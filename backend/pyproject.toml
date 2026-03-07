@@ -1,0 +1,50 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "fibokei"
+version = "0.1.0"
+description = "Multi-strategy automated trading platform using Ichimoku Cloud and Fibonacci systems"
+requires-python = ">=3.11"
+dependencies = [
+    "pandas>=2.0",
+    "numpy>=1.24",
+    "pydantic>=2.0",
+    "python-dateutil",
+    "tabulate",
+    "sqlalchemy>=2.0",
+    "alembic",
+    "aiosqlite",
+    "fastapi>=0.100",
+    "uvicorn[standard]",
+    "python-jose[cryptography]",
+    "passlib[bcrypt]",
+    "python-multipart",
+    "httpx",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0",
+    "pytest-cov",
+    "ruff",
+    "mypy",
+    "httpx",
+]
+
+[project.scripts]
+fibokei = "fibokei.cli:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/fibokei"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "W"]
