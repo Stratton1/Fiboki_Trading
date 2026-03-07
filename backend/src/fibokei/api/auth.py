@@ -4,7 +4,7 @@ import os
 from datetime import datetime, timedelta, timezone
 
 import bcrypt
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import OAuth2PasswordBearer
 from jose import JWTError, jwt
 from pydantic import BaseModel
@@ -23,7 +23,7 @@ class UserModel(Base):
     role: Mapped[str] = mapped_column(String(20), default="user")
 
 
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login", auto_error=False)
 
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_HOURS = 24
@@ -60,6 +60,12 @@ class TokenData(BaseModel):
     username: str
 
 
+class UserResponse(BaseModel):
+    user_id: int
+    username: str
+    role: str
+
+
 def decode_token(token: str) -> TokenData:
     try:
         payload = jwt.decode(token, _get_jwt_secret(), algorithms=[ALGORITHM])
@@ -74,6 +80,20 @@ def decode_token(token: str) -> TokenData:
         ) from exc
 
 
-def get_current_user(token: str = Depends(oauth2_scheme)) -> TokenData:
-    """FastAPI dependency to get current authenticated user."""
-    return decode_token(token)
+def get_current_user(
+    request: Request,
+    token: str | None = Depends(oauth2_scheme),
+) -> TokenData:
+    """FastAPI dependency to get current authenticated user.
+
+    Checks cookie first, then falls back to Bearer token.
+    """
+    cookie_token = request.cookies.get("fibokei_token")
+    effective_token = cookie_token or token
+    if not effective_token:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Not authenticated",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    return decode_token(effective_token)

@@ -50,3 +50,13 @@ def auth_token(api_client):
 def auth_headers(auth_token):
     """Get authorization headers for testing."""
     return {"Authorization": f"Bearer {auth_token}"}
+
+
+@pytest.fixture
+def auth_client(api_client):
+    """Return an API client with cookie auth already set via login."""
+    api_client.post(
+        "/api/v1/auth/login",
+        data={"username": "joe", "password": "testpass123"},
+    )
+    return api_client
