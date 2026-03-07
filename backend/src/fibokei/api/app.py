@@ -81,6 +81,14 @@ def create_app() -> FastAPI:
     application.include_router(research_router, prefix="/api/v1")
     from fibokei.api.routes.paper import router as paper_router
     application.include_router(paper_router, prefix="/api/v1")
+    from fibokei.api.routes.trades import router as trades_router
+    application.include_router(trades_router, prefix="/api/v1")
+    from fibokei.api.routes.system import router as system_router
+    application.include_router(system_router, prefix="/api/v1")
+    from fibokei.api.routes.market_data import router as market_data_router
+    application.include_router(market_data_router, prefix="/api/v1")
+    from fibokei.api.routes.charts import router as charts_router
+    application.include_router(charts_router, prefix="/api/v1")
 
     return application
 
