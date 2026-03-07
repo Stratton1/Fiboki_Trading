@@ -19,7 +19,7 @@ Reference: [blueprint.md](blueprint.md)
 | Phase 4.3: Research API Endpoints | COMPLETE | All pass | Rankings, compare |
 | Phase 4.4: Paper Trading Engine | COMPLETE | All pass | Account, bot, risk engine, orchestrator |
 | Phase 4.5: Paper Trading API + Alerts | COMPLETE | All pass | API routes, Telegram notifier |
-| Phase 5: Web Platform | NOT STARTED | — | Next.js dashboard |
+| Phase 5: Web Platform | COMPLETE | All pass | Next.js dashboard, KLineChart, Plotly analytics, execution adapters |
 
 ### Audit Fixes Applied (Post Phase 4.2)
 - **C1**: Data loader now drops NaN rows after `to_numeric(coerce)` with warning
