@@ -9,7 +9,7 @@ from fibokei.api.auth import UserModel, hash_password
 
 
 def seed_users(session: Session) -> None:
-    """Create Joe and Tom users if they don't exist."""
+    """Create or update Joe and Tom users from environment variables."""
     users = [
         ("joe", os.environ.get("FIBOKEI_USER_JOE_PASSWORD", "changeme")),
         ("tom", os.environ.get("FIBOKEI_USER_TOM_PASSWORD", "changeme")),
@@ -25,4 +25,6 @@ def seed_users(session: Session) -> None:
                 role="admin",
             )
             session.add(user)
+        else:
+            existing.password_hash = hash_password(password)
     session.commit()
