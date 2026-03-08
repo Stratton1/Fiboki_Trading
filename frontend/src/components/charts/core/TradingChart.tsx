@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useCallback } from "react";
+import { useEffect, useRef } from "react";
 import { init, dispose } from "klinecharts";
 import type { Chart, KLineData } from "klinecharts";
 import { mapCandlesToKLine } from "@/lib/chart-mappers/candle-mapper";
@@ -24,6 +24,7 @@ export default function TradingChart({
   const containerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<Chart | null>(null);
   const ichimokuActiveRef = useRef(false);
+  const dataRef = useRef<KLineData[]>([]);
 
   // Register the custom Ichimoku indicator once on mount
   useEffect(() => {
@@ -71,6 +72,13 @@ export default function TradingChart({
 
     chartRef.current = chart;
 
+    // Set up data loader once — reads from dataRef for current data
+    chart.setDataLoader({
+      getBars: ({ callback }) => {
+        callback(dataRef.current);
+      },
+    });
+
     return () => {
       if (containerRef.current) {
         dispose(containerRef.current);
@@ -86,28 +94,19 @@ export default function TradingChart({
     const chart = chartRef.current;
     if (!chart || !data) return;
 
-    // Set ichimoku data in the module cache before applying candle data
     if (data.ichimoku) {
       setIchimokuData(data.ichimoku);
     } else {
       clearIchimokuData();
     }
 
-    const klineData: KLineData[] = mapCandlesToKLine(data.candles);
+    dataRef.current = mapCandlesToKLine(data.candles);
 
-    // Use the DataLoader pattern for v10
-    chart.setDataLoader({
-      getBars: (params) => {
-        if (params.type === "init") {
-          params.callback(klineData, false);
-        } else {
-          params.callback([], false);
-        }
-      },
-    });
-
-    // Trigger data load
-    chart.resetData();
+    // Set symbol and period to trigger klinecharts to call getBars
+    const instrument = data.instrument || "UNKNOWN";
+    const timeframe = data.timeframe || "H1";
+    chart.setSymbol({ ticker: instrument });
+    chart.setPeriod({ span: 1, type: "day" });
   }, [data]);
 
   // Toggle Ichimoku indicator
