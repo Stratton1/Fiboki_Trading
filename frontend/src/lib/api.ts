@@ -7,10 +7,20 @@ class ApiError extends Error {
 }
 
 async function apiFetch<T>(path: string, options: RequestInit = {}): Promise<T> {
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+  };
+  // Use Authorization header as fallback when cross-origin cookies aren't available
+  if (typeof window !== "undefined") {
+    const token = localStorage.getItem("fibokei_token");
+    if (token) {
+      headers["Authorization"] = `Bearer ${token}`;
+    }
+  }
   const res = await fetch(`${API_URL}/api/v1${path}`, {
     credentials: "include",
     headers: {
-      "Content-Type": "application/json",
+      ...headers,
       ...options.headers,
     },
     ...options,

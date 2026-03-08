@@ -28,15 +28,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const login = useCallback(async (username: string, password: string) => {
-    const res = await api.login(username, password);
-    if (!res.ok) return false;
-    const me = await api.me();
-    setUser(me);
-    return true;
+    try {
+      const res = await api.login(username, password);
+      if (!res.ok) return false;
+      const data = await res.json();
+      // Store token for Authorization header fallback (cross-origin cookie may not stick)
+      if (data.access_token) {
+        localStorage.setItem("fibokei_token", data.access_token);
+      }
+      const me = await api.me();
+      setUser(me);
+      return true;
+    } catch {
+      return false;
+    }
   }, []);
 
   const logout = useCallback(async () => {
     await api.logout().catch(() => {});
+    localStorage.removeItem("fibokei_token");
     setUser(null);
   }, []);
 
