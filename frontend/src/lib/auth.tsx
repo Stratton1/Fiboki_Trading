@@ -32,9 +32,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const res = await api.login(username, password);
       if (!res.ok) return false;
       const data = await res.json();
-      // Store token for Authorization header fallback (cross-origin cookie may not stick)
       if (data.access_token) {
         localStorage.setItem("fibokei_token", data.access_token);
+        // Set a frontend-domain cookie so Next.js middleware knows we're logged in
+        document.cookie = "fiboki_auth=1; path=/; max-age=86400; SameSite=Lax";
       }
       const me = await api.me();
       setUser(me);
@@ -47,6 +48,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const logout = useCallback(async () => {
     await api.logout().catch(() => {});
     localStorage.removeItem("fibokei_token");
+    document.cookie = "fiboki_auth=; path=/; max-age=0";
     setUser(null);
   }, []);
 

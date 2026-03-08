@@ -28,6 +28,8 @@ async function apiFetch<T>(path: string, options: RequestInit = {}): Promise<T> 
 
   if (res.status === 401) {
     if (typeof window !== "undefined" && !path.includes("/auth/")) {
+      localStorage.removeItem("fibokei_token");
+      document.cookie = "fiboki_auth=; path=/; max-age=0";
       window.location.href = "/login";
     }
     throw new ApiError(401, "Unauthorized");
