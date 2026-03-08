@@ -11,7 +11,7 @@ services:
       - key: FIBOKEI_DATABASE_URL
         fromDatabase:
           name: fibokei-db
-          property: connectionURI
+          property: connectionString
       - key: FIBOKEI_CORS_ORIGINS
         value: https://frontend-weld-eta-70.vercel.app
       - key: FIBOKEI_USER_JOE_PASSWORD
