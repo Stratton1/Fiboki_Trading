@@ -70,10 +70,10 @@ export default function TradingChart({
       },
     });
 
-    chartRef.current = chart;
+    chartRef.current = chart!;
 
     // Set up data loader once — reads from dataRef for current data
-    chart.setDataLoader({
+    chart!.setDataLoader({
       getBars: ({ callback }) => {
         callback(dataRef.current);
       },
