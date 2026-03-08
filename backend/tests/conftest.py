@@ -1,4 +1,4 @@
-"""Shared test fixtures for FIBOKEI."""
+"""Shared test fixtures for Fiboki."""
 
 import os
 from pathlib import Path
@@ -26,6 +26,7 @@ def api_client():
     os.environ["FIBOKEI_DATABASE_URL"] = "sqlite:///:memory:"
     os.environ["FIBOKEI_USER_JOE_PASSWORD"] = "testpass123"
     os.environ["FIBOKEI_USER_TOM_PASSWORD"] = "testpass456"
+    os.environ["FIBOKEI_LOCAL_DEV"] = "1"
 
     from starlette.testclient import TestClient
 

@@ -1,4 +1,4 @@
-"""SQLAlchemy 2.0 ORM models for FIBOKEI persistence."""
+"""SQLAlchemy 2.0 ORM models for Fiboki persistence."""
 
 from datetime import datetime, timezone
 

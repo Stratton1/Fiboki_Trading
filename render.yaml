@@ -5,6 +5,7 @@ services:
     plan: free
     buildCommand: pip install -e .
     startCommand: uvicorn fibokei.api.app:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /api/v1/health
     envVars:
       - key: FIBOKEI_JWT_SECRET
         generateValue: true
@@ -13,7 +14,7 @@ services:
           name: fibokei-db
           property: connectionString
       - key: FIBOKEI_CORS_ORIGINS
-        value: https://frontend-weld-eta-70.vercel.app
+        sync: false
       - key: FIBOKEI_USER_JOE_PASSWORD
         sync: false
       - key: FIBOKEI_USER_TOM_PASSWORD

@@ -1,6 +1,8 @@
 "use client";
 
 import { useAuth } from "@/lib/auth";
+import { FibokiLogo } from "@/components/FibokiLogo";
+import { LoadingScreen } from "@/components/LoadingScreen";
 import {
   BarChart3,
   Bot,
@@ -32,11 +34,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const router = useRouter();
 
   if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <p className="text-foreground-muted">Loading...</p>
-      </div>
-    );
+    return <LoadingScreen />;
   }
 
   async function handleLogout() {
@@ -48,8 +46,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     <div className="min-h-screen flex bg-background">
       {/* Sidebar */}
       <aside className="w-56 bg-background-card border-r border-gray-200 flex flex-col">
-        <div className="px-4 py-5 border-b border-gray-200">
-          <h1 className="text-lg font-bold text-primary">FIBOKEI</h1>
+        <div className="px-4 py-4 border-b border-gray-200">
+          <FibokiLogo size={32} />
         </div>
         <nav className="flex-1 py-4 space-y-1">
           {NAV_ITEMS.map(({ href, label, icon: Icon }) => {

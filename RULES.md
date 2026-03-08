@@ -1,4 +1,4 @@
-# FIBOKEI Coding Standards
+# Fiboki Coding Standards
 
 ## Strategy Rules
 - All strategies must use the common Strategy base class

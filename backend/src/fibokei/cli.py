@@ -1,4 +1,4 @@
-"""FIBOKEI command-line interface."""
+"""Fiboki Trading command-line interface."""
 
 import argparse
 import sys
@@ -25,7 +25,7 @@ def demo_indicators():
         print("Run: python scripts/generate_sample_data.py")
         sys.exit(1)
 
-    print("FIBOKEI — Indicator Demo")
+    print("Fiboki Trading — Indicator Demo")
     print(f"Loading: {fixture_path.name}")
     print()
 
@@ -127,7 +127,7 @@ def run_backtest(args):
         sys.exit(1)
 
     # Load data
-    print(f"FIBOKEI — Backtest: {strategy.strategy_name}")
+    print(f"Fiboki Trading — Backtest: {strategy.strategy_name}")
     print(f"Instrument: {args.instrument} | Timeframe: {args.timeframe}")
     print(f"Data: {data_path.name}")
 
@@ -151,7 +151,7 @@ def run_backtest(args):
 
 def refresh_data(args):
     """Fetch latest market data from Yahoo Finance."""
-    from fibokei.data.ingestion import SYMBOL_MAP, refresh_all
+    from fibokei.data.ingestion import refresh_all
 
     symbols = None
     if args.symbols:
@@ -160,7 +160,7 @@ def refresh_data(args):
     timeframe = args.timeframe.upper()
     data_dir = args.data_dir if args.data_dir else None
 
-    print(f"FIBOKEI — Data Refresh ({timeframe})")
+    print(f"Fiboki Trading — Data Refresh ({timeframe})")
     print(f"Symbols: {', '.join(symbols) if symbols else 'all'}")
     print()
 
@@ -211,7 +211,7 @@ def run_research(args):
 
     config = BacktestConfig(initial_capital=args.capital)
 
-    print("FIBOKEI — Research Matrix")
+    print("Fiboki Trading — Research Matrix")
     print(f"Strategies: {', '.join(strategy_ids)}")
     print(f"Instruments: {', '.join(instruments)}")
     print(f"Timeframes: {', '.join(tf.value for tf in timeframes)}")
@@ -237,7 +237,7 @@ def run_research(args):
 def main():
     parser = argparse.ArgumentParser(
         prog="fibokei",
-        description="FIBOKEI — Multi-strategy trading platform",
+        description="Fiboki Trading — Multi-strategy trading platform",
     )
     subparsers = parser.add_subparsers(dest="command")
 
@@ -245,7 +245,9 @@ def main():
     subparsers.add_parser("list-indicators", help="List available indicators")
     subparsers.add_parser("list-strategies", help="List available strategies")
 
-    refresh_parser = subparsers.add_parser("refresh-data", help="Fetch market data from Yahoo Finance")
+    refresh_parser = subparsers.add_parser(
+        "refresh-data", help="Fetch market data from Yahoo Finance",
+    )
     refresh_parser.add_argument(
         "--symbols", default=None,
         help="Comma-separated symbols (default: all mapped symbols)",

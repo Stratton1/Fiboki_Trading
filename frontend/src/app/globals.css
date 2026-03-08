@@ -6,10 +6,10 @@
   --color-background-muted: #F5F5F4;
   --color-foreground: #1C1917;
   --color-foreground-muted: #78716C;
-  --color-primary: #16A34A;
-  --color-primary-dark: #15803D;
-  --color-primary-light: #22C55E;
-  --color-primary-accent: #86EFAC;
+  --color-primary: #059669;
+  --color-primary-dark: #047857;
+  --color-primary-light: #10B981;
+  --color-primary-accent: #A7F3D0;
   --color-danger: #EF4444;
   --color-warning: #F59E0B;
   --font-sans: "Inter", system-ui, sans-serif;
@@ -19,4 +19,41 @@ body {
   background: var(--color-background);
   color: var(--color-foreground);
   font-family: var(--font-sans);
+}
+
+/* Fiboki logo & loading screen animations */
+@keyframes scaleIn {
+  from { transform: scale(0.6); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+@keyframes barRise {
+  from { transform: scaleY(0); opacity: 0; }
+  to { transform: scaleY(1); opacity: 1; }
+}
+
+@keyframes drawSpiral {
+  from { stroke-dashoffset: 80; }
+  to { stroke-dashoffset: 0; }
+}
+
+@keyframes dotPop {
+  0% { opacity: 0; r: 0; }
+  60% { opacity: 0.9; r: 3.5; }
+  100% { opacity: 0.7; r: 2.5; }
+}
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes logoEntry {
+  from { transform: scale(0.8); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+@keyframes wordmarkEntry {
+  from { opacity: 0; transform: translateX(-6px); }
+  to { opacity: 1; transform: translateX(0); }
 }

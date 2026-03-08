@@ -1,4 +1,4 @@
-"""Data access functions for FIBOKEI persistence."""
+"""Data access functions for Fiboki persistence."""
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session

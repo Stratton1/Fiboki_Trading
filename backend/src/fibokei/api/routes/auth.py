@@ -1,5 +1,7 @@
 """Auth routes: login, logout, me, and health check."""
 
+import os
+
 from fastapi import APIRouter, Depends, HTTPException, Response, status
 from fastapi.security import OAuth2PasswordRequestForm
 from pydantic import BaseModel
@@ -50,12 +52,13 @@ def login(
             headers={"WWW-Authenticate": "Bearer"},
         )
     token = create_access_token(user.id, user.username)
+    is_production = not os.environ.get("FIBOKEI_LOCAL_DEV")
     response.set_cookie(
         key="fibokei_token",
         value=token,
         httponly=True,
-        samesite="lax",
-        secure=False,
+        samesite="none" if is_production else "lax",
+        secure=is_production,
         max_age=24 * 3600,
     )
     return {"access_token": token, "token_type": "bearer"}
@@ -63,7 +66,12 @@ def login(
 
 @router.post("/auth/logout")
 def logout(response: Response):
-    response.delete_cookie(key="fibokei_token")
+    is_production = not os.environ.get("FIBOKEI_LOCAL_DEV")
+    response.delete_cookie(
+        key="fibokei_token",
+        samesite="none" if is_production else "lax",
+        secure=is_production,
+    )
     return {"detail": "Logged out"}
 
 

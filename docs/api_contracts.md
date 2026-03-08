@@ -1,4 +1,4 @@
-# FIBOKEI API Contracts
+# Fiboki API Contracts
 
 Base URL: `{BACKEND_HOST}/api/v1`
 

@@ -10,7 +10,7 @@ from fibokei.core.trades import ExitReason, TradePlan
 
 
 class Strategy(ABC):
-    """Base class that all 12 FIBOKEI bots must implement."""
+    """Base class that all 12 Fiboki bots must implement."""
 
     # --- Identity (override in subclass) ---
 

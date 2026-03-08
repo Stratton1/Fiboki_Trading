@@ -1,8 +1,8 @@
-# FIBOKEI System Architecture
+# Fiboki System Architecture
 
 ## 1. System Overview
 
-FIBOKEI is a multi-strategy automated trading platform built on Ichimoku Cloud and Fibonacci systems. The platform runs 12 strategy bots across backtesting, research ranking, and paper trading modes.
+Fiboki is a multi-strategy automated trading platform built on Ichimoku Cloud and Fibonacci systems. The platform runs 12 strategy bots across backtesting, research ranking, and paper trading modes.
 
 | Layer | Technology | Deployment |
 |-------|-----------|------------|

@@ -1,4 +1,4 @@
-"""Seed initial users for the FIBOKEI platform."""
+"""Seed initial users for the Fiboki platform."""
 
 import os
 

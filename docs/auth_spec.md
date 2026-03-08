@@ -1,8 +1,8 @@
-# FIBOKEI Authentication Specification
+# Fiboki Authentication Specification
 
 ## 1. Overview
 
-FIBOKEI uses cookie-based JWT authentication. The backend issues an HttpOnly cookie on login. The frontend never reads or stores the token directly -- all API calls use `credentials: "include"` to let the browser handle cookie transmission.
+Fiboki uses cookie-based JWT authentication. The backend issues an HttpOnly cookie on login. The frontend never reads or stores the token directly -- all API calls use `credentials: "include"` to let the browser handle cookie transmission.
 
 ## 2. Cookie Configuration
 

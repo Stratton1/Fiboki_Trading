@@ -1,4 +1,4 @@
- # FIBOKEI — BUILD ROADMAP
+ # Fiboki — Build Roadmap
 
 Version: 1.3
 Status: **V1 COMPLETE** — Phase 6 (Polish) in progress
@@ -21,7 +21,7 @@ Reference: [blueprint.md](blueprint.md)
 | Phase 4.5: Paper Trading API + Alerts | COMPLETE | All pass | API routes, Telegram notifier |
 | Phase 5: Web Platform | COMPLETE | All pass | Next.js dashboard, KLineChart, Plotly analytics, execution adapters |
 | Phase 6.1: Critical Fixes | COMPLETE | All pass | Symbol normalization, dropdown forms |
-| Phase 6.2: Backend Deployment | IN PROGRESS | All pass | Dockerfile, render.yaml, Procfile, PostgreSQL compat — awaiting cloud deploy |
+| Phase 6.2: Production Deployment | IN PROGRESS | All pass | Railway (primary) + Render (fallback), Vercel frontend, cross-origin auth, deployment docs — awaiting first cloud deploy |
 | Phase 6.3: UX Improvements | COMPLETE | All pass | Dashboard polish, SVG logo, trade filters, visual hierarchy |
 | Phase 6.4: Real Market Data | COMPLETE | All pass | yfinance ingestion, CLI refresh-data, API refresh endpoint |
 

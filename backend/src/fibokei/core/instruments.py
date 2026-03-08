@@ -1,4 +1,4 @@
-"""30-instrument launch universe for FIBOKEI."""
+"""30-instrument launch universe for Fiboki."""
 
 from fibokei.core.models import AssetClass, Instrument
 

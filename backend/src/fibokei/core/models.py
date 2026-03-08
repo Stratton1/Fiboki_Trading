@@ -1,4 +1,4 @@
-"""Core data models for FIBOKEI."""
+"""Core data models for Fiboki."""
 
 from datetime import datetime
 from enum import Enum

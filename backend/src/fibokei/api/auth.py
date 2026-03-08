@@ -1,4 +1,4 @@
-"""JWT authentication for FIBOKEI API."""
+"""JWT authentication for Fiboki Trading API."""
 
 import os
 from datetime import datetime, timedelta, timezone

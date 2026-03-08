@@ -1,8 +1,8 @@
-# FIBOKEI Charting Specification
+# Fiboki Charting Specification
 
 ## 1. Engine Selection
 
-FIBOKEI uses two charting engines with strict separation.
+Fiboki uses two charting engines with strict separation.
 
 | Engine | Purpose | Package |
 |--------|---------|---------|

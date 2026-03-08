@@ -1,4 +1,4 @@
-# FIBOKEI Frontend Architecture
+# Fiboki Frontend Architecture
 
 ## 1. Technology Stack
 

@@ -1,6 +1,7 @@
-# FIBOKEI
+# Fiboki
 
 Multi-strategy automated trading platform using Ichimoku Cloud and Fibonacci systems.
+Production: https://fiboki.uk | API: https://api.fiboki.uk
 
 ## Tech Stack
 

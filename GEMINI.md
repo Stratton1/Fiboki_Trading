@@ -1,7 +1,7 @@
-# FIBOKEI
+# Fiboki
 
 ## Project Overview
-FIBOKEI is a full-stack, multi-strategy automated trading platform focused on **Ichimoku Cloud** and **Fibonacci-based** trading systems. It is designed to research, rank, simulate, monitor, and eventually execute algorithmic strategies across multiple liquid instruments and short-to-medium intraday timeframes.
+Fiboki is a full-stack, multi-strategy automated trading platform focused on **Ichimoku Cloud** and **Fibonacci-based** trading systems. It is designed to research, rank, simulate, monitor, and eventually execute algorithmic strategies across multiple liquid instruments and short-to-medium intraday timeframes.
 
 The project is structured as a monorepo containing a Python backend for research, backtesting, and paper trading execution, alongside a Next.js frontend for monitoring and control.
 

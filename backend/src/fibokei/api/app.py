@@ -1,4 +1,4 @@
-"""FastAPI application for FIBOKEI."""
+"""FastAPI application for Fiboki Trading."""
 
 import os
 from contextlib import asynccontextmanager
@@ -13,7 +13,12 @@ from fibokei.api.routes.auth import router as auth_router
 from fibokei.api.routes.instruments import router as instruments_router
 from fibokei.api.routes.strategies import router as strategies_router
 
-DATABASE_URL = os.environ.get("FIBOKEI_DATABASE_URL", "sqlite:///fibokei.db")
+_raw_db_url = os.environ.get("FIBOKEI_DATABASE_URL", "sqlite:///fibokei.db")
+# Render/Railway may provide postgres:// which SQLAlchemy 2.0 rejects
+if _raw_db_url.startswith("postgres://"):
+    DATABASE_URL = _raw_db_url.replace("postgres://", "postgresql://", 1)
+else:
+    DATABASE_URL = _raw_db_url
 
 
 def _create_engine_and_session():
@@ -52,19 +57,19 @@ async def lifespan(app: FastAPI):
 def create_app() -> FastAPI:
     """Create and configure the FastAPI application."""
     application = FastAPI(
-        title="FIBOKEI API",
+        title="Fiboki Trading API",
         version="1.0.0",
         description="Multi-strategy trading platform API",
         lifespan=lifespan,
     )
 
-    # CORS
-    origins = [
-        "http://localhost:3000",
-    ]
+    # CORS — localhost only in local dev, production origins from env var
+    origins = []
+    if os.environ.get("FIBOKEI_LOCAL_DEV"):
+        origins.append("http://localhost:3000")
     extra_origins = os.environ.get("FIBOKEI_CORS_ORIGINS", "")
     if extra_origins:
-        origins.extend(o.strip() for o in extra_origins.split(","))
+        origins.extend(o.strip() for o in extra_origins.split(",") if o.strip())
 
     application.add_middleware(
         CORSMiddleware,

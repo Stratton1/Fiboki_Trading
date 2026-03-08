@@ -1,4 +1,4 @@
-"""Feature flags for FIBOKEI platform."""
+"""Feature flags for Fiboki platform."""
 
 import os
 

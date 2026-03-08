@@ -1,6 +1,7 @@
 "use client";
 
 import { useAuth } from "@/lib/auth";
+import { FibokiMark } from "@/components/FibokiLogo";
 import { useRouter } from "next/navigation";
 import { FormEvent, useState } from "react";
 
@@ -29,12 +30,9 @@ export default function LoginPage() {
     <div className="min-h-screen flex items-center justify-center bg-background">
       <div className="w-full max-w-sm bg-background-card rounded-lg shadow-md p-8">
         <div className="flex justify-center mb-4">
-          <svg width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <rect width="48" height="48" rx="12" fill="#16A34A"/>
-            <path d="M14 34V14h6v20h-6zm8-12h6v12h-6zm8-8h6v20h-6z" fill="white"/>
-          </svg>
+          <FibokiMark size={56} className="animate-[scaleIn_0.5s_ease-out_both] drop-shadow-md" />
         </div>
-        <h1 className="text-2xl font-bold text-center mb-2">FIBOKEI</h1>
+        <h1 className="text-2xl font-bold text-center mb-1">Fiboki Trading</h1>
         <p className="text-foreground-muted text-center text-sm mb-6">
           Trading Research Platform
         </p>

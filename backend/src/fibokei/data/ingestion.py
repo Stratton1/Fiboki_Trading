@@ -1,7 +1,6 @@
 """Market data ingestion from Yahoo Finance."""
 
 import logging
-from datetime import datetime, timezone
 from pathlib import Path
 
 import pandas as pd
@@ -9,7 +8,7 @@ import yfinance as yf
 
 logger = logging.getLogger(__name__)
 
-# Map FIBOKEI symbols to Yahoo Finance tickers
+# Map Fiboki symbols to Yahoo Finance tickers
 SYMBOL_MAP = {
     "EURUSD": "EURUSD=X",
     "GBPUSD": "GBPUSD=X",
@@ -43,7 +42,7 @@ SYMBOL_MAP = {
     "XRPUSD": "XRP-USD",
 }
 
-# Map FIBOKEI timeframes to yfinance intervals
+# Map Fiboki timeframes to yfinance intervals
 TIMEFRAME_MAP = {
     "M1": "1m",
     "M2": "2m",
@@ -70,8 +69,8 @@ def fetch_ohlcv(symbol: str, timeframe: str = "H1") -> pd.DataFrame | None:
     """Fetch OHLCV data from Yahoo Finance.
 
     Args:
-        symbol: FIBOKEI instrument symbol (e.g., 'EURUSD')
-        timeframe: FIBOKEI timeframe (e.g., 'H1')
+        symbol: Fiboki instrument symbol (e.g., 'EURUSD')
+        timeframe: Fiboki timeframe (e.g., 'H1')
 
     Returns:
         DataFrame with columns: timestamp, open, high, low, close, volume
