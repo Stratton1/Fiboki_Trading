@@ -149,6 +149,36 @@ def run_backtest(args):
     print_trade_list(result.trades)
 
 
+def refresh_data(args):
+    """Fetch latest market data from Yahoo Finance."""
+    from fibokei.data.ingestion import SYMBOL_MAP, refresh_all
+
+    symbols = None
+    if args.symbols:
+        symbols = [s.strip().upper() for s in args.symbols.split(",")]
+
+    timeframe = args.timeframe.upper()
+    data_dir = args.data_dir if args.data_dir else None
+
+    print(f"FIBOKEI — Data Refresh ({timeframe})")
+    print(f"Symbols: {', '.join(symbols) if symbols else 'all'}")
+    print()
+
+    results = refresh_all(symbols=symbols, timeframe=timeframe, data_dir=data_dir)
+
+    success = {k: v for k, v in results.items() if v > 0}
+    failed = {k: v for k, v in results.items() if v == 0}
+
+    if success:
+        rows = [[sym, count] for sym, count in sorted(success.items())]
+        print(tabulate(rows, headers=["Symbol", "Bars"], tablefmt="simple"))
+        print()
+
+    print(f"Success: {len(success)} | Failed: {len(failed)}")
+    if failed:
+        print(f"Failed symbols: {', '.join(sorted(failed.keys()))}")
+
+
 def run_research(args):
     """Run research matrix across strategies, instruments, and timeframes."""
     from fibokei.backtester.config import BacktestConfig
@@ -215,6 +245,20 @@ def main():
     subparsers.add_parser("list-indicators", help="List available indicators")
     subparsers.add_parser("list-strategies", help="List available strategies")
 
+    refresh_parser = subparsers.add_parser("refresh-data", help="Fetch market data from Yahoo Finance")
+    refresh_parser.add_argument(
+        "--symbols", default=None,
+        help="Comma-separated symbols (default: all mapped symbols)",
+    )
+    refresh_parser.add_argument(
+        "--timeframe", default="H1",
+        help="Timeframe (M1..H4)",
+    )
+    refresh_parser.add_argument(
+        "--data-dir", default=None,
+        help="Output directory for CSV files",
+    )
+
     bt_parser = subparsers.add_parser("backtest", help="Run a backtest")
     bt_parser.add_argument(
         "--strategy", required=True, help="Strategy ID (e.g. bot01_sanyaku)"
@@ -269,6 +313,8 @@ def main():
         list_indicators()
     elif args.command == "list-strategies":
         list_strategies()
+    elif args.command == "refresh-data":
+        refresh_data(args)
     elif args.command == "backtest":
         run_backtest(args)
     elif args.command == "research":

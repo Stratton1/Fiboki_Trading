@@ -1,20 +1,44 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
+import useSWR from "swr";
 import { useTrades } from "@/lib/hooks/use-trades";
+import { api } from "@/lib/api";
 
 export default function TradesPage() {
   const { data, isLoading } = useTrades();
   const trades = data?.items ?? [];
+  const [filterStrategy, setFilterStrategy] = useState("");
+  const [filterDirection, setFilterDirection] = useState("");
+  const { data: strategies } = useSWR("strategies", () => api.strategies());
+
+  const filtered = trades.filter((t) => {
+    if (filterStrategy && t.strategy_id !== filterStrategy) return false;
+    if (filterDirection && t.direction !== filterDirection) return false;
+    return true;
+  });
 
   return (
     <div>
       <h2 className="text-xl font-semibold mb-6">Trade History</h2>
 
-      <div className="bg-background-card rounded-lg border border-gray-200 overflow-hidden">
+      <div className="flex flex-wrap gap-3 mb-4">
+        <select value={filterStrategy} onChange={(e) => setFilterStrategy(e.target.value)} className="border border-gray-300 rounded px-3 py-1.5 text-sm bg-background">
+          <option value="">All Strategies</option>
+          {strategies?.map((s: any) => <option key={s.strategy_id} value={s.strategy_id}>{s.strategy_id}</option>)}
+        </select>
+        <select value={filterDirection} onChange={(e) => setFilterDirection(e.target.value)} className="border border-gray-300 rounded px-3 py-1.5 text-sm bg-background">
+          <option value="">All Directions</option>
+          <option value="LONG">Long</option>
+          <option value="SHORT">Short</option>
+        </select>
+      </div>
+
+      <div className="bg-background-card rounded-lg border border-gray-300 overflow-hidden">
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b border-gray-200 bg-background-muted">
+            <tr className="border-b border-gray-300 bg-background-muted">
               <th className="text-left px-4 py-3 font-medium text-foreground-muted">Date</th>
               <th className="text-left px-4 py-3 font-medium text-foreground-muted">Strategy</th>
               <th className="text-left px-4 py-3 font-medium text-foreground-muted">Instrument</th>
@@ -38,7 +62,7 @@ export default function TradesPage() {
                 </td>
               </tr>
             )}
-            {trades.map((t) => (
+            {filtered.map((t) => (
               <tr key={t.id} className="border-b border-gray-100 hover:bg-background-muted/50">
                 <td className="px-4 py-3">
                   <Link href={`/trades/${t.id}`} className="text-primary hover:underline">
@@ -72,7 +96,7 @@ export default function TradesPage() {
 
       {data && (
         <p className="text-xs text-foreground-muted mt-3">
-          Showing {trades.length} of {data.total} trades
+          Showing {filtered.length} of {data.total} trades
         </p>
       )}
     </div>

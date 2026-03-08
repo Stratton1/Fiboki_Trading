@@ -22,6 +22,8 @@ dependencies = [
     "passlib[bcrypt]",
     "python-multipart",
     "httpx",
+    "psycopg2-binary",
+    "yfinance",
 ]
 
 [project.optional-dependencies]

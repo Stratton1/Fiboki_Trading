@@ -1,0 +1,26 @@
+services:
+  - type: web
+    name: fibokei-api
+    runtime: python
+    plan: free
+    buildCommand: pip install -e .
+    startCommand: uvicorn fibokei.api.app:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: FIBOKEI_JWT_SECRET
+        generateValue: true
+      - key: FIBOKEI_DATABASE_URL
+        fromDatabase:
+          name: fibokei-db
+          property: connectionURI
+      - key: FIBOKEI_CORS_ORIGINS
+        value: https://frontend-weld-eta-70.vercel.app
+      - key: FIBOKEI_USER_JOE_PASSWORD
+        sync: false
+      - key: FIBOKEI_USER_TOM_PASSWORD
+        sync: false
+    rootDir: backend
+
+databases:
+  - name: fibokei-db
+    plan: free
+    databaseName: fibokei

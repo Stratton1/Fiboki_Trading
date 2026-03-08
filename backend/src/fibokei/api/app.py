@@ -18,10 +18,13 @@ DATABASE_URL = os.environ.get("FIBOKEI_DATABASE_URL", "sqlite:///fibokei.db")
 
 def _create_engine_and_session():
     connect_args = {}
-    if DATABASE_URL == "sqlite:///:memory:":
-        from sqlalchemy.pool import StaticPool
+    if DATABASE_URL.startswith("sqlite"):
         connect_args = {"check_same_thread": False}
-        engine = create_engine(DATABASE_URL, connect_args=connect_args, poolclass=StaticPool)
+        if DATABASE_URL == "sqlite:///:memory:":
+            from sqlalchemy.pool import StaticPool
+            engine = create_engine(DATABASE_URL, connect_args=connect_args, poolclass=StaticPool)
+        else:
+            engine = create_engine(DATABASE_URL, connect_args=connect_args)
     else:
         engine = create_engine(DATABASE_URL)
 

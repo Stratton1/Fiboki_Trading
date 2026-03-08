@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import useSWR from "swr";
 import { api } from "@/lib/api";
 import { useBots, useAccount } from "@/lib/hooks/use-bots";
 
@@ -21,6 +22,8 @@ const STATE_BADGE: Record<string, string> = {
 export default function BotsPage() {
   const { data: bots, mutate: mutateBots } = useBots();
   const { data: account } = useAccount();
+  const { data: strategies } = useSWR("strategies", () => api.strategies());
+  const { data: instruments } = useSWR("instruments", () => api.instruments());
   const [strategy, setStrategy] = useState("");
   const [instrument, setInstrument] = useState("");
   const [timeframe, setTimeframe] = useState("H1");
@@ -95,23 +98,29 @@ export default function BotsPage() {
         <div className="flex flex-wrap gap-3 items-end">
           <div>
             <label className="block text-xs text-foreground-muted mb-1">Strategy</label>
-            <input
-              type="text"
+            <select
               value={strategy}
               onChange={(e) => setStrategy(e.target.value)}
-              placeholder="e.g. ichimoku_tk_cross"
               className="border border-gray-300 rounded px-3 py-1.5 text-sm bg-background"
-            />
+            >
+              <option value="">Select strategy</option>
+              {strategies?.map((s: any) => (
+                <option key={s.strategy_id} value={s.strategy_id}>{s.strategy_name || s.strategy_id}</option>
+              ))}
+            </select>
           </div>
           <div>
             <label className="block text-xs text-foreground-muted mb-1">Instrument</label>
-            <input
-              type="text"
+            <select
               value={instrument}
               onChange={(e) => setInstrument(e.target.value)}
-              placeholder="e.g. EUR_USD"
               className="border border-gray-300 rounded px-3 py-1.5 text-sm bg-background"
-            />
+            >
+              <option value="">Select instrument</option>
+              {instruments?.map((i: any) => (
+                <option key={i.symbol} value={i.symbol}>{i.symbol}</option>
+              ))}
+            </select>
           </div>
           <div>
             <label className="block text-xs text-foreground-muted mb-1">Timeframe</label>

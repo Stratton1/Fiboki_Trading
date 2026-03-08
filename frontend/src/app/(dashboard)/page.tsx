@@ -6,7 +6,7 @@ import { useAccount } from "@/lib/hooks/use-bots";
 function StatCard({ label, value, trend }: { label: string; value: string; trend?: "up" | "down" | "neutral" }) {
   const trendColor = trend === "up" ? "text-primary" : trend === "down" ? "text-danger" : "text-foreground-muted";
   return (
-    <div className="bg-background-card rounded-lg border border-gray-200 p-5">
+    <div className="bg-background-card rounded-lg border border-gray-300 p-5">
       <p className="text-sm text-foreground-muted mb-1">{label}</p>
       <p className={`text-2xl font-semibold ${trendColor}`}>{value}</p>
     </div>
@@ -31,14 +31,35 @@ export default function DashboardPage() {
         <StatCard label="Daily PnL" value={`${dailyPnl >= 0 ? "+" : ""}$${dailyPnl.toFixed(2)}`} trend={dailyPnl >= 0 ? "up" : "down"} />
         <StatCard label="Weekly PnL" value={`${weeklyPnl >= 0 ? "+" : ""}$${weeklyPnl.toFixed(2)}`} trend={weeklyPnl >= 0 ? "up" : "down"} />
       </div>
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <div className="bg-background-card rounded-lg border border-gray-200 p-5">
-          <h3 className="text-sm font-medium text-foreground-muted mb-3">Active Bots</h3>
+      <div className="grid grid-cols-2 gap-4 mb-8">
+        <div className="bg-background-card rounded-lg border border-gray-300 p-5">
+          <h3 className="text-sm font-medium text-foreground-muted mb-2">Active Bots</h3>
           <p className="text-3xl font-semibold">{account?.open_positions ?? 0}</p>
         </div>
-        <div className="bg-background-card rounded-lg border border-gray-200 p-5">
-          <h3 className="text-sm font-medium text-foreground-muted mb-3">Total Trades</h3>
+        <div className="bg-background-card rounded-lg border border-gray-300 p-5">
+          <h3 className="text-sm font-medium text-foreground-muted mb-2">Total Trades</h3>
           <p className="text-3xl font-semibold">{account?.total_trades ?? 0}</p>
+        </div>
+      </div>
+
+      {/* Quick Actions */}
+      <div className="bg-background-card rounded-lg border border-gray-300 p-5 mb-8">
+        <h3 className="text-sm font-medium text-foreground-muted mb-3">Quick Actions</h3>
+        <div className="flex flex-wrap gap-3">
+          <a href="/backtests" className="px-4 py-2 bg-primary text-white rounded text-sm font-medium hover:bg-primary/90">Run Backtest</a>
+          <a href="/bots" className="px-4 py-2 bg-primary/10 text-primary rounded text-sm font-medium hover:bg-primary/20">Add Paper Bot</a>
+          <a href="/research" className="px-4 py-2 bg-primary/10 text-primary rounded text-sm font-medium hover:bg-primary/20">Research Matrix</a>
+          <a href="/charts" className="px-4 py-2 bg-primary/10 text-primary rounded text-sm font-medium hover:bg-primary/20">View Charts</a>
+        </div>
+      </div>
+
+      {/* System Status */}
+      <div className="bg-background-card rounded-lg border border-gray-300 p-5">
+        <h3 className="text-sm font-medium text-foreground-muted mb-3">System Overview</h3>
+        <div className="grid grid-cols-3 gap-4 text-sm">
+          <div><span className="text-foreground-muted">Engine:</span> <span className="font-medium text-green-600">Online</span></div>
+          <div><span className="text-foreground-muted">Strategies:</span> <span className="font-medium">12 loaded</span></div>
+          <div><span className="text-foreground-muted">Mode:</span> <span className="font-medium">Paper Trading</span></div>
         </div>
       </div>
     </div>

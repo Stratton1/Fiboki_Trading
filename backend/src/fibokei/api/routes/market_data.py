@@ -37,6 +37,9 @@ def get_market_data(
     user: TokenData = Depends(get_current_user),
 ):
     """Return OHLCV candles with precomputed Ichimoku Cloud data."""
+    # Normalize symbol: frontend may send EUR_USD, backend uses EURUSD
+    instrument = instrument.replace("_", "").replace("/", "").upper()
+
     # Validate instrument
     try:
         get_instrument(instrument)
@@ -110,3 +113,13 @@ def get_market_data(
         candles=candles,
         ichimoku=ichimoku,
     )
+
+
+@router.post("/market-data/refresh", response_model=dict)
+def refresh_market_data(
+    user: TokenData = Depends(get_current_user),
+):
+    """Trigger a refresh of market data for all instruments."""
+    from fibokei.data.ingestion import refresh_all
+    results = refresh_all(timeframe="H1")
+    return {"refreshed": results, "total": sum(1 for v in results.values() if v > 0)}
