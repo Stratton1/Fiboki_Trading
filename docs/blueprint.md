@@ -48,7 +48,7 @@ The primary objective is to build a professional-grade platform that can:
 
 - host 12 initial Ichimoku/Fibonacci strategies
 - test them over downloaded historical datasets
-- compare them across at least 30 instruments
+- compare them across the full instrument universe (60+ instruments with canonical data)
 - support 1m, 2m, 5m, 15m, 30m, 1h, and 4h timeframes
 - show chart markers for entries and exits
 - show comprehensive statistics and visual performance outputs
@@ -276,7 +276,7 @@ Architecture should leave room for:
 
 ## 7.1 Objective for starting universe
 
-The starting instrument universe must be broad enough to reveal real strategy behaviour, but narrow enough to remain operationally manageable.
+The starting instrument universe must be broad enough to reveal real strategy behaviour, but narrow enough to remain operationally manageable. The supported instrument universe is 67 instruments (60 HistData canonical + 7 alternate-provider); canonical data is 60 × 6 timeframes as of Phase 6.5.
 
 It should prioritise:
 
@@ -286,7 +286,13 @@ It should prioritise:
 - availability of downloadable historical data
 - a mix of market behaviours
 
-## 7.2 Recommended minimum 30-instrument launch universe
+## 7.2 Supported instrument universe
+
+The supported instrument universe comprises 67 instruments across 9 asset classes: 60 with HistData canonical data (60 × 6 timeframes = 360 datasets) and 7 flagged for alternate providers (NATGAS, US30, BTCUSD, ETHUSD, SOLUSD, LTCUSD, XRPUSD — `has_canonical_data=False`). The full registry is defined in `backend/src/fibokei/core/instruments.py`. The API supports filtering by `asset_class` query parameter.
+
+### Historical Phase 1 Baseline (30 instruments)
+
+The original 30-instrument selection below was the Phase 1 design baseline. For the current full universe, see `instruments.py`.
 
 ### Forex (12)
 1. EURUSD
@@ -326,7 +332,7 @@ It should prioritise:
 29. LTCUSD
 30. XRPUSD or a crypto basket proxy if better data quality exists
 
-## 7.3 Why this starter basket is strong
+## 7.3 Why this instrument selection is strong
 
 This basket gives:
 
@@ -2000,7 +2006,7 @@ Phase 1 of FIBOKEI is successful when all of the following are true:
 - the repo and docs foundation is complete
 - all 12 strategies exist under one common framework
 - historical datasets can be ingested and normalized
-- at least 30 instruments can be tested where data is available
+- the full instrument universe (60+ instruments) can be tested with canonical data
 - all target timeframes are supported
 - backtests produce reliable metrics and annotated charts
 - the research matrix can rank best combinations

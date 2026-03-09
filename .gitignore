@@ -42,8 +42,11 @@ data/canonical/
 !data/raw/.gitkeep
 !data/cleaned/.gitkeep
 
-# Playwright MCP
+# Playwright
 .playwright-mcp/
+frontend/test-results/
+frontend/playwright-report/
+frontend/screenshots/
 
 # OS
 .DS_Store

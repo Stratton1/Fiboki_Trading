@@ -519,15 +519,36 @@ Protected system status.
 
 ### GET /instruments
 
-List all available instruments.
+List all available instruments. Supports optional `asset_class` query parameter for filtering.
+
+**Query parameters:**
+
+| Param | Type | Default |
+|-------|------|---------|
+| `asset_class` | string | (all) |
 
 **Response:** `200 OK`
 
 ```json
 [
-  { "symbol": "EURUSD", "name": "Euro / US Dollar", "asset_class": "forex" }
+  {
+    "symbol": "EURUSD",
+    "name": "Euro / US Dollar",
+    "asset_class": "forex_major",
+    "has_canonical_data": true
+  },
+  {
+    "symbol": "BTCUSD",
+    "name": "Bitcoin / US Dollar",
+    "asset_class": "crypto",
+    "has_canonical_data": false
+  }
 ]
 ```
+
+Valid `asset_class` values: `forex_major`, `forex_cross`, `forex_g10_cross`, `forex_scandinavian`, `forex_em`, `commodity_metal`, `commodity_energy`, `index`, `crypto`.
+
+`has_canonical_data` indicates whether the instrument has HistData canonical datasets available. Instruments with `false` require alternate data providers.
 
 ### GET /instruments/{symbol}
 

@@ -94,10 +94,24 @@ export const api = {
 
   // Research
   runResearch: (body: Record<string, unknown>) =>
-    apiFetch("/research/run", { method: "POST", body: JSON.stringify(body) }),
+    apiFetch<import("@/types/contracts/research").ResearchRunSummary>(
+      "/research/run", { method: "POST", body: JSON.stringify(body) }
+    ),
   rankings: (params?: string) =>
     apiFetch<import("@/types/contracts/research").ResearchResult[]>(
       `/research/rankings${params ? `?${params}` : ""}`
+    ),
+  advancedResearch: (body: Record<string, unknown>) =>
+    apiFetch<import("@/types/contracts/research").AdvancedResearchResponse>(
+      "/research/advanced", { method: "POST", body: JSON.stringify(body) }
+    ),
+  validateResearch: (body: Record<string, unknown>) =>
+    apiFetch<import("@/types/contracts/research").ValidationBatchResponse>(
+      "/research/validate", { method: "POST", body: JSON.stringify(body) }
+    ),
+  compareResearch: (combos: string[]) =>
+    apiFetch<import("@/types/contracts/research").ResearchResult[]>(
+      "/research/compare", { method: "POST", body: JSON.stringify({ combos }) }
     ),
 
   // Paper
@@ -118,7 +132,10 @@ export const api = {
     apiFetch<import("@/types/contracts/trades").Trade>(`/trades/${id}`),
 
   // Instruments & strategies
-  instruments: () => apiFetch<Array<Record<string, unknown>>>("/instruments/"),
+  instruments: () =>
+    apiFetch<
+      Array<{ symbol: string; name: string; asset_class: string; has_canonical_data: boolean }>
+    >("/instruments/"),
   strategies: () => apiFetch<Array<Record<string, unknown>>>("/strategies/"),
 
   // System

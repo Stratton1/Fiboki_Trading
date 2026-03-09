@@ -115,7 +115,7 @@ curl $BACKEND/api/v1/strategies/ -b cookies.txt
 - [ ] `POST /api/v1/auth/login` returns token and sets cookie
 - [ ] Cookie has `Secure=true`, `SameSite=None`, `HttpOnly=true`
 - [ ] `GET /api/v1/auth/me` works with cookie auth
-- [ ] `GET /api/v1/instruments/` returns 30 instruments
+- [ ] `GET /api/v1/instruments/` returns all registered instruments (67)
 - [ ] `GET /api/v1/strategies/` returns 12 strategies
 - [ ] Database connected (check `GET /api/v1/system/status`)
 - [ ] No `localhost` in CORS response headers

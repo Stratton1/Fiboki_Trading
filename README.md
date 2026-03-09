@@ -21,5 +21,7 @@ python -m fibokei
 
 ## Documentation
 
+Supported instrument universe: 67 instruments (60 with HistData canonical data × 6 timeframes; 7 alternate-provider).
+
 - [Blueprint](docs/blueprint.md) — full project specification
 - [Roadmap](docs/roadmap.md) — phased build plan

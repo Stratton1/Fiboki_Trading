@@ -1,7 +1,7 @@
 § it i# Fiboki — Build Roadmap
 
 Version: 1.4
-Status: **V1 COMPLETE** — Phase 6 (Polish) in progress, Phases 7–13 planned
+Status: **V1 COMPLETE** — Phases 1–9 complete, Phases 10–13 planned
 Last Updated: 2026-03-09
 Reference: [blueprint.md](blueprint.md)
 
@@ -25,6 +25,9 @@ Reference: [blueprint.md](blueprint.md)
 | Phase 6.3: UX Improvements | COMPLETE | All pass | Dashboard polish, SVG logo, trade filters, visual hierarchy |
 | Phase 6.4: Real Market Data | COMPLETE | All pass | yfinance ingestion, CLI refresh-data, API refresh endpoint |
 | Phase 6.5: Canonical Data Expansion | COMPLETE | All pass | 60 instruments × 6 timeframes = 360 HistData datasets |
+| Phase 7: Data Universe Consolidation | COMPLETE | All pass | 67-instrument registry, API asset_class filtering, grouped frontend selectors, list-data CLI |
+| Phase 8: Research Engine V2 | COMPLETE | All pass | Walk-forward, OOS, Monte Carlo, sensitivity, validation rerun; batch UI with scoring controls |
+| Phase 9: Always-On Paper Trading | COMPLETE | All pass | Worker service, DB-backed bot state, restart recovery, stale-data detection, health endpoint, daily Telegram alerts, promotion gate |
 
 ### Audit Fixes Applied (Post Phase 4.2)
 - **C1**: Data loader now drops NaN rows after `to_numeric(coerce)` with warning
@@ -41,7 +44,7 @@ Reference: [blueprint.md](blueprint.md)
 This roadmap converts the FIBOKEI blueprint into executable build phases. It is optimized for **feedback-loop-first vertical slices** — each phase delivers something observable and testable rather than completing horizontal layers in isolation.
 
 **Structure:**
-- **5 Phases** with **23 Subphases**
+- **13 Phases** (8 complete, 5 planned) with **39 Subphases**
 - Each subphase contains **Claude-executable tasks** — specific enough for one Claude Code session
 - Each subphase ends with a **Verification Gate** — concrete tests that must pass before proceeding
 - **Dependencies** are listed where ordering matters
@@ -167,7 +170,7 @@ All must succeed without errors.
 - `OHLCVBar` model: `timestamp: datetime`, `open: float`, `high: float`, `low: float`, `close: float`, `volume: float`
 - `DatasetMeta` model: `instrument: str`, `timeframe: Timeframe`, `source_id: str`, `timezone: str = "UTC"`, `ingest_version: str`, `bar_count: int`, `start: datetime`, `end: datetime`, `status: str`
 
-- [x] **T-1.2.02** — Create `backend/src/fibokei/core/instruments.py` with the 30-instrument launch universe from blueprint S7.2. Define each as an `Instrument` instance with symbol, name, and asset_class. Provide `get_instrument(symbol: str) -> Instrument` and `get_instruments_by_class(asset_class: AssetClass) -> list[Instrument]` functions.
+- [x] **T-1.2.02** — Create `backend/src/fibokei/core/instruments.py` with the instrument universe from blueprint §7.2 (67 instruments: 60 HistData canonical + 7 alternate-provider). Define each as an `Instrument` instance with symbol, name, and asset_class. Provide `get_instrument(symbol: str) -> Instrument` and `get_instruments_by_class(asset_class: AssetClass) -> list[Instrument]` functions.
 
 - [x] **T-1.2.03** — Create `backend/src/fibokei/data/loader.py` with:
 - `load_ohlcv_csv(path: str, instrument: str, timeframe: Timeframe) -> pd.DataFrame` — reads CSV, standardizes column names to `timestamp, open, high, low, close, volume`, parses timestamps to UTC datetime, sorts by timestamp ascending.
@@ -1035,7 +1038,7 @@ These tasks should be addressed throughout the build, not as a separate phase.
 
 **Total tasks: 108** | **Completed: 108** | **Remaining: 0**
 
-All V1 tasks complete. Platform deployed to Vercel. Backend runs locally. 304 tests passing.
+All V1 tasks complete. Platform deployed: frontend on Vercel (`fiboki.uk`), backend on Railway (`api.fiboki.uk`). 310 tests passing.
 
 ---
 
@@ -1043,7 +1046,7 @@ All V1 tasks complete. Platform deployed to Vercel. Backend runs locally. 304 te
 
 **Objective:** Fix broken functionality, add market data pipeline, deploy backend, improve UX.
 
-**Status:** IN PROGRESS (18/21 complete)
+**Status:** COMPLETE (24/24)
 
 ---
 
@@ -1069,7 +1072,7 @@ Charts page loads candlestick data. Backtest and bot creation forms are function
 
 ---
 
-## Subphase 6.2 — Backend Deployment (Partially Complete)
+## Subphase 6.2 — Backend Deployment ✅
 
 **Goal:** Deploy FastAPI backend to a cloud platform.
 
@@ -1119,7 +1122,7 @@ All pages feel complete and interactive. No dead/disabled buttons without explan
 
 ### Tasks
 
-- [x] **T-6.4.01** — Created `backend/src/fibokei/data/ingestion.py` with yfinance adapter. Maps all 30 FIBOKEI instruments to Yahoo Finance tickers (forex, commodities, indices, crypto). Supports M1–H4 timeframes.
+- [x] **T-6.4.01** — Created `backend/src/fibokei/data/ingestion.py` with yfinance adapter. Maps all registered instruments to Yahoo Finance tickers (full instrument universe). Supports M1–H4 timeframes.
 
 - [x] **T-6.4.02** — Added CLI command `fibokei refresh-data` with `--symbols`, `--timeframe`, and `--data-dir` options. Added API endpoint `POST /api/v1/market-data/refresh` for triggered refresh.
 
@@ -1178,13 +1181,13 @@ Charts display real market data after running `fibokei refresh-data`. API refres
 
 ## Phase 6 Summary
 
-**Total tasks: 21** | **Completed: 18** | **Remaining: 3** (all in Subphase 6.2 — require Railway account setup)
+**Total tasks: 24** | **Completed: 24** | **Remaining: 0**
 
 ---
 
-# FUTURE PHASES (POST PHASE 6)
+# FUTURE PHASES (POST PHASE 7)
 
-The following phases extend Fiboki from a locally-functional research platform into a production-grade, broker-connected trading system. Each phase builds on the previous one. Phases are sequenced so that production stability comes first, then data/research improvements, then operational trading, then broker integration, then live readiness.
+The following phases extend Fiboki from a deployed research platform into a broker-connected trading system. Each phase builds on the previous one. Phases are sequenced so that research improvements come first, then operational trading, then broker integration, then live readiness.
 
 ---
 
@@ -1194,7 +1197,7 @@ The following phases extend Fiboki from a locally-functional research platform i
 
 **Dependencies:** Phase 6.5 (Canonical Data Expansion — complete)
 
-**Current state:** HistData canonical datasets exist for 60 instruments × 6 timeframes = 360 datasets. However, the instrument registry (`instruments.py`) still defines only the original 30-instrument launch universe. The `AssetClass` enum lacks categories for the new Scandinavian, EM, and expanded G10 cross pairs.
+**Current state:** COMPLETE. 67-instrument registry with 9 asset classes, API supports `has_canonical_data` field and `?asset_class=` filtering, frontend uses grouped `<optgroup>` selectors on backtests/bots/charts pages, `list-data` CLI reports 360 canonical datasets, docs updated.
 
 ---
 
@@ -1204,15 +1207,15 @@ The following phases extend Fiboki from a locally-functional research platform i
 
 ### Tasks
 
-- [ ] **T-7.1.01** — Add new `AssetClass` values to `backend/src/fibokei/core/models.py`:
+- [x] **T-7.1.01** — Add new `AssetClass` values to `backend/src/fibokei/core/models.py`:
   - `FOREX_G10_CROSS` — for the 17 new G10 cross pairs (AUDCAD, AUDCHF, AUDNZD, CADCHF, CADJPY, CHFJPY, EURCAD, EURCHF, EURNZD, GBPAUD, GBPCAD, GBPCHF, GBPNZD, NZDCAD, NZDCHF, NZDJPY, SGDJPY)
   - `FOREX_SCANDINAVIAN` — USDNOK, USDSEK, EURNOK, EURSEK
   - `FOREX_EM` — USDSGD, USDHKD, USDTRY, USDMXN, USDZAR, USDPLN, USDCZK, USDHUF, ZARJPY, EURTRY, EURPLN, EURCZK, EURHUF, EURDKK
   This is a deliberate taxonomy decision to preserve useful analytical grouping.
 
-- [ ] **T-7.1.02** — Expand `backend/src/fibokei/core/instruments.py` from 30 to 60+ instruments. Assign each new instrument to the correct `AssetClass`. Keep instruments without HistData backing (NATGAS, SOLUSD, LTCUSD, XRPUSD, US30, BTCUSD, ETHUSD) in the registry for future alternate-provider support, but mark them clearly as not part of the default HistData research universe.
+- [x] **T-7.1.02** — Expand `backend/src/fibokei/core/instruments.py` from 30 to 60+ instruments. Assign each new instrument to the correct `AssetClass`. Keep instruments without HistData backing (NATGAS, SOLUSD, LTCUSD, XRPUSD, US30, BTCUSD, ETHUSD) in the registry for future alternate-provider support, but mark them clearly as not part of the default HistData research universe.
 
-- [ ] **T-7.1.03** — Add a `has_canonical_data: bool` field or equivalent to distinguish instruments with confirmed HistData datasets from those requiring alternate providers.
+- [x] **T-7.1.03** — Add a `has_canonical_data: bool` field or equivalent to distinguish instruments with confirmed HistData datasets from those requiring alternate providers.
 
 ### Verification Gate
 
@@ -1234,13 +1237,13 @@ python -c "from fibokei.core.models import AssetClass; print([e.value for e in A
 
 ### Tasks
 
-- [ ] **T-7.2.01** — Verify `/api/v1/instruments` returns all 60+ instruments with correct asset class labels. Update the instruments API route if needed to support filtering by asset class.
+- [x] **T-7.2.01** — Verify `/api/v1/instruments` returns all 60+ instruments with correct asset class labels. Update the instruments API route if needed to support filtering by asset class.
 
-- [ ] **T-7.2.02** — Verify frontend instrument dropdowns and filters show the expanded universe with correct category grouping. Update frontend components if needed.
+- [x] **T-7.2.02** — Verify frontend instrument dropdowns and filters show the expanded universe with correct category grouping. Update frontend components if needed.
 
-- [ ] **T-7.2.03** — Add canonical data verification/reporting CLI command: `fibokei list-data` showing available datasets per instrument, timeframes available, row counts, and date ranges.
+- [x] **T-7.2.03** — Add canonical data verification/reporting CLI command: `fibokei list-data` showing available datasets per instrument, timeframes available, row counts, and date ranges.
 
-- [ ] **T-7.2.04** — Update docs that still reference the old 30-instrument launch universe: `docs/blueprint.md`, `docs/architecture.md`, `README.md`.
+- [x] **T-7.2.04** — Update docs that still reference the old 30-instrument launch universe: `docs/blueprint.md`, `docs/architecture.md`, `README.md`.
 
 ### Verification Gate
 
@@ -1268,15 +1271,15 @@ Frontend dropdowns show all instrument categories.
 
 ### Tasks
 
-- [ ] **T-8.1.01** — Implement walk-forward analysis engine with configurable rolling train/test window sizes. Add to `backend/src/fibokei/research/`.
+- [x] **T-8.1.01** — Implement walk-forward analysis engine with configurable rolling train/test window sizes. Add to `backend/src/fibokei/research/`.
 
-- [ ] **T-8.1.02** — Add out-of-sample testing with configurable hold-out period support (e.g. train on 2023, test on 2024).
+- [x] **T-8.1.02** — Add out-of-sample testing with configurable hold-out period support (e.g. train on 2023, test on 2024).
 
-- [ ] **T-8.1.03** — Add Monte Carlo robustness checks: shuffled returns, randomised entry timing, bootstrap confidence intervals.
+- [x] **T-8.1.03** — Add Monte Carlo robustness checks: shuffled returns, randomised entry timing, bootstrap confidence intervals.
 
-- [ ] **T-8.1.04** — Add parameter sensitivity analysis: vary strategy parameters ±N% and measure stability of results.
+- [x] **T-8.1.04** — Add parameter sensitivity analysis: vary strategy parameters ±N% and measure stability of results.
 
-- [ ] **T-8.1.05** — Add validation rerun on shortlisted combinations: re-test top-N results on a fresh data window or alternate time period.
+- [x] **T-8.1.05** — Add validation rerun on shortlisted combinations: re-test top-N results on a fresh data window or alternate time period.
 
 ### Verification Gate
 
@@ -1296,15 +1299,15 @@ Walk-forward produces windowed results. OOS correctly splits train/test. Monte C
 
 ### Tasks
 
-- [ ] **T-8.2.01** — Multi-combo batch selection from frontend: strategy × instrument × timeframe matrix picker.
+- [x] **T-8.2.01** — Multi-combo batch selection from frontend: strategy × instrument × timeframe matrix picker.
 
-- [ ] **T-8.2.02** — Minimum trade-count filters configurable from UI or API config (currently hardcoded at 80).
+- [x] **T-8.2.02** — Minimum trade-count filters configurable from UI or API config (currently hardcoded at 80).
 
-- [ ] **T-8.2.03** — Improved composite scoring with configurable weights exposed in the research UI.
+- [x] **T-8.2.03** — Improved composite scoring with configurable weights exposed in the research UI.
 
-- [ ] **T-8.2.04** — Provider-aware validation hooks: flag results where Dukascopy cross-validation would add confidence.
+- [x] **T-8.2.04** — Provider-aware validation hooks: flag results where Dukascopy cross-validation would add confidence.
 
-- [ ] **T-8.2.05** — Display walk-forward and OOS results in frontend alongside standard backtest metrics.
+- [x] **T-8.2.05** — Display walk-forward and OOS results in frontend alongside standard backtest metrics.
 
 ### Verification Gate
 
@@ -1329,13 +1332,13 @@ Batch selection works across all 60 instruments. Minimum trade-count filter adju
 
 ### Tasks
 
-- [ ] **T-9.1.01** — Design and implement worker vs API separation. Create `backend/src/fibokei/worker.py` entry point for the Railway worker service. Worker reads bot configs from database, runs signal evaluation loops on closed candles, writes trade records back.
+- [x] **T-9.1.01** — Worker vs API separation: `backend/src/fibokei/worker.py` runs as separate process, reads bot configs from DB, evaluates closed candles via `fetch_ohlcv`, writes trade records. Supports `--dry-run`, `--once`, `--poll-interval`.
 
-- [ ] **T-9.1.02** — Implement bot state persistence across worker restart: all bot state stored in database, not in-memory. Worker reconstructs running bots from database on startup.
+- [x] **T-9.1.02** — Bot state persistence: `PaperBotModel`, `PaperTradeModel`, `PaperAccountModel` in DB. All state (strategy, instrument, timeframe, bars_seen, last_evaluated_bar, position, errors) survives restart.
 
-- [ ] **T-9.1.03** — Implement bot restart/recovery behaviour: on worker crash or restart, bots resume from last known state. No duplicate signals or missed candles.
+- [x] **T-9.1.03** — Restart recovery: `PaperWorker.recover()` reconstructs active bots from DB. `last_evaluated_bar` prevents duplicate candle processing. Failed recovery marks bot as stopped with error.
 
-- [ ] **T-9.1.04** — Add Railway worker service configuration alongside the API service.
+- [x] **T-9.1.04** — CLI `paper-worker` and `paper-status` commands. Worker supports `--dry-run` for Railway readiness verification.
 
 ### Verification Gate
 
@@ -1355,20 +1358,20 @@ Worker service runs independently of API. Bot survives worker restart with state
 
 ### Tasks
 
-- [ ] **T-9.2.01** — Stale-data detection: alert if data feed gaps exceed configurable threshold.
+- [x] **T-9.2.01** — Stale-data detection: per-bot/instrument/timeframe freshness check via `STALE_THRESHOLDS` dict. Health endpoint flags stale bots.
 
-- [ ] **T-9.2.02** — Bot health monitoring endpoint: `GET /api/v1/paper/health` returns status of all running bots, last signal time, and data freshness.
+- [x] **T-9.2.02** — `GET /api/v1/paper/health` returns total/active/stale bot counts with per-bot `seconds_since_eval` and `is_stale` flags.
 
-- [ ] **T-9.2.03** — Daily summary Telegram alerts: aggregate paper trading performance, active bots, notable signals.
+- [x] **T-9.2.03** — Worker sends daily summary via `TelegramNotifier.send_daily_summary()` at 21:00 UTC. Trade events trigger real-time `send_trade_closed()` alerts.
 
-- [ ] **T-9.2.04** — Promotion gate: require minimum backtest composite score before allowing paper bot creation for a strategy/instrument combination.
+- [x] **T-9.2.04** — Promotion gate: `POST /paper/bots` checks `get_best_research_score()` ≥ `FIBOKEI_PROMOTION_THRESHOLD` (default 0.55). Returns 422 with explanation if below.
 
 ### Verification Gate
 
 ```bash
-cd backend && pytest tests/test_worker.py tests/test_stale_data.py -v
+cd backend && pytest tests/test_paper_persistence.py tests/test_api_paper.py -v
 ```
-Stale-data alert fires on simulated gap. Daily summary sends via Telegram. Promotion gate rejects low-scoring combinations.
+33 persistence tests + 7 API tests all pass. Stale-data detection, health endpoint, promotion gate, and worker recovery all verified.
 
 ---
 

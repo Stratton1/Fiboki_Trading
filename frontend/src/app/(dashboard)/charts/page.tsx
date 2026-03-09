@@ -7,7 +7,7 @@ import TradingChart from "@/components/charts/core/TradingChart";
 import { useMarketData } from "@/lib/hooks/use-market-data";
 
 export default function ChartsPage() {
-  const [instrument, setInstrument] = useState("EUR_USD");
+  const [instrument, setInstrument] = useState("EURUSD");
   const [timeframe, setTimeframe] = useState("H1");
   const [ichimokuEnabled, setIchimokuEnabled] = useState(false);
 

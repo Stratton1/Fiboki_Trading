@@ -1,15 +1,25 @@
 """Tests for paper trading API endpoints."""
 
-import fibokei.api.routes.paper as paper_mod
+from fibokei.db.repository import save_research_results
 
 
-def _reset_orchestrator():
-    """Reset module-level orchestrator between tests."""
-    paper_mod._orchestrator = None
+def _seed_research(api_client, strategy_id="bot01_sanyaku",
+                   instrument="EURUSD", timeframe="H1"):
+    """Seed a qualifying research score so the promotion gate passes."""
+    session_factory = api_client.app.state.session_factory
+    with session_factory() as session:
+        save_research_results(session, [{
+            "run_id": "seed_api_test",
+            "strategy_id": strategy_id,
+            "instrument": instrument,
+            "timeframe": timeframe,
+            "composite_score": 0.80,
+            "rank": 1,
+        }])
 
 
 def test_create_bot(api_client, auth_headers):
-    _reset_orchestrator()
+    _seed_research(api_client)
     req = {
         "strategy_id": "bot01_sanyaku",
         "instrument": "EURUSD",
@@ -24,8 +34,7 @@ def test_create_bot(api_client, auth_headers):
 
 
 def test_list_bots(api_client, auth_headers):
-    _reset_orchestrator()
-    # Create a bot first
+    _seed_research(api_client)
     req = {
         "strategy_id": "bot01_sanyaku",
         "instrument": "EURUSD",
@@ -40,7 +49,7 @@ def test_list_bots(api_client, auth_headers):
 
 
 def test_get_bot(api_client, auth_headers):
-    _reset_orchestrator()
+    _seed_research(api_client)
     req = {
         "strategy_id": "bot01_sanyaku",
         "instrument": "EURUSD",
@@ -57,7 +66,7 @@ def test_get_bot(api_client, auth_headers):
 
 
 def test_stop_bot(api_client, auth_headers):
-    _reset_orchestrator()
+    _seed_research(api_client)
     req = {
         "strategy_id": "bot01_sanyaku",
         "instrument": "EURUSD",
@@ -72,7 +81,7 @@ def test_stop_bot(api_client, auth_headers):
 
 
 def test_pause_bot(api_client, auth_headers):
-    _reset_orchestrator()
+    _seed_research(api_client)
     req = {
         "strategy_id": "bot01_sanyaku",
         "instrument": "EURUSD",
@@ -87,7 +96,6 @@ def test_pause_bot(api_client, auth_headers):
 
 
 def test_get_account(api_client, auth_headers):
-    _reset_orchestrator()
     response = api_client.get("/api/v1/paper/account", headers=auth_headers)
     assert response.status_code == 200
     data = response.json()
@@ -97,6 +105,5 @@ def test_get_account(api_client, auth_headers):
 
 
 def test_bot_not_found(api_client, auth_headers):
-    _reset_orchestrator()
     response = api_client.get("/api/v1/paper/bots/nonexistent", headers=auth_headers)
     assert response.status_code == 404

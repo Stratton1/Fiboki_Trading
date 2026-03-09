@@ -392,6 +392,58 @@ def list_data(_args=None):
         print("Run 'fibokei ingest-data --provider histdata' to populate.")
 
 
+def run_paper_worker(args):
+    """Run the paper trading worker."""
+    from fibokei.worker import main as worker_main
+    # Re-use worker's own CLI parsing by calling its main directly
+    import sys as _sys
+    worker_args = []
+    if args.dry_run:
+        worker_args.append("--dry-run")
+    if args.once:
+        worker_args.append("--once")
+    if args.poll_interval != 60:
+        worker_args.extend(["--poll-interval", str(args.poll_interval)])
+    _sys.argv = ["fibokei-worker"] + worker_args
+    worker_main()
+
+
+def show_paper_status():
+    """Show paper bot and account status from the database."""
+    from fibokei.worker import _build_db_session
+    from fibokei.db.repository import (
+        get_or_create_paper_account,
+        get_paper_bots,
+        get_paper_trades,
+    )
+
+    session_factory = _build_db_session()
+    with session_factory() as session:
+        acct = get_or_create_paper_account(session)
+        bots = get_paper_bots(session)
+        trades = get_paper_trades(session, limit=10000)
+
+    print("Fiboki Trading — Paper Status")
+    print()
+    print(f"Account: balance={acct.balance:.2f}  equity={acct.equity:.2f}  "
+          f"daily_pnl={acct.daily_pnl:+.2f}  weekly_pnl={acct.weekly_pnl:+.2f}")
+    print(f"Total trades: {len(trades)}")
+    print()
+
+    if bots:
+        rows = []
+        for b in bots:
+            last_bar = b.last_evaluated_bar.strftime("%Y-%m-%d %H:%M") if b.last_evaluated_bar else "-"
+            rows.append([
+                b.bot_id, b.strategy_id, b.instrument, b.timeframe,
+                b.state, b.bars_seen, last_bar,
+            ])
+        hdrs = ["Bot ID", "Strategy", "Instrument", "TF", "State", "Bars", "Last Eval"]
+        print(tabulate(rows, headers=hdrs, tablefmt="simple"))
+    else:
+        print("No paper bots configured.")
+
+
 def main():
     parser = argparse.ArgumentParser(
         prog="fibokei",
@@ -511,6 +563,30 @@ def main():
         help="List available canonical datasets",
     )
 
+    # --- paper-worker ---
+    pw_parser = subparsers.add_parser(
+        "paper-worker",
+        help="Run the paper trading worker process",
+    )
+    pw_parser.add_argument(
+        "--dry-run", action="store_true",
+        help="Run without persisting state changes",
+    )
+    pw_parser.add_argument(
+        "--poll-interval", type=int, default=60,
+        help="Seconds between evaluation cycles (default: 60)",
+    )
+    pw_parser.add_argument(
+        "--once", action="store_true",
+        help="Run a single evaluation cycle and exit",
+    )
+
+    # --- paper-status ---
+    subparsers.add_parser(
+        "paper-status",
+        help="Show paper trading bot and account status",
+    )
+
     args = parser.parse_args()
 
     if args.command == "demo":
@@ -531,6 +607,10 @@ def main():
         download_data(args)
     elif args.command == "list-data":
         list_data(args)
+    elif args.command == "paper-worker":
+        run_paper_worker(args)
+    elif args.command == "paper-status":
+        show_paper_status()
     else:
         demo_indicators()
 

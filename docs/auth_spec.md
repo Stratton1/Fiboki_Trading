@@ -2,7 +2,7 @@
 
 ## 1. Overview
 
-Fiboki uses cookie-based JWT authentication. The backend issues an HttpOnly cookie on login. The frontend never reads or stores the token directly -- all API calls use `credentials: "include"` to let the browser handle cookie transmission.
+Fiboki uses a dual-cookie JWT authentication pattern. The backend issues an HttpOnly `fibokei_token` cookie on login. The frontend also stores the token in `localStorage` and sets a non-HttpOnly `fiboki_auth` marker cookie for Next.js middleware (which cannot read HttpOnly cookies). API calls use `credentials: "include"` for cross-origin cookie transmission, with a `Bearer` header fallback from localStorage when cookies are unavailable.
 
 ## 2. Cookie Configuration
 
@@ -12,9 +12,11 @@ Set on successful `POST /api/v1/auth/login`:
 |----------|-------|
 | Key | `fibokei_token` |
 | HttpOnly | `true` |
-| SameSite | `Lax` |
-| Secure | `false` (dev) -- must be `true` in production |
+| SameSite | `None` (production) / `Lax` (local dev) |
+| Secure | `true` (production) / `false` (local dev) |
 | max_age | `86400` (24 hours) |
+
+**Note:** `SameSite=None; Secure=true` is required in production because frontend (`fiboki.uk`) and backend (`api.fiboki.uk`) are on different origins. The `FIBOKEI_LOCAL_DEV` env var switches to `SameSite=Lax; Secure=false` for local development.
 
 Cleared on `POST /api/v1/auth/logout` via `response.delete_cookie("fibokei_token")`.
 
@@ -98,19 +100,19 @@ Seeding runs during the FastAPI lifespan startup in `backend/src/fibokei/api/app
 
 **Source:** `frontend/src/middleware.ts`
 
-Next.js middleware runs server-side on every request (except static assets and API routes). It checks for the `fibokei_token` cookie:
+Next.js middleware runs server-side on every request (except static assets and API routes). It checks for the `fiboki_auth` marker cookie (a non-HttpOnly cookie set by the frontend on login):
 
-- **No cookie + not on `/login`:** Redirect to `/login`.
-- **Has cookie + on `/login`:** Redirect to `/` (dashboard).
+- **No `fiboki_auth` cookie + not on `/login`:** Redirect to `/login`.
+- **Has `fiboki_auth` cookie + on `/login`:** Redirect to `/` (dashboard).
 - **Otherwise:** Pass through.
 
 ```typescript
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico|api).*)"],
+  matcher: ["/((?!_next/static|_next/image|favicon.ico|icon.svg|api).*)"],
 };
 ```
 
-**Note:** The middleware only checks cookie presence, not validity. JWT validation happens server-side on each API call.
+**Why `fiboki_auth` instead of `fibokei_token`?** Next.js middleware runs on the edge and cannot read HttpOnly cookies. The frontend sets a separate `fiboki_auth=1` marker cookie (non-HttpOnly, `path=/`) after successful login to signal auth state to the middleware. The actual JWT (`fibokei_token`) remains HttpOnly and is validated server-side on each API call.
 
 ## 8. AuthProvider Context
 
@@ -133,9 +135,9 @@ interface AuthContextType {
 ### Behavior
 
 1. **On mount:** Calls `GET /auth/me` to check existing session. Sets `isLoading = true` until resolved.
-2. **login():** POSTs form-encoded credentials to `/auth/login`. On success, calls `/auth/me` to populate user state. Returns `true` on success, `false` on failure.
-3. **logout():** POSTs to `/auth/logout` (clears cookie server-side). Sets `user = null` locally.
-4. **No token storage:** The frontend never reads or stores the JWT. Cookie management is handled entirely by the browser.
+2. **login():** POSTs form-encoded credentials to `/auth/login`. On success: stores the `access_token` in `localStorage` as `fibokei_token`, sets `fiboki_auth=1` marker cookie (for middleware), then calls `/auth/me` to populate user state. Returns `true` on success, `false` on failure.
+3. **logout():** POSTs to `/auth/logout` (clears HttpOnly cookie server-side). Removes `fibokei_token` from localStorage, clears the `fiboki_auth` marker cookie, and sets `user = null` locally.
+4. **Dual auth transmission:** API calls include `credentials: "include"` (for the HttpOnly cookie) and an `Authorization: Bearer` header from localStorage (fallback for when cross-origin cookies are blocked).
 
 ### Usage
 
@@ -153,32 +155,39 @@ const { user, isAuthenticated, login, logout, isLoading } = useAuth();
 
 The `apiFetch` function handles auth at the HTTP level:
 
-- All requests include `credentials: "include"`.
-- On `401` response (for non-auth endpoints): Redirects to `/login` via `window.location.href`.
+- All requests include `credentials: "include"` for cross-origin cookie transmission.
+- All requests include `Authorization: Bearer <token>` from localStorage (fallback when cookies are unavailable).
+- On `401` response (for non-auth endpoints): Clears localStorage token and `fiboki_auth` marker cookie, then redirects to `/login` via `window.location.href`.
 - Login uses `application/x-www-form-urlencoded` content type (OAuth2 form format).
+- Requests abort after 10 seconds to prevent infinite loading screens.
 
 ## 10. Auth Flow Sequence
 
 ```
 1. User visits any page
-2. Middleware checks for fibokei_token cookie
+2. Middleware checks for fiboki_auth marker cookie
    - No cookie -> redirect to /login
    - Has cookie -> render page
 
 3. AuthProvider mounts, calls GET /auth/me
-   - Valid cookie -> populate user state
-   - Invalid/expired cookie -> user = null (API calls will 401 -> redirect)
+   - Valid session -> populate user state
+   - Invalid/expired -> user = null (API calls will 401 -> redirect)
 
 4. User submits login form
    - POST /auth/login (form-encoded username + password)
    - Backend validates credentials
-   - Backend sets fibokei_token cookie (HttpOnly, 24h)
+   - Backend sets fibokei_token cookie (HttpOnly, SameSite=None, Secure, 24h)
+   - Backend returns { access_token, token_type } in response body
+   - Frontend stores access_token in localStorage as fibokei_token
+   - Frontend sets fiboki_auth=1 marker cookie (non-HttpOnly, path=/)
    - Frontend calls GET /auth/me -> populates user state
    - Frontend redirects to dashboard
 
 5. User clicks logout
    - POST /auth/logout
-   - Backend deletes fibokei_token cookie
+   - Backend deletes fibokei_token HttpOnly cookie
+   - Frontend removes fibokei_token from localStorage
+   - Frontend clears fiboki_auth marker cookie
    - Frontend sets user = null
    - Redirect to /login
 ```
@@ -203,9 +212,10 @@ CORSMiddleware(
 
 ## 12. Security Considerations
 
-- **HttpOnly cookies** prevent JavaScript access to the token (XSS mitigation).
-- **SameSite=Lax** provides CSRF protection for state-changing requests.
-- **Secure flag** must be set to `true` in production (currently `false` for local dev).
+- **HttpOnly cookies** prevent JavaScript access to the JWT token (XSS mitigation).
+- **SameSite=None + Secure** in production (required for cross-origin cookie auth between `fiboki.uk` and `api.fiboki.uk`). CSRF protection relies on CORS origin checking rather than SameSite.
+- **SameSite=Lax + Secure=false** in local dev (same-origin, no HTTPS needed).
 - **JWT secret** must be set via `FIBOKEI_JWT_SECRET` env var -- the app raises `ValueError` if missing.
 - **No plaintext passwords** -- all passwords stored as bcrypt hashes.
-- **Bearer fallback** retained for API testing tools (Swagger UI, curl).
+- **Bearer fallback** from localStorage ensures auth works even when cross-origin cookies are blocked by browser privacy settings.
+- **Marker cookie (`fiboki_auth`)** is non-HttpOnly and contains no sensitive data (value is `"1"`). It exists solely to signal auth state to Next.js edge middleware.

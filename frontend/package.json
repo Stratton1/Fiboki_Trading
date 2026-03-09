@@ -6,7 +6,11 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "smoke": "npx playwright test --project=smoke",
+    "smoke:prod": "BASE_URL=https://fiboki.uk npx playwright test --project=smoke",
+    "screenshots": "npx playwright test --project=screenshots",
+    "screenshots:prod": "BASE_URL=https://fiboki.uk npx playwright test --project=screenshots"
   },
   "dependencies": {
     "clsx": "^2.1.1",
@@ -21,6 +25,7 @@
     "tailwind-merge": "^3.5.0"
   },
   "devDependencies": {
+    "@playwright/test": "^1.58.2",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19",

@@ -7,6 +7,9 @@ from fibokei.backtester.result import BacktestResult
 from fibokei.db.models import (
     BacktestRunModel,
     DatasetModel,
+    PaperAccountModel,
+    PaperBotModel,
+    PaperTradeModel,
     ResearchResultModel,
     TradeModel,
 )
@@ -119,3 +122,144 @@ def save_dataset_meta(session: Session, meta: dict) -> DatasetModel:
     session.add(model)
     session.commit()
     return model
+
+
+# ---------- Paper trading persistence ----------
+
+
+def save_paper_bot(session: Session, bot_data: dict) -> PaperBotModel:
+    """Create or update a paper bot record."""
+    existing = session.scalars(
+        select(PaperBotModel).where(PaperBotModel.bot_id == bot_data["bot_id"])
+    ).first()
+    if existing:
+        for key, value in bot_data.items():
+            if key != "bot_id" and hasattr(existing, key):
+                setattr(existing, key, value)
+        session.commit()
+        return existing
+    model = PaperBotModel(**bot_data)
+    session.add(model)
+    session.commit()
+    return model
+
+
+def get_paper_bot(session: Session, bot_id: str) -> PaperBotModel | None:
+    """Get a paper bot by its bot_id."""
+    return session.scalars(
+        select(PaperBotModel).where(PaperBotModel.bot_id == bot_id)
+    ).first()
+
+
+def get_paper_bots(
+    session: Session, state: str | None = None
+) -> list[PaperBotModel]:
+    """Get all paper bots, optionally filtered by state."""
+    stmt = select(PaperBotModel)
+    if state:
+        stmt = stmt.where(PaperBotModel.state == state)
+    stmt = stmt.order_by(PaperBotModel.created_at.desc())
+    return list(session.scalars(stmt).all())
+
+
+def get_active_paper_bots(session: Session) -> list[PaperBotModel]:
+    """Get bots in monitoring or position_open state (for worker recovery)."""
+    stmt = select(PaperBotModel).where(
+        PaperBotModel.state.in_(["monitoring", "position_open"])
+    )
+    return list(session.scalars(stmt).all())
+
+
+def update_paper_bot_state(
+    session: Session,
+    bot_id: str,
+    state: str,
+    last_evaluated_bar: "datetime | None" = None,
+    bars_seen: int | None = None,
+    position_json: dict | None = None,
+    error_message: str | None = None,
+) -> PaperBotModel | None:
+    """Update bot state fields. Returns None if bot not found."""
+    from datetime import datetime  # noqa: F811
+
+    bot = get_paper_bot(session, bot_id)
+    if not bot:
+        return None
+    bot.state = state
+    if last_evaluated_bar is not None:
+        bot.last_evaluated_bar = last_evaluated_bar
+    if bars_seen is not None:
+        bot.bars_seen = bars_seen
+    if position_json is not None:
+        bot.position_json = position_json
+    if error_message is not None:
+        bot.error_message = error_message
+    session.commit()
+    return bot
+
+
+def save_paper_trade(session: Session, trade_data: dict) -> PaperTradeModel:
+    """Record a closed paper trade."""
+    model = PaperTradeModel(**trade_data)
+    session.add(model)
+    session.commit()
+    return model
+
+
+def get_paper_trades(
+    session: Session, bot_id: str | None = None, limit: int = 100
+) -> list[PaperTradeModel]:
+    """Get paper trades, optionally filtered by bot_id."""
+    stmt = select(PaperTradeModel)
+    if bot_id:
+        stmt = stmt.where(PaperTradeModel.bot_id == bot_id)
+    stmt = stmt.order_by(PaperTradeModel.created_at.desc()).limit(limit)
+    return list(session.scalars(stmt).all())
+
+
+def get_or_create_paper_account(
+    session: Session, initial_balance: float = 10000.0
+) -> PaperAccountModel:
+    """Get the single paper account record, creating if needed."""
+    account = session.scalars(select(PaperAccountModel)).first()
+    if not account:
+        account = PaperAccountModel(
+            initial_balance=initial_balance,
+            balance=initial_balance,
+            equity=initial_balance,
+        )
+        session.add(account)
+        session.commit()
+    return account
+
+
+def update_paper_account(
+    session: Session,
+    balance: float,
+    equity: float,
+    daily_pnl: float,
+    weekly_pnl: float,
+) -> PaperAccountModel:
+    """Update the paper account snapshot."""
+    account = get_or_create_paper_account(session)
+    account.balance = balance
+    account.equity = equity
+    account.daily_pnl = daily_pnl
+    account.weekly_pnl = weekly_pnl
+    session.commit()
+    return account
+
+
+def get_best_research_score(
+    session: Session, strategy_id: str, instrument: str, timeframe: str
+) -> float | None:
+    """Get the best composite score for a strategy/instrument/timeframe combo."""
+    result = session.scalars(
+        select(ResearchResultModel.composite_score)
+        .where(ResearchResultModel.strategy_id == strategy_id)
+        .where(ResearchResultModel.instrument == instrument)
+        .where(ResearchResultModel.timeframe == timeframe)
+        .order_by(ResearchResultModel.composite_score.desc())
+        .limit(1)
+    ).first()
+    return result

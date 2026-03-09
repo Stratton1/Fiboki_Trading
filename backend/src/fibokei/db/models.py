@@ -106,3 +106,78 @@ class StrategyConfigModel(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime, default=lambda: datetime.now(timezone.utc)
     )
+
+
+class PaperBotModel(Base):
+    """Persistent state for a paper trading bot."""
+
+    __tablename__ = "paper_bots"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    bot_id: Mapped[str] = mapped_column(String(20), nullable=False, unique=True, index=True)
+    strategy_id: Mapped[str] = mapped_column(String(50), nullable=False)
+    instrument: Mapped[str] = mapped_column(String(20), nullable=False)
+    timeframe: Mapped[str] = mapped_column(String(10), nullable=False)
+    risk_pct: Mapped[float] = mapped_column(Float, default=1.0)
+    state: Mapped[str] = mapped_column(String(20), nullable=False, default="idle")
+    bars_seen: Mapped[int] = mapped_column(Integer, default=0)
+    last_evaluated_bar: Mapped[datetime | None] = mapped_column(DateTime)
+    position_json: Mapped[dict | None] = mapped_column(JSON)
+    error_message: Mapped[str | None] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, default=lambda: datetime.now(timezone.utc)
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime,
+        default=lambda: datetime.now(timezone.utc),
+        onupdate=lambda: datetime.now(timezone.utc),
+    )
+
+    trades: Mapped[list["PaperTradeModel"]] = relationship(
+        back_populates="paper_bot", cascade="all, delete-orphan"
+    )
+
+
+class PaperTradeModel(Base):
+    """Persisted paper trading trade."""
+
+    __tablename__ = "paper_trades"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    paper_bot_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("paper_bots.id"), nullable=False, index=True
+    )
+    bot_id: Mapped[str] = mapped_column(String(20), nullable=False, index=True)
+    strategy_id: Mapped[str] = mapped_column(String(50), nullable=False)
+    instrument: Mapped[str] = mapped_column(String(20), nullable=False)
+    direction: Mapped[str] = mapped_column(String(10), nullable=False)
+    entry_time: Mapped[datetime] = mapped_column(DateTime, nullable=False)
+    entry_price: Mapped[float] = mapped_column(Float, nullable=False)
+    exit_time: Mapped[datetime] = mapped_column(DateTime, nullable=False)
+    exit_price: Mapped[float] = mapped_column(Float, nullable=False)
+    exit_reason: Mapped[str] = mapped_column(String(50), nullable=False)
+    pnl: Mapped[float] = mapped_column(Float, nullable=False)
+    bars_in_trade: Mapped[int] = mapped_column(Integer, default=0)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, default=lambda: datetime.now(timezone.utc)
+    )
+
+    paper_bot: Mapped["PaperBotModel"] = relationship(back_populates="trades")
+
+
+class PaperAccountModel(Base):
+    """Snapshot of the paper trading account state."""
+
+    __tablename__ = "paper_account"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    initial_balance: Mapped[float] = mapped_column(Float, nullable=False, default=10000.0)
+    balance: Mapped[float] = mapped_column(Float, nullable=False, default=10000.0)
+    equity: Mapped[float] = mapped_column(Float, nullable=False, default=10000.0)
+    daily_pnl: Mapped[float] = mapped_column(Float, default=0.0)
+    weekly_pnl: Mapped[float] = mapped_column(Float, default=0.0)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime,
+        default=lambda: datetime.now(timezone.utc),
+        onupdate=lambda: datetime.now(timezone.utc),
+    )

@@ -43,6 +43,7 @@ class PaperBot:
         self.bars_seen = 0
         self._df: pd.DataFrame | None = None
         self._prepared = False
+        self._last_evaluated_bar = None
 
     def start(self) -> None:
         """Start monitoring for signals."""
@@ -161,4 +162,9 @@ class PaperBot:
             "bars_seen": self.bars_seen,
             "has_position": self.position is not None,
             "position": self.position.to_dict() if self.position else None,
+            "last_evaluated_bar": (
+                self._last_evaluated_bar.isoformat()
+                if self._last_evaluated_bar
+                else None
+            ),
         }

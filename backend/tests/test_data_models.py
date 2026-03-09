@@ -28,7 +28,7 @@ class TestEnums:
     def test_asset_class_values(self):
         assert AssetClass.FOREX_MAJOR == "forex_major"
         assert AssetClass.CRYPTO == "crypto"
-        assert len(AssetClass) == 6
+        assert len(AssetClass) == 9
 
     def test_direction_values(self):
         assert Direction.LONG == "LONG"
@@ -63,7 +63,26 @@ class TestInstrument:
         assert "XAGUSD" in symbols
 
     def test_total_instruments(self):
-        assert len(INSTRUMENTS) == 30
+        assert len(INSTRUMENTS) == 67
+
+    def test_all_histdata_instruments_in_registry(self):
+        """Every symbol in _HISTDATA_MAP should exist in INSTRUMENTS."""
+        from fibokei.data.providers.symbol_map import list_mapped_symbols
+        from fibokei.data.providers.base import ProviderID
+
+        histdata_symbols = set(list_mapped_symbols(ProviderID.HISTDATA))
+        registry_symbols = {inst.symbol for inst in INSTRUMENTS}
+        missing = histdata_symbols - registry_symbols
+        assert not missing, f"HistData symbols missing from registry: {missing}"
+
+    def test_alternate_provider_instruments_flagged(self):
+        """Instruments without HistData should have has_canonical_data=False."""
+        alternate = {"NATGAS", "US30", "BTCUSD", "ETHUSD", "SOLUSD", "LTCUSD", "XRPUSD"}
+        for inst in INSTRUMENTS:
+            if inst.symbol in alternate:
+                assert not inst.has_canonical_data, (
+                    f"{inst.symbol} should have has_canonical_data=False"
+                )
 
 
 class TestOHLCVBar:

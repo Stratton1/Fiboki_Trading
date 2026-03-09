@@ -32,7 +32,7 @@ Domain: **fiboki.uk**
 ### Principles
 
 - **Always-on.** Platform runs on managed cloud services. No dependency on any laptop or local machine.
-- **No Docker** unless a future requirement demands it. Railway and Render both support native Python deployments.
+- **Docker on Railway.** The backend deploys via `Dockerfile` on Railway. Render uses native Python (`render.yaml`).
 - **Frontend and backend are separate services** on separate hosts, communicating via HTTPS API calls.
 - **Railway is the preferred backend host**, with Render as a tested fallback.
 - **Database is managed PostgreSQL** attached to whichever backend host is active.
@@ -64,7 +64,7 @@ The frontend is a static/SSR app that calls the backend API. It contains **zero*
 
 | Item | Value |
 |------|-------|
-| Runtime | Python 3.11+ (native, no Docker) |
+| Runtime | Python 3.11+ (Docker on Railway, native on Render) |
 | Framework | FastAPI + Uvicorn |
 | Root directory | `backend/` |
 | Start command | `uvicorn fibokei.api.app:app --host 0.0.0.0 --port $PORT` |
@@ -147,12 +147,12 @@ This is already implemented. The `FIBOKEI_LOCAL_DEV` flag switches to `SameSite=
 
 | File | Purpose |
 |------|---------|
+| `Dockerfile` | Docker build for Railway deployment |
 | `railway.json` | Railway service configuration (preferred) |
-| `render.yaml` | Render Blueprint (fallback) |
-| `backend/Procfile` | Heroku-compatible start command (used by some platforms) |
+| `render.yaml` | Render Blueprint (fallback, native Python) |
 | `frontend/.env.local.example` | Local dev env template |
 
-No Docker. No Kubernetes. No Terraform. Keep it simple and managed.
+No Kubernetes. No Terraform. Keep it simple and managed.
 
 ---
 

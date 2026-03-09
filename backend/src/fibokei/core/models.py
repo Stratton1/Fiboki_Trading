@@ -19,6 +19,9 @@ class Timeframe(str, Enum):
 class AssetClass(str, Enum):
     FOREX_MAJOR = "forex_major"
     FOREX_CROSS = "forex_cross"
+    FOREX_G10_CROSS = "forex_g10_cross"
+    FOREX_SCANDINAVIAN = "forex_scandinavian"
+    FOREX_EM = "forex_em"
     COMMODITY_METAL = "commodity_metal"
     COMMODITY_ENERGY = "commodity_energy"
     INDEX = "index"
@@ -34,6 +37,7 @@ class Instrument(BaseModel):
     symbol: str
     name: str
     asset_class: AssetClass
+    has_canonical_data: bool = True
     pip_value: float | None = None
     ig_epic: str | None = None
 

@@ -4,6 +4,7 @@ import { useState } from "react";
 import useSWR from "swr";
 import { api } from "@/lib/api";
 import { useBots, useAccount } from "@/lib/hooks/use-bots";
+import GroupedInstrumentSelect from "@/components/GroupedInstrumentSelect";
 
 interface Bot {
   id: string;
@@ -111,16 +112,12 @@ export default function BotsPage() {
           </div>
           <div>
             <label className="block text-xs text-foreground-muted mb-1">Instrument</label>
-            <select
+            <GroupedInstrumentSelect
+              instruments={instruments ?? []}
               value={instrument}
-              onChange={(e) => setInstrument(e.target.value)}
+              onChange={setInstrument}
               className="border border-gray-300 rounded px-3 py-1.5 text-sm bg-background"
-            >
-              <option value="">Select instrument</option>
-              {instruments?.map((i: any) => (
-                <option key={i.symbol} value={i.symbol}>{i.symbol}</option>
-              ))}
-            </select>
+            />
           </div>
           <div>
             <label className="block text-xs text-foreground-muted mb-1">Timeframe</label>
