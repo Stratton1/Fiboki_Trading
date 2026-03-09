@@ -3,7 +3,8 @@
   "build": {
     "builder": "NIXPACKS",
     "nixpacksPlan": {
-      "providers": ["python"]
+      "providers": ["python"],
+      "aptPkgs": ["libpq-dev"]
     },
     "watchPatterns": ["backend/**"]
   },
