@@ -1,7 +1,7 @@
 # Fiboki — Production Deployment Architecture
 
 Version: 1.1
-Last Updated: 2026-03-07
+Last Updated: 2026-03-09
 Domain: **fiboki.uk**
 
 ---
@@ -101,7 +101,7 @@ The frontend is a static/SSR app that calls the backend API. It contains **zero*
 | Engine | PostgreSQL 15+ |
 | Schema management | SQLAlchemy `create_all` on startup |
 
-The database URL is injected automatically by the hosting platform. SQLAlchemy handles the `postgres://` → `postgresql://` prefix normalisation that some providers require.
+The database URL is injected automatically by the hosting platform. Railway and Render inject `DATABASE_URL` by default. The app checks `FIBOKEI_DATABASE_URL` first, then falls back to `DATABASE_URL`, then defaults to SQLite. This means Railway's auto-injected PostgreSQL URL is picked up automatically without additional configuration. SQLAlchemy handles the `postgres://` → `postgresql://` prefix normalisation that some providers require.
 
 ### 4. Worker Service — Paper Bot Orchestration (future)
 

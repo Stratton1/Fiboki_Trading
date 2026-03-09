@@ -218,7 +218,8 @@ def run_research(args):
     print(f"Data dir: {data_dir}")
     print()
 
-    matrix = ResearchMatrix(strategy_ids, instruments, timeframes, config)
+    provider = getattr(args, "provider", None)
+    matrix = ResearchMatrix(strategy_ids, instruments, timeframes, config, provider=provider)
     results = matrix.run(data_dir)
 
     # Apply trade filter
@@ -232,6 +233,163 @@ def run_research(args):
         print(f"Insufficient (<{args.min_trades} trades): {len(insufficient)}")
 
     print_best_by(results, "composite_score", limit=5)
+
+
+def download_data(args):
+    """Download M1 data from histdata.com and ingest into canonical store."""
+    from fibokei.data.providers.base import ProviderID
+    from fibokei.data.providers.histdata import HistDataProvider
+    from fibokei.data.providers.symbol_map import list_mapped_symbols
+
+    provider = HistDataProvider()
+
+    # Resolve symbols
+    if args.symbols:
+        symbols = [s.strip().upper() for s in args.symbols.split(",")]
+    else:
+        symbols = list_mapped_symbols(ProviderID.HISTDATA)
+
+    # Resolve years
+    from datetime import datetime as dt
+    current_year = dt.now().year
+    if args.years:
+        years = [int(y.strip()) for y in args.years.split(",")]
+    else:
+        years = list(range(2019, current_year + 1))
+
+    # Resolve canonical data dir
+    project_root = Path(__file__).parent.parent.parent.parent
+    data_dir = project_root / "data" / "canonical"
+
+    print("Fiboki Trading — Download & Ingest (histdata.com)")
+    print(f"Symbols: {', '.join(symbols)}")
+    print(f"Years: {', '.join(str(y) for y in years)}")
+    print()
+
+    for symbol in symbols:
+        print(f"  {symbol}:")
+
+        # Download
+        print("    Downloading...", end=" ")
+        try:
+            zips = provider.download(symbol, years=years)
+            print(f"{len(zips)} files")
+        except Exception as e:
+            print(f"ERROR: {e}")
+            continue
+
+        if not zips:
+            print("    No data available, skipping")
+            continue
+
+        # Ingest
+        print("    Ingesting...", end=" ")
+        try:
+            results = provider.ingest_all_timeframes(
+                symbol, data_dir=data_dir,
+            )
+            bars = sum(m.row_count for m in results.values())
+            tfs = ", ".join(sorted(results.keys()))
+            print(f"OK ({bars:,} bars across {tfs})")
+        except Exception as e:
+            print(f"ERROR: {e}")
+
+    print()
+    print("Done. Run 'fibokei list-data' to see available datasets.")
+
+
+def ingest_data(args):
+    """Ingest raw data from a provider into the canonical store."""
+    from fibokei.data.providers.base import ProviderID
+    from fibokei.data.providers.registry import get_provider
+    from fibokei.data.providers.symbol_map import list_mapped_symbols
+
+    try:
+        provider_id = ProviderID(args.provider.lower())
+    except ValueError:
+        print(f"Unknown provider: {args.provider}")
+        print("Available: histdata, dukascopy")
+        sys.exit(1)
+
+    provider = get_provider(provider_id)
+
+    # Resolve symbols
+    if args.symbols:
+        symbols = [s.strip().upper() for s in args.symbols.split(",")]
+    else:
+        symbols = list_mapped_symbols(provider_id)
+
+    # Resolve canonical data dir
+    project_root = Path(__file__).parent.parent.parent.parent
+    data_dir = Path(args.data_dir) if args.data_dir else project_root / "data" / "canonical"
+
+    # If raw_dir specified, set it on the provider
+    if args.raw_dir:
+        if hasattr(provider, "raw_dir"):
+            provider.raw_dir = Path(args.raw_dir)
+
+    print(f"Fiboki Trading — Data Ingestion ({provider_id.value})")
+    print(f"Symbols: {', '.join(symbols)}")
+    print(f"Output: {data_dir}")
+    print()
+
+    success = 0
+    failed = 0
+    for symbol in symbols:
+        print(f"  {symbol}...", end=" ")
+        try:
+            if hasattr(provider, "ingest_all_timeframes"):
+                results = provider.ingest_all_timeframes(symbol, data_dir=data_dir)
+                bars = sum(meta.row_count for _, meta in results)
+                print(f"OK ({len(results)} timeframes, {bars:,} total bars)")
+            else:
+                df, meta = provider.ingest(symbol, "M1", data_dir=data_dir)
+                print(f"OK ({meta.row_count:,} bars)")
+            success += 1
+        except Exception as e:
+            print(f"ERROR: {e}")
+            failed += 1
+
+    print()
+    print(f"Done. Success: {success} | Failed: {failed}")
+
+
+def list_data(_args=None):
+    """List available canonical datasets."""
+    project_root = Path(__file__).parent.parent.parent.parent
+    canonical_dir = project_root / "data" / "canonical"
+
+    if not canonical_dir.exists():
+        print("No canonical data directory found.")
+        print(f"Expected at: {canonical_dir}")
+        print("Run 'fibokei ingest-data --provider histdata' to populate it.")
+        return
+
+    rows = []
+    for provider_dir in sorted(canonical_dir.iterdir()):
+        if not provider_dir.is_dir():
+            continue
+        provider_name = provider_dir.name
+        for symbol_dir in sorted(provider_dir.iterdir()):
+            if not symbol_dir.is_dir():
+                continue
+            symbol = symbol_dir.name.upper()
+            for data_file in sorted(symbol_dir.iterdir()):
+                if data_file.suffix not in (".parquet", ".csv"):
+                    continue
+                # Extract timeframe from filename: eurusd_h1.parquet -> H1
+                parts = data_file.stem.split("_")
+                tf = parts[-1].upper() if len(parts) >= 2 else "?"
+                size_mb = data_file.stat().st_size / (1024 * 1024)
+                rows.append([provider_name, symbol, tf, data_file.suffix, f"{size_mb:.2f} MB"])
+
+    if rows:
+        hdrs = ["Provider", "Symbol", "TF", "Format", "Size"]
+        print(tabulate(rows, headers=hdrs, tablefmt="simple"))
+        print(f"\nTotal datasets: {len(rows)}")
+    else:
+        print("No canonical datasets found.")
+        print("Run 'fibokei ingest-data --provider histdata' to populate.")
 
 
 def main():
@@ -306,6 +464,52 @@ def main():
         "--capital", type=float, default=10000.0,
         help="Initial capital",
     )
+    res_parser.add_argument(
+        "--provider", default=None,
+        help="Data provider: histdata, dukascopy (default: auto-detect)",
+    )
+
+    # --- ingest-data ---
+    ingest_parser = subparsers.add_parser(
+        "ingest-data",
+        help="Ingest raw data from a provider into canonical store",
+    )
+    ingest_parser.add_argument(
+        "--provider", required=True,
+        help="Data provider: histdata, dukascopy",
+    )
+    ingest_parser.add_argument(
+        "--symbols", default=None,
+        help="Comma-separated Fiboki symbols (default: all mapped for provider)",
+    )
+    ingest_parser.add_argument(
+        "--raw-dir", default=None,
+        help="Directory containing raw provider files",
+    )
+    ingest_parser.add_argument(
+        "--data-dir", default=None,
+        help="Output canonical data directory",
+    )
+
+    # --- download-data ---
+    dl_parser = subparsers.add_parser(
+        "download-data",
+        help="Download M1 data from histdata.com and ingest",
+    )
+    dl_parser.add_argument(
+        "--symbols", default=None,
+        help="Comma-separated symbols (default: all HistData-mapped)",
+    )
+    dl_parser.add_argument(
+        "--years", default=None,
+        help="Comma-separated years (default: 2019-current)",
+    )
+
+    # --- list-data ---
+    subparsers.add_parser(
+        "list-data",
+        help="List available canonical datasets",
+    )
 
     args = parser.parse_args()
 
@@ -321,6 +525,12 @@ def main():
         run_backtest(args)
     elif args.command == "research":
         run_research(args)
+    elif args.command == "ingest-data":
+        ingest_data(args)
+    elif args.command == "download-data":
+        download_data(args)
+    elif args.command == "list-data":
+        list_data(args)
     else:
         demo_indicators()
 

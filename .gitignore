@@ -38,8 +38,12 @@ out/
 # Data (keep fixtures)
 data/raw/*
 data/cleaned/*
+data/canonical/
 !data/raw/.gitkeep
 !data/cleaned/.gitkeep
+
+# Playwright MCP
+.playwright-mcp/
 
 # OS
 .DS_Store
