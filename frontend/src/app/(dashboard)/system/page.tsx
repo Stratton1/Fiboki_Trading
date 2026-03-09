@@ -8,11 +8,13 @@ import { StatusBadge } from "@/components/StatusBadge";
 import { PageHeader } from "@/components/PageHeader";
 import {
   Activity,
+  AlertTriangle,
   CheckCircle,
   Copy,
   ExternalLink,
   RefreshCw,
   ShieldCheck,
+  ShieldOff,
   XCircle,
 } from "lucide-react";
 
@@ -38,6 +40,11 @@ export default function SystemPage() {
   });
   const { data: instruments } = useSWR("/instruments", () => api.instruments());
   const { data: strategies } = useSWR("/strategies", () => api.strategies());
+  const { data: execMode, mutate: refreshExecMode } = useSWR(
+    "/execution/mode",
+    () => api.executionMode(),
+    { refreshInterval: 15000 }
+  );
 
   const isHealthy = health?.status === "ok";
 
@@ -108,7 +115,7 @@ export default function SystemPage() {
         subtitle="Monitor platform health, diagnostics, and environment"
         actions={
           <button
-            onClick={() => { refreshHealth(); refreshStatus(); }}
+            onClick={() => { refreshHealth(); refreshStatus(); refreshExecMode(); }}
             className="btn btn-secondary"
           >
             <RefreshCw size={14} />
@@ -193,8 +200,40 @@ export default function SystemPage() {
             </div>
           </div>
           <div>
-            <p className="text-xs text-foreground-muted mb-1">Mode</p>
-            <StatusBadge variant="info">Paper Trading</StatusBadge>
+            <p className="text-xs text-foreground-muted mb-1">Execution Mode</p>
+            <StatusBadge variant={execMode?.mode === "ig_demo" ? "warn" : "info"}>
+              {execMode?.mode === "ig_demo" ? "IG Demo" : "Paper Trading"}
+            </StatusBadge>
+          </div>
+          <div>
+            <p className="text-xs text-foreground-muted mb-1">Kill Switch</p>
+            <div className="flex items-center gap-2">
+              {execMode?.kill_switch_active ? (
+                <>
+                  <StatusBadge variant="error">Active</StatusBadge>
+                  <button
+                    onClick={async () => { await api.deactivateKillSwitch(); refreshExecMode(); }}
+                    className="text-xs text-foreground-muted hover:text-foreground transition"
+                    title="Deactivate kill switch"
+                  >
+                    <ShieldOff size={14} />
+                  </button>
+                </>
+              ) : (
+                <>
+                  <StatusBadge variant="ok">Inactive</StatusBadge>
+                  {execMode?.mode === "ig_demo" && (
+                    <button
+                      onClick={async () => { await api.activateKillSwitch("Manual activation"); refreshExecMode(); }}
+                      className="text-xs text-red-500 hover:text-red-700 transition"
+                      title="Activate kill switch"
+                    >
+                      <AlertTriangle size={14} />
+                    </button>
+                  )}
+                </>
+              )}
+            </div>
           </div>
           <div>
             <p className="text-xs text-foreground-muted mb-1">Session</p>

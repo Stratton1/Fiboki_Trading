@@ -1,5 +1,6 @@
 """FastAPI application for Fiboki Trading."""
 
+import logging
 import os
 from contextlib import asynccontextmanager
 
@@ -51,7 +52,46 @@ async def lifespan(app: FastAPI):
     with session_factory() as session:
         seed_users(session)
 
+    # Validate IG demo configuration at startup
+    _validate_ig_config()
+
     yield
+
+
+def _validate_ig_config() -> None:
+    """Log IG demo integration configuration status at startup."""
+    logger = logging.getLogger("fibokei.startup")
+    from fibokei.core.feature_flags import FeatureFlags
+
+    flags = FeatureFlags()
+    mode = flags.execution_mode
+
+    if mode == "paper":
+        logger.info("Execution mode: paper (IG demo integration inactive)")
+        return
+
+    # IG demo or live mode — check credentials
+    required = {
+        "FIBOKEI_IG_API_KEY": os.environ.get("FIBOKEI_IG_API_KEY", ""),
+        "FIBOKEI_IG_USERNAME": os.environ.get("FIBOKEI_IG_USERNAME", ""),
+        "FIBOKEI_IG_PASSWORD": os.environ.get("FIBOKEI_IG_PASSWORD", ""),
+    }
+    missing = [k for k, v in required.items() if not v]
+
+    if missing:
+        logger.warning(
+            "Execution mode is '%s' but IG credentials are incomplete. "
+            "Missing: %s. IG operations will fail at runtime.",
+            mode,
+            ", ".join(missing),
+        )
+    else:
+        account_id = os.environ.get("FIBOKEI_IG_ACCOUNT_ID", "")
+        logger.info(
+            "Execution mode: %s — IG demo credentials configured%s",
+            mode,
+            f" (account: {account_id})" if account_id else "",
+        )
 
 
 def create_app() -> FastAPI:

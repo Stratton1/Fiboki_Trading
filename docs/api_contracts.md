@@ -509,7 +509,9 @@ Protected system status.
   "api_version": "1.0.0",
   "database": "connected",
   "paper_engine": "standby",
-  "strategies_loaded": 12
+  "strategies_loaded": 12,
+  "execution_mode": "paper",
+  "kill_switch_active": false
 }
 ```
 
@@ -622,6 +624,92 @@ Duplicate health check on the auth router (retained for backward compatibility).
 
 ---
 
-## 12. Frontend Contract Types
+## 12. Execution
+
+### GET /execution/mode
+
+Get current execution mode and safety status.
+
+**Response:** `200 OK`
+
+```json
+{
+  "mode": "paper",
+  "live_execution_enabled": false,
+  "ig_paper_mode": true,
+  "kill_switch_active": false
+}
+```
+
+`mode` values: `"paper"`, `"ig_demo"`.
+
+### GET /execution/kill-switch
+
+Get kill switch status.
+
+**Response:** `200 OK`
+
+```json
+{
+  "is_active": false,
+  "reason": null,
+  "activated_by": null,
+  "activated_at": null
+}
+```
+
+### POST /execution/kill-switch/activate
+
+Activate the kill switch — stops all execution immediately.
+
+**Request:**
+
+```json
+{ "reason": "Emergency stop" }
+```
+
+**Response:** `200 OK` -- `KillSwitchResponse`
+
+### POST /execution/kill-switch/deactivate
+
+Deactivate the kill switch — resume execution.
+
+**Response:** `200 OK` -- `KillSwitchResponse`
+
+### GET /execution/audit
+
+Get execution audit log entries.
+
+**Query parameters:**
+
+| Param | Type | Default |
+|-------|------|---------|
+| `execution_mode` | string | (all) |
+| `bot_id` | string | (all) |
+| `limit` | int | 100 |
+
+**Response:** `200 OK`
+
+```json
+[
+  {
+    "id": 1,
+    "timestamp": "2026-03-09T12:00:00",
+    "execution_mode": "ig_demo",
+    "action": "place_order",
+    "instrument": "EURUSD",
+    "direction": "BUY",
+    "size": 1.0,
+    "deal_id": "DIAAAAP12345",
+    "status": "success",
+    "error_message": null,
+    "bot_id": "BOT-001"
+  }
+]
+```
+
+---
+
+## 13. Frontend Contract Types
 
 The TypeScript types in `frontend/src/types/contracts/` mirror these schemas. See [docs/frontend_architecture.md](frontend_architecture.md) for the type file listing.

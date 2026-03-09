@@ -82,10 +82,8 @@ def run_research(
         provider=req.provider,
     )
 
-    from pathlib import Path
-    data_dir = req.data_dir or str(
-        Path(__file__).resolve().parent.parent.parent.parent / "data" / "fixtures"
-    )
+    from fibokei.data.paths import get_fixtures_dir
+    data_dir = req.data_dir or str(get_fixtures_dir())
     results = matrix.run(data_dir)
 
     # Apply min trades filter

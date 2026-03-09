@@ -1,0 +1,38 @@
+# Large data directories (not needed in Docker image)
+data/canonical/
+data/raw/
+data/cleaned/
+
+# Git
+.git/
+.gitignore
+
+# Frontend (built separately on Vercel)
+frontend/node_modules/
+frontend/.next/
+frontend/test-results/
+frontend/playwright-report/
+
+# Python artifacts
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+htmlcov/
+
+# IDE
+.vscode/
+.idea/
+
+# Playwright
+.playwright-mcp/
+
+# OS
+.DS_Store
+
+# Docs (not needed at runtime)
+docs/

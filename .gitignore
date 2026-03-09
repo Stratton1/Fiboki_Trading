@@ -35,12 +35,13 @@ out/
 *.key
 *.pem
 
-# Data (keep fixtures)
+# Data (keep fixtures and starter)
 data/raw/*
 data/cleaned/*
 data/canonical/
 !data/raw/.gitkeep
 !data/cleaned/.gitkeep
+!data/starter/
 
 # Playwright
 .playwright-mcp/

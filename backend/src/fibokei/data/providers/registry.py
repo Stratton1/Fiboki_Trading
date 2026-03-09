@@ -6,12 +6,8 @@ from pathlib import Path
 
 import pandas as pd
 
+from fibokei.data.paths import get_canonical_dir, get_fixtures_dir, get_starter_dir
 from fibokei.data.providers.base import DataProvider, ProviderID
-
-# Default canonical data directory
-_PROJECT_ROOT = Path(__file__).resolve().parents[5]
-_DEFAULT_CANONICAL_DIR = _PROJECT_ROOT / "data" / "canonical"
-_DEFAULT_FIXTURES_DIR = _PROJECT_ROOT / "data" / "fixtures"
 
 
 def get_provider(provider_id: ProviderID | str) -> DataProvider:
@@ -48,21 +44,32 @@ def load_canonical(
     """Load a canonical dataset from the provider data store.
 
     Search order when *provider* is None:
-        1. Dukascopy (validation-grade)
-        2. HistData (bulk research)
-        3. Legacy fixtures directory (``data/fixtures/``)
+        1. Canonical: Dukascopy (validation-grade)
+        2. Canonical: HistData (bulk research)
+        3. Starter: HistData (production starter subset)
+        4. Legacy fixtures directory (``data/fixtures/``)
 
     Returns None if no file is found.
     """
-    canonical_dir = data_dir or _DEFAULT_CANONICAL_DIR
+    canonical_dir = data_dir or get_canonical_dir()
 
     if provider is not None:
         pid = ProviderID(provider) if isinstance(provider, str) else provider
-        return _try_load(canonical_dir, pid, symbol, timeframe)
+        df = _try_load(canonical_dir, pid, symbol, timeframe)
+        if df is not None:
+            return df
+        # Also check starter for the specified provider
+        return _try_load(get_starter_dir(), pid, symbol, timeframe)
 
-    # Priority search across providers
+    # Priority search across providers in canonical store
     for pid in (ProviderID.DUKASCOPY, ProviderID.HISTDATA):
         df = _try_load(canonical_dir, pid, symbol, timeframe)
+        if df is not None:
+            return df
+
+    # Search starter dataset
+    for pid in (ProviderID.HISTDATA,):
+        df = _try_load(get_starter_dir(), pid, symbol, timeframe)
         if df is not None:
             return df
 
@@ -96,12 +103,13 @@ def _try_load(
 
 def _try_load_fixture(symbol: str, timeframe: str) -> pd.DataFrame | None:
     """Try loading from the legacy data/fixtures/ directory."""
+    fixtures_dir = get_fixtures_dir()
     patterns = [
         f"sample_{symbol.lower()}_{timeframe.lower()}.csv",
         f"{symbol.lower()}_{timeframe.lower()}.csv",
     ]
     for pattern in patterns:
-        path = _DEFAULT_FIXTURES_DIR / pattern
+        path = fixtures_dir / pattern
         if path.exists():
             df = pd.read_csv(path)
             df.columns = df.columns.str.strip().str.lower()

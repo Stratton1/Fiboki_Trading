@@ -1,9 +1,7 @@
 """Market data endpoints."""
 
 import math
-from pathlib import Path
 
-import pandas as pd
 from fastapi import APIRouter, Depends, HTTPException
 
 from fibokei.api.auth import TokenData, get_current_user
@@ -14,11 +12,8 @@ from fibokei.api.schemas.charts import (
 )
 from fibokei.core.instruments import get_instrument
 from fibokei.core.models import Timeframe
+from fibokei.data.providers.registry import load_canonical
 from fibokei.indicators.ichimoku import IchimokuCloud
-
-# Resolve data directory: route file is at backend/src/fibokei/api/routes/
-# We need to reach /Users/joseph/Projects/Fiboki_Trading/data/fixtures/
-_DATA_DIR = Path(__file__).resolve().parent.parent.parent.parent.parent.parent / "data" / "fixtures"
 
 router = APIRouter(tags=["market-data"])
 
@@ -52,23 +47,16 @@ def get_market_data(
     except ValueError:
         raise HTTPException(status_code=400, detail=f"Invalid timeframe: {timeframe}")
 
-    # Load CSV
-    csv_path = _DATA_DIR / f"sample_{instrument.lower()}_{tf_enum.value.lower()}.csv"
-    if not csv_path.exists():
+    # Load data via unified canonical loader
+    df = load_canonical(instrument, tf_enum.value)
+    if df is None:
         raise HTTPException(
             status_code=404,
             detail=f"No data file for {instrument}/{tf_enum.value}",
         )
 
-    df = pd.read_csv(csv_path)
-    df.columns = df.columns.str.strip().str.lower()
-
-    # Normalize column names
-    col_map = {"date": "timestamp", "datetime": "timestamp", "time": "timestamp"}
-    df = df.rename(columns={k: v for k, v in col_map.items() if k in df.columns})
-
-    df["timestamp"] = pd.to_datetime(df["timestamp"], utc=True)
-    df = df.sort_values("timestamp").reset_index(drop=True)
+    # df has DatetimeIndex named "timestamp" — reset to column for iteration
+    df = df.reset_index()
 
     if "volume" not in df.columns:
         df["volume"] = 0.0

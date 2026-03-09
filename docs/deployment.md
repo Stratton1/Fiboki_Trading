@@ -1,6 +1,6 @@
 # Fiboki — Production Deployment Architecture
 
-Version: 1.1
+Version: 1.2
 Last Updated: 2026-03-09
 Domain: **fiboki.uk**
 
@@ -83,6 +83,12 @@ The frontend is a static/SSR app that calls the backend API. It contains **zero*
 | `FIBOKEI_USER_TOM_PASSWORD` | Tom's login password | Yes |
 | `FIBOKEI_TELEGRAM_BOT_TOKEN` | Telegram bot token | Optional |
 | `FIBOKEI_TELEGRAM_CHAT_ID` | Telegram chat ID | Optional |
+| `FIBOKEI_LIVE_EXECUTION_ENABLED` | Enable IG demo execution (`true`/`false`) | No (default: `false`) |
+| `FIBOKEI_IG_PAPER_MODE` | IG adapter uses demo account (`true`/`false`) | No (default: `true`) |
+| `FIBOKEI_IG_API_KEY` | IG API key (from IG demo account settings) | Only if IG demo enabled |
+| `FIBOKEI_IG_USERNAME` | IG demo account username | Only if IG demo enabled |
+| `FIBOKEI_IG_PASSWORD` | IG demo account password | Only if IG demo enabled |
+| `FIBOKEI_IG_ACCOUNT_ID` | IG sub-account ID (for multi-account users) | Optional |
 
 **Environment behaviour:**
 
@@ -140,6 +146,84 @@ Frontend (`fiboki.uk`) and backend (`api.fiboki.uk`) are on different origins. C
 4. **HTTPS on both sides** (mandatory for `Secure` cookies)
 
 This is already implemented. The `FIBOKEI_LOCAL_DEV` flag switches to `SameSite=Lax; Secure=false` for local development where both run on localhost.
+
+---
+
+## IG Demo Integration
+
+### Safety Architecture
+
+The IG integration is **demo-only** by design. Multiple layers prevent accidental live trading:
+
+1. **Hard URL block** — `IGClient` refuses to connect to `api.ig.com` (production). Only `demo-api.ig.com` is allowed.
+2. **Feature flags** — `FIBOKEI_LIVE_EXECUTION_ENABLED` defaults to `false`. When `false`, the system uses the paper adapter exclusively.
+3. **Kill switch** — A database-persisted emergency stop. When active, operators can halt all execution via API or frontend.
+4. **Startup validation** — The backend logs a warning if IG demo mode is enabled but credentials are missing.
+
+### Execution Modes
+
+| `FIBOKEI_LIVE_EXECUTION_ENABLED` | `FIBOKEI_IG_PAPER_MODE` | Effective Mode | Adapter Used |
+|-----------------------------------|--------------------------|----------------|---------------|
+| `false` (default) | any | `paper` | PaperExecutionAdapter |
+| `true` | `true` (default) | `ig_demo` | IGExecutionAdapter (demo API) |
+| `true` | `false` | blocked | IGExecutionAdapter refuses — production URL is hard-blocked |
+
+### IG Demo Go-Live Checklist
+
+Before enabling IG demo execution on Railway:
+
+1. **Create IG demo account** at https://demo-api.ig.com — note your API key, username, password
+2. **Set Railway env vars:**
+   ```
+   FIBOKEI_LIVE_EXECUTION_ENABLED=true
+   FIBOKEI_IG_PAPER_MODE=true
+   FIBOKEI_IG_API_KEY=<your-ig-demo-api-key>
+   FIBOKEI_IG_USERNAME=<your-ig-demo-username>
+   FIBOKEI_IG_PASSWORD=<your-ig-demo-password>
+   FIBOKEI_IG_ACCOUNT_ID=<optional-sub-account-id>
+   ```
+3. **Redeploy backend** — check logs for `Execution mode: ig_demo — IG demo credentials configured`
+4. **Verify via API:**
+   - `GET /api/v1/execution/mode` → `{"mode": "ig_demo", "live_execution_enabled": true, "ig_paper_mode": true, "kill_switch_active": false}`
+   - `GET /api/v1/system/status` → should show `execution_mode: "ig_demo"`
+5. **Verify kill switch:**
+   - `POST /api/v1/execution/kill-switch/activate` with `{"reason": "test"}` → confirm `is_active: true`
+   - `POST /api/v1/execution/kill-switch/deactivate` → confirm `is_active: false`
+6. **Check audit log:** `GET /api/v1/execution/audit` → should return empty list (no executions yet)
+
+### Recommended First-Launch Subset
+
+Start with a single forex major (e.g. EURUSD) on a single timeframe (H1) using one strategy (bot01_sanyaku). Verify:
+- Order placement returns a deal reference and confirmation
+- Position appears in `get_positions()` response
+- Position can be closed
+- All actions appear in the execution audit log
+
+### Reverting to Paper Mode
+
+Set `FIBOKEI_LIVE_EXECUTION_ENABLED=false` in Railway and redeploy. No other changes needed — the system defaults back to the paper adapter.
+
+---
+
+## Starter Dataset
+
+The Docker image bundles a lightweight **starter dataset** (~2.3MB) at `data/starter/histdata/` containing H1 parquet files for 7 forex majors: EURUSD, GBPUSD, USDJPY, AUDUSD, USDCHF, USDCAD, NZDUSD.
+
+This ensures charts, backtests, and research work out of the box in production without requiring the full canonical dataset (961MB, 360 files).
+
+**Data resolution order** (handled by `load_canonical()`):
+
+1. `data/canonical/dukascopy/{symbol}/` — validation-grade data
+2. `data/canonical/histdata/{symbol}/` — bulk research data
+3. `data/starter/histdata/{symbol}/` — production starter (bundled in Docker)
+4. `data/fixtures/sample_{symbol}_{tf}.csv` — legacy demo fallback
+
+**To add more instruments or timeframes:**
+
+1. Copy the parquet file from `data/canonical/histdata/{symbol}/` to `data/starter/histdata/{symbol}/`
+2. Commit and redeploy — the Dockerfile copies `data/starter/` into the image
+
+**Override data directory** (optional): Set `FIBOKEI_DATA_DIR` env var to point to a custom data root directory. The system will look for `canonical/`, `starter/`, and `fixtures/` subdirectories within it.
 
 ---
 

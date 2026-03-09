@@ -26,7 +26,7 @@ All trading logic lives in the backend. The frontend never computes indicators, 
 | `research/` | Research matrix, composite scoring, filtering, ranking |
 | `paper/` | Paper trading account, bot lifecycle, orchestrator |
 | `risk/` | Risk engine (portfolio-aware controls) |
-| `execution/` | Adapter ABC, PaperExecutionAdapter, IG stub |
+| `execution/` | Adapter ABC, PaperExecutionAdapter, IGExecutionAdapter, IGClient, reconciliation |
 | `api/` | FastAPI app, routes, schemas, auth, seed, dependencies |
 | `data/` | CSV loader, data validation |
 | `alerts/` | Telegram event notifications |
@@ -140,8 +140,12 @@ These rules are enforced project-wide (from `CLAUDE.md`):
 | `FIBOKEI_USER_TOM_PASSWORD` | Seeded user password |
 | `FIBOKEI_DATABASE_URL` | Database connection string (default: `sqlite:///fibokei.db`) |
 | `FIBOKEI_CORS_ORIGINS` | Comma-separated allowed origins |
-| `FIBOKEI_LIVE_EXECUTION_ENABLED` | Feature flag (default: `False`) |
-| `FIBOKEI_IG_PAPER_MODE` | Feature flag (default: `True`) |
+| `FIBOKEI_LIVE_EXECUTION_ENABLED` | Enable IG demo execution (default: `false`) |
+| `FIBOKEI_IG_PAPER_MODE` | IG adapter uses demo account (default: `true`) |
+| `FIBOKEI_IG_API_KEY` | IG demo API key (required if IG enabled) |
+| `FIBOKEI_IG_USERNAME` | IG demo username (required if IG enabled) |
+| `FIBOKEI_IG_PASSWORD` | IG demo password (required if IG enabled) |
+| `FIBOKEI_IG_ACCOUNT_ID` | IG sub-account ID (optional) |
 | `NEXT_PUBLIC_API_URL` | Frontend -> backend URL (default: `http://localhost:8000`) |
 
 ## 8. Related Documents

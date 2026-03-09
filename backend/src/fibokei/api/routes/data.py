@@ -1,19 +1,17 @@
 """Data management API endpoints."""
 
-from pathlib import Path
-
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
 
 from fibokei.api.auth import TokenData, get_current_user
+from fibokei.data.paths import get_canonical_dir
 from fibokei.data.providers.base import ProviderID
 from fibokei.data.providers.registry import get_provider, list_providers, load_canonical
 from fibokei.data.providers.symbol_map import list_mapped_symbols, provider_has_symbol
 
 router = APIRouter(tags=["data"])
 
-_PROJECT_ROOT = Path(__file__).resolve().parents[4]
-_CANONICAL_DIR = _PROJECT_ROOT / "data" / "canonical"
+_CANONICAL_DIR = get_canonical_dir()
 
 
 class DatasetInfo(BaseModel):
