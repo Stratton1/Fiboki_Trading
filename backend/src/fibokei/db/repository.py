@@ -7,6 +7,8 @@ from fibokei.backtester.result import BacktestResult
 from fibokei.db.models import (
     BacktestRunModel,
     DatasetModel,
+    ExecutionAuditModel,
+    KillSwitchModel,
     PaperAccountModel,
     PaperBotModel,
     PaperTradeModel,
@@ -263,3 +265,70 @@ def get_best_research_score(
         .limit(1)
     ).first()
     return result
+
+
+# ---------- Execution audit ----------
+
+
+def save_execution_audit(session: Session, audit_data: dict) -> ExecutionAuditModel:
+    """Record an execution audit log entry."""
+    model = ExecutionAuditModel(**audit_data)
+    session.add(model)
+    session.commit()
+    return model
+
+
+def get_execution_audit(
+    session: Session,
+    execution_mode: str | None = None,
+    bot_id: str | None = None,
+    limit: int = 100,
+) -> list[ExecutionAuditModel]:
+    """Retrieve execution audit entries with optional filters."""
+    stmt = select(ExecutionAuditModel)
+    if execution_mode:
+        stmt = stmt.where(ExecutionAuditModel.execution_mode == execution_mode)
+    if bot_id:
+        stmt = stmt.where(ExecutionAuditModel.bot_id == bot_id)
+    stmt = stmt.order_by(ExecutionAuditModel.timestamp.desc()).limit(limit)
+    return list(session.scalars(stmt).all())
+
+
+# ---------- Kill switch ----------
+
+
+def get_kill_switch(session: Session) -> KillSwitchModel:
+    """Get or create the kill switch record (single-row table)."""
+    ks = session.scalars(select(KillSwitchModel)).first()
+    if not ks:
+        ks = KillSwitchModel(is_active=False)
+        session.add(ks)
+        session.commit()
+    return ks
+
+
+def activate_kill_switch(
+    session: Session, reason: str = "", activated_by: str = ""
+) -> KillSwitchModel:
+    """Activate the kill switch — blocks all execution."""
+    from datetime import datetime, timezone
+
+    ks = get_kill_switch(session)
+    ks.is_active = True
+    ks.reason = reason
+    ks.activated_by = activated_by
+    ks.activated_at = datetime.now(timezone.utc)
+    ks.deactivated_at = None
+    session.commit()
+    return ks
+
+
+def deactivate_kill_switch(session: Session) -> KillSwitchModel:
+    """Deactivate the kill switch — resume execution."""
+    from datetime import datetime, timezone
+
+    ks = get_kill_switch(session)
+    ks.is_active = False
+    ks.deactivated_at = datetime.now(timezone.utc)
+    session.commit()
+    return ks

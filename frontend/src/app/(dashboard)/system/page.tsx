@@ -5,6 +5,7 @@ import useSWR from "swr";
 import { api, ApiError } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { StatusBadge } from "@/components/StatusBadge";
+import { PageHeader } from "@/components/PageHeader";
 import {
   Activity,
   CheckCircle,
@@ -12,7 +13,6 @@ import {
   ExternalLink,
   RefreshCw,
   ShieldCheck,
-  Wifi,
   XCircle,
 } from "lucide-react";
 
@@ -41,12 +41,11 @@ export default function SystemPage() {
 
   const isHealthy = health?.status === "ok";
 
-  // ── Diagnostics ──────────────────────────────────────────────
   const [diag, setDiag] = useState<Record<string, DiagResult>>({});
   const [copied, setCopied] = useState(false);
 
   const runDiagnostic = useCallback(
-    async (key: string, label: string, fn: () => Promise<string>) => {
+    async (key: string, _label: string, fn: () => Promise<string>) => {
       setDiag((prev) => ({ ...prev, [key]: { status: "running", detail: "" } }));
       try {
         const detail = await fn();
@@ -87,14 +86,12 @@ export default function SystemPage() {
     setTimeout(() => setCopied(false), 1500);
   }
 
-  // ── Helpers ──────────────────────────────────────────────────
-
   function DiagIcon({ state }: { state: DiagResult["status"] }) {
     if (state === "running")
       return <RefreshCw size={14} className="animate-spin text-blue-500" />;
     if (state === "pass") return <CheckCircle size={14} className="text-green-600" />;
     if (state === "fail") return <XCircle size={14} className="text-red-600" />;
-    return <Activity size={14} className="text-gray-400" />;
+    return <Activity size={14} className="text-foreground-muted/40" />;
   }
 
   const diagEntries: { key: string; label: string }[] = [
@@ -105,52 +102,41 @@ export default function SystemPage() {
   ];
 
   return (
-    <div>
-      <div className="flex items-center justify-between mb-6">
-        <h2 className="text-xl font-semibold">System</h2>
-        <button
-          onClick={() => {
-            refreshHealth();
-            refreshStatus();
-          }}
-          className="flex items-center gap-1.5 text-sm text-foreground-muted hover:text-foreground transition"
-        >
-          <RefreshCw size={14} />
-          Refresh
-        </button>
-      </div>
+    <div className="max-w-5xl">
+      <PageHeader
+        title="System"
+        subtitle="Monitor platform health, diagnostics, and environment"
+        actions={
+          <button
+            onClick={() => { refreshHealth(); refreshStatus(); }}
+            className="btn btn-secondary"
+          >
+            <RefreshCw size={14} />
+            Refresh
+          </button>
+        }
+      />
 
-      {/* ── Overview cards ── */}
+      {/* Overview cards */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
-        {/* Health */}
-        <div className="bg-background-card rounded-lg border border-gray-300 p-4">
-          <p className="text-xs text-foreground-muted mb-1">Backend Health</p>
+        <div className="stat-card">
+          <p className="text-xs font-medium uppercase tracking-wide text-foreground-muted mb-2">Backend Health</p>
           {healthLoading ? (
             <p className="text-sm text-foreground-muted">Checking...</p>
           ) : (
             <div className="flex items-center gap-2">
-              <span
-                className={`inline-block w-2.5 h-2.5 rounded-full ${
-                  isHealthy ? "bg-green-500" : "bg-red-500"
-                }`}
-              />
-              <span className="text-sm font-medium">
-                {isHealthy ? "Healthy" : "Unhealthy"}
-              </span>
+              <span className={`inline-block w-2.5 h-2.5 rounded-full ${isHealthy ? "bg-green-500 animate-pulse" : "bg-red-500"}`} />
+              <span className="text-sm font-semibold">{isHealthy ? "Healthy" : "Unhealthy"}</span>
             </div>
           )}
         </div>
-
-        {/* Version */}
-        <div className="bg-background-card rounded-lg border border-gray-300 p-4">
-          <p className="text-xs text-foreground-muted mb-1">API Version</p>
-          <p className="text-sm font-medium">{health?.version ?? "—"}</p>
+        <div className="stat-card">
+          <p className="text-xs font-medium uppercase tracking-wide text-foreground-muted mb-2">API Version</p>
+          <p className="text-sm font-semibold">{health?.version ?? "—"}</p>
         </div>
-
-        {/* Instruments */}
-        <div className="bg-background-card rounded-lg border border-gray-300 p-4">
-          <p className="text-xs text-foreground-muted mb-1">Instruments</p>
-          <p className="text-sm font-medium">
+        <div className="stat-card">
+          <p className="text-xs font-medium uppercase tracking-wide text-foreground-muted mb-2">Instruments</p>
+          <p className="text-sm font-semibold">
             {instruments ? (
               <>
                 {instruments.length}{" "}
@@ -158,74 +144,52 @@ export default function SystemPage() {
                   ({instruments.filter((i) => i.has_canonical_data).length} canonical)
                 </span>
               </>
-            ) : (
-              "—"
-            )}
+            ) : "—"}
           </p>
         </div>
-
-        {/* Strategies */}
-        <div className="bg-background-card rounded-lg border border-gray-300 p-4">
-          <p className="text-xs text-foreground-muted mb-1">Strategies</p>
-          <p className="text-sm font-medium">{strategies?.length ?? "—"}</p>
+        <div className="stat-card">
+          <p className="text-xs font-medium uppercase tracking-wide text-foreground-muted mb-2">Strategies</p>
+          <p className="text-sm font-semibold">{strategies?.length ?? "—"}</p>
         </div>
       </div>
 
-      {/* ── Engine Status ── */}
-      <div className="bg-background-card rounded-lg border border-gray-300 p-5 mb-6">
-        <h3 className="text-sm font-medium text-foreground-muted mb-3">
-          Engine Status
-        </h3>
+      {/* Engine Status */}
+      <div className="card mb-6">
+        <p className="section-label">Engine Status</p>
         {statusLoading ? (
           <p className="text-foreground-muted text-sm">Loading...</p>
         ) : status ? (
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
             {Object.entries(status).map(([key, value]) => (
               <div key={key}>
-                <p className="text-xs text-foreground-muted mb-1">
-                  {key.replace(/_/g, " ")}
-                </p>
+                <p className="text-xs text-foreground-muted mb-1">{key.replace(/_/g, " ")}</p>
                 <p className="text-sm font-medium">
                   {typeof value === "boolean" ? (
                     <StatusBadge variant={value ? "ok" : "error"}>
                       {value ? "Active" : "Inactive"}
                     </StatusBadge>
-                  ) : (
-                    String(value ?? "—")
-                  )}
+                  ) : String(value ?? "—")}
                 </p>
               </div>
             ))}
           </div>
         ) : (
-          <p className="text-foreground-muted text-sm">
-            Unable to fetch status.
-          </p>
+          <p className="text-foreground-muted text-sm">Unable to fetch status.</p>
         )}
       </div>
 
-      {/* ── Environment ── */}
-      <div className="bg-background-card rounded-lg border border-gray-300 p-5 mb-6">
-        <h3 className="text-sm font-medium text-foreground-muted mb-3">
-          Environment
-        </h3>
+      {/* Environment */}
+      <div className="card mb-6">
+        <p className="section-label">Environment</p>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <p className="text-xs text-foreground-muted mb-1">API Base URL</p>
             <div className="flex items-center gap-2">
-              <code className="text-sm font-mono bg-gray-100 px-2 py-0.5 rounded">
-                {API_URL}
-              </code>
-              <button
-                onClick={copyApiUrl}
-                className="text-foreground-muted hover:text-foreground transition"
-                title="Copy API URL"
-              >
+              <code className="text-sm font-mono bg-background-muted px-2 py-0.5 rounded">{API_URL}</code>
+              <button onClick={copyApiUrl} className="text-foreground-muted hover:text-foreground transition" title="Copy API URL">
                 <Copy size={13} />
               </button>
-              {copied && (
-                <span className="text-xs text-green-600">Copied</span>
-              )}
+              {copied && <span className="text-xs text-green-600">Copied</span>}
             </div>
           </div>
           <div>
@@ -238,9 +202,7 @@ export default function SystemPage() {
               {user ? (
                 <>
                   {user.username}{" "}
-                  <span className="text-xs text-foreground-muted font-normal">
-                    ({user.role})
-                  </span>
+                  <span className="text-xs text-foreground-muted font-normal">({user.role})</span>
                 </>
               ) : (
                 <StatusBadge variant="warn">Not authenticated</StatusBadge>
@@ -249,36 +211,26 @@ export default function SystemPage() {
           </div>
           <div>
             <p className="text-xs text-foreground-muted mb-1">Frontend</p>
-            <p className="text-sm font-medium">
-              {typeof window !== "undefined" ? window.location.origin : "—"}
-            </p>
+            <p className="text-sm font-medium">{typeof window !== "undefined" ? window.location.origin : "—"}</p>
           </div>
         </div>
       </div>
 
-      {/* ── Diagnostics ── */}
-      <div className="bg-background-card rounded-lg border border-gray-300 p-5 mb-6">
-        <div className="flex items-center justify-between mb-3">
-          <h3 className="text-sm font-medium text-foreground-muted">
-            Diagnostics
-          </h3>
-          <button
-            onClick={runAllDiagnostics}
-            className="flex items-center gap-1.5 text-sm text-primary hover:text-primary-dark font-medium transition"
-          >
+      {/* Diagnostics */}
+      <div className="card mb-6">
+        <div className="flex items-center justify-between mb-4">
+          <p className="section-label !mb-0">Diagnostics</p>
+          <button onClick={runAllDiagnostics} className="btn btn-ghost text-xs">
             <ShieldCheck size={14} />
             Run All Checks
           </button>
         </div>
-        <div className="space-y-2">
+        <div className="space-y-1">
           {diagEntries.map(({ key, label }) => {
             const d = diag[key];
             return (
-              <div
-                key={key}
-                className="flex items-center justify-between py-1.5 border-b border-gray-100 last:border-0"
-              >
-                <div className="flex items-center gap-2">
+              <div key={key} className="flex items-center justify-between py-2.5 border-b border-border-muted last:border-0">
+                <div className="flex items-center gap-2.5">
                   <DiagIcon state={d?.status ?? "idle"} />
                   <span className="text-sm">{label}</span>
                 </div>
@@ -291,39 +243,26 @@ export default function SystemPage() {
         </div>
       </div>
 
-      {/* ── Quick Links ── */}
-      <div className="bg-background-card rounded-lg border border-gray-300 p-5">
-        <h3 className="text-sm font-medium text-foreground-muted mb-3">
-          Quick Links
-        </h3>
-        <div className="flex flex-wrap gap-3">
-          <a
-            href={`${API_URL}/api/v1/health`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center gap-1.5 text-sm text-primary hover:text-primary-dark transition"
-          >
-            <ExternalLink size={13} />
-            Health Endpoint
-          </a>
-          <a
-            href={`${API_URL}/docs`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center gap-1.5 text-sm text-primary hover:text-primary-dark transition"
-          >
-            <ExternalLink size={13} />
-            API Docs (Swagger)
-          </a>
-          <a
-            href={`${API_URL}/api/v1/instruments/`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center gap-1.5 text-sm text-primary hover:text-primary-dark transition"
-          >
-            <ExternalLink size={13} />
-            Instruments API
-          </a>
+      {/* Quick Links */}
+      <div className="card">
+        <p className="section-label">Quick Links</p>
+        <div className="flex flex-wrap gap-4">
+          {[
+            { label: "Health Endpoint", url: `${API_URL}/api/v1/health` },
+            { label: "API Docs (Swagger)", url: `${API_URL}/docs` },
+            { label: "Instruments API", url: `${API_URL}/api/v1/instruments/` },
+          ].map(({ label, url }) => (
+            <a
+              key={label}
+              href={url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-1.5 text-sm text-primary hover:text-primary-dark transition"
+            >
+              <ExternalLink size={13} />
+              {label}
+            </a>
+          ))}
         </div>
       </div>
     </div>

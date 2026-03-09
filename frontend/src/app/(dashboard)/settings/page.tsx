@@ -3,7 +3,8 @@
 import { useState } from "react";
 import { useAuth } from "@/lib/auth";
 import { StatusBadge } from "@/components/StatusBadge";
-import { Copy, ExternalLink, Server } from "lucide-react";
+import { PageHeader } from "@/components/PageHeader";
+import { Copy, ExternalLink, Server, User, Shield, Flag } from "lucide-react";
 import Link from "next/link";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
@@ -40,55 +41,63 @@ export default function SettingsPage() {
   }
 
   return (
-    <div>
-      <h2 className="text-xl font-semibold mb-6">Settings</h2>
+    <div className="max-w-4xl">
+      <PageHeader
+        title="Settings"
+        subtitle="Platform configuration and operator tools"
+      />
 
       {/* User Info */}
-      <div className="bg-background-card rounded-lg border border-gray-300 p-5 mb-6">
-        <h3 className="text-sm font-medium text-foreground-muted mb-3">
-          User
-        </h3>
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <p className="text-xs text-foreground-muted mb-1">Username</p>
-            <p className="text-sm font-medium">{user?.username ?? "—"}</p>
+      <div className="card mb-6">
+        <div className="flex items-center gap-2 mb-4">
+          <User size={14} className="text-foreground-muted" />
+          <p className="section-label !mb-0">User</p>
+        </div>
+        <div className="flex items-center gap-6">
+          <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center text-primary text-lg font-bold uppercase">
+            {user?.username?.charAt(0) ?? "?"}
           </div>
-          <div>
-            <p className="text-xs text-foreground-muted mb-1">Role</p>
-            <p className="text-sm font-medium">{user?.role ?? "—"}</p>
+          <div className="grid grid-cols-2 gap-x-8 gap-y-2">
+            <div>
+              <p className="text-xs text-foreground-muted">Username</p>
+              <p className="text-sm font-semibold">{user?.username ?? "—"}</p>
+            </div>
+            <div>
+              <p className="text-xs text-foreground-muted">Role</p>
+              <p className="text-sm font-semibold">{user?.role ?? "—"}</p>
+            </div>
           </div>
         </div>
       </div>
 
       {/* Risk Defaults */}
-      <div className="bg-background-card rounded-lg border border-gray-300 p-5 mb-6">
-        <div className="flex items-center justify-between mb-3">
-          <h3 className="text-sm font-medium text-foreground-muted">
-            Risk Defaults
-          </h3>
+      <div className="card mb-6">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2">
+            <Shield size={14} className="text-foreground-muted" />
+            <p className="section-label !mb-0">Risk Defaults</p>
+          </div>
           <StatusBadge variant="neutral">Read-only</StatusBadge>
         </div>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
           {RISK_DEFAULTS.map(({ label, value }) => (
-            <div key={label}>
-              <p className="text-xs text-foreground-muted mb-1">{label}</p>
-              <p className="text-sm font-semibold">{value}</p>
+            <div key={label} className="bg-background-muted rounded-lg px-3 py-2.5">
+              <p className="text-xs text-foreground-muted mb-0.5">{label}</p>
+              <p className="text-lg font-bold tracking-tight">{value}</p>
             </div>
           ))}
         </div>
       </div>
 
       {/* Feature Flags */}
-      <div className="bg-background-card rounded-lg border border-gray-300 p-5 mb-6">
-        <h3 className="text-sm font-medium text-foreground-muted mb-3">
-          Feature Flags
-        </h3>
-        <div className="space-y-2">
+      <div className="card mb-6">
+        <div className="flex items-center gap-2 mb-4">
+          <Flag size={14} className="text-foreground-muted" />
+          <p className="section-label !mb-0">Feature Flags</p>
+        </div>
+        <div className="space-y-1">
           {FEATURE_FLAGS.map(({ label, enabled }) => (
-            <div
-              key={label}
-              className="flex items-center justify-between py-1"
-            >
+            <div key={label} className="flex items-center justify-between py-2.5 border-b border-border-muted last:border-0">
               <span className="text-sm">{label}</span>
               <StatusBadge variant={enabled ? "ok" : "error"}>
                 {enabled ? "Enabled" : "Disabled"}
@@ -99,33 +108,26 @@ export default function SettingsPage() {
       </div>
 
       {/* Operator Tools */}
-      <div className="bg-background-card rounded-lg border border-gray-300 p-5">
-        <div className="flex items-center gap-2 mb-3">
+      <div className="card">
+        <div className="flex items-center gap-2 mb-4">
           <Server size={14} className="text-foreground-muted" />
-          <h3 className="text-sm font-medium text-foreground-muted">
-            Operator Tools
-          </h3>
+          <p className="section-label !mb-0">Operator Tools</p>
         </div>
 
         {/* Deployment endpoints */}
-        <div className="mb-4">
-          <p className="text-xs text-foreground-muted mb-2">
-            Deployment Endpoints
-          </p>
-          <div className="space-y-1.5">
+        <div className="mb-5">
+          <p className="text-xs text-foreground-muted mb-2">Deployment Endpoints</p>
+          <div className="space-y-1">
             {ENDPOINTS.map(({ label, url }) => (
-              <div
-                key={label}
-                className="flex items-center justify-between py-1"
-              >
-                <span className="text-sm">{label}</span>
+              <div key={label} className="flex items-center justify-between py-2 border-b border-border-muted last:border-0">
+                <span className="text-sm font-medium">{label}</span>
                 <div className="flex items-center gap-2">
-                  <code className="text-xs font-mono text-foreground-muted bg-gray-100 px-1.5 py-0.5 rounded max-w-[220px] truncate">
+                  <code className="text-xs font-mono text-foreground-muted bg-background-muted px-2 py-0.5 rounded max-w-[220px] truncate">
                     {url}
                   </code>
                   <button
                     onClick={() => copyToClipboard(url, label)}
-                    className="text-foreground-muted hover:text-foreground transition"
+                    className="text-foreground-muted hover:text-foreground transition p-1 rounded hover:bg-background-muted"
                     title={`Copy ${label} URL`}
                   >
                     {copied === label ? (
@@ -138,7 +140,7 @@ export default function SettingsPage() {
                     href={url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-foreground-muted hover:text-primary transition"
+                    className="text-foreground-muted hover:text-primary transition p-1 rounded hover:bg-background-muted"
                     title={`Open ${label}`}
                   >
                     <ExternalLink size={12} />
@@ -150,22 +152,19 @@ export default function SettingsPage() {
         </div>
 
         {/* Quick actions */}
-        <div className="border-t border-gray-100 pt-3">
-          <p className="text-xs text-foreground-muted mb-2">Quick Actions</p>
+        <div className="border-t border-border pt-4">
+          <p className="text-xs text-foreground-muted mb-3">Quick Actions</p>
           <div className="flex flex-wrap gap-2">
-            <Link
-              href="/system"
-              className="text-sm text-primary hover:text-primary-dark transition"
-            >
-              Open System Diagnostics
+            <Link href="/system" className="btn btn-secondary text-sm">
+              System Diagnostics
             </Link>
-            <span className="text-gray-300">|</span>
             <a
               href={`${API_URL}/docs`}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-sm text-primary hover:text-primary-dark transition"
+              className="btn btn-secondary text-sm"
             >
+              <ExternalLink size={13} />
               API Documentation
             </a>
           </div>

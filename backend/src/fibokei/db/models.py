@@ -181,3 +181,37 @@ class PaperAccountModel(Base):
         default=lambda: datetime.now(timezone.utc),
         onupdate=lambda: datetime.now(timezone.utc),
     )
+
+
+class ExecutionAuditModel(Base):
+    """Audit log for all execution actions (paper and demo)."""
+
+    __tablename__ = "execution_audit"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    timestamp: Mapped[datetime] = mapped_column(
+        DateTime, default=lambda: datetime.now(timezone.utc), index=True
+    )
+    execution_mode: Mapped[str] = mapped_column(String(20), nullable=False)  # "paper" | "ig_demo"
+    action: Mapped[str] = mapped_column(String(50), nullable=False)  # "place_order", "close_position", etc.
+    instrument: Mapped[str] = mapped_column(String(20), nullable=False)
+    direction: Mapped[str | None] = mapped_column(String(10))
+    size: Mapped[float | None] = mapped_column(Float)
+    deal_id: Mapped[str | None] = mapped_column(String(50))
+    status: Mapped[str] = mapped_column(String(20), nullable=False)  # "success", "failed", "rejected"
+    detail_json: Mapped[dict | None] = mapped_column(JSON)
+    error_message: Mapped[str | None] = mapped_column(Text)
+    bot_id: Mapped[str | None] = mapped_column(String(20), index=True)
+
+
+class KillSwitchModel(Base):
+    """Kill switch state — single row table."""
+
+    __tablename__ = "kill_switch"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    is_active: Mapped[bool] = mapped_column(default=False)
+    reason: Mapped[str | None] = mapped_column(Text)
+    activated_by: Mapped[str | None] = mapped_column(String(50))
+    activated_at: Mapped[datetime | None] = mapped_column(DateTime)
+    deactivated_at: Mapped[datetime | None] = mapped_column(DateTime)

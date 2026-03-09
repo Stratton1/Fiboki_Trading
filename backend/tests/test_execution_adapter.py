@@ -43,11 +43,14 @@ def test_paper_adapter_place_order():
     assert result["order"] == order
 
 
-def test_ig_adapter_raises_not_implemented():
-    """IG adapter raises NotImplementedError with V1 message."""
+def test_ig_adapter_requires_credentials():
+    """IG adapter requires credentials to authenticate."""
+    from fibokei.execution.ig_client import IGClientError
+
     adapter = IGExecutionAdapter()
-    with pytest.raises(NotImplementedError, match="not enabled in V1"):
-        adapter.place_order({})
+    result = adapter.place_order({"instrument": "EURUSD", "direction": "BUY", "size": 1.0})
+    # Without credentials, the adapter catches the error and returns rejected
+    assert result["status"] == "rejected"
 
 
 def test_feature_flags_default_paper():

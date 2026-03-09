@@ -6,6 +6,7 @@ import { api } from "@/lib/api";
 import { useRankings } from "@/lib/hooks/use-research";
 import { Heatmap } from "@/components/analytics/Heatmap";
 import GroupedInstrumentSelect from "@/components/GroupedInstrumentSelect";
+import { PageHeader } from "@/components/PageHeader";
 import type {
   AdvancedResearchResponse,
   ScoringWeights,
@@ -154,15 +155,16 @@ export default function ResearchPage() {
   );
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h2 className="text-xl font-semibold">Research Matrix</h2>
-      </div>
+    <div className="max-w-6xl space-y-6">
+      <PageHeader
+        title="Research Matrix"
+        subtitle="Run batch research, rank strategies, and validate performance"
+      />
 
       {error && <p className="text-danger text-sm">{error}</p>}
 
       {/* Batch Run Form */}
-      <form onSubmit={handleRunResearch} className="bg-background-card rounded-lg border border-gray-200 p-5">
+      <form onSubmit={handleRunResearch} className="card">
         <h3 className="text-sm font-medium text-foreground-muted mb-3">Run Research</h3>
 
         {/* Strategy multi-select */}
@@ -202,7 +204,7 @@ export default function ResearchPage() {
               instruments={instruments ?? []}
               value={selectedInstrument}
               onChange={setSelectedInstrument}
-              className="border border-gray-300 rounded px-3 py-1.5 text-sm bg-background"
+              className="input"
             />
           </div>
           <div>
@@ -232,7 +234,7 @@ export default function ResearchPage() {
               onChange={(e) => setMinTrades(Number(e.target.value))}
               min={1}
               max={1000}
-              className="border border-gray-300 rounded px-3 py-1.5 text-sm bg-background w-20"
+              className="input w-20"
             />
           </div>
         </div>
@@ -273,7 +275,7 @@ export default function ResearchPage() {
           <button
             type="submit"
             disabled={running || selectedStrategies.length === 0 || !selectedInstrument || selectedTimeframes.length === 0}
-            className="bg-primary text-white px-4 py-1.5 rounded text-sm font-medium hover:bg-primary/90 disabled:opacity-50"
+            className="btn btn-primary"
           >
             {running ? "Running..." : "Run Research"}
           </button>
@@ -287,7 +289,7 @@ export default function ResearchPage() {
 
       {/* Heatmap */}
       {strategyIds.length > 0 && instrumentIds.length > 0 && (
-        <div className="bg-background-card rounded-lg border border-gray-200 p-5">
+        <div className="card">
           <Heatmap
             z={z}
             x={instrumentIds}
@@ -298,7 +300,7 @@ export default function ResearchPage() {
       )}
 
       {/* Rankings Table */}
-      <div className="bg-background-card rounded-lg border border-gray-200 overflow-hidden">
+      <div className="table-container">
         <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 bg-background-muted">
           <span className="text-sm font-medium text-foreground-muted">Rankings</span>
           {rankings && rankings.length > 0 && (
@@ -359,7 +361,7 @@ export default function ResearchPage() {
 
       {/* Validation Results */}
       {validationResult && (
-        <div className="bg-background-card rounded-lg border border-gray-200 p-5">
+        <div className="card">
           <h3 className="text-sm font-medium mb-3">
             Validation Results — {validationResult.total_passed}/{validationResult.total_validated} passed ({(validationResult.pass_rate * 100).toFixed(0)}%)
           </h3>
@@ -402,7 +404,7 @@ export default function ResearchPage() {
 
       {/* Advanced Research Results */}
       {advancedLoading && (
-        <div className="bg-background-card rounded-lg border border-gray-200 p-5 text-center">
+        <div className="card text-center">
           <p className="text-foreground-muted text-sm">Running advanced analysis...</p>
         </div>
       )}
@@ -413,7 +415,7 @@ export default function ResearchPage() {
 
           {/* Walk-Forward */}
           {advancedResult.walk_forward && (
-            <div className="bg-background-card rounded-lg border border-gray-200 p-5">
+            <div className="card">
               <h4 className="text-sm font-medium mb-2">Walk-Forward Analysis</h4>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-3">
                 <div>
@@ -470,7 +472,7 @@ export default function ResearchPage() {
 
           {/* Out-of-Sample */}
           {advancedResult.oos && (
-            <div className="bg-background-card rounded-lg border border-gray-200 p-5">
+            <div className="card">
               <h4 className="text-sm font-medium mb-2">Out-of-Sample Test</h4>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                 <div>
@@ -511,7 +513,7 @@ export default function ResearchPage() {
 
           {/* Monte Carlo */}
           {advancedResult.monte_carlo && (
-            <div className="bg-background-card rounded-lg border border-gray-200 p-5">
+            <div className="card">
               <h4 className="text-sm font-medium mb-2">Monte Carlo Robustness</h4>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                 <div>
@@ -558,7 +560,7 @@ export default function ResearchPage() {
 
           {/* Sensitivity */}
           {advancedResult.sensitivity && advancedResult.sensitivity.length > 0 && (
-            <div className="bg-background-card rounded-lg border border-gray-200 p-5">
+            <div className="card">
               <h4 className="text-sm font-medium mb-2">Parameter Sensitivity</h4>
               {advancedResult.sensitivity.map((sens, idx) => (
                 <div key={idx} className="mb-4 last:mb-0">

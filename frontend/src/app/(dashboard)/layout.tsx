@@ -45,33 +45,43 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   return (
     <div className="min-h-screen flex bg-background">
       {/* Sidebar */}
-      <aside className="w-56 bg-background-card border-r border-gray-200 flex flex-col">
-        <div className="px-4 py-4 border-b border-gray-200">
+      <aside className="w-60 bg-background-card border-r border-border flex flex-col shrink-0">
+        <div className="px-5 py-5 border-b border-border">
           <FibokiLogo size={32} />
         </div>
-        <nav className="flex-1 py-4 space-y-1">
+        <nav className="flex-1 py-3 px-3 space-y-0.5">
           {NAV_ITEMS.map(({ href, label, icon: Icon }) => {
             const active = pathname === href;
             return (
               <Link
                 key={href}
                 href={href}
-                className={`flex items-center gap-3 px-4 py-2 text-sm transition ${
+                className={`flex items-center gap-3 px-3 py-2.5 text-sm rounded-lg transition-all ${
                   active
-                    ? "bg-primary/10 text-primary font-medium border-r-2 border-primary"
+                    ? "bg-primary/10 text-primary font-medium shadow-sm"
                     : "text-foreground-muted hover:text-foreground hover:bg-background-muted"
                 }`}
               >
-                <Icon size={18} />
+                <Icon size={18} strokeWidth={active ? 2.2 : 1.8} />
                 {label}
               </Link>
             );
           })}
         </nav>
-        <div className="border-t border-gray-200 p-4">
-          <div className="flex items-center justify-between">
-            <span className="text-sm text-foreground-muted">{user?.username}</span>
-            <button onClick={handleLogout} className="text-foreground-muted hover:text-danger">
+        <div className="border-t border-border p-4">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary text-xs font-bold uppercase">
+              {user?.username?.charAt(0) ?? "?"}
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium truncate">{user?.username}</p>
+              <p className="text-xs text-foreground-muted">{user?.role ?? "operator"}</p>
+            </div>
+            <button
+              onClick={handleLogout}
+              className="text-foreground-muted hover:text-danger transition-colors p-1 rounded-md hover:bg-red-50"
+              title="Sign out"
+            >
               <LogOut size={16} />
             </button>
           </div>
@@ -79,7 +89,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       </aside>
 
       {/* Main content */}
-      <main className="flex-1 p-6 overflow-auto">{children}</main>
+      <main className="flex-1 p-8 overflow-auto">
+        <div className="max-w-7xl">{children}</div>
+      </main>
     </div>
   );
 }

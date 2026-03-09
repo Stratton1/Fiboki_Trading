@@ -140,7 +140,54 @@ export const api = {
 
   // System
   systemHealth: () => apiFetch<{ status: string; version: string }>("/system/health"),
-  systemStatus: () => apiFetch<Record<string, unknown>>("/system/status"),
+  systemStatus: () =>
+    apiFetch<{
+      api_version: string;
+      database: string;
+      paper_engine: string;
+      strategies_loaded: number;
+      execution_mode: string;
+      kill_switch_active: boolean;
+    }>("/system/status"),
+
+  // Execution
+  executionMode: () =>
+    apiFetch<{
+      mode: string;
+      live_execution_enabled: boolean;
+      ig_paper_mode: boolean;
+      kill_switch_active: boolean;
+    }>("/execution/mode"),
+  killSwitchStatus: () =>
+    apiFetch<{
+      is_active: boolean;
+      reason: string | null;
+      activated_by: string | null;
+      activated_at: string | null;
+    }>("/execution/kill-switch"),
+  activateKillSwitch: (reason: string) =>
+    apiFetch("/execution/kill-switch/activate", {
+      method: "POST",
+      body: JSON.stringify({ reason }),
+    }),
+  deactivateKillSwitch: () =>
+    apiFetch("/execution/kill-switch/deactivate", { method: "POST" }),
+  executionAudit: (params?: string) =>
+    apiFetch<
+      Array<{
+        id: number;
+        timestamp: string;
+        execution_mode: string;
+        action: string;
+        instrument: string;
+        direction: string | null;
+        size: number | null;
+        deal_id: string | null;
+        status: string;
+        error_message: string | null;
+        bot_id: string | null;
+      }>
+    >(`/execution/audit${params ? `?${params}` : ""}`),
 };
 
 export { ApiError };

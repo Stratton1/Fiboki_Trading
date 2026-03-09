@@ -6,6 +6,9 @@ import useSWR from "swr";
 import { api } from "@/lib/api";
 import { useBacktests } from "@/lib/hooks/use-backtests";
 import GroupedInstrumentSelect from "@/components/GroupedInstrumentSelect";
+import { PageHeader } from "@/components/PageHeader";
+import { EmptyState } from "@/components/EmptyState";
+import { BarChart3, Loader2 } from "lucide-react";
 
 export default function BacktestsPage() {
   const { data: backtests, mutate, isLoading } = useBacktests();
@@ -33,19 +36,22 @@ export default function BacktestsPage() {
   }
 
   return (
-    <div>
-      <h2 className="text-xl font-semibold mb-6">Backtests</h2>
+    <div className="max-w-6xl">
+      <PageHeader
+        title="Backtests"
+        subtitle="Run strategy backtests and review historical performance"
+      />
 
       {/* Run Backtest Form */}
-      <form onSubmit={handleRun} className="bg-background-card rounded-lg border border-gray-200 p-5 mb-6">
-        <h3 className="text-sm font-medium text-foreground-muted mb-3">Run Backtest</h3>
+      <form onSubmit={handleRun} className="card-elevated mb-6">
+        <p className="section-label">Run Backtest</p>
         <div className="flex flex-wrap gap-3 items-end">
           <div>
-            <label className="block text-xs text-foreground-muted mb-1">Strategy</label>
+            <label className="block text-xs text-foreground-muted mb-1.5">Strategy</label>
             <select
               value={strategy}
               onChange={(e) => setStrategy(e.target.value)}
-              className="border border-gray-300 rounded px-3 py-1.5 text-sm bg-background"
+              className="input"
             >
               <option value="">Select strategy</option>
               {strategies?.map((s: any) => (
@@ -54,20 +60,20 @@ export default function BacktestsPage() {
             </select>
           </div>
           <div>
-            <label className="block text-xs text-foreground-muted mb-1">Instrument</label>
+            <label className="block text-xs text-foreground-muted mb-1.5">Instrument</label>
             <GroupedInstrumentSelect
               instruments={instruments ?? []}
               value={instrument}
               onChange={setInstrument}
-              className="border border-gray-300 rounded px-3 py-1.5 text-sm bg-background"
+              className="input"
             />
           </div>
           <div>
-            <label className="block text-xs text-foreground-muted mb-1">Timeframe</label>
+            <label className="block text-xs text-foreground-muted mb-1.5">Timeframe</label>
             <select
               value={timeframe}
               onChange={(e) => setTimeframe(e.target.value)}
-              className="border border-gray-300 rounded px-3 py-1.5 text-sm bg-background"
+              className="input"
             >
               <option value="M15">M15</option>
               <option value="H1">H1</option>
@@ -78,57 +84,67 @@ export default function BacktestsPage() {
           <button
             type="submit"
             disabled={running || !strategy || !instrument}
-            className="bg-primary text-white px-4 py-1.5 rounded text-sm font-medium hover:bg-primary/90 disabled:opacity-50"
+            className="btn btn-primary"
           >
+            {running && <Loader2 size={14} className="animate-spin" />}
             {running ? "Running..." : "Run Backtest"}
           </button>
         </div>
-        {error && <p className="text-danger text-sm mt-2">{error}</p>}
+        {error && <p className="text-danger text-sm mt-3">{error}</p>}
       </form>
 
       {/* Results Table */}
-      <div className="bg-background-card rounded-lg border border-gray-200 overflow-hidden">
-        <table className="w-full text-sm">
+      <div className="table-container">
+        <table>
           <thead>
-            <tr className="border-b border-gray-200 bg-background-muted">
-              <th className="text-left px-4 py-3 font-medium text-foreground-muted">Strategy</th>
-              <th className="text-left px-4 py-3 font-medium text-foreground-muted">Instrument</th>
-              <th className="text-left px-4 py-3 font-medium text-foreground-muted">TF</th>
-              <th className="text-right px-4 py-3 font-medium text-foreground-muted">Trades</th>
-              <th className="text-right px-4 py-3 font-medium text-foreground-muted">Net Profit</th>
-              <th className="text-right px-4 py-3 font-medium text-foreground-muted">Sharpe</th>
-              <th className="text-right px-4 py-3 font-medium text-foreground-muted">Max DD</th>
+            <tr>
+              <th className="text-left">Strategy</th>
+              <th className="text-left">Instrument</th>
+              <th className="text-left">TF</th>
+              <th className="text-right">Trades</th>
+              <th className="text-right">Net Profit</th>
+              <th className="text-right">Sharpe</th>
+              <th className="text-right">Max DD</th>
             </tr>
           </thead>
           <tbody>
             {isLoading && (
               <tr>
-                <td colSpan={7} className="px-4 py-8 text-center text-foreground-muted">Loading...</td>
+                <td colSpan={7}>
+                  <div className="flex items-center justify-center gap-2 py-8 text-foreground-muted">
+                    <Loader2 size={16} className="animate-spin" />
+                    <span className="text-sm">Loading backtests...</span>
+                  </div>
+                </td>
               </tr>
             )}
             {!isLoading && (!backtests || backtests.length === 0) && (
               <tr>
-                <td colSpan={7} className="px-4 py-8 text-center text-foreground-muted">
-                  No backtests yet. Run one above to get started.
+                <td colSpan={7}>
+                  <EmptyState
+                    icon={<BarChart3 size={36} strokeWidth={1.5} />}
+                    title="No backtests yet"
+                    description="Run your first backtest above to see results here."
+                  />
                 </td>
               </tr>
             )}
             {backtests?.map((bt) => (
-              <tr key={bt.id} className="border-b border-gray-100 hover:bg-background-muted/50">
-                <td className="px-4 py-3">
-                  <Link href={`/backtests/${bt.id}`} className="text-primary hover:underline">
+              <tr key={bt.id}>
+                <td>
+                  <Link href={`/backtests/${bt.id}`} className="text-primary font-medium hover:underline">
                     {bt.strategy_id}
                   </Link>
                 </td>
-                <td className="px-4 py-3">{bt.instrument}</td>
-                <td className="px-4 py-3">{bt.timeframe}</td>
-                <td className="px-4 py-3 text-right">{bt.total_trades}</td>
-                <td className={`px-4 py-3 text-right ${bt.net_profit >= 0 ? "text-primary" : "text-danger"}`}>
+                <td>{bt.instrument}</td>
+                <td className="text-foreground-muted">{bt.timeframe}</td>
+                <td className="text-right tabular-nums">{bt.total_trades}</td>
+                <td className={`text-right tabular-nums font-medium ${bt.net_profit >= 0 ? "text-primary" : "text-danger"}`}>
                   {bt.net_profit >= 0 ? "+" : ""}${bt.net_profit.toFixed(2)}
                 </td>
-                <td className="px-4 py-3 text-right">{bt.sharpe_ratio?.toFixed(2) ?? "-"}</td>
-                <td className="px-4 py-3 text-right text-danger">
-                  {bt.max_drawdown_pct != null ? `${bt.max_drawdown_pct.toFixed(1)}%` : "-"}
+                <td className="text-right tabular-nums">{bt.sharpe_ratio?.toFixed(2) ?? "—"}</td>
+                <td className="text-right tabular-nums text-danger">
+                  {bt.max_drawdown_pct != null ? `${bt.max_drawdown_pct.toFixed(1)}%` : "—"}
                 </td>
               </tr>
             ))}

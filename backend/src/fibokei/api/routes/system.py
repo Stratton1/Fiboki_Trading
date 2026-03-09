@@ -6,6 +6,7 @@ from sqlalchemy import text
 
 from fibokei.api.auth import TokenData, get_current_user
 from fibokei.api.deps import get_db
+from fibokei.core.feature_flags import FeatureFlags
 
 router = APIRouter(tags=["system"])
 
@@ -20,6 +21,8 @@ class SystemStatusResponse(BaseModel):
     database: str
     paper_engine: str
     strategies_loaded: int
+    execution_mode: str
+    kill_switch_active: bool
 
 
 @router.get("/system/health", response_model=SystemHealthResponse)
@@ -49,9 +52,15 @@ def system_status(
 
     strategies_loaded = len(strategy_registry.list_available())
 
+    flags = FeatureFlags()
+    from fibokei.db.repository import get_kill_switch
+    ks = get_kill_switch(db)
+
     return SystemStatusResponse(
         api_version="1.0.0",
         database=db_status,
         paper_engine=paper_status,
         strategies_loaded=strategies_loaded,
+        execution_mode=flags.execution_mode,
+        kill_switch_active=ks.is_active,
     )
