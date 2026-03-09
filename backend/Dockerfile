@@ -15,8 +15,8 @@ COPY alembic.ini .
 
 RUN pip install --no-cache-dir -e .
 
-# Copy data fixtures for dev/demo
-COPY ../data/fixtures/ /app/data/fixtures/ 2>/dev/null || true
+# Optional local/demo fixtures are not included in the production image.
+RUN mkdir -p /app/data/fixtures
 
 EXPOSE 8000
 

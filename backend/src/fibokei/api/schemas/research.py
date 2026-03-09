@@ -11,6 +11,7 @@ class ResearchRunRequest(BaseModel):
     instruments: list[str] = Field(..., min_length=1)
     timeframes: list[str] = Field(..., min_length=1)
     data_dir: str | None = None
+    provider: str | None = Field(None, description="Data provider: histdata, dukascopy, or None for auto")
     initial_capital: float = 10000.0
     risk_per_trade_pct: float = 1.0
 

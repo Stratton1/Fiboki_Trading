@@ -17,14 +17,23 @@ async function apiFetch<T>(path: string, options: RequestInit = {}): Promise<T> 
       headers["Authorization"] = `Bearer ${token}`;
     }
   }
-  const res = await fetch(`${API_URL}/api/v1${path}`, {
-    credentials: "include",
-    headers: {
-      ...headers,
-      ...options.headers,
-    },
-    ...options,
-  });
+  // Abort after 10s to prevent infinite loading screens
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 10000);
+  let res: Response;
+  try {
+    res = await fetch(`${API_URL}/api/v1${path}`, {
+      credentials: "include",
+      signal: controller.signal,
+      headers: {
+        ...headers,
+        ...options.headers,
+      },
+      ...options,
+    });
+  } finally {
+    clearTimeout(timeout);
+  }
 
   if (res.status === 401) {
     if (typeof window !== "undefined" && !path.includes("/auth/")) {

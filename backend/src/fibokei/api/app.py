@@ -13,7 +13,7 @@ from fibokei.api.routes.auth import router as auth_router
 from fibokei.api.routes.instruments import router as instruments_router
 from fibokei.api.routes.strategies import router as strategies_router
 
-_raw_db_url = os.environ.get("FIBOKEI_DATABASE_URL", "sqlite:///fibokei.db")
+_raw_db_url = os.environ.get("FIBOKEI_DATABASE_URL") or os.environ.get("DATABASE_URL", "sqlite:///fibokei.db")
 # Render/Railway may provide postgres:// which SQLAlchemy 2.0 rejects
 if _raw_db_url.startswith("postgres://"):
     DATABASE_URL = _raw_db_url.replace("postgres://", "postgresql://", 1)
@@ -97,6 +97,8 @@ def create_app() -> FastAPI:
     application.include_router(market_data_router, prefix="/api/v1")
     from fibokei.api.routes.charts import router as charts_router
     application.include_router(charts_router, prefix="/api/v1")
+    from fibokei.api.routes.data import router as data_router
+    application.include_router(data_router, prefix="/api/v1")
 
     return application
 

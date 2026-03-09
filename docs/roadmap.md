@@ -1,8 +1,8 @@
- # Fiboki — Build Roadmap
+§ it i# Fiboki — Build Roadmap
 
-Version: 1.3
-Status: **V1 COMPLETE** — Phase 6 (Polish) in progress
-Last Updated: 2026-03-07
+Version: 1.4
+Status: **V1 COMPLETE** — Phase 6 (Polish) in progress, Phases 7–13 planned
+Last Updated: 2026-03-09
 Reference: [blueprint.md](blueprint.md)
 
 ---
@@ -24,6 +24,14 @@ Reference: [blueprint.md](blueprint.md)
 | Phase 6.2: Production Deployment | IN PROGRESS | All pass | Railway (primary) + Render (fallback), Vercel frontend, cross-origin auth, deployment docs — awaiting first cloud deploy |
 | Phase 6.3: UX Improvements | COMPLETE | All pass | Dashboard polish, SVG logo, trade filters, visual hierarchy |
 | Phase 6.4: Real Market Data | COMPLETE | All pass | yfinance ingestion, CLI refresh-data, API refresh endpoint |
+| Phase 6.5: Canonical Data Expansion | COMPLETE | All pass | 60 instruments × 6 timeframes = 360 HistData datasets |
+| Phase 7: Data Universe Consolidation | PLANNED | — | Expand instrument registry to 60+, update API/frontend/docs |
+| Phase 8: Research Engine V2 | PLANNED | — | Walk-forward, OOS, Monte Carlo, batch UI |
+| Phase 9: Always-On Paper Trading | PLANNED | — | Railway worker, bot persistence, monitoring |
+| Phase 10: IG Demo Integration | PLANNED | — | Real IGExecutionAdapter, safety controls |
+| Phase 11: Live Readiness | PLANNED | — | Risk hardening, promotion gates, pre-live checklist |
+| Phase 12: Frontend Improvements V2 | PLANNED | — | Multi-run comparison, demo controls, trade replay |
+| Phase 13: CI/CD and Operations | PLANNED | — | GitHub Actions, deployment pipeline, error tracking |
 
 ### Audit Fixes Applied (Post Phase 4.2)
 - **C1**: Data loader now drops NaN rows after `to_numeric(coerce)` with warning
@@ -1042,7 +1050,7 @@ All V1 tasks complete. Platform deployed to Vercel. Backend runs locally. 304 te
 
 **Objective:** Fix broken functionality, add market data pipeline, deploy backend, improve UX.
 
-**Status:** IN PROGRESS (13/16 complete)
+**Status:** IN PROGRESS (18/21 complete)
 
 ---
 
@@ -1076,15 +1084,15 @@ Charts page loads candlestick data. Backtest and bot creation forms are function
 
 - [x] **T-6.2.01** — Created `Dockerfile`, `render.yaml` (Render Blueprint), and `Procfile` for deployment. Added `psycopg2-binary` to dependencies. Fixed PostgreSQL compatibility in `app.py` (conditional `check_same_thread` and `StaticPool` for SQLite only).
 
-- [ ] **T-6.2.02** — Set environment variables on hosting: `FIBOKEI_JWT_SECRET`, `FIBOKEI_USER_JOE_PASSWORD`, `FIBOKEI_USER_TOM_PASSWORD`, `DATABASE_URL`. *(Requires cloud platform account setup)*
+- [ ] **T-6.2.02** — Deploy FastAPI backend to Railway. Set environment variables: `FIBOKEI_JWT_SECRET`, `FIBOKEI_USER_JOE_PASSWORD`, `FIBOKEI_USER_TOM_PASSWORD`, `FIBOKEI_CORS_ORIGINS`. Database URL auto-injected by Railway PostgreSQL addon (app accepts both `FIBOKEI_DATABASE_URL` and `DATABASE_URL`). Verify health check and PostgreSQL schema creation. *(Requires Railway account setup)*
 
-- [ ] **T-6.2.03** — Update Vercel frontend env var `NEXT_PUBLIC_API_URL` to point to deployed backend URL. *(Blocked on T-6.2.02)*
+- [ ] **T-6.2.03** — Configure custom domain `api.fiboki.uk` on Railway. Update Vercel frontend env var `NEXT_PUBLIC_API_URL` to `https://api.fiboki.uk`. Trigger frontend redeploy. *(Blocked on T-6.2.02)*
 
-- [ ] **T-6.2.04** — Verify end-to-end: Vercel frontend talks to deployed backend, login works, API calls succeed. *(Blocked on T-6.2.03)*
+- [ ] **T-6.2.04** — End-to-end production verification from `fiboki.uk`: login succeeds with cross-origin cookies, session persists across refresh, protected API calls work (e.g. `/api/v1/auth/me`), dashboard/charts/backtests/research/bots/trades all load, at least one backtest completes from UI, at least one paper bot can be created and listed, logout clears session, unauthenticated access redirects to login, no CORS errors in browser console. *(Blocked on T-6.2.03)*
 
 ### Verification Gate
 
-Full stack deployed. Login from Vercel URL hits remote backend. No CORS errors.
+Full stack deployed on Railway + Vercel. Login from `fiboki.uk` hits `api.fiboki.uk` backend. Cross-origin cookie auth works. All 12 smoke tests pass. No CORS errors.
 
 ---
 
@@ -1132,6 +1140,422 @@ Charts display real market data after running `fibokei refresh-data`. API refres
 
 ---
 
+## Subphase 6.5 — Canonical Data Expansion ✅
+
+**Goal:** Expand HistData coverage from 16 to 60 instruments with proper symbol mapping audit.
+
+### Tasks
+
+- [x] **T-6.5.01** — Audited HistData symbol mapping. Previous map had incorrect tickers for indices (e.g. `SPX500USD` should be `SPXUSD`, `DE30EUR` should be `GRXEUR`, `JP225USD` should be `JPXJPY`). Corrected all mappings.
+
+- [x] **T-6.5.02** — Discovered previously-unknown HistData coverage: US100 (`NSXUSD`), UK100 (`UKXGBP`), CAC40 (`FRXEUR`), AU200 (`AUXAUD`), HK50 (`HKXHKD`), DXY (`UDXUSD`), plus 17 G10 FX crosses, 4 Scandinavian pairs, 14 EM pairs, and ZARJPY.
+
+- [x] **T-6.5.03** — Downloaded and ingested all 44 new instruments from HistData (2023–2024 M1 data), deriving M1/M5/M15/M30/H1/H4 canonical timeframes for each. Zero failures.
+
+- [x] **T-6.5.04** — Updated centralised symbol map (`symbol_map.py`) with all 60 HistData instruments. Updated Yahoo map with CAC40 and DXY entries. Removed unmapped symbols (US30, US100, UK100 under old incorrect tickers) from HistData map.
+
+- [x] **T-6.5.05** — Verified all new data loads correctly through the data registry (`load_canonical()`). All instruments return valid DataFrames with correct date ranges (2023–2024).
+
+### Coverage Summary
+
+| Category | Count | Instruments |
+|----------|-------|-------------|
+| Forex Majors | 7 | EURUSD, GBPUSD, USDJPY, AUDUSD, USDCHF, USDCAD, NZDUSD |
+| Forex G10 Crosses | 22 | EURJPY, GBPJPY, EURGBP, AUDJPY, EURAUD, AUDCAD, AUDCHF, AUDNZD, CADCHF, CADJPY, CHFJPY, EURCAD, EURCHF, EURNZD, GBPAUD, GBPCAD, GBPCHF, GBPNZD, NZDCAD, NZDCHF, NZDJPY, SGDJPY |
+| Forex Scandinavian | 4 | USDNOK, USDSEK, EURNOK, EURSEK |
+| Forex EM | 14 | USDSGD, USDHKD, USDTRY, USDMXN, USDZAR, USDPLN, USDCZK, USDHUF, ZARJPY, EURTRY, EURPLN, EURCZK, EURHUF, EURDKK |
+| Metals | 2 | XAUUSD, XAGUSD |
+| Energy | 2 | BCOUSD, WTIUSD |
+| Indices | 9 | US500, US100, UK100, DE40, JP225, CAC40, AU200, HK50, DXY |
+| **Total** | **60** | **× 6 timeframes = 360 canonical datasets** |
+
+### Not Available on HistData (Alternate Provider Required)
+
+| Symbol | Recommended Provider |
+|--------|---------------------|
+| US30 (DJIA) | Dukascopy (`USA30IDXUSD`) or Yahoo (`^DJI`) |
+| BTCUSD | Dukascopy or Yahoo |
+| ETHUSD | Dukascopy or Yahoo |
+
+### Verification Gate
+
+`ls data/canonical/histdata/ | wc -l` returns 60. All instruments load via `load_canonical()` with correct 2023–2024 date ranges.
+
+---
+
 ## Phase 6 Summary
 
-**Total tasks: 16** | **Completed: 13** | **Remaining: 3** (all in Subphase 6.2 — require cloud platform account)
+**Total tasks: 21** | **Completed: 18** | **Remaining: 3** (all in Subphase 6.2 — require Railway account setup)
+
+---
+
+# FUTURE PHASES (POST PHASE 6)
+
+The following phases extend Fiboki from a locally-functional research platform into a production-grade, broker-connected trading system. Each phase builds on the previous one. Phases are sequenced so that production stability comes first, then data/research improvements, then operational trading, then broker integration, then live readiness.
+
+---
+
+# PHASE 7: DATA UNIVERSE CONSOLIDATION
+
+**Objective:** Make the 60-instrument HistData universe the default research universe across the entire platform — instrument registry, API, frontend, and docs.
+
+**Dependencies:** Phase 6.5 (Canonical Data Expansion — complete)
+
+**Current state:** HistData canonical datasets exist for 60 instruments × 6 timeframes = 360 datasets. However, the instrument registry (`instruments.py`) still defines only the original 30-instrument launch universe. The `AssetClass` enum lacks categories for the new Scandinavian, EM, and expanded G10 cross pairs.
+
+---
+
+## Subphase 7.1 — Asset Class Taxonomy and Instrument Registry
+
+**Goal:** Expand the instrument registry and asset class taxonomy to reflect the confirmed 60-instrument HistData universe.
+
+### Tasks
+
+- [ ] **T-7.1.01** — Add new `AssetClass` values to `backend/src/fibokei/core/models.py`:
+  - `FOREX_G10_CROSS` — for the 17 new G10 cross pairs (AUDCAD, AUDCHF, AUDNZD, CADCHF, CADJPY, CHFJPY, EURCAD, EURCHF, EURNZD, GBPAUD, GBPCAD, GBPCHF, GBPNZD, NZDCAD, NZDCHF, NZDJPY, SGDJPY)
+  - `FOREX_SCANDINAVIAN` — USDNOK, USDSEK, EURNOK, EURSEK
+  - `FOREX_EM` — USDSGD, USDHKD, USDTRY, USDMXN, USDZAR, USDPLN, USDCZK, USDHUF, ZARJPY, EURTRY, EURPLN, EURCZK, EURHUF, EURDKK
+  This is a deliberate taxonomy decision to preserve useful analytical grouping.
+
+- [ ] **T-7.1.02** — Expand `backend/src/fibokei/core/instruments.py` from 30 to 60+ instruments. Assign each new instrument to the correct `AssetClass`. Keep instruments without HistData backing (NATGAS, SOLUSD, LTCUSD, XRPUSD, US30, BTCUSD, ETHUSD) in the registry for future alternate-provider support, but mark them clearly as not part of the default HistData research universe.
+
+- [ ] **T-7.1.03** — Add a `has_canonical_data: bool` field or equivalent to distinguish instruments with confirmed HistData datasets from those requiring alternate providers.
+
+### Verification Gate
+
+```bash
+cd backend
+python -c "from fibokei.core.instruments import INSTRUMENTS; print(f'{len(INSTRUMENTS)} instruments')"
+# Should print 60+ instruments
+python -c "from fibokei.core.models import AssetClass; print([e.value for e in AssetClass])"
+# Should include forex_g10_cross, forex_scandinavian, forex_em
+```
+
+---
+
+## Subphase 7.2 — API, Frontend, and Documentation Updates
+
+**Goal:** Ensure the expanded universe is visible and usable across the entire platform.
+
+**Dependencies:** Subphase 7.1
+
+### Tasks
+
+- [ ] **T-7.2.01** — Verify `/api/v1/instruments` returns all 60+ instruments with correct asset class labels. Update the instruments API route if needed to support filtering by asset class.
+
+- [ ] **T-7.2.02** — Verify frontend instrument dropdowns and filters show the expanded universe with correct category grouping. Update frontend components if needed.
+
+- [ ] **T-7.2.03** — Add canonical data verification/reporting CLI command: `fibokei list-data` showing available datasets per instrument, timeframes available, row counts, and date ranges.
+
+- [ ] **T-7.2.04** — Update docs that still reference the old 30-instrument launch universe: `docs/blueprint.md`, `docs/architecture.md`, `README.md`.
+
+### Verification Gate
+
+```bash
+cd backend
+python -m fibokei list-data  # Shows 360 canonical datasets
+curl http://localhost:8000/api/v1/instruments/ | python -m json.tool | grep -c '"symbol"'
+# Should return 60+
+```
+Frontend dropdowns show all instrument categories.
+
+---
+
+# PHASE 8: RESEARCH ENGINE V2
+
+**Objective:** Production-grade research with statistical rigour, frontend batch controls, and configurable quality filters.
+
+**Dependencies:** Phase 7 (Data Universe Consolidation)
+
+---
+
+## Subphase 8.1 — Advanced Research Methods
+
+**Goal:** Add walk-forward analysis, out-of-sample testing, and robustness checks to the research engine.
+
+### Tasks
+
+- [ ] **T-8.1.01** — Implement walk-forward analysis engine with configurable rolling train/test window sizes. Add to `backend/src/fibokei/research/`.
+
+- [ ] **T-8.1.02** — Add out-of-sample testing with configurable hold-out period support (e.g. train on 2023, test on 2024).
+
+- [ ] **T-8.1.03** — Add Monte Carlo robustness checks: shuffled returns, randomised entry timing, bootstrap confidence intervals.
+
+- [ ] **T-8.1.04** — Add parameter sensitivity analysis: vary strategy parameters ±N% and measure stability of results.
+
+- [ ] **T-8.1.05** — Add validation rerun on shortlisted combinations: re-test top-N results on a fresh data window or alternate time period.
+
+### Verification Gate
+
+```bash
+cd backend
+pytest tests/test_walk_forward.py tests/test_oos.py tests/test_monte_carlo.py -v
+```
+Walk-forward produces windowed results. OOS correctly splits train/test. Monte Carlo generates confidence intervals.
+
+---
+
+## Subphase 8.2 — Research UI Improvements
+
+**Goal:** Frontend batch controls and configurable quality filters.
+
+**Dependencies:** Subphase 8.1
+
+### Tasks
+
+- [ ] **T-8.2.01** — Multi-combo batch selection from frontend: strategy × instrument × timeframe matrix picker.
+
+- [ ] **T-8.2.02** — Minimum trade-count filters configurable from UI or API config (currently hardcoded at 80).
+
+- [ ] **T-8.2.03** — Improved composite scoring with configurable weights exposed in the research UI.
+
+- [ ] **T-8.2.04** — Provider-aware validation hooks: flag results where Dukascopy cross-validation would add confidence.
+
+- [ ] **T-8.2.05** — Display walk-forward and OOS results in frontend alongside standard backtest metrics.
+
+### Verification Gate
+
+```bash
+cd frontend && npm run build
+```
+Batch selection works across all 60 instruments. Minimum trade-count filter adjustable in UI. Walk-forward results display correctly.
+
+---
+
+# PHASE 9: ALWAYS-ON PAPER TRADING
+
+**Objective:** Paper bots run continuously on Railway as a separate worker service, with state persistence and operational monitoring.
+
+**Dependencies:** Phase 6.2 (Production Deployment — complete), Phase 7 (Data Universe Consolidation)
+
+---
+
+## Subphase 9.1 — Worker Service Architecture
+
+**Goal:** Separate long-running bot orchestration from the API service.
+
+### Tasks
+
+- [ ] **T-9.1.01** — Design and implement worker vs API separation. Create `backend/src/fibokei/worker.py` entry point for the Railway worker service. Worker reads bot configs from database, runs signal evaluation loops on closed candles, writes trade records back.
+
+- [ ] **T-9.1.02** — Implement bot state persistence across worker restart: all bot state stored in database, not in-memory. Worker reconstructs running bots from database on startup.
+
+- [ ] **T-9.1.03** — Implement bot restart/recovery behaviour: on worker crash or restart, bots resume from last known state. No duplicate signals or missed candles.
+
+- [ ] **T-9.1.04** — Add Railway worker service configuration alongside the API service.
+
+### Verification Gate
+
+```bash
+cd backend
+python -m fibokei.worker --dry-run  # Worker starts, loads bots from DB, exits cleanly
+```
+Worker service runs independently of API. Bot survives worker restart with state intact.
+
+---
+
+## Subphase 9.2 — Operational Monitoring
+
+**Goal:** Health monitoring, stale-data detection, and daily summaries.
+
+**Dependencies:** Subphase 9.1
+
+### Tasks
+
+- [ ] **T-9.2.01** — Stale-data detection: alert if data feed gaps exceed configurable threshold.
+
+- [ ] **T-9.2.02** — Bot health monitoring endpoint: `GET /api/v1/paper/health` returns status of all running bots, last signal time, and data freshness.
+
+- [ ] **T-9.2.03** — Daily summary Telegram alerts: aggregate paper trading performance, active bots, notable signals.
+
+- [ ] **T-9.2.04** — Promotion gate: require minimum backtest composite score before allowing paper bot creation for a strategy/instrument combination.
+
+### Verification Gate
+
+```bash
+cd backend && pytest tests/test_worker.py tests/test_stale_data.py -v
+```
+Stale-data alert fires on simulated gap. Daily summary sends via Telegram. Promotion gate rejects low-scoring combinations.
+
+---
+
+# PHASE 10: IG DEMO INTEGRATION
+
+**Objective:** Real broker execution on IG demo account with full lifecycle management, reconciliation, and safety controls.
+
+**Dependencies:** Phase 9 (Always-On Paper Trading)
+
+**Note:** The exact IG auth flow (API key + session token vs OAuth) must be confirmed against IG API documentation before implementation begins. Do not commit to a specific auth pattern until verified.
+
+---
+
+## Subphase 10.1 — IG Execution Adapter
+
+**Goal:** Implement the real `IGExecutionAdapter` replacing the current stub.
+
+### Tasks
+
+- [ ] **T-10.1.01** — Research and document the IG REST API auth flow, endpoints, and data contracts. Confirm API key + session token approach.
+
+- [ ] **T-10.1.02** — Implement IG demo auth/session handling in `backend/src/fibokei/execution/ig_adapter.py`. Handle session refresh and expiry.
+
+- [ ] **T-10.1.03** — Implement instrument-to-epic mapping: Fiboki symbol → IG epic code. Store mappings in a centralised config.
+
+- [ ] **T-10.1.04** — Implement order placement, modification, and cancellation via IG REST API.
+
+- [ ] **T-10.1.05** — Implement position sync and fill/order-status handling. Keep Fiboki state in sync with IG account state.
+
+- [ ] **T-10.1.06** — Implement reconciliation: compare Fiboki internal state vs IG account state, flag and log discrepancies.
+
+### Verification Gate
+
+```bash
+cd backend && pytest tests/test_ig_adapter.py -v
+```
+Adapter authenticates with IG demo. Can place and close a test trade. Reconciliation detects a simulated discrepancy.
+
+---
+
+## Subphase 10.2 — Safety Controls and Frontend
+
+**Goal:** Kill switch, audit logs, demo-only flags, and frontend controls.
+
+**Dependencies:** Subphase 10.1
+
+### Tasks
+
+- [ ] **T-10.2.01** — Implement kill switch / safe mode: emergency stop all IG activity within 5 seconds. Accessible via API endpoint and frontend button.
+
+- [ ] **T-10.2.02** — Execution audit logs: every order action logged with timestamps, order details, and IG response.
+
+- [ ] **T-10.2.03** — Demo-only feature flags: prevent accidental live execution. IG adapter checks feature flag before any order action.
+
+- [ ] **T-10.2.04** — Frontend controls for demo bot operation: start/stop/pause demo bots, view execution log, trigger kill switch.
+
+- [ ] **T-10.2.05** — Chart/feed strategy for demo mode: document the boundary between HistData (backtesting/research) and IG feed (live/demo execution pricing). Historical research data remains from HistData. Operational demo charting aligns with IG price feed where appropriate.
+
+### Verification Gate
+
+```bash
+cd backend && pytest tests/test_ig_safety.py -v
+```
+Kill switch stops all activity within 5 seconds. Demo flag prevents execution when disabled. Audit log captures all order actions.
+
+---
+
+# PHASE 11: LIVE READINESS
+
+**Objective:** Define and meet measurable criteria for transitioning from paper to demo to live trading. This phase produces documentation, hardened risk controls, and enforceable promotion gates — not the live trading itself.
+
+**Dependencies:** Phase 10 (IG Demo Integration)
+
+---
+
+## Subphase 11.1 — Risk Hardening and Operational Procedures
+
+**Goal:** Strengthen risk controls and document operational procedures.
+
+### Tasks
+
+- [ ] **T-11.1.01** — Create pre-live checklist document: all items that must be verified and signed off before any live trading begins.
+
+- [ ] **T-11.1.02** — Risk hardening: enforce max position size, daily loss limit, correlation limits, max concurrent positions. These must be configurable and monitored.
+
+- [ ] **T-11.1.03** — Monitoring and alerting requirements: error rates, latency, reconciliation failures, unexpected fills. Define thresholds and alert channels.
+
+- [ ] **T-11.1.04** — Operational recovery procedures: what to do if worker crashes, if IG session expires, if database is unavailable, if network partitions occur.
+
+- [ ] **T-11.1.05** — Environment separation: dev/staging/prod configs with clear boundaries. No accidental cross-environment execution.
+
+### Verification Gate
+
+Pre-live checklist exists and all items can be evaluated. Risk limits are enforced in code. Recovery procedures are documented and have been dry-run tested.
+
+---
+
+## Subphase 11.2 — Promotion Gates
+
+**Goal:** Define measurable, enforceable criteria for promotion between trading modes.
+
+**Dependencies:** Subphase 11.1
+
+### Tasks
+
+- [ ] **T-11.2.01** — Define and implement **Paper → Demo** promotion gate:
+  - Minimum 30-day paper runtime
+  - Minimum 80 trades completed
+  - No unresolved critical errors
+  - Composite score above configurable threshold
+
+- [ ] **T-11.2.02** — Define and implement **Demo → Live** promotion gate:
+  - Minimum 14-day demo runtime
+  - Reconciliation accuracy >99.5%
+  - Max tolerated slippage drift within defined tolerance
+  - No unresolved critical alerts
+  - Manual sign-off required (cannot be automated away)
+
+### Verification Gate
+
+```bash
+cd backend && pytest tests/test_promotion_gates.py -v
+```
+Promotion gates reject bots that do not meet criteria. Manual sign-off step is enforced.
+
+---
+
+# PHASE 12: FRONTEND IMPROVEMENTS V2
+
+**Objective:** Richer analytical and operational controls for the web platform.
+
+**Dependencies:** Phase 10 (IG Demo Integration) for demo-related features. Phase 8 (Research V2) for research-related features.
+
+---
+
+### Tasks
+
+- [ ] **T-12.01** — Multi-run backtest comparison views: side-by-side metrics for 3+ backtests.
+
+- [ ] **T-12.02** — Trade detail replay / inspection: step through trade lifecycle with chart context.
+
+- [ ] **T-12.03** — Demo/live mode visibility indicators: clear visual state (paper / demo / live) across all operational pages.
+
+- [ ] **T-12.04** — Settings page for IG credentials and risk parameters: securely store and manage IG API keys and risk config.
+
+- [ ] **T-12.05** — Expanded instrument search/filter UX for 60+ instruments with category grouping.
+
+### Verification Gate
+
+```bash
+cd frontend && npm run build
+```
+Comparison view works for 3+ backtests. Mode indicator visible on all operational pages. Instrument filter groups by asset class.
+
+---
+
+# PHASE 13: CI/CD AND OPERATIONS
+
+**Objective:** Automated quality gates, deployment pipeline, and operational maturity.
+
+**Dependencies:** Phase 6.2 (Production Deployment — complete)
+
+---
+
+### Tasks
+
+- [ ] **T-13.01** — GitHub Actions workflow: lint (`ruff`), test (`pytest`), build (`npm run build`) on every PR.
+
+- [ ] **T-13.02** — Automated deployment on merge to main: Railway auto-deploy from GitHub.
+
+- [ ] **T-13.03** — Deployment smoke test job: automated health check + auth verification post-deploy. Runs after each deployment and alerts on failure.
+
+- [ ] **T-13.04** — Environment variable / config validation: fail-fast on startup if required env vars are missing. Clear error messages.
+
+- [ ] **T-13.05** — Database backup strategy: scheduled PostgreSQL backups, documented restoration procedure.
+
+- [ ] **T-13.06** — Structured logging: JSON log output for production, human-readable for dev. Include request IDs, timing, and error context.
+
+- [ ] **T-13.07** — Error tracking: integrate Sentry or similar for production error monitoring and alerting.
+
+### Verification Gate
+
+PR triggers lint+test automatically. Merge triggers deploy. Smoke test runs post-deploy. Missing env var causes clear startup failure with actionable error message.

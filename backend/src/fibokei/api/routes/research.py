@@ -18,6 +18,7 @@ from fibokei.backtester.engine import Backtester
 from fibokei.backtester.metrics import compute_metrics
 from fibokei.core.models import Timeframe
 from fibokei.data.loader import load_ohlcv_csv
+from fibokei.data.providers.registry import load_canonical
 from fibokei.db.models import ResearchResultModel
 from fibokei.db.repository import get_research_rankings, save_research_results
 from fibokei.research.scorer import compute_composite_score
@@ -63,17 +64,20 @@ def run_research(
                 except ValueError:
                     continue
 
-                # Try to load data
-                from pathlib import Path
+                # Try canonical provider store first, then legacy fixtures
+                df = load_canonical(inst, tf_str.upper(), provider=req.provider)
+                if df is None:
+                    from pathlib import Path
+                    data_path = Path(data_dir) / f"sample_{inst.lower()}_{tf_str.lower()}.csv"
+                    if not data_path.exists():
+                        continue
+                    try:
+                        df = load_ohlcv_csv(str(data_path), inst, tf_enum)
+                    except Exception:
+                        continue
 
-                data_path = Path(data_dir) / f"sample_{inst.lower()}_{tf_str.lower()}.csv"
-                if not data_path.exists():
-                    continue
-
-                try:
-                    df = load_ohlcv_csv(str(data_path), inst, tf_enum)
-                except Exception:
-                    continue
+                df["instrument"] = inst
+                df["timeframe"] = tf_str.upper()
 
                 backtester = Backtester(strategy, config)
                 result = backtester.run(df, inst, tf_enum)

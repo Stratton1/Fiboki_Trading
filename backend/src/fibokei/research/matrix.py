@@ -4,11 +4,14 @@ import sys
 from dataclasses import dataclass, field
 from pathlib import Path
 
+import pandas as pd
+
 from fibokei.backtester.config import BacktestConfig
 from fibokei.backtester.engine import Backtester
 from fibokei.backtester.metrics import compute_metrics
 from fibokei.core.models import Timeframe
 from fibokei.data.loader import load_ohlcv_csv
+from fibokei.data.providers.registry import load_canonical
 from fibokei.research.scorer import ScoringConfig, compute_composite_score
 from fibokei.strategies.registry import strategy_registry
 
@@ -20,6 +23,7 @@ class ResearchResult:
     strategy_id: str
     instrument: str
     timeframe: str
+    provider: str | None = None
     total_trades: int = 0
     net_profit: float = 0.0
     sharpe_ratio: float = 0.0
@@ -42,12 +46,14 @@ class ResearchMatrix:
         timeframes: list[Timeframe],
         config: BacktestConfig | None = None,
         scoring_config: ScoringConfig | None = None,
+        provider: str | None = None,
     ):
         self.strategies = strategies
         self.instruments = instruments
         self.timeframes = timeframes
         self.config = config or BacktestConfig()
         self.scoring_config = scoring_config or ScoringConfig()
+        self.provider = provider
 
     def run(self, data_dir: str) -> list[ResearchResult]:
         """Run all combinations and return ranked results."""
@@ -74,14 +80,13 @@ class ResearchMatrix:
                     )
                     sys.stdout.flush()
 
-                    # Try to find data file
-                    csv_path = self._find_data_file(data_path, instrument, tf_str)
-                    if csv_path is None:
+                    # Load data: canonical provider store first, then legacy files
+                    df = self._load_data(data_path, instrument, tf_str, timeframe)
+                    if df is None:
                         print("SKIP (no data)")
                         continue
 
                     try:
-                        df = load_ohlcv_csv(csv_path, instrument, timeframe)
                         bt = Backtester(strategy, self.config)
                         bt_result = bt.run(df, instrument, timeframe)
                         metrics = compute_metrics(bt_result)
@@ -94,6 +99,7 @@ class ResearchMatrix:
                             strategy_id=strategy_id,
                             instrument=instrument,
                             timeframe=tf_str,
+                            provider=self.provider,
                             total_trades=metrics.get("total_trades", 0),
                             net_profit=metrics.get("total_net_profit", 0.0),
                             sharpe_ratio=metrics.get("sharpe_ratio", 0.0),
@@ -110,6 +116,7 @@ class ResearchMatrix:
                             strategy_id=strategy_id,
                             instrument=instrument,
                             timeframe=tf_str,
+                            provider=self.provider,
                             status=f"error: {e}",
                         )
                         print(f"ERROR: {e}")
@@ -122,6 +129,28 @@ class ResearchMatrix:
             r.rank = i + 1
 
         return results
+
+    def _load_data(
+        self,
+        data_dir: Path,
+        instrument: str,
+        tf_str: str,
+        timeframe: Timeframe,
+    ) -> pd.DataFrame | None:
+        """Load data from canonical provider store, falling back to legacy files."""
+        # Try canonical provider store first
+        df = load_canonical(instrument, tf_str, provider=self.provider)
+        if df is not None:
+            df["instrument"] = instrument
+            df["timeframe"] = tf_str
+            return df
+
+        # Fall back to legacy CSV file search
+        csv_path = self._find_data_file(data_dir, instrument, tf_str)
+        if csv_path is not None:
+            return load_ohlcv_csv(csv_path, instrument, timeframe)
+
+        return None
 
     def _find_data_file(self, data_dir: Path, instrument: str, timeframe: str) -> Path | None:
         """Find data CSV file with common naming patterns."""
