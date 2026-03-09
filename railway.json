@@ -2,6 +2,7 @@
   "$schema": "https://railway.com/railway.schema.json",
   "build": {
     "builder": "NIXPACKS",
+    "buildCommand": "cd backend && pip install -e .",
     "nixpacksPlan": {
       "providers": ["python"],
       "aptPkgs": ["libpq-dev"]
@@ -9,7 +10,7 @@
     "watchPatterns": ["backend/**"]
   },
   "deploy": {
-    "startCommand": "cd backend && pip install -e . && uvicorn fibokei.api.app:app --host 0.0.0.0 --port ${PORT:-8000}",
+    "startCommand": "cd backend && uvicorn fibokei.api.app:app --host 0.0.0.0 --port ${PORT:-8000}",
     "healthcheckPath": "/api/v1/health",
     "healthcheckTimeout": 30,
     "restartPolicyType": "ON_FAILURE",
