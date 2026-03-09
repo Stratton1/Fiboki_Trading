@@ -10,7 +10,8 @@
     "smoke": "npx playwright test --project=smoke",
     "smoke:prod": "BASE_URL=https://fiboki.uk npx playwright test --project=smoke",
     "screenshots": "npx playwright test --project=screenshots",
-    "screenshots:prod": "BASE_URL=https://fiboki.uk npx playwright test --project=screenshots"
+    "screenshots:prod": "BASE_URL=https://fiboki.uk npx playwright test --project=screenshots",
+    "verify:prod": "npx playwright test --project=auth-prod --reporter=list"
   },
   "dependencies": {
     "clsx": "^2.1.1",

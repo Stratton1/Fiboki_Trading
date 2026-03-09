@@ -2,9 +2,11 @@
 
 import logging
 import os
+import time
+import uuid
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
@@ -20,6 +22,58 @@ if _raw_db_url.startswith("postgres://"):
     DATABASE_URL = _raw_db_url.replace("postgres://", "postgresql://", 1)
 else:
     DATABASE_URL = _raw_db_url
+
+
+def _configure_logging() -> None:
+    """Configure structured logging based on environment."""
+    is_production = not os.environ.get("FIBOKEI_LOCAL_DEV")
+    level = logging.INFO
+
+    if is_production:
+        # JSON-style structured logging for production
+        fmt = '{"time":"%(asctime)s","level":"%(levelname)s","logger":"%(name)s","message":"%(message)s"}'
+    else:
+        # Human-readable for local dev
+        fmt = "%(asctime)s %(levelname)-8s [%(name)s] %(message)s"
+
+    logging.basicConfig(level=level, format=fmt, force=True)
+    # Quieten noisy libraries
+    logging.getLogger("uvicorn.access").setLevel(logging.WARNING)
+    logging.getLogger("sqlalchemy.engine").setLevel(logging.WARNING)
+
+
+def _validate_required_env_vars() -> None:
+    """Fail fast if critical environment variables are missing in production."""
+    logger = logging.getLogger("fibokei.startup")
+    is_production = not os.environ.get("FIBOKEI_LOCAL_DEV")
+
+    if not is_production:
+        logger.info("Local dev mode — skipping env var validation")
+        return
+
+    required = {
+        "FIBOKEI_JWT_SECRET": "JWT signing key (min 32 chars)",
+        "FIBOKEI_CORS_ORIGINS": "Allowed CORS origins",
+    }
+    # Database URL can come from either var
+    has_db = os.environ.get("FIBOKEI_DATABASE_URL") or os.environ.get("DATABASE_URL")
+
+    missing = []
+    if not has_db:
+        missing.append("FIBOKEI_DATABASE_URL or DATABASE_URL — PostgreSQL connection string")
+    for var, desc in required.items():
+        if not os.environ.get(var):
+            missing.append(f"{var} — {desc}")
+
+    # Warn about weak JWT secret
+    jwt_secret = os.environ.get("FIBOKEI_JWT_SECRET", "")
+    if jwt_secret and len(jwt_secret) < 32:
+        logger.warning("FIBOKEI_JWT_SECRET is shorter than 32 characters — consider using a stronger secret")
+
+    if missing:
+        msg = "Missing required environment variables:\n  " + "\n  ".join(missing)
+        logger.error(msg)
+        raise SystemExit(f"Startup aborted: {msg}")
 
 
 def _create_engine_and_session():
@@ -42,6 +96,9 @@ def _create_engine_and_session():
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Initialize database and seed users on startup."""
+    _configure_logging()
+    _validate_required_env_vars()
+
     engine, session_factory = _create_engine_and_session()
     app.state.engine = engine
     app.state.session_factory = session_factory
@@ -54,6 +111,9 @@ async def lifespan(app: FastAPI):
 
     # Validate IG demo configuration at startup
     _validate_ig_config()
+
+    logger = logging.getLogger("fibokei.startup")
+    logger.info("Fiboki Trading API started — database=%s", "postgresql" if "postgresql" in DATABASE_URL else "sqlite")
 
     yield
 
@@ -118,6 +178,22 @@ def create_app() -> FastAPI:
         allow_methods=["*"],
         allow_headers=["*"],
     )
+
+    # Request ID + logging middleware
+    @application.middleware("http")
+    async def request_logging_middleware(request: Request, call_next):
+        request_id = request.headers.get("X-Request-ID", uuid.uuid4().hex[:12])
+        request.state.request_id = request_id
+        start = time.monotonic()
+        response = await call_next(request)
+        duration_ms = (time.monotonic() - start) * 1000
+        logger = logging.getLogger("fibokei.http")
+        logger.info(
+            "%s %s %d %.0fms rid=%s",
+            request.method, request.url.path, response.status_code, duration_ms, request_id,
+        )
+        response.headers["X-Request-ID"] = request_id
+        return response
 
     # Mount routers
     application.include_router(auth_router, prefix="/api/v1")

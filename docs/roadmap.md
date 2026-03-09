@@ -1,7 +1,7 @@
 § it i# Fiboki — Build Roadmap
 
-Version: 1.5
-Status: **V1 COMPLETE** — Phases 1–10 complete, Phases 11–13 planned
+Version: 1.6
+Status: **V1 COMPLETE** — Phases 1–13 complete
 Last Updated: 2026-03-09
 Reference: [blueprint.md](blueprint.md)
 
@@ -29,6 +29,10 @@ Reference: [blueprint.md](blueprint.md)
 | Phase 8: Research Engine V2 | COMPLETE | All pass | Walk-forward, OOS, Monte Carlo, sensitivity, validation rerun; batch UI with scoring controls |
 | Phase 9: Always-On Paper Trading | COMPLETE | All pass | Worker service, DB-backed bot state, restart recovery, stale-data detection, health endpoint, daily Telegram alerts, promotion gate |
 | Phase 10: IG Demo Integration | COMPLETE | All pass | IG REST client (demo only), epic mapping (65 instruments), order lifecycle, position sync, reconciliation, kill switch, execution audit, feature flags, frontend controls |
+| Phase 10.5: Production Data Access | COMPLETE | All pass | Centralized path resolver, starter dataset (2.3MB, 7 majors H1), unified load_canonical(), .dockerignore |
+| Phase 11: Live Readiness | COMPLETE | All pass | Risk limits config (env-var driven), promotion gates (Paper→Demo, Demo→Live), pre-live checklist, 18 gate tests |
+| Phase 12: Frontend V2 | COMPLETE | Build clean | ExecutionModeBanner, backtest comparison view, enhanced settings (exec mode + risk params), searchable instrument select |
+| Phase 13: CI/CD & Operations | COMPLETE | All pass | GitHub Actions CI (lint+test+build+smoke), env var validation, structured logging (JSON prod), request IDs, operations runbook |
 
 ### Audit Fixes Applied (Post Phase 4.2)
 - **C1**: Data loader now drops NaN rows after `to_numeric(coerce)` with warning

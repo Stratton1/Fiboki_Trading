@@ -8,7 +8,7 @@ import { useBacktests } from "@/lib/hooks/use-backtests";
 import GroupedInstrumentSelect from "@/components/GroupedInstrumentSelect";
 import { PageHeader } from "@/components/PageHeader";
 import { EmptyState } from "@/components/EmptyState";
-import { BarChart3, Loader2 } from "lucide-react";
+import { BarChart3, GitCompareArrows, Loader2 } from "lucide-react";
 
 export default function BacktestsPage() {
   const { data: backtests, mutate, isLoading } = useBacktests();
@@ -40,6 +40,12 @@ export default function BacktestsPage() {
       <PageHeader
         title="Backtests"
         subtitle="Run strategy backtests and review historical performance"
+        actions={
+          <Link href="/backtests/compare" className="btn btn-secondary text-sm">
+            <GitCompareArrows size={14} />
+            Compare
+          </Link>
+        }
       />
 
       {/* Run Backtest Form */}
@@ -66,6 +72,7 @@ export default function BacktestsPage() {
               value={instrument}
               onChange={setInstrument}
               className="input"
+              showDataIndicator
             />
           </div>
           <div>

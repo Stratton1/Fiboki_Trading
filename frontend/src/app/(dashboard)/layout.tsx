@@ -2,6 +2,7 @@
 
 import { useAuth } from "@/lib/auth";
 import { FibokiLogo } from "@/components/FibokiLogo";
+import { ExecutionModeBanner } from "@/components/ExecutionModeBanner";
 import { LoadingScreen } from "@/components/LoadingScreen";
 import {
   BarChart3,
@@ -90,7 +91,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
       {/* Main content */}
       <main className="flex-1 p-8 overflow-auto">
-        <div className="max-w-7xl">{children}</div>
+        <div className="max-w-7xl">
+          <ExecutionModeBanner />
+          {children}
+        </div>
       </main>
     </div>
   );

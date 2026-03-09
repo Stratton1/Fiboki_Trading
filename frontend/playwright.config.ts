@@ -7,6 +7,9 @@ import { defineConfig } from "@playwright/test";
  *   npx playwright test --project=smoke                          # smoke tests
  *   npx playwright test --project=screenshots                    # capture screenshots
  *   BASE_URL=https://fiboki.uk npx playwright test --project=screenshots
+ *
+ * Authenticated production verification:
+ *   FIBOKI_E2E_USERNAME=x FIBOKI_E2E_PASSWORD=y npm run verify:prod
  */
 export default defineConfig({
   testDir: "./e2e",
@@ -30,6 +33,17 @@ export default defineConfig({
       use: {
         viewport: { width: 1280, height: 800 },
       },
+    },
+    {
+      name: "auth-prod",
+      testMatch: /auth-prod\.spec\.ts$/,
+      use: {
+        baseURL: process.env.BASE_URL || "https://fiboki.uk",
+        viewport: { width: 1280, height: 800 },
+        // Longer timeout for real network + login flow
+        actionTimeout: 15_000,
+      },
+      timeout: 30_000,
     },
   ],
   // Don't start a dev server automatically — caller is responsible
