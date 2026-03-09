@@ -18,8 +18,6 @@ RUN pip install --no-cache-dir -e .
 # Optional local/demo fixtures are not included in the production image.
 RUN mkdir -p /app/data/fixtures
 
-# Railway injects PORT at runtime; default to 8000 for local Docker use.
-ENV PORT=${PORT:-8000}
-EXPOSE $PORT
+EXPOSE 8000
 
-CMD ["sh", "-c", "uvicorn fibokei.api.app:app --host 0.0.0.0 --port $PORT"]
+CMD ["sh", "-c", "exec uvicorn fibokei.api.app:app --host 0.0.0.0 --port ${PORT:-8000}"]
