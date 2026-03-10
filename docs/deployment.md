@@ -227,6 +227,48 @@ This ensures charts, backtests, and research work out of the box in production w
 
 ---
 
+## Railway Persistent Volume
+
+For production with the full canonical dataset, use a Railway persistent volume instead of bundling data in the Docker image.
+
+### Setup
+
+1. Create a Railway volume: `railway volume create fiboki-data --size 2GB`
+2. Mount to backend service at `/data` (Railway dashboard: Service → Volumes → Mount Path: `/data`)
+3. Set env var: `FIBOKEI_DATA_DIR=/data`
+
+### Populating Data
+
+```bash
+# Upload canonical data to volume
+railway shell
+# From local: rsync -avz data/canonical/ railway-host:/data/canonical/
+
+# Generate manifest
+railway run python -m fibokei manifest
+
+# Verify
+curl https://api.fiboki.uk/api/v1/data/manifest | jq '.datasets | length'
+# Expected: 360 (60 instruments × 6 timeframes)
+```
+
+### Data Resolution Order
+
+The backend loads data in this priority:
+
+1. `canonical/dukascopy/` — validation-grade
+2. `canonical/histdata/` — bulk research
+3. `starter/histdata/` — Docker-bundled fallback
+4. `fixtures/` — legacy
+
+Falls back automatically. Logs warnings on fallback.
+
+### Fallback Behavior
+
+If the volume is not mounted or `FIBOKEI_DATA_DIR` is unset, the backend falls back to the starter dataset bundled in the Docker image (see "Starter Dataset" above). This means deployments work out of the box — the volume is an enhancement, not a requirement.
+
+---
+
 ## Deployment Configs in Repo
 
 | File | Purpose |

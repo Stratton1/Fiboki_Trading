@@ -71,12 +71,24 @@ Returns OHLCV candles with precomputed Ichimoku Cloud data.
 | `instrument` | `EURUSD` |
 | `timeframe` | `H1` |
 
+**Query parameters:**
+
+| Param | Type | Default | Description |
+|-------|------|---------|-------------|
+| `limit` | int (1-10000) | 2000 | Maximum number of candles to return |
+| `from_dt` | ISO datetime | (none) | Start of date range filter (inclusive) |
+| `to_dt` | ISO datetime | (none) | End of date range filter (inclusive) |
+
 **Response:** `200 OK`
 
 ```json
 {
   "instrument": "EURUSD",
   "timeframe": "H1",
+  "total_bars": 8760,
+  "from_date": "2024-01-01T00:00:00",
+  "to_date": "2024-12-31T23:00:00",
+  "source": "canonical/histdata",
   "candles": [
     {
       "timestamp": 1704067200000,
@@ -100,7 +112,47 @@ Returns OHLCV candles with precomputed Ichimoku Cloud data.
 }
 ```
 
+`source` indicates which dataset tier served the data: `"canonical/dukascopy"`, `"canonical/histdata"`, `"starter/histdata"`, or `"fixtures"`.
+
 **Errors:** `404` -- Unknown instrument or no data file. `400` -- Invalid timeframe.
+
+### GET /data/manifest
+
+Returns the manifest listing all canonical datasets available on disk.
+
+**Response:** `200 OK`
+
+```json
+{
+  "version": "1.0",
+  "generated_at": "2026-03-10T08:00:00Z",
+  "generator": "fibokei.cli.manifest",
+  "datasets": [
+    {
+      "instrument": "EURUSD",
+      "timeframe": "H1",
+      "source": "canonical/histdata",
+      "rows": 87600,
+      "from_date": "2014-01-01",
+      "to_date": "2024-12-31",
+      "file": "canonical/histdata/EURUSD/H1.parquet"
+    }
+  ]
+}
+```
+
+### POST /data/manifest/refresh
+
+Regenerate the manifest from disk. Use after uploading new data files to the volume.
+
+**Response:** `200 OK`
+
+```json
+{
+  "status": "ok",
+  "datasets": 360
+}
+```
 
 ---
 
@@ -511,9 +563,12 @@ Protected system status.
   "paper_engine": "standby",
   "strategies_loaded": 12,
   "execution_mode": "paper",
-  "kill_switch_active": false
+  "kill_switch_active": false,
+  "data_source": "volume"
 }
 ```
+
+`data_source` values: `"volume"` (Railway persistent volume), `"starter"` (Docker-bundled starter dataset), `"fixtures"` (legacy fallback).
 
 ---
 
