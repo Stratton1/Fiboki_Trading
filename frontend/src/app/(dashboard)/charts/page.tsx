@@ -1,10 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import ChartToolbar from "@/components/charts/panels/ChartToolbar";
 import OverlayControls from "@/components/charts/panels/OverlayControls";
+import DrawingToolbar from "@/components/charts/panels/DrawingToolbar";
 import TradingChart from "@/components/charts/core/TradingChart";
 import { useMarketData } from "@/lib/hooks/use-market-data";
+import { useDrawings } from "@/lib/hooks/use-drawings";
 import { PageHeader } from "@/components/PageHeader";
 import { AlertTriangle, Loader2 } from "lucide-react";
 
@@ -12,8 +14,71 @@ export default function ChartsPage() {
   const [instrument, setInstrument] = useState("EURUSD");
   const [timeframe, setTimeframe] = useState("H1");
   const [ichimokuEnabled, setIchimokuEnabled] = useState(false);
+  const [activeDrawingTool, setActiveDrawingTool] = useState<string | null>(null);
 
   const { data, error, isLoading } = useMarketData(instrument, timeframe);
+  const {
+    drawings,
+    createDrawing,
+    updateDrawing,
+    deleteDrawing,
+    clearDrawings,
+  } = useDrawings(instrument, timeframe);
+
+  // Map from klinecharts overlay IDs to backend drawing IDs.
+  // Populated when saved drawings are loaded (overlay ID = `saved_${drawing.id}`).
+  const lookupDrawingId = useCallback(
+    (overlayId: string): number | null => {
+      // Overlay IDs for saved drawings follow the pattern "saved_{id}"
+      const match = overlayId.match(/^saved_(\d+)$/);
+      if (match) return parseInt(match[1], 10);
+      return null;
+    },
+    []
+  );
+
+  const handleDrawingCreated = useCallback(
+    async (drawing: {
+      tool_type: string;
+      points: Array<{ timestamp: number; value: number }>;
+    }) => {
+      await createDrawing({
+        instrument,
+        timeframe,
+        tool_type: drawing.tool_type,
+        points: drawing.points,
+      });
+      setActiveDrawingTool(null);
+    },
+    [createDrawing, instrument, timeframe]
+  );
+
+  const handleDrawingUpdated = useCallback(
+    async (
+      overlayId: string,
+      points: Array<{ timestamp: number; value: number }>
+    ) => {
+      const drawingId = lookupDrawingId(overlayId);
+      if (drawingId !== null) {
+        await updateDrawing(drawingId, { points });
+      }
+    },
+    [lookupDrawingId, updateDrawing]
+  );
+
+  const handleDrawingRemoved = useCallback(
+    async (overlayId: string) => {
+      const drawingId = lookupDrawingId(overlayId);
+      if (drawingId !== null) {
+        await deleteDrawing(drawingId);
+      }
+    },
+    [lookupDrawingId, deleteDrawing]
+  );
+
+  const handleClearAll = useCallback(async () => {
+    await clearDrawings();
+  }, [clearDrawings]);
 
   return (
     <div className="flex flex-col gap-4 h-full">
@@ -33,6 +98,12 @@ export default function ChartsPage() {
             <OverlayControls
               ichimokuEnabled={ichimokuEnabled}
               onIchimokuToggle={setIchimokuEnabled}
+            />
+            <div className="w-px h-6 bg-border" />
+            <DrawingToolbar
+              activeTool={activeDrawingTool}
+              onToolChange={setActiveDrawingTool}
+              onClearAll={handleClearAll}
             />
           </div>
         }
@@ -60,7 +131,15 @@ export default function ChartsPage() {
             </div>
           </div>
         ) : (
-          <TradingChart data={data} ichimokuEnabled={ichimokuEnabled} />
+          <TradingChart
+            data={data}
+            ichimokuEnabled={ichimokuEnabled}
+            activeDrawingTool={activeDrawingTool}
+            savedDrawings={drawings}
+            onDrawingCreated={handleDrawingCreated}
+            onDrawingUpdated={handleDrawingUpdated}
+            onDrawingRemoved={handleDrawingRemoved}
+          />
         )}
       </div>
     </div>

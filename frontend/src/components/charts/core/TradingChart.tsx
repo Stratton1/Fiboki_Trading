@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useCallback } from "react";
 import { init, dispose } from "klinecharts";
 import type { Chart, KLineData } from "klinecharts";
 import { mapCandlesToKLine } from "@/lib/chart-mappers/candle-mapper";
@@ -11,20 +11,59 @@ import {
   ICHIMOKU_INDICATOR_NAME,
 } from "@/components/charts/overlays/IchimokuOverlay";
 import type { MarketDataResponse } from "@/types/contracts/chart";
+import type { ChartDrawing } from "@/types/contracts/drawings";
+
+/** Extract valid {timestamp, value} entries from klinecharts Partial<Point>[] */
+function extractPoints(
+  pts: Array<{ timestamp?: number; value?: number }>
+): Array<{ timestamp: number; value: number }> {
+  return pts
+    .filter(
+      (p): p is { timestamp: number; value: number } =>
+        p.timestamp !== undefined && p.value !== undefined
+    )
+    .map((p) => ({ timestamp: p.timestamp, value: p.value }));
+}
 
 interface TradingChartProps {
   data: MarketDataResponse | null;
   ichimokuEnabled: boolean;
+  activeDrawingTool: string | null;
+  savedDrawings: ChartDrawing[];
+  onDrawingCreated: (drawing: {
+    tool_type: string;
+    points: Array<{ timestamp: number; value: number }>;
+  }) => void;
+  onDrawingUpdated: (overlayId: string, points: Array<{ timestamp: number; value: number }>) => void;
+  onDrawingRemoved: (overlayId: string) => void;
 }
 
 export default function TradingChart({
   data,
   ichimokuEnabled,
+  activeDrawingTool,
+  savedDrawings,
+  onDrawingCreated,
+  onDrawingUpdated,
+  onDrawingRemoved,
 }: TradingChartProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<Chart | null>(null);
   const ichimokuActiveRef = useRef(false);
   const dataRef = useRef<KLineData[]>([]);
+
+  // Track drawing overlay IDs to avoid conflicting with Ichimoku overlays
+  const drawingOverlayIdsRef = useRef<Set<string>>(new Set());
+  // Map klinecharts overlay ID -> backend drawing ID
+  const overlayToDrawingIdRef = useRef<Map<string, number>>(new Map());
+
+  // Store callbacks in refs so overlay handlers always see latest versions
+  const onDrawingCreatedRef = useRef(onDrawingCreated);
+  onDrawingCreatedRef.current = onDrawingCreated;
+  const onDrawingUpdatedRef = useRef(onDrawingUpdated);
+  onDrawingUpdatedRef.current = onDrawingUpdated;
+  const onDrawingRemovedRef = useRef(onDrawingRemoved);
+  onDrawingRemovedRef.current = onDrawingRemoved;
 
   // Register the custom Ichimoku indicator once on mount
   useEffect(() => {
@@ -89,12 +128,13 @@ export default function TradingChart({
       }
       chartRef.current = null;
       ichimokuActiveRef.current = false;
+      drawingOverlayIdsRef.current.clear();
+      overlayToDrawingIdRef.current.clear();
       clearIchimokuData();
     };
   }, []);
 
-  // Apply data when it changes — follows klinecharts v10 pattern:
-  // setSymbol → setPeriod → setDataLoader (which triggers getBars)
+  // Apply data when it changes
   useEffect(() => {
     const chart = chartRef.current;
     if (!chart || !data) return;
@@ -135,6 +175,76 @@ export default function TradingChart({
       ichimokuActiveRef.current = false;
     }
   }, [ichimokuEnabled]);
+
+  // Active drawing tool — enter drawing mode when tool is selected
+  useEffect(() => {
+    const chart = chartRef.current;
+    if (!chart || !activeDrawingTool) return;
+
+    chart.createOverlay({
+      name: activeDrawingTool,
+      onDrawEnd: ({ overlay }) => {
+        const points = extractPoints(overlay.points ?? []);
+        if (overlay.id) {
+          drawingOverlayIdsRef.current.add(overlay.id);
+        }
+        onDrawingCreatedRef.current({ tool_type: overlay.name, points });
+      },
+      onPressedMoving: ({ overlay }) => {
+        if (!overlay.id) return;
+        const points = extractPoints(overlay.points ?? []);
+        onDrawingUpdatedRef.current(overlay.id, points);
+      },
+      onRemoved: ({ overlay }) => {
+        if (overlay.id) {
+          drawingOverlayIdsRef.current.delete(overlay.id);
+          onDrawingRemovedRef.current(overlay.id);
+        }
+      },
+    });
+  }, [activeDrawingTool]);
+
+  // Load saved drawings onto the chart
+  useEffect(() => {
+    const chart = chartRef.current;
+    if (!chart) return;
+
+    // Remove only existing drawing overlays, not Ichimoku/indicator overlays
+    for (const overlayId of drawingOverlayIdsRef.current) {
+      chart.removeOverlay({ id: overlayId });
+    }
+    drawingOverlayIdsRef.current.clear();
+    overlayToDrawingIdRef.current.clear();
+
+    if (!savedDrawings.length) return;
+
+    for (const drawing of savedDrawings) {
+      const overlayId = `saved_${drawing.id}`;
+
+      chart.createOverlay({
+        name: drawing.tool_type,
+        id: overlayId,
+        points: drawing.points.map((p) => ({ timestamp: p.timestamp, value: p.value })),
+        lock: drawing.lock,
+        visible: drawing.visible,
+        styles: drawing.styles || undefined,
+        onPressedMoving: ({ overlay }) => {
+          if (!overlay.id) return;
+          const points = extractPoints(overlay.points ?? []);
+          onDrawingUpdatedRef.current(overlay.id, points);
+        },
+        onRemoved: ({ overlay }) => {
+          if (overlay.id) {
+            drawingOverlayIdsRef.current.delete(overlay.id);
+            onDrawingRemovedRef.current(overlay.id);
+          }
+        },
+      });
+
+      drawingOverlayIdsRef.current.add(overlayId);
+      overlayToDrawingIdRef.current.set(overlayId, drawing.id);
+    }
+  }, [savedDrawings]);
 
   return (
     <div
