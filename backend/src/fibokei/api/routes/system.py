@@ -23,6 +23,7 @@ class SystemStatusResponse(BaseModel):
     strategies_loaded: int
     execution_mode: str
     kill_switch_active: bool
+    data_source: str
 
 
 @router.get("/system/health", response_model=SystemHealthResponse)
@@ -56,6 +57,18 @@ def system_status(
     from fibokei.db.repository import get_kill_switch
     ks = get_kill_switch(db)
 
+    # Determine active data source
+    from fibokei.data.paths import get_data_root, get_canonical_dir
+
+    data_root = get_data_root()
+    canonical = get_canonical_dir()
+    if (canonical / "manifest.json").exists():
+        data_source = "volume"
+    elif (data_root / "starter").exists() and any((data_root / "starter").iterdir()):
+        data_source = "starter"
+    else:
+        data_source = "fixtures"
+
     return SystemStatusResponse(
         api_version="1.0.0",
         database=db_status,
@@ -63,4 +76,5 @@ def system_status(
         strategies_loaded=strategies_loaded,
         execution_mode=flags.execution_mode,
         kill_switch_active=ks.is_active,
+        data_source=data_source,
     )
