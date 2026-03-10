@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 from fibokei.backtester.result import BacktestResult
 from fibokei.db.models import (
     BacktestRunModel,
+    ChartDrawingModel,
     DatasetModel,
     ExecutionAuditModel,
     KillSwitchModel,
@@ -15,6 +16,76 @@ from fibokei.db.models import (
     ResearchResultModel,
     TradeModel,
 )
+
+
+# ---------- Chart drawings ----------
+
+
+def save_drawing(session: Session, drawing_data: dict) -> ChartDrawingModel:
+    """Save a chart drawing."""
+    model = ChartDrawingModel(**drawing_data)
+    session.add(model)
+    session.commit()
+    return model
+
+
+def get_drawings(
+    session: Session, user_id: int, instrument: str, timeframe: str
+) -> list[ChartDrawingModel]:
+    """Get all drawings for a user/instrument/timeframe combo."""
+    stmt = (
+        select(ChartDrawingModel)
+        .where(ChartDrawingModel.user_id == user_id)
+        .where(ChartDrawingModel.instrument == instrument)
+        .where(ChartDrawingModel.timeframe == timeframe)
+        .order_by(ChartDrawingModel.created_at.asc())
+    )
+    return list(session.scalars(stmt).all())
+
+
+def update_drawing(
+    session: Session, drawing_id: int, user_id: int, updates: dict
+) -> ChartDrawingModel | None:
+    """Update a drawing. Returns None if not found or wrong user."""
+    drawing = session.scalars(
+        select(ChartDrawingModel)
+        .where(ChartDrawingModel.id == drawing_id)
+        .where(ChartDrawingModel.user_id == user_id)
+    ).first()
+    if not drawing:
+        return None
+    for key, value in updates.items():
+        if hasattr(drawing, key):
+            setattr(drawing, key, value)
+    session.commit()
+    return drawing
+
+
+def delete_drawing(session: Session, drawing_id: int, user_id: int) -> bool:
+    """Delete a single drawing. Returns True if deleted."""
+    drawing = session.scalars(
+        select(ChartDrawingModel)
+        .where(ChartDrawingModel.id == drawing_id)
+        .where(ChartDrawingModel.user_id == user_id)
+    ).first()
+    if not drawing:
+        return False
+    session.delete(drawing)
+    session.commit()
+    return True
+
+
+def delete_all_drawings(
+    session: Session, user_id: int, instrument: str, timeframe: str
+) -> int:
+    """Delete all drawings for a user/instrument/timeframe. Returns count deleted."""
+    drawings = get_drawings(session, user_id, instrument, timeframe)
+    count = len(drawings)
+    for d in drawings:
+        session.delete(d)
+    if count:
+        session.commit()
+    return count
 
 
 def save_backtest_result(

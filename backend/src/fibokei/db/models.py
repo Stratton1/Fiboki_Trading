@@ -4,6 +4,7 @@ from datetime import datetime, timezone
 
 from sqlalchemy import (
     JSON,
+    Boolean,
     DateTime,
     Float,
     ForeignKey,
@@ -202,6 +203,30 @@ class ExecutionAuditModel(Base):
     detail_json: Mapped[dict | None] = mapped_column(JSON)
     error_message: Mapped[str | None] = mapped_column(Text)
     bot_id: Mapped[str | None] = mapped_column(String(20), index=True)
+
+
+class ChartDrawingModel(Base):
+    """Persisted chart drawing (trend lines, fibs, etc.)."""
+
+    __tablename__ = "chart_drawings"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    user_id: Mapped[int] = mapped_column(Integer, nullable=False, index=True)
+    instrument: Mapped[str] = mapped_column(String(20), nullable=False, index=True)
+    timeframe: Mapped[str] = mapped_column(String(10), nullable=False)
+    tool_type: Mapped[str] = mapped_column(String(30), nullable=False)
+    points_json: Mapped[list] = mapped_column(JSON, nullable=False)
+    styles_json: Mapped[dict | None] = mapped_column(JSON)
+    lock: Mapped[bool] = mapped_column(Boolean, default=False)
+    visible: Mapped[bool] = mapped_column(Boolean, default=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, default=lambda: datetime.now(timezone.utc)
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime,
+        default=lambda: datetime.now(timezone.utc),
+        onupdate=lambda: datetime.now(timezone.utc),
+    )
 
 
 class KillSwitchModel(Base):
