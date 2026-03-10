@@ -198,6 +198,29 @@ export const api = {
         bot_id: string | null;
       }>
     >(`/execution/audit${params ? `?${params}` : ""}`),
+
+  // Drawings
+  listDrawings: (instrument: string, timeframe: string) =>
+    apiFetch<import("@/types/contracts/drawings").ChartDrawing[]>(
+      `/drawings?instrument=${instrument}&timeframe=${timeframe}`
+    ),
+  createDrawing: (body: import("@/types/contracts/drawings").DrawingCreate) =>
+    apiFetch<import("@/types/contracts/drawings").ChartDrawing>("/drawings", {
+      method: "POST",
+      body: JSON.stringify(body),
+    }),
+  updateDrawing: (id: number, body: import("@/types/contracts/drawings").DrawingUpdate) =>
+    apiFetch<import("@/types/contracts/drawings").ChartDrawing>(`/drawings/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(body),
+    }),
+  deleteDrawing: (id: number) =>
+    apiFetch<void>(`/drawings/${id}`, { method: "DELETE" }),
+  clearDrawings: (instrument: string, timeframe: string) =>
+    apiFetch<{ deleted: number }>(
+      `/drawings?instrument=${instrument}&timeframe=${timeframe}`,
+      { method: "DELETE" }
+    ),
 };
 
 export { API_URL, ApiError };
