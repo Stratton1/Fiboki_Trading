@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef } from "react";
 import ChartToolbar from "@/components/charts/panels/ChartToolbar";
 import OverlayControls from "@/components/charts/panels/OverlayControls";
 import DrawingToolbar from "@/components/charts/panels/DrawingToolbar";
@@ -53,15 +53,20 @@ export default function ChartsPage() {
     [createDrawing, instrument, timeframe]
   );
 
+  // Debounce drawing updates — onPressedMoving fires on every pixel of drag
+  const updateTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const handleDrawingUpdated = useCallback(
-    async (
+    (
       overlayId: string,
       points: Array<{ timestamp: number; value: number }>
     ) => {
-      const drawingId = lookupDrawingId(overlayId);
-      if (drawingId !== null) {
-        await updateDrawing(drawingId, { points });
-      }
+      if (updateTimerRef.current) clearTimeout(updateTimerRef.current);
+      updateTimerRef.current = setTimeout(async () => {
+        const drawingId = lookupDrawingId(overlayId);
+        if (drawingId !== null) {
+          await updateDrawing(drawingId, { points });
+        }
+      }, 300);
     },
     [lookupDrawingId, updateDrawing]
   );
