@@ -104,13 +104,17 @@ def _try_load(
         path = base / f"{stem}.{ext}"
         if path.exists():
             logger.debug("Loading data from %s", path)
-            if ext == "parquet":
-                df = pd.read_parquet(path)
-            else:
-                df = pd.read_csv(path, parse_dates=["timestamp"], index_col="timestamp")
-            df.index = pd.to_datetime(df.index, utc=True)
-            df.index.name = "timestamp"
-            return df
+            try:
+                if ext == "parquet":
+                    df = pd.read_parquet(path)
+                else:
+                    df = pd.read_csv(path, parse_dates=["timestamp"], index_col="timestamp")
+                df.index = pd.to_datetime(df.index, utc=True)
+                df.index.name = "timestamp"
+                return df
+            except Exception as e:
+                logger.error("Failed to read %s: %s", path, e)
+                continue
 
     return None
 
@@ -125,15 +129,19 @@ def _try_load_fixture(symbol: str, timeframe: str) -> pd.DataFrame | None:
     for pattern in patterns:
         path = fixtures_dir / pattern
         if path.exists():
-            df = pd.read_csv(path)
-            df.columns = df.columns.str.strip().str.lower()
-            col_map = {"date": "timestamp", "datetime": "timestamp", "time": "timestamp"}
-            df = df.rename(columns={k: v for k, v in col_map.items() if k in df.columns})
-            df["timestamp"] = pd.to_datetime(df["timestamp"], utc=True)
-            df = df.set_index("timestamp").sort_index()
-            if "volume" not in df.columns:
-                df["volume"] = 0.0
-            df = df[["open", "high", "low", "close", "volume"]]
-            return df
+            try:
+                df = pd.read_csv(path)
+                df.columns = df.columns.str.strip().str.lower()
+                col_map = {"date": "timestamp", "datetime": "timestamp", "time": "timestamp"}
+                df = df.rename(columns={k: v for k, v in col_map.items() if k in df.columns})
+                df["timestamp"] = pd.to_datetime(df["timestamp"], utc=True)
+                df = df.set_index("timestamp").sort_index()
+                if "volume" not in df.columns:
+                    df["volume"] = 0.0
+                df = df[["open", "high", "low", "close", "volume"]]
+                return df
+            except Exception as e:
+                logger.error("Failed to read fixture %s: %s", path, e)
+                continue
 
     return None

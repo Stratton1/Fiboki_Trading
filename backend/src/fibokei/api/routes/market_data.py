@@ -1,5 +1,6 @@
 """Market data endpoints."""
 
+import logging
 import math
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -14,6 +15,8 @@ from fibokei.core.instruments import get_instrument
 from fibokei.core.models import Timeframe
 from fibokei.data.providers.registry import load_canonical
 from fibokei.indicators.ichimoku import IchimokuCloud
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(tags=["market-data"])
 
@@ -48,9 +51,17 @@ def get_market_data(
         raise HTTPException(status_code=400, detail=f"Invalid timeframe: {timeframe}")
 
     # Load data via unified canonical loader
-    df = load_canonical(instrument, tf_enum.value)
+    try:
+        df = load_canonical(instrument, tf_enum.value)
+    except Exception as e:
+        logger.error("Failed to load data for %s/%s: %s", instrument, tf_enum.value, e)
+        raise HTTPException(
+            status_code=500, detail=f"Failed to load data for {instrument}/{tf_enum.value}: {e}"
+        )
+
     if df is None:
-        from fibokei.data.paths import get_starter_dir, get_canonical_dir
+        from fibokei.data.paths import get_canonical_dir, get_starter_dir
+
         raise HTTPException(
             status_code=404,
             detail=(
@@ -79,25 +90,29 @@ def get_market_data(
             )
         )
 
-    # Compute Ichimoku
-    ich_df = df[["timestamp", "open", "high", "low", "close"]].copy()
-    ich_df = ich_df.set_index("timestamp")
-    ich = IchimokuCloud()
-    ich.compute(ich_df)
-    ich_df = ich_df.reset_index()
-
+    # Compute Ichimoku — graceful degradation if computation fails
     ichimoku = []
-    for _, row in ich_df.iterrows():
-        ichimoku.append(
-            IchimokuSeries(
-                timestamp=int(row["timestamp"].timestamp() * 1000),
-                tenkan=_nan_to_none(row.get("tenkan_sen", float("nan"))),
-                kijun=_nan_to_none(row.get("kijun_sen", float("nan"))),
-                senkou_a=_nan_to_none(row.get("senkou_span_a", float("nan"))),
-                senkou_b=_nan_to_none(row.get("senkou_span_b", float("nan"))),
-                chikou=_nan_to_none(row.get("chikou_span", float("nan"))),
+    try:
+        ich_df = df[["timestamp", "open", "high", "low", "close"]].copy()
+        ich_df = ich_df.set_index("timestamp")
+        ich = IchimokuCloud()
+        ich.compute(ich_df)
+        ich_df = ich_df.reset_index()
+
+        for _, row in ich_df.iterrows():
+            ichimoku.append(
+                IchimokuSeries(
+                    timestamp=int(row["timestamp"].timestamp() * 1000),
+                    tenkan=_nan_to_none(row.get("tenkan_sen", float("nan"))),
+                    kijun=_nan_to_none(row.get("kijun_sen", float("nan"))),
+                    senkou_a=_nan_to_none(row.get("senkou_span_a", float("nan"))),
+                    senkou_b=_nan_to_none(row.get("senkou_span_b", float("nan"))),
+                    chikou=_nan_to_none(row.get("chikou_span", float("nan"))),
+                )
             )
-        )
+    except Exception as e:
+        logger.error("Ichimoku computation failed for %s/%s: %s", instrument, tf_enum.value, e)
+        # Return candles without ichimoku data rather than failing entirely
 
     return MarketDataResponse(
         instrument=instrument,
