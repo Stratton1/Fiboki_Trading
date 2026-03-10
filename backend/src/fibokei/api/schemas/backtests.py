@@ -10,7 +10,6 @@ class BacktestRunRequest(BaseModel):
     strategy_id: str
     instrument: str
     timeframe: str
-    data_path: str | None = None
     config_overrides: dict[str, Any] | None = None
 
 

@@ -16,7 +16,6 @@ from fibokei.backtester.config import BacktestConfig
 from fibokei.backtester.engine import Backtester
 from fibokei.backtester.metrics import compute_metrics
 from fibokei.core.models import Timeframe
-from fibokei.data.loader import load_ohlcv_csv
 from fibokei.data.providers.registry import load_canonical
 from fibokei.db.models import BacktestRunModel, TradeModel
 from fibokei.db.repository import get_backtest_results, save_backtest_result
@@ -47,22 +46,12 @@ def run_backtest(
     except ValueError:
         raise HTTPException(status_code=400, detail=f"Invalid timeframe: {req.timeframe}")
 
-    if req.data_path:
-        try:
-            df = load_ohlcv_csv(req.data_path, req.instrument, tf_enum)
-        except FileNotFoundError:
-            raise HTTPException(status_code=400, detail="Data file not found")
-        except ValueError as e:
-            raise HTTPException(status_code=400, detail=f"Invalid data format: {e}")
-        except Exception:
-            raise HTTPException(status_code=400, detail="Failed to load data")
-    else:
-        df = load_canonical(req.instrument, tf_enum.value)
-        if df is None:
-            raise HTTPException(
-                status_code=404,
-                detail=f"No data file for {req.instrument}/{tf_enum.value}",
-            )
+    df = load_canonical(req.instrument, tf_enum.value)
+    if df is None:
+        raise HTTPException(
+            status_code=404,
+            detail=f"No data file for {req.instrument}/{tf_enum.value}",
+        )
 
     backtester = Backtester(strategy, config)
     result = backtester.run(df, req.instrument, tf_enum)
