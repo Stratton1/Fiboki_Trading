@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
 
 from fibokei.api.auth import TokenData, get_current_user
+from fibokei.data.manifest import generate_manifest, load_manifest
 from fibokei.data.paths import get_canonical_dir
 from fibokei.data.providers.base import ProviderID
 from fibokei.data.providers.registry import get_provider, list_providers, load_canonical
@@ -12,6 +13,7 @@ from fibokei.data.providers.symbol_map import list_mapped_symbols, provider_has_
 router = APIRouter(tags=["data"])
 
 _CANONICAL_DIR = get_canonical_dir()
+_cached_manifest: dict | None = None
 
 
 class DatasetInfo(BaseModel):
@@ -149,3 +151,22 @@ def check_data_availability(
         "start": str(df.index.min()),
         "end": str(df.index.max()),
     }
+
+
+@router.get("/data/manifest")
+def get_manifest(user: TokenData = Depends(get_current_user)):
+    """Return the data manifest listing all available canonical datasets."""
+    global _cached_manifest
+    if _cached_manifest is None:
+        _cached_manifest = load_manifest(_CANONICAL_DIR)
+    if _cached_manifest is None:
+        raise HTTPException(status_code=404, detail="No manifest found. Run 'fibokei manifest' to generate.")
+    return _cached_manifest
+
+
+@router.post("/data/manifest/refresh")
+def refresh_manifest(user: TokenData = Depends(get_current_user)):
+    """Regenerate and reload the manifest from disk."""
+    global _cached_manifest
+    _cached_manifest = generate_manifest(_CANONICAL_DIR)
+    return {"status": "ok", "datasets": len(_cached_manifest.get("datasets", []))}
