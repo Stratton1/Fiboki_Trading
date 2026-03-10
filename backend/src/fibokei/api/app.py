@@ -187,6 +187,11 @@ def create_app() -> FastAPI:
         lifespan=lifespan,
     )
 
+    # Trust proxy headers (X-Forwarded-Proto etc.) so redirects use HTTPS
+    # when behind Railway/Render reverse proxy
+    from uvicorn.middleware.proxy_headers import ProxyHeadersMiddleware
+    application.add_middleware(ProxyHeadersMiddleware, trusted_hosts="*")
+
     # CORS — localhost only in local dev, production origins from env var
     origins = []
     if os.environ.get("FIBOKEI_LOCAL_DEV"):

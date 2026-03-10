@@ -145,8 +145,8 @@ export const api = {
   instruments: () =>
     apiFetch<
       Array<{ symbol: string; name: string; asset_class: string; has_canonical_data: boolean }>
-    >("/instruments/"),
-  strategies: () => apiFetch<Array<Record<string, unknown>>>("/strategies/"),
+    >("/instruments"),
+  strategies: () => apiFetch<Array<Record<string, unknown>>>("/strategies"),
 
   // System
   systemHealth: () => apiFetch<{ status: string; version: string }>("/system/health"),
