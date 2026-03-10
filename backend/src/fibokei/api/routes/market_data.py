@@ -50,9 +50,13 @@ def get_market_data(
     # Load data via unified canonical loader
     df = load_canonical(instrument, tf_enum.value)
     if df is None:
+        from fibokei.data.paths import get_starter_dir, get_canonical_dir
         raise HTTPException(
             status_code=404,
-            detail=f"No data file for {instrument}/{tf_enum.value}",
+            detail=(
+                f"No data file for {instrument}/{tf_enum.value}. "
+                f"Searched canonical={get_canonical_dir()}, starter={get_starter_dir()}"
+            ),
         )
 
     # df has DatetimeIndex named "timestamp" — reset to column for iteration

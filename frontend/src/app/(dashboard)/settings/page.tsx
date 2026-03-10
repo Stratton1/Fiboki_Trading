@@ -3,13 +3,11 @@
 import { useState } from "react";
 import useSWR from "swr";
 import { useAuth } from "@/lib/auth";
-import { api } from "@/lib/api";
+import { api, API_URL } from "@/lib/api";
 import { StatusBadge } from "@/components/StatusBadge";
 import { PageHeader } from "@/components/PageHeader";
 import { Copy, ExternalLink, Server, User, Shield, Flag, Zap } from "lucide-react";
 import Link from "next/link";
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
 const RISK_PARAMS = [
   { label: "Risk per Trade", key: "max_risk_per_trade_pct", suffix: "%", default: "1.0" },

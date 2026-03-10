@@ -2,7 +2,7 @@
 
 import { useCallback, useState } from "react";
 import useSWR from "swr";
-import { api, ApiError } from "@/lib/api";
+import { api, API_URL, ApiError } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { StatusBadge } from "@/components/StatusBadge";
 import { PageHeader } from "@/components/PageHeader";
@@ -17,8 +17,6 @@ import {
   ShieldOff,
   XCircle,
 } from "lucide-react";
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
 type DiagResult = { status: "idle" | "running" | "pass" | "fail"; detail: string };
 

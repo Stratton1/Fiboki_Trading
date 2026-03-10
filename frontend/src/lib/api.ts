@@ -1,4 +1,12 @@
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+const _rawApiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+// Prevent mixed content: if the page is served over HTTPS, ensure API URL is too
+const API_URL =
+  typeof window !== "undefined" &&
+  window.location.protocol === "https:" &&
+  _rawApiUrl.startsWith("http://") &&
+  !_rawApiUrl.includes("localhost")
+    ? _rawApiUrl.replace("http://", "https://")
+    : _rawApiUrl;
 
 class ApiError extends Error {
   constructor(public status: number, message: string) {
@@ -190,4 +198,4 @@ export const api = {
     >(`/execution/audit${params ? `?${params}` : ""}`),
 };
 
-export { ApiError };
+export { API_URL, ApiError };

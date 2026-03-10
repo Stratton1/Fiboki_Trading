@@ -112,6 +112,9 @@ async def lifespan(app: FastAPI):
     # Validate IG demo configuration at startup
     _validate_ig_config()
 
+    # Log data directory resolution for diagnostics
+    _log_data_paths()
+
     logger = logging.getLogger("fibokei.startup")
     logger.info("Fiboki Trading API started — database=%s", "postgresql" if "postgresql" in DATABASE_URL else "sqlite")
 
@@ -152,6 +155,27 @@ def _validate_ig_config() -> None:
             mode,
             f" (account: {account_id})" if account_id else "",
         )
+
+
+def _log_data_paths() -> None:
+    """Log resolved data paths and available starter files at startup."""
+    logger = logging.getLogger("fibokei.startup")
+    from fibokei.data.paths import get_data_root, get_starter_dir, get_canonical_dir
+
+    data_root = get_data_root()
+    starter = get_starter_dir()
+    canonical = get_canonical_dir()
+    logger.info("Data root: %s (exists=%s)", data_root, data_root.exists())
+    logger.info("Starter dir: %s (exists=%s)", starter, starter.exists())
+    logger.info("Canonical dir: %s (exists=%s)", canonical, canonical.exists())
+
+    if starter.exists():
+        starter_files = list(starter.rglob("*.parquet"))
+        logger.info("Starter dataset: %d parquet files", len(starter_files))
+        for f in starter_files[:10]:
+            logger.info("  %s", f.relative_to(starter))
+    else:
+        logger.warning("Starter directory does not exist — charts/backtests will fail")
 
 
 def create_app() -> FastAPI:

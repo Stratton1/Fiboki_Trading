@@ -2,12 +2,15 @@
 
 from __future__ import annotations
 
+import logging
 from pathlib import Path
 
 import pandas as pd
 
 from fibokei.data.paths import get_canonical_dir, get_fixtures_dir, get_starter_dir
 from fibokei.data.providers.base import DataProvider, ProviderID
+
+logger = logging.getLogger(__name__)
 
 
 def get_provider(provider_id: ProviderID | str) -> DataProvider:
@@ -74,7 +77,17 @@ def load_canonical(
             return df
 
     # Fall back to legacy fixtures
-    return _try_load_fixture(symbol, timeframe)
+    df = _try_load_fixture(symbol, timeframe)
+    if df is None:
+        logger.warning(
+            "No data found for %s/%s. Searched: canonical=%s, starter=%s, fixtures=%s",
+            symbol,
+            timeframe,
+            canonical_dir,
+            get_starter_dir(),
+            get_fixtures_dir(),
+        )
+    return df
 
 
 def _try_load(
@@ -90,6 +103,7 @@ def _try_load(
     for ext in ("parquet", "csv"):
         path = base / f"{stem}.{ext}"
         if path.exists():
+            logger.debug("Loading data from %s", path)
             if ext == "parquet":
                 df = pd.read_parquet(path)
             else:

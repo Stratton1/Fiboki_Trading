@@ -4,8 +4,11 @@ Works in both local dev and Docker by walking up the directory tree
 to find the data/ directory, with an env var override for explicit control.
 """
 
+import logging
 import os
 from pathlib import Path
+
+logger = logging.getLogger(__name__)
 
 
 def get_data_root() -> Path:
@@ -20,8 +23,14 @@ def get_data_root() -> Path:
     if env_dir:
         return Path(env_dir)
 
-    # Start above the Python package's own data/ directory
-    current = Path(__file__).resolve().parents[4]  # up from data/paths.py to project root
+    # Walk up from this file's location looking for a data/ directory
+    # that contains at least one of the expected subdirectories.
+    # In local dev: paths.py is at backend/src/fibokei/data/paths.py
+    #   parents[3] = /app (in Docker) or .../Fiboki_Trading/backend (local)
+    #   parents[4] = / (in Docker) or .../Fiboki_Trading (local)
+    # So we start from parents[2] and walk up to cover both cases.
+    start = Path(__file__).resolve().parent  # fibokei/data/
+    current = start
     for _ in range(10):
         candidate = current / "data"
         if candidate.is_dir() and any(
@@ -29,6 +38,8 @@ def get_data_root() -> Path:
             for sub in ("canonical", "fixtures", "starter")
         ):
             return candidate
+        if current.parent == current:
+            break
         current = current.parent
 
     return Path("/app/data")
