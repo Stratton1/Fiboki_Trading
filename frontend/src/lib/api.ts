@@ -1,4 +1,14 @@
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+// NEXT_PUBLIC_API_URL is inlined at build time by Next.js.
+// The runtime guard below protects against stale Vercel CDN builds that may
+// still have http:// baked in from an older compilation.
+const _buildTimeUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+const API_URL =
+  typeof window !== "undefined" &&
+  window.location.protocol === "https:" &&
+  _buildTimeUrl.startsWith("http://") &&
+  !_buildTimeUrl.includes("localhost")
+    ? _buildTimeUrl.replace("http://", "https://")
+    : _buildTimeUrl;
 
 class ApiError extends Error {
   constructor(public status: number, message: string) {
