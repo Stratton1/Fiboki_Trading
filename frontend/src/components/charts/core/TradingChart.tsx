@@ -101,8 +101,12 @@ export default function TradingChart({
     chart.setSymbol({ ticker: instrument });
     chart.setPeriod({ span: 1, type: "day" });
     chart.setDataLoader({
-      getBars: ({ callback }) => {
-        callback(dataRef.current);
+      getBars: ({ type, callback }) => {
+        if (type === "init" || type === "backward") {
+          callback(dataRef.current, false);
+        } else {
+          callback([], false);
+        }
       },
     });
   }, [data]);
