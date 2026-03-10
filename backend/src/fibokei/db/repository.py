@@ -17,7 +17,6 @@ from fibokei.db.models import (
     TradeModel,
 )
 
-
 # ---------- Chart drawings ----------
 
 
@@ -253,7 +252,6 @@ def update_paper_bot_state(
     error_message: str | None = None,
 ) -> PaperBotModel | None:
     """Update bot state fields. Returns None if bot not found."""
-    from datetime import datetime  # noqa: F811
 
     bot = get_paper_bot(session, bot_id)
     if not bot:
