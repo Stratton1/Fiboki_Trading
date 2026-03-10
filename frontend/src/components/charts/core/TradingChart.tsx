@@ -72,7 +72,16 @@ export default function TradingChart({
 
     chartRef.current = chart!;
 
+    // klinecharts calculates layout on init, but in a flex layout the
+    // container may not have its final height yet. Use ResizeObserver
+    // to call resize() whenever the container dimensions change.
+    const ro = new ResizeObserver(() => {
+      chartRef.current?.resize();
+    });
+    ro.observe(containerRef.current);
+
     return () => {
+      ro.disconnect();
       if (containerRef.current) {
         dispose(containerRef.current);
       }
