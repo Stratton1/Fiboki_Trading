@@ -1,4 +1,4 @@
-import { test, expect, Page } from "@playwright/test";
+import { test, expect, Page, BrowserContext } from "@playwright/test";
 import * as path from "path";
 import * as fs from "fs";
 
@@ -28,6 +28,7 @@ import * as fs from "fs";
  */
 
 const SCREENSHOT_DIR = path.join(__dirname, "..", "screenshots", "auth-prod");
+const AUTH_STATE_FILE = path.join(__dirname, "..", ".auth-state.json");
 
 const USERNAME = process.env.FIBOKI_E2E_USERNAME;
 const PASSWORD = process.env.FIBOKI_E2E_PASSWORD;
@@ -43,7 +44,12 @@ async function screenshot(page: Page, name: string) {
 
 /** Wait for page hydration and any SWR fetches to settle. */
 async function settle(page: Page) {
-  await page.waitForLoadState("networkidle");
+  await page.waitForLoadState("domcontentloaded");
+  // Race networkidle against a 5s ceiling — chart pages have persistent connections
+  await Promise.race([
+    page.waitForLoadState("networkidle"),
+    page.waitForTimeout(5000),
+  ]);
   await page.waitForTimeout(1000);
 }
 
@@ -63,13 +69,24 @@ test.beforeAll(() => {
       "Run with: FIBOKI_E2E_USERNAME=x FIBOKI_E2E_PASSWORD=y npm run verify:prod"
     );
   }
+  // Remove old screenshots so stale files don't persist
+  if (fs.existsSync(SCREENSHOT_DIR)) {
+    fs.rmSync(SCREENSHOT_DIR, { recursive: true });
+  }
   fs.mkdirSync(SCREENSHOT_DIR, { recursive: true });
+});
+
+test.afterAll(() => {
+  // Clean up auth state file
+  if (fs.existsSync(AUTH_STATE_FILE)) {
+    fs.unlinkSync(AUTH_STATE_FILE);
+  }
 });
 
 // ── Login ────────────────────────────────────────────────────────────
 
 test.describe.serial("authenticated production verification", () => {
-  test("login succeeds", async ({ page }) => {
+  test("login succeeds", async ({ page, context }) => {
     await page.goto("/login");
     await page.waitForLoadState("networkidle");
 
@@ -88,12 +105,18 @@ test.describe.serial("authenticated production verification", () => {
     // Dashboard header should be visible
     await expect(page.locator("h1")).toContainText("Welcome back");
 
+    // Save auth state (cookies + localStorage) for subsequent tests
+    await context.storageState({ path: AUTH_STATE_FILE });
+
     await screenshot(page, "01-login-success");
   });
 
   // ── Dashboard ──────────────────────────────────────────────────
 
-  test("dashboard renders with real data", async ({ page }) => {
+  test("dashboard renders with real data", async ({ browser }) => {
+    const context = await browser.newContext({ storageState: AUTH_STATE_FILE });
+    const page = await context.newPage();
+
     await page.goto("/");
     await settle(page);
 
@@ -108,11 +131,15 @@ test.describe.serial("authenticated production verification", () => {
     await expect(page.locator("text=EQUITY").first()).toBeVisible();
 
     await screenshot(page, "02-dashboard");
+    await context.close();
   });
 
   // ── Charts ─────────────────────────────────────────────────────
 
-  test("charts page loads", async ({ page }) => {
+  test("charts page loads", async ({ browser }) => {
+    const context = await browser.newContext({ storageState: AUTH_STATE_FILE });
+    const page = await context.newPage();
+
     await page.goto("/charts");
     await settle(page);
 
@@ -123,9 +150,13 @@ test.describe.serial("authenticated production verification", () => {
     await expect(page.locator("h1")).toContainText("Trading Chart");
 
     await screenshot(page, "03-charts");
+    await context.close();
   });
 
-  test("charts page: EURUSD/H1 starter data check", async ({ page }) => {
+  test("charts page: EURUSD/H1 starter data check", async ({ browser }) => {
+    const context = await browser.newContext({ storageState: AUTH_STATE_FILE });
+    const page = await context.newPage();
+
     await page.goto("/charts");
     await settle(page);
 
@@ -151,11 +182,15 @@ test.describe.serial("authenticated production verification", () => {
 
     // This test reports status but does not fail — starter data may not be deployed yet
     await screenshot(page, "04-charts-eurusd-h1");
+    await context.close();
   });
 
   // ── Backtests ──────────────────────────────────────────────────
 
-  test("backtests page loads", async ({ page }) => {
+  test("backtests page loads", async ({ browser }) => {
+    const context = await browser.newContext({ storageState: AUTH_STATE_FILE });
+    const page = await context.newPage();
+
     await page.goto("/backtests");
     await settle(page);
 
@@ -167,11 +202,15 @@ test.describe.serial("authenticated production verification", () => {
     await expect(page.locator("text=RUN BACKTEST").first()).toBeVisible();
 
     await screenshot(page, "05-backtests");
+    await context.close();
   });
 
   // ── Research ───────────────────────────────────────────────────
 
-  test("research page loads", async ({ page }) => {
+  test("research page loads", async ({ browser }) => {
+    const context = await browser.newContext({ storageState: AUTH_STATE_FILE });
+    const page = await context.newPage();
+
     await page.goto("/research");
     await settle(page);
 
@@ -181,11 +220,15 @@ test.describe.serial("authenticated production verification", () => {
     await expect(page.locator("h1")).toContainText("Research Matrix");
 
     await screenshot(page, "06-research");
+    await context.close();
   });
 
   // ── Paper Bots ─────────────────────────────────────────────────
 
-  test("bots page loads", async ({ page }) => {
+  test("bots page loads", async ({ browser }) => {
+    const context = await browser.newContext({ storageState: AUTH_STATE_FILE });
+    const page = await context.newPage();
+
     await page.goto("/bots");
     await settle(page);
 
@@ -197,11 +240,15 @@ test.describe.serial("authenticated production verification", () => {
     await expect(page.locator("text=BALANCE").first()).toBeVisible();
 
     await screenshot(page, "07-bots");
+    await context.close();
   });
 
   // ── Trades ─────────────────────────────────────────────────────
 
-  test("trades page loads", async ({ page }) => {
+  test("trades page loads", async ({ browser }) => {
+    const context = await browser.newContext({ storageState: AUTH_STATE_FILE });
+    const page = await context.newPage();
+
     await page.goto("/trades");
     await settle(page);
 
@@ -211,11 +258,15 @@ test.describe.serial("authenticated production verification", () => {
     await expect(page.locator("h1")).toContainText("Trade History");
 
     await screenshot(page, "08-trades");
+    await context.close();
   });
 
   // ── Settings ───────────────────────────────────────────────────
 
-  test("settings page loads", async ({ page }) => {
+  test("settings page loads", async ({ browser }) => {
+    const context = await browser.newContext({ storageState: AUTH_STATE_FILE });
+    const page = await context.newPage();
+
     await page.goto("/settings");
     await settle(page);
 
@@ -228,11 +279,15 @@ test.describe.serial("authenticated production verification", () => {
     expect(bodyText).toContain(USERNAME!);
 
     await screenshot(page, "09-settings");
+    await context.close();
   });
 
   // ── System ─────────────────────────────────────────────────────
 
-  test("system page loads with diagnostics", async ({ page }) => {
+  test("system page loads with diagnostics", async ({ browser }) => {
+    const context = await browser.newContext({ storageState: AUTH_STATE_FILE });
+    const page = await context.newPage();
+
     await page.goto("/system");
     await settle(page);
 
@@ -252,11 +307,15 @@ test.describe.serial("authenticated production verification", () => {
     expect(healthVisible).toBeTruthy();
 
     await screenshot(page, "10-system");
+    await context.close();
   });
 
   // ── Session persistence check ──────────────────────────────────
 
-  test("session persists across navigation", async ({ page }) => {
+  test("session persists across navigation", async ({ browser }) => {
+    const context = await browser.newContext({ storageState: AUTH_STATE_FILE });
+    const page = await context.newPage();
+
     // Navigate through multiple pages quickly to confirm no auth dropout
     const routes = ["/", "/charts", "/backtests", "/bots", "/trades", "/settings", "/system"];
     for (const route of routes) {
@@ -264,5 +323,6 @@ test.describe.serial("authenticated production verification", () => {
       await page.waitForLoadState("domcontentloaded");
       expect(page.url()).not.toContain("/login");
     }
+    await context.close();
   });
 });

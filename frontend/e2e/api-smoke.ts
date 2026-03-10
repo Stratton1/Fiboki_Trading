@@ -53,38 +53,16 @@ async function fetchJson(path: string, options?: RequestInit) {
 async function run() {
   console.log(`\nFiboki API Smoke Check — ${API_URL}\n`);
 
-  // Health
+  // Health (public endpoint)
   await check("Health endpoint", async () => {
     const data = await fetchJson("/system/health");
     if (data.status !== "ok") throw new Error(`status=${data.status}`);
     return `ok — v${data.version}`;
   });
 
-  // System status
-  await check("System status", async () => {
-    const data = await fetchJson("/system/status");
-    return `db=${data.database}, engine=${data.paper_engine}, strategies=${data.strategies_loaded}`;
-  });
-
-  // Instruments
-  await check("Instruments", async () => {
-    const data = await fetchJson("/instruments/");
-    if (!Array.isArray(data)) throw new Error("Expected array");
-    const canonical = data.filter((i: any) => i.has_canonical_data).length;
-    return `${data.length} instruments (${canonical} canonical)`;
-  });
-
-  // Strategies
-  await check("Strategies", async () => {
-    const data = await fetchJson("/strategies/");
-    if (!Array.isArray(data)) throw new Error("Expected array");
-    return `${data.length} strategies`;
-  });
-
-  // Authenticated checks
+  // Login early so we can use the token for all subsequent checks
+  let token: string | null = null;
   if (USERNAME && PASSWORD) {
-    // Login
-    let token: string | null = null;
     await check("Login", async () => {
       const body = new URLSearchParams();
       body.append("username", USERNAME);
@@ -101,51 +79,77 @@ async function run() {
       token = data.access_token;
       return `token received`;
     });
-
-    if (token) {
-      const authFetch = (path: string) =>
-        fetch(`${API_URL}/api/v1${path}`, {
-          headers: { Authorization: `Bearer ${token}` },
-          signal: AbortSignal.timeout(10_000),
-        }).then(async (res) => {
-          if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
-          return res.json();
-        });
-
-      // /auth/me
-      await check("Auth: /me", async () => {
-        const data = await authFetch("/auth/me");
-        return `${data.username} (${data.role})`;
-      });
-
-      // Paper account
-      await check("Paper account", async () => {
-        const data = await authFetch("/paper/account");
-        return `balance=$${data.balance}, equity=$${data.equity}`;
-      });
-
-      // Market data check (EURUSD/H1)
-      await check("Market data: EURUSD/H1", async () => {
-        const data = await authFetch("/market-data/EURUSD/H1");
-        const candles = data.candles?.length ?? 0;
-        if (candles === 0) throw new Error("No candles returned — starter data not available");
-        return `${candles} candles`;
-      });
-
-      // Backtests list
-      await check("Backtests list", async () => {
-        const data = await authFetch("/backtests");
-        return `${Array.isArray(data) ? data.length : 0} backtests`;
-      });
-
-      // Research rankings
-      await check("Research rankings", async () => {
-        const data = await authFetch("/research/rankings");
-        return `${Array.isArray(data) ? data.length : 0} rankings`;
-      });
-    }
   } else {
     skip("Login", "FIBOKI_E2E_USERNAME / FIBOKI_E2E_PASSWORD not set");
+  }
+
+  async function fetchJsonAuth(path: string) {
+    const headers: HeadersInit = token
+      ? { Authorization: `Bearer ${token}` }
+      : {};
+    const res = await fetch(`${API_URL}/api/v1${path}`, {
+      headers,
+      signal: AbortSignal.timeout(10_000),
+    });
+    if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
+    return res.json();
+  }
+
+  // System status (requires auth)
+  await check("System status", async () => {
+    const data = await fetchJsonAuth("/system/status");
+    return `db=${data.database}, engine=${data.paper_engine}, strategies=${data.strategies_loaded}`;
+  });
+
+  // Instruments (requires auth)
+  await check("Instruments", async () => {
+    const data = await fetchJsonAuth("/instruments");
+    if (!Array.isArray(data)) throw new Error("Expected array");
+    const canonical = data.filter((i: any) => i.has_canonical_data).length;
+    return `${data.length} instruments (${canonical} canonical)`;
+  });
+
+  // Strategies (requires auth)
+  await check("Strategies", async () => {
+    const data = await fetchJsonAuth("/strategies");
+    if (!Array.isArray(data)) throw new Error("Expected array");
+    return `${data.length} strategies`;
+  });
+
+  // Authenticated-only checks
+  if (token) {
+    // /auth/me
+    await check("Auth: /me", async () => {
+      const data = await fetchJsonAuth("/auth/me");
+      return `${data.username} (${data.role})`;
+    });
+
+    // Paper account
+    await check("Paper account", async () => {
+      const data = await fetchJsonAuth("/paper/account");
+      return `balance=$${data.balance}, equity=$${data.equity}`;
+    });
+
+    // Market data check (EURUSD/H1)
+    await check("Market data: EURUSD/H1", async () => {
+      const data = await fetchJsonAuth("/market-data/EURUSD/H1");
+      const candles = data.candles?.length ?? 0;
+      if (candles === 0) throw new Error("No candles returned — starter data not available");
+      return `${candles} candles`;
+    });
+
+    // Backtests list
+    await check("Backtests list", async () => {
+      const data = await fetchJsonAuth("/backtests");
+      return `${Array.isArray(data) ? data.length : 0} backtests`;
+    });
+
+    // Research rankings
+    await check("Research rankings", async () => {
+      const data = await fetchJsonAuth("/research/rankings");
+      return `${Array.isArray(data) ? data.length : 0} rankings`;
+    });
+  } else if (!USERNAME || !PASSWORD) {
     skip("Auth: /me", "No credentials");
     skip("Paper account", "No credentials");
     skip("Market data: EURUSD/H1", "No credentials");

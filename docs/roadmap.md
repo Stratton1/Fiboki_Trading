@@ -1,8 +1,8 @@
 # Fiboki — Build Roadmap
 
-Version: 1.7
-Status: **V1 COMPLETE** — Phases 1–13 complete
-Last Updated: 2026-03-09
+Version: 1.8
+Status: **Phase 14 IN PROGRESS** — Slice 1 complete, Slices 2–4 pending
+Last Updated: 2026-03-10
 Reference: [blueprint.md](blueprint.md)
 
 ---
@@ -33,6 +33,10 @@ Reference: [blueprint.md](blueprint.md)
 | Phase 11: Live Readiness | COMPLETE | All pass | Risk limits config (env-var driven), promotion gates (Paper→Demo, Demo→Live), pre-live checklist, 18 gate tests |
 | Phase 12: Frontend V2 | COMPLETE | Build clean | ExecutionModeBanner, backtest comparison view, enhanced settings (exec mode + risk params), searchable instrument select |
 | Phase 13: CI/CD & Operations | COMPLETE | All pass | GitHub Actions CI (lint+test+build+smoke), env var validation, structured logging (JSON prod), request IDs, operations runbook |
+| Phase 14.1: Online Historical Data | COMPLETE | 467 pass | LRU cache, manifest generator/API, paginated market data, vectorized serialization, dynamic has_canonical_data, data_source observability |
+| Phase 14.2: Drawing Tools | PLANNED | — | DrawingToolbar, klinecharts overlays, chart_drawings DB, CRUD API, drawing persistence |
+| Phase 14.3: Live Chart Mode | PLANNED | — | IGDataProvider, server-side IG polling, ?mode=live, frontend mode toggle, SWR auto-refresh |
+| Phase 14.4: Full Production UX | PLANNED | — | Data availability UI, research preset builder, backtest validation, bulk data sync |
 
 ### Audit Fixes Applied (Post Phase 4.2)
 - **C1**: Data loader now drops NaN rows after `to_numeric(coerce)` with warning
@@ -49,7 +53,7 @@ Reference: [blueprint.md](blueprint.md)
 This roadmap converts the FIBOKEI blueprint into executable build phases. It is optimized for **feedback-loop-first vertical slices** — each phase delivers something observable and testable rather than completing horizontal layers in isolation.
 
 **Structure:**
-- **13 Phases** (all complete) with **39 Subphases**
+- **14 Phases** (13 complete, Phase 14 in progress) with **43 Subphases**
 - Each subphase contains **Claude-executable tasks** — specific enough for one Claude Code session
 - Each subphase ends with a **Verification Gate** — concrete tests that must pass before proceeding
 - **Dependencies** are listed where ordering matters
@@ -1560,3 +1564,73 @@ Comparison view works for 3+ backtests. Mode indicator visible on all operationa
 ### Verification Gate
 
 PR triggers lint+test automatically. Merge triggers deploy. Smoke test runs post-deploy. Missing env var causes clear startup failure with actionable error message.
+
+---
+
+## Phase 14: Online Data Layer, Dual-Mode Charting & Drawing Tools
+
+**Goal:** Make the full canonical dataset accessible in production, add dual-mode charting (historical + live IG), and interactive drawing tools with persistence.
+
+**Design doc:** [docs/plans/2026-03-10-online-data-and-charting-design.md](plans/2026-03-10-online-data-and-charting-design.md)
+
+**Dependencies:** Phase 10.5 (Production Data Access), Phase 10 (IG Demo Integration)
+
+---
+
+### Phase 14.1: Online Historical Data Foundation — COMPLETE
+
+**Branch:** `slice1-online-historical-data` (9 commits, 467 tests passing)
+
+**What was built:**
+
+| Component | File(s) | Purpose |
+|-----------|---------|---------|
+| DataFrame LRU Cache | `data/cache.py` | Process-local OrderedDict cache, TTL 5min, max 50 entries. Avoids re-reading parquet on every request. |
+| Data Manifest Generator | `data/manifest.py` | Scans canonical dir, produces `manifest.json` with bar counts, date ranges, checksums, file sizes. |
+| CLI Manifest Command | `cli.py` | `python -m fibokei manifest` — generates manifest, prints provider summary. |
+| Manifest API | `api/routes/data.py` | `GET /data/manifest` (lazy-cached), `POST /data/manifest/refresh` (regenerate). |
+| Market Data Pagination | `api/routes/market_data.py` | `limit` (max 10k), `from_dt`, `to_dt` params. Vectorized `to_dict('records')` replaces `iterrows()`. |
+| Response Metadata | `api/schemas/charts.py` | `total_bars`, `from_date`, `to_date`, `source` in MarketDataResponse. |
+| Dynamic has_canonical_data | `api/routes/instruments.py` | Derived from manifest instead of static flag. |
+| Data Source Observability | `api/routes/system.py` | `data_source` in system status: `"volume"`, `"starter"`, or `"fixtures"`. |
+| Remove dead data_path | `api/routes/backtests.py` | Always uses `load_canonical()` search order. |
+| Fallback Logging | `data/providers/registry.py` | Logs warnings when falling back from canonical → starter → fixtures. |
+
+**What this enables:** Once a Railway volume is mounted at `/data` and populated with the 961MB canonical dataset (360 parquet files), production gets full historical charting, backtests, and research for all 60 instruments across 6 timeframes.
+
+**Operator next step:** Mount Railway volume, upload `data/canonical/`, run `fibokei manifest`, verify via `GET /api/v1/data/manifest`.
+
+---
+
+### Phase 14.2: Drawing Tools — PLANNED
+
+**Scope:**
+- `DrawingToolbar` component with tool selection buttons
+- Wire `activeDrawingTool` prop through `TradingChart`
+- Register klinecharts built-in overlays: trendline (`segment`), horizontal line, ray, Fibonacci retracement (`fibonacciLine`), parallel channel
+- Custom rectangle/supply-demand zone overlay (~30 lines)
+- `chart_drawings` database table + Alembic migration
+- Drawing CRUD API: `GET/POST/PUT/DELETE /api/v1/charts/drawings`
+- Auto-load drawings on chart mount, save on change
+
+---
+
+### Phase 14.3: Live Chart Mode — PLANNED
+
+**Scope:**
+- `IGDataProvider` adapter wrapping `IGClient.get_prices()`
+- Server-side IG price polling with in-memory cache
+- `?mode=live` support in market data endpoint
+- Frontend mode toggle in `ChartToolbar`
+- SWR `refreshInterval: 5000` for live mode auto-refresh
+- Same `MarketDataResponse` contract — frontend is mode-agnostic
+
+---
+
+### Phase 14.4: Full Production UX — PLANNED
+
+**Scope:**
+- Frontend data availability UI (instrument picker shows available timeframes from manifest)
+- Research preset builder using manifest data
+- Backtest instrument/timeframe validation against manifest
+- Bulk data sync tooling (Railway volume update workflow)
