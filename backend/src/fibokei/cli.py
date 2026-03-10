@@ -444,6 +444,28 @@ def show_paper_status():
         print("No paper bots configured.")
 
 
+def generate_manifest_cmd(_args=None):
+    """Generate manifest.json for the canonical data directory."""
+    from fibokei.data.manifest import generate_manifest
+    from fibokei.data.paths import get_canonical_dir
+
+    canonical = get_canonical_dir()
+    print(f"Scanning: {canonical}")
+
+    manifest = generate_manifest(canonical)
+    count = len(manifest["datasets"])
+    print(f"Generated manifest with {count} datasets")
+
+    if count > 0:
+        # Summary by provider
+        providers = {}
+        for d in manifest["datasets"]:
+            p = d["provider"]
+            providers[p] = providers.get(p, 0) + 1
+        for p, c in sorted(providers.items()):
+            print(f"  {p}: {c} files")
+
+
 def main():
     parser = argparse.ArgumentParser(
         prog="fibokei",
@@ -587,6 +609,12 @@ def main():
         help="Show paper trading bot and account status",
     )
 
+    # --- manifest ---
+    subparsers.add_parser(
+        "manifest",
+        help="Generate manifest.json for canonical datasets",
+    )
+
     args = parser.parse_args()
 
     if args.command == "demo":
@@ -611,6 +639,8 @@ def main():
         run_paper_worker(args)
     elif args.command == "paper-status":
         show_paper_status()
+    elif args.command == "manifest":
+        generate_manifest_cmd(args)
     else:
         demo_indicators()
 
