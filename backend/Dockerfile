@@ -15,8 +15,11 @@ COPY alembic.ini .
 
 RUN pip install --no-cache-dir -e .
 
-# Optional local/demo fixtures are not included in the production image.
-RUN mkdir -p /app/data/fixtures
+# Bundle starter dataset for production (lightweight H1 parquet files)
+COPY data_starter/ data/starter/
+
+# Create empty dirs for optional canonical/fixtures data
+RUN mkdir -p /app/data/canonical /app/data/fixtures
 
 EXPOSE 8000
 
