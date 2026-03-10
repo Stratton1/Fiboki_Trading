@@ -1,6 +1,6 @@
-§ it i# Fiboki — Build Roadmap
+# Fiboki — Build Roadmap
 
-Version: 1.6
+Version: 1.7
 Status: **V1 COMPLETE** — Phases 1–13 complete
 Last Updated: 2026-03-09
 Reference: [blueprint.md](blueprint.md)
@@ -49,7 +49,7 @@ Reference: [blueprint.md](blueprint.md)
 This roadmap converts the FIBOKEI blueprint into executable build phases. It is optimized for **feedback-loop-first vertical slices** — each phase delivers something observable and testable rather than completing horizontal layers in isolation.
 
 **Structure:**
-- **13 Phases** (8 complete, 5 planned) with **39 Subphases**
+- **13 Phases** (all complete) with **39 Subphases**
 - Each subphase contains **Claude-executable tasks** — specific enough for one Claude Code session
 - Each subphase ends with a **Verification Gate** — concrete tests that must pass before proceeding
 - **Dependencies** are listed where ordering matters
@@ -1452,21 +1452,21 @@ cd backend && pytest tests/test_ig_safety.py -v
 
 ---
 
-## Subphase 11.1 — Risk Hardening and Operational Procedures
+## Subphase 11.1 — Risk Hardening and Operational Procedures [COMPLETE]
 
 **Goal:** Strengthen risk controls and document operational procedures.
 
 ### Tasks
 
-- [ ] **T-11.1.01** — Create pre-live checklist document: all items that must be verified and signed off before any live trading begins.
+- [x] **T-11.1.01** — Create pre-live checklist document: all items that must be verified and signed off before any live trading begins.
 
-- [ ] **T-11.1.02** — Risk hardening: enforce max position size, daily loss limit, correlation limits, max concurrent positions. These must be configurable and monitored.
+- [x] **T-11.1.02** — Risk hardening: enforce max position size, daily loss limit, correlation limits, max concurrent positions. These must be configurable and monitored.
 
-- [ ] **T-11.1.03** — Monitoring and alerting requirements: error rates, latency, reconciliation failures, unexpected fills. Define thresholds and alert channels.
+- [x] **T-11.1.03** — Monitoring and alerting requirements: error rates, latency, reconciliation failures, unexpected fills. Define thresholds and alert channels.
 
-- [ ] **T-11.1.04** — Operational recovery procedures: what to do if worker crashes, if IG session expires, if database is unavailable, if network partitions occur.
+- [x] **T-11.1.04** — Operational recovery procedures: what to do if worker crashes, if IG session expires, if database is unavailable, if network partitions occur.
 
-- [ ] **T-11.1.05** — Environment separation: dev/staging/prod configs with clear boundaries. No accidental cross-environment execution.
+- [x] **T-11.1.05** — Environment separation: dev/staging/prod configs with clear boundaries. No accidental cross-environment execution.
 
 ### Verification Gate
 
@@ -1474,7 +1474,7 @@ Pre-live checklist exists and all items can be evaluated. Risk limits are enforc
 
 ---
 
-## Subphase 11.2 — Promotion Gates
+## Subphase 11.2 — Promotion Gates [COMPLETE]
 
 **Goal:** Define measurable, enforceable criteria for promotion between trading modes.
 
@@ -1482,13 +1482,13 @@ Pre-live checklist exists and all items can be evaluated. Risk limits are enforc
 
 ### Tasks
 
-- [ ] **T-11.2.01** — Define and implement **Paper → Demo** promotion gate:
+- [x] **T-11.2.01** — Define and implement **Paper → Demo** promotion gate:
   - Minimum 30-day paper runtime
   - Minimum 80 trades completed
   - No unresolved critical errors
   - Composite score above configurable threshold
 
-- [ ] **T-11.2.02** — Define and implement **Demo → Live** promotion gate:
+- [x] **T-11.2.02** — Define and implement **Demo → Live** promotion gate:
   - Minimum 14-day demo runtime
   - Reconciliation accuracy >99.5%
   - Max tolerated slippage drift within defined tolerance
@@ -1514,15 +1514,15 @@ Promotion gates reject bots that do not meet criteria. Manual sign-off step is e
 
 ### Tasks
 
-- [ ] **T-12.01** — Multi-run backtest comparison views: side-by-side metrics for 3+ backtests.
+- [x] **T-12.01** — Multi-run backtest comparison views: side-by-side metrics for 3+ backtests.
 
 - [ ] **T-12.02** — Trade detail replay / inspection: step through trade lifecycle with chart context.
 
-- [ ] **T-12.03** — Demo/live mode visibility indicators: clear visual state (paper / demo / live) across all operational pages.
+- [x] **T-12.03** — Demo/live mode visibility indicators: clear visual state (paper / demo / live) across all operational pages.
 
-- [ ] **T-12.04** — Settings page for IG credentials and risk parameters: securely store and manage IG API keys and risk config.
+- [x] **T-12.04** — Settings page for IG credentials and risk parameters: securely store and manage IG API keys and risk config.
 
-- [ ] **T-12.05** — Expanded instrument search/filter UX for 60+ instruments with category grouping.
+- [x] **T-12.05** — Expanded instrument search/filter UX for 60+ instruments with category grouping.
 
 ### Verification Gate
 
@@ -1543,17 +1543,17 @@ Comparison view works for 3+ backtests. Mode indicator visible on all operationa
 
 ### Tasks
 
-- [ ] **T-13.01** — GitHub Actions workflow: lint (`ruff`), test (`pytest`), build (`npm run build`) on every PR.
+- [x] **T-13.01** — GitHub Actions workflow: lint (`ruff`), test (`pytest`), build (`npm run build`) on every PR.
 
 - [ ] **T-13.02** — Automated deployment on merge to main: Railway auto-deploy from GitHub.
 
-- [ ] **T-13.03** — Deployment smoke test job: automated health check + auth verification post-deploy. Runs after each deployment and alerts on failure.
+- [x] **T-13.03** — Deployment smoke test job: automated health check + auth verification post-deploy. Runs after each deployment and alerts on failure.
 
-- [ ] **T-13.04** — Environment variable / config validation: fail-fast on startup if required env vars are missing. Clear error messages.
+- [x] **T-13.04** — Environment variable / config validation: fail-fast on startup if required env vars are missing. Clear error messages.
 
 - [ ] **T-13.05** — Database backup strategy: scheduled PostgreSQL backups, documented restoration procedure.
 
-- [ ] **T-13.06** — Structured logging: JSON log output for production, human-readable for dev. Include request IDs, timing, and error context.
+- [x] **T-13.06** — Structured logging: JSON log output for production, human-readable for dev. Include request IDs, timing, and error context.
 
 - [ ] **T-13.07** — Error tracking: integrate Sentry or similar for production error monitoring and alerting.
 
