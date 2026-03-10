@@ -246,6 +246,8 @@ def create_app() -> FastAPI:
     application.include_router(data_router, prefix="/api/v1")
     from fibokei.api.routes.execution import router as execution_router
     application.include_router(execution_router, prefix="/api/v1")
+    from fibokei.api.routes.drawings import router as drawings_router
+    application.include_router(drawings_router, prefix="/api/v1")
 
     return application
 
