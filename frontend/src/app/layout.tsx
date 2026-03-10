@@ -20,6 +20,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
+      <head>
+        <meta httpEquiv="Content-Security-Policy" content="upgrade-insecure-requests" />
+      </head>
       <body className={`${inter.variable} antialiased`}>
         <AuthProvider>{children}</AuthProvider>
       </body>
