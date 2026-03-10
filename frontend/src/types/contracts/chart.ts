@@ -27,4 +27,33 @@ export interface MarketDataResponse {
   timeframe: string;
   candles: CandleBar[];
   ichimoku: IchimokuPoint[];
+  total_bars: number;
+  from_date: string | null;
+  to_date: string | null;
+  source: string | null;
+}
+
+export interface ManifestDataset {
+  provider: string;
+  symbol: string;
+  timeframe: string;
+  bars: number;
+  from_date: string;
+  to_date: string;
+  file_path: string;
+  size_bytes: number;
+  modified_at: string;
+}
+
+export interface DataManifest {
+  generated_at: string;
+  canonical_dir: string;
+  datasets: ManifestDataset[];
+}
+
+export interface DataAvailability {
+  available: boolean;
+  rows: number;
+  start?: string;
+  end?: string;
 }

@@ -8,6 +8,7 @@ import { useBacktests } from "@/lib/hooks/use-backtests";
 import GroupedInstrumentSelect from "@/components/GroupedInstrumentSelect";
 import { PageHeader } from "@/components/PageHeader";
 import { EmptyState } from "@/components/EmptyState";
+import { useManifest } from "@/lib/hooks/use-manifest";
 import { BarChart3, GitCompareArrows, Loader2 } from "lucide-react";
 
 export default function BacktestsPage() {
@@ -19,6 +20,12 @@ export default function BacktestsPage() {
   const [timeframe, setTimeframe] = useState("H1");
   const [running, setRunning] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { hasData, availableTimeframes, datasetInfo } = useManifest();
+
+  const ALL_TIMEFRAMES = ["M15", "H1", "H4", "D"];
+  const manifestTimeframes = instrument ? availableTimeframes(instrument) : [];
+  const noDataForCombo = instrument && timeframe && !hasData(instrument, timeframe);
+  const comboInfo = instrument && timeframe ? datasetInfo(instrument, timeframe) : undefined;
 
   async function handleRun(e: React.FormEvent) {
     e.preventDefault();
@@ -82,21 +89,35 @@ export default function BacktestsPage() {
               onChange={(e) => setTimeframe(e.target.value)}
               className="input"
             >
-              <option value="M15">M15</option>
-              <option value="H1">H1</option>
-              <option value="H4">H4</option>
-              <option value="D">D</option>
+              {ALL_TIMEFRAMES.map((tf) => {
+                const available = manifestTimeframes.length === 0 || manifestTimeframes.includes(tf);
+                return (
+                  <option key={tf} value={tf} disabled={!available}>
+                    {tf}{!available ? " (no data)" : ""}
+                  </option>
+                );
+              })}
             </select>
           </div>
           <button
             type="submit"
-            disabled={running || !strategy || !instrument}
+            disabled={running || !strategy || !instrument || !!noDataForCombo}
             className="btn btn-primary"
           >
             {running && <Loader2 size={14} className="animate-spin" />}
             {running ? "Running..." : "Run Backtest"}
           </button>
         </div>
+        {noDataForCombo && (
+          <p className="text-amber-600 text-sm mt-2">
+            No data available for {instrument}/{timeframe}. Select a different timeframe or ingest data first.
+          </p>
+        )}
+        {comboInfo && !noDataForCombo && (
+          <p className="text-foreground-muted text-xs mt-2">
+            {comboInfo.bars.toLocaleString()} bars &middot; {comboInfo.from_date.slice(0, 10)} to {comboInfo.to_date.slice(0, 10)} &middot; {comboInfo.provider}
+          </p>
+        )}
         {error && <p className="text-danger text-sm mt-3">{error}</p>}
       </form>
 

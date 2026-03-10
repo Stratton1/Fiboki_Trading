@@ -6,6 +6,7 @@ import { api } from "@/lib/api";
 import { useRankings } from "@/lib/hooks/use-research";
 import { Heatmap } from "@/components/analytics/Heatmap";
 import GroupedInstrumentSelect from "@/components/GroupedInstrumentSelect";
+import { useManifest } from "@/lib/hooks/use-manifest";
 import { PageHeader } from "@/components/PageHeader";
 import type {
   AdvancedResearchResponse,
@@ -28,6 +29,8 @@ export default function ResearchPage() {
   const { data: rankings, mutate, isLoading } = useRankings();
   const { data: strategies } = useSWR("strategies", () => api.strategies());
   const { data: instruments } = useSWR("instruments", () => api.instruments());
+
+  const { hasData, availableTimeframes: manifestTimeframes } = useManifest();
 
   // Batch selection state
   const [selectedStrategies, setSelectedStrategies] = useState<string[]>([]);
@@ -205,26 +208,40 @@ export default function ResearchPage() {
               value={selectedInstrument}
               onChange={setSelectedInstrument}
               className="input"
+              showDataIndicator
             />
           </div>
           <div>
             <label className="block text-xs text-foreground-muted mb-1">Timeframes</label>
             <div className="flex gap-1">
-              {TIMEFRAMES.map((tf) => (
-                <button
-                  key={tf}
-                  type="button"
-                  onClick={() => toggleTimeframe(tf)}
-                  className={`px-2 py-1 rounded text-xs border ${
-                    selectedTimeframes.includes(tf)
-                      ? "bg-primary text-white border-primary"
-                      : "bg-background border-gray-300"
-                  }`}
-                >
-                  {tf}
-                </button>
-              ))}
+              {TIMEFRAMES.map((tf) => {
+                const instrumentTfs = selectedInstrument ? manifestTimeframes(selectedInstrument) : [];
+                const tfAvailable = instrumentTfs.length === 0 || instrumentTfs.includes(tf);
+                return (
+                  <button
+                    key={tf}
+                    type="button"
+                    onClick={() => toggleTimeframe(tf)}
+                    disabled={!tfAvailable}
+                    className={`px-2 py-1 rounded text-xs border transition ${
+                      selectedTimeframes.includes(tf)
+                        ? "bg-primary text-white border-primary"
+                        : tfAvailable
+                          ? "bg-background border-gray-300"
+                          : "bg-background border-gray-200 text-foreground-muted/50 cursor-not-allowed"
+                    }`}
+                    title={!tfAvailable ? `No data for ${selectedInstrument}/${tf}` : undefined}
+                  >
+                    {tf}
+                  </button>
+                );
+              })}
             </div>
+            {selectedInstrument && selectedTimeframes.some((tf) => !hasData(selectedInstrument, tf)) && (
+              <p className="text-amber-600 text-xs mt-1">
+                Some selected timeframes have no data for {selectedInstrument}
+              </p>
+            )}
           </div>
           <div>
             <label className="block text-xs text-foreground-muted mb-1">Min Trades</label>

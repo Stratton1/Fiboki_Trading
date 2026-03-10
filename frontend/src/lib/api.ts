@@ -199,6 +199,16 @@ export const api = {
       }>
     >(`/execution/audit${params ? `?${params}` : ""}`),
 
+  // Data availability
+  manifest: () =>
+    apiFetch<import("@/types/contracts/chart").DataManifest>("/data/manifest"),
+  refreshManifest: () =>
+    apiFetch<{ status: string; datasets: number }>("/data/manifest/refresh", { method: "POST" }),
+  dataCheck: (symbol: string, timeframe: string) =>
+    apiFetch<import("@/types/contracts/chart").DataAvailability>(
+      `/data/check/${symbol}/${timeframe}`
+    ),
+
   // Drawings
   listDrawings: (instrument: string, timeframe: string) =>
     apiFetch<import("@/types/contracts/drawings").ChartDrawing[]>(

@@ -8,7 +8,7 @@ import TradingChart from "@/components/charts/core/TradingChart";
 import { useMarketData } from "@/lib/hooks/use-market-data";
 import { useDrawings } from "@/lib/hooks/use-drawings";
 import { PageHeader } from "@/components/PageHeader";
-import { AlertTriangle, Loader2 } from "lucide-react";
+import { AlertTriangle, Database, Loader2 } from "lucide-react";
 
 export default function ChartsPage() {
   const [instrument, setInstrument] = useState("EURUSD");
@@ -113,6 +113,20 @@ export default function ChartsPage() {
           </div>
         }
       />
+
+      {/* Data source info */}
+      {data && (
+        <div className="flex items-center gap-3 text-xs text-foreground-muted px-1">
+          <Database size={12} />
+          <span>{data.total_bars?.toLocaleString() ?? "?"} total bars</span>
+          {data.from_date && data.to_date && (
+            <span>&middot; {data.from_date.slice(0, 10)} to {data.to_date.slice(0, 10)}</span>
+          )}
+          {data.source && (
+            <span>&middot; source: {data.source}</span>
+          )}
+        </div>
+      )}
 
       {/* Chart area */}
       <div className="flex-1 min-h-0">

@@ -11,12 +11,14 @@ import {
   AlertTriangle,
   CheckCircle,
   Copy,
+  Database,
   ExternalLink,
   RefreshCw,
   ShieldCheck,
   ShieldOff,
   XCircle,
 } from "lucide-react";
+import { useManifest } from "@/lib/hooks/use-manifest";
 
 type DiagResult = { status: "idle" | "running" | "pass" | "fail"; detail: string };
 
@@ -43,6 +45,8 @@ export default function SystemPage() {
     () => api.executionMode(),
     { refreshInterval: 15000 }
   );
+
+  const { manifest, datasets, refresh: refreshManifest } = useManifest();
 
   const isHealthy = health?.status === "ok";
 
@@ -251,6 +255,83 @@ export default function SystemPage() {
             <p className="text-sm font-medium">{typeof window !== "undefined" ? window.location.origin : "—"}</p>
           </div>
         </div>
+      </div>
+
+      {/* Data Manifest */}
+      <div className="card mb-6">
+        <div className="flex items-center justify-between mb-4">
+          <p className="section-label !mb-0">Data Manifest</p>
+          <button
+            onClick={async () => {
+              await api.refreshManifest();
+              refreshManifest();
+            }}
+            className="btn btn-ghost text-xs"
+          >
+            <Database size={14} />
+            Refresh Manifest
+          </button>
+        </div>
+        {manifest ? (
+          <>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-4">
+              <div>
+                <p className="text-xs text-foreground-muted mb-1">Datasets</p>
+                <p className="text-lg font-semibold">{datasets.length}</p>
+              </div>
+              <div>
+                <p className="text-xs text-foreground-muted mb-1">Symbols</p>
+                <p className="text-lg font-semibold">
+                  {new Set(datasets.map((d) => d.symbol)).size}
+                </p>
+              </div>
+              <div>
+                <p className="text-xs text-foreground-muted mb-1">Total Bars</p>
+                <p className="text-lg font-semibold">
+                  {datasets.reduce((sum, d) => sum + d.bars, 0).toLocaleString()}
+                </p>
+              </div>
+              <div>
+                <p className="text-xs text-foreground-muted mb-1">Generated</p>
+                <p className="text-sm font-semibold">
+                  {new Date(manifest.generated_at).toLocaleDateString()}
+                </p>
+              </div>
+            </div>
+            {datasets.length > 0 && (
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-gray-200">
+                      <th className="text-left px-3 py-2 text-xs text-foreground-muted">Symbol</th>
+                      <th className="text-left px-3 py-2 text-xs text-foreground-muted">TF</th>
+                      <th className="text-right px-3 py-2 text-xs text-foreground-muted">Bars</th>
+                      <th className="text-left px-3 py-2 text-xs text-foreground-muted">Range</th>
+                      <th className="text-left px-3 py-2 text-xs text-foreground-muted">Provider</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {datasets.map((d, i) => (
+                      <tr key={i} className="border-b border-gray-100">
+                        <td className="px-3 py-1.5 font-medium">{d.symbol}</td>
+                        <td className="px-3 py-1.5">{d.timeframe}</td>
+                        <td className="px-3 py-1.5 text-right tabular-nums">{d.bars.toLocaleString()}</td>
+                        <td className="px-3 py-1.5 text-xs text-foreground-muted">
+                          {d.from_date.slice(0, 10)} — {d.to_date.slice(0, 10)}
+                        </td>
+                        <td className="px-3 py-1.5 text-xs">{d.provider}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </>
+        ) : (
+          <p className="text-foreground-muted text-sm">
+            No manifest found. Click &ldquo;Refresh Manifest&rdquo; to generate one, or run <code className="bg-background-muted px-1 rounded text-xs">fibokei manifest</code> on the server.
+          </p>
+        )}
       </div>
 
       {/* Diagnostics */}
