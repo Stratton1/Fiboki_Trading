@@ -26,6 +26,10 @@ class MarketDataResponse(BaseModel):
     timeframe: str
     candles: list[CandleBar]
     ichimoku: list[IchimokuSeries]
+    total_bars: int = 0
+    from_date: str | None = None
+    to_date: str | None = None
+    source: str | None = None
 
 
 class PricePoint(BaseModel):

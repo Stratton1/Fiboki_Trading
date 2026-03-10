@@ -7,10 +7,13 @@ from pathlib import Path
 
 import pandas as pd
 
+from fibokei.data.cache import DataFrameCache
 from fibokei.data.paths import get_canonical_dir, get_fixtures_dir, get_starter_dir
 from fibokei.data.providers.base import DataProvider, ProviderID
 
 logger = logging.getLogger(__name__)
+
+_df_cache = DataFrameCache(max_size=50, ttl_seconds=300)
 
 
 def get_provider(provider_id: ProviderID | str) -> DataProvider:
@@ -70,11 +73,15 @@ def load_canonical(
         if df is not None:
             return df
 
+    logger.info("No canonical data for %s/%s, checking starter", symbol, timeframe)
+
     # Search starter dataset
     for pid in (ProviderID.HISTDATA,):
         df = _try_load(get_starter_dir(), pid, symbol, timeframe)
         if df is not None:
             return df
+
+    logger.info("No starter data for %s/%s, checking fixtures", symbol, timeframe)
 
     # Fall back to legacy fixtures
     df = _try_load_fixture(symbol, timeframe)
@@ -88,6 +95,49 @@ def load_canonical(
             get_fixtures_dir(),
         )
     return df
+
+
+def load_canonical_cached(
+    symbol: str,
+    timeframe: str,
+    data_dir: str | Path | None = None,
+    provider: "ProviderID | str | None" = None,
+) -> tuple[pd.DataFrame | None, str]:
+    """Load canonical data with caching. Returns (df, source_label)."""
+    if data_dir is None and provider is None:
+        cached = _df_cache.get(symbol, timeframe)
+        if cached is not None:
+            return cached, "cache"
+
+    df = load_canonical(symbol, timeframe, data_dir=data_dir, provider=provider)
+    if df is not None and data_dir is None and provider is None:
+        _df_cache.put(symbol, timeframe, df)
+
+    source = _determine_source(symbol, timeframe)
+    return df, source
+
+
+def _determine_source(symbol: str, timeframe: str) -> str:
+    """Determine which data source was used (for observability)."""
+    canonical = get_canonical_dir()
+    starter = get_starter_dir()
+    sym_lower = symbol.lower()
+    tf_lower = timeframe.lower()
+
+    for pid in ("dukascopy", "histdata"):
+        p = canonical / pid / sym_lower / f"{sym_lower}_{tf_lower}.parquet"
+        if p.exists():
+            return f"canonical/{pid}"
+        p = p.with_suffix(".csv")
+        if p.exists():
+            return f"canonical/{pid}"
+
+    for pid in ("histdata",):
+        p = starter / pid / sym_lower / f"{sym_lower}_{tf_lower}.parquet"
+        if p.exists():
+            return "starter"
+
+    return "fixtures"
 
 
 def _try_load(
