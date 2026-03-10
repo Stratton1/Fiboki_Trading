@@ -72,13 +72,6 @@ export default function TradingChart({
 
     chartRef.current = chart!;
 
-    // Set up data loader once — reads from dataRef for current data
-    chart!.setDataLoader({
-      getBars: ({ callback }) => {
-        callback(dataRef.current);
-      },
-    });
-
     return () => {
       if (containerRef.current) {
         dispose(containerRef.current);
@@ -89,7 +82,8 @@ export default function TradingChart({
     };
   }, []);
 
-  // Apply data when it changes
+  // Apply data when it changes — follows klinecharts v10 pattern:
+  // setSymbol → setPeriod → setDataLoader (which triggers getBars)
   useEffect(() => {
     const chart = chartRef.current;
     if (!chart || !data) return;
@@ -100,13 +94,17 @@ export default function TradingChart({
       clearIchimokuData();
     }
 
-    dataRef.current = mapCandlesToKLine(data.candles);
+    const klineData = mapCandlesToKLine(data.candles);
+    dataRef.current = klineData;
 
-    // Set symbol and period to trigger klinecharts to call getBars
     const instrument = data.instrument || "UNKNOWN";
-    const timeframe = data.timeframe || "H1";
     chart.setSymbol({ ticker: instrument });
     chart.setPeriod({ span: 1, type: "day" });
+    chart.setDataLoader({
+      getBars: ({ callback }) => {
+        callback(dataRef.current);
+      },
+    });
   }, [data]);
 
   // Toggle Ichimoku indicator
