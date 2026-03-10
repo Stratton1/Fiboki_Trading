@@ -35,6 +35,12 @@ export default function TradingChart({
   useEffect(() => {
     if (!containerRef.current) return;
 
+    // klinecharts uses height:100% internally, which resolves against the
+    // parent's explicit `height` — not `min-height`. Convert the rendered
+    // min-height into a concrete pixel height so the inner 100% works.
+    const el = containerRef.current;
+    el.style.height = `${el.offsetHeight}px`;
+
     const chart = init(containerRef.current, {
       styles: {
         candle: {
@@ -72,16 +78,12 @@ export default function TradingChart({
 
     chartRef.current = chart!;
 
-    // klinecharts calculates layout on init, but in a flex layout the
-    // container may not have its final height yet. Use ResizeObserver
-    // to call resize() whenever the container dimensions change.
-    const ro = new ResizeObserver(() => {
-      chartRef.current?.resize();
-    });
-    ro.observe(containerRef.current);
+    // Resize chart when window size changes
+    const onResize = () => chartRef.current?.resize();
+    window.addEventListener("resize", onResize);
 
     return () => {
-      ro.disconnect();
+      window.removeEventListener("resize", onResize);
       if (containerRef.current) {
         dispose(containerRef.current);
       }
