@@ -120,6 +120,8 @@ class PaperBotModel(Base):
     instrument: Mapped[str] = mapped_column(String(20), nullable=False)
     timeframe: Mapped[str] = mapped_column(String(10), nullable=False)
     risk_pct: Mapped[float] = mapped_column(Float, default=1.0)
+    source_type: Mapped[str | None] = mapped_column(String(20))  # "research" | "backtest" | "manual"
+    source_id: Mapped[str | None] = mapped_column(String(100))  # research run_id or backtest run id
     state: Mapped[str] = mapped_column(String(20), nullable=False, default="idle")
     bars_seen: Mapped[int] = mapped_column(Integer, default=0)
     last_evaluated_bar: Mapped[datetime | None] = mapped_column(DateTime)

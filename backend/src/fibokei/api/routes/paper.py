@@ -46,6 +46,8 @@ class CreateBotRequest(BaseModel):
     instrument: str
     timeframe: str
     risk_pct: float = 1.0
+    source_type: str | None = None  # "research" | "backtest" | "manual"
+    source_id: str | None = None  # research run_id or backtest id
 
 
 class CreateBotResponse(BaseModel):
@@ -54,6 +56,8 @@ class CreateBotResponse(BaseModel):
     instrument: str
     timeframe: str
     state: str
+    source_type: str | None = None
+    source_id: str | None = None
 
 
 class BotStatusResponse(BaseModel):
@@ -67,6 +71,8 @@ class BotStatusResponse(BaseModel):
     position: dict | None = None
     last_evaluated_bar: str | None = None
     error_message: str | None = None
+    source_type: str | None = None
+    source_id: str | None = None
 
 
 class AccountResponse(BaseModel):
@@ -128,12 +134,15 @@ def create_bot(
         )
 
     bot_id = str(uuid.uuid4())[:8]
+    source_type = req.source_type or "manual"
     bot_model = save_paper_bot(db, {
         "bot_id": bot_id,
         "strategy_id": req.strategy_id,
         "instrument": req.instrument,
         "timeframe": req.timeframe.upper(),
         "risk_pct": req.risk_pct,
+        "source_type": source_type,
+        "source_id": req.source_id,
         "state": "monitoring",
     })
 
@@ -143,6 +152,8 @@ def create_bot(
         instrument=req.instrument,
         timeframe=req.timeframe.upper(),
         state=bot_model.state,
+        source_type=source_type,
+        source_id=req.source_id,
     )
 
 
@@ -289,4 +300,6 @@ def _bot_to_response(bot) -> BotStatusResponse:
             bot.last_evaluated_bar.isoformat() if bot.last_evaluated_bar else None
         ),
         error_message=bot.error_message,
+        source_type=getattr(bot, "source_type", None),
+        source_id=getattr(bot, "source_id", None),
     )

@@ -57,6 +57,17 @@ export default function ResearchPage() {
   const [validationResult, setValidationResult] = useState<ValidationBatchResponse | null>(null);
   const [validatingLoading, setValidatingLoading] = useState(false);
 
+  // Promotion state
+  const [promoteTarget, setPromoteTarget] = useState<{
+    strategy_id: string;
+    instrument: string;
+    timeframe: string;
+    composite_score: number;
+  } | null>(null);
+  const [promoteLoading, setPromoteLoading] = useState(false);
+  const [promoteError, setPromoteError] = useState<string | null>(null);
+  const [promoteSuccess, setPromoteSuccess] = useState<string | null>(null);
+
   function toggleStrategy(id: string) {
     setSelectedStrategies((prev) =>
       prev.includes(id) ? prev.filter((s) => s !== id) : [...prev, id]
@@ -164,6 +175,31 @@ export default function ResearchPage() {
       setValidatingLoading(false);
     }
   }
+
+  async function handlePromote() {
+    if (!promoteTarget) return;
+    setPromoteLoading(true);
+    setPromoteError(null);
+    setPromoteSuccess(null);
+    try {
+      const res = await api.createBot({
+        strategy_id: promoteTarget.strategy_id,
+        instrument: promoteTarget.instrument,
+        timeframe: promoteTarget.timeframe,
+        source_type: "research",
+        source_id: lastSummary?.run_id || undefined,
+      });
+      const botId = (res as Record<string, unknown>).bot_id as string;
+      setPromoteSuccess(`Bot ${botId} created`);
+      setPromoteTarget(null);
+    } catch (err) {
+      setPromoteError(err instanceof Error ? err.message : "Promotion failed");
+    } finally {
+      setPromoteLoading(false);
+    }
+  }
+
+  const PROMOTION_THRESHOLD = 0.55;
 
   // Heatmap data
   const strategyIds = [...new Set(rankings?.map((r) => r.strategy_id) ?? [])];
@@ -378,8 +414,12 @@ export default function ResearchPage() {
                 <td className="px-4 py-3">{r.strategy_id}</td>
                 <td className="px-4 py-3">{r.instrument}</td>
                 <td className="px-4 py-3">{r.timeframe}</td>
-                <td className="px-4 py-3 text-right font-medium">{r.composite_score.toFixed(3)}</td>
-                <td className="px-4 py-3 text-right">
+                <td className="px-4 py-3 text-right font-medium">
+                  <span className={r.composite_score >= PROMOTION_THRESHOLD ? "text-green-600" : "text-foreground"}>
+                    {r.composite_score.toFixed(3)}
+                  </span>
+                </td>
+                <td className="px-4 py-3 text-right space-x-2">
                   <button
                     onClick={() => handleAdvancedResearch(r.strategy_id, r.instrument, r.timeframe)}
                     disabled={advancedLoading}
@@ -387,6 +427,19 @@ export default function ResearchPage() {
                   >
                     Analyse
                   </button>
+                  {r.composite_score >= PROMOTION_THRESHOLD && (
+                    <button
+                      onClick={() => setPromoteTarget({
+                        strategy_id: r.strategy_id,
+                        instrument: r.instrument,
+                        timeframe: r.timeframe,
+                        composite_score: r.composite_score,
+                      })}
+                      className="text-xs text-green-600 hover:underline"
+                    >
+                      Promote
+                    </button>
+                  )}
                 </td>
               </tr>
             ))}
@@ -639,6 +692,64 @@ export default function ResearchPage() {
               ))}
             </div>
           )}
+        </div>
+      )}
+
+      {/* Promotion success/error feedback */}
+      {promoteSuccess && (
+        <div className="card bg-green-50 border-green-200 text-green-800 text-sm flex items-center justify-between">
+          <span>{promoteSuccess}</span>
+          <button onClick={() => setPromoteSuccess(null)} className="text-green-600 hover:underline text-xs">Dismiss</button>
+        </div>
+      )}
+
+      {/* Promotion confirmation dialog */}
+      {promoteTarget && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-background rounded-lg shadow-xl p-6 max-w-md w-full mx-4 space-y-4">
+            <h3 className="text-lg font-semibold">Promote to Paper Trading</h3>
+            <div className="space-y-2 text-sm">
+              <div className="flex justify-between">
+                <span className="text-foreground-muted">Strategy</span>
+                <span className="font-medium">{promoteTarget.strategy_id}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-foreground-muted">Instrument</span>
+                <span className="font-medium">{promoteTarget.instrument}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-foreground-muted">Timeframe</span>
+                <span className="font-medium">{promoteTarget.timeframe}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-foreground-muted">Composite Score</span>
+                <span className="font-medium text-green-600">{promoteTarget.composite_score.toFixed(3)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-foreground-muted">Threshold</span>
+                <span className="font-medium">{PROMOTION_THRESHOLD.toFixed(3)}</span>
+              </div>
+            </div>
+            {promoteError && (
+              <p className="text-sm text-red-600">{promoteError}</p>
+            )}
+            <div className="flex gap-3 justify-end pt-2">
+              <button
+                onClick={() => { setPromoteTarget(null); setPromoteError(null); }}
+                className="btn btn-secondary text-sm"
+                disabled={promoteLoading}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handlePromote}
+                className="btn btn-primary text-sm"
+                disabled={promoteLoading}
+              >
+                {promoteLoading ? "Creating..." : "Create Paper Bot"}
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>
