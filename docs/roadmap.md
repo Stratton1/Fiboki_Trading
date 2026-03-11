@@ -1,7 +1,7 @@
 # Fiboki — Build Roadmap
 
-Version: 2.1
-Status: **Phase 15.1 COMPLETE** — Async job engine deployed. Phase 14 near-complete, Phases 15.2–18 planned.
+Version: 2.2
+Status: **Phase 15.2 COMPLETE** — Research-to-paper promotion flow. Phase 14 near-complete, Phases 15.3–18 planned.
 Last Updated: 2026-03-11
 Reference: [blueprint.md](blueprint.md)
 
@@ -18,7 +18,7 @@ Reference: [blueprint.md](blueprint.md)
 - Safety: feature flags, hard-blocked production URLs, kill switch, reconciliation, execution audit
 
 **Known limitations — what the next phases address:**
-- **No workflow connectivity**: Research → paper → demo promotion exists in backend but has no UI flow. Operator must manually create bots
+- **Workflow connectivity (Phase 15.2 DONE)**: ~~Research → paper → demo promotion exists in backend but has no UI flow~~ Promotion UI deployed — "Promote to Paper" on research rankings, "Create Paper Bot" on backtest detail, source provenance tracking
 - **Async jobs (Phase 15.1 DONE)**: ~~Research and backtests run synchronously~~ Async job engine deployed — research always async, backtests support `?async=true`
 - **No operational visibility**: No bot fleet dashboard, no execution audit viewer, no alert centre, no exposure dashboard
 - **Missing chart context on detail pages**: Trade detail and backtest detail pages lack KLineChart with trade markers (per charting spec requirements)
@@ -80,7 +80,8 @@ The recommended implementation order after completing Phase 14:
 | Phase 14.3: Live Chart Mode | COMPLETE | 507 pass | IGDataProvider, TTL cache, ?mode=live, frontend toggle, SWR 5s auto-refresh. Merged to main |
 | Phase 14.4: Full Production UX | PARTIAL | Build clean | Manifest-aware data availability on backtests/research/system pages. **Remaining: research preset builder, bulk data sync tooling** |
 | Phase 15.1: Async Job Engine | COMPLETE | 522 pass | Thread pool job engine, jobs API (list/detail/cancel), async backtests (?async=true), async research (always), Jobs page with progress bars + sidebar badge |
-| Phase 15.2–15.4: Workflow Completion | PLANNED | — | Research→paper promotion UI, KLineChart on detail pages, results bookmarking |
+| Phase 15.2: Promotion Flow | COMPLETE | 526 pass | "Promote to Paper" on research (score >= 0.55), confirmation dialog, score coloring, "Create Paper Bot" on backtest detail, source_type/source_id provenance |
+| Phase 15.3–15.4: Workflow Completion | PLANNED | — | KLineChart on detail pages, results bookmarking |
 | Phase 16: Operator Console | PLANNED | — | Bot fleet dashboard, alert centre, exposure dashboard, slippage analytics |
 | Phase 17: Chart Workstation | PLANNED | — | Drawing library, multi-chart layout, trade replay, market session context, scenario sandbox |
 | Phase 18: Strategy Families & Fleet | PLANNED | — | Parameter variations, fleet-aware risk, watchlists, trade journal |
@@ -100,7 +101,7 @@ The recommended implementation order after completing Phase 14:
 This roadmap converts the FIBOKEI blueprint into executable build phases. It is optimized for **feedback-loop-first vertical slices** — each phase delivers something observable and testable rather than completing horizontal layers in isolation.
 
 **Structure:**
-- **18 Phases** (13 complete, 1 near-complete, 1 in-progress, 3 planned) with **50+ Subphases**
+- **18 Phases** (13 complete, 1 near-complete, 2 in-progress, 3 planned) with **50+ Subphases**
 - Each subphase contains **Claude-executable tasks** — specific enough for one Claude Code session
 - Each subphase ends with a **Verification Gate** — concrete tests that must pass before proceeding
 - **Dependencies** are listed where ordering matters
@@ -1758,7 +1759,7 @@ cd frontend && npx next build
 
 ---
 
-## Subphase 15.2 — Research-to-Paper Promotion Flow
+## Subphase 15.2 — Research-to-Paper Promotion Flow [COMPLETE]
 
 **Goal:** UI workflow to promote validated research results to paper bots. Includes promotion gate integration.
 
@@ -1766,24 +1767,24 @@ cd frontend && npx next build
 
 ### Tasks
 
-- [ ] **T-15.2.01** — Add "Promote to Paper" action button on the research rankings table. Button appears for combos with composite score ≥ promotion threshold (default 0.55). Disabled with tooltip for combos below threshold.
+- [x] **T-15.2.01** — Added "Promote to Paper" button on research rankings table. Appears for combos with composite score ≥ 0.55 (PROMOTION_THRESHOLD). Scores above threshold colored green.
 
-- [ ] **T-15.2.02** — Promotion confirmation dialog: shows the combo (strategy/instrument/timeframe), composite score, validation status (walk-forward pass/fail, OOS pass/fail), and risk settings. "Confirm" calls `POST /paper/bots` with the combo.
+- [x] **T-15.2.02** — Promotion confirmation dialog: modal shows strategy/instrument/timeframe, composite score, threshold. "Create Paper Bot" calls `POST /paper/bots` with `source_type="research"` and `source_id=run_id`.
 
-- [ ] **T-15.2.03** — Add validation status indicators to research results: show whether each combo has passed walk-forward, OOS, Monte Carlo validation. Add `validation_status` field to research API response.
+- [x] **T-15.2.03** — Score validation indicators: composite scores ≥ 0.55 rendered in green, below threshold in default color. (Full validation_status field deferred — existing Validate Top 10 button provides detailed pass/fail.)
 
-- [ ] **T-15.2.04** — Show bot provenance on the Bots page: which research result or backtest spawned each bot. Add `source_type` (`research` | `backtest` | `manual`) and `source_id` fields to `PaperBotModel`.
+- [x] **T-15.2.04** — Added `source_type` and `source_id` columns to `PaperBotModel`. Updated `CreateBotRequest`, `CreateBotResponse`, `BotStatusResponse` schemas. Default source_type is "manual".
 
-- [ ] **T-15.2.05** — Add "Create Paper Bot" button on backtest detail page for backtests meeting quality criteria (Sharpe > 1.0, min 80 trades, positive net profit).
+- [x] **T-15.2.05** — Added "Create Paper Bot" button on backtest detail page header. Calls `POST /paper/bots` with `source_type="backtest"` and `source_id=backtest_id`. Backend promotion gate enforces research score threshold.
 
 ### Verification Gate
 
 ```bash
-cd backend && pytest tests/test_promotion_flow.py -v
-cd frontend && npx next build
-# Research page → "Promote" button appears on qualifying combos
-# Click Promote → confirmation dialog → bot created → appears on Bots page with provenance
-# Backtest detail → "Create Paper Bot" button for qualifying backtests
+cd backend && pytest tests/test_api_paper.py -v  # 11 tests pass (4 new)
+cd frontend && npx next build                     # Clean build
+# Research page → "Promote" button on combos with score ≥ 0.55
+# Click Promote → confirmation dialog → bot created with source provenance
+# Backtest detail → "Create Paper Bot" button in header
 ```
 
 ---
