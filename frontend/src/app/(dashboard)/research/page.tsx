@@ -96,11 +96,29 @@ export default function ResearchPage() {
       }
       const result = await api.runResearch(body);
       setLastSummary({
-        run_id: result.run_id,
-        completed: result.completed,
-        qualified: result.qualified,
+        run_id: result.job_id,
+        completed: 0,
+        qualified: 0,
       });
-      await mutate();
+      // Research now runs as an async job — poll for completion
+      const pollInterval = setInterval(async () => {
+        const job = await api.getJob(result.job_id);
+        if (job.state === "completed" && job.result) {
+          clearInterval(pollInterval);
+          setLastSummary({
+            run_id: (job.result as Record<string, unknown>).run_id as string,
+            completed: (job.result as Record<string, unknown>).completed as number,
+            qualified: (job.result as Record<string, unknown>).qualified as number,
+          });
+          await mutate();
+          setRunning(false);
+        } else if (job.state === "failed") {
+          clearInterval(pollInterval);
+          setError(job.error || "Research job failed");
+          setRunning(false);
+        }
+      }, 2000);
+      return; // Don't setRunning(false) here — the poll handles it
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to run research");
     } finally {

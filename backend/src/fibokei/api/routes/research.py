@@ -2,11 +2,12 @@
 
 import uuid
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from sqlalchemy.orm import Session
 
 from fibokei.api.auth import TokenData, get_current_user
 from fibokei.api.deps import get_db
+from fibokei.api.schemas.jobs import JobSubmittedResponse
 from fibokei.api.schemas.research import (
     AdvancedResearchRequest,
     AdvancedResearchResponse,
@@ -50,47 +51,59 @@ def _scoring_config_from_weights(weights: ScoringWeights | None) -> ScoringConfi
     )
 
 
-@router.post("/research/run", response_model=ResearchRunSummary)
-def run_research(
-    req: ResearchRunRequest,
-    db: Session = Depends(get_db),
-    user: TokenData = Depends(get_current_user),
-):
-    """Run research matrix across strategy x instrument x timeframe combinations."""
+def _run_research_sync(
+    strategy_ids: list[str],
+    instruments: list[str],
+    timeframes_str: list[str],
+    initial_capital: float,
+    risk_per_trade_pct: float,
+    min_trades: int,
+    scoring_weights: ScoringWeights | None,
+    provider: str | None,
+    data_dir: str | None,
+    session_factory,
+    progress_callback=None,
+) -> dict:
+    """Execute research matrix — used as job target."""
     run_id = str(uuid.uuid4())[:8]
-    scoring_config = _scoring_config_from_weights(req.scoring_weights)
-    scoring_config.min_trades_full = req.min_trades
+    scoring_config = _scoring_config_from_weights(scoring_weights)
+    scoring_config.min_trades_full = min_trades
 
     config = BacktestConfig(
-        initial_capital=req.initial_capital,
-        risk_per_trade_pct=req.risk_per_trade_pct,
+        initial_capital=initial_capital,
+        risk_per_trade_pct=risk_per_trade_pct,
     )
 
     timeframes = []
-    for tf_str in req.timeframes:
+    for tf_str in timeframes_str:
         try:
             timeframes.append(Timeframe(tf_str.upper()))
         except ValueError:
             continue
 
     matrix = ResearchMatrix(
-        strategies=req.strategy_ids,
-        instruments=req.instruments,
+        strategies=strategy_ids,
+        instruments=instruments,
         timeframes=timeframes,
         config=config,
         scoring_config=scoring_config,
-        provider=req.provider,
+        provider=provider,
     )
 
     from fibokei.data.paths import get_fixtures_dir
-    data_dir = req.data_dir or str(get_fixtures_dir())
-    results = matrix.run(data_dir)
+    resolved_data_dir = data_dir or str(get_fixtures_dir())
 
-    # Apply min trades filter
+    if progress_callback:
+        progress_callback(5)
+
+    results = matrix.run(resolved_data_dir)
+
+    if progress_callback:
+        progress_callback(70)
+
     from fibokei.research.filter import apply_minimum_trade_filter
-    qualified, _ = apply_minimum_trade_filter(results, req.min_trades)
+    qualified, _ = apply_minimum_trade_filter(results, min_trades)
 
-    # Persist all results
     result_dicts = []
     for r in results:
         result_dicts.append({
@@ -103,31 +116,54 @@ def run_research(
             "metrics": r.metrics,
         })
 
-    saved = save_research_results(db, result_dicts) if result_dicts else []
+    if progress_callback:
+        progress_callback(90)
 
-    top = None
-    if saved:
-        s = saved[0]
-        top = ResearchResultResponse(
-            id=s.id,
-            run_id=s.run_id,
-            strategy_id=s.strategy_id,
-            instrument=s.instrument,
-            timeframe=s.timeframe,
-            composite_score=s.composite_score,
-            rank=s.rank,
-            metrics_json=s.metrics_json,
-            created_at=s.created_at,
-        )
+    with session_factory() as db:
+        save_research_results(db, result_dicts) if result_dicts else []
 
-    return ResearchRunSummary(
-        run_id=run_id,
-        total_combinations=len(req.strategy_ids) * len(req.instruments) * len(req.timeframes),
-        completed=len(results),
-        qualified=len(qualified),
+    total_combinations = len(strategy_ids) * len(instruments) * len(timeframes_str)
+    return {
+        "run_id": run_id,
+        "total_combinations": total_combinations,
+        "completed": len(results),
+        "qualified": len(qualified),
+        "min_trades": min_trades,
+    }
+
+
+@router.post("/research/run", response_model=JobSubmittedResponse)
+def run_research(
+    req: ResearchRunRequest,
+    request: Request,
+    user: TokenData = Depends(get_current_user),
+):
+    """Run research matrix as an async job. Returns a job ID for polling."""
+    from fibokei.jobs.engine import get_job_engine
+
+    combos = len(req.strategy_ids) * len(req.instruments) * len(req.timeframes)
+    label = f"Research {combos} combos"
+    engine = get_job_engine()
+    info = engine.submit(
+        job_type="research",
+        label=label,
+        fn=_run_research_sync,
+        strategy_ids=req.strategy_ids,
+        instruments=req.instruments,
+        timeframes_str=req.timeframes,
+        initial_capital=req.initial_capital,
+        risk_per_trade_pct=req.risk_per_trade_pct,
         min_trades=req.min_trades,
         scoring_weights=req.scoring_weights,
-        top_result=top,
+        provider=req.provider,
+        data_dir=req.data_dir,
+        session_factory=request.app.state.session_factory,
+    )
+    return JobSubmittedResponse(
+        job_id=info.job_id,
+        job_type=info.job_type,
+        label=info.label,
+        state=info.state.value,
     )
 
 

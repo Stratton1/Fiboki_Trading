@@ -1,6 +1,6 @@
 """Backtest endpoints."""
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from sqlalchemy.orm import Session
 
 from fibokei.api.auth import TokenData, get_current_user
@@ -12,6 +12,7 @@ from fibokei.api.schemas.backtests import (
     EquityCurveResponse,
     TradeListResponse,
 )
+from fibokei.api.schemas.jobs import JobSubmittedResponse
 from fibokei.backtester.config import BacktestConfig
 from fibokei.backtester.engine import Backtester
 from fibokei.backtester.metrics import compute_metrics
@@ -19,61 +20,127 @@ from fibokei.core.models import Timeframe
 from fibokei.data.providers.registry import load_canonical
 from fibokei.db.models import BacktestRunModel, TradeModel
 from fibokei.db.repository import get_backtest_results, save_backtest_result
+from fibokei.jobs.engine import get_job_engine
 from fibokei.strategies.registry import strategy_registry
 
 router = APIRouter(tags=["backtests"])
 
 
-@router.post("/backtests/run", response_model=BacktestSummaryResponse)
+def _run_backtest_sync(
+    strategy_id: str,
+    instrument: str,
+    timeframe: str,
+    config_overrides: dict | None,
+    session_factory,
+    progress_callback=None,
+):
+    """Execute a backtest — used both sync and as a job target."""
+    strategy = strategy_registry.get(strategy_id)
+    if config_overrides:
+        strategy.config.update(config_overrides)
+
+    config = BacktestConfig()
+    tf_enum = Timeframe(timeframe.upper())
+
+    df = load_canonical(instrument, tf_enum.value)
+    if df is None:
+        raise ValueError(f"No data file for {instrument}/{tf_enum.value}")
+
+    if progress_callback:
+        progress_callback(10)
+
+    backtester = Backtester(strategy, config)
+    result = backtester.run(df, instrument, tf_enum)
+
+    if progress_callback:
+        progress_callback(80)
+
+    metrics = compute_metrics(result)
+    metrics["equity_curve"] = result.equity_curve
+
+    with session_factory() as db:
+        run_model = save_backtest_result(db, result, metrics)
+        result_dict = {
+            "backtest_run_id": run_model.id,
+            "strategy_id": run_model.strategy_id,
+            "instrument": run_model.instrument,
+            "timeframe": run_model.timeframe,
+            "total_trades": run_model.total_trades,
+            "net_profit": run_model.net_profit,
+            "sharpe_ratio": run_model.sharpe_ratio,
+            "max_drawdown_pct": run_model.max_drawdown_pct,
+        }
+
+    if progress_callback:
+        progress_callback(100)
+
+    return result_dict
+
+
+@router.post("/backtests/run")
 def run_backtest(
     req: BacktestRunRequest,
+    request: Request,
+    async_mode: bool = Query(False, alias="async"),
     db: Session = Depends(get_db),
     user: TokenData = Depends(get_current_user),
 ):
-    """Run a backtest synchronously and save the results."""
+    """Run a backtest. Use ?async=true to run in background and get a job ID."""
+    # Validate inputs before submitting
     try:
-        strategy = strategy_registry.get(req.strategy_id)
+        strategy_registry.get(req.strategy_id)
     except KeyError:
         raise HTTPException(status_code=400, detail=f"Unknown strategy: {req.strategy_id}")
-
-    if req.config_overrides:
-        strategy.config.update(req.config_overrides)
-
-    config = BacktestConfig()
 
     try:
         tf_enum = Timeframe(req.timeframe.upper())
     except ValueError:
         raise HTTPException(status_code=400, detail=f"Invalid timeframe: {req.timeframe}")
 
-    df = load_canonical(req.instrument, tf_enum.value)
-    if df is None:
-        raise HTTPException(
-            status_code=404,
-            detail=f"No data file for {req.instrument}/{tf_enum.value}",
-        )
+    if not async_mode:
+        # Synchronous path (existing behaviour)
+        try:
+            result = _run_backtest_sync(
+                req.strategy_id, req.instrument, req.timeframe,
+                req.config_overrides, request.app.state.session_factory,
+            )
+        except ValueError as e:
+            raise HTTPException(status_code=404, detail=str(e))
+        # Re-query the saved model for full response
+        run_id = result["backtest_run_id"]
+        run = db.query(BacktestRunModel).filter(BacktestRunModel.id == run_id).first()
+        return {
+            "id": run.id,
+            "strategy_id": run.strategy_id,
+            "instrument": run.instrument,
+            "timeframe": run.timeframe,
+            "start_date": run.start_date,
+            "end_date": run.end_date,
+            "total_trades": run.total_trades,
+            "net_profit": run.net_profit,
+            "sharpe_ratio": run.sharpe_ratio,
+            "max_drawdown_pct": run.max_drawdown_pct,
+        }
 
-    backtester = Backtester(strategy, config)
-    result = backtester.run(df, req.instrument, tf_enum)
-
-    metrics = compute_metrics(result)
-    # Inject equity curve so it can be retrieved later
-    metrics["equity_curve"] = result.equity_curve
-
-    run_model = save_backtest_result(db, result, metrics)
-
-    return {
-        "id": run_model.id,
-        "strategy_id": run_model.strategy_id,
-        "instrument": run_model.instrument,
-        "timeframe": run_model.timeframe,
-        "start_date": run_model.start_date,
-        "end_date": run_model.end_date,
-        "total_trades": run_model.total_trades,
-        "net_profit": run_model.net_profit,
-        "sharpe_ratio": run_model.sharpe_ratio,
-        "max_drawdown_pct": run_model.max_drawdown_pct,
-    }
+    # Async path — submit to job engine
+    label = f"{req.strategy_id} {req.instrument} {req.timeframe.upper()}"
+    engine = get_job_engine()
+    info = engine.submit(
+        job_type="backtest",
+        label=label,
+        fn=_run_backtest_sync,
+        strategy_id=req.strategy_id,
+        instrument=req.instrument,
+        timeframe=req.timeframe,
+        config_overrides=req.config_overrides,
+        session_factory=request.app.state.session_factory,
+    )
+    return JobSubmittedResponse(
+        job_id=info.job_id,
+        job_type=info.job_type,
+        label=info.label,
+        state=info.state.value,
+    )
 
 
 @router.get("/backtests", response_model=list[BacktestSummaryResponse])

@@ -10,6 +10,7 @@ import {
   ChartCandlestick,
   History,
   LayoutDashboard,
+  ListTodo,
   LogOut,
   Search,
   Settings,
@@ -17,12 +18,15 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import useSWR from "swr";
+import { api } from "@/lib/api";
 
 const NAV_ITEMS = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard },
   { href: "/charts", label: "Charts", icon: ChartCandlestick },
   { href: "/backtests", label: "Backtests", icon: BarChart3 },
   { href: "/research", label: "Research", icon: Search },
+  { href: "/jobs", label: "Jobs", icon: ListTodo },
   { href: "/bots", label: "Paper Bots", icon: Bot },
   { href: "/trades", label: "Trade History", icon: History },
   { href: "/settings", label: "Settings", icon: Settings },
@@ -33,6 +37,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const { user, logout, isLoading } = useAuth();
   const pathname = usePathname();
   const router = useRouter();
+  const { data: jobsData } = useSWR("/jobs/active-count", () => api.listJobs("limit=1"), {
+    refreshInterval: 5000,
+  });
+  const activeJobCount = jobsData?.active_count ?? 0;
 
   if (isLoading) {
     return <LoadingScreen />;
@@ -65,6 +73,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               >
                 <Icon size={18} strokeWidth={active ? 2.2 : 1.8} />
                 {label}
+                {href === "/jobs" && activeJobCount > 0 && (
+                  <span className="ml-auto text-xs bg-primary text-white rounded-full px-1.5 py-0.5 min-w-[18px] text-center leading-none">
+                    {activeJobCount}
+                  </span>
+                )}
               </Link>
             );
           })}

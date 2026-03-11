@@ -95,8 +95,8 @@ export const api = {
     ),
 
   // Backtests
-  runBacktest: (body: Record<string, unknown>) =>
-    apiFetch("/backtests/run", { method: "POST", body: JSON.stringify(body) }),
+  runBacktest: (body: Record<string, unknown>, async_mode = false) =>
+    apiFetch(`/backtests/run${async_mode ? "?async=true" : ""}`, { method: "POST", body: JSON.stringify(body) }),
   listBacktests: (params?: string) =>
     apiFetch<import("@/types/contracts/analytics").BacktestSummary[]>(
       `/backtests${params ? `?${params}` : ""}`
@@ -108,7 +108,7 @@ export const api = {
 
   // Research
   runResearch: (body: Record<string, unknown>) =>
-    apiFetch<import("@/types/contracts/research").ResearchRunSummary>(
+    apiFetch<{ job_id: string; job_type: string; label: string; state: string }>(
       "/research/run", { method: "POST", body: JSON.stringify(body) }
     ),
   rankings: (params?: string) =>
@@ -212,6 +212,39 @@ export const api = {
     apiFetch<import("@/types/contracts/chart").DataAvailability>(
       `/data/check/${symbol}/${timeframe}`
     ),
+
+  // Jobs
+  listJobs: (params?: string) =>
+    apiFetch<{
+      items: Array<{
+        job_id: string;
+        job_type: string;
+        label: string;
+        state: string;
+        progress: number;
+        created_at: string;
+        started_at: string | null;
+        completed_at: string | null;
+        result: Record<string, unknown> | null;
+        error: string | null;
+      }>;
+      active_count: number;
+    }>(`/jobs${params ? `?${params}` : ""}`),
+  getJob: (jobId: string) =>
+    apiFetch<{
+      job_id: string;
+      job_type: string;
+      label: string;
+      state: string;
+      progress: number;
+      created_at: string;
+      started_at: string | null;
+      completed_at: string | null;
+      result: Record<string, unknown> | null;
+      error: string | null;
+    }>(`/jobs/${jobId}`),
+  cancelJob: (jobId: string) =>
+    apiFetch<{ job_id: string; state: string }>(`/jobs/${jobId}/cancel`, { method: "POST" }),
 
   // Drawings
   listDrawings: (instrument: string, timeframe: string) =>
