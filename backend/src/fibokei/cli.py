@@ -444,6 +444,79 @@ def show_paper_status():
         print("No paper bots configured.")
 
 
+def data_sync(args):
+    """Bulk data sync: scan, validate, and optionally copy canonical data to a target directory."""
+    from fibokei.data.paths import get_canonical_dir
+
+    canonical = Path(args.data_dir) if args.data_dir else get_canonical_dir()
+    if not canonical.exists():
+        print(f"Canonical directory not found: {canonical}")
+        sys.exit(1)
+
+    files = list(canonical.rglob("*.parquet"))
+    print("Fiboki Trading — Bulk Data Sync")
+    print(f"Source: {canonical}")
+    print(f"Found {len(files)} parquet files")
+    print()
+
+    if not files:
+        print("Nothing to sync.")
+        return
+
+    import pyarrow.parquet as pq
+
+    valid = []
+    broken = []
+    total_rows = 0
+    for f in sorted(files):
+        try:
+            meta = pq.read_metadata(f)
+            total_rows += meta.num_rows
+            valid.append((f, meta.num_rows))
+        except Exception as e:
+            broken.append((f, str(e)))
+
+    rows = []
+    for f, count in valid:
+        rel = f.relative_to(canonical)
+        size_mb = f.stat().st_size / (1024 * 1024)
+        rows.append([str(rel), f"{count:,}", f"{size_mb:.2f} MB"])
+    print(tabulate(rows, headers=["Dataset", "Rows", "Size"], tablefmt="simple"))
+    print()
+
+    if broken:
+        print(f"Broken files ({len(broken)}):")
+        for f, err in broken:
+            print(f"  {f.relative_to(canonical)}: {err}")
+        print()
+
+    print(f"Valid: {len(valid)} | Broken: {len(broken)} | Total rows: {total_rows:,}")
+    total_size = sum(f.stat().st_size for f, _ in valid) / (1024 * 1024)
+    print(f"Total size: {total_size:.1f} MB")
+
+    if args.target:
+        import shutil
+
+        target = Path(args.target)
+        print(f"\nSyncing to: {target}")
+        target.mkdir(parents=True, exist_ok=True)
+        synced = 0
+        for f, _ in valid:
+            rel = f.relative_to(canonical)
+            dest = target / rel
+            dest.parent.mkdir(parents=True, exist_ok=True)
+            if not dest.exists() or f.stat().st_mtime > dest.stat().st_mtime:
+                shutil.copy2(f, dest)
+                synced += 1
+        print(f"Synced {synced} files ({len(valid) - synced} already up-to-date)")
+
+    if not args.skip_manifest:
+        from fibokei.data.manifest import generate_manifest
+
+        generate_manifest(canonical)
+        print("Manifest regenerated.")
+
+
 def generate_manifest_cmd(_args=None):
     """Generate manifest.json for the canonical data directory."""
     from fibokei.data.manifest import generate_manifest
@@ -609,6 +682,24 @@ def main():
         help="Show paper trading bot and account status",
     )
 
+    # --- data-sync ---
+    sync_parser = subparsers.add_parser(
+        "data-sync",
+        help="Scan, validate, and sync canonical parquet data",
+    )
+    sync_parser.add_argument(
+        "--data-dir", default=None,
+        help="Source canonical data directory (default: auto-detect)",
+    )
+    sync_parser.add_argument(
+        "--target", default=None,
+        help="Target directory to copy valid files to (e.g. Railway volume mount)",
+    )
+    sync_parser.add_argument(
+        "--skip-manifest", action="store_true",
+        help="Skip manifest regeneration after sync",
+    )
+
     # --- manifest ---
     subparsers.add_parser(
         "manifest",
@@ -639,6 +730,8 @@ def main():
         run_paper_worker(args)
     elif args.command == "paper-status":
         show_paper_status()
+    elif args.command == "data-sync":
+        data_sync(args)
     elif args.command == "manifest":
         generate_manifest_cmd(args)
     else:

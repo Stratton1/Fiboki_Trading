@@ -25,6 +25,7 @@ dependencies = [
     "httpx",
     "psycopg2-binary",
     "yfinance",
+    "sentry-sdk[fastapi]",
 ]
 
 [project.optional-dependencies]

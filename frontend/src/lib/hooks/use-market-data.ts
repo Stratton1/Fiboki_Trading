@@ -8,15 +8,15 @@ const LIVE_REFRESH_INTERVAL = 5_000;
 export type ChartMode = "historical" | "live";
 
 export function useMarketData(
-  instrument: string,
-  timeframe: string,
+  instrument: string | null,
+  timeframe: string | null,
   mode: ChartMode = "historical"
 ) {
   const { data, error, isLoading, mutate } = useSWR<MarketDataResponse>(
     instrument && timeframe
       ? `/market-data/${instrument}/${timeframe}?mode=${mode}`
       : null,
-    () => api.marketData(instrument, timeframe, mode),
+    () => api.marketData(instrument!, timeframe!, mode),
     {
       revalidateOnFocus: false,
       dedupingInterval: mode === "live" ? LIVE_REFRESH_INTERVAL : 30_000,

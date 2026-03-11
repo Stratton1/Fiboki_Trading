@@ -215,3 +215,27 @@ class ValidationBatchResponse(BaseModel):
     total_skipped: int
     pass_rate: float
     results: list[ValidationResultResponse]
+
+
+# Research preset schemas
+
+
+class ResearchPresetCreate(BaseModel):
+    name: str = Field(..., min_length=1, max_length=100)
+    description: str | None = None
+    config: ResearchRunRequest
+
+
+class ResearchPresetUpdate(BaseModel):
+    name: str | None = Field(None, min_length=1, max_length=100)
+    description: str | None = None
+    config: ResearchRunRequest | None = None
+
+
+class ResearchPresetResponse(BaseModel):
+    id: int
+    name: str
+    description: str | None = None
+    config: dict[str, Any]
+    created_at: datetime | None = None
+    updated_at: datetime | None = None

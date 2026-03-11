@@ -105,6 +105,10 @@ export const api = {
     apiFetch<import("@/types/contracts/analytics").BacktestDetail>(`/backtests/${id}`),
   getEquityCurve: (id: number) =>
     apiFetch<{ equity_curve: number[] }>(`/backtests/${id}/equity-curve`),
+  getBacktestTrades: (id: number, page = 1, size = 50, sort?: string) =>
+    apiFetch<import("@/types/contracts/trades").TradeListResponse>(
+      `/backtests/${id}/trades?page=${page}&size=${size}${sort ? `&sort=${sort}` : ""}`
+    ),
 
   // Research
   runResearch: (body: Record<string, unknown>) =>
@@ -127,6 +131,18 @@ export const api = {
     apiFetch<import("@/types/contracts/research").ResearchResult[]>(
       "/research/compare", { method: "POST", body: JSON.stringify({ combos }) }
     ),
+  listPresets: () =>
+    apiFetch<import("@/types/contracts/research").ResearchPreset[]>("/research/presets"),
+  createPreset: (body: { name: string; description?: string; config: Record<string, unknown> }) =>
+    apiFetch<import("@/types/contracts/research").ResearchPreset>("/research/presets", {
+      method: "POST", body: JSON.stringify(body),
+    }),
+  updatePreset: (id: number, body: Record<string, unknown>) =>
+    apiFetch<import("@/types/contracts/research").ResearchPreset>(`/research/presets/${id}`, {
+      method: "PUT", body: JSON.stringify(body),
+    }),
+  deletePreset: (id: number) =>
+    apiFetch<{ deleted: number }>(`/research/presets/${id}`, { method: "DELETE" }),
 
   // Paper
   createBot: (body: Record<string, unknown>) =>

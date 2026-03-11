@@ -93,10 +93,28 @@ def _create_engine_and_session():
     return engine, session_factory
 
 
+def _init_sentry() -> None:
+    """Initialize Sentry error tracking if DSN is configured."""
+    dsn = os.environ.get("FIBOKEI_SENTRY_DSN", "")
+    if not dsn:
+        return
+
+    import sentry_sdk
+
+    sentry_sdk.init(
+        dsn=dsn,
+        traces_sample_rate=float(os.environ.get("FIBOKEI_SENTRY_TRACES_RATE", "0.1")),
+        environment=os.environ.get("FIBOKEI_SENTRY_ENV", "production"),
+        release=os.environ.get("FIBOKEI_VERSION", "0.1.0"),
+    )
+    logging.getLogger("fibokei.startup").info("Sentry error tracking enabled")
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Initialize database and seed users on startup."""
     _configure_logging()
+    _init_sentry()
     _validate_required_env_vars()
 
     engine, session_factory = _create_engine_and_session()
