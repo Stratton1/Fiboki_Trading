@@ -1,9 +1,52 @@
 # Fiboki — Build Roadmap
 
-Version: 1.8
-Status: **Phase 14 IN PROGRESS** — Slice 1 complete, Slices 2–4 pending
+Version: 2.0
+Status: **Phase 14 NEAR-COMPLETE** — Slices 1–3 done, Slice 4 partial. Phases 15–18 planned.
 Last Updated: 2026-03-10
 Reference: [blueprint.md](blueprint.md)
+
+---
+
+## Current State & Known Limitations
+
+**What Fiboki is today:** A fully deployed multi-strategy trading research platform with 12 Ichimoku/Fibonacci strategies, 60-instrument canonical dataset (360 parquet files), production-grade backend on Railway, and Next.js frontend on Vercel. The backend is architecturally strong — research matrix, walk-forward/OOS/Monte Carlo validation, paper trading worker, IG demo integration, promotion gates, risk engine, and kill switch are all implemented and tested.
+
+**What works well:**
+- Backend architecture: strategy framework, backtester, research engine, paper trading, IG demo integration
+- Data infrastructure: multi-tier resolution (canonical → starter → fixtures), manifest system, LRU cache
+- Charting: KLineChart with Ichimoku overlays, interactive drawing tools, live IG demo mode (branch)
+- Safety: feature flags, hard-blocked production URLs, kill switch, reconciliation, execution audit
+
+**Known limitations — what the next phases address:**
+- **No workflow connectivity**: Research → paper → demo promotion exists in backend but has no UI flow. Operator must manually create bots
+- **No async jobs**: Research and backtests run synchronously, blocking the API. Large research matrices time out
+- **No operational visibility**: No bot fleet dashboard, no execution audit viewer, no alert centre, no exposure dashboard
+- **Missing chart context on detail pages**: Trade detail and backtest detail pages lack KLineChart with trade markers (per charting spec requirements)
+- **No portfolio-level analysis**: No scenario sandbox, no fleet-aware risk view, no correlation analysis
+- **Observability gaps**: No error tracking (Sentry), no automated DB backups, no slippage analytics
+
+**Pending merges:**
+- Branch `phase14-3-live-chart` (1 commit) — live chart mode via IG demo REST API. Ready to merge to main.
+
+**Remaining legacy tasks:**
+- T-12.02: Trade detail replay/inspection (KLineChart with trade markers)
+- T-13.02: Railway auto-deploy from GitHub
+- T-13.05: Database backup strategy
+- T-13.07: Error tracking (Sentry)
+
+---
+
+## Next Priorities
+
+The recommended implementation order after completing Phase 14:
+
+1. **Phase 15: Workflow Completion & Async Infrastructure** — async job engine, research→paper promotion UI, KLineChart on detail pages, results bookmarking. This is the highest-leverage work: it connects the backend's strong research/validation pipeline to the frontend so operators can actually use the full workflow.
+
+2. **Phase 16: Operator Console & Fleet Operations** — bot fleet dashboard, alert centre, exposure dashboard, slippage analytics. Required before running multiple bots in production.
+
+3. **Phase 17: Chart Workstation & Advanced Analysis** — drawing library, multi-chart layout, trade replay, market session context, scenario sandbox. Quality-of-life improvements for the analysis workflow.
+
+4. **Phase 18: Strategy Families & Fleet Scaling** — parameter variation engine, fleet-aware risk, watchlists, trade journal. The most ambitious phase, requiring everything before it to be solid.
 
 ---
 
@@ -31,12 +74,16 @@ Reference: [blueprint.md](blueprint.md)
 | Phase 10: IG Demo Integration | COMPLETE | All pass | IG REST client (demo only), epic mapping (65 instruments), order lifecycle, position sync, reconciliation, kill switch, execution audit, feature flags, frontend controls |
 | Phase 10.5: Production Data Access | COMPLETE | All pass | Centralized path resolver, starter dataset (2.3MB, 7 majors H1), unified load_canonical(), .dockerignore |
 | Phase 11: Live Readiness | COMPLETE | All pass | Risk limits config (env-var driven), promotion gates (Paper→Demo, Demo→Live), pre-live checklist, 18 gate tests |
-| Phase 12: Frontend V2 | COMPLETE | Build clean | ExecutionModeBanner, backtest comparison view, enhanced settings (exec mode + risk params), searchable instrument select |
-| Phase 13: CI/CD & Operations | COMPLETE | All pass | GitHub Actions CI (lint+test+build+smoke), env var validation, structured logging (JSON prod), request IDs, operations runbook |
+| Phase 12: Frontend V2 | PARTIAL | Build clean | ExecutionModeBanner, backtest comparison, enhanced settings, searchable instrument select. **Remaining: T-12.02 trade detail replay** |
+| Phase 13: CI/CD & Operations | PARTIAL | All pass | GitHub Actions CI, env var validation, structured logging, request IDs. **Remaining: T-13.02 auto-deploy, T-13.05 DB backups, T-13.07 error tracking** |
 | Phase 14.1: Online Historical Data | COMPLETE | 467 pass | LRU cache, manifest generator/API, paginated market data, vectorized serialization, dynamic has_canonical_data, data_source observability |
-| Phase 14.2: Drawing Tools | PLANNED | — | DrawingToolbar, klinecharts overlays, chart_drawings DB, CRUD API, drawing persistence |
-| Phase 14.3: Live Chart Mode | PLANNED | — | IGDataProvider, server-side IG polling, ?mode=live, frontend mode toggle, SWR auto-refresh |
-| Phase 14.4: Full Production UX | PLANNED | — | Data availability UI, research preset builder, backtest validation, bulk data sync |
+| Phase 14.2: Drawing Tools | COMPLETE | All pass | DrawingToolbar (6 tools), klinecharts overlays, chart_drawings DB, CRUD API, auto-load/persist |
+| Phase 14.3: Live Chart Mode | COMPLETE (branch) | 507 pass | IGDataProvider, TTL cache, ?mode=live, frontend toggle, SWR 5s auto-refresh. **On branch `phase14-3-live-chart`, pending merge to main** |
+| Phase 14.4: Full Production UX | PARTIAL | Build clean | Manifest-aware data availability on backtests/research/system pages. **Remaining: research preset builder, bulk data sync tooling** |
+| Phase 15: Workflow Completion | PLANNED | — | Async jobs, research→paper promotion UI, KLineChart on detail pages, results bookmarking |
+| Phase 16: Operator Console | PLANNED | — | Bot fleet dashboard, alert centre, exposure dashboard, slippage analytics |
+| Phase 17: Chart Workstation | PLANNED | — | Drawing library, multi-chart layout, trade replay, market session context, scenario sandbox |
+| Phase 18: Strategy Families & Fleet | PLANNED | — | Parameter variations, fleet-aware risk, watchlists, trade journal |
 
 ### Audit Fixes Applied (Post Phase 4.2)
 - **C1**: Data loader now drops NaN rows after `to_numeric(coerce)` with warning
@@ -53,12 +100,18 @@ Reference: [blueprint.md](blueprint.md)
 This roadmap converts the FIBOKEI blueprint into executable build phases. It is optimized for **feedback-loop-first vertical slices** — each phase delivers something observable and testable rather than completing horizontal layers in isolation.
 
 **Structure:**
-- **14 Phases** (13 complete, Phase 14 in progress) with **43 Subphases**
+- **18 Phases** (13 complete, 1 near-complete, 4 planned) with **50+ Subphases**
 - Each subphase contains **Claude-executable tasks** — specific enough for one Claude Code session
 - Each subphase ends with a **Verification Gate** — concrete tests that must pass before proceeding
 - **Dependencies** are listed where ordering matters
 
 **Task format:** Each task is written as an instruction Claude Code can execute directly. Tasks are numbered for reference (e.g., `T-1.1.03` = Phase 1, Subphase 1, Task 3).
+
+**Phase grouping (Phases 15–18):**
+- **Phase 15 (Workflow Completion)**: Connects the strong backend pipeline to usable frontend workflows — async jobs, promotion UI, chart context on detail pages
+- **Phase 16 (Operator Console)**: Fleet operations, alerting, exposure — required before scaling to many bots
+- **Phase 17 (Chart Workstation)**: Advanced chart features, replay, scenario sandbox — analysis depth
+- **Phase 18 (Fleet Scaling)**: Strategy families, parameter variations, fleet-aware risk — the most ambitious phase
 
 ---
 
@@ -1520,7 +1573,7 @@ Promotion gates reject bots that do not meet criteria. Manual sign-off step is e
 
 - [x] **T-12.01** — Multi-run backtest comparison views: side-by-side metrics for 3+ backtests.
 
-- [ ] **T-12.02** — Trade detail replay / inspection: step through trade lifecycle with chart context.
+- [ ] **T-12.02** — Trade detail replay / inspection: step through trade lifecycle with chart context. **Deferred to Phase 15.3** — will be implemented as part of the KLineChart-on-detail-pages work.
 
 - [x] **T-12.03** — Demo/live mode visibility indicators: clear visual state (paper / demo / live) across all operational pages.
 
@@ -1602,35 +1655,711 @@ PR triggers lint+test automatically. Merge triggers deploy. Smoke test runs post
 
 ---
 
-### Phase 14.2: Drawing Tools — PLANNED
+### Phase 14.2: Drawing Tools — COMPLETE
 
-**Scope:**
-- `DrawingToolbar` component with tool selection buttons
-- Wire `activeDrawingTool` prop through `TradingChart`
-- Register klinecharts built-in overlays: trendline (`segment`), horizontal line, ray, Fibonacci retracement (`fibonacciLine`), parallel channel
-- Custom rectangle/supply-demand zone overlay (~30 lines)
-- `chart_drawings` database table + Alembic migration
-- Drawing CRUD API: `GET/POST/PUT/DELETE /api/v1/charts/drawings`
-- Auto-load drawings on chart mount, save on change
+**Commits:** `1a8e116`, `813fcae`, `411bc1d`, `12d3542` (merged to main)
 
----
+**What was built:**
 
-### Phase 14.3: Live Chart Mode — PLANNED
-
-**Scope:**
-- `IGDataProvider` adapter wrapping `IGClient.get_prices()`
-- Server-side IG price polling with in-memory cache
-- `?mode=live` support in market data endpoint
-- Frontend mode toggle in `ChartToolbar`
-- SWR `refreshInterval: 5000` for live mode auto-refresh
-- Same `MarketDataResponse` contract — frontend is mode-agnostic
+| Component | File(s) | Purpose |
+|-----------|---------|---------|
+| DrawingToolbar | `frontend/src/components/charts/panels/DrawingToolbar.tsx` | 6 tools: Pointer, Trendline, Horizontal Line, Ray, Fibonacci Retracement, Channel |
+| Drawing CRUD API | `backend/src/fibokei/api/routes/drawings.py` | GET/POST/PUT/DELETE with per-user isolation |
+| ChartDrawingModel | `backend/src/fibokei/db/models.py` | Persists drawings with points, styles, lock status, visibility |
+| TradingChart integration | `frontend/src/components/charts/core/TradingChart.tsx` | Auto-load saved drawings on chart mount, persist on change (debounced) |
+| API client | `frontend/src/lib/api.ts` | `listDrawings()`, `saveDrawing()`, `updateDrawing()`, `deleteDrawing()` |
 
 ---
 
-### Phase 14.4: Full Production UX — PLANNED
+### Phase 14.3: Live Chart Mode — COMPLETE (pending merge)
 
-**Scope:**
-- Frontend data availability UI (instrument picker shows available timeframes from manifest)
-- Research preset builder using manifest data
-- Backtest instrument/timeframe validation against manifest
-- Bulk data sync tooling (Railway volume update workflow)
+**Branch:** `phase14-3-live-chart` (commit `bf0ab08`, 507 tests passing)
+
+**What was built:**
+
+| Component | File(s) | Purpose |
+|-----------|---------|---------|
+| Live Data Provider | `backend/src/fibokei/data/live_provider.py` | Fetches recent OHLCV via IG REST API with per-timeframe TTL cache |
+| Market Data Mode Routing | `backend/src/fibokei/api/routes/market_data.py` | `?mode=historical|live` query param, shared `_df_to_response()` helper |
+| Live Status Endpoint | `GET /market-data/live/status` | Reports whether IG live data is available |
+| IG Price History | `backend/src/fibokei/execution/ig_client.py` | `get_prices()` method for IG REST price endpoint |
+| Frontend Mode Toggle | `frontend/src/components/charts/panels/ChartToolbar.tsx` | Historical/Live toggle with disabled state and tooltip |
+| Live Polling | `frontend/src/lib/hooks/use-market-data.ts` | SWR `refreshInterval: 5000` for live mode; `useLiveStatus()` hook |
+| Response Contract | `frontend/src/types/contracts/chart.ts` | `mode: "historical" | "live"` field, `LiveStatusResponse` interface |
+| Backend Tests | `backend/tests/test_live_chart.py` | 18 tests covering live provider, mode routing, live status endpoint |
+
+**Operator next step:** Merge branch to main, redeploy, set IG credentials to enable live mode.
+
+---
+
+### Phase 14.4: Full Production UX — PARTIAL
+
+**What is done:**
+- [x] Manifest-aware data availability UI integrated on backtests page (disables timeframes without data)
+- [x] Manifest-aware data availability UI integrated on research page (filters instruments/timeframes by manifest)
+- [x] System page shows canonical data count and data source status
+- [x] `useManifest()` hook with `hasData()`, `availableTimeframes()`, `datasetInfo()` helpers
+
+**What remains:**
+- [ ] Research preset builder — save/load research configurations (strategy × instrument × timeframe selections)
+- [ ] Bulk data sync tooling — documented Railway volume update workflow with CLI support
+
+---
+
+# PHASE 15: WORKFLOW COMPLETION & ASYNC INFRASTRUCTURE
+
+**Objective:** Connect the strong backend research/validation pipeline to usable frontend workflows. Add async job infrastructure so large operations don't block the API. Add KLineChart context to detail pages per charting spec.
+
+**Dependencies:** Phase 14 (near-complete), Phase 8 (Research V2), Phase 9 (Paper Trading)
+
+**Why this phase exists:** Fiboki's backend can research, validate, and paper-trade strategies — but the operator has no UI workflow to move combos from research → paper → demo. Backtests and research run synchronously and time out on large matrices. Trade and backtest detail pages lack the KLineChart context the charting spec requires.
+
+**Current gap:** The research page shows ranked results but has no "Promote to Paper" action. The backtest detail page shows Plotly equity/drawdown charts but no candlestick chart with trade markers. Research runs block the API for minutes on large matrices.
+
+---
+
+## Subphase 15.1 — Async Job Engine & Job Status Centre
+
+**Goal:** Background execution for backtests, research, and data operations. Frontend job status tracking.
+
+**Dependencies:** None (foundational infrastructure)
+
+### Tasks
+
+- [ ] **T-15.1.01** — Create `backend/src/fibokei/jobs/engine.py` with a lightweight async job engine. Use Python `threading` + `concurrent.futures` for V1 (not Celery — too heavy for current scale). Jobs have states: `pending`, `running`, `completed`, `failed`. Each job has a UUID, type, progress (0–100), result reference, error message, created/started/completed timestamps.
+
+- [ ] **T-15.1.02** — Create `backend/src/fibokei/jobs/models.py` with `JobModel` SQLAlchemy model persisting job state to DB. Repository functions: `create_job()`, `update_job_progress()`, `complete_job()`, `fail_job()`, `get_job()`, `list_jobs()`.
+
+- [ ] **T-15.1.03** — Create `backend/src/fibokei/api/routes/jobs.py` with API endpoints:
+  - `GET /api/v1/jobs` — list jobs with optional status/type filtering
+  - `GET /api/v1/jobs/{job_id}` — get job detail with progress
+  - `DELETE /api/v1/jobs/{job_id}` — cancel a running job
+
+- [ ] **T-15.1.04** — Wrap `POST /backtests/run` to optionally run as async job: add `?async=true` query param. When async, return `202 Accepted` with `job_id` instead of blocking until complete. Job result links to backtest detail on completion.
+
+- [ ] **T-15.1.05** — Wrap `POST /research/run` to always run as async job (research is always long-running). Return `202 Accepted` with `job_id`. Report progress as percentage of combinations completed.
+
+- [ ] **T-15.1.06** — Create `frontend/src/app/(dashboard)/jobs/page.tsx` — Job Status Centre page. Shows running/completed/failed jobs in a table with progress bars, timestamps, and result links. Auto-refreshes via SWR polling (5s for running jobs).
+
+- [ ] **T-15.1.07** — Add sidebar navigation entry for Jobs page. Add running job count badge to sidebar icon.
+
+- [ ] **T-15.1.08** — Add toast notifications when a job completes or fails. Use a lightweight notification system (e.g., react-hot-toast or custom component).
+
+### Verification Gate
+
+```bash
+cd backend && pytest tests/test_jobs.py -v
+# Start a research job via API → returns 202 with job_id
+# Poll job status → shows progress 0–100%
+# Job completes → GET /jobs/{id} shows result link
+cd frontend && npx next build
+# Jobs page renders with progress bars and status badges
+```
+
+---
+
+## Subphase 15.2 — Research-to-Paper Promotion Flow
+
+**Goal:** UI workflow to promote validated research results to paper bots. Includes promotion gate integration.
+
+**Dependencies:** Subphase 15.1 (async jobs)
+
+### Tasks
+
+- [ ] **T-15.2.01** — Add "Promote to Paper" action button on the research rankings table. Button appears for combos with composite score ≥ promotion threshold (default 0.55). Disabled with tooltip for combos below threshold.
+
+- [ ] **T-15.2.02** — Promotion confirmation dialog: shows the combo (strategy/instrument/timeframe), composite score, validation status (walk-forward pass/fail, OOS pass/fail), and risk settings. "Confirm" calls `POST /paper/bots` with the combo.
+
+- [ ] **T-15.2.03** — Add validation status indicators to research results: show whether each combo has passed walk-forward, OOS, Monte Carlo validation. Add `validation_status` field to research API response.
+
+- [ ] **T-15.2.04** — Show bot provenance on the Bots page: which research result or backtest spawned each bot. Add `source_type` (`research` | `backtest` | `manual`) and `source_id` fields to `PaperBotModel`.
+
+- [ ] **T-15.2.05** — Add "Create Paper Bot" button on backtest detail page for backtests meeting quality criteria (Sharpe > 1.0, min 80 trades, positive net profit).
+
+### Verification Gate
+
+```bash
+cd backend && pytest tests/test_promotion_flow.py -v
+cd frontend && npx next build
+# Research page → "Promote" button appears on qualifying combos
+# Click Promote → confirmation dialog → bot created → appears on Bots page with provenance
+# Backtest detail → "Create Paper Bot" button for qualifying backtests
+```
+
+---
+
+## Subphase 15.3 — Trade & Backtest Chart Context
+
+**Goal:** Add KLineChart with trade markers to trade detail and backtest detail pages per charting spec requirements.
+
+**Dependencies:** Phase 14.1 (market data API), Phase 14.2 (drawing tools TradingChart)
+
+**Note:** This absorbs deferred task T-12.02 (trade detail replay/inspection).
+
+### Tasks
+
+- [ ] **T-15.3.01** — Add KLineChart to backtest detail page (`backtests/[id]/page.tsx`). Load market data for the backtest's instrument/timeframe/date range. Overlay trade markers (entry/exit arrows) using the annotations API. Show alongside existing Plotly equity/drawdown charts.
+
+- [ ] **T-15.3.02** — Add KLineChart to trade detail page (`trades/[id]/page.tsx`). Center chart on the trade's entry timestamp. Show entry arrow, exit arrow, SL/TP lines. Load ±50 bars of context around the trade.
+
+- [ ] **T-15.3.03** — Add "Jump to Trade" functionality: clicking a trade in the backtest detail's trade list centers the KLineChart on that trade's entry timestamp and highlights its markers.
+
+- [ ] **T-15.3.04** — Add trade list table to backtest detail page below the charts. Paginated, sortable by PnL/direction/exit_reason. Each row links to the trade detail page.
+
+### Verification Gate
+
+```bash
+cd frontend && npx next build
+# Backtest detail → KLineChart shows candlesticks with trade markers overlaid
+# Trade detail → KLineChart centered on trade with entry/exit arrows and SL/TP lines
+# Click trade in backtest list → chart jumps to that trade
+```
+
+---
+
+## Subphase 15.4 — Results Bookmarking & Research Templates
+
+**Goal:** Save and recall research configurations and bookmark interesting results for later reference.
+
+**Dependencies:** Subphase 15.1 (async jobs)
+
+### Tasks
+
+- [ ] **T-15.4.01** — Create `ResearchPresetModel` in DB: name, strategy_ids (JSON array), instrument_ids (JSON array), timeframes (JSON array), scoring weights, created_at. CRUD API: `GET/POST/PUT/DELETE /api/v1/research/presets`.
+
+- [ ] **T-15.4.02** — Add preset save/load UI to the research page. "Save as Preset" button saves current selection. Preset dropdown loads saved configurations.
+
+- [ ] **T-15.4.03** — Create `BookmarkModel` in DB: user_id, entity_type (`research_result` | `backtest` | `trade`), entity_id, note, created_at. API: `POST/DELETE /api/v1/bookmarks`, `GET /api/v1/bookmarks`.
+
+- [ ] **T-15.4.04** — Add bookmark/star toggle to research results rows, backtest list rows, and trade list rows. Bookmarked items filter available on each page.
+
+- [ ] **T-15.4.05** — Remaining Phase 14.4 item: bulk data sync tooling — document Railway volume update workflow with CLI helper command `fibokei sync-data`.
+
+### Verification Gate
+
+```bash
+cd backend && pytest tests/test_presets.py tests/test_bookmarks.py -v
+cd frontend && npx next build
+# Save research preset → appears in dropdown → load restores selections
+# Bookmark a research result → appears in filtered view
+```
+
+---
+
+# PHASE 16: OPERATOR CONSOLE & FLEET OPERATIONS
+
+**Objective:** Give the operator visibility into what the bot fleet is doing, centralize alerts and notifications, and add portfolio-level risk/exposure monitoring.
+
+**Dependencies:** Phase 15 (Workflow Completion), Phase 9 (Paper Trading), Phase 10 (IG Demo)
+
+**Why this phase exists:** Before scaling to multiple bots, the operator needs a fleet-level view, not just individual bot pages. Alert fatigue is real — centralized notification management prevents missed signals. Exposure monitoring prevents accidentally over-concentrating in one instrument or direction.
+
+**Current gap:** The Bots page shows individual bots but has no fleet-level metrics. Telegram alerts fire but are not visible in the UI. There is no exposure or portfolio risk view. Execution audit log exists in the API but has no frontend viewer.
+
+---
+
+## Subphase 16.1 — Bot Fleet Dashboard & Event Timeline
+
+**Goal:** Fleet-level dashboard showing aggregate bot performance, and a per-bot event timeline for debugging.
+
+**Dependencies:** Phase 9 (Paper Trading)
+
+### Tasks
+
+- [ ] **T-16.1.01** — Create fleet dashboard section on the Bots page (or a new `/fleet` sub-route). Fleet-level metrics: total bots (running/paused/stopped), aggregate PnL (daily/weekly/total), total open positions, total trades today, fleet health summary.
+
+- [ ] **T-16.1.02** — Add per-bot expandable event timeline: show recent events (trade opened, trade closed, signal evaluated, error occurred, bot state change) with timestamps. Backend: `BotEventModel` or structured log query. API: `GET /api/v1/paper/bots/{bot_id}/events`.
+
+- [ ] **T-16.1.03** — Add bot performance sparkline: inline mini equity curve per bot using Plotly `MiniSummary` component. Shows PnL trajectory at a glance.
+
+- [ ] **T-16.1.04** — Add fleet PnL chart: aggregate equity curve across all running bots. Plotly line chart showing combined daily PnL.
+
+- [ ] **T-16.1.05** — Add bot grouping by strategy family: group bots by strategy_id in the fleet view. Show per-strategy aggregate metrics.
+
+### Verification Gate
+
+```bash
+cd backend && pytest tests/test_fleet.py -v
+cd frontend && npx next build
+# Fleet dashboard → shows aggregate metrics across all bots
+# Per-bot timeline → shows recent events with timestamps
+# Bot sparklines → mini equity curves render correctly
+```
+
+---
+
+## Subphase 16.2 — Alert Centre & Notification Inbox
+
+**Goal:** Centralized notification management in the frontend, integrating Telegram alerts with an in-app notification inbox.
+
+**Dependencies:** Phase 4.5 (Telegram notifier), Phase 9 (Paper Trading)
+
+### Tasks
+
+- [ ] **T-16.2.01** — Create `AlertModel` in DB: type (trade_closed, risk_breach, bot_error, daily_summary, system_event), severity (info, warning, critical), title, message, metadata JSON, read status, created_at. Repository: `save_alert()`, `list_alerts()`, `mark_read()`, `mark_all_read()`.
+
+- [ ] **T-16.2.02** — Hook alert creation into existing Telegram notifier: every `send_trade_closed()`, `send_risk_alert()`, `send_daily_summary()` call also creates a DB alert. Telegram remains the push channel; DB alerts are the pull channel.
+
+- [ ] **T-16.2.03** — API endpoints: `GET /api/v1/alerts` (paginated, filterable by type/severity/read), `POST /api/v1/alerts/{id}/read`, `POST /api/v1/alerts/read-all`.
+
+- [ ] **T-16.2.04** — Create `frontend/src/app/(dashboard)/alerts/page.tsx` — Alert Centre page. Shows alerts in reverse chronological order with severity badges, type icons, and read/unread styling. Filter by type and severity.
+
+- [ ] **T-16.2.05** — Add unread alert count badge to sidebar navigation. Poll for new alerts via SWR (30s interval).
+
+- [ ] **T-16.2.06** — Add alert preferences to Settings page: configure which alert types trigger Telegram vs in-app-only. Per-type toggle.
+
+### Verification Gate
+
+```bash
+cd backend && pytest tests/test_alerts.py -v
+cd frontend && npx next build
+# Trade closes → alert appears in Alert Centre + Telegram
+# Alert Centre → filters by type/severity, mark as read
+# Sidebar → shows unread count badge
+```
+
+---
+
+## Subphase 16.3 — Exposure Dashboard & Portfolio Risk View
+
+**Goal:** Portfolio-level risk monitoring showing aggregate exposure by instrument, direction, and asset class.
+
+**Dependencies:** Phase 9 (Paper Trading), Phase 11 (Risk Hardening)
+
+### Tasks
+
+- [ ] **T-16.3.01** — Create `GET /api/v1/paper/exposure` API endpoint returning:
+  - Per-instrument exposure (total long lots, total short lots, net exposure)
+  - Per-asset-class aggregate exposure
+  - Per-direction aggregate (total long, total short)
+  - Portfolio risk utilization (current risk % vs max portfolio risk 5%)
+
+- [ ] **T-16.3.02** — Create exposure dashboard page (sub-route of `/bots` or standalone `/exposure`). Show:
+  - Instrument exposure heatmap (Plotly) — colour-coded by net position size
+  - Direction balance bar chart (long vs short)
+  - Risk utilization gauge (current % of max portfolio risk)
+  - Correlation warning: flag when >3 bots trade the same instrument
+
+- [ ] **T-16.3.03** — Add real-time risk limit indicators: show when approaching daily loss limit (-4%), weekly loss limit (-8%), max simultaneous trades (8). Colour-coded (green/amber/red).
+
+- [ ] **T-16.3.04** — Add execution audit log viewer to System page: table showing recent execution audit entries (from `ExecutionAuditModel`). Filterable by execution mode, bot, status.
+
+### Verification Gate
+
+```bash
+cd backend && pytest tests/test_exposure.py -v
+cd frontend && npx next build
+# Exposure dashboard → shows instrument/direction/risk breakdown
+# Risk gauges → update as positions change
+# Execution audit viewer → shows audit entries with filters
+```
+
+---
+
+## Subphase 16.4 — Slippage & Execution Quality Analytics
+
+**Goal:** Measure and display execution quality metrics. Only meaningful once IG demo mode is active.
+
+**Dependencies:** Phase 10 (IG Demo Integration), Subphase 16.1 (Fleet Dashboard)
+
+**When this becomes relevant:** After IG demo mode is enabled and the first ~40 demo trades have been executed. Paper mode has zero slippage by design, so this subphase only adds value once real broker fills are happening.
+
+### Tasks
+
+- [ ] **T-16.4.01** — Extend `ExecutionAuditModel` with execution quality fields: `requested_price`, `filled_price`, `slippage_pips`, `fill_latency_ms`. Update `IGExecutionAdapter` to capture these on every order fill.
+
+- [ ] **T-16.4.02** — Create `GET /api/v1/execution/quality` API endpoint returning:
+  - Average slippage per instrument (pips)
+  - Slippage distribution (histogram data)
+  - Fill rate (filled / total orders)
+  - Average fill latency (ms)
+  - Cost-adjusted PnL (paper PnL minus actual slippage)
+  - Slippage trend over time (rolling 7-day average)
+
+- [ ] **T-16.4.03** — Add slippage analytics section to System page or a new `/execution` sub-route:
+  - Per-instrument slippage bar chart
+  - Slippage distribution histogram (Plotly)
+  - Fill latency percentiles (p50, p95, p99)
+  - Cost-adjusted vs raw PnL comparison
+  - Time-series of rolling average slippage
+
+- [ ] **T-16.4.04** — Add per-trade slippage display to trade detail page: show requested vs filled price and slippage pips alongside existing trade metrics.
+
+- [ ] **T-16.4.05** — Add slippage summary to the Demo→Live promotion gate display: show average slippage relative to the 2.0 pip threshold. Clearly indicate pass/fail.
+
+### Verification Gate
+
+```bash
+cd backend && pytest tests/test_execution_quality.py -v
+cd frontend && npx next build
+# Slippage analytics → shows per-instrument slippage, distribution, latency
+# Trade detail → shows slippage for demo-executed trades
+# Promotion gate → slippage metric visible in demo→live assessment
+```
+
+---
+
+# PHASE 17: CHART WORKSTATION & ADVANCED ANALYSIS
+
+**Objective:** Deepen the charting experience with reusable drawing templates, multi-chart layouts, trade replay, market session context, and portfolio-level scenario analysis.
+
+**Dependencies:** Phase 15 (Workflow Completion), Phase 14 (Drawing Tools, Live Mode)
+
+**Why this phase exists:** Fiboki's charting is functional (candlesticks, Ichimoku, drawings, live mode) but lacks the depth that makes a chart workstation productive for daily analysis. Trade replay, session context, and scenario sandbox are the difference between "I can see a chart" and "I can efficiently analyse and decide."
+
+**Current gap:** Drawings are per-chart but not reusable. Only one chart at a time. No market session awareness (London/NY/Tokyo). No ability to replay a trade step-by-step. No portfolio-level "what-if" simulation.
+
+---
+
+## Subphase 17.1 — Drawing Library & Template System
+
+**Goal:** Save, name, and re-apply drawing sets across charts. Share templates between instruments.
+
+**Dependencies:** Phase 14.2 (Drawing Tools)
+
+### Tasks
+
+- [ ] **T-17.1.01** — Create `DrawingTemplateModel` in DB: name, description, drawings (JSON array of drawing definitions without instrument/timestamp binding), created_at. API: `GET/POST/PUT/DELETE /api/v1/charts/drawing-templates`.
+
+- [ ] **T-17.1.02** — Add "Save as Template" action to drawing toolbar: saves current drawing set as a named template. "Load Template" dropdown applies a template's drawings to the current chart, rebinding to the current instrument's price range.
+
+- [ ] **T-17.1.03** — Template preview: show a thumbnail preview of each template in the dropdown. Use a mini-canvas rendering of the drawing shapes.
+
+### Verification Gate
+
+```bash
+cd backend && pytest tests/test_drawing_templates.py -v
+cd frontend && npx next build
+# Save drawings as template → appears in template list
+# Load template on different instrument → drawings re-bound to current price range
+```
+
+---
+
+## Subphase 17.2 — Multi-Chart Layout
+
+**Goal:** Display 2–4 charts simultaneously for cross-instrument or cross-timeframe analysis.
+
+**Dependencies:** Phase 14.2 (Drawing Tools), Subphase 15.3 (TradingChart reusability)
+
+### Tasks
+
+- [ ] **T-17.2.01** — Create `MultiChartLayout` component supporting 1x1, 1x2, 2x2 grid layouts. Each cell is an independent `TradingChart` instance with its own instrument/timeframe selectors.
+
+- [ ] **T-17.2.02** — Add layout selector to the Charts page toolbar. Persist selected layout in localStorage.
+
+- [ ] **T-17.2.03** — Add cross-chart synchronization option: when enabled, all charts share the same time axis (panning one pans all). Toggle in toolbar.
+
+- [ ] **T-17.2.04** — Add saved chart layout persistence: save the current multi-chart configuration (which instrument/timeframe in each cell + layout type) to the DB. API: `GET/POST/DELETE /api/v1/charts/layouts`.
+
+### Verification Gate
+
+```bash
+cd frontend && npx next build
+# Charts page → 2x2 layout shows 4 independent charts
+# Cross-chart sync → panning one chart pans all
+# Save layout → reload page → same layout restored
+```
+
+---
+
+## Subphase 17.3 — Advanced Chart Overlays & Market Session Context
+
+**Goal:** Add market session awareness (London/NY/Tokyo) and advanced indicator overlays computed server-side.
+
+**Dependencies:** Phase 14.1 (Market Data API)
+
+**Market session context tags Fiboki should show:**
+
+| Session | Hours (UTC) | Why It Matters |
+|---------|-------------|----------------|
+| Tokyo/Asian | 00:00–09:00 | Low volatility for majors, JPY pairs active. Range-bound setups |
+| London/European | 07:00–16:00 | Highest FX volume. Breakout setups. EUR/GBP pairs peak |
+| New York/American | 12:00–21:00 | USD pairs peak. Commodity correlation active |
+| London-NY Overlap | 12:00–16:00 | Highest volatility window. Best for momentum strategies |
+| Weekend Gap | Fri 21:00–Sun 22:00 | No trading. Gap risk on Sunday open |
+
+Additional context tags:
+- **High-impact news** (future: integrate economic calendar)
+- **Session open/close markers** (vertical lines on chart)
+- **Volume profile by session** (which session produced the most volume)
+
+### Tasks
+
+- [ ] **T-17.3.01** — Create `backend/src/fibokei/data/sessions.py` with market session definitions and `get_session_for_timestamp(ts: datetime) -> str` utility. Sessions: Asian, London, New York, London-NY Overlap, Off-Hours.
+
+- [ ] **T-17.3.02** — Add `session` field to `MarketDataResponse` candles (optional): each candle tagged with its session. Frontend renders session background shading on the chart (light colour bands).
+
+- [ ] **T-17.3.03** — Add session filter to chart toolbar: toggle session highlighting on/off. Show session legend.
+
+- [ ] **T-17.3.04** — Add volume profile overlay: volume bars coloured by session. Shows which session contributed the most volume per bar.
+
+### Verification Gate
+
+```bash
+cd backend && pytest tests/test_sessions.py -v
+cd frontend && npx next build
+# Chart → session shading visible (London blue, NY green, Asian grey)
+# Toggle sessions → shading appears/disappears
+```
+
+---
+
+## Subphase 17.4 — Trade Replay Mode
+
+**Goal:** Step through a completed trade's lifecycle bar-by-bar on a KLineChart, watching the strategy's decision points unfold.
+
+**Dependencies:** Subphase 15.3 (KLineChart on detail pages)
+
+### Tasks
+
+- [ ] **T-17.4.01** — Create `TradeReplay` component: wraps TradingChart with a playback controller (play/pause/step-forward/step-back/speed). Loads bars around the trade and animates candle-by-candle from entry to exit.
+
+- [ ] **T-17.4.02** — Add strategy decision annotations: at each bar during replay, show the strategy's signal evaluation result (e.g., "Ichimoku: price above cloud, tenkan > kijun = bullish confirmation"). Requires backend endpoint: `GET /api/v1/backtests/{run_id}/trades/{trade_id}/signals` returning per-bar signal evaluations.
+
+- [ ] **T-17.4.03** — Add replay entry point on trade detail page: "Replay Trade" button launches the replay view.
+
+### Verification Gate
+
+```bash
+cd frontend && npx next build
+# Trade detail → "Replay Trade" → candles animate from entry to exit
+# Strategy annotations visible at each bar during replay
+```
+
+---
+
+## Subphase 17.5 — Scenario / Paper Portfolio Sandbox
+
+**Goal:** Simulate a portfolio of N bots on historical data to test combined performance before committing to live paper trading.
+
+**Dependencies:** Phase 8 (Research V2), Subphase 16.3 (Exposure Dashboard)
+
+### Tasks
+
+- [ ] **T-17.5.01** — Create `backend/src/fibokei/research/scenario.py` with `ScenarioSimulator` class. Takes a list of (strategy, instrument, timeframe, risk_pct) tuples and runs them all on the same historical period with shared capital and portfolio-level risk controls (max portfolio risk, max per-instrument exposure, correlation limits).
+
+- [ ] **T-17.5.02** — API endpoint: `POST /api/v1/research/scenario` (async job). Request: list of combos + date range + capital. Response: aggregate equity curve, per-bot PnL, portfolio metrics (combined Sharpe, max portfolio drawdown, trade overlap percentage).
+
+- [ ] **T-17.5.03** — Create scenario builder UI: drag-and-drop or checkbox selection of combos from research results. Configure capital allocation. "Run Scenario" triggers async job.
+
+- [ ] **T-17.5.04** — Scenario results page: combined equity curve, per-bot contribution breakdown, correlation matrix heatmap (Plotly), exposure timeline, trade overlap analysis.
+
+### Verification Gate
+
+```bash
+cd backend && pytest tests/test_scenario.py -v
+cd frontend && npx next build
+# Select 5 combos → run scenario → combined equity curve shows portfolio performance
+# Correlation matrix → highlights highly-correlated bot pairs
+# Trade overlap → shows percentage of simultaneous positions
+```
+
+---
+
+# PHASE 18: STRATEGY FAMILIES & FLEET SCALING
+
+**Objective:** Support parameter variations for strategy families, fleet-aware risk controls, watchlists, and trade journaling. This phase enables scaling from ~5 bots to 30–40+ bots safely.
+
+**Dependencies:** Phase 16 (Operator Console), Phase 17 (Scenario Sandbox)
+
+**Why this phase exists:** Individual strategies have fixed parameters today. To scale the fleet, operators need to run multiple parameter variants of the same strategy (ensemble trading). This requires fleet-aware risk controls to prevent hidden correlation risk and over-concentration.
+
+**Current gap:** Strategies have hardcoded parameters. Risk controls are per-bot, not fleet-aware. No watchlist or saved layout functionality for daily workflow. No trade journal for operator reflection.
+
+**Important safety considerations:** Running 30+ bots with parameter variations creates hidden correlation risk — bots sharing the same strategy/instrument will have highly correlated positions. Fleet-level risk controls (max aggregate exposure per instrument, correlation rejection thresholds, position caps) are mandatory before enabling this capability. See question D in the design rationale for detailed analysis.
+
+---
+
+## Subphase 18.1 — Parameter Variation Engine
+
+**Goal:** Generate and manage strategy parameter variants for ensemble trading.
+
+**Dependencies:** Phase 8 (Sensitivity Analysis)
+
+### Tasks
+
+- [ ] **T-18.1.01** — Add `config_overrides: dict | None` support to the `Strategy` base class. Each strategy defines its tunable parameters with default values and valid ranges. `evaluate()` and `compute_exit()` read from config overrides when present.
+
+- [ ] **T-18.1.02** — Create `backend/src/fibokei/strategies/variation.py` with `generate_variants(strategy_id, param_ranges, num_variants) -> list[StrategyVariant]`. Uses sensitivity analysis results to identify stable parameter regions.
+
+- [ ] **T-18.1.03** — Add variant management API: `POST /api/v1/strategies/{id}/variants` (generate N variants), `GET /api/v1/strategies/{id}/variants` (list variants). Variants are virtual strategies that appear in research/backtest/paper workflows.
+
+- [ ] **T-18.1.04** — Add variant deduplication: reject variants whose historical trade overlap exceeds 80% with an existing variant (prevents clone-bot sprawl).
+
+### Verification Gate
+
+```bash
+cd backend && pytest tests/test_variations.py -v
+# Generate 10 variants of bot01_sanyaku → each has different parameters
+# Overlap check → rejects variants with >80% trade overlap
+```
+
+---
+
+## Subphase 18.2 — Fleet-Aware Risk Controls
+
+**Goal:** Portfolio-level risk controls that account for correlation between bots, aggregate exposure, and fleet-level limits.
+
+**Dependencies:** Subphase 18.1 (Parameter Variations), Subphase 16.3 (Exposure Dashboard)
+
+### Tasks
+
+- [ ] **T-18.2.01** — Extend `RiskEngine` with fleet-level checks: max aggregate exposure per instrument (configurable, default 3x single-bot limit), max bots per instrument (default 5), max total open positions across fleet (default 20).
+
+- [ ] **T-18.2.02** — Add correlation monitoring: compute pairwise trade correlation between all running bots. Alert when two bots have >85% trade overlap. Dashboard widget showing correlation matrix.
+
+- [ ] **T-18.2.03** — Add automatic fleet culling: if a bot underperforms the fleet median by >2 standard deviations over its last 50 trades, auto-pause and alert the operator.
+
+- [ ] **T-18.2.04** — Add fleet risk limits to Settings page: configurable max bots per instrument, max aggregate exposure, correlation threshold.
+
+### Verification Gate
+
+```bash
+cd backend && pytest tests/test_fleet_risk.py -v
+# 6th bot on same instrument → rejected (max 5 per instrument)
+# Two bots with 90% overlap → alert generated
+# Bot underperforming by >2σ → auto-paused
+```
+
+---
+
+## Subphase 18.3 — Watchlists & Saved Layouts
+
+**Goal:** Operator can create instrument watchlists and save/restore their workspace layout.
+
+**Dependencies:** Subphase 17.2 (Multi-Chart Layout)
+
+### Tasks
+
+- [ ] **T-18.3.01** — Create `WatchlistModel` in DB: name, instrument_ids (JSON array), created_at. API: `GET/POST/PUT/DELETE /api/v1/watchlists`. Default watchlist: "Forex Majors" (7 instruments).
+
+- [ ] **T-18.3.02** — Add watchlist selector to Charts page: dropdown to filter instrument selectors by watchlist. Add/remove instruments from watchlist inline.
+
+- [ ] **T-18.3.03** — Add workspace save/restore: save entire workspace state (which pages are open, chart layouts, selected instruments/timeframes) to DB. "Save Workspace" / "Load Workspace" in Settings or top-bar.
+
+### Verification Gate
+
+```bash
+cd backend && pytest tests/test_watchlists.py -v
+cd frontend && npx next build
+# Create watchlist → instruments filtered in chart selectors
+# Save workspace → reload → same state restored
+```
+
+---
+
+## Subphase 18.4 — Trade Journal & Annotations
+
+**Goal:** Operator can annotate trades with notes, tags, and screenshots for reflection and learning.
+
+**Dependencies:** Subphase 15.3 (Trade Chart Context)
+
+### Tasks
+
+- [ ] **T-18.4.01** — Create `TradeJournalModel` in DB: trade_id (FK), note (text), tags (JSON array), screenshot_url (optional), created_at. API: `GET/POST/PUT/DELETE /api/v1/trades/{trade_id}/journal`.
+
+- [ ] **T-18.4.02** — Add journal panel to trade detail page: text area for notes, tag chips (e.g., "good entry", "held too long", "news event", "trend reversal"), and a chart screenshot capture button.
+
+- [ ] **T-18.4.03** — Add journal summary view: new tab or section on the Trades page showing recent journal entries with trade context. Filter by tag.
+
+- [ ] **T-18.4.04** — Add trade tagging to the trade list: inline tag display and filter-by-tag dropdown.
+
+### Verification Gate
+
+```bash
+cd backend && pytest tests/test_journal.py -v
+cd frontend && npx next build
+# Trade detail → add journal note with tags → persists and displays
+# Trades page → filter by journal tag → shows matching trades
+```
+
+---
+
+## Information Architecture Reference
+
+The following navigation structure is recommended as Phases 15–18 are implemented. This is a guide for frontend reorganization, not an immediate requirement.
+
+**Current sidebar (8 items):** Dashboard, Charts, Backtests, Research, Paper Bots, Trade History, Settings, System
+
+**Proposed sidebar (reorganized, ~10 items with sub-routes):**
+
+| Top-Level | Sub-Routes | Phase |
+|-----------|-----------|-------|
+| Dashboard | — | Existing |
+| Charts | Multi-chart, Replay | 14 (existing), 17.2, 17.4 |
+| Research & Testing | Research, Backtests, Jobs, Scenarios | Existing + 15.1, 17.5 |
+| Operations | Fleet, Bots, Alerts, Exposure | 16.1, 16.2, 16.3 |
+| Trade History | Trades, Journal | Existing + 18.4 |
+| Settings | General, Risk, Alerts, Workspaces | Existing + 16.2.06, 18.3 |
+| System | Health, Execution, Audit | Existing + 16.3.04, 16.4 |
+
+Sub-routes can be implemented as tabs within the parent page. The sidebar itself should not grow beyond ~10 items.
+
+---
+
+## Operator Workflow: Research → Paper → Demo → Live
+
+This section documents the intended operator workflow that Phases 15–18 complete:
+
+```
+1. DISCOVER
+   Research Matrix → batch run strategies × instruments × timeframes (async job)
+   ↓ results ranked by composite score
+
+2. VALIDATE
+   Walk-Forward + OOS + Monte Carlo on top combos (async job)
+   ↓ validated combos marked with pass/fail badges
+
+3. PROMOTE TO PAPER
+   "Promote to Paper" button on validated combos
+   ↓ paper bot created with provenance tracking
+
+4. OBSERVE (30+ days)
+   Fleet Dashboard → aggregate PnL, exposure, alerts
+   ↓ bot accumulates forward performance
+
+5. SCENARIO TEST (optional)
+   Scenario Sandbox → test portfolio of planned bots on historical data
+   ↓ combined equity curve, correlation analysis
+
+6. PROMOTE TO DEMO
+   Paper→Demo promotion gate check (30 days, 80 trades, score ≥ 0.55)
+   ↓ bot switches to IG demo execution
+
+7. MEASURE EXECUTION QUALITY (14+ days)
+   Slippage Analytics → per-instrument fill quality
+   ↓ execution metrics accumulate
+
+8. PROMOTE TO LIVE (future)
+   Demo→Live gate (14 days, reconciliation >99.5%, slippage ≤2 pips, manual sign-off)
+   ↓ requires manual operator approval — cannot be automated away
+```
+
+---
+
+## Strategy Reference
+
+Fiboki includes 12 pre-built strategies, all inheriting from the `Strategy` base class in `backend/src/fibokei/strategies/`:
+
+| ID | Name | Family | Complexity | Key Indicators |
+|----|------|--------|-----------|----------------|
+| bot01 | PureSanyakuConfluence | Ichimoku | Basic | Full Ichimoku confluence (price, tenkan, kijun, cloud, chikou) |
+| bot02 | KijunPullback | Ichimoku | Basic | Kijun-sen as dynamic S/R, pullback entries |
+| bot03 | FlatSenkouBBounce | Ichimoku | Basic | Flat Senkou B as horizontal S/R level |
+| bot04 | ChikouMomentum | Ichimoku | Basic | Chikou span momentum confirmation |
+| bot05 | MTFASanyaku | Ichimoku | Advanced | Multi-timeframe analysis — higher TF trend, lower TF entry |
+| bot06 | NWaveStructural | Fibonacci | Intermediate | N-wave Fibonacci structural patterns |
+| bot07 | KumoTwistAnticipator | Ichimoku | Intermediate | Cloud twist anticipation for trend reversals |
+| bot08 | KihonSuchiCycle | Ichimoku | Advanced | Ichimoku time cycle theory (basic numbers: 9, 17, 26, 33, 42) |
+| bot09 | GoldenCloudConfluence | Hybrid | Advanced | Golden ratio confluence with Ichimoku cloud |
+| bot10 | KijunFibContinuation | Hybrid | Intermediate | Kijun + Fibonacci retracement continuation |
+| bot11 | SanyakuFibExtension | Hybrid | Advanced | Sanyaku confluence + Fibonacci extension targets |
+| bot12 | KumoFibTimeZone | Hybrid | Advanced | Cloud boundaries + Fibonacci time zones |
+
+**Adding a new strategy:**
+1. Create `backend/src/fibokei/strategies/bot13_whatever.py` implementing `Strategy`
+2. Register in `registry.py` — it immediately appears in the API and all frontend dropdowns
+3. No frontend changes needed — dropdowns populate from `GET /strategies`
+
+**Parameter variations (Phase 18):** Strategy parameters (Ichimoku periods, ATR multipliers, Fibonacci levels) can be varied to create ensemble families. The sensitivity analysis engine (Phase 8) identifies which parameters are stable and what ranges produce consistent results.
