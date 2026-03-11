@@ -25,8 +25,7 @@ Reference: [blueprint.md](blueprint.md)
 - **No portfolio-level analysis**: No scenario sandbox, no fleet-aware risk view, no correlation analysis
 - **Observability gaps**: No error tracking (Sentry), no automated DB backups, no slippage analytics
 
-**Pending merges:**
-- Branch `phase15-1-async-jobs` — async job engine, Jobs page, async research/backtest wrapping. Ready to merge to main.
+**Pending merges:** None.
 
 **Remaining legacy tasks:**
 - T-12.02: Trade detail replay/inspection (KLineChart with trade markers)
@@ -78,7 +77,7 @@ The recommended implementation order after completing Phase 14:
 | Phase 13: CI/CD & Operations | PARTIAL | All pass | GitHub Actions CI, env var validation, structured logging, request IDs. **Remaining: T-13.02 auto-deploy, T-13.05 DB backups, T-13.07 error tracking** |
 | Phase 14.1: Online Historical Data | COMPLETE | 467 pass | LRU cache, manifest generator/API, paginated market data, vectorized serialization, dynamic has_canonical_data, data_source observability |
 | Phase 14.2: Drawing Tools | COMPLETE | All pass | DrawingToolbar (6 tools), klinecharts overlays, chart_drawings DB, CRUD API, auto-load/persist |
-| Phase 14.3: Live Chart Mode | COMPLETE (branch) | 507 pass | IGDataProvider, TTL cache, ?mode=live, frontend toggle, SWR 5s auto-refresh. **On branch `phase14-3-live-chart`, pending merge to main** |
+| Phase 14.3: Live Chart Mode | COMPLETE | 507 pass | IGDataProvider, TTL cache, ?mode=live, frontend toggle, SWR 5s auto-refresh. Merged to main |
 | Phase 14.4: Full Production UX | PARTIAL | Build clean | Manifest-aware data availability on backtests/research/system pages. **Remaining: research preset builder, bulk data sync tooling** |
 | Phase 15.1: Async Job Engine | COMPLETE | 522 pass | Thread pool job engine, jobs API (list/detail/cancel), async backtests (?async=true), async research (always), Jobs page with progress bars + sidebar badge |
 | Phase 15.2–15.4: Workflow Completion | PLANNED | — | Research→paper promotion UI, KLineChart on detail pages, results bookmarking |
@@ -1672,9 +1671,9 @@ PR triggers lint+test automatically. Merge triggers deploy. Smoke test runs post
 
 ---
 
-### Phase 14.3: Live Chart Mode — COMPLETE (pending merge)
+### Phase 14.3: Live Chart Mode — COMPLETE
 
-**Branch:** `phase14-3-live-chart` (commit `bf0ab08`, 507 tests passing)
+**Merged to main** (commit `bf0ab08`, merge `4660100`, 507 tests passing)
 
 **What was built:**
 
@@ -1689,7 +1688,7 @@ PR triggers lint+test automatically. Merge triggers deploy. Smoke test runs post
 | Response Contract | `frontend/src/types/contracts/chart.ts` | `mode: "historical" | "live"` field, `LiveStatusResponse` interface |
 | Backend Tests | `backend/tests/test_live_chart.py` | 18 tests covering live provider, mode routing, live status endpoint |
 
-**Operator next step:** Merge branch to main, redeploy, set IG credentials to enable live mode.
+**Operator next step:** Redeploy backend, set IG credentials to enable live mode.
 
 ---
 
