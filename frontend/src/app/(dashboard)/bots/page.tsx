@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { Fragment, useState } from "react";
 import useSWR from "swr";
 import { api } from "@/lib/api";
 import { useBots, useAccount } from "@/lib/hooks/use-bots";
@@ -8,7 +8,7 @@ import GroupedInstrumentSelect from "@/components/GroupedInstrumentSelect";
 import { PageHeader } from "@/components/PageHeader";
 import { EmptyState } from "@/components/EmptyState";
 import { StatusBadge } from "@/components/StatusBadge";
-import { Bot, Loader2, Wallet, TrendingUp, CalendarDays } from "lucide-react";
+import { Bot, Loader2, Wallet, TrendingUp, CalendarDays, Activity, AlertTriangle, BarChart3 } from "lucide-react";
 
 interface BotItem {
   id: string;
@@ -27,6 +27,7 @@ const STATE_VARIANT: Record<string, "ok" | "warn" | "neutral"> = {
 export default function BotsPage() {
   const { data: bots, mutate: mutateBots } = useBots();
   const { data: account } = useAccount();
+  const { data: fleet } = useSWR("/paper/fleet", () => api.fleet(), { refreshInterval: 5000 });
   const { data: strategies } = useSWR("strategies", () => api.strategies());
   const { data: instruments } = useSWR("instruments", () => api.instruments());
   const [strategy, setStrategy] = useState("");
@@ -34,6 +35,7 @@ export default function BotsPage() {
   const [timeframe, setTimeframe] = useState("H1");
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [groupBy, setGroupBy] = useState<"none" | "strategy">("none");
 
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault();
@@ -74,40 +76,104 @@ export default function BotsPage() {
   const equity = account?.equity ?? 0;
   const dailyPnl = account?.daily_pnl ?? 0;
   const botList = (bots ?? []) as BotItem[];
+  const fleetBots = fleet?.bots ?? [];
+
+  // Strategy groups for grouped view
+  const strategyGroups = fleet?.strategy_groups ?? {};
+  const groupedBots: Record<string, typeof fleetBots> = {};
+  if (groupBy === "strategy") {
+    for (const b of fleetBots) {
+      if (!groupedBots[b.strategy_id]) groupedBots[b.strategy_id] = [];
+      groupedBots[b.strategy_id].push(b);
+    }
+  }
 
   return (
     <div className="max-w-6xl">
       <PageHeader
         title="Paper Bots"
-        subtitle="Manage paper trading bots and monitor account performance"
+        subtitle="Manage paper trading bots and monitor fleet performance"
       />
 
-      {/* Account Summary */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+      {/* Fleet Summary */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-3 mb-6">
         <div className="stat-card">
           <div className="flex items-center justify-between mb-2">
             <span className="text-xs font-medium uppercase tracking-wide text-foreground-muted">Balance</span>
-            <Wallet size={16} className="text-foreground-muted" />
+            <Wallet size={14} className="text-foreground-muted" />
           </div>
-          <p className="text-2xl font-bold tracking-tight">${balance.toFixed(2)}</p>
+          <p className="text-xl font-bold tracking-tight">${balance.toFixed(2)}</p>
         </div>
         <div className="stat-card">
           <div className="flex items-center justify-between mb-2">
             <span className="text-xs font-medium uppercase tracking-wide text-foreground-muted">Equity</span>
-            <TrendingUp size={16} className="text-foreground-muted" />
+            <TrendingUp size={14} className="text-foreground-muted" />
           </div>
-          <p className="text-2xl font-bold tracking-tight">${equity.toFixed(2)}</p>
+          <p className="text-xl font-bold tracking-tight">${equity.toFixed(2)}</p>
         </div>
         <div className="stat-card">
           <div className="flex items-center justify-between mb-2">
             <span className="text-xs font-medium uppercase tracking-wide text-foreground-muted">Daily PnL</span>
-            <CalendarDays size={16} className="text-foreground-muted" />
+            <CalendarDays size={14} className="text-foreground-muted" />
           </div>
-          <p className={`text-2xl font-bold tracking-tight ${dailyPnl >= 0 ? "text-primary" : "text-danger"}`}>
+          <p className={`text-xl font-bold tracking-tight ${dailyPnl >= 0 ? "text-primary" : "text-danger"}`}>
             {dailyPnl >= 0 ? "+" : ""}${dailyPnl.toFixed(2)}
           </p>
         </div>
+        <div className="stat-card">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-xs font-medium uppercase tracking-wide text-foreground-muted">Running</span>
+            <Activity size={14} className="text-foreground-muted" />
+          </div>
+          <p className="text-xl font-bold tracking-tight">
+            {fleet?.running ?? 0}
+            <span className="text-sm font-normal text-foreground-muted"> / {fleet?.total_bots ?? 0}</span>
+          </p>
+        </div>
+        <div className="stat-card">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-xs font-medium uppercase tracking-wide text-foreground-muted">Fleet PnL</span>
+            <BarChart3 size={14} className="text-foreground-muted" />
+          </div>
+          <p className={`text-xl font-bold tracking-tight ${(fleet?.aggregate_pnl ?? 0) >= 0 ? "text-primary" : "text-danger"}`}>
+            {(fleet?.aggregate_pnl ?? 0) >= 0 ? "+" : ""}${(fleet?.aggregate_pnl ?? 0).toFixed(2)}
+          </p>
+        </div>
+        <div className="stat-card">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-xs font-medium uppercase tracking-wide text-foreground-muted">Fleet Trades</span>
+            {(fleet?.stale ?? 0) > 0 && <AlertTriangle size={14} className="text-amber-500" />}
+          </div>
+          <p className="text-xl font-bold tracking-tight">
+            {fleet?.aggregate_trades ?? 0}
+            {(fleet?.stale ?? 0) > 0 && (
+              <span className="text-xs font-normal text-amber-600 ml-1">({fleet?.stale} stale)</span>
+            )}
+          </p>
+        </div>
       </div>
+
+      {/* Strategy Family Summary */}
+      {Object.keys(strategyGroups).length > 1 && (
+        <div className="card mb-6">
+          <p className="section-label">By Strategy</p>
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+            {Object.entries(strategyGroups).map(([sid, g]) => (
+              <div key={sid} className="border border-gray-200 rounded-lg p-3">
+                <p className="text-sm font-medium truncate">{sid}</p>
+                <div className="flex items-baseline gap-3 mt-1">
+                  <span className="text-xs text-foreground-muted">{g.count} bots</span>
+                  <span className="text-xs text-foreground-muted">{g.running} active</span>
+                  <span className={`text-xs font-medium ${g.pnl >= 0 ? "text-primary" : "text-danger"}`}>
+                    {g.pnl >= 0 ? "+" : ""}${g.pnl.toFixed(2)}
+                  </span>
+                </div>
+                <p className="text-xs text-foreground-muted mt-0.5">{g.trades} trades</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Add Bot Form */}
       <form onSubmit={handleCreate} className="card-elevated mb-6">
@@ -143,6 +209,16 @@ export default function BotsPage() {
         {error && <p className="text-danger text-sm mt-3">{error}</p>}
       </form>
 
+      {/* View controls */}
+      <div className="flex items-center gap-3 mb-3">
+        <button
+          onClick={() => setGroupBy(groupBy === "none" ? "strategy" : "none")}
+          className={`text-xs px-3 py-1 rounded border ${groupBy === "strategy" ? "bg-primary/10 border-primary text-primary" : "border-gray-200"}`}
+        >
+          {groupBy === "strategy" ? "Grouped by Strategy" : "Group by Strategy"}
+        </button>
+      </div>
+
       {/* Bot List */}
       <div className="table-container">
         <table>
@@ -152,13 +228,15 @@ export default function BotsPage() {
               <th className="text-left">Instrument</th>
               <th className="text-left">TF</th>
               <th className="text-left">State</th>
+              <th className="text-right">Trades</th>
+              <th className="text-right">PnL</th>
               <th className="text-right">Actions</th>
             </tr>
           </thead>
           <tbody>
             {botList.length === 0 && (
               <tr>
-                <td colSpan={5}>
+                <td colSpan={7}>
                   <EmptyState
                     icon={<Bot size={36} strokeWidth={1.5} />}
                     title="No bots running"
@@ -167,32 +245,96 @@ export default function BotsPage() {
                 </td>
               </tr>
             )}
-            {botList.map((bot) => (
-              <tr key={bot.id}>
-                <td className="font-medium">{bot.strategy_id}</td>
-                <td>{bot.instrument}</td>
-                <td className="text-foreground-muted">{bot.timeframe}</td>
-                <td>
-                  <StatusBadge variant={STATE_VARIANT[bot.state] ?? "neutral"}>
-                    {bot.state}
-                  </StatusBadge>
-                </td>
-                <td className="text-right">
-                  <div className="flex items-center justify-end gap-2">
-                    {bot.state === "monitoring" && (
-                      <button onClick={() => handlePause(bot.id)} className="btn-ghost text-xs px-2 py-1 rounded">
-                        Pause
-                      </button>
-                    )}
-                    {bot.state !== "stopped" && (
-                      <button onClick={() => handleStop(bot.id)} className="text-xs px-2 py-1 rounded text-danger hover:bg-red-50 transition-colors">
-                        Stop
-                      </button>
-                    )}
-                  </div>
-                </td>
-              </tr>
-            ))}
+            {groupBy === "none" ? (
+              botList.map((bot) => {
+                const fleetBot = fleetBots.find((fb) => fb.bot_id === bot.id);
+                return (
+                  <tr key={bot.id} className={fleetBot?.is_stale ? "bg-amber-50/50" : ""}>
+                    <td className="font-medium">{bot.strategy_id}</td>
+                    <td>{bot.instrument}</td>
+                    <td className="text-foreground-muted">{bot.timeframe}</td>
+                    <td>
+                      <div className="flex items-center gap-1.5">
+                        <StatusBadge variant={STATE_VARIANT[bot.state] ?? "neutral"}>
+                          {bot.state}
+                        </StatusBadge>
+                        {fleetBot?.is_stale && (
+                          <AlertTriangle size={12} className="text-amber-500" />
+                        )}
+                      </div>
+                    </td>
+                    <td className="text-right tabular-nums">{fleetBot?.total_trades ?? 0}</td>
+                    <td className={`text-right tabular-nums font-medium ${(fleetBot?.total_pnl ?? 0) >= 0 ? "text-primary" : "text-danger"}`}>
+                      {(fleetBot?.total_pnl ?? 0) >= 0 ? "+" : ""}${(fleetBot?.total_pnl ?? 0).toFixed(2)}
+                    </td>
+                    <td className="text-right">
+                      <div className="flex items-center justify-end gap-2">
+                        {bot.state === "monitoring" && (
+                          <button onClick={() => handlePause(bot.id)} className="btn-ghost text-xs px-2 py-1 rounded">
+                            Pause
+                          </button>
+                        )}
+                        {bot.state !== "stopped" && (
+                          <button onClick={() => handleStop(bot.id)} className="text-xs px-2 py-1 rounded text-danger hover:bg-red-50 transition-colors">
+                            Stop
+                          </button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })
+            ) : (
+              Object.entries(groupedBots).map(([sid, bots]) => (
+                <Fragment key={sid}>
+                  <tr className="bg-background-muted">
+                    <td colSpan={7} className="text-sm font-semibold py-2">
+                      {sid}
+                      <span className="text-foreground-muted font-normal ml-2">
+                        ({bots.length} bots &middot; {strategyGroups[sid]?.running ?? 0} active &middot;
+                        <span className={`ml-1 ${(strategyGroups[sid]?.pnl ?? 0) >= 0 ? "text-primary" : "text-danger"}`}>
+                          {(strategyGroups[sid]?.pnl ?? 0) >= 0 ? "+" : ""}${(strategyGroups[sid]?.pnl ?? 0).toFixed(2)}
+                        </span>
+                        )
+                      </span>
+                    </td>
+                  </tr>
+                  {bots.map((b) => (
+                    <tr key={b.bot_id} className={b.is_stale ? "bg-amber-50/50" : ""}>
+                      <td className="font-medium pl-6">{b.strategy_id}</td>
+                      <td>{b.instrument}</td>
+                      <td className="text-foreground-muted">{b.timeframe}</td>
+                      <td>
+                        <div className="flex items-center gap-1.5">
+                          <StatusBadge variant={STATE_VARIANT[b.state] ?? "neutral"}>
+                            {b.state}
+                          </StatusBadge>
+                          {b.is_stale && <AlertTriangle size={12} className="text-amber-500" />}
+                        </div>
+                      </td>
+                      <td className="text-right tabular-nums">{b.total_trades}</td>
+                      <td className={`text-right tabular-nums font-medium ${b.total_pnl >= 0 ? "text-primary" : "text-danger"}`}>
+                        {b.total_pnl >= 0 ? "+" : ""}${b.total_pnl.toFixed(2)}
+                      </td>
+                      <td className="text-right">
+                        <div className="flex items-center justify-end gap-2">
+                          {b.state === "monitoring" && (
+                            <button onClick={() => handlePause(b.bot_id)} className="btn-ghost text-xs px-2 py-1 rounded">
+                              Pause
+                            </button>
+                          )}
+                          {b.state !== "stopped" && (
+                            <button onClick={() => handleStop(b.bot_id)} className="text-xs px-2 py-1 rounded text-danger hover:bg-red-50 transition-colors">
+                              Stop
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </Fragment>
+              ))
+            )}
           </tbody>
         </table>
       </div>

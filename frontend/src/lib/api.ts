@@ -152,6 +152,37 @@ export const api = {
   stopBot: (id: string) => apiFetch(`/paper/bots/${id}/stop`, { method: "POST" }),
   pauseBot: (id: string) => apiFetch(`/paper/bots/${id}/pause`, { method: "POST" }),
   account: () => apiFetch("/paper/account"),
+  fleet: () => apiFetch<{
+    total_bots: number;
+    running: number;
+    paused: number;
+    stopped: number;
+    stale: number;
+    aggregate_pnl: number;
+    aggregate_trades: number;
+    open_positions: number;
+    bots: Array<{
+      bot_id: string;
+      strategy_id: string;
+      instrument: string;
+      timeframe: string;
+      state: string;
+      bars_seen: number;
+      total_trades: number;
+      total_pnl: number;
+      has_position: boolean;
+      source_type: string | null;
+      last_evaluated_bar: string | null;
+      is_stale: boolean;
+    }>;
+    strategy_groups: Record<string, { count: number; running: number; pnl: number; trades: number }>;
+  }>("/paper/fleet"),
+  botTrades: (botId: string) => apiFetch<{
+    bot_id: string;
+    total: number;
+    trades: Array<Record<string, unknown>>;
+    equity_curve: number[];
+  }>(`/paper/bots/${botId}/trades`),
 
   // Trades
   listTrades: (params?: string) =>

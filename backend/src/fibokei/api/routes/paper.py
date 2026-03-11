@@ -285,6 +285,156 @@ def get_health(
     )
 
 
+class BotFleetItem(BaseModel):
+    bot_id: str
+    strategy_id: str
+    instrument: str
+    timeframe: str
+    state: str
+    bars_seen: int
+    total_trades: int
+    total_pnl: float
+    has_position: bool
+    source_type: str | None = None
+    last_evaluated_bar: str | None = None
+    is_stale: bool = False
+
+
+class FleetOverviewResponse(BaseModel):
+    total_bots: int
+    running: int
+    paused: int
+    stopped: int
+    stale: int
+    aggregate_pnl: float
+    aggregate_trades: int
+    open_positions: int
+    bots: list[BotFleetItem]
+    strategy_groups: dict[str, dict]
+
+
+@router.get("/paper/fleet")
+def get_fleet_overview(
+    user: TokenData = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Fleet-level dashboard: aggregate metrics + per-bot stats."""
+    all_bots = get_paper_bots(db)
+    now = datetime.now(timezone.utc)
+    items: list[BotFleetItem] = []
+    strategy_groups: dict[str, dict] = {}
+    total_pnl = 0.0
+    total_trades_count = 0
+    open_count = 0
+
+    for bot in all_bots:
+        trades = get_paper_trades(db, bot_id=bot.bot_id, limit=10000)
+        bot_pnl = sum(t.pnl for t in trades)
+        bot_trades = len(trades)
+        total_pnl += bot_pnl
+        total_trades_count += bot_trades
+        has_position = bot.position_json is not None
+        if has_position:
+            open_count += 1
+
+        # Stale detection
+        is_stale = False
+        if bot.last_evaluated_bar and bot.state in ("monitoring", "position_open"):
+            last_eval = bot.last_evaluated_bar
+            if last_eval.tzinfo is None:
+                last_eval = last_eval.replace(tzinfo=timezone.utc)
+            seconds_since = (now - last_eval).total_seconds()
+            threshold = STALE_THRESHOLDS.get(bot.timeframe.upper(), 7200)
+            is_stale = seconds_since > threshold
+
+        items.append(BotFleetItem(
+            bot_id=bot.bot_id,
+            strategy_id=bot.strategy_id,
+            instrument=bot.instrument,
+            timeframe=bot.timeframe,
+            state=bot.state,
+            bars_seen=bot.bars_seen,
+            total_trades=bot_trades,
+            total_pnl=bot_pnl,
+            has_position=has_position,
+            source_type=getattr(bot, "source_type", None),
+            last_evaluated_bar=(
+                bot.last_evaluated_bar.isoformat() if bot.last_evaluated_bar else None
+            ),
+            is_stale=is_stale,
+        ))
+
+        # Strategy grouping
+        sid = bot.strategy_id
+        if sid not in strategy_groups:
+            strategy_groups[sid] = {"count": 0, "running": 0, "pnl": 0.0, "trades": 0}
+        strategy_groups[sid]["count"] += 1
+        if bot.state in ("monitoring", "position_open"):
+            strategy_groups[sid]["running"] += 1
+        strategy_groups[sid]["pnl"] += bot_pnl
+        strategy_groups[sid]["trades"] += bot_trades
+
+    running = sum(1 for b in all_bots if b.state in ("monitoring", "position_open"))
+    paused_count = sum(1 for b in all_bots if b.state == "paused")
+    stopped_count = sum(1 for b in all_bots if b.state == "stopped")
+    stale_count = sum(1 for i in items if i.is_stale)
+
+    return FleetOverviewResponse(
+        total_bots=len(all_bots),
+        running=running,
+        paused=paused_count,
+        stopped=stopped_count,
+        stale=stale_count,
+        aggregate_pnl=total_pnl,
+        aggregate_trades=total_trades_count,
+        open_positions=open_count,
+        bots=items,
+        strategy_groups=strategy_groups,
+    )
+
+
+@router.get("/paper/bots/{bot_id}/trades")
+def get_bot_trades(
+    bot_id: str,
+    limit: int = Query(100, ge=1, le=1000),
+    user: TokenData = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Get trades for a specific bot with equity curve."""
+    bot = get_paper_bot(db, bot_id)
+    if not bot:
+        raise HTTPException(status_code=404, detail="Bot not found")
+    trades = get_paper_trades(db, bot_id=bot_id, limit=limit)
+    # Build equity curve (chronological)
+    sorted_trades = sorted(trades, key=lambda t: t.entry_time)
+    cumulative = 0.0
+    equity_curve = []
+    for t in sorted_trades:
+        cumulative += t.pnl
+        equity_curve.append(round(cumulative, 2))
+    return {
+        "bot_id": bot_id,
+        "total": len(trades),
+        "trades": [
+            {
+                "id": t.id,
+                "strategy_id": t.strategy_id,
+                "instrument": t.instrument,
+                "direction": t.direction,
+                "entry_time": t.entry_time.isoformat() if t.entry_time else None,
+                "entry_price": t.entry_price,
+                "exit_time": t.exit_time.isoformat() if t.exit_time else None,
+                "exit_price": t.exit_price,
+                "exit_reason": t.exit_reason,
+                "pnl": t.pnl,
+                "bars_in_trade": t.bars_in_trade,
+            }
+            for t in trades
+        ],
+        "equity_curve": equity_curve,
+    }
+
+
 def _bot_to_response(bot) -> BotStatusResponse:
     """Convert a PaperBotModel to response schema."""
     return BotStatusResponse(

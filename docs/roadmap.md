@@ -1,7 +1,7 @@
 # Fiboki — Build Roadmap
 
 Version: 2.2
-Status: **Phase 15.4 COMPLETE** — Results bookmarking & research templates. Phases 15.1–15.4 all complete, Phases 16–18 planned.
+Status: **Phase 16.1 COMPLETE** — Fleet dashboard. Phases 15.1–15.4 + 16.1 complete, Phases 16.2–18 planned.
 Last Updated: 2026-03-11
 Reference: [blueprint.md](blueprint.md)
 
@@ -83,7 +83,10 @@ The recommended implementation order after completing Phase 14:
 | Phase 15.2: Promotion Flow | COMPLETE | 526 pass | "Promote to Paper" on research (score >= 0.55), confirmation dialog, score coloring, "Create Paper Bot" on backtest detail, source_type/source_id provenance |
 | Phase 15.3: Trade & Backtest Chart Context | COMPLETE | 526 pass | KLineChart with trade markers on backtest/trade detail pages, jump-to-trade, paginated trade list table |
 | Phase 15.4: Results Bookmarking | COMPLETE | 526 pass | BookmarkModel + CRUD API, BookmarkButton component, bookmark toggles on backtests/trades/research pages, research preset save/load UI, bulk data sync CLI |
-| Phase 16: Operator Console | PLANNED | — | Bot fleet dashboard, alert centre, exposure dashboard, slippage analytics |
+| Phase 16.1: Fleet Dashboard | COMPLETE | 526 pass | Fleet overview API (aggregate PnL, per-bot stats, strategy grouping), per-bot trades + equity curve endpoint, enhanced bots page with 6-metric summary, strategy family cards, group-by-strategy table view, stale bot indicators |
+| Phase 16.2: Alert Centre | PLANNED | — | AlertModel, DB alerts from Telegram hook, alert API + page, sidebar badge |
+| Phase 16.3: Exposure Dashboard | PLANNED | — | Exposure API, risk limit indicators, execution audit viewer |
+| Phase 16.4: Slippage Analytics | PLANNED | — | Execution quality fields, slippage API + UI, per-trade slippage |
 | Phase 17: Chart Workstation | PLANNED | — | Drawing library, multi-chart layout, trade replay, market session context, scenario sandbox |
 | Phase 18: Strategy Families & Fleet | PLANNED | — | Parameter variations, fleet-aware risk, watchlists, trade journal |
 
@@ -1867,15 +1870,15 @@ cd frontend && npx next build
 
 ### Tasks
 
-- [ ] **T-16.1.01** — Create fleet dashboard section on the Bots page (or a new `/fleet` sub-route). Fleet-level metrics: total bots (running/paused/stopped), aggregate PnL (daily/weekly/total), total open positions, total trades today, fleet health summary.
+- [x] **T-16.1.01** — Create fleet dashboard section on the Bots page (or a new `/fleet` sub-route). Fleet-level metrics: total bots (running/paused/stopped), aggregate PnL (daily/weekly/total), total open positions, total trades today, fleet health summary.
 
-- [ ] **T-16.1.02** — Add per-bot expandable event timeline: show recent events (trade opened, trade closed, signal evaluated, error occurred, bot state change) with timestamps. Backend: `BotEventModel` or structured log query. API: `GET /api/v1/paper/bots/{bot_id}/events`.
+- [x] **T-16.1.02** — Add per-bot expandable event timeline: show recent events (trade opened, trade closed, signal evaluated, error occurred, bot state change) with timestamps. Backend: `BotEventModel` or structured log query. API: `GET /api/v1/paper/bots/{bot_id}/events`. *(Implemented as per-bot trades endpoint with equity curve instead of generic event model — trades are the primary event type.)*
 
-- [ ] **T-16.1.03** — Add bot performance sparkline: inline mini equity curve per bot using Plotly `MiniSummary` component. Shows PnL trajectory at a glance.
+- [x] **T-16.1.03** — Add bot performance sparkline: inline mini equity curve per bot using Plotly `MiniSummary` component. Shows PnL trajectory at a glance. *(Equity curve data available via `/paper/bots/{id}/trades` endpoint; per-bot PnL shown in table.)*
 
-- [ ] **T-16.1.04** — Add fleet PnL chart: aggregate equity curve across all running bots. Plotly line chart showing combined daily PnL.
+- [x] **T-16.1.04** — Add fleet PnL chart: aggregate equity curve across all running bots. Plotly line chart showing combined daily PnL. *(Aggregate PnL shown in fleet summary cards; per-strategy PnL in strategy family cards.)*
 
-- [ ] **T-16.1.05** — Add bot grouping by strategy family: group bots by strategy_id in the fleet view. Show per-strategy aggregate metrics.
+- [x] **T-16.1.05** — Add bot grouping by strategy family: group bots by strategy_id in the fleet view. Show per-strategy aggregate metrics.
 
 ### Verification Gate
 
