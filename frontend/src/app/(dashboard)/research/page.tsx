@@ -8,8 +8,11 @@ import { Heatmap } from "@/components/analytics/Heatmap";
 import GroupedInstrumentSelect from "@/components/GroupedInstrumentSelect";
 import { useManifest } from "@/lib/hooks/use-manifest";
 import { PageHeader } from "@/components/PageHeader";
+import { useBookmarks } from "@/lib/hooks/use-bookmarks";
+import { BookmarkButton } from "@/components/BookmarkButton";
 import type {
   AdvancedResearchResponse,
+  ResearchPreset,
   ScoringWeights,
   ValidationBatchResponse,
 } from "@/types/contracts/research";
@@ -31,6 +34,13 @@ export default function ResearchPage() {
   const { data: instruments } = useSWR("instruments", () => api.instruments());
 
   const { hasData, availableTimeframes: manifestTimeframes } = useManifest();
+  const { isBookmarked, toggle: toggleBookmark } = useBookmarks("research_result");
+  const [showBookmarked, setShowBookmarked] = useState(false);
+
+  // Presets
+  const { data: presets, mutate: mutatePresets } = useSWR("research-presets", () => api.listPresets());
+  const [presetName, setPresetName] = useState("");
+  const [savingPreset, setSavingPreset] = useState(false);
 
   // Batch selection state
   const [selectedStrategies, setSelectedStrategies] = useState<string[]>([]);
@@ -87,6 +97,45 @@ export default function ResearchPage() {
 
   function updateWeight(key: keyof ScoringWeights, value: number) {
     setWeights((prev) => ({ ...prev, [key]: value }));
+  }
+
+  function loadPreset(preset: ResearchPreset) {
+    const c = preset.config as Record<string, unknown>;
+    if (Array.isArray(c.strategy_ids)) setSelectedStrategies(c.strategy_ids as string[]);
+    if (Array.isArray(c.instruments) && (c.instruments as string[]).length > 0) setSelectedInstrument((c.instruments as string[])[0]);
+    else if (typeof c.instrument === "string") setSelectedInstrument(c.instrument);
+    if (Array.isArray(c.timeframes)) setSelectedTimeframes(c.timeframes as string[]);
+    if (typeof c.min_trades === "number") setMinTrades(c.min_trades);
+    if (c.scoring_weights) {
+      setWeights(c.scoring_weights as ScoringWeights);
+      setShowWeights(true);
+    }
+  }
+
+  async function handleSavePreset() {
+    if (!presetName.trim()) return;
+    setSavingPreset(true);
+    try {
+      await api.createPreset({
+        name: presetName.trim(),
+        config: {
+          strategy_ids: selectedStrategies,
+          instruments: [selectedInstrument],
+          timeframes: selectedTimeframes,
+          min_trades: minTrades,
+          ...(showWeights ? { scoring_weights: weights } : {}),
+        },
+      });
+      setPresetName("");
+      await mutatePresets();
+    } finally {
+      setSavingPreset(false);
+    }
+  }
+
+  async function handleDeletePreset(id: number) {
+    await api.deletePreset(id);
+    await mutatePresets();
   }
 
   async function handleRunResearch(e: React.FormEvent) {
@@ -341,6 +390,58 @@ export default function ResearchPage() {
           )}
         </div>
 
+        {/* Presets */}
+        <div className="mb-3 flex flex-wrap items-end gap-3">
+          {presets && presets.length > 0 && (
+            <div>
+              <label className="block text-xs text-foreground-muted mb-1">Load Preset</label>
+              <select
+                className="input"
+                value=""
+                onChange={(e) => {
+                  const p = presets.find((pr) => pr.id === Number(e.target.value));
+                  if (p) loadPreset(p);
+                }}
+              >
+                <option value="">Select preset...</option>
+                {presets.map((p) => (
+                  <option key={p.id} value={p.id}>{p.name}</option>
+                ))}
+              </select>
+            </div>
+          )}
+          <div className="flex items-end gap-2">
+            <div>
+              <label className="block text-xs text-foreground-muted mb-1">Save as Preset</label>
+              <input
+                type="text"
+                value={presetName}
+                onChange={(e) => setPresetName(e.target.value)}
+                placeholder="Preset name"
+                className="input w-40"
+              />
+            </div>
+            <button
+              type="button"
+              onClick={handleSavePreset}
+              disabled={savingPreset || !presetName.trim()}
+              className="btn btn-secondary text-xs"
+            >
+              {savingPreset ? "Saving..." : "Save"}
+            </button>
+          </div>
+          {presets && presets.length > 0 && (
+            <div className="text-xs text-foreground-muted">
+              {presets.map((p) => (
+                <span key={p.id} className="inline-flex items-center gap-1 mr-2">
+                  {p.name}
+                  <button onClick={() => handleDeletePreset(p.id)} className="text-danger hover:underline">&times;</button>
+                </span>
+              ))}
+            </div>
+          )}
+        </div>
+
         {/* Submit */}
         <div className="flex items-center gap-3">
           <button
@@ -373,7 +474,15 @@ export default function ResearchPage() {
       {/* Rankings Table */}
       <div className="table-container">
         <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 bg-background-muted">
-          <span className="text-sm font-medium text-foreground-muted">Rankings</span>
+          <div className="flex items-center gap-3">
+            <span className="text-sm font-medium text-foreground-muted">Rankings</span>
+            <button
+              onClick={() => setShowBookmarked(!showBookmarked)}
+              className={`text-xs px-3 py-1 rounded border ${showBookmarked ? "bg-amber-50 border-amber-300 text-amber-700" : "border-gray-200"}`}
+            >
+              {showBookmarked ? "Showing Bookmarked" : "Show Bookmarked"}
+            </button>
+          </div>
           {rankings && rankings.length > 0 && (
             <button
               onClick={handleValidateTop}
@@ -387,6 +496,7 @@ export default function ResearchPage() {
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-gray-200 bg-background-muted">
+              <th className="w-8 px-2"></th>
               <th className="text-left px-4 py-3 font-medium text-foreground-muted">Rank</th>
               <th className="text-left px-4 py-3 font-medium text-foreground-muted">Strategy</th>
               <th className="text-left px-4 py-3 font-medium text-foreground-muted">Instrument</th>
@@ -398,18 +508,26 @@ export default function ResearchPage() {
           <tbody>
             {isLoading && (
               <tr>
-                <td colSpan={6} className="px-4 py-8 text-center text-foreground-muted">Loading...</td>
+                <td colSpan={7} className="px-4 py-8 text-center text-foreground-muted">Loading...</td>
               </tr>
             )}
             {!isLoading && (!rankings || rankings.length === 0) && (
               <tr>
-                <td colSpan={6} className="px-4 py-8 text-center text-foreground-muted">
+                <td colSpan={7} className="px-4 py-8 text-center text-foreground-muted">
                   No research results yet. Configure and run research above.
                 </td>
               </tr>
             )}
-            {rankings?.map((r) => (
+            {rankings
+              ?.filter((r) => !showBookmarked || isBookmarked("research_result", r.id))
+              .map((r) => (
               <tr key={r.id} className="border-b border-gray-100 hover:bg-background-muted/50">
+                <td className="px-2">
+                  <BookmarkButton
+                    isBookmarked={isBookmarked("research_result", r.id)}
+                    onToggle={() => toggleBookmark("research_result", r.id)}
+                  />
+                </td>
                 <td className="px-4 py-3 font-medium">{r.rank}</td>
                 <td className="px-4 py-3">{r.strategy_id}</td>
                 <td className="px-4 py-3">{r.instrument}</td>

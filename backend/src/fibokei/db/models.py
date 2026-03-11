@@ -261,3 +261,18 @@ class KillSwitchModel(Base):
     activated_by: Mapped[str | None] = mapped_column(String(50))
     activated_at: Mapped[datetime | None] = mapped_column(DateTime)
     deactivated_at: Mapped[datetime | None] = mapped_column(DateTime)
+
+
+class BookmarkModel(Base):
+    """User bookmark for research results, backtests, or trades."""
+
+    __tablename__ = "bookmarks"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    user_id: Mapped[int] = mapped_column(Integer, nullable=False, index=True)
+    entity_type: Mapped[str] = mapped_column(String(30), nullable=False)
+    entity_id: Mapped[int] = mapped_column(Integer, nullable=False)
+    note: Mapped[str | None] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, default=lambda: datetime.now(timezone.utc)
+    )

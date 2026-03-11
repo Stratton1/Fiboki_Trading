@@ -9,6 +9,8 @@ import { PageHeader } from "@/components/PageHeader";
 import { EmptyState } from "@/components/EmptyState";
 import { StatusBadge } from "@/components/StatusBadge";
 import { History, Loader2 } from "lucide-react";
+import { useBookmarks } from "@/lib/hooks/use-bookmarks";
+import { BookmarkButton } from "@/components/BookmarkButton";
 
 export default function TradesPage() {
   const { data, isLoading } = useTrades();
@@ -16,6 +18,8 @@ export default function TradesPage() {
   const [filterStrategy, setFilterStrategy] = useState("");
   const [filterDirection, setFilterDirection] = useState("");
   const { data: strategies } = useSWR("strategies", () => api.strategies());
+  const { isBookmarked, toggle: toggleBookmark } = useBookmarks("trade");
+  const [showBookmarked, setShowBookmarked] = useState(false);
 
   const filtered = trades.filter((t) => {
     if (filterStrategy && t.strategy_id !== filterStrategy) return false;
@@ -43,11 +47,22 @@ export default function TradesPage() {
         </select>
       </div>
 
+      {/* Bookmark filter */}
+      <div className="flex gap-2 mb-3">
+        <button
+          onClick={() => setShowBookmarked(!showBookmarked)}
+          className={`text-xs px-3 py-1 rounded border ${showBookmarked ? "bg-amber-50 border-amber-300 text-amber-700" : "border-gray-200"}`}
+        >
+          {showBookmarked ? "Showing Bookmarked" : "Show Bookmarked"}
+        </button>
+      </div>
+
       {/* Trades Table */}
       <div className="table-container">
         <table>
           <thead>
             <tr>
+              <th className="w-8"></th>
               <th className="text-left">Date</th>
               <th className="text-left">Strategy</th>
               <th className="text-left">Instrument</th>
@@ -61,7 +76,7 @@ export default function TradesPage() {
           <tbody>
             {isLoading && (
               <tr>
-                <td colSpan={8}>
+                <td colSpan={9}>
                   <div className="flex items-center justify-center gap-2 py-8 text-foreground-muted">
                     <Loader2 size={16} className="animate-spin" />
                     <span className="text-sm">Loading trades...</span>
@@ -71,7 +86,7 @@ export default function TradesPage() {
             )}
             {!isLoading && trades.length === 0 && (
               <tr>
-                <td colSpan={8}>
+                <td colSpan={9}>
                   <EmptyState
                     icon={<History size={36} strokeWidth={1.5} />}
                     title="No trades recorded"
@@ -80,8 +95,16 @@ export default function TradesPage() {
                 </td>
               </tr>
             )}
-            {filtered.map((t) => (
+            {filtered
+              .filter((t) => !showBookmarked || isBookmarked("trade", t.id))
+              .map((t) => (
               <tr key={t.id}>
+                <td>
+                  <BookmarkButton
+                    isBookmarked={isBookmarked("trade", t.id)}
+                    onToggle={() => toggleBookmark("trade", t.id)}
+                  />
+                </td>
                 <td>
                   <Link href={`/trades/${t.id}`} className="text-primary font-medium hover:underline">
                     {t.entry_time ? new Date(t.entry_time).toLocaleDateString() : "—"}

@@ -284,6 +284,23 @@ export const api = {
       `/drawings?instrument=${instrument}&timeframe=${timeframe}`,
       { method: "DELETE" }
     ),
+
+  // Bookmarks
+  listBookmarks: (entityType?: string) =>
+    apiFetch<Array<{ id: number; entity_type: string; entity_id: number; note: string | null; created_at: string | null }>>(
+      `/bookmarks${entityType ? `?entity_type=${entityType}` : ""}`
+    ),
+  createBookmark: (body: { entity_type: string; entity_id: number; note?: string }) =>
+    apiFetch<{ id: number; entity_type: string; entity_id: number; note: string | null; created_at: string | null }>(
+      "/bookmarks", { method: "POST", body: JSON.stringify(body) }
+    ),
+  deleteBookmark: (id: number) =>
+    apiFetch<{ deleted: number }>(`/bookmarks/${id}`, { method: "DELETE" }),
+  deleteBookmarkByEntity: (entityType: string, entityId: number) =>
+    apiFetch<{ deleted: number }>(
+      `/bookmarks?entity_type=${entityType}&entity_id=${entityId}`,
+      { method: "DELETE" }
+    ),
 };
 
 export { API_URL, ApiError };

@@ -1,7 +1,7 @@
 # Fiboki — Build Roadmap
 
 Version: 2.2
-Status: **Phase 15.2 COMPLETE** — Research-to-paper promotion flow. Phase 14 near-complete, Phases 15.3–18 planned.
+Status: **Phase 15.4 COMPLETE** — Results bookmarking & research templates. Phases 15.1–15.4 all complete, Phases 16–18 planned.
 Last Updated: 2026-03-11
 Reference: [blueprint.md](blueprint.md)
 
@@ -82,7 +82,7 @@ The recommended implementation order after completing Phase 14:
 | Phase 15.1: Async Job Engine | COMPLETE | 522 pass | Thread pool job engine, jobs API (list/detail/cancel), async backtests (?async=true), async research (always), Jobs page with progress bars + sidebar badge |
 | Phase 15.2: Promotion Flow | COMPLETE | 526 pass | "Promote to Paper" on research (score >= 0.55), confirmation dialog, score coloring, "Create Paper Bot" on backtest detail, source_type/source_id provenance |
 | Phase 15.3: Trade & Backtest Chart Context | COMPLETE | 526 pass | KLineChart with trade markers on backtest/trade detail pages, jump-to-trade, paginated trade list table |
-| Phase 15.4: Results Bookmarking | PLANNED | — | Bookmark/favourite research results, saved views |
+| Phase 15.4: Results Bookmarking | COMPLETE | 526 pass | BookmarkModel + CRUD API, BookmarkButton component, bookmark toggles on backtests/trades/research pages, research preset save/load UI, bulk data sync CLI |
 | Phase 16: Operator Console | PLANNED | — | Bot fleet dashboard, alert centre, exposure dashboard, slippage analytics |
 | Phase 17: Chart Workstation | PLANNED | — | Drawing library, multi-chart layout, trade replay, market session context, scenario sandbox |
 | Phase 18: Strategy Families & Fleet | PLANNED | — | Parameter variations, fleet-aware risk, watchlists, trade journal |
@@ -1826,15 +1826,15 @@ cd frontend && npx next build
 
 ### Tasks
 
-- [ ] **T-15.4.01** — Create `ResearchPresetModel` in DB: name, strategy_ids (JSON array), instrument_ids (JSON array), timeframes (JSON array), scoring weights, created_at. CRUD API: `GET/POST/PUT/DELETE /api/v1/research/presets`.
+- [x] **T-15.4.01** — Create `ResearchPresetModel` in DB: name, strategy_ids (JSON array), instrument_ids (JSON array), timeframes (JSON array), scoring weights, created_at. CRUD API: `GET/POST/PUT/DELETE /api/v1/research/presets`.
 
-- [ ] **T-15.4.02** — Add preset save/load UI to the research page. "Save as Preset" button saves current selection. Preset dropdown loads saved configurations.
+- [x] **T-15.4.02** — Add preset save/load UI to the research page. "Save as Preset" button saves current selection. Preset dropdown loads saved configurations.
 
-- [ ] **T-15.4.03** — Create `BookmarkModel` in DB: user_id, entity_type (`research_result` | `backtest` | `trade`), entity_id, note, created_at. API: `POST/DELETE /api/v1/bookmarks`, `GET /api/v1/bookmarks`.
+- [x] **T-15.4.03** — Create `BookmarkModel` in DB: user_id, entity_type (`research_result` | `backtest` | `trade`), entity_id, note, created_at. API: `POST/DELETE /api/v1/bookmarks`, `GET /api/v1/bookmarks`.
 
-- [ ] **T-15.4.04** — Add bookmark/star toggle to research results rows, backtest list rows, and trade list rows. Bookmarked items filter available on each page.
+- [x] **T-15.4.04** — Add bookmark/star toggle to research results rows, backtest list rows, and trade list rows. Bookmarked items filter available on each page.
 
-- [ ] **T-15.4.05** — Remaining Phase 14.4 item: bulk data sync tooling — document Railway volume update workflow with CLI helper command `fibokei sync-data`.
+- [x] **T-15.4.05** — Remaining Phase 14.4 item: bulk data sync tooling — document Railway volume update workflow with CLI helper command `fibokei sync-data`.
 
 ### Verification Gate
 

@@ -268,6 +268,8 @@ def create_app() -> FastAPI:
     application.include_router(drawings_router, prefix="/api/v1")
     from fibokei.api.routes.jobs import router as jobs_router
     application.include_router(jobs_router, prefix="/api/v1")
+    from fibokei.api.routes.bookmarks import router as bookmarks_router
+    application.include_router(bookmarks_router, prefix="/api/v1")
 
     return application
 

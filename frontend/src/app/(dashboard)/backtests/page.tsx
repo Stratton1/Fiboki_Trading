@@ -10,6 +10,8 @@ import { PageHeader } from "@/components/PageHeader";
 import { EmptyState } from "@/components/EmptyState";
 import { useManifest } from "@/lib/hooks/use-manifest";
 import { BarChart3, GitCompareArrows, Loader2 } from "lucide-react";
+import { useBookmarks } from "@/lib/hooks/use-bookmarks";
+import { BookmarkButton } from "@/components/BookmarkButton";
 
 export default function BacktestsPage() {
   const { data: backtests, mutate, isLoading } = useBacktests();
@@ -21,6 +23,8 @@ export default function BacktestsPage() {
   const [running, setRunning] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { hasData, availableTimeframes, datasetInfo } = useManifest();
+  const { isBookmarked, toggle: toggleBookmark } = useBookmarks("backtest");
+  const [showBookmarked, setShowBookmarked] = useState(false);
 
   const ALL_TIMEFRAMES = ["M15", "H1", "H4", "D"];
   const manifestTimeframes = instrument ? availableTimeframes(instrument) : [];
@@ -121,11 +125,22 @@ export default function BacktestsPage() {
         {error && <p className="text-danger text-sm mt-3">{error}</p>}
       </form>
 
+      {/* Bookmark filter */}
+      <div className="flex gap-2 mb-3">
+        <button
+          onClick={() => setShowBookmarked(!showBookmarked)}
+          className={`text-xs px-3 py-1 rounded border ${showBookmarked ? "bg-amber-50 border-amber-300 text-amber-700" : "border-gray-200"}`}
+        >
+          {showBookmarked ? "Showing Bookmarked" : "Show Bookmarked"}
+        </button>
+      </div>
+
       {/* Results Table */}
       <div className="table-container">
         <table>
           <thead>
             <tr>
+              <th className="w-8"></th>
               <th className="text-left">Strategy</th>
               <th className="text-left">Instrument</th>
               <th className="text-left">TF</th>
@@ -138,7 +153,7 @@ export default function BacktestsPage() {
           <tbody>
             {isLoading && (
               <tr>
-                <td colSpan={7}>
+                <td colSpan={8}>
                   <div className="flex items-center justify-center gap-2 py-8 text-foreground-muted">
                     <Loader2 size={16} className="animate-spin" />
                     <span className="text-sm">Loading backtests...</span>
@@ -148,7 +163,7 @@ export default function BacktestsPage() {
             )}
             {!isLoading && (!backtests || backtests.length === 0) && (
               <tr>
-                <td colSpan={7}>
+                <td colSpan={8}>
                   <EmptyState
                     icon={<BarChart3 size={36} strokeWidth={1.5} />}
                     title="No backtests yet"
@@ -157,8 +172,16 @@ export default function BacktestsPage() {
                 </td>
               </tr>
             )}
-            {backtests?.map((bt) => (
+            {backtests
+              ?.filter((bt) => !showBookmarked || isBookmarked("backtest", bt.id))
+              .map((bt) => (
               <tr key={bt.id}>
+                <td>
+                  <BookmarkButton
+                    isBookmarked={isBookmarked("backtest", bt.id)}
+                    onToggle={() => toggleBookmark("backtest", bt.id)}
+                  />
+                </td>
                 <td>
                   <Link href={`/backtests/${bt.id}`} className="text-primary font-medium hover:underline">
                     {bt.strategy_id}
