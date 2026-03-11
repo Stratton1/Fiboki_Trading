@@ -30,6 +30,7 @@ class MarketDataResponse(BaseModel):
     from_date: str | None = None
     to_date: str | None = None
     source: str | None = None
+    mode: str = "historical"  # "historical" or "live"
 
 
 class PricePoint(BaseModel):

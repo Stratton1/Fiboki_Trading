@@ -31,6 +31,12 @@ export interface MarketDataResponse {
   from_date: string | null;
   to_date: string | null;
   source: string | null;
+  mode: "historical" | "live";
+}
+
+export interface LiveStatusResponse {
+  available: boolean;
+  reason: string | null;
 }
 
 export interface ManifestDataset {

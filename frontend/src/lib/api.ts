@@ -79,9 +79,13 @@ export const api = {
   me: () => apiFetch<{ user_id: number; username: string; role: string }>("/auth/me"),
 
   // Market data
-  marketData: (instrument: string, timeframe: string) =>
+  marketData: (instrument: string, timeframe: string, mode: "historical" | "live" = "historical") =>
     apiFetch<import("@/types/contracts/chart").MarketDataResponse>(
-      `/market-data/${instrument}/${timeframe}`
+      `/market-data/${instrument}/${timeframe}?mode=${mode}`
+    ),
+  liveStatus: () =>
+    apiFetch<import("@/types/contracts/chart").LiveStatusResponse>(
+      "/market-data/live/status"
     ),
 
   // Charts
