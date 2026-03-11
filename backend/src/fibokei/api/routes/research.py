@@ -14,9 +14,11 @@ from fibokei.api.schemas.research import (
     MonteCarloResponse,
     OOSResponse,
     ResearchCompareRequest,
+    ResearchPresetCreate,
+    ResearchPresetResponse,
+    ResearchPresetUpdate,
     ResearchResultResponse,
     ResearchRunRequest,
-    ResearchRunSummary,
     ScoringWeights,
     SensitivityPointResponse,
     SensitivityResponse,
@@ -29,7 +31,7 @@ from fibokei.api.schemas.research import (
 from fibokei.backtester.config import BacktestConfig
 from fibokei.core.models import Timeframe
 from fibokei.data.providers.registry import load_canonical
-from fibokei.db.models import ResearchResultModel
+from fibokei.db.models import ResearchPresetModel, ResearchResultModel
 from fibokei.db.repository import get_research_rankings, save_research_results
 from fibokei.research.matrix import ResearchMatrix
 from fibokei.research.scorer import ScoringConfig
@@ -451,3 +453,95 @@ def run_validation(
             for r in batch.results
         ],
     )
+
+
+# ── Research Presets ──────────────────────────────────────────
+
+
+@router.get("/research/presets", response_model=list[ResearchPresetResponse])
+def list_presets(
+    db: Session = Depends(get_db),
+    user: TokenData = Depends(get_current_user),
+):
+    """List all saved research presets."""
+    presets = db.query(ResearchPresetModel).order_by(ResearchPresetModel.updated_at.desc()).all()
+    return [
+        {
+            "id": p.id,
+            "name": p.name,
+            "description": p.description,
+            "config": p.config_json,
+            "created_at": p.created_at,
+            "updated_at": p.updated_at,
+        }
+        for p in presets
+    ]
+
+
+@router.post("/research/presets", response_model=ResearchPresetResponse, status_code=201)
+def create_preset(
+    req: ResearchPresetCreate,
+    db: Session = Depends(get_db),
+    user: TokenData = Depends(get_current_user),
+):
+    """Save a research configuration as a named preset."""
+    preset = ResearchPresetModel(
+        name=req.name,
+        description=req.description,
+        config_json=req.config.model_dump(),
+    )
+    db.add(preset)
+    db.commit()
+    db.refresh(preset)
+    return {
+        "id": preset.id,
+        "name": preset.name,
+        "description": preset.description,
+        "config": preset.config_json,
+        "created_at": preset.created_at,
+        "updated_at": preset.updated_at,
+    }
+
+
+@router.put("/research/presets/{preset_id}", response_model=ResearchPresetResponse)
+def update_preset(
+    preset_id: int,
+    req: ResearchPresetUpdate,
+    db: Session = Depends(get_db),
+    user: TokenData = Depends(get_current_user),
+):
+    """Update an existing research preset."""
+    preset = db.query(ResearchPresetModel).filter(ResearchPresetModel.id == preset_id).first()
+    if not preset:
+        raise HTTPException(status_code=404, detail="Preset not found")
+    if req.name is not None:
+        preset.name = req.name
+    if req.description is not None:
+        preset.description = req.description
+    if req.config is not None:
+        preset.config_json = req.config.model_dump()
+    db.commit()
+    db.refresh(preset)
+    return {
+        "id": preset.id,
+        "name": preset.name,
+        "description": preset.description,
+        "config": preset.config_json,
+        "created_at": preset.created_at,
+        "updated_at": preset.updated_at,
+    }
+
+
+@router.delete("/research/presets/{preset_id}")
+def delete_preset(
+    preset_id: int,
+    db: Session = Depends(get_db),
+    user: TokenData = Depends(get_current_user),
+):
+    """Delete a research preset."""
+    preset = db.query(ResearchPresetModel).filter(ResearchPresetModel.id == preset_id).first()
+    if not preset:
+        raise HTTPException(status_code=404, detail="Preset not found")
+    db.delete(preset)
+    db.commit()
+    return {"deleted": preset_id}

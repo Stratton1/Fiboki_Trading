@@ -28,10 +28,10 @@ Reference: [blueprint.md](blueprint.md)
 **Pending merges:** None.
 
 **Remaining legacy tasks:**
-- T-12.02: Trade detail replay/inspection (KLineChart with trade markers)
+- T-12.02: ~~Trade detail replay/inspection~~ — absorbed into Phase 15.3 (DONE)
 - T-13.02: Railway auto-deploy from GitHub
 - T-13.05: Database backup strategy
-- T-13.07: Error tracking (Sentry)
+- ~~T-13.07: Error tracking (Sentry)~~ — DONE
 
 ---
 
@@ -73,15 +73,16 @@ The recommended implementation order after completing Phase 14:
 | Phase 10: IG Demo Integration | COMPLETE | All pass | IG REST client (demo only), epic mapping (65 instruments), order lifecycle, position sync, reconciliation, kill switch, execution audit, feature flags, frontend controls |
 | Phase 10.5: Production Data Access | COMPLETE | All pass | Centralized path resolver, starter dataset (2.3MB, 7 majors H1), unified load_canonical(), .dockerignore |
 | Phase 11: Live Readiness | COMPLETE | All pass | Risk limits config (env-var driven), promotion gates (Paper→Demo, Demo→Live), pre-live checklist, 18 gate tests |
-| Phase 12: Frontend V2 | PARTIAL | Build clean | ExecutionModeBanner, backtest comparison, enhanced settings, searchable instrument select. **Remaining: T-12.02 trade detail replay** |
-| Phase 13: CI/CD & Operations | PARTIAL | All pass | GitHub Actions CI, env var validation, structured logging, request IDs. **Remaining: T-13.02 auto-deploy, T-13.05 DB backups, T-13.07 error tracking** |
+| Phase 12: Frontend V2 | COMPLETE | Build clean | ExecutionModeBanner, backtest comparison, enhanced settings, searchable instrument select. T-12.02 absorbed into Phase 15.3 |
+| Phase 13: CI/CD & Operations | PARTIAL | All pass | GitHub Actions CI, env var validation, structured logging, request IDs, Sentry error tracking. **Remaining: T-13.02 auto-deploy, T-13.05 DB backups** |
 | Phase 14.1: Online Historical Data | COMPLETE | 467 pass | LRU cache, manifest generator/API, paginated market data, vectorized serialization, dynamic has_canonical_data, data_source observability |
 | Phase 14.2: Drawing Tools | COMPLETE | All pass | DrawingToolbar (6 tools), klinecharts overlays, chart_drawings DB, CRUD API, auto-load/persist |
 | Phase 14.3: Live Chart Mode | COMPLETE | 507 pass | IGDataProvider, TTL cache, ?mode=live, frontend toggle, SWR 5s auto-refresh. Merged to main |
-| Phase 14.4: Full Production UX | PARTIAL | Build clean | Manifest-aware data availability on backtests/research/system pages. **Remaining: research preset builder, bulk data sync tooling** |
+| Phase 14.4: Full Production UX | COMPLETE | Build clean | Manifest-aware data availability, research preset builder (save/load configs), bulk data sync CLI (fibokei data-sync) |
 | Phase 15.1: Async Job Engine | COMPLETE | 522 pass | Thread pool job engine, jobs API (list/detail/cancel), async backtests (?async=true), async research (always), Jobs page with progress bars + sidebar badge |
 | Phase 15.2: Promotion Flow | COMPLETE | 526 pass | "Promote to Paper" on research (score >= 0.55), confirmation dialog, score coloring, "Create Paper Bot" on backtest detail, source_type/source_id provenance |
-| Phase 15.3–15.4: Workflow Completion | PLANNED | — | KLineChart on detail pages, results bookmarking |
+| Phase 15.3: Trade & Backtest Chart Context | COMPLETE | 526 pass | KLineChart with trade markers on backtest/trade detail pages, jump-to-trade, paginated trade list table |
+| Phase 15.4: Results Bookmarking | PLANNED | — | Bookmark/favourite research results, saved views |
 | Phase 16: Operator Console | PLANNED | — | Bot fleet dashboard, alert centre, exposure dashboard, slippage analytics |
 | Phase 17: Chart Workstation | PLANNED | — | Drawing library, multi-chart layout, trade replay, market session context, scenario sandbox |
 | Phase 18: Strategy Families & Fleet | PLANNED | — | Parameter variations, fleet-aware risk, watchlists, trade journal |
@@ -1613,7 +1614,7 @@ Comparison view works for 3+ backtests. Mode indicator visible on all operationa
 
 - [x] **T-13.06** — Structured logging: JSON log output for production, human-readable for dev. Include request IDs, timing, and error context.
 
-- [ ] **T-13.07** — Error tracking: integrate Sentry or similar for production error monitoring and alerting.
+- [x] **T-13.07** — Error tracking: Sentry SDK integration with env-based DSN (FIBOKEI_SENTRY_DSN), configurable traces rate and environment.
 
 ### Verification Gate
 
@@ -1701,9 +1702,8 @@ PR triggers lint+test automatically. Merge triggers deploy. Smoke test runs post
 - [x] System page shows canonical data count and data source status
 - [x] `useManifest()` hook with `hasData()`, `availableTimeframes()`, `datasetInfo()` helpers
 
-**What remains:**
-- [ ] Research preset builder — save/load research configurations (strategy × instrument × timeframe selections)
-- [ ] Bulk data sync tooling — documented Railway volume update workflow with CLI support
+- [x] Research preset builder — CRUD API for saving/loading research configurations (strategy × instrument × timeframe selections)
+- [x] Bulk data sync tooling — `fibokei data-sync` CLI command with parquet validation, optional target sync, manifest regeneration
 
 ---
 
@@ -1799,13 +1799,13 @@ cd frontend && npx next build                     # Clean build
 
 ### Tasks
 
-- [ ] **T-15.3.01** — Add KLineChart to backtest detail page (`backtests/[id]/page.tsx`). Load market data for the backtest's instrument/timeframe/date range. Overlay trade markers (entry/exit arrows) using the annotations API. Show alongside existing Plotly equity/drawdown charts.
+- [x] **T-15.3.01** — KLineChart on backtest detail page with trade markers (entry/exit arrows, dashed PnL lines). TradeMarkerChart component using klinecharts overlays.
 
-- [ ] **T-15.3.02** — Add KLineChart to trade detail page (`trades/[id]/page.tsx`). Center chart on the trade's entry timestamp. Show entry arrow, exit arrow, SL/TP lines. Load ±50 bars of context around the trade.
+- [x] **T-15.3.02** — KLineChart on trade detail page, centered on trade entry. Shows single-trade context with entry/exit markers via backtest timeframe lookup.
 
-- [ ] **T-15.3.03** — Add "Jump to Trade" functionality: clicking a trade in the backtest detail's trade list centers the KLineChart on that trade's entry timestamp and highlights its markers.
+- [x] **T-15.3.03** — "Jump to Trade" functionality: clicking Jump button in trade list or clicking chart marker scrolls KLineChart to that trade's entry.
 
-- [ ] **T-15.3.04** — Add trade list table to backtest detail page below the charts. Paginated, sortable by PnL/direction/exit_reason. Each row links to the trade detail page.
+- [x] **T-15.3.04** — Paginated, sortable trade list table on backtest detail. Sort by entry_time/PnL/direction/exit_reason. Each row links to trade detail page.
 
 ### Verification Gate
 

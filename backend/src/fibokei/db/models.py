@@ -231,6 +231,25 @@ class ChartDrawingModel(Base):
     )
 
 
+class ResearchPresetModel(Base):
+    """Saved research configurations (strategy × instrument × timeframe selections)."""
+
+    __tablename__ = "research_presets"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    name: Mapped[str] = mapped_column(String(100), nullable=False, index=True)
+    description: Mapped[str | None] = mapped_column(Text)
+    config_json: Mapped[dict] = mapped_column(JSON, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, default=lambda: datetime.now(timezone.utc)
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime,
+        default=lambda: datetime.now(timezone.utc),
+        onupdate=lambda: datetime.now(timezone.utc),
+    )
+
+
 class KillSwitchModel(Base):
     """Kill switch state — single row table."""
 
