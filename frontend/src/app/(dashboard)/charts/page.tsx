@@ -5,7 +5,8 @@ import ChartToolbar from "@/components/charts/panels/ChartToolbar";
 import OverlayControls from "@/components/charts/panels/OverlayControls";
 import DrawingToolbar from "@/components/charts/panels/DrawingToolbar";
 import TradingChart from "@/components/charts/core/TradingChart";
-import { useMarketData } from "@/lib/hooks/use-market-data";
+import { useMarketData, useLiveStatus } from "@/lib/hooks/use-market-data";
+import type { ChartMode } from "@/lib/hooks/use-market-data";
 import { useDrawings } from "@/lib/hooks/use-drawings";
 import { PageHeader } from "@/components/PageHeader";
 import { AlertTriangle, Database, Loader2 } from "lucide-react";
@@ -15,8 +16,10 @@ export default function ChartsPage() {
   const [timeframe, setTimeframe] = useState("H1");
   const [ichimokuEnabled, setIchimokuEnabled] = useState(false);
   const [activeDrawingTool, setActiveDrawingTool] = useState<string | null>(null);
+  const [chartMode, setChartMode] = useState<ChartMode>("historical");
 
-  const { data, error, isLoading } = useMarketData(instrument, timeframe);
+  const { available: liveAvailable } = useLiveStatus();
+  const { data, error, isLoading } = useMarketData(instrument, timeframe, chartMode);
   const {
     drawings,
     createDrawing,
@@ -98,6 +101,9 @@ export default function ChartsPage() {
               timeframe={timeframe}
               onInstrumentChange={setInstrument}
               onTimeframeChange={setTimeframe}
+              mode={chartMode}
+              onModeChange={setChartMode}
+              liveAvailable={liveAvailable}
             />
             <div className="w-px h-6 bg-border" />
             <OverlayControls
@@ -124,6 +130,12 @@ export default function ChartsPage() {
           )}
           {data.source && (
             <span>&middot; source: {data.source}</span>
+          )}
+          {data.mode === "live" && (
+            <span className="inline-flex items-center gap-1 text-green-600 font-medium">
+              <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
+              LIVE
+            </span>
           )}
         </div>
       )}

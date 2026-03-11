@@ -290,6 +290,31 @@ class IGClient:
         """Get market details for an epic."""
         return self._request("GET", f"/markets/{epic}", version="3")
 
+    def get_prices(
+        self,
+        epic: str,
+        resolution: str = "HOUR",
+        num_points: int = 200,
+    ) -> dict:
+        """Fetch recent price candles from IG REST API.
+
+        Args:
+            epic: IG market epic (e.g. "CS.D.EURUSD.CFD.IP").
+            resolution: MINUTE, MINUTE_5, MINUTE_15, MINUTE_30,
+                HOUR, HOUR_4, DAY, WEEK.
+            num_points: Number of candles (max 200 per IG).
+
+        Returns:
+            dict with "prices" list from IG. Each price entry has:
+            snapshotTime, openPrice, highPrice, lowPrice, closePrice,
+            lastTradedVolume.
+        """
+        return self._request(
+            "GET",
+            f"/prices/{epic}/{resolution}/{num_points}",
+            version="3",
+        )
+
     def close(self) -> None:
         """Close the HTTP client."""
         self._http.close()
