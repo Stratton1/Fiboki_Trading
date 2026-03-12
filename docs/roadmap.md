@@ -27,11 +27,11 @@ Reference: [blueprint.md](blueprint.md)
 
 **Pending merges:** None.
 
-**Remaining legacy tasks:**
-- T-12.02: ~~Trade detail replay/inspection~~ — absorbed into Phase 15.3 (DONE)
-- T-13.02: Railway auto-deploy from GitHub
-- T-13.05: Database backup strategy
-- ~~T-13.07: Error tracking (Sentry)~~ — DONE
+**Remaining legacy tasks:** All complete.
+- ~~T-12.02~~: Absorbed into Phase 15.3
+- ~~T-13.02~~: Railway auto-deploys from `main`
+- ~~T-13.05~~: Manual operator backup via `pg_dump` + `DATABASE_PUBLIC_URL` (documented in `docs/operations.md`)
+- ~~T-13.07~~: Sentry SDK integration
 
 ---
 
@@ -74,7 +74,7 @@ The recommended implementation order after completing Phase 14:
 | Phase 10.5: Production Data Access | COMPLETE | All pass | Centralized path resolver, starter dataset (2.3MB, 7 majors H1), unified load_canonical(), .dockerignore |
 | Phase 11: Live Readiness | COMPLETE | All pass | Risk limits config (env-var driven), promotion gates (Paper→Demo, Demo→Live), pre-live checklist, 18 gate tests |
 | Phase 12: Frontend V2 | COMPLETE | Build clean | ExecutionModeBanner, backtest comparison, enhanced settings, searchable instrument select. T-12.02 absorbed into Phase 15.3 |
-| Phase 13: CI/CD & Operations | PARTIAL | All pass | GitHub Actions CI, env var validation, structured logging, request IDs, Sentry error tracking. **Remaining: T-13.02 auto-deploy, T-13.05 DB backups** |
+| Phase 13: CI/CD & Operations | COMPLETE | All pass | GitHub Actions CI, env var validation, structured logging, request IDs, Sentry error tracking, Railway auto-deploy, DB backup strategy (manual `pg_dump` via `DATABASE_PUBLIC_URL`) |
 | Phase 14.1: Online Historical Data | COMPLETE | 467 pass | LRU cache, manifest generator/API, paginated market data, vectorized serialization, dynamic has_canonical_data, data_source observability |
 | Phase 14.2: Drawing Tools | COMPLETE | All pass | DrawingToolbar (6 tools), klinecharts overlays, chart_drawings DB, CRUD API, auto-load/persist |
 | Phase 14.3: Live Chart Mode | COMPLETE | 507 pass | IGDataProvider, TTL cache, ?mode=live, frontend toggle, SWR 5s auto-refresh. Merged to main |
@@ -1607,13 +1607,13 @@ Comparison view works for 3+ backtests. Mode indicator visible on all operationa
 
 - [x] **T-13.01** — GitHub Actions workflow: lint (`ruff`), test (`pytest`), build (`npm run build`) on every PR.
 
-- [ ] **T-13.02** — Automated deployment on merge to main: Railway auto-deploy from GitHub.
+- [x] **T-13.02** — Automated deployment on merge to main: Railway auto-deploy from GitHub.
 
 - [x] **T-13.03** — Deployment smoke test job: automated health check + auth verification post-deploy. Runs after each deployment and alerts on failure.
 
 - [x] **T-13.04** — Environment variable / config validation: fail-fast on startup if required env vars are missing. Clear error messages.
 
-- [ ] **T-13.05** — Database backup strategy: scheduled PostgreSQL backups, documented restoration procedure.
+- [x] **T-13.05** — Database backup strategy: manual operator backup via `pg_dump` using `DATABASE_PUBLIC_URL` (Railway Hobby has no automated backups). Documented in `docs/operations.md`.
 
 - [x] **T-13.06** — Structured logging: JSON log output for production, human-readable for dev. Include request IDs, timing, and error context.
 

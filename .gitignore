@@ -60,3 +60,4 @@ Thumbs.db
 # Database
 *.db
 *.sqlite3
+fiboki_backup_*.sql

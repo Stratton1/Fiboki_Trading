@@ -1,7 +1,7 @@
 # Fiboki — Operations Runbook
 
-Version: 1.0
-Last Updated: 2026-03-09
+Version: 1.1
+Last Updated: 2026-03-12
 
 ---
 
@@ -94,23 +94,62 @@ Missing any of these causes the backend to fail on startup with a clear error me
 
 ### Backup Strategy
 
-Railway PostgreSQL supports automated backups. To configure:
+Railway Hobby plan does **not** include automated PostgreSQL backups. Backups are
+operator-initiated using `pg_dump` from a local terminal.
 
-1. Open Railway dashboard → PostgreSQL plugin → Settings
-2. Enable automated backups (daily recommended)
-3. Set retention period (7 days minimum)
+**Important:** Railway injects two database connection strings:
 
-### Manual Backup
+| Variable | Hostname | Reachable from |
+|----------|----------|----------------|
+| `DATABASE_URL` | `postgres.railway.internal` | Railway services only |
+| `DATABASE_PUBLIC_URL` | `*.proxy.rlwy.net:<port>` | Internet (local terminal) |
+
+Local `pg_dump` commands **must** use `DATABASE_PUBLIC_URL`. Using `DATABASE_URL`
+will fail with a DNS resolution error (`could not translate host name`).
+
+### Manual Backup (from local terminal)
 
 ```bash
-pg_dump $DATABASE_URL > fibokei_backup_$(date +%Y%m%d).sql
+# 1. Extract the public connection string
+export DB_PUBLIC=$(railway variables --json | python3 -c \
+  "import sys,json; print(json.load(sys.stdin).get('DATABASE_PUBLIC_URL',''))")
+
+# 2. Create the backup (use version-matched pg_dump — server is Postgres 17)
+/opt/homebrew/opt/postgresql@17/bin/pg_dump "$DB_PUBLIC" > fiboki_backup_$(date +%Y%m%d).sql
+
+# 3. Verify
+ls -lh fiboki_backup_*.sql
+head -20 fiboki_backup_$(date +%Y%m%d).sql
+# Should show SQL: SET statements, CREATE TABLE, COPY data
 ```
 
-### Restore
+**Prerequisites:** Railway CLI installed and linked (`railway link`), `pg_dump`
+version-matched to the server (`brew install postgresql@17`). The default
+`pg_dump` from `brew install postgresql` may be too old and will abort with a
+version mismatch error.
+
+### When to Back Up
+
+- Before every deployment that includes database model changes
+- Before running destructive maintenance (schema drops, bulk deletes)
+- Weekly as a routine safety measure
+
+### Restore (disaster recovery only)
 
 ```bash
-psql $DATABASE_URL < fibokei_backup_YYYYMMDD.sql
+# DANGER: This overwrites the production database.
+# Only use for disaster recovery after confirming the backup is valid.
+#
+# /opt/homebrew/opt/postgresql@17/bin/psql "$DB_PUBLIC" < fiboki_backup_YYYYMMDD.sql
 ```
+
+### Future Improvements
+
+When moving to Railway Pro or a dedicated Postgres provider:
+
+- Enable automated daily backups with 7-day retention
+- Add off-site backup (S3/R2) via scheduled cron service
+- Add backup verification job that restores to a scratch database
 
 ### Schema Migrations
 
