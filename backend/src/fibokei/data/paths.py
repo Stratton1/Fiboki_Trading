@@ -56,5 +56,17 @@ def get_fixtures_dir() -> Path:
 
 
 def get_starter_dir() -> Path:
-    """Return the starter dataset directory (data/starter/)."""
-    return get_data_root() / "starter"
+    """Return the starter dataset directory (data/starter/).
+
+    When FIBOKEI_DATA_DIR points to a Railway volume, the starter data
+    won't exist there — it's bundled in the Docker image at /app/data/starter/.
+    Fall back to the Docker-bundled location if the primary path doesn't exist.
+    """
+    primary = get_data_root() / "starter"
+    if primary.is_dir():
+        return primary
+    # Docker-bundled fallback (image always has /app/data/starter/)
+    docker_bundled = Path("/app/data/starter")
+    if docker_bundled.is_dir():
+        return docker_bundled
+    return primary

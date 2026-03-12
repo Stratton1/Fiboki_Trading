@@ -187,13 +187,14 @@ def _log_data_paths() -> None:
     logger.info("Starter dir: %s (exists=%s)", starter, starter.exists())
     logger.info("Canonical dir: %s (exists=%s)", canonical, canonical.exists())
 
+    if canonical.exists():
+        canonical_files = list(canonical.rglob("*.parquet"))
+        logger.info("Canonical dataset: %d parquet files", len(canonical_files))
     if starter.exists():
         starter_files = list(starter.rglob("*.parquet"))
         logger.info("Starter dataset: %d parquet files", len(starter_files))
-        for f in starter_files[:10]:
-            logger.info("  %s", f.relative_to(starter))
-    else:
-        logger.warning("Starter directory does not exist — charts/backtests will fail")
+    if not canonical.exists() and not starter.exists():
+        logger.warning("No data directories found — charts/backtests will return 404")
 
 
 def create_app() -> FastAPI:
