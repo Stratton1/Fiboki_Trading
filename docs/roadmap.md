@@ -1,8 +1,8 @@
 # Fiboki — Build Roadmap
 
-Version: 2.2
-Status: **Phase 16.1 COMPLETE** — Fleet dashboard. Phases 15.1–15.4 + 16.1 complete, Phases 16.2–18 planned.
-Last Updated: 2026-03-11
+Version: 2.4
+Status: **Phase 16.3 COMPLETE** — Exposure Dashboard. Phases 15.1–15.4 + 16.1–16.3 complete, Phases 16.4–18 planned.
+Last Updated: 2026-03-12
 Reference: [blueprint.md](blueprint.md)
 
 ---
@@ -84,8 +84,8 @@ The recommended implementation order after completing Phase 14:
 | Phase 15.3: Trade & Backtest Chart Context | COMPLETE | 526 pass | KLineChart with trade markers on backtest/trade detail pages, jump-to-trade, paginated trade list table |
 | Phase 15.4: Results Bookmarking | COMPLETE | 526 pass | BookmarkModel + CRUD API, BookmarkButton component, bookmark toggles on backtests/trades/research pages, research preset save/load UI, bulk data sync CLI |
 | Phase 16.1: Fleet Dashboard | COMPLETE | 526 pass | Fleet overview API (aggregate PnL, per-bot stats, strategy grouping), per-bot trades + equity curve endpoint, enhanced bots page with 6-metric summary, strategy family cards, group-by-strategy table view, stale bot indicators |
-| Phase 16.2: Alert Centre | PLANNED | — | AlertModel, DB alerts from Telegram hook, alert API + page, sidebar badge |
-| Phase 16.3: Exposure Dashboard | PLANNED | — | Exposure API, risk limit indicators, execution audit viewer |
+| Phase 16.2: Alert Centre | COMPLETE | 526 pass | AlertModel + repository (save, list, count_unread, mark_read, mark_all_read), Telegram dual-write hooks, alert CRUD API + unread-count endpoint, Alert Centre page with filters + severity badges, sidebar unread badge (30s poll) |
+| Phase 16.3: Exposure Dashboard | COMPLETE | 526 pass | Exposure API (per-instrument/asset-class/direction breakdown, risk utilization, concentration warnings), exposure page with risk gauge components, execution audit viewer on System page |
 | Phase 16.4: Slippage Analytics | PLANNED | — | Execution quality fields, slippage API + UI, per-trade slippage |
 | Phase 17: Chart Workstation | PLANNED | — | Drawing library, multi-chart layout, trade replay, market session context, scenario sandbox |
 | Phase 18: Strategy Families & Fleet | PLANNED | — | Parameter variations, fleet-aware risk, watchlists, trade journal |
@@ -1900,17 +1900,17 @@ cd frontend && npx next build
 
 ### Tasks
 
-- [ ] **T-16.2.01** — Create `AlertModel` in DB: type (trade_closed, risk_breach, bot_error, daily_summary, system_event), severity (info, warning, critical), title, message, metadata JSON, read status, created_at. Repository: `save_alert()`, `list_alerts()`, `mark_read()`, `mark_all_read()`.
+- [x] **T-16.2.01** — `AlertModel` in DB: alert_type (signal, trade, risk, summary), severity (info, warning, critical), title, message, metadata_json, is_read, created_at. Repository: `save_alert()`, `list_alerts()`, `count_unread_alerts()`, `mark_alert_read()`, `mark_all_alerts_read()`.
 
-- [ ] **T-16.2.02** — Hook alert creation into existing Telegram notifier: every `send_trade_closed()`, `send_risk_alert()`, `send_daily_summary()` call also creates a DB alert. Telegram remains the push channel; DB alerts are the pull channel.
+- [x] **T-16.2.02** — Dual-write hooks in Telegram notifier: `send_signal_alert()`, `send_trade_closed()`, `send_risk_alert()`, `send_daily_summary()` each call `_save_alert_to_db()` with optional `db` session. Telegram push + DB pull.
 
-- [ ] **T-16.2.03** — API endpoints: `GET /api/v1/alerts` (paginated, filterable by type/severity/read), `POST /api/v1/alerts/{id}/read`, `POST /api/v1/alerts/read-all`.
+- [x] **T-16.2.03** — API endpoints: `GET /alerts` (paginated, filterable by type/read), `GET /alerts/unread-count`, `POST /alerts` (manual create), `POST /alerts/{id}/read`, `POST /alerts/read-all`.
 
-- [ ] **T-16.2.04** — Create `frontend/src/app/(dashboard)/alerts/page.tsx` — Alert Centre page. Shows alerts in reverse chronological order with severity badges, type icons, and read/unread styling. Filter by type and severity.
+- [x] **T-16.2.04** — Alert Centre page at `/alerts`. Reverse chronological list with severity badges (info/warning/critical), type icons (signal/trade/risk/summary), read/unread styling. Filter by type and read status. Click-to-mark-read, bulk mark-all-read.
 
-- [ ] **T-16.2.05** — Add unread alert count badge to sidebar navigation. Poll for new alerts via SWR (30s interval).
+- [x] **T-16.2.05** — Sidebar unread alert count badge (amber). Polls via SWR every 30s. Shows "99+" for large counts.
 
-- [ ] **T-16.2.06** — Add alert preferences to Settings page: configure which alert types trigger Telegram vs in-app-only. Per-type toggle.
+- [ ] **T-16.2.06** — Deferred: alert preferences on Settings page (per-type Telegram vs in-app toggle). Not required for MVP; can be added when Telegram is actively used in production.
 
 ### Verification Gate
 
@@ -1932,21 +1932,13 @@ cd frontend && npx next build
 
 ### Tasks
 
-- [ ] **T-16.3.01** — Create `GET /api/v1/paper/exposure` API endpoint returning:
-  - Per-instrument exposure (total long lots, total short lots, net exposure)
-  - Per-asset-class aggregate exposure
-  - Per-direction aggregate (total long, total short)
-  - Portfolio risk utilization (current risk % vs max portfolio risk 5%)
+- [x] **T-16.3.01** — `GET /api/v1/paper/exposure` endpoint: per-instrument exposure (long/short/net/bot_count), per-asset-class aggregation, direction balance, risk utilization (daily/weekly DD% vs soft/hard limits, open trades vs max), concentration warnings (>=3 bots on same instrument).
 
-- [ ] **T-16.3.02** — Create exposure dashboard page (sub-route of `/bots` or standalone `/exposure`). Show:
-  - Instrument exposure heatmap (Plotly) — colour-coded by net position size
-  - Direction balance bar chart (long vs short)
-  - Risk utilization gauge (current % of max portfolio risk)
-  - Correlation warning: flag when >3 bots trade the same instrument
+- [x] **T-16.3.02** — Standalone `/exposure` page with: risk limit gauges (trade capacity, daily DD, weekly DD — green/amber/red), direction balance cards (long vs short counts), instrument exposure table (long/short/net/bots), asset class breakdown cards, concentration warning banner.
 
-- [ ] **T-16.3.03** — Add real-time risk limit indicators: show when approaching daily loss limit (-4%), weekly loss limit (-8%), max simultaneous trades (8). Colour-coded (green/amber/red).
+- [x] **T-16.3.03** — Risk limit indicators integrated into exposure page gauges: `RiskGauge` component shows current value against soft/hard limits with colour-coded progress bars. `TradeCapacityGauge` shows open trades vs max.
 
-- [ ] **T-16.3.04** — Add execution audit log viewer to System page: table showing recent execution audit entries (from `ExecutionAuditModel`). Filterable by execution mode, bot, status.
+- [x] **T-16.3.04** — Execution audit log viewer on System page: `ExecutionAuditSection` component with table of recent entries (time, mode, action, instrument, status, bot). Filterable by execution mode (paper/ig_demo). Auto-refreshes every 30s.
 
 ### Verification Gate
 

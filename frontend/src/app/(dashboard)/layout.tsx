@@ -6,6 +6,7 @@ import { ExecutionModeBanner } from "@/components/ExecutionModeBanner";
 import { LoadingScreen } from "@/components/LoadingScreen";
 import {
   BarChart3,
+  Bell,
   Bot,
   ChartCandlestick,
   History,
@@ -15,6 +16,7 @@ import {
   Search,
   Settings,
   Server,
+  Shield,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -28,7 +30,9 @@ const NAV_ITEMS = [
   { href: "/research", label: "Research", icon: Search },
   { href: "/jobs", label: "Jobs", icon: ListTodo },
   { href: "/bots", label: "Paper Bots", icon: Bot },
+  { href: "/exposure", label: "Exposure", icon: Shield },
   { href: "/trades", label: "Trade History", icon: History },
+  { href: "/alerts", label: "Alerts", icon: Bell },
   { href: "/settings", label: "Settings", icon: Settings },
   { href: "/system", label: "System", icon: Server },
 ];
@@ -41,6 +45,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     refreshInterval: 5000,
   });
   const activeJobCount = jobsData?.active_count ?? 0;
+  const { data: alertData } = useSWR("/alerts/unread-count", () => api.unreadAlertCount(), {
+    refreshInterval: 30000,
+  });
+  const unreadAlertCount = alertData?.unread_count ?? 0;
 
   if (isLoading) {
     return <LoadingScreen />;
@@ -76,6 +84,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 {href === "/jobs" && activeJobCount > 0 && (
                   <span className="ml-auto text-xs bg-primary text-white rounded-full px-1.5 py-0.5 min-w-[18px] text-center leading-none">
                     {activeJobCount}
+                  </span>
+                )}
+                {href === "/alerts" && unreadAlertCount > 0 && (
+                  <span className="ml-auto text-xs bg-amber-500 text-white rounded-full px-1.5 py-0.5 min-w-[18px] text-center leading-none">
+                    {unreadAlertCount > 99 ? "99+" : unreadAlertCount}
                   </span>
                 )}
               </Link>

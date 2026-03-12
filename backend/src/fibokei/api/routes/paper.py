@@ -435,6 +435,91 @@ def get_bot_trades(
     }
 
 
+@router.get("/paper/exposure")
+def get_exposure(
+    user: TokenData = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Portfolio exposure breakdown: per-instrument, per-asset-class, risk utilization."""
+    from fibokei.core.instruments import get_instrument
+    from fibokei.risk.limits import get_risk_limits
+
+    all_bots = get_paper_bots(db)
+    acct = get_or_create_paper_account(db)
+    limits = get_risk_limits()
+    trades = get_paper_trades(db, limit=10000)
+
+    # Per-instrument exposure (based on open positions)
+    instrument_exposure: dict[str, dict] = {}
+    active_positions = 0
+    for bot in all_bots:
+        if bot.position_json is None:
+            continue
+        active_positions += 1
+        inst = bot.instrument
+        direction = bot.position_json.get("direction", "LONG")
+        if inst not in instrument_exposure:
+            instrument_exposure[inst] = {"long": 0, "short": 0, "bot_count": 0}
+        instrument_exposure[inst]["bot_count"] += 1
+        if direction in ("LONG", "long"):
+            instrument_exposure[inst]["long"] += 1
+        else:
+            instrument_exposure[inst]["short"] += 1
+
+    # Derive net per instrument
+    for inst, exp in instrument_exposure.items():
+        exp["net"] = exp["long"] - exp["short"]
+
+    # Per-asset-class aggregation
+    asset_class_exposure: dict[str, dict] = {}
+    for inst, exp in instrument_exposure.items():
+        try:
+            instrument_obj = get_instrument(inst)
+            ac = instrument_obj.asset_class.value
+        except KeyError:
+            ac = "unknown"
+        if ac not in asset_class_exposure:
+            asset_class_exposure[ac] = {"long": 0, "short": 0, "instruments": 0}
+        asset_class_exposure[ac]["long"] += exp["long"]
+        asset_class_exposure[ac]["short"] += exp["short"]
+        asset_class_exposure[ac]["instruments"] += 1
+
+    # Concentration warnings: instruments with >= 3 bots
+    concentration_warnings = [
+        {"instrument": inst, "bot_count": exp["bot_count"]}
+        for inst, exp in instrument_exposure.items()
+        if exp["bot_count"] >= 3
+    ]
+
+    # Risk utilization
+    total_long = sum(e["long"] for e in instrument_exposure.values())
+    total_short = sum(e["short"] for e in instrument_exposure.values())
+
+    daily_dd_pct = abs(min(acct.daily_pnl, 0.0)) / acct.initial_balance * 100 if acct.initial_balance > 0 else 0.0
+    weekly_dd_pct = abs(min(acct.weekly_pnl, 0.0)) / acct.initial_balance * 100 if acct.initial_balance > 0 else 0.0
+
+    return {
+        "instrument_exposure": instrument_exposure,
+        "asset_class_exposure": asset_class_exposure,
+        "direction_balance": {"long": total_long, "short": total_short},
+        "active_positions": active_positions,
+        "concentration_warnings": concentration_warnings,
+        "risk_utilization": {
+            "open_trades": active_positions,
+            "max_open_trades": limits["max_open_trades"],
+            "open_trades_pct": round(active_positions / limits["max_open_trades"] * 100, 1) if limits["max_open_trades"] > 0 else 0,
+            "daily_dd_pct": round(daily_dd_pct, 2),
+            "daily_soft_stop_pct": limits["daily_soft_stop_pct"],
+            "daily_hard_stop_pct": limits["daily_hard_stop_pct"],
+            "weekly_dd_pct": round(weekly_dd_pct, 2),
+            "weekly_soft_stop_pct": limits["weekly_soft_stop_pct"],
+            "weekly_hard_stop_pct": limits["weekly_hard_stop_pct"],
+        },
+        "total_bots": len(all_bots),
+        "total_trades": len(trades),
+    }
+
+
 def _bot_to_response(bot) -> BotStatusResponse:
     """Convert a PaperBotModel to response schema."""
     return BotStatusResponse(

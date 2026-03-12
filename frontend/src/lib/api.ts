@@ -183,6 +183,26 @@ export const api = {
     trades: Array<Record<string, unknown>>;
     equity_curve: number[];
   }>(`/paper/bots/${botId}/trades`),
+  exposure: () => apiFetch<{
+    instrument_exposure: Record<string, { long: number; short: number; net: number; bot_count: number }>;
+    asset_class_exposure: Record<string, { long: number; short: number; instruments: number }>;
+    direction_balance: { long: number; short: number };
+    active_positions: number;
+    concentration_warnings: Array<{ instrument: string; bot_count: number }>;
+    risk_utilization: {
+      open_trades: number;
+      max_open_trades: number;
+      open_trades_pct: number;
+      daily_dd_pct: number;
+      daily_soft_stop_pct: number;
+      daily_hard_stop_pct: number;
+      weekly_dd_pct: number;
+      weekly_soft_stop_pct: number;
+      weekly_hard_stop_pct: number;
+    };
+    total_bots: number;
+    total_trades: number;
+  }>("/paper/exposure"),
 
   // Trades
   listTrades: (params?: string) =>
@@ -332,6 +352,29 @@ export const api = {
       `/bookmarks?entity_type=${entityType}&entity_id=${entityId}`,
       { method: "DELETE" }
     ),
+
+  // Alerts
+  listAlerts: (params?: string) =>
+    apiFetch<{
+      items: Array<{
+        id: number;
+        alert_type: string;
+        severity: string;
+        title: string;
+        message: string;
+        metadata_json: Record<string, unknown> | null;
+        is_read: boolean;
+        created_at: string;
+      }>;
+      unread_count: number;
+      total: number;
+    }>(`/alerts${params ? `?${params}` : ""}`),
+  unreadAlertCount: () =>
+    apiFetch<{ unread_count: number }>("/alerts/unread-count"),
+  markAlertRead: (id: number) =>
+    apiFetch<{ id: number; is_read: boolean }>(`/alerts/${id}/read`, { method: "POST" }),
+  markAllAlertsRead: () =>
+    apiFetch<{ marked_read: number }>("/alerts/read-all", { method: "POST" }),
 };
 
 export { API_URL, ApiError };

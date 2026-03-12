@@ -5,6 +5,7 @@ from sqlalchemy.orm import Session
 
 from fibokei.backtester.result import BacktestResult
 from fibokei.db.models import (
+    AlertModel,
     BacktestRunModel,
     ChartDrawingModel,
     DatasetModel,
@@ -401,3 +402,75 @@ def deactivate_kill_switch(session: Session) -> KillSwitchModel:
     ks.deactivated_at = datetime.now(timezone.utc)
     session.commit()
     return ks
+
+
+# ---------- Alerts ----------
+
+
+def save_alert(
+    session: Session,
+    alert_type: str,
+    severity: str,
+    title: str,
+    message: str,
+    metadata_json: dict | None = None,
+) -> AlertModel:
+    """Create an in-app alert."""
+    model = AlertModel(
+        alert_type=alert_type,
+        severity=severity,
+        title=title,
+        message=message,
+        metadata_json=metadata_json,
+    )
+    session.add(model)
+    session.commit()
+    return model
+
+
+def list_alerts(
+    session: Session,
+    alert_type: str | None = None,
+    is_read: bool | None = None,
+    limit: int = 50,
+    offset: int = 0,
+) -> list[AlertModel]:
+    """List alerts with optional filters, newest first."""
+    stmt = select(AlertModel)
+    if alert_type:
+        stmt = stmt.where(AlertModel.alert_type == alert_type)
+    if is_read is not None:
+        stmt = stmt.where(AlertModel.is_read == is_read)
+    stmt = stmt.order_by(AlertModel.created_at.desc()).offset(offset).limit(limit)
+    return list(session.scalars(stmt).all())
+
+
+def count_unread_alerts(session: Session) -> int:
+    """Count unread alerts."""
+    from sqlalchemy import func
+
+    result = session.execute(
+        select(func.count()).select_from(AlertModel).where(AlertModel.is_read == False)  # noqa: E712
+    )
+    return result.scalar() or 0
+
+
+def mark_alert_read(session: Session, alert_id: int) -> AlertModel | None:
+    """Mark a single alert as read."""
+    alert = session.get(AlertModel, alert_id)
+    if not alert:
+        return None
+    alert.is_read = True
+    session.commit()
+    return alert
+
+
+def mark_all_alerts_read(session: Session) -> int:
+    """Mark all unread alerts as read. Returns count updated."""
+    from sqlalchemy import update
+
+    result = session.execute(
+        update(AlertModel).where(AlertModel.is_read == False).values(is_read=True)  # noqa: E712
+    )
+    session.commit()
+    return result.rowcount

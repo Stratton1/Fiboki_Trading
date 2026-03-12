@@ -276,3 +276,20 @@ class BookmarkModel(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime, default=lambda: datetime.now(timezone.utc)
     )
+
+
+class AlertModel(Base):
+    """In-app alert for signals, trades, risk events, and summaries."""
+
+    __tablename__ = "alerts"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    alert_type: Mapped[str] = mapped_column(String(30), nullable=False, index=True)  # "signal" | "trade" | "risk" | "summary"
+    severity: Mapped[str] = mapped_column(String(20), nullable=False, default="info")  # "info" | "warning" | "critical"
+    title: Mapped[str] = mapped_column(String(200), nullable=False)
+    message: Mapped[str] = mapped_column(Text, nullable=False)
+    metadata_json: Mapped[dict | None] = mapped_column(JSON)
+    is_read: Mapped[bool] = mapped_column(Boolean, default=False, index=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, default=lambda: datetime.now(timezone.utc), index=True
+    )

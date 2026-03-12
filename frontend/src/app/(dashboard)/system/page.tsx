@@ -13,6 +13,7 @@ import {
   Copy,
   Database,
   ExternalLink,
+  FileText,
   RefreshCw,
   ShieldCheck,
   ShieldOff,
@@ -21,6 +22,84 @@ import {
 import { useManifest } from "@/lib/hooks/use-manifest";
 
 type DiagResult = { status: "idle" | "running" | "pass" | "fail"; detail: string };
+
+const AUDIT_STATUS_VARIANT: Record<string, "ok" | "warn" | "error" | "neutral"> = {
+  success: "ok",
+  failed: "error",
+  rejected: "warn",
+};
+
+function ExecutionAuditSection() {
+  const [auditFilter, setAuditFilter] = useState<string>("");
+  const params = auditFilter ? `execution_mode=${auditFilter}` : undefined;
+  const { data: auditEntries } = useSWR(
+    `/execution/audit?${params ?? "all"}`,
+    () => api.executionAudit(params),
+    { refreshInterval: 30000 }
+  );
+
+  return (
+    <div className="card mb-6">
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-2">
+          <FileText size={14} className="text-foreground-muted" />
+          <p className="section-label !mb-0">Execution Audit Log</p>
+        </div>
+        <select
+          value={auditFilter}
+          onChange={(e) => setAuditFilter(e.target.value)}
+          className="input text-xs"
+        >
+          <option value="">All modes</option>
+          <option value="paper">Paper</option>
+          <option value="ig_demo">IG Demo</option>
+        </select>
+      </div>
+      {!auditEntries || auditEntries.length === 0 ? (
+        <p className="text-foreground-muted text-sm">No audit entries yet.</p>
+      ) : (
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-gray-200">
+                <th className="text-left px-3 py-2 text-xs text-foreground-muted">Time</th>
+                <th className="text-left px-3 py-2 text-xs text-foreground-muted">Mode</th>
+                <th className="text-left px-3 py-2 text-xs text-foreground-muted">Action</th>
+                <th className="text-left px-3 py-2 text-xs text-foreground-muted">Instrument</th>
+                <th className="text-left px-3 py-2 text-xs text-foreground-muted">Status</th>
+                <th className="text-left px-3 py-2 text-xs text-foreground-muted">Bot</th>
+              </tr>
+            </thead>
+            <tbody>
+              {auditEntries.slice(0, 50).map((entry) => (
+                <tr key={entry.id} className="border-b border-gray-100">
+                  <td className="px-3 py-1.5 text-xs text-foreground-muted whitespace-nowrap">
+                    {new Date(entry.timestamp).toLocaleString()}
+                  </td>
+                  <td className="px-3 py-1.5">
+                    <StatusBadge variant={entry.execution_mode === "ig_demo" ? "warn" : "neutral"}>
+                      {entry.execution_mode}
+                    </StatusBadge>
+                  </td>
+                  <td className="px-3 py-1.5 font-medium">{entry.action}</td>
+                  <td className="px-3 py-1.5">{entry.instrument}</td>
+                  <td className="px-3 py-1.5">
+                    <StatusBadge variant={AUDIT_STATUS_VARIANT[entry.status] ?? "neutral"}>
+                      {entry.status}
+                    </StatusBadge>
+                  </td>
+                  <td className="px-3 py-1.5 text-xs text-foreground-muted">
+                    {entry.bot_id ?? "—"}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function SystemPage() {
   const { user } = useAuth();
@@ -360,6 +439,9 @@ export default function SystemPage() {
           })}
         </div>
       </div>
+
+      {/* Execution Audit Log */}
+      <ExecutionAuditSection />
 
       {/* Quick Links */}
       <div className="card">
