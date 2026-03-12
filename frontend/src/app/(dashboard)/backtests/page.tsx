@@ -26,7 +26,7 @@ export default function BacktestsPage() {
   const { isBookmarked, toggle: toggleBookmark } = useBookmarks("backtest");
   const [showBookmarked, setShowBookmarked] = useState(false);
 
-  const ALL_TIMEFRAMES = ["M1", "M2", "M5", "M15", "M30", "H1", "H4"];
+  const ALL_TIMEFRAMES = ["M1", "M5", "M15", "M30", "H1", "H4"];
   const manifestTimeframes = instrument ? availableTimeframes(instrument) : [];
   const noDataForCombo = instrument && timeframe && !hasData(instrument, timeframe);
   const comboInfo = instrument && timeframe ? datasetInfo(instrument, timeframe) : undefined;

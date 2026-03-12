@@ -229,43 +229,31 @@ This ensures charts, backtests, and research work out of the box in production w
 
 ## Railway Persistent Volume
 
-For production with the full canonical dataset, use a Railway persistent volume instead of bundling data in the Docker image.
+For production with the full canonical dataset (961MB, 60 instruments × 6 timeframes), use a Railway persistent volume. See **`docs/operations.md` → "Production Data: Full Canonical Dataset on Railway"** for detailed operator instructions.
 
-### Setup
+### Quick Reference
 
-1. Create a Railway volume: `railway volume create fiboki-data --size 2GB`
-2. Mount to backend service at `/data` (Railway dashboard: Service → Volumes → Mount Path: `/data`)
-3. Set env var: `FIBOKEI_DATA_DIR=/data`
+1. Railway dashboard → Backend Service → Settings → Volumes → New Volume: name `fiboki-data`, mount at `/data`
+2. Set env var: `FIBOKEI_DATA_DIR=/data`
+3. Upload canonical parquet files to `/data/canonical/histdata/{symbol}/`
+4. Generate manifest: `railway run python -m fibokei manifest generate` or `POST /api/v1/data/manifest/refresh`
+5. Verify: `GET /api/v1/data/manifest` should return 360 datasets
 
-### Populating Data
+### Supported Timeframes
 
-```bash
-# Upload canonical data to volume
-railway shell
-# From local: rsync -avz data/canonical/ railway-host:/data/canonical/
-
-# Generate manifest
-railway run python -m fibokei manifest
-
-# Verify
-curl https://api.fiboki.uk/api/v1/data/manifest | jq '.datasets | length'
-# Expected: 360 (60 instruments × 6 timeframes)
-```
+M1, M5, M15, M30, H1, H4 — all produced by the HistData canonical pipeline.
+**M2 is not supported** — no data source produces it.
 
 ### Data Resolution Order
 
-The backend loads data in this priority:
-
 1. `canonical/dukascopy/` — validation-grade
 2. `canonical/histdata/` — bulk research
-3. `starter/histdata/` — Docker-bundled fallback
+3. `starter/histdata/` — Docker-bundled fallback (H1 only, 7 majors)
 4. `fixtures/` — legacy
-
-Falls back automatically. Logs warnings on fallback.
 
 ### Fallback Behavior
 
-If the volume is not mounted or `FIBOKEI_DATA_DIR` is unset, the backend falls back to the starter dataset bundled in the Docker image (see "Starter Dataset" above). This means deployments work out of the box — the volume is an enhancement, not a requirement.
+If the volume is not mounted or `FIBOKEI_DATA_DIR` is unset, the backend falls back to the starter dataset bundled in the Docker image. Deployments work out of the box — the volume is an enhancement, not a requirement.
 
 ---
 
