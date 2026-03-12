@@ -56,7 +56,15 @@ async function apiFetch<T>(path: string, options: RequestInit = {}): Promise<T> 
 
   if (!res.ok) {
     const body = await res.json().catch(() => ({ detail: "Request failed" }));
-    throw new ApiError(res.status, body.detail || "Request failed");
+    let message = "Request failed";
+    if (typeof body.detail === "string") {
+      message = body.detail;
+    } else if (Array.isArray(body.detail)) {
+      message = body.detail.map((e: { msg?: string; loc?: string[] }) =>
+        e.msg ? `${e.msg} (${(e.loc ?? []).join(".")})` : JSON.stringify(e)
+      ).join("; ");
+    }
+    throw new ApiError(res.status, message);
   }
 
   return res.json();
