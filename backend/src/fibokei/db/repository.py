@@ -1,7 +1,28 @@
 """Data access functions for Fiboki persistence."""
 
+import math
+
+import numpy as np
 from sqlalchemy import select
 from sqlalchemy.orm import Session
+
+
+def _sanitize_for_json(obj):
+    """Convert numpy types to native Python types for JSON/SQL serialization."""
+    if isinstance(obj, dict):
+        return {k: _sanitize_for_json(v) for k, v in obj.items()}
+    if isinstance(obj, list):
+        return [_sanitize_for_json(v) for v in obj]
+    if isinstance(obj, (np.floating, np.float64, np.float32)):
+        v = float(obj)
+        return None if math.isnan(v) or math.isinf(v) else v
+    if isinstance(obj, (np.integer, np.int64, np.int32)):
+        return int(obj)
+    if isinstance(obj, np.bool_):
+        return bool(obj)
+    if isinstance(obj, np.ndarray):
+        return [_sanitize_for_json(v) for v in obj.tolist()]
+    return obj
 
 from fibokei.backtester.result import BacktestResult
 from fibokei.db.models import (
@@ -100,10 +121,10 @@ def save_backtest_result(
         start_date=result.start_date,
         end_date=result.end_date,
         total_trades=len(result.trades),
-        net_profit=metrics.get("total_net_profit", 0.0),
-        sharpe_ratio=metrics.get("sharpe_ratio"),
-        max_drawdown_pct=metrics.get("max_drawdown_pct"),
-        metrics_json=metrics,
+        net_profit=float(metrics.get("total_net_profit", 0.0)),
+        sharpe_ratio=float(metrics["sharpe_ratio"]) if metrics.get("sharpe_ratio") is not None else None,
+        max_drawdown_pct=float(metrics["max_drawdown_pct"]) if metrics.get("max_drawdown_pct") is not None else None,
+        metrics_json=_sanitize_for_json(metrics),
     )
     session.add(run)
     session.flush()  # Get the run.id
@@ -155,9 +176,9 @@ def save_research_results(
             strategy_id=r["strategy_id"],
             instrument=r["instrument"],
             timeframe=r["timeframe"],
-            composite_score=r.get("composite_score", 0.0),
-            rank=r.get("rank", 0),
-            metrics_json=r.get("metrics"),
+            composite_score=float(r.get("composite_score", 0.0)),
+            rank=int(r.get("rank", 0)),
+            metrics_json=_sanitize_for_json(r.get("metrics")),
         )
         session.add(model)
         models.append(model)
