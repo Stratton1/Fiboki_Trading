@@ -17,7 +17,7 @@ import type {
   ValidationBatchResponse,
 } from "@/types/contracts/research";
 
-const TIMEFRAMES = ["M15", "H1", "H4", "D"];
+const TIMEFRAMES = ["M1", "M2", "M5", "M15", "M30", "H1", "H4"];
 
 const DEFAULT_WEIGHTS: ScoringWeights = {
   weight_risk_adjusted: 0.25,

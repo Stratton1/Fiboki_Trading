@@ -195,10 +195,13 @@ export default function BotsPage() {
           <div>
             <label className="block text-xs text-foreground-muted mb-1.5">Timeframe</label>
             <select value={timeframe} onChange={(e) => setTimeframe(e.target.value)} className="input">
+              <option value="M1">M1</option>
+              <option value="M2">M2</option>
+              <option value="M5">M5</option>
               <option value="M15">M15</option>
+              <option value="M30">M30</option>
               <option value="H1">H1</option>
               <option value="H4">H4</option>
-              <option value="D">D</option>
             </select>
           </div>
           <button type="submit" disabled={creating || !strategy || !instrument} className="btn btn-primary">
