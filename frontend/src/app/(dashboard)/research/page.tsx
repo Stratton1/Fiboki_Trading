@@ -86,7 +86,7 @@ export default function ResearchPage() {
 
   function selectAllStrategies() {
     if (!strategies) return;
-    setSelectedStrategies(strategies.map((s: any) => s.strategy_id));
+    setSelectedStrategies(strategies.map((s: any) => s.id));
   }
 
   function toggleTimeframe(tf: string) {
@@ -287,16 +287,16 @@ export default function ResearchPage() {
           <div className="flex flex-wrap gap-2">
             {strategies?.map((s: any) => (
               <button
-                key={s.strategy_id}
+                key={s.id}
                 type="button"
-                onClick={() => toggleStrategy(s.strategy_id)}
+                onClick={() => toggleStrategy(s.id)}
                 className={`px-2 py-1 rounded text-xs border ${
-                  selectedStrategies.includes(s.strategy_id)
+                  selectedStrategies.includes(s.id)
                     ? "bg-primary text-white border-primary"
                     : "bg-background border-gray-300 text-foreground"
                 }`}
               >
-                {s.strategy_name || s.strategy_id}
+                {s.name || s.id}
               </button>
             ))}
           </div>
