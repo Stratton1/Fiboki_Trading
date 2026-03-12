@@ -1,11 +1,17 @@
 """Data management API endpoints."""
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+import io
+import logging
+import tarfile
+
+from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile
 from pydantic import BaseModel, Field
 
 from fibokei.api.auth import TokenData, get_current_user
 from fibokei.data.manifest import generate_manifest, load_manifest
 from fibokei.data.paths import get_canonical_dir
+
+logger = logging.getLogger(__name__)
 from fibokei.data.providers.base import ProviderID
 from fibokei.data.providers.registry import get_provider, list_providers, load_canonical
 from fibokei.data.providers.symbol_map import list_mapped_symbols, provider_has_symbol
@@ -170,3 +176,51 @@ def refresh_manifest(user: TokenData = Depends(get_current_user)):
     global _cached_manifest
     _cached_manifest = generate_manifest(_CANONICAL_DIR)
     return {"status": "ok", "datasets": len(_cached_manifest.get("datasets", []))}
+
+
+@router.post("/data/upload-tar")
+async def upload_canonical_tar(
+    file: UploadFile,
+    user: TokenData = Depends(get_current_user),
+):
+    """Upload a tar.gz of canonical data and extract to the canonical directory.
+
+    Expects a tar.gz containing a ``histdata/`` directory tree with parquet files:
+        histdata/{symbol}/{symbol}_{timeframe}.parquet
+
+    This is a one-time volume seeding endpoint. Use from the local machine:
+        tar czf canonical.tar.gz -C data/canonical histdata
+        curl -X POST https://api.fiboki.uk/api/v1/data/upload-tar \\
+          -H "Authorization: Bearer $TOKEN" \\
+          -F "file=@canonical.tar.gz"
+    """
+    if not file.filename or not file.filename.endswith((".tar.gz", ".tgz", ".tar")):
+        raise HTTPException(400, "File must be a .tar.gz, .tgz, or .tar archive")
+
+    content = await file.read()
+    logger.info("Received data upload: %s (%d bytes)", file.filename, len(content))
+
+    target = _CANONICAL_DIR
+    target.mkdir(parents=True, exist_ok=True)
+
+    try:
+        mode = "r:gz" if file.filename.endswith((".tar.gz", ".tgz")) else "r:"
+        with tarfile.open(fileobj=io.BytesIO(content), mode=mode) as tar:
+            # Security: reject paths that escape the target directory
+            for member in tar.getmembers():
+                resolved = (target / member.name).resolve()
+                if not str(resolved).startswith(str(target.resolve())):
+                    raise HTTPException(400, f"Unsafe path in archive: {member.name}")
+            tar.extractall(path=target, filter="data")
+    except tarfile.TarError as e:
+        raise HTTPException(400, f"Invalid tar archive: {e}")
+
+    # Count extracted files
+    parquet_files = list(target.rglob("*.parquet"))
+    logger.info("Extracted %d parquet files to %s", len(parquet_files), target)
+
+    return {
+        "status": "ok",
+        "target": str(target),
+        "parquet_files": len(parquet_files),
+    }
