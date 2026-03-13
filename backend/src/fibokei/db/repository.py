@@ -416,6 +416,60 @@ def get_execution_audit(
     return list(session.scalars(stmt).all())
 
 
+def get_slippage_summary(
+    session: Session,
+    instrument: str | None = None,
+    limit: int = 500,
+) -> dict:
+    """Aggregate slippage statistics from execution audit entries.
+
+    Returns per-instrument stats and an overall summary.
+    """
+    from sqlalchemy import func
+
+    stmt = select(
+        ExecutionAuditModel.instrument,
+        func.count().label("fills"),
+        func.avg(ExecutionAuditModel.slippage_pips).label("avg_slippage"),
+        func.max(ExecutionAuditModel.slippage_pips).label("max_slippage"),
+        func.min(ExecutionAuditModel.slippage_pips).label("min_slippage"),
+        func.avg(ExecutionAuditModel.fill_latency_ms).label("avg_latency_ms"),
+    ).where(
+        ExecutionAuditModel.filled_price.is_not(None),
+    ).where(
+        ExecutionAuditModel.status == "success",
+    )
+
+    if instrument:
+        stmt = stmt.where(ExecutionAuditModel.instrument == instrument)
+
+    stmt = stmt.group_by(ExecutionAuditModel.instrument)
+    rows = session.execute(stmt).all()
+
+    instruments = []
+    total_fills = 0
+    total_slippage_sum = 0.0
+    for row in rows:
+        avg_slip = round(float(row.avg_slippage or 0), 2)
+        fills = int(row.fills)
+        total_fills += fills
+        total_slippage_sum += avg_slip * fills
+        instruments.append({
+            "instrument": row.instrument,
+            "fills": fills,
+            "avg_slippage_pips": avg_slip,
+            "max_slippage_pips": round(float(row.max_slippage or 0), 2),
+            "min_slippage_pips": round(float(row.min_slippage or 0), 2),
+            "avg_latency_ms": round(float(row.avg_latency_ms or 0), 1),
+        })
+
+    return {
+        "total_fills": total_fills,
+        "avg_slippage_pips": round(total_slippage_sum / total_fills, 2) if total_fills else 0.0,
+        "instruments": instruments,
+    }
+
+
 # ---------- Kill switch ----------
 
 

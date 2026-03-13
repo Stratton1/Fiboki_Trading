@@ -89,8 +89,31 @@ def _create_engine_and_session():
         engine = create_engine(DATABASE_URL)
 
     Base.metadata.create_all(engine)
+    _ensure_new_columns(engine)
     session_factory = sessionmaker(bind=engine)
     return engine, session_factory
+
+
+def _ensure_new_columns(engine) -> None:
+    """Add columns that create_all won't add to existing tables (PostgreSQL)."""
+    from sqlalchemy import inspect, text
+
+    inspector = inspect(engine)
+    if "execution_audit" not in inspector.get_table_names():
+        return
+    existing = {col["name"] for col in inspector.get_columns("execution_audit")}
+    new_cols = {
+        "requested_price": "FLOAT",
+        "filled_price": "FLOAT",
+        "slippage_pips": "FLOAT",
+        "fill_latency_ms": "INTEGER",
+    }
+    with engine.begin() as conn:
+        for col_name, col_type in new_cols.items():
+            if col_name not in existing:
+                conn.execute(text(
+                    f"ALTER TABLE execution_audit ADD COLUMN {col_name} {col_type}"
+                ))
 
 
 def _init_sentry() -> None:

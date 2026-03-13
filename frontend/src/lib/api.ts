@@ -290,6 +290,19 @@ export const api = {
         bot_id: string | null;
       }>
     >(`/execution/audit${params ? `?${params}` : ""}`),
+  slippage: (instrument?: string) =>
+    apiFetch<{
+      total_fills: number;
+      avg_slippage_pips: number;
+      instruments: Array<{
+        instrument: string;
+        fills: number;
+        avg_slippage_pips: number;
+        max_slippage_pips: number;
+        min_slippage_pips: number;
+        avg_latency_ms: number;
+      }>;
+    }>(`/execution/slippage${instrument ? `?instrument=${instrument}` : ""}`),
 
   // Data availability
   manifest: () =>

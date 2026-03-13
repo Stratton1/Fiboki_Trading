@@ -1,7 +1,7 @@
 # Fiboki — Build Roadmap
 
-Version: 2.5
-Status: **Operator Workflow Stabilization COMPLETE** — 6 production defects fixed. Phases 1–16.3 complete, Phases 16.4–18 planned.
+Version: 2.6
+Status: **Phase 16.4 COMPLETE** — Slippage Analytics. Phases 1–16.4 complete, Phases 17–18 planned.
 Last Updated: 2026-03-13
 Reference: [blueprint.md](blueprint.md)
 
@@ -87,7 +87,7 @@ The recommended implementation order after completing Phase 14:
 | Phase 16.2: Alert Centre | COMPLETE | 526 pass | AlertModel + repository (save, list, count_unread, mark_read, mark_all_read), Telegram dual-write hooks, alert CRUD API + unread-count endpoint, Alert Centre page with filters + severity badges, sidebar unread badge (30s poll) |
 | Phase 16.3: Exposure Dashboard | COMPLETE | 526 pass | Exposure API (per-instrument/asset-class/direction breakdown, risk utilization, concentration warnings), exposure page with risk gauge components, execution audit viewer on System page |
 | Operator Workflow Stabilization | COMPLETE | 526 pass | Strategy dropdown fix (field name mismatch), run-scoped research rankings with toggle, per-combo job progress (5%→85%), promotion-to-paper repair (case-insensitive gate + 30s timeout + error categorization), delete/cleanup endpoints (jobs, research runs, backtests) + Jobs page cleanup UI, inline error surfacing on jobs + zero-qualified explanation |
-| Phase 16.4: Slippage Analytics | PLANNED | — | Execution quality fields, slippage API + UI, per-trade slippage |
+| Phase 16.4: Slippage Analytics | COMPLETE | 526 pass | ExecutionAuditModel extended (requested_price, filled_price, slippage_pips, fill_latency_ms), auto-migration for PostgreSQL, slippage aggregation repository, GET /execution/slippage API, IG adapter captures fill price + latency, System page Slippage Analytics section with per-instrument table |
 | Phase 17: Chart Workstation | PLANNED | — | Drawing library, multi-chart layout, trade replay, market session context, scenario sandbox |
 | Phase 18: Strategy Families & Fleet | PLANNED | — | Parameter variations, fleet-aware risk, watchlists, trade journal |
 

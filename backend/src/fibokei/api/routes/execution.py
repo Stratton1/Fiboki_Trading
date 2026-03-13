@@ -12,6 +12,7 @@ from fibokei.db.repository import (
     deactivate_kill_switch,
     get_execution_audit,
     get_kill_switch,
+    get_slippage_summary,
 )
 
 router = APIRouter(tags=["execution"])
@@ -49,6 +50,25 @@ class AuditEntryResponse(BaseModel):
     status: str
     error_message: str | None = None
     bot_id: str | None = None
+    requested_price: float | None = None
+    filled_price: float | None = None
+    slippage_pips: float | None = None
+    fill_latency_ms: int | None = None
+
+
+class SlippageInstrumentResponse(BaseModel):
+    instrument: str
+    fills: int
+    avg_slippage_pips: float
+    max_slippage_pips: float
+    min_slippage_pips: float
+    avg_latency_ms: float
+
+
+class SlippageSummaryResponse(BaseModel):
+    total_fills: int
+    avg_slippage_pips: float
+    instruments: list[SlippageInstrumentResponse]
 
 
 # ---------- Endpoints ----------
@@ -138,6 +158,21 @@ def get_audit_log(
             status=e.status,
             error_message=e.error_message,
             bot_id=e.bot_id,
+            requested_price=e.requested_price,
+            filled_price=e.filled_price,
+            slippage_pips=e.slippage_pips,
+            fill_latency_ms=e.fill_latency_ms,
         )
         for e in entries
     ]
+
+
+@router.get("/execution/slippage", response_model=SlippageSummaryResponse)
+def get_slippage(
+    instrument: str | None = None,
+    user: TokenData = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Get slippage analytics summary, optionally filtered by instrument."""
+    summary = get_slippage_summary(db, instrument=instrument)
+    return summary

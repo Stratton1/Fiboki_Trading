@@ -66,11 +66,21 @@ class IGExecutionAdapter(ExecutionAdapter):
         if order.get("limit_distance") is not None:
             params["limitDistance"] = order["limit_distance"]
 
+        import time
+
+        requested_price = order.get("requested_price")
+        t_start = time.monotonic()
+
         try:
             result = self._client.open_position(params)
+            fill_latency_ms = int((time.monotonic() - t_start) * 1000)
             deal_ref = result.get("dealReference", "")
             if deal_ref:
                 confirmation = self._client.get_deal_confirmation(deal_ref)
+                filled_price = confirmation.get("level")
+                slippage_pips = None
+                if filled_price is not None and requested_price is not None:
+                    slippage_pips = round(abs(filled_price - requested_price) * 10000, 2)
                 return {
                     "status": confirmation.get("dealStatus", "UNKNOWN"),
                     "deal_id": confirmation.get("dealId", ""),
@@ -78,8 +88,12 @@ class IGExecutionAdapter(ExecutionAdapter):
                     "direction": direction,
                     "size": size,
                     "epic": epic,
-                    "level": confirmation.get("level"),
+                    "level": filled_price,
                     "reason": confirmation.get("reason", ""),
+                    "requested_price": requested_price,
+                    "filled_price": filled_price,
+                    "slippage_pips": slippage_pips,
+                    "fill_latency_ms": fill_latency_ms,
                 }
             return {"status": "UNKNOWN", "deal_reference": deal_ref, "raw": result}
         except IGClientError as e:

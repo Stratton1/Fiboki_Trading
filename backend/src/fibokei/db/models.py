@@ -205,6 +205,11 @@ class ExecutionAuditModel(Base):
     detail_json: Mapped[dict | None] = mapped_column(JSON)
     error_message: Mapped[str | None] = mapped_column(Text)
     bot_id: Mapped[str | None] = mapped_column(String(20), index=True)
+    # Slippage analytics fields (Phase 16.4)
+    requested_price: Mapped[float | None] = mapped_column(Float)
+    filled_price: Mapped[float | None] = mapped_column(Float)
+    slippage_pips: Mapped[float | None] = mapped_column(Float)
+    fill_latency_ms: Mapped[int | None] = mapped_column(Integer)
 
 
 class ChartDrawingModel(Base):

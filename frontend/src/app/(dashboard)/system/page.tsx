@@ -9,6 +9,7 @@ import { PageHeader } from "@/components/PageHeader";
 import {
   Activity,
   AlertTriangle,
+  BarChart3,
   CheckCircle,
   Copy,
   Database,
@@ -96,6 +97,72 @@ function ExecutionAuditSection() {
             </tbody>
           </table>
         </div>
+      )}
+    </div>
+  );
+}
+
+function SlippageSection() {
+  const { data: slippage } = useSWR(
+    "/execution/slippage",
+    () => api.slippage(),
+    { refreshInterval: 60000 }
+  );
+
+  return (
+    <div className="card mb-6">
+      <div className="flex items-center gap-2 mb-4">
+        <BarChart3 size={14} className="text-foreground-muted" />
+        <p className="section-label !mb-0">Slippage Analytics</p>
+      </div>
+      {!slippage || slippage.total_fills === 0 ? (
+        <p className="text-foreground-muted text-sm">
+          No execution fill data yet. Slippage analytics will appear once IG demo fills accumulate.
+          Paper mode has zero slippage by design.
+        </p>
+      ) : (
+        <>
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mb-4">
+            <div>
+              <p className="text-xs text-foreground-muted mb-1">Total Fills</p>
+              <p className="text-lg font-semibold">{slippage.total_fills}</p>
+            </div>
+            <div>
+              <p className="text-xs text-foreground-muted mb-1">Avg Slippage</p>
+              <p className="text-lg font-semibold">{slippage.avg_slippage_pips} pips</p>
+            </div>
+            <div>
+              <p className="text-xs text-foreground-muted mb-1">Instruments</p>
+              <p className="text-lg font-semibold">{slippage.instruments.length}</p>
+            </div>
+          </div>
+          {slippage.instruments.length > 0 && (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-gray-200">
+                    <th className="text-left px-3 py-2 text-xs text-foreground-muted">Instrument</th>
+                    <th className="text-right px-3 py-2 text-xs text-foreground-muted">Fills</th>
+                    <th className="text-right px-3 py-2 text-xs text-foreground-muted">Avg Slip</th>
+                    <th className="text-right px-3 py-2 text-xs text-foreground-muted">Max Slip</th>
+                    <th className="text-right px-3 py-2 text-xs text-foreground-muted">Avg Latency</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {slippage.instruments.map((inst) => (
+                    <tr key={inst.instrument} className="border-b border-gray-100">
+                      <td className="px-3 py-1.5 font-medium">{inst.instrument}</td>
+                      <td className="px-3 py-1.5 text-right tabular-nums">{inst.fills}</td>
+                      <td className="px-3 py-1.5 text-right tabular-nums">{inst.avg_slippage_pips} pips</td>
+                      <td className="px-3 py-1.5 text-right tabular-nums">{inst.max_slippage_pips} pips</td>
+                      <td className="px-3 py-1.5 text-right tabular-nums">{inst.avg_latency_ms}ms</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </>
       )}
     </div>
   );
@@ -442,6 +509,9 @@ export default function SystemPage() {
 
       {/* Execution Audit Log */}
       <ExecutionAuditSection />
+
+      {/* Slippage Analytics */}
+      <SlippageSection />
 
       {/* Quick Links */}
       <div className="card">
