@@ -4,6 +4,7 @@ import { useEffect, useRef, useCallback } from "react";
 import { init, dispose } from "klinecharts";
 import type { Chart, KLineData } from "klinecharts";
 import { mapCandlesToKLine } from "@/lib/chart-mappers/candle-mapper";
+import { formatPnl } from "@/lib/format-currency";
 import type { MarketDataResponse } from "@/types/contracts/chart";
 import type { Trade } from "@/types/contracts/trades";
 
@@ -158,7 +159,7 @@ export default function TradeMarkerChart({
             paddingBottom: 2,
           },
         },
-        extendData: `EXIT ${trade.pnl >= 0 ? "+" : ""}${trade.pnl.toFixed(2)}`,
+        extendData: `EXIT ${formatPnl(trade.pnl)}`,
         lock: true,
         onPressedMoving: () => {},
       });

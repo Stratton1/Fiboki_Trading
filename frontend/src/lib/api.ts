@@ -100,6 +100,10 @@ export const api = {
     apiFetch<import("@/types/contracts/chart").MarketDataResponse>(
       `/market-data/${instrument}/${timeframe}?mode=${mode}`
     ),
+  sessions: () =>
+    apiFetch<{
+      sessions: Array<{ name: string; start_utc: string; end_utc: string; color: string }>;
+    }>("/market-data/sessions"),
   liveStatus: () =>
     apiFetch<import("@/types/contracts/chart").LiveStatusResponse>(
       "/market-data/live/status"
@@ -162,6 +166,13 @@ export const api = {
     }),
   deletePreset: (id: number) =>
     apiFetch<{ deleted: number }>(`/research/presets/${id}`, { method: "DELETE" }),
+  runScenario: (body: {
+    combos: Array<{ strategy_id: string; instrument: string; timeframe: string; risk_pct?: number }>;
+    capital?: number;
+  }) =>
+    apiFetch<{ job_id: string; job_type: string; label: string; state: string }>(
+      "/research/scenario", { method: "POST", body: JSON.stringify(body) }
+    ),
   deleteResearchRun: (runId: string) =>
     apiFetch<{ deleted: string; results_removed: number }>(`/research/runs/${runId}`, { method: "DELETE" }),
 
@@ -373,6 +384,21 @@ export const api = {
       `/drawings?instrument=${instrument}&timeframe=${timeframe}`,
       { method: "DELETE" }
     ),
+
+  // Drawing Templates
+  listDrawingTemplates: () =>
+    apiFetch<import("@/types/contracts/drawings").DrawingTemplate[]>(
+      "/charts/drawing-templates"
+    ),
+  createDrawingTemplate: (body: import("@/types/contracts/drawings").DrawingTemplateCreate) =>
+    apiFetch<import("@/types/contracts/drawings").DrawingTemplate>(
+      "/charts/drawing-templates",
+      { method: "POST", body: JSON.stringify(body) }
+    ),
+  deleteDrawingTemplate: (id: number) =>
+    apiFetch<{ deleted: number }>(`/charts/drawing-templates/${id}`, {
+      method: "DELETE",
+    }),
 
   // Bookmarks
   listBookmarks: (entityType?: string) =>

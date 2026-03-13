@@ -1,14 +1,21 @@
 "use client";
 
-import { use } from "react";
+import { use, useState } from "react";
 import Link from "next/link";
 import dynamic from "next/dynamic";
 import { useTrade } from "@/lib/hooks/use-trades";
+import { formatPnl } from "@/lib/format-currency";
 import { useBacktest } from "@/lib/hooks/use-backtests";
 import { useMarketData } from "@/lib/hooks/use-market-data";
+import { Play, X } from "lucide-react";
 
 const TradeMarkerChart = dynamic(
   () => import("@/components/charts/core/TradeMarkerChart"),
+  { ssr: false }
+);
+
+const TradeReplay = dynamic(
+  () => import("@/components/charts/core/TradeReplay"),
   { ssr: false }
 );
 
@@ -16,6 +23,7 @@ export default function TradeDetailPage({ params }: { params: Promise<{ id: stri
   const { id } = use(params);
   const numId = parseInt(id, 10);
   const { data: trade, isLoading } = useTrade(isNaN(numId) ? null : numId);
+  const [replayMode, setReplayMode] = useState(false);
 
   // Look up the backtest to get timeframe
   const { data: bt } = useBacktest(trade?.backtest_run_id ?? null);
@@ -48,7 +56,7 @@ export default function TradeDetailPage({ params }: { params: Promise<{ id: stri
     { label: "Exit Price", value: trade.exit_price.toFixed(5) },
     {
       label: "PnL",
-      value: `${trade.pnl >= 0 ? "+" : ""}$${trade.pnl.toFixed(2)}`,
+      value: formatPnl(trade.pnl),
       color: trade.pnl >= 0 ? "text-primary" : "text-danger",
     },
     { label: "Bars in Trade", value: String(trade.bars_in_trade) },
@@ -64,6 +72,19 @@ export default function TradeDetailPage({ params }: { params: Promise<{ id: stri
         </Link>
         <span className="text-foreground-muted text-sm">/</span>
         <h2 className="text-xl font-semibold">Trade #{trade.id}</h2>
+        {marketData && (
+          <button
+            onClick={() => setReplayMode(!replayMode)}
+            className={`ml-auto flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-md transition ${
+              replayMode
+                ? "bg-primary text-white"
+                : "bg-background-card text-foreground-muted hover:text-foreground border border-gray-200"
+            }`}
+          >
+            {replayMode ? <X size={14} /> : <Play size={14} />}
+            {replayMode ? "Exit Replay" : "Replay Trade"}
+          </button>
+        )}
       </div>
 
       <div className="bg-background-card rounded-lg border border-gray-200 p-5 mb-6">
@@ -77,18 +98,22 @@ export default function TradeDetailPage({ params }: { params: Promise<{ id: stri
         </div>
       </div>
 
-      {/* KLineChart centered on this trade */}
+      {/* Chart area */}
       {marketData && (
         <div>
           <h3 className="text-sm font-medium text-foreground-muted mb-2">
-            Trade Context — {trade.instrument}
+            {replayMode ? "Trade Replay" : "Trade Context"} — {trade.instrument}
           </h3>
           <div className="h-[450px]">
-            <TradeMarkerChart
-              data={marketData}
-              trades={[trade]}
-              focusTradeId={trade.id}
-            />
+            {replayMode ? (
+              <TradeReplay data={marketData} trade={trade} />
+            ) : (
+              <TradeMarkerChart
+                data={marketData}
+                trades={[trade]}
+                focusTradeId={trade.id}
+              />
+            )}
           </div>
         </div>
       )}

@@ -137,15 +137,18 @@ class Position:
 
 
 def calculate_position_size(
-    capital: float, risk_pct: float, entry: float, stop: float
+    capital: float,
+    risk_pct: float,
+    entry: float,
+    stop: float,
+    max_leverage: float = 30.0,
+    instrument: str = "",
 ) -> float:
-    """Calculate position size based on risk percentage.
+    """Calculate position size with leverage cap.
 
-    Returns the number of units to trade such that a move from
-    entry to stop loses risk_pct% of capital.
+    Delegates to fibokei.backtester.sizing for the full implementation.
+    Kept here for backward compatibility with external callers.
     """
-    risk_amount = capital * (risk_pct / 100.0)
-    risk_per_unit = abs(entry - stop)
-    if risk_per_unit < 1e-10:
-        return 0.0
-    return risk_amount / risk_per_unit
+    from fibokei.backtester.sizing import calculate_position_size as _calc
+
+    return _calc(capital, risk_pct, entry, stop, max_leverage, instrument)

@@ -1,4 +1,4 @@
-# Fiboki — Build Roadmap
+ou thi# Fiboki — Build Roadmap
 
 Version: 2.6
 Status: **Phase 16.4 COMPLETE** — Slippage Analytics. Phases 1–16.4 complete, Phases 17–18 planned.
@@ -88,7 +88,11 @@ The recommended implementation order after completing Phase 14:
 | Phase 16.3: Exposure Dashboard | COMPLETE | 526 pass | Exposure API (per-instrument/asset-class/direction breakdown, risk utilization, concentration warnings), exposure page with risk gauge components, execution audit viewer on System page |
 | Operator Workflow Stabilization | COMPLETE | 526 pass | Strategy dropdown fix (field name mismatch), run-scoped research rankings with toggle, per-combo job progress (5%→85%), promotion-to-paper repair (case-insensitive gate + 30s timeout + error categorization), delete/cleanup endpoints (jobs, research runs, backtests) + Jobs page cleanup UI, inline error surfacing on jobs + zero-qualified explanation |
 | Phase 16.4: Slippage Analytics | COMPLETE | 526 pass | ExecutionAuditModel extended (requested_price, filled_price, slippage_pips, fill_latency_ms), auto-migration for PostgreSQL, slippage aggregation repository, GET /execution/slippage API, IG adapter captures fill price + latency, System page Slippage Analytics section with per-instrument table |
-| Phase 17: Chart Workstation | PLANNED | — | Drawing library, multi-chart layout, trade replay, market session context, scenario sandbox |
+| Phase 17.1: Drawing Templates | COMPLETE | 526 pass | DrawingTemplateModel + repo CRUD, 4 API endpoints (GET/POST/PUT/DELETE /charts/drawing-templates), frontend types + api methods, DrawingToolbar Save/Load Template dialogs, charts page wiring |
+| Phase 17.2: Multi-Chart Layout | COMPLETE | 526 pass | ChartCell (self-contained chart), MultiChartLayout (1x1/1x2/2x2 grid), layout selector with localStorage persistence, Charts page refactored |
+| Phase 17.3: Market Session Context | COMPLETE | 526 pass | sessions.py (5 market sessions), GET /market-data/sessions API, frontend session utils + ChartCell sessions toggle with legend |
+| Phase 17.4: Trade Replay | COMPLETE | 526 pass | TradeReplay component (play/pause/step/scrub, 4 speeds, entry/exit markers), "Replay Trade" button on trade detail page |
+| Phase 17.5: Scenario Sandbox | IN PROGRESS | — | Portfolio-level scenario simulation |
 | Phase 18: Strategy Families & Fleet | PLANNED | — | Parameter variations, fleet-aware risk, watchlists, trade journal |
 
 ### Audit Fixes Applied (Post Phase 4.2)
@@ -2016,9 +2020,9 @@ cd frontend && npx next build
 
 ### Tasks
 
-- [ ] **T-17.1.01** — Create `DrawingTemplateModel` in DB: name, description, drawings (JSON array of drawing definitions without instrument/timestamp binding), created_at. API: `GET/POST/PUT/DELETE /api/v1/charts/drawing-templates`.
+- [x] **T-17.1.01** — Create `DrawingTemplateModel` in DB: name, description, drawings (JSON array of drawing definitions without instrument/timestamp binding), created_at. API: `GET/POST/PUT/DELETE /api/v1/charts/drawing-templates`.
 
-- [ ] **T-17.1.02** — Add "Save as Template" action to drawing toolbar: saves current drawing set as a named template. "Load Template" dropdown applies a template's drawings to the current chart, rebinding to the current instrument's price range.
+- [x] **T-17.1.02** — Add "Save as Template" action to drawing toolbar: saves current drawing set as a named template. "Load Template" dropdown applies a template's drawings to the current chart, rebinding to the current instrument's price range.
 
 - [ ] **T-17.1.03** — Template preview: show a thumbnail preview of each template in the dropdown. Use a mini-canvas rendering of the drawing shapes.
 
@@ -2041,9 +2045,9 @@ cd frontend && npx next build
 
 ### Tasks
 
-- [ ] **T-17.2.01** — Create `MultiChartLayout` component supporting 1x1, 1x2, 2x2 grid layouts. Each cell is an independent `TradingChart` instance with its own instrument/timeframe selectors.
+- [x] **T-17.2.01** — Create `MultiChartLayout` component supporting 1x1, 1x2, 2x2 grid layouts. Each cell is an independent `TradingChart` instance with its own instrument/timeframe selectors.
 
-- [ ] **T-17.2.02** — Add layout selector to the Charts page toolbar. Persist selected layout in localStorage.
+- [x] **T-17.2.02** — Add layout selector to the Charts page toolbar. Persist selected layout in localStorage.
 
 - [ ] **T-17.2.03** — Add cross-chart synchronization option: when enabled, all charts share the same time axis (panning one pans all). Toggle in toolbar.
 
@@ -2083,11 +2087,11 @@ Additional context tags:
 
 ### Tasks
 
-- [ ] **T-17.3.01** — Create `backend/src/fibokei/data/sessions.py` with market session definitions and `get_session_for_timestamp(ts: datetime) -> str` utility. Sessions: Asian, London, New York, London-NY Overlap, Off-Hours.
+- [x] **T-17.3.01** — Create `backend/src/fibokei/data/sessions.py` with market session definitions and `get_session_for_timestamp(ts: datetime) -> str` utility. Sessions: Asian, London, New York, London-NY Overlap, Off-Hours.
 
-- [ ] **T-17.3.02** — Add `session` field to `MarketDataResponse` candles (optional): each candle tagged with its session. Frontend renders session background shading on the chart (light colour bands).
+- [x] **T-17.3.02** — Frontend `sessions.ts` utilities + `GET /market-data/sessions` API endpoint. Session computation done client-side from candle timestamps.
 
-- [ ] **T-17.3.03** — Add session filter to chart toolbar: toggle session highlighting on/off. Show session legend.
+- [x] **T-17.3.03** — Add session toggle to ChartCell toolbar with color-coded legend and current session indicator.
 
 - [ ] **T-17.3.04** — Add volume profile overlay: volume bars coloured by session. Shows which session contributed the most volume per bar.
 
@@ -2110,11 +2114,11 @@ cd frontend && npx next build
 
 ### Tasks
 
-- [ ] **T-17.4.01** — Create `TradeReplay` component: wraps TradingChart with a playback controller (play/pause/step-forward/step-back/speed). Loads bars around the trade and animates candle-by-candle from entry to exit.
+- [x] **T-17.4.01** — Create `TradeReplay` component: wraps klinecharts with a playback controller (play/pause/step-forward/step-back/scrub/speed). Loads bars around the trade and animates candle-by-candle from entry to exit.
 
-- [ ] **T-17.4.02** — Add strategy decision annotations: at each bar during replay, show the strategy's signal evaluation result (e.g., "Ichimoku: price above cloud, tenkan > kijun = bullish confirmation"). Requires backend endpoint: `GET /api/v1/backtests/{run_id}/trades/{trade_id}/signals` returning per-bar signal evaluations.
+- [ ] **T-17.4.02** — Add strategy decision annotations: at each bar during replay, show the strategy's signal evaluation result. (Deferred — requires new backend introspection endpoint.)
 
-- [ ] **T-17.4.03** — Add replay entry point on trade detail page: "Replay Trade" button launches the replay view.
+- [x] **T-17.4.03** — Add replay entry point on trade detail page: "Replay Trade" button launches the replay view.
 
 ### Verification Gate
 

@@ -5,6 +5,7 @@ import Link from "next/link";
 import useSWR from "swr";
 import { api } from "@/lib/api";
 import { useBacktests } from "@/lib/hooks/use-backtests";
+import { formatPnl } from "@/lib/format-currency";
 import GroupedInstrumentSelect from "@/components/GroupedInstrumentSelect";
 import { PageHeader } from "@/components/PageHeader";
 import { EmptyState } from "@/components/EmptyState";
@@ -31,17 +32,42 @@ export default function BacktestsPage() {
   const noDataForCombo = instrument && timeframe && !hasData(instrument, timeframe);
   const comboInfo = instrument && timeframe ? datasetInfo(instrument, timeframe) : undefined;
 
+  const [runProgress, setRunProgress] = useState(0);
+
   async function handleRun(e: React.FormEvent) {
     e.preventDefault();
     if (!strategy || !instrument) return;
     setRunning(true);
+    setRunProgress(0);
     setError(null);
     try {
-      await api.runBacktest({ strategy_id: strategy, instrument, timeframe });
-      await mutate();
+      const res = await api.runBacktest({ strategy_id: strategy, instrument, timeframe }, true);
+      const jobId = (res as Record<string, unknown>).job_id as string;
+
+      const poll = setInterval(async () => {
+        try {
+          const job = await api.getJob(jobId);
+          setRunProgress(job.progress ?? 0);
+
+          if (job.state === "completed") {
+            clearInterval(poll);
+            await mutate();
+            setRunning(false);
+          } else if (job.state === "failed") {
+            clearInterval(poll);
+            setError(job.error || "Backtest failed");
+            setRunning(false);
+          } else if (job.state === "cancelled") {
+            clearInterval(poll);
+            setError("Backtest was cancelled");
+            setRunning(false);
+          }
+        } catch {
+          // poll error — keep trying
+        }
+      }, 2000);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to run backtest");
-    } finally {
       setRunning(false);
     }
   }
@@ -109,7 +135,7 @@ export default function BacktestsPage() {
             className="btn btn-primary"
           >
             {running && <Loader2 size={14} className="animate-spin" />}
-            {running ? "Running..." : "Run Backtest"}
+            {running ? `Running (${runProgress}%)` : "Run Backtest"}
           </button>
         </div>
         {noDataForCombo && (
@@ -121,6 +147,14 @@ export default function BacktestsPage() {
           <p className="text-foreground-muted text-xs mt-2">
             {comboInfo.bars.toLocaleString()} bars &middot; {comboInfo.from_date.slice(0, 10)} to {comboInfo.to_date.slice(0, 10)} &middot; {comboInfo.provider}
           </p>
+        )}
+        {running && (
+          <div className="w-full h-1.5 bg-background-muted rounded-full overflow-hidden mt-3">
+            <div
+              className="h-full bg-primary rounded-full transition-all duration-300"
+              style={{ width: `${runProgress}%` }}
+            />
+          </div>
         )}
         {error && <p className="text-danger text-sm mt-3">{error}</p>}
       </form>
@@ -191,7 +225,7 @@ export default function BacktestsPage() {
                 <td className="text-foreground-muted">{bt.timeframe}</td>
                 <td className="text-right tabular-nums">{bt.total_trades}</td>
                 <td className={`text-right tabular-nums font-medium ${bt.net_profit >= 0 ? "text-primary" : "text-danger"}`}>
-                  {bt.net_profit >= 0 ? "+" : ""}${bt.net_profit.toFixed(2)}
+                  {formatPnl(bt.net_profit)}
                 </td>
                 <td className="text-right tabular-nums">{bt.sharpe_ratio?.toFixed(2) ?? "—"}</td>
                 <td className="text-right tabular-nums text-danger">

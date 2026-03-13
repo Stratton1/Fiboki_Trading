@@ -174,9 +174,10 @@ class PaperAccountModel(Base):
     __tablename__ = "paper_account"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    initial_balance: Mapped[float] = mapped_column(Float, nullable=False, default=10000.0)
-    balance: Mapped[float] = mapped_column(Float, nullable=False, default=10000.0)
-    equity: Mapped[float] = mapped_column(Float, nullable=False, default=10000.0)
+    initial_balance: Mapped[float] = mapped_column(Float, nullable=False, default=1000.0)
+    balance: Mapped[float] = mapped_column(Float, nullable=False, default=1000.0)
+    equity: Mapped[float] = mapped_column(Float, nullable=False, default=1000.0)
+    currency: Mapped[str] = mapped_column(String(3), nullable=False, default="GBP")
     daily_pnl: Mapped[float] = mapped_column(Float, default=0.0)
     weekly_pnl: Mapped[float] = mapped_column(Float, default=0.0)
     updated_at: Mapped[datetime] = mapped_column(
@@ -226,6 +227,26 @@ class ChartDrawingModel(Base):
     styles_json: Mapped[dict | None] = mapped_column(JSON)
     lock: Mapped[bool] = mapped_column(Boolean, default=False)
     visible: Mapped[bool] = mapped_column(Boolean, default=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, default=lambda: datetime.now(timezone.utc)
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime,
+        default=lambda: datetime.now(timezone.utc),
+        onupdate=lambda: datetime.now(timezone.utc),
+    )
+
+
+class DrawingTemplateModel(Base):
+    """Reusable drawing template (named set of drawings without instrument binding)."""
+
+    __tablename__ = "drawing_templates"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    user_id: Mapped[int] = mapped_column(Integer, nullable=False, index=True)
+    name: Mapped[str] = mapped_column(String(100), nullable=False)
+    description: Mapped[str | None] = mapped_column(Text)
+    drawings_json: Mapped[list] = mapped_column(JSON, nullable=False)
     created_at: Mapped[datetime] = mapped_column(
         DateTime, default=lambda: datetime.now(timezone.utc)
     )

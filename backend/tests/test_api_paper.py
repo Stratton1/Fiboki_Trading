@@ -99,8 +99,9 @@ def test_get_account(api_client, auth_headers):
     response = api_client.get("/api/v1/paper/account", headers=auth_headers)
     assert response.status_code == 200
     data = response.json()
-    assert data["balance"] == 10000.0
-    assert data["equity"] == 10000.0
+    assert data["balance"] == 1000.0
+    assert data["equity"] == 1000.0
+    assert data["currency"] == "GBP"
     assert data["total_pnl"] == 0.0
 
 

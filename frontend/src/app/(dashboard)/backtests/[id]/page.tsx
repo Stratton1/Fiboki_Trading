@@ -5,6 +5,7 @@ import Link from "next/link";
 import dynamic from "next/dynamic";
 import { api } from "@/lib/api";
 import { useBacktest, useEquityCurve, useBacktestTrades } from "@/lib/hooks/use-backtests";
+import { formatPnl } from "@/lib/format-currency";
 import { useMarketData } from "@/lib/hooks/use-market-data";
 import { EquityCurve } from "@/components/analytics/EquityCurve";
 import { DrawdownChart } from "@/components/analytics/DrawdownChart";
@@ -159,7 +160,7 @@ export default function BacktestDetailPage({ params }: { params: Promise<{ id: s
         <MetricCard label="Total Trades" value={String(bt.total_trades)} />
         <MetricCard
           label="Net Profit"
-          value={`${bt.net_profit >= 0 ? "+" : ""}$${bt.net_profit.toFixed(2)}`}
+          value={formatPnl(bt.net_profit)}
           color={bt.net_profit >= 0 ? "text-primary" : "text-danger"}
         />
         <MetricCard label="Sharpe Ratio" value={bt.sharpe_ratio?.toFixed(2) ?? "-"} />

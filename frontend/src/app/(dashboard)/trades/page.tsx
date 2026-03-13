@@ -5,6 +5,7 @@ import Link from "next/link";
 import useSWR from "swr";
 import { useTrades } from "@/lib/hooks/use-trades";
 import { api } from "@/lib/api";
+import { formatPnl } from "@/lib/format-currency";
 import { PageHeader } from "@/components/PageHeader";
 import { EmptyState } from "@/components/EmptyState";
 import { StatusBadge } from "@/components/StatusBadge";
@@ -120,7 +121,7 @@ export default function TradesPage() {
                 <td className="text-right tabular-nums">{t.entry_price.toFixed(5)}</td>
                 <td className="text-right tabular-nums">{t.exit_price.toFixed(5)}</td>
                 <td className={`text-right tabular-nums font-medium ${t.pnl >= 0 ? "text-primary" : "text-danger"}`}>
-                  {t.pnl >= 0 ? "+" : ""}${t.pnl.toFixed(2)}
+                  {formatPnl(t.pnl)}
                 </td>
                 <td className="text-foreground-muted">{t.exit_reason}</td>
               </tr>

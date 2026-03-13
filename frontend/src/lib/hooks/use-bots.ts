@@ -4,6 +4,8 @@ import { api } from "@/lib/api";
 export interface AccountData {
   balance: number;
   equity: number;
+  initial_balance: number;
+  currency: string;
   daily_pnl: number;
   weekly_pnl: number;
   open_positions: number;

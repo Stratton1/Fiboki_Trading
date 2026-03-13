@@ -186,8 +186,8 @@ class TestPaperTradeModel:
 class TestPaperAccountModel:
     def test_get_or_create_account(self, db_session):
         acct = get_or_create_paper_account(db_session)
-        assert acct.initial_balance == 10000.0
-        assert acct.balance == 10000.0
+        assert acct.initial_balance == 1000.0
+        assert acct.balance == 1000.0
 
     def test_creates_only_once(self, db_session):
         acct1 = get_or_create_paper_account(db_session)
@@ -534,8 +534,9 @@ class TestPaperBotAPI:
         resp = api_client.get("/api/v1/paper/account", headers=auth_headers)
         assert resp.status_code == 200
         data = resp.json()
-        assert data["balance"] == 10000.0
-        assert data["initial_balance"] == 10000.0
+        assert data["balance"] == 1000.0
+        assert data["initial_balance"] == 1000.0
+        assert data["currency"] == "GBP"
 
     def test_get_account_returns_all_fields(self, auth_headers, api_client):
         """Account endpoint returns valid JSON with all expected fields."""

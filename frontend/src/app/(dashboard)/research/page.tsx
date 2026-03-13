@@ -3,6 +3,7 @@
 import { useState } from "react";
 import useSWR from "swr";
 import { api } from "@/lib/api";
+import { formatCurrency } from "@/lib/format-currency";
 import { useRankings } from "@/lib/hooks/use-research";
 import { Heatmap } from "@/components/analytics/Heatmap";
 import GroupedInstrumentSelect from "@/components/GroupedInstrumentSelect";
@@ -714,7 +715,7 @@ export default function ResearchPage() {
                           <td className="px-2 py-1 text-right">{w.train_trades}</td>
                           <td className="px-2 py-1 text-right">{w.test_trades}</td>
                           <td className={`px-2 py-1 text-right ${w.test_net_profit >= 0 ? "text-primary" : "text-danger"}`}>
-                            ${w.test_net_profit.toFixed(2)}
+                            {formatCurrency(w.test_net_profit)}
                           </td>
                         </tr>
                       ))}
@@ -756,11 +757,11 @@ export default function ResearchPage() {
               <div className="grid grid-cols-2 gap-3 mt-3 text-sm">
                 <div className="space-y-1">
                   <p className="text-xs text-foreground-muted font-medium">In-Sample</p>
-                  <p>Trades: {advancedResult.oos.is_trades} | Sharpe: {advancedResult.oos.is_sharpe.toFixed(2)} | Profit: ${advancedResult.oos.is_net_profit.toFixed(2)}</p>
+                  <p>Trades: {advancedResult.oos.is_trades} | Sharpe: {advancedResult.oos.is_sharpe.toFixed(2)} | Profit: {formatCurrency(advancedResult.oos.is_net_profit)}</p>
                 </div>
                 <div className="space-y-1">
                   <p className="text-xs text-foreground-muted font-medium">Out-of-Sample</p>
-                  <p>Trades: {advancedResult.oos.oos_trades} | Sharpe: {advancedResult.oos.oos_sharpe.toFixed(2)} | Profit: ${advancedResult.oos.oos_net_profit.toFixed(2)}</p>
+                  <p>Trades: {advancedResult.oos.oos_trades} | Sharpe: {advancedResult.oos.oos_sharpe.toFixed(2)} | Profit: {formatCurrency(advancedResult.oos.oos_net_profit)}</p>
                 </div>
               </div>
             </div>
@@ -784,7 +785,7 @@ export default function ResearchPage() {
                 <div>
                   <p className="text-xs text-foreground-muted">Mean Profit</p>
                   <p className={`text-lg font-semibold ${advancedResult.monte_carlo.mean_net_profit >= 0 ? "text-primary" : "text-danger"}`}>
-                    ${advancedResult.monte_carlo.mean_net_profit.toFixed(2)}
+                    {formatCurrency(advancedResult.monte_carlo.mean_net_profit)}
                   </p>
                 </div>
                 <div>
@@ -799,15 +800,15 @@ export default function ResearchPage() {
               <div className="grid grid-cols-3 gap-3 mt-3 text-sm">
                 <div>
                   <p className="text-xs text-foreground-muted">P5 (worst case)</p>
-                  <p>${advancedResult.monte_carlo.p5_net_profit.toFixed(2)}</p>
+                  <p>{formatCurrency(advancedResult.monte_carlo.p5_net_profit)}</p>
                 </div>
                 <div>
                   <p className="text-xs text-foreground-muted">Median</p>
-                  <p>${advancedResult.monte_carlo.median_net_profit.toFixed(2)}</p>
+                  <p>{formatCurrency(advancedResult.monte_carlo.median_net_profit)}</p>
                 </div>
                 <div>
                   <p className="text-xs text-foreground-muted">P95 (best case)</p>
-                  <p>${advancedResult.monte_carlo.p95_net_profit.toFixed(2)}</p>
+                  <p>{formatCurrency(advancedResult.monte_carlo.p95_net_profit)}</p>
                 </div>
               </div>
             </div>
@@ -846,7 +847,7 @@ export default function ResearchPage() {
                             <td className="px-2 py-1">{v.param_value}</td>
                             <td className="px-2 py-1 text-right">{v.total_trades}</td>
                             <td className={`px-2 py-1 text-right ${v.net_profit >= 0 ? "text-primary" : "text-danger"}`}>
-                              ${v.net_profit.toFixed(2)}
+                              {formatCurrency(v.net_profit)}
                             </td>
                             <td className="px-2 py-1 text-right">{v.sharpe_ratio.toFixed(4)}</td>
                             <td className="px-2 py-1 text-right font-medium">{v.composite_score.toFixed(4)}</td>

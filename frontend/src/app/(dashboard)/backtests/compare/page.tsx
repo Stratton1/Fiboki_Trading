@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { api } from "@/lib/api";
 import { useBacktests } from "@/lib/hooks/use-backtests";
+import { formatPnl } from "@/lib/format-currency";
 import { PageHeader } from "@/components/PageHeader";
 import { EmptyState } from "@/components/EmptyState";
 import { ArrowLeft, BarChart3, Check, Loader2, X } from "lucide-react";
@@ -44,7 +45,7 @@ export default function CompareBacktestsPage() {
     {
       key: "net_profit",
       label: "Net Profit",
-      fmt: (v: number) => `${v >= 0 ? "+" : ""}$${v.toFixed(2)}`,
+      fmt: (v: number) => formatPnl(v),
       color: (v: number) => (v >= 0 ? "text-primary" : "text-danger"),
     },
     {

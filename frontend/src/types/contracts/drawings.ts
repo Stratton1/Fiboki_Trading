@@ -32,3 +32,18 @@ export interface DrawingUpdate {
   lock?: boolean;
   visible?: boolean;
 }
+
+export interface DrawingTemplate {
+  id: number;
+  name: string;
+  description: string | null;
+  drawings: Record<string, unknown>[];
+  created_at: string;
+  updated_at: string;
+}
+
+export interface DrawingTemplateCreate {
+  name: string;
+  description?: string | null;
+  drawings: Record<string, unknown>[];
+}

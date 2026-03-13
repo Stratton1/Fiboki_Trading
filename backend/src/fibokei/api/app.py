@@ -112,6 +112,15 @@ def _ensure_new_columns(engine) -> None:
         if table not in table_names:
             logger.warning("Table '%s' missing after create_all — will be created on next restart", table)
 
+    # Add currency column to paper_account if missing
+    if "paper_account" in table_names:
+        pa_cols = {col["name"] for col in inspector.get_columns("paper_account")}
+        if "currency" not in pa_cols:
+            with engine.begin() as conn:
+                conn.execute(text(
+                    "ALTER TABLE paper_account ADD COLUMN currency VARCHAR(3) DEFAULT 'GBP'"
+                ))
+
     if "execution_audit" not in table_names:
         return
     existing = {col["name"] for col in inspector.get_columns("execution_audit")}

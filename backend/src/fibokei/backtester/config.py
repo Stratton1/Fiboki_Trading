@@ -15,3 +15,4 @@ class BacktestConfig(BaseModel):
     allow_short: bool = True
     max_open_trades: int = 1
     max_bars_in_trade: int = 100
+    max_leverage: float = 30.0  # UK/EU FCA retail CFD limit

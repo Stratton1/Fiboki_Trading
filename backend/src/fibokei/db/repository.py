@@ -30,6 +30,7 @@ from fibokei.db.models import (
     BacktestRunModel,
     ChartDrawingModel,
     DatasetModel,
+    DrawingTemplateModel,
     ExecutionAuditModel,
     KillSwitchModel,
     PaperAccountModel,
@@ -107,6 +108,62 @@ def delete_all_drawings(
     if count:
         session.commit()
     return count
+
+
+# ---------- Drawing templates ----------
+
+
+def save_drawing_template(session: Session, data: dict) -> DrawingTemplateModel:
+    """Create a drawing template."""
+    model = DrawingTemplateModel(**data)
+    session.add(model)
+    session.commit()
+    return model
+
+
+def get_drawing_templates(session: Session, user_id: int) -> list[DrawingTemplateModel]:
+    """Get all drawing templates for a user."""
+    stmt = (
+        select(DrawingTemplateModel)
+        .where(DrawingTemplateModel.user_id == user_id)
+        .order_by(DrawingTemplateModel.updated_at.desc())
+    )
+    return list(session.scalars(stmt).all())
+
+
+def update_drawing_template(
+    session: Session, template_id: int, user_id: int, updates: dict
+) -> DrawingTemplateModel | None:
+    """Update a template. Returns None if not found or wrong user."""
+    tmpl = session.scalars(
+        select(DrawingTemplateModel)
+        .where(DrawingTemplateModel.id == template_id)
+        .where(DrawingTemplateModel.user_id == user_id)
+    ).first()
+    if not tmpl:
+        return None
+    for key, value in updates.items():
+        if hasattr(tmpl, key):
+            setattr(tmpl, key, value)
+    session.commit()
+    return tmpl
+
+
+def delete_drawing_template(session: Session, template_id: int, user_id: int) -> bool:
+    """Delete a drawing template. Returns True if deleted."""
+    tmpl = session.scalars(
+        select(DrawingTemplateModel)
+        .where(DrawingTemplateModel.id == template_id)
+        .where(DrawingTemplateModel.user_id == user_id)
+    ).first()
+    if not tmpl:
+        return False
+    session.delete(tmpl)
+    session.commit()
+    return True
+
+
+# ---------- Backtest results ----------
 
 
 def save_backtest_result(
@@ -342,15 +399,19 @@ def get_paper_trades(
 
 
 def get_or_create_paper_account(
-    session: Session, initial_balance: float = 10000.0
+    session: Session, initial_balance: float = 1000.0
 ) -> PaperAccountModel:
     """Get the single paper account record, creating if needed."""
+    from fibokei.paper.account import DEFAULT_INITIAL_BALANCE, DEFAULT_CURRENCY
+
+    balance = initial_balance if initial_balance != 1000.0 else DEFAULT_INITIAL_BALANCE
     account = session.scalars(select(PaperAccountModel)).first()
     if not account:
         account = PaperAccountModel(
-            initial_balance=initial_balance,
-            balance=initial_balance,
-            equity=initial_balance,
+            initial_balance=balance,
+            balance=balance,
+            equity=balance,
+            currency=DEFAULT_CURRENCY,
         )
         session.add(account)
         session.commit()

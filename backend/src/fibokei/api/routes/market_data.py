@@ -114,6 +114,14 @@ def _df_to_response(
     )
 
 
+@router.get("/market-data/sessions")
+def get_sessions(user: TokenData = Depends(get_current_user)):
+    """Return market session definitions for chart rendering."""
+    from fibokei.data.sessions import get_sessions_metadata
+
+    return {"sessions": get_sessions_metadata()}
+
+
 @router.get("/market-data/live/status")
 def live_chart_status(user: TokenData = Depends(get_current_user)):
     """Check whether live chart mode is available."""

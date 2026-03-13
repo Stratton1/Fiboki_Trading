@@ -2,6 +2,7 @@
 
 import { useAuth } from "@/lib/auth";
 import { useAccount } from "@/lib/hooks/use-bots";
+import { formatCurrency, formatPnl } from "@/lib/format-currency";
 import { PageHeader } from "@/components/PageHeader";
 import {
   ArrowUpRight,
@@ -88,6 +89,7 @@ export default function DashboardPage() {
   const equity = account?.equity ?? 0;
   const dailyPnl = account?.daily_pnl ?? 0;
   const weeklyPnl = account?.weekly_pnl ?? 0;
+  const currency = account?.currency ?? "GBP";
 
   return (
     <div className="max-w-6xl">
@@ -98,10 +100,10 @@ export default function DashboardPage() {
 
       {/* KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-        <StatCard icon={Wallet} label="Balance" value={`$${balance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`} />
-        <StatCard icon={TrendingUp} label="Equity" value={`$${equity.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`} trend={equity >= balance ? "up" : "down"} />
-        <StatCard icon={CalendarDays} label="Daily PnL" value={`${dailyPnl >= 0 ? "+" : ""}$${dailyPnl.toFixed(2)}`} trend={dailyPnl >= 0 ? "up" : "down"} />
-        <StatCard icon={CalendarRange} label="Weekly PnL" value={`${weeklyPnl >= 0 ? "+" : ""}$${weeklyPnl.toFixed(2)}`} trend={weeklyPnl >= 0 ? "up" : "down"} />
+        <StatCard icon={Wallet} label="Balance" value={formatCurrency(balance, currency)} />
+        <StatCard icon={TrendingUp} label="Equity" value={formatCurrency(equity, currency)} trend={equity >= balance ? "up" : "down"} />
+        <StatCard icon={CalendarDays} label="Daily PnL" value={formatPnl(dailyPnl, currency)} trend={dailyPnl >= 0 ? "up" : "down"} />
+        <StatCard icon={CalendarRange} label="Weekly PnL" value={formatPnl(weeklyPnl, currency)} trend={weeklyPnl >= 0 ? "up" : "down"} />
       </div>
 
       {/* Activity + Quick Actions row */}

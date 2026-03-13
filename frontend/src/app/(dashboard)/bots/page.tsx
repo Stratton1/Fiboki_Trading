@@ -4,6 +4,7 @@ import { Fragment, useState } from "react";
 import useSWR from "swr";
 import { api } from "@/lib/api";
 import { useBots, useAccount } from "@/lib/hooks/use-bots";
+import { currencySymbol as getCurrencySymbol, formatCurrency, formatPnl } from "@/lib/format-currency";
 import GroupedInstrumentSelect from "@/components/GroupedInstrumentSelect";
 import { PageHeader } from "@/components/PageHeader";
 import { EmptyState } from "@/components/EmptyState";
@@ -75,6 +76,8 @@ export default function BotsPage() {
   const balance = account?.balance ?? 0;
   const equity = account?.equity ?? 0;
   const dailyPnl = account?.daily_pnl ?? 0;
+  const currency = account?.currency ?? "GBP";
+  const sym = getCurrencySymbol(currency);
   const botList = (bots ?? []) as BotItem[];
   const fleetBots = fleet?.bots ?? [];
 
@@ -102,14 +105,14 @@ export default function BotsPage() {
             <span className="text-xs font-medium uppercase tracking-wide text-foreground-muted">Balance</span>
             <Wallet size={14} className="text-foreground-muted" />
           </div>
-          <p className="text-xl font-bold tracking-tight">${balance.toFixed(2)}</p>
+          <p className="text-xl font-bold tracking-tight">{sym}{balance.toFixed(2)}</p>
         </div>
         <div className="stat-card">
           <div className="flex items-center justify-between mb-2">
             <span className="text-xs font-medium uppercase tracking-wide text-foreground-muted">Equity</span>
             <TrendingUp size={14} className="text-foreground-muted" />
           </div>
-          <p className="text-xl font-bold tracking-tight">${equity.toFixed(2)}</p>
+          <p className="text-xl font-bold tracking-tight">{sym}{equity.toFixed(2)}</p>
         </div>
         <div className="stat-card">
           <div className="flex items-center justify-between mb-2">
@@ -117,7 +120,7 @@ export default function BotsPage() {
             <CalendarDays size={14} className="text-foreground-muted" />
           </div>
           <p className={`text-xl font-bold tracking-tight ${dailyPnl >= 0 ? "text-primary" : "text-danger"}`}>
-            {dailyPnl >= 0 ? "+" : ""}${dailyPnl.toFixed(2)}
+            {dailyPnl >= 0 ? "+" : ""}{sym}{dailyPnl.toFixed(2)}
           </p>
         </div>
         <div className="stat-card">
@@ -136,7 +139,7 @@ export default function BotsPage() {
             <BarChart3 size={14} className="text-foreground-muted" />
           </div>
           <p className={`text-xl font-bold tracking-tight ${(fleet?.aggregate_pnl ?? 0) >= 0 ? "text-primary" : "text-danger"}`}>
-            {(fleet?.aggregate_pnl ?? 0) >= 0 ? "+" : ""}${(fleet?.aggregate_pnl ?? 0).toFixed(2)}
+            {(fleet?.aggregate_pnl ?? 0) >= 0 ? "+" : ""}{sym}{(fleet?.aggregate_pnl ?? 0).toFixed(2)}
           </p>
         </div>
         <div className="stat-card">
@@ -165,7 +168,7 @@ export default function BotsPage() {
                   <span className="text-xs text-foreground-muted">{g.count} bots</span>
                   <span className="text-xs text-foreground-muted">{g.running} active</span>
                   <span className={`text-xs font-medium ${g.pnl >= 0 ? "text-primary" : "text-danger"}`}>
-                    {g.pnl >= 0 ? "+" : ""}${g.pnl.toFixed(2)}
+                    {g.pnl >= 0 ? "+" : ""}{sym}{g.pnl.toFixed(2)}
                   </span>
                 </div>
                 <p className="text-xs text-foreground-muted mt-0.5">{g.trades} trades</p>
@@ -267,7 +270,7 @@ export default function BotsPage() {
                     </td>
                     <td className="text-right tabular-nums">{fleetBot?.total_trades ?? 0}</td>
                     <td className={`text-right tabular-nums font-medium ${(fleetBot?.total_pnl ?? 0) >= 0 ? "text-primary" : "text-danger"}`}>
-                      {(fleetBot?.total_pnl ?? 0) >= 0 ? "+" : ""}${(fleetBot?.total_pnl ?? 0).toFixed(2)}
+                      {(fleetBot?.total_pnl ?? 0) >= 0 ? "+" : ""}{sym}{(fleetBot?.total_pnl ?? 0).toFixed(2)}
                     </td>
                     <td className="text-right">
                       <div className="flex items-center justify-end gap-2">
@@ -295,7 +298,7 @@ export default function BotsPage() {
                       <span className="text-foreground-muted font-normal ml-2">
                         ({bots.length} bots &middot; {strategyGroups[sid]?.running ?? 0} active &middot;
                         <span className={`ml-1 ${(strategyGroups[sid]?.pnl ?? 0) >= 0 ? "text-primary" : "text-danger"}`}>
-                          {(strategyGroups[sid]?.pnl ?? 0) >= 0 ? "+" : ""}${(strategyGroups[sid]?.pnl ?? 0).toFixed(2)}
+                          {(strategyGroups[sid]?.pnl ?? 0) >= 0 ? "+" : ""}{sym}{(strategyGroups[sid]?.pnl ?? 0).toFixed(2)}
                         </span>
                         )
                       </span>
@@ -316,7 +319,7 @@ export default function BotsPage() {
                       </td>
                       <td className="text-right tabular-nums">{b.total_trades}</td>
                       <td className={`text-right tabular-nums font-medium ${b.total_pnl >= 0 ? "text-primary" : "text-danger"}`}>
-                        {b.total_pnl >= 0 ? "+" : ""}${b.total_pnl.toFixed(2)}
+                        {b.total_pnl >= 0 ? "+" : ""}{sym}{b.total_pnl.toFixed(2)}
                       </td>
                       <td className="text-right">
                         <div className="flex items-center justify-end gap-2">

@@ -563,3 +563,67 @@ def delete_preset(
     db.delete(preset)
     db.commit()
     return {"deleted": preset_id}
+
+
+# ---------- Scenario Sandbox ----------
+
+
+from pydantic import BaseModel as _BaseModel
+
+
+class ScenarioComboRequest(_BaseModel):
+    strategy_id: str
+    instrument: str
+    timeframe: str
+    risk_pct: float = 1.0
+
+
+class ScenarioRequest(_BaseModel):
+    combos: list[ScenarioComboRequest]
+    capital: float = 10000.0
+
+
+@router.post("/research/scenario", response_model=JobSubmittedResponse)
+def run_scenario_endpoint(
+    body: ScenarioRequest,
+    request: Request,
+    user: TokenData = Depends(get_current_user),
+):
+    """Run a portfolio scenario simulation as an async job."""
+    from fibokei.jobs.engine import get_job_engine
+    from fibokei.research.scenario import ComboSpec, run_scenario
+
+    if not body.combos:
+        raise HTTPException(status_code=422, detail="At least one combo required")
+
+    combo_specs = [
+        ComboSpec(
+            strategy_id=c.strategy_id,
+            instrument=c.instrument,
+            timeframe=c.timeframe,
+            risk_pct=c.risk_pct,
+        )
+        for c in body.combos
+    ]
+
+    label = f"Scenario: {len(body.combos)} combos, ${body.capital:,.0f}"
+    engine = get_job_engine()
+
+    def _run(progress_callback=None):
+        result = run_scenario(combo_specs, body.capital, progress_callback)
+        return {
+            "combos": result.combos,
+            "per_bot": result.per_bot,
+            "aggregate_equity": result.aggregate_equity,
+            "total_trades": result.total_trades,
+            "aggregate_pnl": round(result.aggregate_pnl, 2),
+            "aggregate_max_dd": result.aggregate_max_dd,
+        }
+
+    info = engine.submit(job_type="scenario", label=label, fn=_run)
+    return JobSubmittedResponse(
+        job_id=info.job_id,
+        job_type=info.job_type,
+        label=info.label,
+        state=info.state.value,
+    )

@@ -79,6 +79,7 @@ class AccountResponse(BaseModel):
     balance: float
     equity: float
     initial_balance: float
+    currency: str = "GBP"
     total_pnl: float
     total_pnl_pct: float
     daily_pnl: float
@@ -247,13 +248,15 @@ def get_account(
         active_bots = []
 
     open_count = sum(1 for b in active_bots if b.state == "position_open")
-    initial = acct.initial_balance or 10000.0
+    initial = acct.initial_balance or 1000.0
+    currency = getattr(acct, "currency", None) or "GBP"
     total_pnl = (acct.balance or 0.0) - initial
     total_pnl_pct = (total_pnl / initial * 100) if initial > 0 else 0.0
     return AccountResponse(
         balance=acct.balance or 0.0,
         equity=acct.equity or 0.0,
         initial_balance=initial,
+        currency=currency,
         total_pnl=total_pnl,
         total_pnl_pct=total_pnl_pct,
         daily_pnl=acct.daily_pnl or 0.0,

@@ -1,12 +1,18 @@
 """Paper trading account."""
 
+import os
+
 from fibokei.core.trades import TradeResult
+
+# Configurable via env var — defaults to £1,000
+DEFAULT_INITIAL_BALANCE = float(os.environ.get("FIBOKEI_PAPER_INITIAL_BALANCE", "1000.0"))
+DEFAULT_CURRENCY = os.environ.get("FIBOKEI_PAPER_CURRENCY", "GBP")
 
 
 class PaperAccount:
     """Virtual trading account for paper trading."""
 
-    def __init__(self, initial_balance: float = 10000.0):
+    def __init__(self, initial_balance: float = DEFAULT_INITIAL_BALANCE):
         self.initial_balance = initial_balance
         self.balance = initial_balance
         self.equity = initial_balance

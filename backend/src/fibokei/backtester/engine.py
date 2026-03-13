@@ -3,8 +3,13 @@
 import pandas as pd
 
 from fibokei.backtester.config import BacktestConfig
-from fibokei.backtester.position import Position, calculate_position_size
+from fibokei.backtester.position import Position
 from fibokei.backtester.result import BacktestResult
+from fibokei.backtester.sizing import (
+    calculate_position_size,
+    get_default_spread,
+    pip_value_adjustment,
+)
 from fibokei.core.models import Direction, Timeframe
 from fibokei.core.trades import ExitReason, TradeResult
 from fibokei.strategies.base import Strategy
@@ -31,6 +36,11 @@ class Backtester:
         position: Position | None = None
         trades: list[TradeResult] = []
         equity_curve: list[float] = []
+
+        # Apply default spread if none configured
+        effective_spread = self.config.spread_points
+        if effective_spread == 0.0:
+            effective_spread = get_default_spread(instrument)
 
         # Determine warmup (skip indicator warmup bars)
         warmup = max(
@@ -69,13 +79,24 @@ class Backtester:
                         position, bar, exit_reason
                     )
                     trade = position.close(exit_price, bar_time, exit_reason)
+                    # Convert PnL to account currency
+                    adj = pip_value_adjustment(instrument, exit_price)
+                    adjusted_pnl = trade.pnl * adj
+                    trade = trade.model_copy(update={"pnl": adjusted_pnl})
                     trades.append(trade)
                     equity += trade.pnl
+                    # Bankruptcy guard
+                    if equity <= 0:
+                        equity = 0.0
+                        context["capital"] = equity
+                        position = None
+                        equity_curve.append(equity)
+                        break
                     context["capital"] = equity
                     position = None
 
             # --- Look for new entry ---
-            if position is None:
+            if position is None and equity > 0:
                 signal = self.strategy.generate_signal(df, i, context.copy())
 
                 if signal is not None:
@@ -88,13 +109,15 @@ class Backtester:
                 if signal is not None:
                     plan = self.strategy.build_trade_plan(signal, context)
                     entry_price = self._apply_costs(
-                        signal.proposed_entry, signal.direction
+                        signal.proposed_entry, signal.direction, effective_spread
                     )
                     pos_size = calculate_position_size(
                         equity,
                         self.config.risk_per_trade_pct,
                         entry_price,
                         plan.stop_loss,
+                        max_leverage=self.config.max_leverage,
+                        instrument=instrument,
                     )
 
                     if pos_size > 0:
@@ -123,6 +146,9 @@ class Backtester:
             trade = position.close(
                 last_bar["close"], last_time, ExitReason.SYSTEM_SHUTDOWN_EXIT
             )
+            adj = pip_value_adjustment(instrument, last_bar["close"])
+            adjusted_pnl = trade.pnl * adj
+            trade = trade.model_copy(update={"pnl": adjusted_pnl})
             trades.append(trade)
             equity += trade.pnl
             if equity_curve:
@@ -140,9 +166,9 @@ class Backtester:
             total_bars=len(df) - warmup,
         )
 
-    def _apply_costs(self, price: float, direction: Direction) -> float:
+    def _apply_costs(self, price: float, direction: Direction, spread: float = 0.0) -> float:
         """Apply spread and slippage to entry price."""
-        half_spread = self.config.spread_points / 2
+        half_spread = spread / 2
         slippage = self.config.slippage_points
 
         if direction == Direction.LONG:
