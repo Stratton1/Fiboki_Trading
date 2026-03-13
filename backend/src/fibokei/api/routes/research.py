@@ -32,7 +32,7 @@ from fibokei.backtester.config import BacktestConfig
 from fibokei.core.models import Timeframe
 from fibokei.data.providers.registry import load_canonical
 from fibokei.db.models import ResearchPresetModel, ResearchResultModel
-from fibokei.db.repository import get_research_rankings, save_research_results
+from fibokei.db.repository import delete_research_run, get_research_rankings, save_research_results
 from fibokei.research.matrix import ResearchMatrix
 from fibokei.research.scorer import ScoringConfig
 
@@ -98,10 +98,14 @@ def _run_research_sync(
     if progress_callback:
         progress_callback(5)
 
-    results = matrix.run(resolved_data_dir)
+    # Pass a per-combo progress callback that maps combo progress
+    # to the 5–85% range of the overall job.
+    def _combo_progress(completed: int, total: int) -> None:
+        if progress_callback and total > 0:
+            pct = 5 + int(80 * completed / total)  # 5% → 85%
+            progress_callback(pct)
 
-    if progress_callback:
-        progress_callback(70)
+    results = matrix.run(resolved_data_dir, progress_callback=_combo_progress)
 
     from fibokei.research.filter import apply_minimum_trade_filter
     qualified, _ = apply_minimum_trade_filter(results, min_trades)
@@ -173,11 +177,12 @@ def run_research(
 def get_rankings(
     sort_by: str = Query("composite_score", pattern="^(composite_score|rank)$"),
     limit: int = Query(50, ge=1, le=500),
+    run_id: str | None = Query(None, description="Scope results to a specific run"),
     db: Session = Depends(get_db),
     user: TokenData = Depends(get_current_user),
 ):
-    """Get ranked research results."""
-    results = get_research_rankings(db, sort_by=sort_by, limit=limit)
+    """Get ranked research results, optionally scoped to a single run."""
+    results = get_research_rankings(db, sort_by=sort_by, limit=limit, run_id=run_id)
     return [
         {
             "id": r.id,
@@ -192,6 +197,19 @@ def get_rankings(
         }
         for r in results
     ]
+
+
+@router.delete("/research/runs/{run_id}")
+def delete_research_run_endpoint(
+    run_id: str,
+    db: Session = Depends(get_db),
+    user: TokenData = Depends(get_current_user),
+):
+    """Delete all results for a research run."""
+    count = delete_research_run(db, run_id)
+    if count == 0:
+        raise HTTPException(status_code=404, detail=f"No results found for run {run_id}")
+    return {"deleted": run_id, "results_removed": count}
 
 
 @router.post("/research/compare", response_model=list[ResearchResultResponse])

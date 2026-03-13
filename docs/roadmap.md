@@ -1,8 +1,8 @@
 # Fiboki — Build Roadmap
 
-Version: 2.4
-Status: **Phase 16.3 COMPLETE** — Exposure Dashboard. Phases 15.1–15.4 + 16.1–16.3 complete, Phases 16.4–18 planned.
-Last Updated: 2026-03-12
+Version: 2.5
+Status: **Operator Workflow Stabilization COMPLETE** — 6 production defects fixed. Phases 1–16.3 complete, Phases 16.4–18 planned.
+Last Updated: 2026-03-13
 Reference: [blueprint.md](blueprint.md)
 
 ---
@@ -71,7 +71,7 @@ The recommended implementation order after completing Phase 14:
 | Phase 8: Research Engine V2 | COMPLETE | All pass | Walk-forward, OOS, Monte Carlo, sensitivity, validation rerun; batch UI with scoring controls |
 | Phase 9: Always-On Paper Trading | COMPLETE | All pass | Worker service, DB-backed bot state, restart recovery, stale-data detection, health endpoint, daily Telegram alerts, promotion gate |
 | Phase 10: IG Demo Integration | COMPLETE | All pass | IG REST client (demo only), epic mapping (65 instruments), order lifecycle, position sync, reconciliation, kill switch, execution audit, feature flags, frontend controls |
-| Phase 10.5: Production Data Access | COMPLETE | All pass | Centralized path resolver, starter dataset (2.3MB, 7 majors H1), unified load_canonical(), .dockerignore |
+| Phase 10.5: Production Data Access | COMPLETE | All pass | Centralized path resolver, starter dataset (2.3MB, 7 majors H1), unified load_canonical(), .dockerignore. **Railway volume seeded 2026-03-13**: 60 instruments × 6 timeframes = 360 parquet files via API upload pipeline |
 | Phase 11: Live Readiness | COMPLETE | All pass | Risk limits config (env-var driven), promotion gates (Paper→Demo, Demo→Live), pre-live checklist, 18 gate tests |
 | Phase 12: Frontend V2 | COMPLETE | Build clean | ExecutionModeBanner, backtest comparison, enhanced settings, searchable instrument select. T-12.02 absorbed into Phase 15.3 |
 | Phase 13: CI/CD & Operations | COMPLETE | All pass | GitHub Actions CI, env var validation, structured logging, request IDs, Sentry error tracking, Railway auto-deploy, DB backup strategy (manual `pg_dump` via `DATABASE_PUBLIC_URL`) |
@@ -86,6 +86,7 @@ The recommended implementation order after completing Phase 14:
 | Phase 16.1: Fleet Dashboard | COMPLETE | 526 pass | Fleet overview API (aggregate PnL, per-bot stats, strategy grouping), per-bot trades + equity curve endpoint, enhanced bots page with 6-metric summary, strategy family cards, group-by-strategy table view, stale bot indicators |
 | Phase 16.2: Alert Centre | COMPLETE | 526 pass | AlertModel + repository (save, list, count_unread, mark_read, mark_all_read), Telegram dual-write hooks, alert CRUD API + unread-count endpoint, Alert Centre page with filters + severity badges, sidebar unread badge (30s poll) |
 | Phase 16.3: Exposure Dashboard | COMPLETE | 526 pass | Exposure API (per-instrument/asset-class/direction breakdown, risk utilization, concentration warnings), exposure page with risk gauge components, execution audit viewer on System page |
+| Operator Workflow Stabilization | COMPLETE | 526 pass | Strategy dropdown fix (field name mismatch), run-scoped research rankings with toggle, per-combo job progress (5%→85%), promotion-to-paper repair (case-insensitive gate + 30s timeout + error categorization), delete/cleanup endpoints (jobs, research runs, backtests) + Jobs page cleanup UI, inline error surfacing on jobs + zero-qualified explanation |
 | Phase 16.4: Slippage Analytics | PLANNED | — | Execution quality fields, slippage API + UI, per-trade slippage |
 | Phase 17: Chart Workstation | PLANNED | — | Drawing library, multi-chart layout, trade replay, market session context, scenario sandbox |
 | Phase 18: Strategy Families & Fleet | PLANNED | — | Parameter variations, fleet-aware risk, watchlists, trade journal |
@@ -1656,7 +1657,7 @@ PR triggers lint+test automatically. Merge triggers deploy. Smoke test runs post
 
 **What this enables:** Once a Railway volume is mounted at `/data` and populated with the 961MB canonical dataset (360 parquet files), production gets full historical charting, backtests, and research for all 60 instruments across 6 timeframes.
 
-**Operator next step:** Mount Railway volume, upload `data/canonical/`, run `fibokei manifest`, verify via `GET /api/v1/data/manifest`.
+**Operator next step:** ~~Mount Railway volume, upload `data/canonical/`, run `fibokei manifest`, verify via `GET /api/v1/data/manifest`.~~ DONE 2026-03-13 — Railway volume populated via `scripts/seed-railway-volume.sh` (per-instrument API upload). 360 datasets, manifest refreshed, all timeframes verified.
 
 ---
 

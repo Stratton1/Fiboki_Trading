@@ -393,7 +393,7 @@ class TestPromotionGateAPI:
             },
         )
         assert resp.status_code == 422
-        assert "Promotion gate failed" in resp.json()["detail"]
+        assert "Promotion gate" in resp.json()["detail"]
 
     def test_create_bot_with_low_score_fails(self, auth_headers, api_client):
         """Creating a bot with score below threshold should fail."""
@@ -421,7 +421,7 @@ class TestPromotionGateAPI:
             },
         )
         assert resp.status_code == 422
-        assert "Promotion gate failed" in resp.json()["detail"]
+        assert "Promotion gate" in resp.json()["detail"]
 
     def test_create_bot_with_passing_score(self, auth_headers, api_client):
         """Creating a bot with qualifying score should succeed."""

@@ -19,7 +19,7 @@ from fibokei.backtester.metrics import compute_metrics
 from fibokei.core.models import Timeframe
 from fibokei.data.providers.registry import load_canonical
 from fibokei.db.models import BacktestRunModel, TradeModel
-from fibokei.db.repository import get_backtest_results, save_backtest_result
+from fibokei.db.repository import delete_backtest_run, get_backtest_results, save_backtest_result
 from fibokei.jobs.engine import get_job_engine
 from fibokei.strategies.registry import strategy_registry
 
@@ -201,6 +201,19 @@ def get_backtest(
         "config_json": run.config_json,
         "metrics_json": run.metrics_json,
     }
+
+
+@router.delete("/backtests/{run_id}")
+def delete_backtest(
+    run_id: int,
+    db: Session = Depends(get_db),
+    user: TokenData = Depends(get_current_user),
+):
+    """Delete a backtest run and all its trades."""
+    deleted = delete_backtest_run(db, run_id)
+    if not deleted:
+        raise HTTPException(status_code=404, detail="Backtest run not found")
+    return {"deleted": run_id}
 
 
 @router.get("/backtests/{run_id}/trades", response_model=TradeListResponse)

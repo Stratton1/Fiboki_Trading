@@ -27,9 +27,12 @@ async function apiFetch<T>(path: string, options: RequestInit = {}): Promise<T> 
       headers["Authorization"] = `Bearer ${token}`;
     }
   }
-  // Abort after 10s to prevent infinite loading screens
+  // Abort after timeout to prevent infinite loading screens.
+  // POST/PUT/DELETE get 30s; GET gets 10s.
+  const method = (options.method || "GET").toUpperCase();
+  const timeoutMs = method === "GET" ? 10000 : 30000;
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 10000);
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
   let res: Response;
   try {
     res = await fetch(`${API_URL}/api/v1${path}`, {
@@ -41,6 +44,12 @@ async function apiFetch<T>(path: string, options: RequestInit = {}): Promise<T> 
       },
       ...options,
     });
+  } catch (fetchErr) {
+    clearTimeout(timeout);
+    if (fetchErr instanceof DOMException && fetchErr.name === "AbortError") {
+      throw new ApiError(0, `Request timed out after ${timeoutMs / 1000}s`);
+    }
+    throw fetchErr;
   } finally {
     clearTimeout(timeout);
   }
@@ -113,6 +122,8 @@ export const api = {
     apiFetch<import("@/types/contracts/analytics").BacktestDetail>(`/backtests/${id}`),
   getEquityCurve: (id: number) =>
     apiFetch<{ equity_curve: number[] }>(`/backtests/${id}/equity-curve`),
+  deleteBacktest: (id: number) =>
+    apiFetch<{ deleted: number }>(`/backtests/${id}`, { method: "DELETE" }),
   getBacktestTrades: (id: number, page = 1, size = 50, sort?: string) =>
     apiFetch<import("@/types/contracts/trades").TradeListResponse>(
       `/backtests/${id}/trades?page=${page}&size=${size}${sort ? `&sort=${sort}` : ""}`
@@ -125,7 +136,7 @@ export const api = {
     ),
   rankings: (params?: string) =>
     apiFetch<import("@/types/contracts/research").ResearchResult[]>(
-      `/research/rankings${params ? `?${params}` : ""}`
+      `/research/rankings${params ? (params.startsWith("?") ? params : `?${params}`) : ""}`
     ),
   advancedResearch: (body: Record<string, unknown>) =>
     apiFetch<import("@/types/contracts/research").AdvancedResearchResponse>(
@@ -151,6 +162,8 @@ export const api = {
     }),
   deletePreset: (id: number) =>
     apiFetch<{ deleted: number }>(`/research/presets/${id}`, { method: "DELETE" }),
+  deleteResearchRun: (runId: string) =>
+    apiFetch<{ deleted: string; results_removed: number }>(`/research/runs/${runId}`, { method: "DELETE" }),
 
   // Paper
   createBot: (body: Record<string, unknown>) =>
@@ -320,6 +333,10 @@ export const api = {
     }>(`/jobs/${jobId}`),
   cancelJob: (jobId: string) =>
     apiFetch<{ job_id: string; state: string }>(`/jobs/${jobId}/cancel`, { method: "POST" }),
+  deleteJob: (jobId: string) =>
+    apiFetch<{ deleted: string }>(`/jobs/${jobId}`, { method: "DELETE" }),
+  clearFinishedJobs: () =>
+    apiFetch<{ deleted_count: number }>("/jobs", { method: "DELETE" }),
 
   // Drawings
   listDrawings: (instrument: string, timeframe: string) =>

@@ -184,7 +184,7 @@ export default function BotsPage() {
             <select value={strategy} onChange={(e) => setStrategy(e.target.value)} className="input">
               <option value="">Select strategy</option>
               {strategies?.map((s: any) => (
-                <option key={s.strategy_id} value={s.strategy_id}>{s.strategy_name || s.strategy_id}</option>
+                <option key={s.id} value={s.id}>{s.name || s.id}</option>
               ))}
             </select>
           </div>

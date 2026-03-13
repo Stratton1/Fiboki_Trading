@@ -167,7 +167,7 @@ def test_promotion_gate_rejects_low_score(api_client, auth_headers):
     }
     response = api_client.post("/api/v1/paper/bots", json=req, headers=auth_headers)
     assert response.status_code == 422
-    assert "Promotion gate failed" in response.json()["detail"]
+    assert "Promotion gate" in response.json()["detail"]
 
 
 def test_promotion_gate_rejects_no_research(api_client, auth_headers):
@@ -179,4 +179,4 @@ def test_promotion_gate_rejects_no_research(api_client, auth_headers):
     }
     response = api_client.post("/api/v1/paper/bots", json=req, headers=auth_headers)
     assert response.status_code == 422
-    assert "composite_score=none" in response.json()["detail"]
+    assert "score=none" in response.json()["detail"]

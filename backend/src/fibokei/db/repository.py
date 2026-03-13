@@ -190,15 +190,46 @@ def get_research_rankings(
     session: Session,
     sort_by: str = "composite_score",
     limit: int = 50,
+    run_id: str | None = None,
 ) -> list[ResearchResultModel]:
-    """Get research results ranked by score."""
+    """Get research results ranked by score.
+
+    If run_id is provided, results are scoped to that run only.
+    """
     stmt = select(ResearchResultModel)
+    if run_id:
+        stmt = stmt.where(ResearchResultModel.run_id == run_id)
     if sort_by == "composite_score":
         stmt = stmt.order_by(ResearchResultModel.composite_score.desc())
     elif sort_by == "rank":
         stmt = stmt.order_by(ResearchResultModel.rank.asc())
     stmt = stmt.limit(limit)
     return list(session.scalars(stmt).all())
+
+
+def delete_research_run(session: Session, run_id: str) -> int:
+    """Delete all research results for a given run_id. Returns count deleted."""
+    results = list(
+        session.scalars(
+            select(ResearchResultModel).where(ResearchResultModel.run_id == run_id)
+        ).all()
+    )
+    count = len(results)
+    for r in results:
+        session.delete(r)
+    if count:
+        session.commit()
+    return count
+
+
+def delete_backtest_run(session: Session, run_id: int) -> bool:
+    """Delete a backtest run and its trades (via cascade). Returns True if deleted."""
+    run = session.get(BacktestRunModel, run_id)
+    if not run:
+        return False
+    session.delete(run)
+    session.commit()
+    return True
 
 
 def save_dataset_meta(session: Session, meta: dict) -> DatasetModel:

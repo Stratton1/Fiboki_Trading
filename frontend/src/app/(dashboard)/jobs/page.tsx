@@ -5,7 +5,7 @@ import { api } from "@/lib/api";
 import { PageHeader } from "@/components/PageHeader";
 import { EmptyState } from "@/components/EmptyState";
 import { StatusBadge } from "@/components/StatusBadge";
-import { ListTodo, Loader2, RefreshCw, X } from "lucide-react";
+import { ListTodo, Loader2, RefreshCw, Trash2, X } from "lucide-react";
 
 function stateVariant(state: string): "ok" | "warn" | "error" | "info" {
   switch (state) {
@@ -40,9 +40,22 @@ export default function JobsPage() {
 
   const jobs = data?.items ?? [];
   const activeCount = data?.active_count ?? 0;
+  const finishedCount = jobs.filter(
+    (j) => j.state === "completed" || j.state === "failed" || j.state === "cancelled"
+  ).length;
 
   async function handleCancel(jobId: string) {
     await api.cancelJob(jobId);
+    mutate();
+  }
+
+  async function handleDelete(jobId: string) {
+    await api.deleteJob(jobId);
+    mutate();
+  }
+
+  async function handleClearFinished() {
+    await api.clearFinishedJobs();
     mutate();
   }
 
@@ -52,10 +65,21 @@ export default function JobsPage() {
         title="Jobs"
         subtitle={`Background tasks — ${activeCount} active`}
         actions={
-          <button onClick={() => mutate()} className="btn btn-secondary">
-            <RefreshCw size={14} />
-            Refresh
-          </button>
+          <div className="flex items-center gap-2">
+            {finishedCount > 0 && (
+              <button
+                onClick={handleClearFinished}
+                className="btn btn-secondary text-danger"
+              >
+                <Trash2 size={14} />
+                Clear finished ({finishedCount})
+              </button>
+            )}
+            <button onClick={() => mutate()} className="btn btn-secondary">
+              <RefreshCw size={14} />
+              Refresh
+            </button>
+          </div>
         }
       />
 
@@ -101,7 +125,15 @@ export default function JobsPage() {
                     {j.job_type}
                   </span>
                 </td>
-                <td className="font-medium">{j.label}</td>
+                <td>
+                  <span className="font-medium">{j.label}</span>
+                  {j.state === "completed" && j.result && j.job_type === "research" && (
+                    <span className="text-xs text-foreground-muted ml-2">
+                      {(j.result as Record<string, unknown>).completed as number}/{(j.result as Record<string, unknown>).total_combinations as number} completed,{" "}
+                      {(j.result as Record<string, unknown>).qualified as number} qualified
+                    </span>
+                  )}
+                </td>
                 <td>
                   <StatusBadge variant={stateVariant(j.state)}>
                     {j.state}
@@ -133,23 +165,31 @@ export default function JobsPage() {
                   {new Date(j.created_at).toLocaleTimeString()}
                 </td>
                 <td>
-                  {(j.state === "running" || j.state === "pending") && (
-                    <button
-                      onClick={() => handleCancel(j.job_id)}
-                      className="text-foreground-muted hover:text-danger transition p-1"
-                      title="Cancel job"
-                    >
-                      <X size={14} />
-                    </button>
-                  )}
-                  {j.state === "failed" && j.error && (
-                    <span
-                      className="text-xs text-danger cursor-help"
-                      title={j.error}
-                    >
-                      Error
-                    </span>
-                  )}
+                  <div className="flex items-center gap-2">
+                    {(j.state === "running" || j.state === "pending") && (
+                      <button
+                        onClick={() => handleCancel(j.job_id)}
+                        className="text-foreground-muted hover:text-danger transition p-1"
+                        title="Cancel job"
+                      >
+                        <X size={14} />
+                      </button>
+                    )}
+                    {j.state === "failed" && j.error && (
+                      <span className="text-xs text-danger max-w-xs truncate" title={j.error}>
+                        {j.error}
+                      </span>
+                    )}
+                    {(j.state === "completed" || j.state === "failed" || j.state === "cancelled") && (
+                      <button
+                        onClick={() => handleDelete(j.job_id)}
+                        className="text-foreground-muted hover:text-danger transition p-1"
+                        title="Remove job"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    )}
+                  </div>
                 </td>
               </tr>
             ))}

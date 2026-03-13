@@ -55,8 +55,12 @@ class ResearchMatrix:
         self.scoring_config = scoring_config or ScoringConfig()
         self.provider = provider
 
-    def run(self, data_dir: str) -> list[ResearchResult]:
-        """Run all combinations and return ranked results."""
+    def run(self, data_dir: str, progress_callback=None) -> list[ResearchResult]:
+        """Run all combinations and return ranked results.
+
+        If progress_callback is provided, it is called with (completed, total)
+        after each combination finishes.
+        """
         data_path = Path(data_dir)
         results = []
 
@@ -84,6 +88,8 @@ class ResearchMatrix:
                     df = self._load_data(data_path, instrument, tf_str, timeframe)
                     if df is None:
                         print("SKIP (no data)")
+                        if progress_callback:
+                            progress_callback(count, total)
                         continue
 
                     try:
@@ -122,6 +128,9 @@ class ResearchMatrix:
                         print(f"ERROR: {e}")
 
                     results.append(result)
+
+                    if progress_callback:
+                        progress_callback(count, total)
 
         # Sort by composite score and assign ranks
         results.sort(key=lambda r: r.composite_score, reverse=True)

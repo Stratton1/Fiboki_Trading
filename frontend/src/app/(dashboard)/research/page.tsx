@@ -29,7 +29,21 @@ const DEFAULT_WEIGHTS: ScoringWeights = {
 };
 
 export default function ResearchPage() {
-  const { data: rankings, mutate, isLoading } = useRankings();
+  // Run state — declared first because useRankings depends on currentRunId
+  const [running, setRunning] = useState(false);
+  const [runProgress, setRunProgress] = useState(0);
+  const [error, setError] = useState<string | null>(null);
+  const [currentRunId, setCurrentRunId] = useState<string | null>(null);
+  const [showAllRuns, setShowAllRuns] = useState(false);
+  const [lastSummary, setLastSummary] = useState<{
+    run_id: string;
+    completed: number;
+    qualified: number;
+    total_combinations: number;
+    min_trades: number;
+  } | null>(null);
+
+  const { data: rankings, mutate, isLoading } = useRankings(showAllRuns ? null : currentRunId);
   const { data: strategies } = useSWR("strategies", () => api.strategies());
   const { data: instruments } = useSWR("instruments", () => api.instruments());
 
@@ -49,15 +63,6 @@ export default function ResearchPage() {
   const [minTrades, setMinTrades] = useState(80);
   const [showWeights, setShowWeights] = useState(false);
   const [weights, setWeights] = useState<ScoringWeights>(DEFAULT_WEIGHTS);
-
-  // Run state
-  const [running, setRunning] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [lastSummary, setLastSummary] = useState<{
-    run_id: string;
-    completed: number;
-    qualified: number;
-  } | null>(null);
 
   // Advanced research state
   const [advancedResult, setAdvancedResult] = useState<AdvancedResearchResponse | null>(null);
@@ -142,8 +147,11 @@ export default function ResearchPage() {
     e.preventDefault();
     if (selectedStrategies.length === 0 || !selectedInstrument || selectedTimeframes.length === 0) return;
     setRunning(true);
+    setRunProgress(0);
     setError(null);
     setLastSummary(null);
+    setCurrentRunId(null);
+    setShowAllRuns(false);
     try {
       const body: Record<string, unknown> = {
         strategy_ids: selectedStrategies,
@@ -155,33 +163,44 @@ export default function ResearchPage() {
         body.scoring_weights = weights;
       }
       const result = await api.runResearch(body);
-      setLastSummary({
-        run_id: result.job_id,
-        completed: 0,
-        qualified: 0,
-      });
-      // Research now runs as an async job — poll for completion
+      const jobId = result.job_id;
+
+      // Poll for completion — track progress
       const pollInterval = setInterval(async () => {
-        const job = await api.getJob(result.job_id);
-        if (job.state === "completed" && job.result) {
-          clearInterval(pollInterval);
-          setLastSummary({
-            run_id: (job.result as Record<string, unknown>).run_id as string,
-            completed: (job.result as Record<string, unknown>).completed as number,
-            qualified: (job.result as Record<string, unknown>).qualified as number,
-          });
-          await mutate();
-          setRunning(false);
-        } else if (job.state === "failed") {
-          clearInterval(pollInterval);
-          setError(job.error || "Research job failed");
-          setRunning(false);
+        try {
+          const job = await api.getJob(jobId);
+          setRunProgress(job.progress ?? 0);
+
+          if (job.state === "completed" && job.result) {
+            clearInterval(pollInterval);
+            const r = job.result as Record<string, unknown>;
+            const runId = r.run_id as string;
+            setCurrentRunId(runId);
+            setLastSummary({
+              run_id: runId,
+              completed: (r.completed as number) ?? 0,
+              qualified: (r.qualified as number) ?? 0,
+              total_combinations: (r.total_combinations as number) ?? 0,
+              min_trades: (r.min_trades as number) ?? minTrades,
+            });
+            await mutate();
+            setRunning(false);
+          } else if (job.state === "failed") {
+            clearInterval(pollInterval);
+            setError(job.error || "Research job failed");
+            setRunning(false);
+          } else if (job.state === "cancelled") {
+            clearInterval(pollInterval);
+            setError("Research job was cancelled");
+            setRunning(false);
+          }
+        } catch {
+          // Poll error — keep trying
         }
       }, 2000);
       return; // Don't setRunning(false) here — the poll handles it
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to run research");
-    } finally {
       setRunning(false);
     }
   }
@@ -236,13 +255,25 @@ export default function ResearchPage() {
         instrument: promoteTarget.instrument,
         timeframe: promoteTarget.timeframe,
         source_type: "research",
-        source_id: lastSummary?.run_id || undefined,
+        source_id: currentRunId || undefined,
       });
       const botId = (res as Record<string, unknown>).bot_id as string;
-      setPromoteSuccess(`Bot ${botId} created`);
+      setPromoteSuccess(`Bot ${botId} created for ${promoteTarget.strategy_id} / ${promoteTarget.instrument} / ${promoteTarget.timeframe}`);
       setPromoteTarget(null);
     } catch (err) {
-      setPromoteError(err instanceof Error ? err.message : "Promotion failed");
+      if (err instanceof Error) {
+        if (err.message === "Failed to fetch") {
+          setPromoteError(
+            "Network error: could not reach API. Check connection and CORS configuration."
+          );
+        } else if (err.message.includes("AbortError") || err.message.includes("aborted")) {
+          setPromoteError("Request timed out. The server may be slow — try again.");
+        } else {
+          setPromoteError(err.message);
+        }
+      } else {
+        setPromoteError("Promotion failed (unknown error)");
+      }
     } finally {
       setPromoteLoading(false);
     }
@@ -451,9 +482,19 @@ export default function ResearchPage() {
           >
             {running ? "Running..." : "Run Research"}
           </button>
-          {lastSummary && (
+          {running && (
             <span className="text-xs text-foreground-muted">
-              Run {lastSummary.run_id}: {lastSummary.completed} completed, {lastSummary.qualified} qualified
+              Running... {runProgress}%
+            </span>
+          )}
+          {!running && lastSummary && (
+            <span className="text-xs text-foreground-muted">
+              Run {lastSummary.run_id}: {lastSummary.completed}/{lastSummary.total_combinations} completed, {lastSummary.qualified} qualified
+              {lastSummary.qualified === 0 && lastSummary.completed > 0 && (
+                <span className="text-amber-600 ml-1">
+                  (no combinations met min_trades={lastSummary.min_trades})
+                </span>
+              )}
             </span>
           )}
         </div>
@@ -476,6 +517,14 @@ export default function ResearchPage() {
         <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 bg-background-muted">
           <div className="flex items-center gap-3">
             <span className="text-sm font-medium text-foreground-muted">Rankings</span>
+            {currentRunId && (
+              <button
+                onClick={() => setShowAllRuns(!showAllRuns)}
+                className={`text-xs px-3 py-1 rounded border ${showAllRuns ? "border-gray-200" : "bg-primary/10 border-primary text-primary"}`}
+              >
+                {showAllRuns ? "All Runs" : `Run ${currentRunId}`}
+              </button>
+            )}
             <button
               onClick={() => setShowBookmarked(!showBookmarked)}
               className={`text-xs px-3 py-1 rounded border ${showBookmarked ? "bg-amber-50 border-amber-300 text-amber-700" : "border-gray-200"}`}

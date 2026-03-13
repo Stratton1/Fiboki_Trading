@@ -79,3 +79,32 @@ def cancel_job(
             detail=f"Cannot cancel job in state: {info.state.value}",
         )
     return {"job_id": job_id, "state": "cancelled"}
+
+
+@router.delete("/jobs/{job_id}")
+def delete_job(
+    job_id: str,
+    user: TokenData = Depends(get_current_user),
+):
+    """Remove a finished job from the list."""
+    engine = get_job_engine()
+    info = engine.get(job_id)
+    if not info:
+        raise HTTPException(status_code=404, detail="Job not found")
+    removed = engine.remove(job_id)
+    if not removed:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Cannot delete job in state: {info.state.value}",
+        )
+    return {"deleted": job_id}
+
+
+@router.delete("/jobs")
+def clear_finished_jobs(
+    user: TokenData = Depends(get_current_user),
+):
+    """Remove all finished (completed/failed/cancelled) jobs."""
+    engine = get_job_engine()
+    count = engine.clear_finished()
+    return {"deleted_count": count}

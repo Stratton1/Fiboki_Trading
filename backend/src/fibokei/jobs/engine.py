@@ -151,6 +151,32 @@ class JobEngine:
             info.completed_at = datetime.now(timezone.utc)
             return True
 
+    def remove(self, job_id: str) -> bool:
+        """Remove a finished job from the in-memory store.
+
+        Only jobs in a terminal state (completed, failed, cancelled) can be
+        removed.  Returns True if the job was found and removed.
+        """
+        with self._lock:
+            info = self._jobs.get(job_id)
+            if not info:
+                return False
+            if info.state in (JobState.PENDING, JobState.RUNNING):
+                return False
+            del self._jobs[job_id]
+            return True
+
+    def clear_finished(self) -> int:
+        """Remove all finished (completed/failed/cancelled) jobs. Returns count removed."""
+        with self._lock:
+            to_remove = [
+                jid for jid, info in self._jobs.items()
+                if info.state in (JobState.COMPLETED, JobState.FAILED, JobState.CANCELLED)
+            ]
+            for jid in to_remove:
+                del self._jobs[jid]
+            return len(to_remove)
+
     def active_count(self) -> int:
         """Number of pending + running jobs."""
         with self._lock:
