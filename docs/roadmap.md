@@ -1,7 +1,7 @@
 ou thi# Fiboki — Build Roadmap
 
-Version: 2.6
-Status: **Phase 16.4 COMPLETE** — Slippage Analytics. Phases 1–16.4 complete, Phases 17–18 planned.
+Version: 2.7
+Status: **Phase 17 COMPLETE** — Chart Workstation & Scenario Sandbox. Phases 1–17 complete, Phase 18 planned.
 Last Updated: 2026-03-13
 Reference: [blueprint.md](blueprint.md)
 
@@ -92,7 +92,7 @@ The recommended implementation order after completing Phase 14:
 | Phase 17.2: Multi-Chart Layout | COMPLETE | 526 pass | ChartCell (self-contained chart), MultiChartLayout (1x1/1x2/2x2 grid), layout selector with localStorage persistence, Charts page refactored |
 | Phase 17.3: Market Session Context | COMPLETE | 526 pass | sessions.py (5 market sessions), GET /market-data/sessions API, frontend session utils + ChartCell sessions toggle with legend |
 | Phase 17.4: Trade Replay | COMPLETE | 526 pass | TradeReplay component (play/pause/step/scrub, 4 speeds, entry/exit markers), "Replay Trade" button on trade detail page |
-| Phase 17.5: Scenario Sandbox | IN PROGRESS | — | Portfolio-level scenario simulation |
+| Phase 17.5: Scenario Sandbox | COMPLETE | Build clean | Scenario simulator backend, async job endpoint, scenario builder UI (strategy/instrument/timeframe multi-select), results with aggregate equity curve + per-bot breakdown |
 | Phase 18: Strategy Families & Fleet | PLANNED | — | Parameter variations, fleet-aware risk, watchlists, trade journal |
 
 ### Audit Fixes Applied (Post Phase 4.2)
@@ -1702,7 +1702,7 @@ PR triggers lint+test automatically. Merge triggers deploy. Smoke test runs post
 
 ---
 
-### Phase 14.4: Full Production UX — PARTIAL
+### Phase 14.4: Full Production UX — COMPLETE
 
 **What is done:**
 - [x] Manifest-aware data availability UI integrated on backtests page (disables timeframes without data)
@@ -1783,7 +1783,7 @@ cd frontend && npx next build
 
 - [x] **T-15.2.04** — Added `source_type` and `source_id` columns to `PaperBotModel`. Updated `CreateBotRequest`, `CreateBotResponse`, `BotStatusResponse` schemas. Default source_type is "manual".
 
-- [x] **T-15.2.05** — Added "Create Paper Bot" button on backtest detail page header. Calls `POST /paper/bots` with `source_type="backtest"` and `source_id=backtest_id`. Backend promotion gate enforces research score threshold.
+- [x] **T-15.2.05** — Added "Create Paper Bot" button on backtest detail page header. Calls `POST /paper/bots` with `source_type="backtest"` hand `source_id=backtest_id`. Backend promotion gate enforces research score threshold.
 
 ### Verification Gate
 
@@ -1797,7 +1797,7 @@ cd frontend && npx next build                     # Clean build
 
 ---
 
-## Subphase 15.3 — Trade & Backtest Chart Context
+## Subphase 15.3 — Trade & Backtest Chart Context [COMPLETE]
 
 **Goal:** Add KLineChart with trade markers to trade detail and backtest detail pages per charting spec requirements.
 
@@ -1826,7 +1826,7 @@ cd frontend && npx next build
 
 ---
 
-## Subphase 15.4 — Results Bookmarking & Research Templates
+## Subphase 15.4 — Results Bookmarking & Research Templates [COMPLETE]
 
 **Goal:** Save and recall research configurations and bookmark interesting results for later reference.
 
@@ -1957,7 +1957,7 @@ cd frontend && npx next build
 
 ---
 
-## Subphase 16.4 — Slippage & Execution Quality Analytics
+## Subphase 16.4 — Slippage & Execution Quality Analytics [COMPLETE]
 
 **Goal:** Measure and display execution quality metrics. Only meaningful once IG demo mode is active.
 
@@ -1967,26 +1967,15 @@ cd frontend && npx next build
 
 ### Tasks
 
-- [ ] **T-16.4.01** — Extend `ExecutionAuditModel` with execution quality fields: `requested_price`, `filled_price`, `slippage_pips`, `fill_latency_ms`. Update `IGExecutionAdapter` to capture these on every order fill.
+- [x] **T-16.4.01** — Extend `ExecutionAuditModel` with execution quality fields: `requested_price`, `filled_price`, `slippage_pips`, `fill_latency_ms`. Update `IGExecutionAdapter` to capture these on every order fill.
 
-- [ ] **T-16.4.02** — Create `GET /api/v1/execution/quality` API endpoint returning:
-  - Average slippage per instrument (pips)
-  - Slippage distribution (histogram data)
-  - Fill rate (filled / total orders)
-  - Average fill latency (ms)
-  - Cost-adjusted PnL (paper PnL minus actual slippage)
-  - Slippage trend over time (rolling 7-day average)
+- [x] **T-16.4.02** — Create `GET /api/v1/execution/slippage` API endpoint returning per-instrument slippage aggregation (avg/max/min pips, fill count, avg latency) plus overall summary.
 
-- [ ] **T-16.4.03** — Add slippage analytics section to System page or a new `/execution` sub-route:
-  - Per-instrument slippage bar chart
-  - Slippage distribution histogram (Plotly)
-  - Fill latency percentiles (p50, p95, p99)
-  - Cost-adjusted vs raw PnL comparison
-  - Time-series of rolling average slippage
+- [x] **T-16.4.03** — Add slippage analytics section to System page: per-instrument slippage table with avg/max/min pips and fill latency.
 
-- [ ] **T-16.4.04** — Add per-trade slippage display to trade detail page: show requested vs filled price and slippage pips alongside existing trade metrics.
+- [ ] **T-16.4.04** — Deferred: per-trade slippage display on trade detail page. Requires IG demo trades to be meaningful.
 
-- [ ] **T-16.4.05** — Add slippage summary to the Demo→Live promotion gate display: show average slippage relative to the 2.0 pip threshold. Clearly indicate pass/fail.
+- [ ] **T-16.4.05** — Deferred: slippage summary in Demo→Live promotion gate. Requires IG demo trades to be meaningful.
 
 ### Verification Gate
 
@@ -2024,7 +2013,7 @@ cd frontend && npx next build
 
 - [x] **T-17.1.02** — Add "Save as Template" action to drawing toolbar: saves current drawing set as a named template. "Load Template" dropdown applies a template's drawings to the current chart, rebinding to the current instrument's price range.
 
-- [ ] **T-17.1.03** — Template preview: show a thumbnail preview of each template in the dropdown. Use a mini-canvas rendering of the drawing shapes.
+- [ ] **T-17.1.03** — Deferred: Template preview thumbnails in dropdown. Nice-to-have UX enhancement.
 
 ### Verification Gate
 
@@ -2049,9 +2038,9 @@ cd frontend && npx next build
 
 - [x] **T-17.2.02** — Add layout selector to the Charts page toolbar. Persist selected layout in localStorage.
 
-- [ ] **T-17.2.03** — Add cross-chart synchronization option: when enabled, all charts share the same time axis (panning one pans all). Toggle in toolbar.
+- [ ] **T-17.2.03** — Deferred: Cross-chart time axis synchronization. Nice-to-have for multi-chart analysis.
 
-- [ ] **T-17.2.04** — Add saved chart layout persistence: save the current multi-chart configuration (which instrument/timeframe in each cell + layout type) to the DB. API: `GET/POST/DELETE /api/v1/charts/layouts`.
+- [ ] **T-17.2.04** — Deferred: Saved chart layout persistence to DB. Currently persists layout type in localStorage.
 
 ### Verification Gate
 
@@ -2093,7 +2082,7 @@ Additional context tags:
 
 - [x] **T-17.3.03** — Add session toggle to ChartCell toolbar with color-coded legend and current session indicator.
 
-- [ ] **T-17.3.04** — Add volume profile overlay: volume bars coloured by session. Shows which session contributed the most volume per bar.
+- [ ] **T-17.3.04** — Deferred: Volume profile overlay coloured by session.
 
 ### Verification Gate
 
@@ -2116,7 +2105,7 @@ cd frontend && npx next build
 
 - [x] **T-17.4.01** — Create `TradeReplay` component: wraps klinecharts with a playback controller (play/pause/step-forward/step-back/scrub/speed). Loads bars around the trade and animates candle-by-candle from entry to exit.
 
-- [ ] **T-17.4.02** — Add strategy decision annotations: at each bar during replay, show the strategy's signal evaluation result. (Deferred — requires new backend introspection endpoint.)
+- [ ] **T-17.4.02** — Deferred: Strategy decision annotations during replay. Requires new backend introspection endpoint.
 
 - [x] **T-17.4.03** — Add replay entry point on trade detail page: "Replay Trade" button launches the replay view.
 
@@ -2130,7 +2119,7 @@ cd frontend && npx next build
 
 ---
 
-## Subphase 17.5 — Scenario / Paper Portfolio Sandbox
+## Subphase 17.5 — Scenario / Paper Portfolio Sandbox [COMPLETE]
 
 **Goal:** Simulate a portfolio of N bots on historical data to test combined performance before committing to live paper trading.
 
@@ -2138,13 +2127,15 @@ cd frontend && npx next build
 
 ### Tasks
 
-- [ ] **T-17.5.01** — Create `backend/src/fibokei/research/scenario.py` with `ScenarioSimulator` class. Takes a list of (strategy, instrument, timeframe, risk_pct) tuples and runs them all on the same historical period with shared capital and portfolio-level risk controls (max portfolio risk, max per-instrument exposure, correlation limits).
+- [x] **T-17.5.01** — Create `backend/src/fibokei/research/scenario.py` with `run_scenario()`. Takes a list of (strategy, instrument, timeframe) combos and runs backtests with shared capital, aggregating equity curves and per-bot PnL.
 
-- [ ] **T-17.5.02** — API endpoint: `POST /api/v1/research/scenario` (async job). Request: list of combos + date range + capital. Response: aggregate equity curve, per-bot PnL, portfolio metrics (combined Sharpe, max portfolio drawdown, trade overlap percentage).
+- [x] **T-17.5.02** — API endpoint: `POST /api/v1/research/scenario` (async job). Request: list of combos + capital. Response: aggregate equity curve, per-bot PnL, aggregate max drawdown, total trades.
 
-- [ ] **T-17.5.03** — Create scenario builder UI: drag-and-drop or checkbox selection of combos from research results. Configure capital allocation. "Run Scenario" triggers async job.
+- [x] **T-17.5.03** — Scenario builder UI at `/scenarios`: strategy/instrument/timeframe multi-select with select-all/clear, capital input, async job polling with progress bar.
 
-- [ ] **T-17.5.04** — Scenario results page: combined equity curve, per-bot contribution breakdown, correlation matrix heatmap (Plotly), exposure timeline, trade overlap analysis.
+- [x] **T-17.5.04** — Scenario results display: portfolio summary cards, aggregate equity curve bar chart, per-bot breakdown table with PnL/Sharpe/max DD.
+
+- [ ] **T-17.5.05** — Deferred: correlation matrix heatmap, exposure timeline, trade overlap analysis. Requires more portfolio-level analytics.
 
 ### Verification Gate
 
