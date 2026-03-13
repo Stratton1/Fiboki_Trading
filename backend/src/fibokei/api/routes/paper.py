@@ -227,20 +227,37 @@ def get_account(
     db: Session = Depends(get_db),
 ):
     """Get paper trading account overview."""
-    acct = get_or_create_paper_account(db)
-    trades = get_paper_trades(db, limit=10000)
-    active_bots = get_active_paper_bots(db)
+    import logging
+
+    logger = logging.getLogger("fibokei.paper")
+    try:
+        acct = get_or_create_paper_account(db)
+    except Exception:
+        logger.exception("Failed to get/create paper account")
+        raise HTTPException(status_code=500, detail="Failed to load paper account")
+    try:
+        trades = get_paper_trades(db, limit=10000)
+    except Exception:
+        logger.exception("Failed to load paper trades")
+        trades = []
+    try:
+        active_bots = get_active_paper_bots(db)
+    except Exception:
+        logger.exception("Failed to load active bots")
+        active_bots = []
+
     open_count = sum(1 for b in active_bots if b.state == "position_open")
-    total_pnl = acct.balance - acct.initial_balance
-    total_pnl_pct = (total_pnl / acct.initial_balance * 100) if acct.initial_balance > 0 else 0.0
+    initial = acct.initial_balance or 10000.0
+    total_pnl = (acct.balance or 0.0) - initial
+    total_pnl_pct = (total_pnl / initial * 100) if initial > 0 else 0.0
     return AccountResponse(
-        balance=acct.balance,
-        equity=acct.equity,
-        initial_balance=acct.initial_balance,
+        balance=acct.balance or 0.0,
+        equity=acct.equity or 0.0,
+        initial_balance=initial,
         total_pnl=total_pnl,
         total_pnl_pct=total_pnl_pct,
-        daily_pnl=acct.daily_pnl,
-        weekly_pnl=acct.weekly_pnl,
+        daily_pnl=acct.daily_pnl or 0.0,
+        weekly_pnl=acct.weekly_pnl or 0.0,
         open_positions=open_count,
         total_trades=len(trades),
     )

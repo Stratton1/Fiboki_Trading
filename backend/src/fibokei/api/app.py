@@ -95,11 +95,24 @@ def _create_engine_and_session():
 
 
 def _ensure_new_columns(engine) -> None:
-    """Add columns that create_all won't add to existing tables (PostgreSQL)."""
+    """Add columns that create_all won't add to existing tables (PostgreSQL).
+
+    Also verifies that critical tables exist (create_all should handle this,
+    but log a warning if they're missing after create_all).
+    """
     from sqlalchemy import inspect, text
 
     inspector = inspect(engine)
-    if "execution_audit" not in inspector.get_table_names():
+    table_names = set(inspector.get_table_names())
+
+    # Verify critical tables exist (helpful for diagnosing production issues)
+    logger = logging.getLogger("fibokei.startup")
+    critical_tables = ["paper_account", "paper_bots", "paper_trades", "execution_audit"]
+    for table in critical_tables:
+        if table not in table_names:
+            logger.warning("Table '%s' missing after create_all — will be created on next restart", table)
+
+    if "execution_audit" not in table_names:
         return
     existing = {col["name"] for col in inspector.get_columns("execution_audit")}
     new_cols = {
@@ -251,12 +264,31 @@ def create_app() -> FastAPI:
     )
 
     # Request ID + logging middleware
+    # IMPORTANT: This middleware is outermost (added after CORS). Any unhandled
+    # exception here bypasses CORSMiddleware, causing browsers to report CORS
+    # errors instead of the real 500.  The try/except ensures exceptions are
+    # caught and returned as proper JSON so CORS headers can still be applied.
     @application.middleware("http")
     async def request_logging_middleware(request: Request, call_next):
         request_id = request.headers.get("X-Request-ID", uuid.uuid4().hex[:12])
         request.state.request_id = request_id
         start = time.monotonic()
-        response = await call_next(request)
+        try:
+            response = await call_next(request)
+        except Exception:
+            # Log the error and return a JSON 500 so CORS middleware can wrap it
+            duration_ms = (time.monotonic() - start) * 1000
+            logger = logging.getLogger("fibokei.http")
+            logger.exception(
+                "%s %s 500 %.0fms rid=%s [UNHANDLED]",
+                request.method, request.url.path, duration_ms, request_id,
+            )
+            from starlette.responses import JSONResponse
+            return JSONResponse(
+                status_code=500,
+                content={"detail": "Internal server error"},
+                headers={"X-Request-ID": request_id},
+            )
         duration_ms = (time.monotonic() - start) * 1000
         logger = logging.getLogger("fibokei.http")
         logger.info(

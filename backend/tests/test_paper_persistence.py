@@ -537,6 +537,23 @@ class TestPaperBotAPI:
         assert data["balance"] == 10000.0
         assert data["initial_balance"] == 10000.0
 
+    def test_get_account_returns_all_fields(self, auth_headers, api_client):
+        """Account endpoint returns valid JSON with all expected fields."""
+        resp = api_client.get("/api/v1/paper/account", headers=auth_headers)
+        assert resp.status_code == 200
+        assert "application/json" in resp.headers.get("content-type", "")
+        data = resp.json()
+        for field in ["balance", "equity", "initial_balance", "total_pnl",
+                      "total_pnl_pct", "daily_pnl", "weekly_pnl"]:
+            assert isinstance(data[field], (int, float)), f"{field} should be numeric"
+        assert isinstance(data["open_positions"], int)
+        assert isinstance(data["total_trades"], int)
+
+    def test_get_account_requires_auth(self, api_client):
+        """Account endpoint returns 401 without auth, not a crash."""
+        resp = api_client.get("/api/v1/paper/account")
+        assert resp.status_code == 401
+
     def test_stop_nonexistent_bot(self, auth_headers, api_client):
         resp = api_client.post(
             "/api/v1/paper/bots/ghost/stop",
