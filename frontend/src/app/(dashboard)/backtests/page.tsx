@@ -10,7 +10,7 @@ import GroupedInstrumentSelect from "@/components/GroupedInstrumentSelect";
 import { PageHeader } from "@/components/PageHeader";
 import { EmptyState } from "@/components/EmptyState";
 import { useManifest } from "@/lib/hooks/use-manifest";
-import { BarChart3, GitCompareArrows, Loader2 } from "lucide-react";
+import { BarChart3, GitCompareArrows, Loader2, Trash2 } from "lucide-react";
 import { useBookmarks } from "@/lib/hooks/use-bookmarks";
 import { BookmarkButton } from "@/components/BookmarkButton";
 
@@ -26,6 +26,20 @@ export default function BacktestsPage() {
   const { hasData, availableTimeframes, datasetInfo } = useManifest();
   const { isBookmarked, toggle: toggleBookmark } = useBookmarks("backtest");
   const [showBookmarked, setShowBookmarked] = useState(false);
+  const [deleting, setDeleting] = useState<number | null>(null);
+
+  async function handleDelete(id: number) {
+    if (!confirm("Delete this backtest run and all its trades?")) return;
+    setDeleting(id);
+    try {
+      await api.deleteBacktest(id);
+      mutate();
+    } catch {
+      /* ignore */
+    } finally {
+      setDeleting(null);
+    }
+  }
 
   const ALL_TIMEFRAMES = ["M1", "M5", "M15", "M30", "H1", "H4"];
   const manifestTimeframes = instrument ? availableTimeframes(instrument) : [];
@@ -182,6 +196,7 @@ export default function BacktestsPage() {
               <th className="text-right">Net Profit</th>
               <th className="text-right">Sharpe</th>
               <th className="text-right">Max DD</th>
+              <th className="w-8"></th>
             </tr>
           </thead>
           <tbody>
@@ -230,6 +245,16 @@ export default function BacktestsPage() {
                 <td className="text-right tabular-nums">{bt.sharpe_ratio?.toFixed(2) ?? "—"}</td>
                 <td className="text-right tabular-nums text-danger">
                   {bt.max_drawdown_pct != null ? `${bt.max_drawdown_pct.toFixed(1)}%` : "—"}
+                </td>
+                <td>
+                  <button
+                    onClick={() => handleDelete(bt.id)}
+                    disabled={deleting === bt.id}
+                    className="text-foreground-muted hover:text-danger transition-colors disabled:opacity-50"
+                    title="Delete backtest"
+                  >
+                    {deleting === bt.id ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />}
+                  </button>
                 </td>
               </tr>
             ))}
