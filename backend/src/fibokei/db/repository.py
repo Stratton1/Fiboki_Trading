@@ -193,12 +193,12 @@ def save_backtest_result(
             instrument=trade.instrument,
             direction=trade.direction.value,
             entry_time=trade.entry_time,
-            entry_price=trade.entry_price,
+            entry_price=float(trade.entry_price),
             exit_time=trade.exit_time,
-            exit_price=trade.exit_price,
+            exit_price=float(trade.exit_price),
             exit_reason=trade.exit_reason.value,
-            pnl=trade.pnl,
-            bars_in_trade=trade.bars_in_trade,
+            pnl=float(trade.pnl),
+            bars_in_trade=int(trade.bars_in_trade),
         )
         session.add(trade_row)
 
