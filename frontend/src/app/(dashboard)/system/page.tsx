@@ -21,6 +21,7 @@ import {
   XCircle,
 } from "lucide-react";
 import { useManifest } from "@/lib/hooks/use-manifest";
+import { InfoTip } from "@/components/InfoTip";
 
 type DiagResult = { status: "idle" | "running" | "pass" | "fail"; detail: string };
 
@@ -113,7 +114,7 @@ function SlippageSection() {
     <div className="card mb-6">
       <div className="flex items-center gap-2 mb-4">
         <BarChart3 size={14} className="text-foreground-muted" />
-        <p className="section-label !mb-0">Slippage Analytics</p>
+        <p className="section-label !mb-0">Slippage Analytics<InfoTip text="Slippage = difference between requested price and actual fill price. Paper mode has zero slippage. Relevant when using IG demo/live execution." /></p>
       </div>
       {!slippage || slippage.total_fills === 0 ? (
         <p className="text-foreground-muted text-sm">
@@ -354,7 +355,7 @@ export default function SystemPage() {
             </StatusBadge>
           </div>
           <div>
-            <p className="text-xs text-foreground-muted mb-1">Kill Switch</p>
+            <p className="text-xs text-foreground-muted mb-1">Kill Switch<InfoTip text="Emergency stop. When active, all bots are paused and no new entries are taken. Use when something looks wrong." /></p>
             <div className="flex items-center gap-2">
               {execMode?.kill_switch_active ? (
                 <>

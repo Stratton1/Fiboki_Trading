@@ -40,6 +40,8 @@ interface GroupedInstrumentSelectProps {
   onChange: (value: string) => void;
   className?: string;
   showDataIndicator?: boolean;
+  /** When provided, only instruments in this set are shown */
+  watchlistFilter?: Set<string> | null;
 }
 
 export default function GroupedInstrumentSelect({
@@ -48,6 +50,7 @@ export default function GroupedInstrumentSelect({
   onChange,
   className = "",
   showDataIndicator = false,
+  watchlistFilter,
 }: GroupedInstrumentSelectProps) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
@@ -71,9 +74,13 @@ export default function GroupedInstrumentSelect({
   }, [open]);
 
   const filtered = useMemo(() => {
+    let list = instruments;
+    if (watchlistFilter) {
+      list = list.filter((inst) => watchlistFilter.has(inst.symbol));
+    }
     const q = search.toLowerCase().trim();
-    if (!q) return instruments;
-    return instruments.filter(
+    if (!q) return list;
+    return list.filter(
       (inst) =>
         inst.symbol.toLowerCase().includes(q) ||
         inst.name.toLowerCase().includes(q) ||
@@ -81,7 +88,7 @@ export default function GroupedInstrumentSelect({
           .toLowerCase()
           .includes(q)
     );
-  }, [instruments, search]);
+  }, [instruments, search, watchlistFilter]);
 
   const grouped = useMemo(() => {
     const map = new Map<string, InstrumentOption[]>();

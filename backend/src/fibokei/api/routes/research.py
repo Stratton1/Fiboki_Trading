@@ -18,10 +18,14 @@ from fibokei.api.schemas.research import (
     ResearchPresetResponse,
     ResearchPresetUpdate,
     ResearchResultResponse,
+    ResearchRunListItem,
     ResearchRunRequest,
     ScoringWeights,
     SensitivityPointResponse,
     SensitivityResponse,
+    ShortlistEntryCreate,
+    ShortlistEntryResponse,
+    ShortlistEntryUpdate,
     ValidationBatchResponse,
     ValidationResultResponse,
     ValidationRunRequest,
@@ -32,7 +36,19 @@ from fibokei.backtester.config import BacktestConfig
 from fibokei.core.models import Timeframe
 from fibokei.data.providers.registry import load_canonical
 from fibokei.db.models import ResearchPresetModel, ResearchResultModel
-from fibokei.db.repository import delete_research_run, get_research_rankings, save_research_results
+from fibokei.db.repository import (
+    delete_all_research_results,
+    delete_non_saved_results,
+    delete_research_run,
+    delete_shortlist_entry,
+    delete_single_research_result,
+    get_research_rankings,
+    list_research_runs,
+    list_saved_shortlist,
+    save_research_results,
+    update_shortlist_entry,
+    upsert_shortlist_entry,
+)
 from fibokei.research.matrix import ResearchMatrix
 from fibokei.research.scorer import ScoringConfig
 
@@ -178,11 +194,12 @@ def get_rankings(
     sort_by: str = Query("composite_score", pattern="^(composite_score|rank)$"),
     limit: int = Query(50, ge=1, le=500),
     run_id: str | None = Query(None, description="Scope results to a specific run"),
+    deduplicate: bool = Query(False, description="When viewing all runs, show only best score per combo"),
     db: Session = Depends(get_db),
     user: TokenData = Depends(get_current_user),
 ):
     """Get ranked research results, optionally scoped to a single run."""
-    results = get_research_rankings(db, sort_by=sort_by, limit=limit, run_id=run_id)
+    results = get_research_rankings(db, sort_by=sort_by, limit=limit, run_id=run_id, deduplicate=deduplicate)
     return [
         {
             "id": r.id,
@@ -565,6 +582,144 @@ def delete_preset(
     return {"deleted": preset_id}
 
 
+# ── Saved Shortlist ──────────────────────────────────────────
+
+
+@router.get("/research/shortlist", response_model=list[ShortlistEntryResponse])
+def get_shortlist(
+    db: Session = Depends(get_db),
+    user: TokenData = Depends(get_current_user),
+):
+    """List all saved shortlist entries for the current user."""
+    entries = list_saved_shortlist(db, user.user_id)
+    return [
+        {
+            "id": e.id,
+            "strategy_id": e.strategy_id,
+            "instrument": e.instrument,
+            "timeframe": e.timeframe,
+            "score": e.score,
+            "source_run_id": e.source_run_id,
+            "metrics_snapshot": e.metrics_snapshot,
+            "note": e.note,
+            "status": e.status,
+            "created_at": e.created_at,
+            "updated_at": e.updated_at,
+        }
+        for e in entries
+    ]
+
+
+@router.post("/research/shortlist", response_model=ShortlistEntryResponse, status_code=201)
+def save_to_shortlist(
+    req: ShortlistEntryCreate,
+    db: Session = Depends(get_db),
+    user: TokenData = Depends(get_current_user),
+):
+    """Save a strategy combo to the shortlist (upsert by combo)."""
+    entry = upsert_shortlist_entry(db, user.user_id, req.model_dump())
+    return {
+        "id": entry.id,
+        "strategy_id": entry.strategy_id,
+        "instrument": entry.instrument,
+        "timeframe": entry.timeframe,
+        "score": entry.score,
+        "source_run_id": entry.source_run_id,
+        "metrics_snapshot": entry.metrics_snapshot,
+        "note": entry.note,
+        "status": entry.status,
+        "created_at": entry.created_at,
+        "updated_at": entry.updated_at,
+    }
+
+
+@router.patch("/research/shortlist/{entry_id}", response_model=ShortlistEntryResponse)
+def patch_shortlist_entry(
+    entry_id: int,
+    req: ShortlistEntryUpdate,
+    db: Session = Depends(get_db),
+    user: TokenData = Depends(get_current_user),
+):
+    """Update note or status on a shortlist entry."""
+    updates = req.model_dump(exclude_unset=True)
+    entry = update_shortlist_entry(db, entry_id, user.user_id, updates)
+    if entry is None:
+        raise HTTPException(status_code=404, detail="Shortlist entry not found")
+    return {
+        "id": entry.id,
+        "strategy_id": entry.strategy_id,
+        "instrument": entry.instrument,
+        "timeframe": entry.timeframe,
+        "score": entry.score,
+        "source_run_id": entry.source_run_id,
+        "metrics_snapshot": entry.metrics_snapshot,
+        "note": entry.note,
+        "status": entry.status,
+        "created_at": entry.created_at,
+        "updated_at": entry.updated_at,
+    }
+
+
+@router.delete("/research/shortlist/{entry_id}")
+def remove_from_shortlist(
+    entry_id: int,
+    db: Session = Depends(get_db),
+    user: TokenData = Depends(get_current_user),
+):
+    """Remove a shortlist entry."""
+    deleted = delete_shortlist_entry(db, entry_id, user.user_id)
+    if not deleted:
+        raise HTTPException(status_code=404, detail="Shortlist entry not found")
+    return {"deleted": entry_id}
+
+
+# ── Research Runs + Result Deletion ──────────────────────────
+
+
+@router.get("/research/runs", response_model=list[ResearchRunListItem])
+def get_research_runs(
+    db: Session = Depends(get_db),
+    user: TokenData = Depends(get_current_user),
+):
+    """List all distinct research runs with metadata."""
+    return list_research_runs(db)
+
+
+@router.delete("/research/results/non-saved")
+def delete_non_saved(
+    run_id: str | None = Query(None, description="Scope to a specific run"),
+    db: Session = Depends(get_db),
+    user: TokenData = Depends(get_current_user),
+):
+    """Delete research results whose combos are NOT in the user's saved shortlist."""
+    count = delete_non_saved_results(db, user.user_id, run_id=run_id)
+    return {"deleted_count": count, "run_id": run_id}
+
+
+@router.delete("/research/results/{result_id}")
+def delete_single_result(
+    result_id: int,
+    db: Session = Depends(get_db),
+    user: TokenData = Depends(get_current_user),
+):
+    """Delete a single research result row."""
+    deleted = delete_single_research_result(db, result_id)
+    if not deleted:
+        raise HTTPException(status_code=404, detail="Research result not found")
+    return {"deleted": result_id}
+
+
+@router.delete("/research/results")
+def delete_results_bulk(
+    run_id: str | None = Query(None, description="Scope deletion to a specific run"),
+    db: Session = Depends(get_db),
+    user: TokenData = Depends(get_current_user),
+):
+    """Bulk-delete research results, optionally scoped to a run."""
+    count = delete_all_research_results(db, run_id=run_id)
+    return {"deleted_count": count, "run_id": run_id}
+
+
 # ---------- Scenario Sandbox ----------
 
 
@@ -611,6 +766,10 @@ def run_scenario_endpoint(
 
     def _run(progress_callback=None):
         result = run_scenario(combo_specs, body.capital, progress_callback)
+        # Detect mixed-timeframe for frontend warning
+        successful_tfs = {
+            b["timeframe"] for b in result.per_bot if "error" not in b
+        }
         return {
             "combos": result.combos,
             "per_bot": result.per_bot,
@@ -618,6 +777,10 @@ def run_scenario_endpoint(
             "total_trades": result.total_trades,
             "aggregate_pnl": round(result.aggregate_pnl, 2),
             "aggregate_max_dd": result.aggregate_max_dd,
+            "aggregate_sharpe": result.aggregate_sharpe,
+            "aggregate_win_rate": result.aggregate_win_rate,
+            "capital": body.capital,
+            "is_mixed_timeframe": len(successful_tfs) > 1,
         }
 
     info = engine.submit(job_type="scenario", label=label, fn=_run)

@@ -10,6 +10,12 @@ const API_URL =
     ? _buildTimeUrl.replace("http://", "https://")
     : _buildTimeUrl;
 
+interface WatchlistResponse {
+  id: number;
+  name: string;
+  instrument_ids: string[];
+}
+
 class ApiError extends Error {
   constructor(public status: number, message: string) {
     super(message);
@@ -128,6 +134,11 @@ export const api = {
     apiFetch<{ equity_curve: number[] }>(`/backtests/${id}/equity-curve`),
   deleteBacktest: (id: number) =>
     apiFetch<{ deleted: number }>(`/backtests/${id}`, { method: "DELETE" }),
+  bulkDeleteBacktests: (ids: number[]) =>
+    apiFetch<{ deleted_count: number; requested: number }>(`/backtests/bulk`, {
+      method: "DELETE",
+      body: JSON.stringify({ ids }),
+    }),
   getBacktestTrades: (id: number, page = 1, size = 50, sort?: string) =>
     apiFetch<import("@/types/contracts/trades").TradeListResponse>(
       `/backtests/${id}/trades?page=${page}&size=${size}${sort ? `&sort=${sort}` : ""}`
@@ -175,6 +186,37 @@ export const api = {
     ),
   deleteResearchRun: (runId: string) =>
     apiFetch<{ deleted: string; results_removed: number }>(`/research/runs/${runId}`, { method: "DELETE" }),
+
+  // Saved Shortlist
+  listShortlist: () =>
+    apiFetch<import("@/types/contracts/research").ShortlistEntry[]>("/research/shortlist"),
+  saveToShortlist: (body: {
+    strategy_id: string; instrument: string; timeframe: string; score: number;
+    source_run_id?: string; metrics_snapshot?: Record<string, unknown>; note?: string;
+  }) =>
+    apiFetch<import("@/types/contracts/research").ShortlistEntry>("/research/shortlist", {
+      method: "POST", body: JSON.stringify(body),
+    }),
+  updateShortlistEntry: (id: number, body: { note?: string; status?: string }) =>
+    apiFetch<import("@/types/contracts/research").ShortlistEntry>(`/research/shortlist/${id}`, {
+      method: "PATCH", body: JSON.stringify(body),
+    }),
+  deleteShortlistEntry: (id: number) =>
+    apiFetch<{ deleted: number }>(`/research/shortlist/${id}`, { method: "DELETE" }),
+
+  // Research Runs + Result Deletion
+  listResearchRuns: () =>
+    apiFetch<import("@/types/contracts/research").ResearchRunListItem[]>("/research/runs"),
+  deleteSingleResult: (id: number) =>
+    apiFetch<{ deleted: number }>(`/research/results/${id}`, { method: "DELETE" }),
+  deleteResultsBulk: (runId?: string) =>
+    apiFetch<{ deleted_count: number; run_id: string | null }>(
+      `/research/results${runId ? `?run_id=${runId}` : ""}`, { method: "DELETE" }
+    ),
+  deleteNonSavedResults: (runId?: string) =>
+    apiFetch<{ deleted_count: number; run_id: string | null }>(
+      `/research/results/non-saved${runId ? `?run_id=${runId}` : ""}`, { method: "DELETE" }
+    ),
 
   // Paper
   createBot: (body: Record<string, unknown>) =>
@@ -235,6 +277,31 @@ export const api = {
     total_bots: number;
     total_trades: number;
   }>("/paper/exposure"),
+  fleetRisk: () => apiFetch<{
+    fleet_limits: {
+      max_bots_per_instrument: number;
+      max_total_positions: number;
+      max_exposure_per_instrument: number;
+      correlation_threshold: number;
+      cull_sigma: number;
+      cull_min_trades: number;
+    };
+    fleet_status: {
+      total_bots: number;
+      active_bots: number;
+      open_positions: number;
+      positions_limit_pct: number;
+    };
+    instrument_alerts: Array<{ instrument: string; bot_count: number; limit: number }>;
+    correlation_alerts: Array<{ bot_a: string; bot_b: string; overlap: number }>;
+    underperformers: Array<{
+      bot_id: string;
+      avg_pnl: number;
+      fleet_median: number;
+      fleet_std: number;
+      sigma_below: number;
+    }>;
+  }>("/paper/fleet/risk"),
 
   // Trades
   listTrades: (params?: string) =>
@@ -243,6 +310,56 @@ export const api = {
     ),
   getTrade: (id: number) =>
     apiFetch<import("@/types/contracts/trades").Trade>(`/trades/${id}`),
+
+  // Trade Journal
+  getJournal: (tradeId: number) =>
+    apiFetch<import("@/types/contracts/trades").JournalEntry | null>(`/trades/${tradeId}/journal`),
+  createJournal: (tradeId: number, body: { note?: string; tags?: string[] }) =>
+    apiFetch<import("@/types/contracts/trades").JournalEntry>(`/trades/${tradeId}/journal`, {
+      method: "POST", body: JSON.stringify(body),
+    }),
+  updateJournal: (tradeId: number, body: { note?: string; tags?: string[] }) =>
+    apiFetch<import("@/types/contracts/trades").JournalEntry>(`/trades/${tradeId}/journal`, {
+      method: "PATCH", body: JSON.stringify(body),
+    }),
+  deleteJournal: (tradeId: number) =>
+    apiFetch<{ deleted: number }>(`/trades/${tradeId}/journal`, { method: "DELETE" }),
+  listJournal: (params?: string) =>
+    apiFetch<import("@/types/contracts/trades").JournalListResponse>(
+      `/journal${params ? `?${params}` : ""}`
+    ),
+
+  // Strategy Variants
+  listVariants: (strategyId?: string) =>
+    apiFetch<{
+      items: Array<{
+        id: number;
+        strategy_id: string;
+        name: string;
+        params: Record<string, number>;
+        is_active: boolean;
+        backtest_run_id: number | null;
+        trade_overlap: number | null;
+        created_at: string | null;
+      }>;
+      total: number;
+    }>(`/variations${strategyId ? `?strategy_id=${strategyId}` : ""}`),
+  createVariant: (body: { strategy_id: string; name: string; params: Record<string, number> }) =>
+    apiFetch<{ id: number; strategy_id: string; name: string; params: Record<string, number> }>(
+      "/variations", { method: "POST", body: JSON.stringify(body) }
+    ),
+  deleteVariant: (id: number) =>
+    apiFetch<{ deleted: number }>(`/variations/${id}`, { method: "DELETE" }),
+  variantParams: (strategyId: string) =>
+    apiFetch<{
+      strategy_id: string;
+      params: Record<string, number[]>;
+      constructor_params: Record<string, string>;
+    }>(`/variations/params/${strategyId}`),
+  generateVariants: (body: { strategy_id: string; max_variants?: number }) =>
+    apiFetch<{ strategy_id: string; variants: Array<Record<string, number>>; count: number }>(
+      "/variations/generate", { method: "POST", body: JSON.stringify(body) }
+    ),
 
   // Instruments & strategies
   instruments: () =>
@@ -439,6 +556,15 @@ export const api = {
     apiFetch<{ id: number; is_read: boolean }>(`/alerts/${id}/read`, { method: "POST" }),
   markAllAlertsRead: () =>
     apiFetch<{ marked_read: number }>("/alerts/read-all", { method: "POST" }),
+
+  // Watchlists
+  listWatchlists: () => apiFetch<WatchlistResponse[]>("/watchlists"),
+  createWatchlist: (body: { name: string; instrument_ids: string[] }) =>
+    apiFetch<WatchlistResponse>("/watchlists", { method: "POST", body: JSON.stringify(body) }),
+  updateWatchlist: (id: number, body: { name?: string; instrument_ids?: string[] }) =>
+    apiFetch<WatchlistResponse>(`/watchlists/${id}`, { method: "PUT", body: JSON.stringify(body) }),
+  deleteWatchlist: (id: number) =>
+    apiFetch<{ deleted: number }>(`/watchlists/${id}`, { method: "DELETE" }),
 };
 
 export { API_URL, ApiError };

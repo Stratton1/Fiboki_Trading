@@ -3,6 +3,8 @@
 import useSWR from "swr";
 import { api } from "@/lib/api";
 import GroupedInstrumentSelect from "@/components/GroupedInstrumentSelect";
+import WatchlistPicker from "@/components/WatchlistPicker";
+import { useWatchlists } from "@/lib/hooks/use-watchlists";
 import type { ChartMode } from "@/lib/hooks/use-market-data";
 
 const TIMEFRAMES = ["M15", "M30", "H1", "H4"] as const;
@@ -27,15 +29,20 @@ export default function ChartToolbar({
   liveAvailable,
 }: ChartToolbarProps) {
   const { data: instruments } = useSWR("instruments", () => api.instruments());
+  const { filterSet } = useWatchlists();
 
   return (
     <div className="flex items-center gap-4">
+      {/* Watchlist filter */}
+      <WatchlistPicker />
+
       {/* Instrument selector */}
       <GroupedInstrumentSelect
         instruments={instruments ?? []}
         value={instrument}
         onChange={onInstrumentChange}
         className="bg-background-card border border-gray-200 rounded-md px-3 py-1.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
+        watchlistFilter={filterSet}
       />
 
       {/* Timeframe buttons */}

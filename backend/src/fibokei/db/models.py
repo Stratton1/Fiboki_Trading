@@ -11,6 +11,7 @@ from sqlalchemy import (
     Integer,
     String,
     Text,
+    UniqueConstraint,
 )
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
@@ -289,6 +290,41 @@ class KillSwitchModel(Base):
     deactivated_at: Mapped[datetime | None] = mapped_column(DateTime)
 
 
+class SavedShortlistModel(Base):
+    """Durable operator-curated shortlist of promising strategy combos.
+
+    Independent of research_results — stores a snapshot so entries survive
+    run deletion and result clearing.
+    """
+
+    __tablename__ = "saved_shortlist"
+    __table_args__ = (
+        UniqueConstraint(
+            "user_id", "strategy_id", "instrument", "timeframe",
+            name="uq_shortlist_combo",
+        ),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    user_id: Mapped[int] = mapped_column(Integer, nullable=False, index=True)
+    strategy_id: Mapped[str] = mapped_column(String(50), nullable=False)
+    instrument: Mapped[str] = mapped_column(String(20), nullable=False)
+    timeframe: Mapped[str] = mapped_column(String(10), nullable=False)
+    score: Mapped[float] = mapped_column(Float, nullable=False)
+    source_run_id: Mapped[str | None] = mapped_column(String(50))
+    metrics_snapshot: Mapped[dict | None] = mapped_column(JSON)
+    note: Mapped[str | None] = mapped_column(Text)
+    status: Mapped[str] = mapped_column(String(20), default="active")
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, default=lambda: datetime.now(timezone.utc)
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime,
+        default=lambda: datetime.now(timezone.utc),
+        onupdate=lambda: datetime.now(timezone.utc),
+    )
+
+
 class BookmarkModel(Base):
     """User bookmark for research results, backtests, or trades."""
 
@@ -299,6 +335,67 @@ class BookmarkModel(Base):
     entity_type: Mapped[str] = mapped_column(String(30), nullable=False)
     entity_id: Mapped[int] = mapped_column(Integer, nullable=False)
     note: Mapped[str | None] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, default=lambda: datetime.now(timezone.utc)
+    )
+
+
+class WatchlistModel(Base):
+    """User watchlist — named collection of instruments."""
+
+    __tablename__ = "watchlists"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    user_id: Mapped[int] = mapped_column(Integer, nullable=False, index=True)
+    name: Mapped[str] = mapped_column(String(100), nullable=False)
+    instrument_ids: Mapped[list] = mapped_column(JSON, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, default=lambda: datetime.now(timezone.utc)
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime,
+        default=lambda: datetime.now(timezone.utc),
+        onupdate=lambda: datetime.now(timezone.utc),
+    )
+
+
+class TradeJournalModel(Base):
+    """User journal entry for a trade — notes and tags."""
+
+    __tablename__ = "trade_journal"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    user_id: Mapped[int] = mapped_column(Integer, nullable=False, index=True)
+    trade_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("trades.id"), nullable=False, index=True
+    )
+    note: Mapped[str | None] = mapped_column(Text)
+    tags: Mapped[list | None] = mapped_column(JSON)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, default=lambda: datetime.now(timezone.utc)
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime,
+        default=lambda: datetime.now(timezone.utc),
+        onupdate=lambda: datetime.now(timezone.utc),
+    )
+
+
+class StrategyVariantModel(Base):
+    """A named parameter variant of a base strategy."""
+
+    __tablename__ = "strategy_variants"
+    __table_args__ = (
+        UniqueConstraint("strategy_id", "name", name="uq_variant_name"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    strategy_id: Mapped[str] = mapped_column(String(50), nullable=False, index=True)
+    name: Mapped[str] = mapped_column(String(100), nullable=False)
+    params: Mapped[dict] = mapped_column(JSON, nullable=False)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+    backtest_run_id: Mapped[int | None] = mapped_column(Integer)
+    trade_overlap: Mapped[float | None] = mapped_column(Float)
     created_at: Mapped[datetime] = mapped_column(
         DateTime, default=lambda: datetime.now(timezone.utc)
     )

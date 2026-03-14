@@ -1,6 +1,6 @@
 """Backtest endpoints."""
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from fastapi import APIRouter, Body, Depends, HTTPException, Query, Request
 from sqlalchemy.orm import Session
 
 from fibokei.api.auth import TokenData, get_current_user
@@ -171,6 +171,7 @@ def list_backtests(
             "net_profit": r.net_profit,
             "sharpe_ratio": r.sharpe_ratio,
             "max_drawdown_pct": r.max_drawdown_pct,
+            "created_at": r.created_at,
         }
         for r in runs
     ]
@@ -201,6 +202,20 @@ def get_backtest(
         "config_json": run.config_json,
         "metrics_json": run.metrics_json,
     }
+
+
+@router.delete("/backtests/bulk")
+def bulk_delete_backtests(
+    ids: list[int] = Body(..., embed=True),
+    db: Session = Depends(get_db),
+    user: TokenData = Depends(get_current_user),
+):
+    """Delete multiple backtest runs by IDs."""
+    deleted = 0
+    for run_id in ids:
+        if delete_backtest_run(db, run_id):
+            deleted += 1
+    return {"deleted_count": deleted, "requested": len(ids)}
 
 
 @router.delete("/backtests/{run_id}")

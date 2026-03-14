@@ -6,7 +6,7 @@ import { useAuth } from "@/lib/auth";
 import { api, API_URL } from "@/lib/api";
 import { StatusBadge } from "@/components/StatusBadge";
 import { PageHeader } from "@/components/PageHeader";
-import { Copy, ExternalLink, Server, User, Shield, Flag, Zap } from "lucide-react";
+import { Copy, ExternalLink, Server, User, Shield, Flag, Zap, Users } from "lucide-react";
 import Link from "next/link";
 
 const RISK_PARAMS = [
@@ -18,6 +18,15 @@ const RISK_PARAMS = [
   { label: "Daily Hard Stop", key: "daily_hard_stop_pct", suffix: "%", default: "4.0" },
   { label: "Weekly Soft Stop", key: "weekly_soft_stop_pct", suffix: "%", default: "6.0" },
   { label: "Weekly Hard Stop", key: "weekly_hard_stop_pct", suffix: "%", default: "8.0" },
+];
+
+const FLEET_RISK_PARAMS = [
+  { label: "Max Bots / Instrument", key: "fleet_max_bots_per_instrument", suffix: "", default: "5" },
+  { label: "Max Total Positions", key: "fleet_max_total_positions", suffix: "", default: "20" },
+  { label: "Max Exposure / Instrument", key: "fleet_max_exposure_per_instrument", suffix: "", default: "6" },
+  { label: "Correlation Threshold", key: "fleet_correlation_threshold", suffix: "", default: "0.85" },
+  { label: "Auto-Cull Sigma", key: "fleet_cull_sigma", suffix: "σ", default: "2.0" },
+  { label: "Min Trades for Cull", key: "fleet_cull_min_trades", suffix: "", default: "50" },
 ];
 
 const ENDPOINTS = [
@@ -118,6 +127,31 @@ export default function SettingsPage() {
         </p>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           {RISK_PARAMS.map(({ label, key, suffix, default: defaultVal }) => (
+            <div key={key} className="bg-background-muted rounded-lg px-3 py-2.5">
+              <p className="text-xs text-foreground-muted mb-0.5">{label}</p>
+              <p className="text-lg font-bold tracking-tight">
+                {defaultVal}{suffix}
+              </p>
+              <p className="text-[10px] text-foreground-muted font-mono mt-0.5">{key}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Fleet Risk Limits */}
+      <div className="card mb-6">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2">
+            <Users size={14} className="text-foreground-muted" />
+            <p className="section-label !mb-0">Fleet Risk Limits</p>
+          </div>
+          <StatusBadge variant="neutral">Server-configured</StatusBadge>
+        </div>
+        <p className="text-xs text-foreground-muted mb-3">
+          Fleet-level limits prevent overconcentration when running multiple bots. Configured via environment variables.
+        </p>
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+          {FLEET_RISK_PARAMS.map(({ label, key, suffix, default: defaultVal }) => (
             <div key={key} className="bg-background-muted rounded-lg px-3 py-2.5">
               <p className="text-xs text-foreground-muted mb-0.5">{label}</p>
               <p className="text-lg font-bold tracking-tight">

@@ -1,12 +1,19 @@
 """Trade history API endpoints."""
 
 from fastapi import APIRouter, Depends, HTTPException, Query
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from fibokei.api.auth import TokenData, get_current_user
 from fibokei.api.deps import get_db
 from fibokei.db.models import TradeModel
+from fibokei.db.repository import (
+    create_journal_entry,
+    delete_journal_entry,
+    get_journal_entry,
+    list_journal_entries,
+    update_journal_entry,
+)
 
 router = APIRouter(tags=["trades"])
 
@@ -94,3 +101,121 @@ def get_trade(
     if trade is None:
         raise HTTPException(status_code=404, detail="Trade not found")
     return _trade_to_response(trade)
+
+
+# ── Trade Journal ────────────────────────────────────────────
+
+
+class JournalEntryResponse(BaseModel):
+    id: int
+    trade_id: int
+    note: str | None
+    tags: list[str]
+    created_at: str | None
+    updated_at: str | None
+
+
+class JournalCreate(BaseModel):
+    note: str | None = None
+    tags: list[str] = Field(default_factory=list)
+
+
+class JournalUpdate(BaseModel):
+    note: str | None = None
+    tags: list[str] | None = None
+
+
+class JournalListResponse(BaseModel):
+    items: list[JournalEntryResponse]
+    total: int
+
+
+def _journal_to_response(entry) -> JournalEntryResponse:
+    return JournalEntryResponse(
+        id=entry.id,
+        trade_id=entry.trade_id,
+        note=entry.note,
+        tags=entry.tags or [],
+        created_at=entry.created_at.isoformat() if entry.created_at else None,
+        updated_at=entry.updated_at.isoformat() if entry.updated_at else None,
+    )
+
+
+@router.get("/trades/{trade_id}/journal", response_model=JournalEntryResponse | None)
+def get_trade_journal(
+    trade_id: int,
+    db: Session = Depends(get_db),
+    user: TokenData = Depends(get_current_user),
+):
+    """Get journal entry for a trade."""
+    entry = get_journal_entry(db, trade_id, user.user_id)
+    if not entry:
+        return None
+    return _journal_to_response(entry)
+
+
+@router.post("/trades/{trade_id}/journal", response_model=JournalEntryResponse, status_code=201)
+def create_trade_journal(
+    trade_id: int,
+    body: JournalCreate,
+    db: Session = Depends(get_db),
+    user: TokenData = Depends(get_current_user),
+):
+    """Create a journal entry for a trade (one per trade)."""
+    # Verify trade exists
+    trade = db.query(TradeModel).filter(TradeModel.id == trade_id).first()
+    if not trade:
+        raise HTTPException(status_code=404, detail="Trade not found")
+
+    # Check if journal entry already exists
+    existing = get_journal_entry(db, trade_id, user.user_id)
+    if existing:
+        raise HTTPException(status_code=409, detail="Journal entry already exists for this trade")
+
+    entry = create_journal_entry(db, user.user_id, trade_id, body.note, body.tags)
+    return _journal_to_response(entry)
+
+
+@router.patch("/trades/{trade_id}/journal", response_model=JournalEntryResponse)
+def update_trade_journal(
+    trade_id: int,
+    body: JournalUpdate,
+    db: Session = Depends(get_db),
+    user: TokenData = Depends(get_current_user),
+):
+    """Update a trade's journal entry."""
+    updates = body.model_dump(exclude_none=True)
+    if not updates:
+        raise HTTPException(status_code=400, detail="No fields to update")
+    entry = update_journal_entry(db, trade_id, user.user_id, updates)
+    if not entry:
+        raise HTTPException(status_code=404, detail="Journal entry not found")
+    return _journal_to_response(entry)
+
+
+@router.delete("/trades/{trade_id}/journal")
+def delete_trade_journal(
+    trade_id: int,
+    db: Session = Depends(get_db),
+    user: TokenData = Depends(get_current_user),
+):
+    """Delete a trade's journal entry."""
+    deleted = delete_journal_entry(db, trade_id, user.user_id)
+    if not deleted:
+        raise HTTPException(status_code=404, detail="Journal entry not found")
+    return {"deleted": trade_id}
+
+
+@router.get("/journal", response_model=JournalListResponse)
+def list_journal(
+    tag: str | None = Query(None),
+    limit: int = Query(50, ge=1, le=200),
+    db: Session = Depends(get_db),
+    user: TokenData = Depends(get_current_user),
+):
+    """List all journal entries, optionally filtered by tag."""
+    entries = list_journal_entries(db, user.user_id, tag=tag, limit=limit)
+    return JournalListResponse(
+        items=[_journal_to_response(e) for e in entries],
+        total=len(entries),
+    )

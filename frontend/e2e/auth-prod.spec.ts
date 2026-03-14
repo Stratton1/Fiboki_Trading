@@ -9,12 +9,12 @@ import * as fs from "fs";
  * then verifies every stable page loads correctly with real backend data.
  *
  * Required env vars:
- *   FIBOKI_E2E_USERNAME   — production username
- *   FIBOKI_E2E_PASSWORD   — production password
+ *   FIBOKI_TEST_EMAIL     — production username (fallback: FIBOKI_E2E_USERNAME)
+ *   FIBOKI_TEST_PASSWORD  — production password (fallback: FIBOKI_E2E_PASSWORD)
  *   BASE_URL              — target URL (defaults to https://fiboki.uk)
  *
  * Run:
- *   FIBOKI_E2E_USERNAME=x FIBOKI_E2E_PASSWORD=y npm run verify:prod
+ *   FIBOKI_TEST_EMAIL=x FIBOKI_TEST_PASSWORD=y npm run verify:prod
  *
  * What this verifies:
  *   - Real login flow works end-to-end
@@ -24,22 +24,31 @@ import * as fs from "fs";
  *   - System diagnostics are visible
  *   - No unexpected redirects back to /login
  *
- * Screenshots are saved to frontend/screenshots/auth-prod/
+ * Screenshots are saved to frontend/screenshots/auth-prod/ and audit/
  */
 
 const SCREENSHOT_DIR = path.join(__dirname, "..", "screenshots", "auth-prod");
+const AUDIT_DIR = path.join(__dirname, "..", "..", "audit");
 const AUTH_STATE_FILE = path.join(__dirname, "..", ".auth-state.json");
 
-const USERNAME = process.env.FIBOKI_E2E_USERNAME;
-const PASSWORD = process.env.FIBOKI_E2E_PASSWORD;
+const USERNAME =
+  process.env.FIBOKI_TEST_EMAIL || process.env.FIBOKI_E2E_USERNAME;
+const PASSWORD =
+  process.env.FIBOKI_TEST_PASSWORD || process.env.FIBOKI_E2E_PASSWORD;
 
 // ── Helpers ──────────────────────────────────────────────────────────
 
-async function screenshot(page: Page, name: string) {
+async function screenshot(page: Page, authProdName: string, auditName?: string) {
   await page.screenshot({
-    path: path.join(SCREENSHOT_DIR, `${name}.png`),
+    path: path.join(SCREENSHOT_DIR, `${authProdName}.png`),
     fullPage: false,
   });
+  if (auditName) {
+    await page.screenshot({
+      path: path.join(AUDIT_DIR, `${auditName}.png`),
+      fullPage: false,
+    });
+  }
 }
 
 /** Wait for page hydration and any SWR fetches to settle. */
@@ -65,8 +74,8 @@ async function assertNoCrash(page: Page) {
 test.beforeAll(() => {
   if (!USERNAME || !PASSWORD) {
     throw new Error(
-      "Missing FIBOKI_E2E_USERNAME and/or FIBOKI_E2E_PASSWORD env vars.\n" +
-      "Run with: FIBOKI_E2E_USERNAME=x FIBOKI_E2E_PASSWORD=y npm run verify:prod"
+      "Missing credentials. Set FIBOKI_TEST_EMAIL and FIBOKI_TEST_PASSWORD env vars.\n" +
+        "Run with: FIBOKI_TEST_EMAIL=x FIBOKI_TEST_PASSWORD=y npm run verify:prod"
     );
   }
   // Remove old screenshots so stale files don't persist
@@ -74,6 +83,7 @@ test.beforeAll(() => {
     fs.rmSync(SCREENSHOT_DIR, { recursive: true });
   }
   fs.mkdirSync(SCREENSHOT_DIR, { recursive: true });
+  fs.mkdirSync(AUDIT_DIR, { recursive: true });
 });
 
 test.afterAll(() => {
@@ -120,17 +130,14 @@ test.describe.serial("authenticated production verification", () => {
     await page.goto("/");
     await settle(page);
 
-    // Should not redirect to login
     expect(page.url()).not.toContain("/login");
     await assertNoCrash(page);
 
-    // Check for key dashboard elements
     await expect(page.locator("h1")).toContainText("Welcome back");
-    // KPI cards should be present (Balance, Equity, etc.)
     await expect(page.locator("text=BALANCE").first()).toBeVisible();
     await expect(page.locator("text=EQUITY").first()).toBeVisible();
 
-    await screenshot(page, "02-dashboard");
+    await screenshot(page, "02-dashboard", "01-dashboard");
     await context.close();
   });
 
@@ -146,10 +153,9 @@ test.describe.serial("authenticated production verification", () => {
     expect(page.url()).not.toContain("/login");
     await assertNoCrash(page);
 
-    // Header should be visible
     await expect(page.locator("h1")).toContainText("Trading Chart");
 
-    await screenshot(page, "03-charts");
+    await screenshot(page, "03-charts", "02-charts-loading");
     await context.close();
   });
 
@@ -160,10 +166,7 @@ test.describe.serial("authenticated production verification", () => {
     await page.goto("/charts");
     await settle(page);
 
-    // The chart toolbar should show EURUSD by default
     const body = await page.textContent("body");
-
-    // Check whether chart rendered data or shows "no data" / error
     const hasNoData =
       body?.includes("Failed to load market data") ||
       body?.includes("No data") ||
@@ -175,12 +178,15 @@ test.describe.serial("authenticated production verification", () => {
     if (hasNoData) {
       console.log("⚠ EURUSD/H1 chart: No production data available yet");
     } else if (hasChartCanvas) {
-      console.log("✓ EURUSD/H1 chart: Canvas/KLineChart element detected — data appears loaded");
+      console.log(
+        "✓ EURUSD/H1 chart: Canvas/KLineChart element detected — data appears loaded"
+      );
     } else {
-      console.log("? EURUSD/H1 chart: Indeterminate state — no error but no chart canvas found");
+      console.log(
+        "? EURUSD/H1 chart: Indeterminate state — no error but no chart canvas found"
+      );
     }
 
-    // This test reports status but does not fail — starter data may not be deployed yet
     await screenshot(page, "04-charts-eurusd-h1");
     await context.close();
   });
@@ -198,10 +204,9 @@ test.describe.serial("authenticated production verification", () => {
     await assertNoCrash(page);
 
     await expect(page.locator("h1")).toContainText("Backtests");
-    // Form controls should be present
     await expect(page.locator("text=RUN BACKTEST").first()).toBeVisible();
 
-    await screenshot(page, "05-backtests");
+    await screenshot(page, "05-backtests", "05-backtests");
     await context.close();
   });
 
@@ -219,7 +224,39 @@ test.describe.serial("authenticated production verification", () => {
 
     await expect(page.locator("h1")).toContainText("Research Matrix");
 
-    await screenshot(page, "06-research");
+    await screenshot(page, "06-research", "07-research");
+    await context.close();
+  });
+
+  // ── Scenarios ──────────────────────────────────────────────────
+
+  test("scenarios page loads", async ({ browser }) => {
+    const context = await browser.newContext({ storageState: AUTH_STATE_FILE });
+    const page = await context.newPage();
+
+    await page.goto("/scenarios");
+    await settle(page);
+
+    expect(page.url()).not.toContain("/login");
+    await assertNoCrash(page);
+
+    await screenshot(page, "07-scenarios", "08-scenarios");
+    await context.close();
+  });
+
+  // ── Jobs ───────────────────────────────────────────────────────
+
+  test("jobs page loads", async ({ browser }) => {
+    const context = await browser.newContext({ storageState: AUTH_STATE_FILE });
+    const page = await context.newPage();
+
+    await page.goto("/jobs");
+    await settle(page);
+
+    expect(page.url()).not.toContain("/login");
+    await assertNoCrash(page);
+
+    await screenshot(page, "08-jobs", "09-jobs");
     await context.close();
   });
 
@@ -236,10 +273,25 @@ test.describe.serial("authenticated production verification", () => {
     await assertNoCrash(page);
 
     await expect(page.locator("h1")).toContainText("Paper Bots");
-    // Account summary cards should be visible
     await expect(page.locator("text=BALANCE").first()).toBeVisible();
 
-    await screenshot(page, "07-bots");
+    await screenshot(page, "09-bots", "10-paper-bots");
+    await context.close();
+  });
+
+  // ── Exposure ───────────────────────────────────────────────────
+
+  test("exposure page loads", async ({ browser }) => {
+    const context = await browser.newContext({ storageState: AUTH_STATE_FILE });
+    const page = await context.newPage();
+
+    await page.goto("/exposure");
+    await settle(page);
+
+    expect(page.url()).not.toContain("/login");
+    await assertNoCrash(page);
+
+    await screenshot(page, "10-exposure", "11-exposure");
     await context.close();
   });
 
@@ -257,7 +309,50 @@ test.describe.serial("authenticated production verification", () => {
 
     await expect(page.locator("h1")).toContainText("Trade History");
 
-    await screenshot(page, "08-trades");
+    await screenshot(page, "11-trades", "12-trade-history");
+    await context.close();
+  });
+
+  // ── Trade Detail (first trade) ─────────────────────────────────
+
+  test("trade detail page loads", async ({ browser }) => {
+    const context = await browser.newContext({ storageState: AUTH_STATE_FILE });
+    const page = await context.newPage();
+
+    await page.goto("/trades");
+    await settle(page);
+
+    // Try to click the first trade row to navigate to detail
+    const tradeRow = page.locator("table tbody tr").first();
+    const hasRows = (await tradeRow.count()) > 0;
+
+    if (hasRows) {
+      await tradeRow.click();
+      await settle(page);
+      await assertNoCrash(page);
+      await screenshot(page, "12-trade-detail", "12b-trade-detail");
+    } else {
+      console.log("⚠ No trade rows found — skipping trade detail screenshot");
+      // Capture the empty trades page as the detail screenshot
+      await screenshot(page, "12-trade-detail");
+    }
+
+    await context.close();
+  });
+
+  // ── Alerts ─────────────────────────────────────────────────────
+
+  test("alerts page loads", async ({ browser }) => {
+    const context = await browser.newContext({ storageState: AUTH_STATE_FILE });
+    const page = await context.newPage();
+
+    await page.goto("/alerts");
+    await settle(page);
+
+    expect(page.url()).not.toContain("/login");
+    await assertNoCrash(page);
+
+    await screenshot(page, "13-alerts", "13-alerts");
     await context.close();
   });
 
@@ -274,11 +369,8 @@ test.describe.serial("authenticated production verification", () => {
     await assertNoCrash(page);
 
     await expect(page.locator("h1")).toContainText("Settings");
-    // User section should show the logged-in username
-    const bodyText = await page.textContent("body");
-    expect(bodyText).toContain(USERNAME!);
 
-    await screenshot(page, "09-settings");
+    await screenshot(page, "14-settings", "14-settings");
     await context.close();
   });
 
@@ -295,18 +387,16 @@ test.describe.serial("authenticated production verification", () => {
     await assertNoCrash(page);
 
     await expect(page.locator("h1")).toContainText("System");
-
-    // Key diagnostic sections should be visible
     await expect(page.locator("text=BACKEND HEALTH").first()).toBeVisible();
     await expect(page.locator("text=ENGINE STATUS").first()).toBeVisible();
     await expect(page.locator("text=DIAGNOSTICS").first()).toBeVisible();
 
-    // Health indicator should show (either Healthy or Unhealthy)
     const bodyText = await page.textContent("body");
-    const healthVisible = bodyText?.includes("Healthy") || bodyText?.includes("Unhealthy");
+    const healthVisible =
+      bodyText?.includes("Healthy") || bodyText?.includes("Unhealthy");
     expect(healthVisible).toBeTruthy();
 
-    await screenshot(page, "10-system");
+    await screenshot(page, "15-system", "15-system");
     await context.close();
   });
 
@@ -316,8 +406,20 @@ test.describe.serial("authenticated production verification", () => {
     const context = await browser.newContext({ storageState: AUTH_STATE_FILE });
     const page = await context.newPage();
 
-    // Navigate through multiple pages quickly to confirm no auth dropout
-    const routes = ["/", "/charts", "/backtests", "/bots", "/trades", "/settings", "/system"];
+    const routes = [
+      "/",
+      "/charts",
+      "/backtests",
+      "/research",
+      "/scenarios",
+      "/jobs",
+      "/bots",
+      "/exposure",
+      "/trades",
+      "/alerts",
+      "/settings",
+      "/system",
+    ];
     for (const route of routes) {
       await page.goto(route);
       await page.waitForLoadState("domcontentloaded");

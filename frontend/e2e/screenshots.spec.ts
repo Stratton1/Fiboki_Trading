@@ -31,8 +31,12 @@ const PAGES: { name: string; path: string }[] = [
   { name: "charts", path: "/charts" },
   { name: "backtests", path: "/backtests" },
   { name: "research", path: "/research" },
+  { name: "scenarios", path: "/scenarios" },
+  { name: "jobs", path: "/jobs" },
   { name: "bots", path: "/bots" },
+  { name: "exposure", path: "/exposure" },
   { name: "trades", path: "/trades" },
+  { name: "alerts", path: "/alerts" },
   { name: "settings", path: "/settings" },
   { name: "system", path: "/system" },
 ];
@@ -117,6 +121,36 @@ async function setupAuthContext(context: BrowserContext) {
     // Research (array)
     if (url.includes("/research"))
       return respond([]);
+
+    // Exposure
+    if (url.includes("/paper/fleet/risk"))
+      return respond({
+        fleet_limits: { max_bots_per_instrument: 5, max_total_positions: 20, correlation_threshold: 0.85 },
+        fleet_status: { open_positions: 0, active_bots: 0 },
+        instrument_alerts: [], correlation_alerts: [], underperformers: [],
+      });
+    if (url.includes("/paper/exposure"))
+      return respond({ by_instrument: [], by_asset_class: [], by_direction: [], risk_utilisation: 0 });
+
+    // Jobs
+    if (url.includes("/jobs"))
+      return respond([]);
+
+    // Scenarios
+    if (url.includes("/scenarios"))
+      return respond([]);
+
+    // Alerts
+    if (url.includes("/alerts"))
+      return respond([]);
+
+    // Watchlists
+    if (url.includes("/watchlists"))
+      return respond([]);
+
+    // Variations
+    if (url.includes("/variations"))
+      return respond({ items: [], total: 0 });
 
     // Fallback — safe empty array
     return respond([]);

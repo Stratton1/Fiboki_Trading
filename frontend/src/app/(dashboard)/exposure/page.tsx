@@ -13,7 +13,11 @@ import {
   Layers,
   PieChart,
   Shield,
+  Users,
+  TrendingDown,
+  Link2,
 } from "lucide-react";
+import { InfoTip } from "@/components/InfoTip";
 
 function RiskGauge({
   label,
@@ -103,17 +107,51 @@ function TradeCapacityGauge({
 }
 
 export default function ExposurePage() {
-  const { data } = useSWR("/paper/exposure", () => api.exposure(), {
-    refreshInterval: 10000,
-  });
+  const { data, error, isLoading, mutate } = useSWR(
+    "/paper/exposure",
+    () => api.exposure(),
+    { refreshInterval: 10000 },
+  );
+  const { data: fleetRisk } = useSWR(
+    "/paper/fleet/risk",
+    () => api.fleetRisk(),
+    { refreshInterval: 30000 },
+  );
 
-  if (!data) {
+  if (error) {
+    return (
+      <div className="max-w-5xl">
+        <PageHeader
+          title="Exposure Dashboard"
+          subtitle="Could not load exposure data"
+        />
+        <div className="card flex flex-col items-center gap-3 py-8">
+          <AlertTriangle size={28} className="text-amber-500" />
+          <p className="text-sm text-foreground-muted">
+            {error instanceof Error ? error.message : "Failed to fetch exposure data."}
+          </p>
+          <button
+            onClick={() => mutate()}
+            className="text-sm text-primary hover:underline"
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (isLoading || !data) {
     return (
       <div className="max-w-5xl">
         <PageHeader
           title="Exposure Dashboard"
           subtitle="Loading portfolio exposure..."
         />
+        <div className="card flex items-center justify-center gap-2 py-8">
+          <Gauge size={16} className="animate-pulse text-foreground-muted" />
+          <span className="text-sm text-foreground-muted">Loading...</span>
+        </div>
       </div>
     );
   }
@@ -142,7 +180,7 @@ export default function ExposurePage() {
       <div className="card mb-6">
         <div className="flex items-center gap-2 mb-4">
           <Shield size={14} className="text-foreground-muted" />
-          <p className="section-label !mb-0">Risk Limits</p>
+          <p className="section-label !mb-0">Risk Limits<InfoTip text="Portfolio-level risk controls. Soft limits trigger warnings; hard limits pause new entries. Resets daily/weekly." /></p>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
           <TradeCapacityGauge
@@ -216,7 +254,7 @@ export default function ExposurePage() {
       <div className="card mb-6">
         <div className="flex items-center gap-2 mb-4">
           <Layers size={14} className="text-foreground-muted" />
-          <p className="section-label !mb-0">By Instrument</p>
+          <p className="section-label !mb-0">By Instrument<InfoTip text="Exposure breakdown per instrument. Net = Long minus Short positions. Watch for concentration in a single instrument." /></p>
         </div>
         {!hasExposure ? (
           <EmptyState
@@ -270,7 +308,7 @@ export default function ExposurePage() {
 
       {/* Asset Class Breakdown */}
       {assetClasses.length > 0 && (
-        <div className="card">
+        <div className="card mb-6">
           <div className="flex items-center gap-2 mb-4">
             <PieChart size={14} className="text-foreground-muted" />
             <p className="section-label !mb-0">By Asset Class</p>
@@ -294,6 +332,91 @@ export default function ExposurePage() {
               </div>
             ))}
           </div>
+        </div>
+      )}
+
+      {/* Fleet Risk Analysis */}
+      {fleetRisk && (
+        <div className="card">
+          <div className="flex items-center gap-2 mb-4">
+            <Users size={14} className="text-foreground-muted" />
+            <p className="section-label !mb-0">Fleet Risk Analysis<InfoTip text="Fleet-level risk monitoring: bot correlation alerts and underperformance detection across the entire fleet." /></p>
+          </div>
+
+          {/* Fleet capacity */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
+            <div className="bg-background-muted rounded-lg p-3">
+              <p className="text-xs text-foreground-muted mb-0.5">Fleet Positions</p>
+              <p className="text-lg font-bold">
+                {fleetRisk.fleet_status.open_positions}
+                <span className="text-foreground-muted font-normal text-sm"> / {fleetRisk.fleet_limits.max_total_positions}</span>
+              </p>
+            </div>
+            <div className="bg-background-muted rounded-lg p-3">
+              <p className="text-xs text-foreground-muted mb-0.5">Active Bots</p>
+              <p className="text-lg font-bold">{fleetRisk.fleet_status.active_bots}</p>
+            </div>
+            <div className="bg-background-muted rounded-lg p-3">
+              <p className="text-xs text-foreground-muted mb-0.5">Max / Instrument</p>
+              <p className="text-lg font-bold">{fleetRisk.fleet_limits.max_bots_per_instrument}</p>
+            </div>
+            <div className="bg-background-muted rounded-lg p-3">
+              <p className="text-xs text-foreground-muted mb-0.5">Correlation Threshold</p>
+              <p className="text-lg font-bold">{(fleetRisk.fleet_limits.correlation_threshold * 100).toFixed(0)}%</p>
+            </div>
+          </div>
+
+          {/* Instrument limit breaches */}
+          {fleetRisk.instrument_alerts.length > 0 && (
+            <div className="border-l-4 border-l-amber-500 bg-amber-50 rounded-r-lg p-3 mb-3">
+              <div className="flex items-center gap-2 mb-1">
+                <AlertTriangle size={14} className="text-amber-500" />
+                <p className="text-sm font-semibold text-amber-700">Instrument Limit Breaches</p>
+              </div>
+              {fleetRisk.instrument_alerts.map((a) => (
+                <p key={a.instrument} className="text-xs text-amber-800">
+                  <span className="font-medium">{a.instrument}</span>: {a.bot_count} bots (limit: {a.limit})
+                </p>
+              ))}
+            </div>
+          )}
+
+          {/* Correlation alerts */}
+          {fleetRisk.correlation_alerts.length > 0 && (
+            <div className="border-l-4 border-l-blue-500 bg-blue-50 rounded-r-lg p-3 mb-3">
+              <div className="flex items-center gap-2 mb-1">
+                <Link2 size={14} className="text-blue-500" />
+                <p className="text-sm font-semibold text-blue-700">Correlated Bot Pairs</p>
+              </div>
+              {fleetRisk.correlation_alerts.map((a) => (
+                <p key={`${a.bot_a}-${a.bot_b}`} className="text-xs text-blue-800">
+                  <span className="font-mono">{a.bot_a}</span> &harr; <span className="font-mono">{a.bot_b}</span>: {(a.overlap * 100).toFixed(0)}% overlap
+                </p>
+              ))}
+            </div>
+          )}
+
+          {/* Underperformers */}
+          {fleetRisk.underperformers.length > 0 && (
+            <div className="border-l-4 border-l-red-500 bg-red-50 rounded-r-lg p-3">
+              <div className="flex items-center gap-2 mb-1">
+                <TrendingDown size={14} className="text-red-500" />
+                <p className="text-sm font-semibold text-red-700">Underperforming Bots (auto-cull candidates)</p>
+              </div>
+              {fleetRisk.underperformers.map((u) => (
+                <p key={u.bot_id} className="text-xs text-red-800">
+                  <span className="font-mono">{u.bot_id}</span>: avg PnL {u.avg_pnl.toFixed(4)} ({u.sigma_below.toFixed(1)}&sigma; below median)
+                </p>
+              ))}
+            </div>
+          )}
+
+          {/* All clear */}
+          {fleetRisk.instrument_alerts.length === 0 &&
+            fleetRisk.correlation_alerts.length === 0 &&
+            fleetRisk.underperformers.length === 0 && (
+            <p className="text-xs text-foreground-muted">No fleet risk alerts. All bots operating within limits.</p>
+          )}
         </div>
       )}
     </div>

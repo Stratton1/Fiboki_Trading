@@ -1347,7 +1347,7 @@ The matrix should support runs across:
 - timeframe
 - date range
 - direction bias
-- parameter variants
+- parameter variants (implemented — the Parameter Variation Engine auto-discovers configurable constructor parameters from each strategy, generates cartesian product combinations within defined ranges, and deduplicates variants with >80% trade overlap via Jaccard similarity. Variants are persisted in the `strategy_variants` table and managed through the `/variations` API.)
 - transaction cost profile
 - slippage profile
 
@@ -1527,13 +1527,24 @@ Position sizing must consider:
 
 ## 20.5 Portfolio limits
 
-Recommended defaults:
+Recommended defaults (per-bot):
 
 - max open portfolio risk: 5%
 - max bucket risk by correlated group: 2.5%
 - max simultaneous open trades: 8
 - max open trades per instrument: configurable, default 2 across all strategies
 - max same-direction stacking in highly correlated instruments: capped
+
+Fleet-level limits (implemented — enforced across the entire bot fleet):
+
+- max bots per instrument: configurable, default 5
+- max total open positions across fleet: configurable, default 20
+- max aggregate exposure per instrument: configurable, default 6
+- correlation threshold for bot-pair alerts: configurable, default 85%
+- auto-cull sigma threshold: configurable, default 2.0σ below fleet median
+- minimum trade count before cull eligibility: configurable, default 50
+
+All fleet limits are configured via `FIBOKEI_FLEET_*` environment variables and enforced by the `RiskEngine`. The fleet risk analysis endpoint (`GET /paper/fleet/risk`) provides instrument alerts, correlation alerts, and underperformer detection. Fleet risk status is displayed on the Exposure Dashboard and fleet limits are shown on the Settings page.
 
 ## 20.6 Drawdown controls
 
@@ -1559,6 +1570,8 @@ A strategy that materially underperforms its expected baseline in paper mode sho
 - have its risk reduced
 - be disabled
 - be marked for review
+
+Fleet-level underperformance detection is implemented: the `RiskEngine.find_underperformers()` method identifies bots whose average PnL is more than N standard deviations below the fleet median (configurable, default 2σ). These bots are flagged as auto-cull candidates on the Exposure Dashboard. Pairwise trade correlation monitoring (`find_correlated_bots()`) alerts when two bots exceed the overlap threshold (default 85%), helping operators identify redundant bots.
 
 ## 20.8 Cooling and throttling
 
@@ -1742,6 +1755,7 @@ Must support:
 
 - instrument selection
 - timeframe selection
+- watchlist-based instrument filtering (implemented — operators can create, rename, and delete watchlists; the active watchlist filters instrument selectors across Charts, Backtests, Bots, and Research pages)
 - candlesticks
 - Ichimoku overlays
 - Fibonacci overlays
@@ -1783,7 +1797,9 @@ Must support:
 - filter by instrument
 - filter by timeframe
 - filter by date
+- filter by journal tag (implemented)
 - inspect closed trade details
+- trade journal annotations (implemented — each trade supports a free-text note and tag chips from a set of common labels such as "good entry", "bad entry", "held too long", "textbook setup", etc. Journal entries are displayed inline on the trades list and editable on the trade detail page.)
 - export CSV
 
 ### System & Settings
@@ -1792,7 +1808,8 @@ Must support:
 
 - user settings
 - Telegram settings
-- risk defaults
+- risk defaults (implemented — per-bot and fleet-level risk parameters displayed with env var keys)
+- fleet risk limits (implemented — max bots per instrument, max total positions, correlation threshold, auto-cull sigma, all configurable via `FIBOKEI_FLEET_*` env vars)
 - feature flags
 - dataset registry
 - engine status

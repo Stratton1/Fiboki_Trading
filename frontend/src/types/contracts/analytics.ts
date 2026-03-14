@@ -14,6 +14,7 @@ export interface BacktestSummary {
   net_profit: number;
   sharpe_ratio: number | null;
   max_drawdown_pct: number | null;
+  created_at: string | null;
 }
 
 export interface BacktestDetail extends BacktestSummary {

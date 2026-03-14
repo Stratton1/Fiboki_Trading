@@ -4,11 +4,15 @@ import { useState } from "react";
 import useSWR from "swr";
 import { api } from "@/lib/api";
 import { formatCurrency } from "@/lib/format-currency";
-import { useRankings } from "@/lib/hooks/use-research";
+import { useRankings, useResearchRuns } from "@/lib/hooks/use-research";
+import { useShortlist } from "@/lib/hooks/use-shortlist";
 import { Heatmap } from "@/components/analytics/Heatmap";
 import GroupedInstrumentSelect from "@/components/GroupedInstrumentSelect";
+import WatchlistPicker from "@/components/WatchlistPicker";
+import { useWatchlists } from "@/lib/hooks/use-watchlists";
 import { useManifest } from "@/lib/hooks/use-manifest";
 import { PageHeader } from "@/components/PageHeader";
+import { InfoTip } from "@/components/InfoTip";
 import { useBookmarks } from "@/lib/hooks/use-bookmarks";
 import { BookmarkButton } from "@/components/BookmarkButton";
 import type {
@@ -35,7 +39,8 @@ export default function ResearchPage() {
   const [runProgress, setRunProgress] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [currentRunId, setCurrentRunId] = useState<string | null>(null);
-  const [showAllRuns, setShowAllRuns] = useState(false);
+  // Run scope: "current" = latest run, "all" = all runs (deduped best-per-combo), or a specific run_id
+  const [runScope, setRunScope] = useState<"current" | "all" | string>("current");
   const [lastSummary, setLastSummary] = useState<{
     run_id: string;
     completed: number;
@@ -43,14 +48,26 @@ export default function ResearchPage() {
     total_combinations: number;
     min_trades: number;
   } | null>(null);
+  const [confirmAction, setConfirmAction] = useState<{
+    label: string;
+    description: string;
+    onConfirm: () => Promise<void>;
+  } | null>(null);
 
-  const { data: rankings, mutate, isLoading } = useRankings(showAllRuns ? null : currentRunId);
+  // Derive the effective run_id for the rankings query
+  const effectiveRunId = runScope === "current" ? currentRunId : runScope === "all" ? null : runScope;
+  const isAllRunsMode = runScope === "all";
+  const { data: rankings, mutate, isLoading } = useRankings(effectiveRunId, isAllRunsMode);
   const { data: strategies } = useSWR("strategies", () => api.strategies());
   const { data: instruments } = useSWR("instruments", () => api.instruments());
+  const { filterSet } = useWatchlists();
 
   const { hasData, availableTimeframes: manifestTimeframes } = useManifest();
   const { isBookmarked, toggle: toggleBookmark } = useBookmarks("research_result");
   const [showBookmarked, setShowBookmarked] = useState(false);
+  const { shortlist, save: saveToShortlist, update: updateShortlistEntry, remove: removeFromShortlist, isShortlisted } = useShortlist();
+  const { runs: researchRuns, mutate: mutateRuns } = useResearchRuns();
+  const [shortlistNote, setShortlistNote] = useState<Record<number, string>>({});
 
   // Presets
   const { data: presets, mutate: mutatePresets } = useSWR("research-presets", () => api.listPresets());
@@ -152,7 +169,7 @@ export default function ResearchPage() {
     setError(null);
     setLastSummary(null);
     setCurrentRunId(null);
-    setShowAllRuns(false);
+    setRunScope("current");
     try {
       const body: Record<string, unknown> = {
         strategy_ids: selectedStrategies,
@@ -299,6 +316,11 @@ export default function ResearchPage() {
         subtitle="Run batch research, rank strategies, and validate performance"
       />
 
+      {/* Workflow Explainer */}
+      <div className="rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-xs text-blue-800">
+        <strong>Workflow:</strong> Run Research to generate results → review Rankings (transient, per-run) → Save promising combos to your Shortlist (durable, persists across runs) → Promote top performers to Paper Trading.
+      </div>
+
       {error && <p className="text-danger text-sm">{error}</p>}
 
       {/* Batch Run Form */}
@@ -337,13 +359,17 @@ export default function ResearchPage() {
         {/* Instrument + Timeframe + Min Trades */}
         <div className="flex flex-wrap gap-3 items-end mb-3">
           <div>
-            <label className="block text-xs text-foreground-muted mb-1">Instrument</label>
+            <label className="flex items-center gap-2 text-xs text-foreground-muted mb-1">
+              Instrument
+              <WatchlistPicker />
+            </label>
             <GroupedInstrumentSelect
               instruments={instruments ?? []}
               value={selectedInstrument}
               onChange={setSelectedInstrument}
               className="input"
               showDataIndicator
+              watchlistFilter={filterSet}
             />
           </div>
           <div>
@@ -491,6 +517,7 @@ export default function ResearchPage() {
           {!running && lastSummary && (
             <span className="text-xs text-foreground-muted">
               Run {lastSummary.run_id}: {lastSummary.completed}/{lastSummary.total_combinations} completed, {lastSummary.qualified} qualified
+              <InfoTip text="Completed = combos backtested. Qualified = combos that met the minimum trade threshold (default 80 trades) and are ranked." />
               {lastSummary.qualified === 0 && lastSummary.completed > 0 && (
                 <span className="text-amber-600 ml-1">
                   (no combinations met min_trades={lastSummary.min_trades})
@@ -513,35 +540,206 @@ export default function ResearchPage() {
         </div>
       )}
 
-      {/* Rankings Table */}
-      <div className="table-container">
-        <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 bg-background-muted">
-          <div className="flex items-center gap-3">
-            <span className="text-sm font-medium text-foreground-muted">Rankings</span>
-            {currentRunId && (
-              <button
-                onClick={() => setShowAllRuns(!showAllRuns)}
-                className={`text-xs px-3 py-1 rounded border ${showAllRuns ? "border-gray-200" : "bg-primary/10 border-primary text-primary"}`}
-              >
-                {showAllRuns ? "All Runs" : `Run ${currentRunId}`}
-              </button>
-            )}
-            <button
-              onClick={() => setShowBookmarked(!showBookmarked)}
-              className={`text-xs px-3 py-1 rounded border ${showBookmarked ? "bg-amber-50 border-amber-300 text-amber-700" : "border-gray-200"}`}
-            >
-              {showBookmarked ? "Showing Bookmarked" : "Show Bookmarked"}
-            </button>
+      {/* Saved Shortlist */}
+      <div className="card">
+        <div className="flex items-center justify-between mb-3">
+          <div>
+            <h3 className="text-sm font-medium text-foreground">
+              Saved Shortlist<InfoTip text="Your curated list of promising strategy/instrument/timeframe combos. Persists independently of run results — safe from clear operations." />
+            </h3>
+            <p className="text-xs text-foreground-muted mt-0.5">
+              Durable operator-curated list of promising combos. Persists independently of run results.
+            </p>
           </div>
-          {rankings && rankings.length > 0 && (
-            <button
-              onClick={handleValidateTop}
-              disabled={validatingLoading}
-              className="text-xs text-primary hover:underline disabled:opacity-50"
-            >
-              {validatingLoading ? "Validating..." : "Validate Top 10"}
-            </button>
+          {shortlist.length > 0 && (
+            <span className="text-xs text-foreground-muted">{shortlist.length} saved</span>
           )}
+        </div>
+        {shortlist.length === 0 ? (
+          <p className="text-sm text-foreground-muted py-4 text-center">
+            No saved combos yet. Use the &quot;Save&quot; button in the rankings table below to add promising combos.
+          </p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-gray-200 bg-background-muted">
+                  <th className="text-left px-3 py-2 text-xs text-foreground-muted">Strategy</th>
+                  <th className="text-left px-3 py-2 text-xs text-foreground-muted">Instrument</th>
+                  <th className="text-left px-3 py-2 text-xs text-foreground-muted">TF</th>
+                  <th className="text-right px-3 py-2 text-xs text-foreground-muted">Score</th>
+                  <th className="text-left px-3 py-2 text-xs text-foreground-muted">Status</th>
+                  <th className="text-left px-3 py-2 text-xs text-foreground-muted">Note</th>
+                  <th className="text-right px-3 py-2 text-xs text-foreground-muted">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {shortlist.map((entry) => (
+                  <tr key={entry.id} className="border-b border-gray-100 hover:bg-background-muted/50">
+                    <td className="px-3 py-2">{entry.strategy_id}</td>
+                    <td className="px-3 py-2">{entry.instrument}</td>
+                    <td className="px-3 py-2">{entry.timeframe}</td>
+                    <td className="px-3 py-2 text-right font-medium">
+                      <span className={entry.score >= PROMOTION_THRESHOLD ? "text-green-600" : ""}>{entry.score.toFixed(3)}</span>
+                    </td>
+                    <td className="px-3 py-2">
+                      <span className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${
+                        entry.status === "active" ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-600"
+                      }`}>
+                        {entry.status}
+                      </span>
+                    </td>
+                    <td className="px-3 py-2 max-w-[200px]">
+                      {shortlistNote[entry.id] !== undefined ? (
+                        <div className="flex items-center gap-1">
+                          <input
+                            type="text"
+                            value={shortlistNote[entry.id]}
+                            onChange={(e) => setShortlistNote((prev) => ({ ...prev, [entry.id]: e.target.value }))}
+                            className="input text-xs w-full"
+                            placeholder="Add note..."
+                            onKeyDown={async (e) => {
+                              if (e.key === "Enter") {
+                                await updateShortlistEntry(entry.id, { note: shortlistNote[entry.id] });
+                                setShortlistNote((prev) => { const n = { ...prev }; delete n[entry.id]; return n; });
+                              }
+                              if (e.key === "Escape") {
+                                setShortlistNote((prev) => { const n = { ...prev }; delete n[entry.id]; return n; });
+                              }
+                            }}
+                          />
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => setShortlistNote((prev) => ({ ...prev, [entry.id]: entry.note ?? "" }))}
+                          className="text-xs text-foreground-muted hover:text-foreground truncate block max-w-[200px]"
+                          title={entry.note || "Click to add a note"}
+                        >
+                          {entry.note || "—"}
+                        </button>
+                      )}
+                    </td>
+                    <td className="px-3 py-2 text-right space-x-2">
+                      {entry.status === "active" ? (
+                        <button
+                          onClick={() => updateShortlistEntry(entry.id, { status: "archived" })}
+                          className="text-xs text-foreground-muted hover:underline"
+                        >
+                          Archive
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => updateShortlistEntry(entry.id, { status: "active" })}
+                          className="text-xs text-primary hover:underline"
+                        >
+                          Restore
+                        </button>
+                      )}
+                      <button
+                        onClick={() => removeFromShortlist(entry.id)}
+                        className="text-xs text-danger hover:underline"
+                      >
+                        Remove
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
+      {/* Run Results */}
+      <div className="table-container">
+        <div className="px-4 py-3 border-b border-gray-200 bg-background-muted space-y-2">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <span className="text-sm font-medium text-foreground">Run Results</span>
+              <span className="text-xs text-foreground-muted">
+                {isAllRunsMode
+                  ? "Best score per combo across all runs"
+                  : effectiveRunId
+                    ? `Run ${effectiveRunId}`
+                    : "No run selected"}
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              {rankings && rankings.length > 0 && (
+                <button
+                  onClick={handleValidateTop}
+                  disabled={validatingLoading}
+                  className="text-xs text-primary hover:underline disabled:opacity-50"
+                >
+                  {validatingLoading ? "Validating..." : "Validate Top 10"}
+                </button>
+              )}
+              <button
+                onClick={() => setShowBookmarked(!showBookmarked)}
+                className={`text-xs px-2 py-1 rounded border ${showBookmarked ? "bg-amber-50 border-amber-300 text-amber-700" : "border-gray-200"}`}
+              >
+                {showBookmarked ? "Bookmarked" : "Bookmarks"}
+              </button>
+            </div>
+          </div>
+          {/* Run selector + Clear controls */}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <label className="text-xs text-foreground-muted">Scope:</label>
+              <select
+                value={runScope}
+                onChange={(e) => setRunScope(e.target.value)}
+                className="text-xs border border-gray-300 rounded px-2 py-1 bg-background"
+              >
+                {currentRunId && <option value="current">Latest run ({currentRunId})</option>}
+                <option value="all">All runs (best per combo)</option>
+                {researchRuns
+                  .filter((r) => r.run_id !== currentRunId)
+                  .map((r) => (
+                    <option key={r.run_id} value={r.run_id}>
+                      Run {r.run_id} — {r.result_count} results, top {r.top_score.toFixed(3)}
+                      {r.created_at ? ` (${new Date(r.created_at).toLocaleDateString()})` : ""}
+                    </option>
+                  ))}
+              </select>
+            </div>
+            {rankings && rankings.length > 0 && (
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setConfirmAction({
+                    label: isAllRunsMode ? "Clear All Run Results" : `Clear Run ${effectiveRunId}`,
+                    description: isAllRunsMode
+                      ? `This will permanently delete all ${rankings.length} research result rows across every run. Your Saved Shortlist is NOT affected.`
+                      : `This will permanently delete all results from run ${effectiveRunId}. Your Saved Shortlist is NOT affected.`,
+                    onConfirm: async () => {
+                      await api.deleteResultsBulk(isAllRunsMode ? undefined : effectiveRunId ?? undefined);
+                      await mutate();
+                      await mutateRuns();
+                      if (!isAllRunsMode && effectiveRunId === currentRunId) setCurrentRunId(null);
+                    },
+                  })}
+                  className="text-xs text-danger hover:underline"
+                >
+                  {isAllRunsMode ? "Clear All" : "Clear This Run"}
+                </button>
+                <button
+                  onClick={() => setConfirmAction({
+                    label: "Clear Non-Saved Results",
+                    description: "This will delete all research results whose combos are NOT in your Saved Shortlist. Results matching saved combos will be kept. Your Saved Shortlist is NOT affected.",
+                    onConfirm: async () => {
+                      await api.deleteNonSavedResults(isAllRunsMode ? undefined : effectiveRunId ?? undefined);
+                      await mutate();
+                      await mutateRuns();
+                    },
+                  })}
+                  className="text-xs text-amber-600 hover:underline"
+                  title="Deletes results whose combos are NOT in your Saved Shortlist. Saved combos are kept."
+                >
+                  Clear Non-Saved
+                </button>
+              </div>
+            )}
+          </div>
         </div>
         <table className="w-full text-sm">
           <thead>
@@ -551,19 +749,22 @@ export default function ResearchPage() {
               <th className="text-left px-4 py-3 font-medium text-foreground-muted">Strategy</th>
               <th className="text-left px-4 py-3 font-medium text-foreground-muted">Instrument</th>
               <th className="text-left px-4 py-3 font-medium text-foreground-muted">TF</th>
-              <th className="text-right px-4 py-3 font-medium text-foreground-muted">Score</th>
+              {isAllRunsMode && <th className="text-left px-4 py-3 font-medium text-foreground-muted">Run</th>}
+              <th className="text-right px-4 py-3 font-medium text-foreground-muted">
+                Score<InfoTip text="Composite Score: weighted blend of Sharpe ratio, profit factor, return, drawdown, sample size, and stability. Higher = better risk-adjusted performance." />
+              </th>
               <th className="text-right px-4 py-3 font-medium text-foreground-muted">Actions</th>
             </tr>
           </thead>
           <tbody>
             {isLoading && (
               <tr>
-                <td colSpan={7} className="px-4 py-8 text-center text-foreground-muted">Loading...</td>
+                <td colSpan={isAllRunsMode ? 8 : 7} className="px-4 py-8 text-center text-foreground-muted">Loading...</td>
               </tr>
             )}
             {!isLoading && (!rankings || rankings.length === 0) && (
               <tr>
-                <td colSpan={7} className="px-4 py-8 text-center text-foreground-muted">
+                <td colSpan={isAllRunsMode ? 8 : 7} className="px-4 py-8 text-center text-foreground-muted">
                   No research results yet. Configure and run research above.
                 </td>
               </tr>
@@ -582,12 +783,30 @@ export default function ResearchPage() {
                 <td className="px-4 py-3">{r.strategy_id}</td>
                 <td className="px-4 py-3">{r.instrument}</td>
                 <td className="px-4 py-3">{r.timeframe}</td>
+                {isAllRunsMode && <td className="px-4 py-3 text-xs text-foreground-muted">{r.run_id}</td>}
                 <td className="px-4 py-3 text-right font-medium">
                   <span className={r.composite_score >= PROMOTION_THRESHOLD ? "text-green-600" : "text-foreground"}>
                     {r.composite_score.toFixed(3)}
                   </span>
                 </td>
                 <td className="px-4 py-3 text-right space-x-2">
+                  <button
+                    onClick={() => saveToShortlist({
+                      strategy_id: r.strategy_id,
+                      instrument: r.instrument,
+                      timeframe: r.timeframe,
+                      score: r.composite_score,
+                      source_run_id: r.run_id,
+                      metrics_snapshot: r.metrics_json ?? undefined,
+                    })}
+                    className={`text-xs hover:underline ${
+                      isShortlisted(r.strategy_id, r.instrument, r.timeframe)
+                        ? "text-amber-600"
+                        : "text-foreground-muted"
+                    }`}
+                  >
+                    {isShortlisted(r.strategy_id, r.instrument, r.timeframe) ? "Saved" : "Save"}
+                  </button>
                   <button
                     onClick={() => handleAdvancedResearch(r.strategy_id, r.instrument, r.timeframe)}
                     disabled={advancedLoading}
@@ -608,6 +827,17 @@ export default function ResearchPage() {
                       Promote
                     </button>
                   )}
+                  <button
+                    onClick={async () => {
+                      await api.deleteSingleResult(r.id);
+                      await mutate();
+                      await mutateRuns();
+                    }}
+                    className="text-xs text-foreground-muted hover:text-danger hover:underline"
+                    title="Remove this result row"
+                  >
+                    &times;
+                  </button>
                 </td>
               </tr>
             ))}
@@ -868,6 +1098,33 @@ export default function ResearchPage() {
         <div className="card bg-green-50 border-green-200 text-green-800 text-sm flex items-center justify-between">
           <span>{promoteSuccess}</span>
           <button onClick={() => setPromoteSuccess(null)} className="text-green-600 hover:underline text-xs">Dismiss</button>
+        </div>
+      )}
+
+      {/* Destructive action confirmation dialog */}
+      {confirmAction && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-background rounded-lg shadow-xl p-6 max-w-md w-full mx-4 space-y-4">
+            <h3 className="text-lg font-semibold text-danger">{confirmAction.label}</h3>
+            <p className="text-sm text-foreground-muted">{confirmAction.description}</p>
+            <div className="flex gap-3 justify-end pt-2">
+              <button
+                onClick={() => setConfirmAction(null)}
+                className="btn btn-secondary text-sm"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={async () => {
+                  await confirmAction.onConfirm();
+                  setConfirmAction(null);
+                }}
+                className="btn text-sm bg-danger text-white hover:bg-red-700"
+              >
+                Confirm Delete
+              </button>
+            </div>
+          </div>
         </div>
       )}
 

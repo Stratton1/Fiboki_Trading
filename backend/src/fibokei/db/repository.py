@@ -37,7 +37,9 @@ from fibokei.db.models import (
     PaperBotModel,
     PaperTradeModel,
     ResearchResultModel,
+    TradeJournalModel,
     TradeModel,
+    WatchlistModel,
 )
 
 # ---------- Chart drawings ----------
@@ -248,11 +250,50 @@ def get_research_rankings(
     sort_by: str = "composite_score",
     limit: int = 50,
     run_id: str | None = None,
+    deduplicate: bool = False,
 ) -> list[ResearchResultModel]:
     """Get research results ranked by score.
 
     If run_id is provided, results are scoped to that run only.
+    If deduplicate is True and run_id is None (all-runs view), returns only the
+    best-scoring row per (strategy_id, instrument, timeframe) combo.
     """
+    if deduplicate and not run_id:
+        # Best-per-combo: subquery to find max-scoring row id per combo
+        from sqlalchemy import func
+
+        best_ids_sub = (
+            select(
+                func.min(ResearchResultModel.id).label("best_id"),
+            )
+            .group_by(
+                ResearchResultModel.strategy_id,
+                ResearchResultModel.instrument,
+                ResearchResultModel.timeframe,
+            )
+            .having(
+                ResearchResultModel.composite_score == func.max(ResearchResultModel.composite_score)
+            )
+        ).subquery()
+        # Actually, the above won't work cleanly. Use a simpler approach:
+        # fetch all, deduplicate in Python (keeps best score per combo).
+        all_results = list(
+            session.scalars(
+                select(ResearchResultModel)
+                .order_by(ResearchResultModel.composite_score.desc())
+            ).all()
+        )
+        seen: set[tuple[str, str, str]] = set()
+        deduped: list[ResearchResultModel] = []
+        for r in all_results:
+            key = (r.strategy_id, r.instrument, r.timeframe)
+            if key not in seen:
+                seen.add(key)
+                deduped.append(r)
+        if sort_by == "rank":
+            deduped.sort(key=lambda r: r.rank)
+        return deduped[:limit]
+
     stmt = select(ResearchResultModel)
     if run_id:
         stmt = stmt.where(ResearchResultModel.run_id == run_id)
@@ -277,6 +318,248 @@ def delete_research_run(session: Session, run_id: str) -> int:
     if count:
         session.commit()
     return count
+
+
+def delete_single_research_result(session: Session, result_id: int) -> bool:
+    """Delete a single research result row. Returns True if deleted."""
+    result = session.get(ResearchResultModel, result_id)
+    if not result:
+        return False
+    session.delete(result)
+    session.commit()
+    return True
+
+
+def delete_all_research_results(
+    session: Session,
+    run_id: str | None = None,
+    keep_combos: list[tuple[str, str, str]] | None = None,
+) -> int:
+    """Bulk delete research results.
+
+    If run_id is given, only delete results from that run.
+    If keep_combos is given, skip rows matching those (strategy_id, instrument, timeframe) tuples.
+    """
+    stmt = select(ResearchResultModel)
+    if run_id:
+        stmt = stmt.where(ResearchResultModel.run_id == run_id)
+    results = list(session.scalars(stmt).all())
+
+    keep_set = set(keep_combos) if keep_combos else set()
+    count = 0
+    for r in results:
+        if keep_set and (r.strategy_id, r.instrument, r.timeframe) in keep_set:
+            continue
+        session.delete(r)
+        count += 1
+    if count:
+        session.commit()
+    return count
+
+
+def list_research_runs(session: Session) -> list[dict]:
+    """List distinct research runs with metadata including top score and strategies."""
+    from sqlalchemy import func
+
+    stmt = (
+        select(
+            ResearchResultModel.run_id,
+            func.min(ResearchResultModel.created_at).label("created_at"),
+            func.count(ResearchResultModel.id).label("result_count"),
+            func.max(ResearchResultModel.composite_score).label("top_score"),
+        )
+        .group_by(ResearchResultModel.run_id)
+        .order_by(func.min(ResearchResultModel.created_at).desc())
+    )
+    rows = session.execute(stmt).all()
+    return [
+        {
+            "run_id": row.run_id,
+            "created_at": row.created_at,
+            "result_count": row.result_count,
+            "top_score": round(row.top_score, 4) if row.top_score else 0.0,
+        }
+        for row in rows
+    ]
+
+
+def delete_non_saved_results(session: Session, user_id: int, run_id: str | None = None) -> int:
+    """Delete research results whose combos are NOT in the user's saved shortlist.
+
+    If run_id is given, only targets that run. Returns count deleted.
+    """
+    from fibokei.db.models import SavedShortlistModel
+
+    # Get all shortlisted combos for this user
+    shortlisted = session.execute(
+        select(
+            SavedShortlistModel.strategy_id,
+            SavedShortlistModel.instrument,
+            SavedShortlistModel.timeframe,
+        ).where(SavedShortlistModel.user_id == user_id)
+    ).all()
+    saved_set = {(s.strategy_id, s.instrument, s.timeframe) for s in shortlisted}
+
+    stmt = select(ResearchResultModel)
+    if run_id:
+        stmt = stmt.where(ResearchResultModel.run_id == run_id)
+    results = list(session.scalars(stmt).all())
+
+    count = 0
+    for r in results:
+        if (r.strategy_id, r.instrument, r.timeframe) not in saved_set:
+            session.delete(r)
+            count += 1
+    if count:
+        session.commit()
+    return count
+
+
+# ── Saved Shortlist ──────────────────────────────────────────
+
+
+def list_saved_shortlist(session: Session, user_id: int) -> list:
+    """List all saved shortlist entries for a user."""
+    from fibokei.db.models import SavedShortlistModel
+
+    stmt = (
+        select(SavedShortlistModel)
+        .where(SavedShortlistModel.user_id == user_id)
+        .order_by(SavedShortlistModel.score.desc())
+    )
+    return list(session.scalars(stmt).all())
+
+
+def upsert_shortlist_entry(session: Session, user_id: int, data: dict):
+    """Save or update a shortlist entry (upsert by user+strategy+instrument+tf)."""
+    from fibokei.db.models import SavedShortlistModel
+
+    existing = session.scalar(
+        select(SavedShortlistModel).where(
+            SavedShortlistModel.user_id == user_id,
+            SavedShortlistModel.strategy_id == data["strategy_id"],
+            SavedShortlistModel.instrument == data["instrument"],
+            SavedShortlistModel.timeframe == data["timeframe"],
+        )
+    )
+    if existing:
+        existing.score = data["score"]
+        existing.source_run_id = data.get("source_run_id")
+        existing.metrics_snapshot = data.get("metrics_snapshot")
+        if data.get("note") is not None:
+            existing.note = data["note"]
+        session.commit()
+        session.refresh(existing)
+        return existing
+
+    entry = SavedShortlistModel(
+        user_id=user_id,
+        strategy_id=data["strategy_id"],
+        instrument=data["instrument"],
+        timeframe=data["timeframe"],
+        score=data["score"],
+        source_run_id=data.get("source_run_id"),
+        metrics_snapshot=data.get("metrics_snapshot"),
+        note=data.get("note"),
+        status=data.get("status", "active"),
+    )
+    session.add(entry)
+    session.commit()
+    session.refresh(entry)
+    return entry
+
+
+def update_shortlist_entry(session: Session, entry_id: int, user_id: int, updates: dict):
+    """Update note or status on a shortlist entry. Returns updated entry or None."""
+    from fibokei.db.models import SavedShortlistModel
+
+    entry = session.scalar(
+        select(SavedShortlistModel).where(
+            SavedShortlistModel.id == entry_id,
+            SavedShortlistModel.user_id == user_id,
+        )
+    )
+    if not entry:
+        return None
+    if "note" in updates:
+        entry.note = updates["note"]
+    if "status" in updates:
+        entry.status = updates["status"]
+    session.commit()
+    session.refresh(entry)
+    return entry
+
+
+def delete_shortlist_entry(session: Session, entry_id: int, user_id: int) -> bool:
+    """Remove a shortlist entry. Returns True if deleted."""
+    from fibokei.db.models import SavedShortlistModel
+
+    entry = session.scalar(
+        select(SavedShortlistModel).where(
+            SavedShortlistModel.id == entry_id,
+            SavedShortlistModel.user_id == user_id,
+        )
+    )
+    if not entry:
+        return False
+    session.delete(entry)
+    session.commit()
+    return True
+
+
+def migrate_bookmarks_to_shortlist(session: Session) -> int:
+    """Migrate existing research_result bookmarks to saved_shortlist entries.
+
+    Idempotent — skips bookmarks that already have a matching shortlist entry.
+    Returns count of entries created.
+    """
+    from fibokei.db.models import BookmarkModel, SavedShortlistModel
+
+    bookmarks = list(
+        session.scalars(
+            select(BookmarkModel).where(BookmarkModel.entity_type == "research_result")
+        ).all()
+    )
+    created = 0
+    for bm in bookmarks:
+        result = session.get(ResearchResultModel, bm.entity_id)
+        if not result:
+            continue  # orphaned bookmark — skip
+
+        # Check if shortlist entry already exists for this combo
+        existing = session.scalar(
+            select(SavedShortlistModel).where(
+                SavedShortlistModel.user_id == bm.user_id,
+                SavedShortlistModel.strategy_id == result.strategy_id,
+                SavedShortlistModel.instrument == result.instrument,
+                SavedShortlistModel.timeframe == result.timeframe,
+            )
+        )
+        if existing:
+            # Update if new score is higher
+            if result.composite_score > existing.score:
+                existing.score = result.composite_score
+                existing.source_run_id = result.run_id
+                existing.metrics_snapshot = result.metrics_json
+            continue
+
+        entry = SavedShortlistModel(
+            user_id=bm.user_id,
+            strategy_id=result.strategy_id,
+            instrument=result.instrument,
+            timeframe=result.timeframe,
+            score=result.composite_score,
+            source_run_id=result.run_id,
+            metrics_snapshot=result.metrics_json,
+            note=bm.note,
+            status="active",
+        )
+        session.add(entry)
+        created += 1
+
+    if created:
+        session.commit()
+    return created
 
 
 def delete_backtest_run(session: Session, run_id: int) -> bool:
@@ -641,3 +924,212 @@ def mark_all_alerts_read(session: Session) -> int:
     )
     session.commit()
     return result.rowcount
+
+
+# ---------- Watchlists ----------
+
+
+def create_watchlist(
+    session: Session, user_id: int, name: str, instrument_ids: list[str]
+) -> WatchlistModel:
+    """Create a new watchlist."""
+    model = WatchlistModel(user_id=user_id, name=name, instrument_ids=instrument_ids)
+    session.add(model)
+    session.commit()
+    return model
+
+
+def list_watchlists(session: Session, user_id: int) -> list[WatchlistModel]:
+    """Get all watchlists for a user."""
+    stmt = (
+        select(WatchlistModel)
+        .where(WatchlistModel.user_id == user_id)
+        .order_by(WatchlistModel.created_at.asc())
+    )
+    return list(session.scalars(stmt).all())
+
+
+def get_watchlist(session: Session, watchlist_id: int, user_id: int) -> WatchlistModel | None:
+    """Get a single watchlist by ID and user."""
+    return session.scalars(
+        select(WatchlistModel)
+        .where(WatchlistModel.id == watchlist_id)
+        .where(WatchlistModel.user_id == user_id)
+    ).first()
+
+
+def update_watchlist(
+    session: Session, watchlist_id: int, user_id: int, updates: dict
+) -> WatchlistModel | None:
+    """Update a watchlist. Returns None if not found or wrong user."""
+    wl = session.scalars(
+        select(WatchlistModel)
+        .where(WatchlistModel.id == watchlist_id)
+        .where(WatchlistModel.user_id == user_id)
+    ).first()
+    if not wl:
+        return None
+    for key, value in updates.items():
+        if hasattr(wl, key):
+            setattr(wl, key, value)
+    session.commit()
+    return wl
+
+
+def delete_watchlist(session: Session, watchlist_id: int, user_id: int) -> bool:
+    """Delete a watchlist. Returns True if deleted."""
+    wl = session.scalars(
+        select(WatchlistModel)
+        .where(WatchlistModel.id == watchlist_id)
+        .where(WatchlistModel.user_id == user_id)
+    ).first()
+    if not wl:
+        return False
+    session.delete(wl)
+    session.commit()
+    return True
+
+
+# ---------- Trade journal ----------
+
+
+def create_journal_entry(
+    session: Session,
+    user_id: int,
+    trade_id: int,
+    note: str | None,
+    tags: list[str] | None,
+) -> TradeJournalModel:
+    """Create a journal entry for a trade."""
+    model = TradeJournalModel(
+        user_id=user_id, trade_id=trade_id, note=note, tags=tags or []
+    )
+    session.add(model)
+    session.commit()
+    return model
+
+
+def get_journal_entry(
+    session: Session, trade_id: int, user_id: int
+) -> TradeJournalModel | None:
+    """Get a journal entry for a trade."""
+    return session.scalars(
+        select(TradeJournalModel)
+        .where(TradeJournalModel.trade_id == trade_id)
+        .where(TradeJournalModel.user_id == user_id)
+    ).first()
+
+
+def update_journal_entry(
+    session: Session, trade_id: int, user_id: int, updates: dict
+) -> TradeJournalModel | None:
+    """Update a journal entry. Returns None if not found or wrong user."""
+    entry = get_journal_entry(session, trade_id, user_id)
+    if not entry:
+        return None
+    for key, value in updates.items():
+        if hasattr(entry, key) and key not in ("id", "user_id", "trade_id", "created_at"):
+            setattr(entry, key, value)
+    session.commit()
+    return entry
+
+
+def delete_journal_entry(session: Session, trade_id: int, user_id: int) -> bool:
+    """Delete a journal entry. Returns True if deleted."""
+    entry = get_journal_entry(session, trade_id, user_id)
+    if not entry:
+        return False
+    session.delete(entry)
+    session.commit()
+    return True
+
+
+def list_journal_entries(
+    session: Session,
+    user_id: int,
+    tag: str | None = None,
+    limit: int = 50,
+) -> list[TradeJournalModel]:
+    """List journal entries for a user, optionally filtered by tag, newest first."""
+    stmt = (
+        select(TradeJournalModel)
+        .where(TradeJournalModel.user_id == user_id)
+    )
+    if tag:
+        stmt = stmt.where(TradeJournalModel.tags.contains(tag))
+    stmt = stmt.order_by(TradeJournalModel.created_at.desc()).limit(limit)
+    return list(session.scalars(stmt).all())
+
+
+# ── Strategy Variants ──────────────────────────────────────
+
+from fibokei.db.models import StrategyVariantModel  # noqa: E402
+
+
+def create_variant(
+    session: Session,
+    strategy_id: str,
+    name: str,
+    params: dict,
+    backtest_run_id: int | None = None,
+    trade_overlap: float | None = None,
+) -> StrategyVariantModel:
+    """Create a new strategy variant."""
+    variant = StrategyVariantModel(
+        strategy_id=strategy_id,
+        name=name,
+        params=params,
+        backtest_run_id=backtest_run_id,
+        trade_overlap=trade_overlap,
+    )
+    session.add(variant)
+    session.commit()
+    session.refresh(variant)
+    return variant
+
+
+def list_variants(
+    session: Session,
+    strategy_id: str | None = None,
+    active_only: bool = False,
+) -> list[StrategyVariantModel]:
+    """List strategy variants, optionally filtered by strategy_id."""
+    stmt = select(StrategyVariantModel)
+    if strategy_id:
+        stmt = stmt.where(StrategyVariantModel.strategy_id == strategy_id)
+    if active_only:
+        stmt = stmt.where(StrategyVariantModel.is_active == True)  # noqa: E712
+    stmt = stmt.order_by(StrategyVariantModel.created_at.desc())
+    return list(session.scalars(stmt).all())
+
+
+def get_variant(session: Session, variant_id: int) -> StrategyVariantModel | None:
+    """Get a variant by ID."""
+    return session.get(StrategyVariantModel, variant_id)
+
+
+def update_variant(
+    session: Session,
+    variant_id: int,
+    updates: dict,
+) -> StrategyVariantModel | None:
+    """Update a variant's fields."""
+    variant = session.get(StrategyVariantModel, variant_id)
+    if not variant:
+        return None
+    for key, value in updates.items():
+        if hasattr(variant, key):
+            setattr(variant, key, value)
+    session.commit()
+    session.refresh(variant)
+    return variant
+
+
+def delete_variant(session: Session, variant_id: int) -> bool:
+    """Delete a variant by ID."""
+    variant = session.get(StrategyVariantModel, variant_id)
+    if not variant:
+        return False
+    session.delete(variant)
+    session.commit()
+    return True

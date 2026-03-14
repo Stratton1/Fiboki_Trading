@@ -10,6 +10,7 @@ import { useMarketData } from "@/lib/hooks/use-market-data";
 import { EquityCurve } from "@/components/analytics/EquityCurve";
 import { DrawdownChart } from "@/components/analytics/DrawdownChart";
 import type { Trade } from "@/types/contracts/trades";
+import { InfoTip } from "@/components/InfoTip";
 
 const TradeMarkerChart = dynamic(
   () => import("@/components/charts/core/TradeMarkerChart"),
@@ -163,11 +164,12 @@ export default function BacktestDetailPage({ params }: { params: Promise<{ id: s
           value={formatPnl(bt.net_profit)}
           color={bt.net_profit >= 0 ? "text-primary" : "text-danger"}
         />
-        <MetricCard label="Sharpe Ratio" value={bt.sharpe_ratio?.toFixed(2) ?? "-"} />
+        <MetricCard label="Sharpe Ratio" value={bt.sharpe_ratio?.toFixed(2) ?? "-"} tip="Risk-adjusted return per unit of volatility. Above 1.0 is good, above 2.0 is excellent." />
         <MetricCard
           label="Max Drawdown"
           value={bt.max_drawdown_pct != null ? `${bt.max_drawdown_pct.toFixed(1)}%` : "-"}
           color="text-danger"
+          tip="Largest peak-to-trough decline. Indicates worst-case loss during the test period."
         />
         <MetricCard label="Start" value={bt.start_date ?? "-"} />
         <MetricCard label="End" value={bt.end_date ?? "-"} />
@@ -178,14 +180,20 @@ export default function BacktestDetailPage({ params }: { params: Promise<{ id: s
         <div className="bg-background-card rounded-lg border border-gray-200 p-5 mb-6">
           <h3 className="text-sm font-medium text-foreground-muted mb-3">Detailed Metrics</h3>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            {Object.entries(metrics).map(([key, value]) => (
-              <div key={key}>
-                <p className="text-xs text-foreground-muted">{key.replace(/_/g, " ")}</p>
-                <p className="text-sm font-medium">
-                  {typeof value === "number" ? value.toFixed(4) : String(value ?? "-")}
-                </p>
-              </div>
-            ))}
+            {Object.entries(metrics)
+              .filter(([, v]) => v !== null && typeof v !== "object")
+              .map(([key, value]) => (
+                <div key={key}>
+                  <p className="text-xs text-foreground-muted">{key.replace(/_/g, " ")}</p>
+                  <p className="text-sm font-medium">
+                    {typeof value === "number"
+                      ? value.toFixed(4)
+                      : typeof value === "boolean"
+                      ? value ? "Yes" : "No"
+                      : String(value ?? "-")}
+                  </p>
+                </div>
+              ))}
           </div>
         </div>
       )}
@@ -306,10 +314,13 @@ export default function BacktestDetailPage({ params }: { params: Promise<{ id: s
   );
 }
 
-function MetricCard({ label, value, color }: { label: string; value: string; color?: string }) {
+function MetricCard({ label, value, color, tip }: { label: string; value: string; color?: string; tip?: string }) {
   return (
     <div className="bg-background-card rounded-lg border border-gray-200 p-4">
-      <p className="text-xs text-foreground-muted mb-1">{label}</p>
+      <p className="text-xs text-foreground-muted mb-1">
+        {label}
+        {tip && <InfoTip text={tip} />}
+      </p>
       <p className={`text-lg font-semibold ${color ?? ""}`}>{value}</p>
     </div>
   );

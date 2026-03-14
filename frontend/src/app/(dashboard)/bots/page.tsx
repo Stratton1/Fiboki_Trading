@@ -6,10 +6,14 @@ import { api } from "@/lib/api";
 import { useBots, useAccount } from "@/lib/hooks/use-bots";
 import { currencySymbol as getCurrencySymbol, formatCurrency, formatPnl } from "@/lib/format-currency";
 import GroupedInstrumentSelect from "@/components/GroupedInstrumentSelect";
+import WatchlistPicker from "@/components/WatchlistPicker";
+import { useWatchlists } from "@/lib/hooks/use-watchlists";
 import { PageHeader } from "@/components/PageHeader";
 import { EmptyState } from "@/components/EmptyState";
 import { StatusBadge } from "@/components/StatusBadge";
-import { Bot, Loader2, Wallet, TrendingUp, CalendarDays, Activity, AlertTriangle, BarChart3 } from "lucide-react";
+import { Bot, Loader2, Wallet, TrendingUp, CalendarDays, Activity, AlertTriangle, BarChart3, Search } from "lucide-react";
+import { InfoTip } from "@/components/InfoTip";
+import Link from "next/link";
 
 interface BotItem {
   id: string;
@@ -31,6 +35,7 @@ export default function BotsPage() {
   const { data: fleet } = useSWR("/paper/fleet", () => api.fleet(), { refreshInterval: 5000 });
   const { data: strategies } = useSWR("strategies", () => api.strategies());
   const { data: instruments } = useSWR("instruments", () => api.instruments());
+  const { filterSet } = useWatchlists();
   const [strategy, setStrategy] = useState("");
   const [instrument, setInstrument] = useState("");
   const [timeframe, setTimeframe] = useState("H1");
@@ -135,7 +140,7 @@ export default function BotsPage() {
         </div>
         <div className="stat-card">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-medium uppercase tracking-wide text-foreground-muted">Fleet PnL</span>
+            <span className="text-xs font-medium uppercase tracking-wide text-foreground-muted">Fleet PnL<InfoTip text="Aggregate profit/loss across all paper bots. Combines realised and unrealised PnL from every active and stopped bot." /></span>
             <BarChart3 size={14} className="text-foreground-muted" />
           </div>
           <p className={`text-xl font-bold tracking-tight ${(fleet?.aggregate_pnl ?? 0) >= 0 ? "text-primary" : "text-danger"}`}>
@@ -178,9 +183,18 @@ export default function BotsPage() {
         </div>
       )}
 
+      {/* Workflow explainer (show when no bots exist) */}
+      {botList.length === 0 && (
+        <div className="rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-xs text-blue-800 mb-6">
+          <strong>How Paper Bots work:</strong> A paper bot monitors a strategy/instrument/timeframe combo in real time using simulated capital.
+          No real money is at risk. The recommended path: <strong>Research</strong> (find promising combos) → <strong>Save to Shortlist</strong> → <strong>Promote to Paper Bot</strong> → observe performance before going live.
+          You can also add bots manually below.
+        </div>
+      )}
+
       {/* Add Bot Form */}
       <form onSubmit={handleCreate} className="card-elevated mb-6">
-        <p className="section-label">Add Bot</p>
+        <p className="section-label">Add Bot<InfoTip text="Creates a paper bot that monitors this strategy/instrument/timeframe combo. The bot starts in 'monitoring' state and evaluates signals on each new candle close." /></p>
         <div className="flex flex-wrap gap-3 items-end">
           <div>
             <label className="block text-xs text-foreground-muted mb-1.5">Strategy</label>
@@ -192,8 +206,11 @@ export default function BotsPage() {
             </select>
           </div>
           <div>
-            <label className="block text-xs text-foreground-muted mb-1.5">Instrument</label>
-            <GroupedInstrumentSelect instruments={instruments ?? []} value={instrument} onChange={setInstrument} className="input" />
+            <label className="flex items-center gap-2 text-xs text-foreground-muted mb-1.5">
+              Instrument
+              <WatchlistPicker />
+            </label>
+            <GroupedInstrumentSelect instruments={instruments ?? []} value={instrument} onChange={setInstrument} className="input" watchlistFilter={filterSet} />
           </div>
           <div>
             <label className="block text-xs text-foreground-muted mb-1.5">Timeframe</label>
@@ -244,9 +261,15 @@ export default function BotsPage() {
                 <td colSpan={7}>
                   <EmptyState
                     icon={<Bot size={36} strokeWidth={1.5} />}
-                    title="No bots running"
-                    description="Add a paper bot above to start monitoring."
+                    title="No paper bots yet"
+                    description="Paper bots simulate live trading with no real money. Add one manually above, or promote a top-scoring combo from your Research shortlist."
                   />
+                  <div className="flex justify-center gap-3 pb-4">
+                    <Link href="/research" className="btn btn-secondary text-sm">
+                      <Search size={14} />
+                      Go to Research
+                    </Link>
+                  </div>
                 </td>
               </tr>
             )}

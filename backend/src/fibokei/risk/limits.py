@@ -23,6 +23,13 @@ def get_risk_limits() -> dict:
         "daily_hard_stop_pct": _float("FIBOKEI_DAILY_HARD_STOP_PCT", 4.0),
         "weekly_soft_stop_pct": _float("FIBOKEI_WEEKLY_SOFT_STOP_PCT", 6.0),
         "weekly_hard_stop_pct": _float("FIBOKEI_WEEKLY_HARD_STOP_PCT", 8.0),
+        # Fleet-level limits
+        "fleet_max_bots_per_instrument": _int("FIBOKEI_FLEET_MAX_BOTS_PER_INSTRUMENT", 5),
+        "fleet_max_total_positions": _int("FIBOKEI_FLEET_MAX_TOTAL_POSITIONS", 20),
+        "fleet_max_exposure_per_instrument": _int("FIBOKEI_FLEET_MAX_EXPOSURE_PER_INSTRUMENT", 6),
+        "fleet_correlation_threshold": _float("FIBOKEI_FLEET_CORRELATION_THRESHOLD", 0.85),
+        "fleet_cull_sigma": _float("FIBOKEI_FLEET_CULL_SIGMA", 2.0),
+        "fleet_cull_min_trades": _int("FIBOKEI_FLEET_CULL_MIN_TRADES", 50),
     }
 
 

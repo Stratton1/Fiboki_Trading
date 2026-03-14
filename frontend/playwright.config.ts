@@ -31,15 +31,15 @@ export default defineConfig({
       name: "screenshots",
       testMatch: /screenshots\.spec\.ts$/,
       use: {
-        viewport: { width: 1280, height: 800 },
+        viewport: { width: 1440, height: 900 },
       },
     },
     {
       name: "auth-prod",
       testMatch: /auth-prod\.spec\.ts$/,
       use: {
-        baseURL: process.env.BASE_URL || "https://fiboki.uk",
-        viewport: { width: 1280, height: 800 },
+        baseURL: process.env.BASE_URL || process.env.FIBOKI_BASE_URL || "https://fiboki.uk",
+        viewport: { width: 1440, height: 900 },
         // Longer timeout for real network + login flow
         actionTimeout: 15_000,
       },

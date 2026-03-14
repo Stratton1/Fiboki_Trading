@@ -160,6 +160,29 @@ export interface ValidationBatchResponse {
   results: ValidationResultResponse[];
 }
 
+// Saved Shortlist
+
+export interface ShortlistEntry {
+  id: number;
+  strategy_id: string;
+  instrument: string;
+  timeframe: string;
+  score: number;
+  source_run_id: string | null;
+  metrics_snapshot: Record<string, unknown> | null;
+  note: string | null;
+  status: string;
+  created_at: string | null;
+  updated_at: string | null;
+}
+
+export interface ResearchRunListItem {
+  run_id: string;
+  created_at: string | null;
+  result_count: number;
+  top_score: number;
+}
+
 // Research presets
 
 export interface ResearchPreset {

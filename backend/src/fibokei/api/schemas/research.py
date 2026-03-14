@@ -239,3 +239,45 @@ class ResearchPresetResponse(BaseModel):
     config: dict[str, Any]
     created_at: datetime | None = None
     updated_at: datetime | None = None
+
+
+# ── Saved Shortlist schemas ─────────────────────────────────
+
+
+class ShortlistEntryCreate(BaseModel):
+    strategy_id: str = Field(..., min_length=1)
+    instrument: str = Field(..., min_length=1)
+    timeframe: str = Field(..., min_length=1)
+    score: float
+    source_run_id: str | None = None
+    metrics_snapshot: dict[str, Any] | None = None
+    note: str | None = None
+
+
+class ShortlistEntryUpdate(BaseModel):
+    note: str | None = None
+    status: str | None = Field(None, pattern="^(active|archived)$")
+
+
+class ShortlistEntryResponse(BaseModel):
+    id: int
+    strategy_id: str
+    instrument: str
+    timeframe: str
+    score: float
+    source_run_id: str | None = None
+    metrics_snapshot: dict[str, Any] | None = None
+    note: str | None = None
+    status: str
+    created_at: datetime | None = None
+    updated_at: datetime | None = None
+
+
+# ── Research Runs listing ────────────────────────────────────
+
+
+class ResearchRunListItem(BaseModel):
+    run_id: str
+    created_at: datetime | None = None
+    result_count: int
+    top_score: float = 0.0

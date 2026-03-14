@@ -50,3 +50,17 @@ export interface TradeListResponse {
   page: number;
   size: number;
 }
+
+export interface JournalEntry {
+  id: number;
+  trade_id: number;
+  note: string | null;
+  tags: string[];
+  created_at: string | null;
+  updated_at: string | null;
+}
+
+export interface JournalListResponse {
+  items: JournalEntry[];
+  total: number;
+}

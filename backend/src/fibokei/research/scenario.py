@@ -33,6 +33,7 @@ class ScenarioResult:
     aggregate_pnl: float = 0.0
     aggregate_sharpe: float | None = None
     aggregate_max_dd: float | None = None
+    aggregate_win_rate: float | None = None
 
 
 def run_scenario(
@@ -80,19 +81,21 @@ def run_scenario(
             bt_result = backtester.run(df, combo.instrument, tf_enum)
             metrics = compute_metrics(bt_result)
 
+            net_profit = float(metrics.get("total_net_profit", 0.0))
             bot_result = {
                 "strategy_id": combo.strategy_id,
                 "instrument": combo.instrument,
                 "timeframe": combo.timeframe,
                 "total_trades": bt_result.total_trades,
-                "net_profit": metrics.get("net_profit", 0.0),
+                "net_profit": net_profit,
+                "win_rate": float(metrics.get("win_rate", 0.0)),
                 "sharpe_ratio": metrics.get("sharpe_ratio"),
                 "max_drawdown_pct": metrics.get("max_drawdown_pct"),
-                "equity_curve": bt_result.equity_curve,
+                "equity_curve": [float(v) for v in bt_result.equity_curve],
             }
             result.per_bot.append(bot_result)
             result.total_trades += bt_result.total_trades
-            result.aggregate_pnl += metrics.get("net_profit", 0.0)
+            result.aggregate_pnl += net_profit
             equity_curves.append(bt_result.equity_curve)
 
         except Exception as e:
@@ -104,7 +107,17 @@ def run_scenario(
                 "error": str(e),
             })
 
-    # Aggregate equity curve: sum across bots, aligned by index
+    # Determine if this is a mixed-timeframe scenario
+    successful_timeframes = {
+        b["timeframe"] for b in result.per_bot if "error" not in b
+    }
+    is_mixed_timeframe = len(successful_timeframes) > 1
+
+    # Aggregate equity curve: sum across bots, aligned by index.
+    # NOTE: When timeframes differ, bar-index alignment is approximate —
+    # an H4 bar and an M15 bar cover very different time periods.
+    # The aggregate curve is still useful for overall shape but the
+    # x-axis does not represent uniform time.
     if equity_curves:
         max_len = max(len(ec) for ec in equity_curves)
         aggregate = []
@@ -125,6 +138,30 @@ def run_scenario(
             if dd > max_dd:
                 max_dd = dd
         result.aggregate_max_dd = round(max_dd, 2)
+
+    # Compute aggregate Sharpe from combined equity returns
+    if equity_curves:
+        all_returns: list[float] = []
+        for ec in equity_curves:
+            if len(ec) < 2:
+                continue
+            for i in range(1, len(ec)):
+                if ec[i - 1] != 0:
+                    all_returns.append((ec[i] - ec[i - 1]) / ec[i - 1])
+        if len(all_returns) > 1:
+            import statistics
+            mean_r = statistics.mean(all_returns)
+            std_r = statistics.stdev(all_returns)
+            result.aggregate_sharpe = round(mean_r / std_r * (252 ** 0.5) if std_r > 0 else 0.0, 4)
+
+    # Compute aggregate win rate
+    successful = [b for b in result.per_bot if "error" not in b]
+    total_wins = sum(
+        round((b.get("win_rate", 0) or 0) * (b.get("total_trades", 0) or 0))
+        for b in successful
+    )
+    if result.total_trades > 0:
+        result.aggregate_win_rate = round(total_wins / result.total_trades, 4)
 
     if progress_callback:
         progress_callback(100)

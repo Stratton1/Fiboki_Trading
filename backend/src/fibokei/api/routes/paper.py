@@ -569,3 +569,85 @@ def _bot_to_response(bot) -> BotStatusResponse:
         source_type=getattr(bot, "source_type", None),
         source_id=getattr(bot, "source_id", None),
     )
+
+
+# ── Fleet Risk Analysis ─────────────────────────────────────
+
+
+@router.get("/paper/fleet/risk")
+def get_fleet_risk_analysis(
+    user: TokenData = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Fleet-level risk analysis: limits status, correlation alerts, underperformers."""
+    from fibokei.risk.engine import RiskEngine
+    from fibokei.risk.limits import get_risk_limits
+
+    limits = get_risk_limits()
+    engine = RiskEngine(**limits)
+    all_bots = get_paper_bots(db)
+
+    # Build fleet positions list
+    fleet_positions: list[dict] = []
+    for bot in all_bots:
+        if bot.position_json is not None:
+            fleet_positions.append({
+                "instrument": bot.instrument,
+                "direction": bot.position_json.get("direction", "LONG"),
+                "bot_id": bot.bot_id,
+            })
+
+    # Per-instrument bot counts (all bots, not just those with positions)
+    instrument_bot_counts: dict[str, int] = {}
+    for bot in all_bots:
+        if bot.state in ("monitoring", "position_open"):
+            instrument_bot_counts[bot.instrument] = (
+                instrument_bot_counts.get(bot.instrument, 0) + 1
+            )
+
+    # Instrument limit breaches
+    instrument_alerts = [
+        {"instrument": inst, "bot_count": count, "limit": engine.fleet_max_bots_per_instrument}
+        for inst, count in instrument_bot_counts.items()
+        if count >= engine.fleet_max_bots_per_instrument
+    ]
+
+    # Correlation analysis — gather recent trades per bot
+    bot_trades: dict[str, list[tuple[str, str]]] = {}
+    bot_pnls: dict[str, list[float]] = {}
+    for bot in all_bots:
+        trades = get_paper_trades(db, bot_id=bot.bot_id, limit=200)
+        if trades:
+            bot_trades[bot.bot_id] = [
+                (
+                    t.entry_time.isoformat() if t.entry_time else "",
+                    t.exit_time.isoformat() if t.exit_time else "",
+                )
+                for t in trades
+            ]
+            bot_pnls[bot.bot_id] = [t.pnl for t in trades]
+
+    correlation_alerts = engine.find_correlated_bots(bot_trades)
+    underperformers = engine.find_underperformers(bot_pnls)
+
+    return {
+        "fleet_limits": {
+            "max_bots_per_instrument": engine.fleet_max_bots_per_instrument,
+            "max_total_positions": engine.fleet_max_total_positions,
+            "max_exposure_per_instrument": engine.fleet_max_exposure_per_instrument,
+            "correlation_threshold": engine.fleet_correlation_threshold,
+            "cull_sigma": engine.fleet_cull_sigma,
+            "cull_min_trades": engine.fleet_cull_min_trades,
+        },
+        "fleet_status": {
+            "total_bots": len(all_bots),
+            "active_bots": sum(1 for b in all_bots if b.state in ("monitoring", "position_open")),
+            "open_positions": len(fleet_positions),
+            "positions_limit_pct": round(
+                len(fleet_positions) / engine.fleet_max_total_positions * 100, 1
+            ) if engine.fleet_max_total_positions > 0 else 0,
+        },
+        "instrument_alerts": instrument_alerts,
+        "correlation_alerts": correlation_alerts,
+        "underperformers": underperformers,
+    }

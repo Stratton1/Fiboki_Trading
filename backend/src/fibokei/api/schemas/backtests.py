@@ -24,6 +24,7 @@ class BacktestSummaryResponse(BaseModel):
     net_profit: float
     sharpe_ratio: float | None = None
     max_drawdown_pct: float | None = None
+    created_at: datetime | None = None
 
 
 class BacktestDetailResponse(BacktestSummaryResponse):

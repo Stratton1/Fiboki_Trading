@@ -107,7 +107,7 @@ def _ensure_new_columns(engine) -> None:
 
     # Verify critical tables exist (helpful for diagnosing production issues)
     logger = logging.getLogger("fibokei.startup")
-    critical_tables = ["paper_account", "paper_bots", "paper_trades", "execution_audit"]
+    critical_tables = ["paper_account", "paper_bots", "paper_trades", "execution_audit", "watchlists", "saved_shortlist", "trade_journal", "strategy_variants"]
     for table in critical_tables:
         if table not in table_names:
             logger.warning("Table '%s' missing after create_all — will be created on next restart", table)
@@ -119,6 +119,19 @@ def _ensure_new_columns(engine) -> None:
             with engine.begin() as conn:
                 conn.execute(text(
                     "ALTER TABLE paper_account ADD COLUMN currency VARCHAR(3) DEFAULT 'GBP'"
+                ))
+
+    # Add source_type/source_id to paper_bots if missing
+    if "paper_bots" in table_names:
+        pb_cols = {col["name"] for col in inspector.get_columns("paper_bots")}
+        with engine.begin() as conn:
+            if "source_type" not in pb_cols:
+                conn.execute(text(
+                    "ALTER TABLE paper_bots ADD COLUMN source_type VARCHAR(20)"
+                ))
+            if "source_id" not in pb_cols:
+                conn.execute(text(
+                    "ALTER TABLE paper_bots ADD COLUMN source_id VARCHAR(100)"
                 ))
 
     if "execution_audit" not in table_names:
@@ -166,11 +179,17 @@ async def lifespan(app: FastAPI):
     app.state.engine = engine
     app.state.session_factory = session_factory
 
-    # Seed users
+    # Seed users + migrate bookmarks
     from fibokei.api.seed import seed_users
+    from fibokei.db.repository import migrate_bookmarks_to_shortlist
 
     with session_factory() as session:
         seed_users(session)
+        migrated = migrate_bookmarks_to_shortlist(session)
+        if migrated:
+            logging.getLogger("fibokei.startup").info(
+                "Migrated %d research bookmarks to saved shortlist", migrated
+            )
 
     # Validate IG demo configuration at startup
     _validate_ig_config()
@@ -337,6 +356,10 @@ def create_app() -> FastAPI:
     application.include_router(bookmarks_router, prefix="/api/v1")
     from fibokei.api.routes.alerts import router as alerts_router
     application.include_router(alerts_router, prefix="/api/v1")
+    from fibokei.api.routes.watchlists import router as watchlists_router
+    application.include_router(watchlists_router, prefix="/api/v1")
+    from fibokei.api.routes.variations import router as variations_router
+    application.include_router(variations_router, prefix="/api/v1")
 
     return application
 
