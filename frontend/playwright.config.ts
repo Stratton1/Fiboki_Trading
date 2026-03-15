@@ -35,6 +35,38 @@ export default defineConfig({
       },
     },
     {
+      name: "shortlist",
+      testMatch: /shortlist-workflow\.spec\.ts$/,
+      use: {
+        actionTimeout: 10_000,
+      },
+      timeout: 30_000,
+    },
+    {
+      name: "chart-trust",
+      testMatch: /chart-trust\.spec\.ts$/,
+      use: {
+        actionTimeout: 10_000,
+      },
+      timeout: 30_000,
+    },
+    {
+      name: "dashboard",
+      testMatch: /dashboard\.spec\.ts$/,
+      use: {
+        actionTimeout: 10_000,
+      },
+      timeout: 30_000,
+    },
+    {
+      name: "charts",
+      testMatch: /charts\.spec\.ts$/,
+      use: {
+        actionTimeout: 10_000,
+      },
+      timeout: 30_000,
+    },
+    {
       name: "auth-prod",
       testMatch: /auth-prod\.spec\.ts$/,
       use: {

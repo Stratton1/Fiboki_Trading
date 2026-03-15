@@ -78,9 +78,8 @@ export default function MultiChartLayout({ headerSlot }: MultiChartLayoutProps) 
   return (
     <div className="flex flex-col h-full gap-3">
       {/* Toolbar row */}
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-3" data-testid="layout-toolbar">
         {headerSlot}
-        <div className="w-px h-6 bg-border" />
         <div className="flex items-center gap-1">
           <LayoutGrid size={14} className="text-foreground-muted mr-1" />
           {LAYOUT_OPTIONS.map((opt) => {
@@ -91,6 +90,7 @@ export default function MultiChartLayout({ headerSlot }: MultiChartLayoutProps) 
                 key={opt.mode}
                 onClick={() => handleModeChange(opt.mode)}
                 title={opt.label}
+                data-testid={`layout-${opt.mode}`}
                 className={`px-2 py-1 text-xs rounded transition flex items-center gap-1 ${
                   active
                     ? "bg-primary text-white font-medium"
@@ -106,7 +106,7 @@ export default function MultiChartLayout({ headerSlot }: MultiChartLayoutProps) 
       </div>
 
       {/* Chart grid */}
-      <div className={`flex-1 min-h-0 grid ${gridClass} gap-2`}>
+      <div className={`flex-1 min-h-0 grid ${gridClass} gap-2`} data-testid="chart-grid">
         {Array.from({ length: cellCount }).map((_, i) => (
           <ChartCell
             key={`cell-${i}-${layout.mode}`}

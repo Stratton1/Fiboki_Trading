@@ -1,15 +1,45 @@
 "use client";
 
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useRef, useMemo } from "react";
 import TradingChart from "./TradingChart";
 import { useMarketData, useLiveStatus } from "@/lib/hooks/use-market-data";
 import type { ChartMode } from "@/lib/hooks/use-market-data";
 import { useDrawings } from "@/lib/hooks/use-drawings";
-import { AlertTriangle, Database, Loader2, Clock } from "lucide-react";
+import {
+  AlertTriangle,
+  Database,
+  Loader2,
+  Clock,
+  MousePointer,
+  TrendingUp,
+  Minus,
+  MoveRight,
+  GitBranch,
+  Columns3,
+  Trash2,
+  Layers,
+  ArrowUpDown,
+  Zap,
+  HelpCircle,
+  ExternalLink,
+} from "lucide-react";
 import { MARKET_SESSIONS, getSessionForTimestamp } from "@/lib/sessions";
+import { InfoTip } from "@/components/InfoTip";
 
-const INSTRUMENTS = ["EURUSD", "GBPUSD", "USDJPY", "AUDUSD", "USDCAD", "XAUUSD"];
-const TIMEFRAMES = ["M15", "H1", "H4", "D1"];
+const INSTRUMENTS = [
+  "EURUSD", "GBPUSD", "USDJPY", "AUDUSD", "USDCAD", "XAUUSD",
+  "EURJPY", "GBPJPY", "EURGBP", "NZDUSD", "USDCHF",
+];
+const TIMEFRAMES = ["M15", "M30", "H1", "H4", "D1"];
+
+const DRAWING_TOOLS = [
+  { id: null, label: "Select", icon: MousePointer, shortcut: "V" },
+  { id: "straightLine", label: "Trend", icon: TrendingUp, shortcut: "T" },
+  { id: "horizontalStraightLine", label: "H-Line", icon: Minus, shortcut: "H" },
+  { id: "rayLine", label: "Ray", icon: MoveRight, shortcut: "R" },
+  { id: "fibonacciLine", label: "Fib", icon: GitBranch, shortcut: "F" },
+  { id: "parallelStraightLine", label: "Channel", icon: Columns3, shortcut: "C" },
+] as const;
 
 interface ChartCellProps {
   defaultInstrument?: string;
@@ -29,15 +59,33 @@ export default function ChartCell({
   const [ichimokuEnabled, setIchimokuEnabled] = useState(false);
   const [sessionsVisible, setSessionsVisible] = useState(false);
   const [activeDrawingTool, setActiveDrawingTool] = useState<string | null>(null);
-  const [chartMode] = useState<ChartMode>("historical");
+  const [chartMode, setChartMode] = useState<ChartMode>("historical");
+  const [showHelp, setShowHelp] = useState(false);
 
   const { data, error, isLoading } = useMarketData(instrument, timeframe, chartMode);
+  const { available: liveAvailable } = useLiveStatus();
   const {
     drawings,
     createDrawing,
     updateDrawing,
     deleteDrawing,
+    clearDrawings,
   } = useDrawings(instrument, timeframe);
+
+  // Price summary from latest candle
+  const priceSummary = useMemo(() => {
+    if (!data?.candles?.length) return null;
+    const last = data.candles[data.candles.length - 1];
+    const prev = data.candles.length > 1 ? data.candles[data.candles.length - 2] : null;
+    const change = prev ? last.close - prev.close : 0;
+    const changePct = prev ? (change / prev.close) * 100 : 0;
+    return { last, change, changePct };
+  }, [data]);
+
+  const currentSession = useMemo(() => {
+    if (!data?.candles?.length) return null;
+    return getSessionForTimestamp(data.candles[data.candles.length - 1].timestamp);
+  }, [data]);
 
   const lookupDrawingId = useCallback(
     (overlayId: string): number | null => {
@@ -98,61 +146,244 @@ export default function ChartCell({
   };
 
   return (
-    <div className="flex flex-col h-full border border-border rounded-lg overflow-hidden bg-background-card">
-      {/* Compact toolbar */}
-      <div className="flex items-center gap-2 px-2 py-1.5 border-b border-border bg-background text-xs">
+    <div className="flex flex-col h-full border border-border rounded-lg overflow-hidden bg-background-card" data-testid="chart-cell">
+      {/* ── Header / Context Bar ─────────────────────────────── */}
+      <div className="flex items-center gap-2 px-3 py-1.5 border-b border-border bg-background" data-testid="chart-header">
+        {/* Instrument + Timeframe */}
         <select
           value={instrument}
           onChange={(e) => handleInstrumentChange(e.target.value)}
-          className="bg-background border border-border rounded px-1.5 py-0.5 text-xs"
+          className="bg-background border border-border rounded px-1.5 py-0.5 text-xs font-medium"
+          data-testid="instrument-select"
         >
           {INSTRUMENTS.map((i) => (
-            <option key={i} value={i}>{i.replace("_", "/")}</option>
+            <option key={i} value={i}>{i.slice(0, 3)}/{i.slice(3)}</option>
           ))}
         </select>
-        <select
-          value={timeframe}
-          onChange={(e) => handleTimeframeChange(e.target.value)}
-          className="bg-background border border-border rounded px-1.5 py-0.5 text-xs"
-        >
+
+        {/* Timeframe buttons */}
+        <div className="flex gap-0.5" data-testid="timeframe-buttons">
           {TIMEFRAMES.map((tf) => (
-            <option key={tf} value={tf}>{tf}</option>
+            <button
+              key={tf}
+              onClick={() => handleTimeframeChange(tf)}
+              className={`px-1.5 py-0.5 text-[11px] rounded transition ${
+                timeframe === tf
+                  ? "bg-primary text-white font-medium"
+                  : "text-foreground-muted hover:text-foreground hover:bg-background-muted"
+              }`}
+              data-testid={`tf-${tf}`}
+            >
+              {tf}
+            </button>
           ))}
-        </select>
-        <label className="flex items-center gap-1 text-foreground-muted cursor-pointer">
-          <input
-            type="checkbox"
-            checked={ichimokuEnabled}
-            onChange={(e) => setIchimokuEnabled(e.target.checked)}
-            className="w-3 h-3"
-          />
-          Ichimoku
-        </label>
-        <label className="flex items-center gap-1 text-foreground-muted cursor-pointer">
-          <input
-            type="checkbox"
-            checked={sessionsVisible}
-            onChange={(e) => setSessionsVisible(e.target.checked)}
-            className="w-3 h-3"
-          />
-          <Clock size={10} />
-          Sessions
-        </label>
-        {data && !compact && (
-          <span className="text-foreground-muted ml-auto flex items-center gap-1">
-            <Database size={10} />
-            {data.total_bars?.toLocaleString() ?? "?"} bars
-          </span>
+        </div>
+
+        {/* Separator */}
+        <div className="w-px h-4 bg-border" />
+
+        {/* Price readout */}
+        {priceSummary && (
+          <div className="flex items-center gap-1.5 text-xs" data-testid="price-readout">
+            <span className="font-mono font-semibold text-foreground">
+              {priceSummary.last.close.toFixed(instrument.includes("JPY") ? 3 : 5)}
+            </span>
+            <span className={`font-mono text-[11px] ${priceSummary.change >= 0 ? "text-green-600" : "text-red-500"}`}>
+              {priceSummary.change >= 0 ? "+" : ""}
+              {priceSummary.changePct.toFixed(2)}%
+            </span>
+          </div>
         )}
+
+        {/* Spacer */}
+        <div className="flex-1" />
+
+        {/* OHLC of latest bar */}
+        {priceSummary && !compact && (
+          <div className="hidden sm:flex items-center gap-2 text-[10px] text-foreground-muted font-mono" data-testid="ohlc-readout">
+            <span>O {priceSummary.last.open.toFixed(instrument.includes("JPY") ? 3 : 5)}</span>
+            <span>H {priceSummary.last.high.toFixed(instrument.includes("JPY") ? 3 : 5)}</span>
+            <span>L {priceSummary.last.low.toFixed(instrument.includes("JPY") ? 3 : 5)}</span>
+            <span>C {priceSummary.last.close.toFixed(instrument.includes("JPY") ? 3 : 5)}</span>
+          </div>
+        )}
+
+        {/* Bar count + session */}
+        {data && (
+          <div className="flex items-center gap-1.5 text-[10px] text-foreground-muted">
+            <Database size={9} />
+            <span>{data.total_bars?.toLocaleString() ?? "?"}</span>
+            {currentSession && (
+              <>
+                <span className="w-1.5 h-1.5 rounded-full inline-block" style={{ backgroundColor: currentSession.color.replace("0.06", "0.5") }} />
+                <span>{currentSession.name}</span>
+              </>
+            )}
+          </div>
+        )}
+
+        {/* Mode toggle */}
+        <div className="flex gap-0.5 bg-background border border-border rounded p-0.5" data-testid="mode-toggle">
+          <button
+            onClick={() => setChartMode("historical")}
+            className={`px-1.5 py-0.5 text-[10px] rounded transition ${
+              chartMode === "historical"
+                ? "bg-primary text-white font-medium"
+                : "text-foreground-muted hover:text-foreground"
+            }`}
+          >
+            Hist
+          </button>
+          <button
+            onClick={() => liveAvailable && setChartMode("live")}
+            disabled={!liveAvailable}
+            title={!liveAvailable ? "IG demo credentials not configured" : "Live data from IG"}
+            className={`px-1.5 py-0.5 text-[10px] rounded transition ${
+              chartMode === "live"
+                ? "bg-green-600 text-white font-medium"
+                : liveAvailable
+                  ? "text-foreground-muted hover:text-foreground"
+                  : "text-foreground-muted/40 cursor-not-allowed"
+            }`}
+          >
+            <span className="flex items-center gap-0.5">
+              {chartMode === "live" && <Zap size={8} />}
+              Live
+            </span>
+          </button>
+        </div>
       </div>
 
-      {/* Session legend */}
+      {/* ── Drawing Tools + Overlay Controls ──────────────────── */}
+      <div className="flex items-center gap-1 px-2 py-1 border-b border-border bg-background text-xs" data-testid="drawing-toolbar">
+        {/* Drawing tools */}
+        {DRAWING_TOOLS.map((tool) => {
+          const Icon = tool.icon;
+          const isActive = activeDrawingTool === tool.id;
+          return (
+            <button
+              key={tool.id ?? "pointer"}
+              onClick={() => setActiveDrawingTool(isActive && tool.id !== null ? null : tool.id)}
+              title={`${tool.label} (${tool.shortcut})`}
+              className={`p-1 rounded transition ${
+                isActive
+                  ? "bg-primary text-white"
+                  : "text-foreground-muted hover:text-foreground hover:bg-background-muted"
+              }`}
+              data-testid={`draw-${tool.id ?? "pointer"}`}
+            >
+              <Icon size={13} />
+            </button>
+          );
+        })}
+
+        {drawings.length > 0 && (
+          <>
+            <div className="w-px h-4 bg-border mx-0.5" />
+            <button
+              onClick={() => clearDrawings()}
+              title="Clear all drawings"
+              className="p-1 rounded text-foreground-muted hover:text-red-500 hover:bg-background-muted transition"
+              data-testid="draw-clear"
+            >
+              <Trash2 size={12} />
+            </button>
+            <span className="text-[10px] text-foreground-muted">{drawings.length}</span>
+          </>
+        )}
+
+        {/* Separator */}
+        <div className="w-px h-4 bg-border mx-1" />
+
+        {/* Overlay toggles */}
+        <button
+          onClick={() => setIchimokuEnabled(!ichimokuEnabled)}
+          title="Toggle Ichimoku Cloud overlay"
+          className={`flex items-center gap-1 px-1.5 py-0.5 text-[11px] rounded transition ${
+            ichimokuEnabled
+              ? "bg-blue-100 text-blue-700 font-medium"
+              : "text-foreground-muted hover:text-foreground hover:bg-background-muted"
+          }`}
+          data-testid="toggle-ichimoku"
+        >
+          <Layers size={11} />
+          Ichimoku
+        </button>
+
+        <button
+          onClick={() => setSessionsVisible(!sessionsVisible)}
+          title="Toggle market session highlights"
+          className={`flex items-center gap-1 px-1.5 py-0.5 text-[11px] rounded transition ${
+            sessionsVisible
+              ? "bg-amber-100 text-amber-700 font-medium"
+              : "text-foreground-muted hover:text-foreground hover:bg-background-muted"
+          }`}
+          data-testid="toggle-sessions"
+        >
+          <Clock size={11} />
+          Sessions
+        </button>
+
+        {/* Spacer */}
+        <div className="flex-1" />
+
+        {/* Workflow links */}
+        {!compact && (
+          <div className="flex items-center gap-1">
+            <a
+              href={`/backtests?instrument=${instrument}`}
+              className="flex items-center gap-0.5 px-1.5 py-0.5 text-[10px] text-foreground-muted hover:text-primary rounded hover:bg-background-muted transition"
+              title={`Backtest ${instrument}`}
+              data-testid="link-backtest"
+            >
+              <ArrowUpDown size={10} />
+              Backtest
+            </a>
+            <a
+              href="/research"
+              className="flex items-center gap-0.5 px-1.5 py-0.5 text-[10px] text-foreground-muted hover:text-primary rounded hover:bg-background-muted transition"
+              title="Open Research"
+              data-testid="link-research"
+            >
+              <ExternalLink size={10} />
+              Research
+            </a>
+          </div>
+        )}
+
+        {/* Help */}
+        <div className="relative">
+          <button
+            onClick={() => setShowHelp(!showHelp)}
+            className="p-1 rounded text-foreground-muted hover:text-foreground hover:bg-background-muted transition"
+            title="Chart help"
+            data-testid="chart-help-btn"
+          >
+            <HelpCircle size={12} />
+          </button>
+          {showHelp && (
+            <div className="absolute right-0 top-full mt-1 z-50 w-64 bg-background-card border border-border rounded-lg shadow-lg p-3 text-xs text-foreground" data-testid="chart-help-panel">
+              <h4 className="font-medium mb-2">Chart Controls</h4>
+              <ul className="space-y-1 text-foreground-muted">
+                <li><strong>Scroll</strong> — pan chart left/right</li>
+                <li><strong>Pinch/Ctrl+Scroll</strong> — zoom in/out</li>
+                <li><strong>Drawing tools</strong> — click tool, then click on chart to draw</li>
+                <li><strong>Ichimoku</strong> — toggles Tenkan, Kijun, Senkou A/B, Chikou lines</li>
+                <li><strong>Sessions</strong> — shows Asian/London/NY session bands</li>
+                <li><strong>Hist/Live</strong> — historical data or IG live feed</li>
+              </ul>
+              <div className="mt-2 pt-2 border-t border-border">
+                <p className="text-foreground-muted">Drawings are auto-saved per instrument/timeframe pair.</p>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* ── Session legend (when visible) ─────────────────────── */}
       {sessionsVisible && (
-        <div className="flex items-center gap-3 px-2 py-1 border-b border-border text-[10px]">
+        <div className="flex items-center gap-3 px-2 py-1 border-b border-border text-[10px]" data-testid="session-legend">
           {MARKET_SESSIONS.map((s) => {
-            const currentSession = data?.candles?.length
-              ? getSessionForTimestamp(data.candles[data.candles.length - 1].timestamp)
-              : null;
             const isCurrent = currentSession?.name === s.name;
             return (
               <span key={s.name} className={`flex items-center gap-1 ${isCurrent ? "font-bold text-foreground" : "text-foreground-muted"}`}>
@@ -165,18 +396,28 @@ export default function ChartCell({
         </div>
       )}
 
-      {/* Chart */}
+      {/* ── Chart Area ────────────────────────────────────────── */}
       <div className="flex-1 min-h-0">
         {error ? (
-          <div className="flex items-center justify-center h-full">
-            <div className="text-center">
-              <AlertTriangle size={16} className="text-danger mx-auto mb-1" />
-              <p className="text-xs text-danger">Failed to load data</p>
-            </div>
+          <div className="flex flex-col items-center justify-center h-full gap-2" data-testid="chart-error">
+            <AlertTriangle size={20} className="text-danger" />
+            <p className="text-xs text-danger font-medium">Failed to load chart data</p>
+            <p className="text-[10px] text-foreground-muted max-w-xs text-center">
+              Check that the backend is running and {instrument} data is available for {timeframe}.
+            </p>
           </div>
         ) : isLoading ? (
-          <div className="flex items-center justify-center h-full">
-            <Loader2 size={16} className="text-primary animate-spin" />
+          <div className="flex flex-col items-center justify-center h-full gap-2" data-testid="chart-loading">
+            <Loader2 size={20} className="text-primary animate-spin" />
+            <p className="text-xs text-foreground-muted">Loading {instrument} {timeframe}...</p>
+          </div>
+        ) : !data?.candles?.length ? (
+          <div className="flex flex-col items-center justify-center h-full gap-2" data-testid="chart-empty">
+            <Database size={20} className="text-foreground-muted/40" />
+            <p className="text-xs text-foreground-muted font-medium">No data available</p>
+            <p className="text-[10px] text-foreground-muted">
+              No candles found for {instrument} on {timeframe}. Try a different instrument or timeframe.
+            </p>
           </div>
         ) : (
           <TradingChart
