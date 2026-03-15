@@ -276,7 +276,9 @@ export default function BacktestDetailPage({ params }: { params: Promise<{ id: s
           </div>
           <div>
             <p className="text-xs text-foreground-muted">Max Leverage</p>
-            <p className="font-medium">{String(config.max_leverage ?? 30)}x (FCA retail)</p>
+            <p className="font-medium">{String(config.max_leverage ?? 30)}x config cap
+              <InfoTip text="Actual leverage is the lower of this cap and the IG FCA limit for the instrument's asset class (e.g. FX majors 30:1, indices 20:1, oil 10:1, crypto 2:1)." />
+            </p>
           </div>
           <div>
             <p className="text-xs text-foreground-muted">Sizing Model</p>

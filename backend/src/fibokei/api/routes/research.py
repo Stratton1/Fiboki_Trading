@@ -735,7 +735,7 @@ class ScenarioComboRequest(_BaseModel):
 
 class ScenarioRequest(_BaseModel):
     combos: list[ScenarioComboRequest]
-    capital: float = 10000.0
+    capital: float = 1000.0
 
 
 @router.post("/research/scenario", response_model=JobSubmittedResponse)

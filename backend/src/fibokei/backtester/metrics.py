@@ -64,9 +64,10 @@ def compute_metrics(result: BacktestResult) -> dict:
     # Drawdown from equity curve
     max_drawdown, max_drawdown_pct = _compute_drawdown(equity)
 
-    # Risk-adjusted metrics
-    sharpe = _compute_sharpe(equity, periods_per_year)
-    sortino = _compute_sortino(equity, periods_per_year)
+    # Risk-adjusted metrics — use trade-level returns to avoid
+    # inflation from sparse equity curves (most bars have zero change).
+    sharpe = _compute_sharpe_from_trades(trades, result.config.initial_capital, total_bars, periods_per_year)
+    sortino = _compute_sortino_from_trades(trades, result.config.initial_capital, total_bars, periods_per_year)
     calmar = _compute_calmar(equity, max_drawdown_pct)
     recovery_factor = (
         total_net_profit / max_drawdown if max_drawdown > 0 else float("inf")
@@ -174,8 +175,73 @@ def _compute_drawdown(equity: list[float]) -> tuple[float, float]:
     return max_dd, max_dd_pct
 
 
+def _compute_sharpe_from_trades(
+    trades: list, initial_capital: float, total_bars: int, periods_per_year: int = 252
+) -> float:
+    """Annualized Sharpe ratio from trade-level returns.
+
+    Uses per-trade PnL as a percentage of running equity at trade entry,
+    annualized by sqrt(252) — the industry standard for daily-frequency
+    returns. This avoids inflation from either:
+      - Sparse bar-by-bar equity returns (most bars zero)
+      - Over-annualization from sqrt(trades_per_year) on high-frequency data
+    """
+    if len(trades) < 2:
+        return 0.0
+
+    # Compute per-trade return as fraction of pre-trade equity
+    equity = initial_capital
+    trade_returns = []
+    for t in trades:
+        if equity > 0:
+            trade_returns.append(t.pnl / equity)
+        equity += t.pnl
+        if equity <= 0:
+            break
+
+    if len(trade_returns) < 2:
+        return 0.0
+
+    arr = np.array(trade_returns)
+    std = np.std(arr, ddof=1)
+    if std < 1e-12:
+        return 0.0
+
+    # Annualize using sqrt(252) — standard daily annualization.
+    # This is equivalent to assuming each trade is one "period" and
+    # capping annualization at daily frequency to prevent inflation.
+    return float(np.mean(arr) / std * math.sqrt(252))
+
+
+def _compute_sortino_from_trades(
+    trades: list, initial_capital: float, total_bars: int, periods_per_year: int = 252
+) -> float:
+    """Annualized Sortino ratio from trade-level returns (downside only)."""
+    if len(trades) < 2:
+        return 0.0
+
+    equity = initial_capital
+    trade_returns = []
+    for t in trades:
+        if equity > 0:
+            trade_returns.append(t.pnl / equity)
+        equity += t.pnl
+        if equity <= 0:
+            break
+
+    if len(trade_returns) < 2:
+        return 0.0
+
+    arr = np.array(trade_returns)
+    downside = arr[arr < 0]
+    if len(downside) == 0 or np.std(downside, ddof=1) < 1e-12:
+        return 0.0 if np.mean(arr) <= 0 else float("inf")
+
+    return float(np.mean(arr) / np.std(downside, ddof=1) * math.sqrt(252))
+
+
 def _compute_sharpe(equity: list[float], periods_per_year: int = 252) -> float:
-    """Annualized Sharpe ratio from equity curve."""
+    """Annualized Sharpe ratio from equity curve (legacy, used by calmar only)."""
     if len(equity) < 3:
         return 0.0
 
@@ -187,7 +253,7 @@ def _compute_sharpe(equity: list[float], periods_per_year: int = 252) -> float:
 
 
 def _compute_sortino(equity: list[float], periods_per_year: int = 252) -> float:
-    """Annualized Sortino ratio (downside deviation only)."""
+    """Annualized Sortino ratio from equity curve (legacy)."""
     if len(equity) < 3:
         return 0.0
 

@@ -109,9 +109,12 @@ class TestMetrics:
         assert m["profit_factor"] == pytest.approx(0.0)
 
     def test_sharpe_ratio_nonzero(self):
-        # Rising equity → positive Sharpe
+        # Multiple winning trades → positive Sharpe (need >= 2 for meaningful ratio)
         equity = [10000 + i * 10 for i in range(100)]
-        result = _make_result([_make_trade(100)], equity_curve=equity)
+        result = _make_result(
+            [_make_trade(100), _make_trade(50), _make_trade(80)],
+            equity_curve=equity,
+        )
         m = compute_metrics(result)
         assert m["sharpe_ratio"] > 0
 

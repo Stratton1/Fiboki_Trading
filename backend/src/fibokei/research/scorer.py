@@ -39,7 +39,7 @@ def _score_profit_factor(metrics: dict, config: ScoringConfig) -> float:
 def _score_return(metrics: dict, config: ScoringConfig) -> float:
     """Normalized return score (0-1)."""
     net = metrics.get("total_net_profit", 0.0)
-    capital = metrics.get("initial_capital", 10000.0)
+    capital = metrics.get("initial_capital", 1000.0)
     if capital <= 0:
         return 0.0
     normalized = net / capital
