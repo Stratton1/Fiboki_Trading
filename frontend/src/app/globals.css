@@ -208,3 +208,81 @@ body {
   from { opacity: 0; transform: translateX(-6px); }
   to { opacity: 1; transform: translateX(0); }
 }
+
+/* ── Hero claim badge (largest free indexed platform) ── */
+.hero-claim-badge {
+  animation: heroClaimFadeIn 0.6s ease-out both;
+}
+
+.hero-claim-icon {
+  animation: heroClaimIconPop 0.5s ease-out 0.2s both;
+}
+
+.hero-claim-text {
+  animation: heroClaimTextReveal 0.5s ease-out 0.25s both;
+}
+
+.hero-claim-shimmer {
+  background: linear-gradient(
+    105deg,
+    transparent 0%,
+    transparent 40%,
+    rgba(251, 191, 36, 0.15) 45%,
+    rgba(245, 158, 11, 0.25) 50%,
+    rgba(251, 191, 36, 0.15) 55%,
+    transparent 60%,
+    transparent 100%
+  );
+  background-size: 200% 100%;
+  animation: heroClaimShimmer 4s ease-in-out 1s infinite;
+}
+
+@keyframes heroClaimFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes heroClaimIconPop {
+  from {
+    opacity: 0;
+    transform: scale(0.5);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes heroClaimTextReveal {
+  from {
+    opacity: 0;
+    transform: translateX(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes heroClaimShimmer {
+  0%,
+  100% {
+    background-position: 100% 0;
+  }
+  50% {
+    background-position: -100% 0;
+  }
+}
+
+/* Optional: dotted grid background for hero (use with section-dot) */
+.section-dot {
+  background-image: radial-gradient(circle at 1px 1px, var(--color-border-muted) 1px, transparent 0);
+  background-size: 24px 24px;
+  background-color: var(--color-background);
+}

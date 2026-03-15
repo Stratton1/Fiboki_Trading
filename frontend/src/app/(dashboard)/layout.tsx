@@ -27,8 +27,8 @@ import { api } from "@/lib/api";
 const NAV_ITEMS = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard },
   { href: "/charts", label: "Charts", icon: ChartCandlestick },
-  { href: "/backtests", label: "Backtests", icon: BarChart3 },
   { href: "/research", label: "Research", icon: Search },
+  { href: "/backtests", label: "Backtests", icon: BarChart3 },
   { href: "/scenarios", label: "Scenarios", icon: Layers },
   { href: "/jobs", label: "Jobs", icon: ListTodo },
   { href: "/bots", label: "Paper Bots", icon: Bot },

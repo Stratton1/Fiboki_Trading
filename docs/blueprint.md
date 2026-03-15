@@ -1411,6 +1411,21 @@ FIBOKEI should prefer:
 
 not just the biggest raw profit number.
 
+## 17.8 Saved Shortlist
+
+The **Saved Shortlist** is a durable, operator-curated list of promising strategy/instrument/timeframe combos. It is the universal bridge between discovery (Research) and deployment (Paper Bots, Scenarios, Backtesting).
+
+Key design:
+
+- Independent of research run results — entries survive run deletion and result clearing
+- Uniqueness enforced per user: one entry per (strategy_id, instrument, timeframe) combo
+- Upsert semantics: re-saving updates score/metrics, does not create duplicates
+- Each entry stores: score, source_run_id (optional), metrics_snapshot (optional), note, status (active/archived)
+- Accessible via "From Shortlist" picker on Backtests run form, Paper Bot creation form, and Scenario Sandbox
+- Accessible via "Save to Shortlist" (star icon) on Research rankings, Backtest detail, and Backtests list
+
+Workflow: Research → Save to Shortlist → Backtest from Shortlist → Promote to Paper Bot from Shortlist → Scenario test portfolio from Shortlist.
+
 ---
 
 # 18. Performance Metrics
@@ -1771,12 +1786,19 @@ Must support:
 - choosing instrument(s)
 - choosing timeframe(s)
 - date-range selection
-- launching runs
+- launching runs (async via job engine)
 - viewing stats
 - viewing equity curve
 - viewing drawdown curve
-- viewing trade list
+- viewing trade list with sortable columns
 - comparing runs
+- promote backtest combo to Saved Shortlist (star icon)
+- load strategy/instrument/timeframe from Saved Shortlist ("From Shortlist" picker)
+- bulk select + delete backtests
+- filter by bookmarked / legacy
+- Assumptions panel: surface execution model (capital, spread, slippage, leverage, sizing mode, compounding, pip conversion)
+- Diagnostics panel: flag suspicious results (extreme Sharpe, impossible win rates, few trades, inconsistent expectancy)
+- TP-hit negative PnL transparency: tooltip when exit_reason=take_profit_hit and PnL<0 explains spread artefact
 
 ### Running Bots
 
@@ -1788,6 +1810,9 @@ Must support:
 - see last signal reason
 - see current bot state
 - toggle combinations on/off for paper mode
+- load strategy/instrument/timeframe from Saved Shortlist ("From Shortlist" picker)
+- fleet summary: aggregate PnL, equity, balance, running/total counts, stale bot warnings
+- group by strategy view
 
 ### Trade History
 

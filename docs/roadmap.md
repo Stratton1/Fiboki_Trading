@@ -1,8 +1,8 @@
 ou thi# Fiboki — Build Roadmap
 
-Version: 2.7
-Status: **Phase 18 COMPLETE** — Strategy Families & Fleet Scaling. Phases 1–18 complete.
-Last Updated: 2026-03-13
+Version: 2.8
+Status: **Phase 19 IN PROGRESS** — UX + Correctness Hardening. Phases 1–18 complete.
+Last Updated: 2026-03-14
 Reference: [blueprint.md](blueprint.md)
 
 ---
@@ -94,6 +94,7 @@ The recommended implementation order after completing Phase 14:
 | Phase 17.4: Trade Replay | COMPLETE | 526 pass | TradeReplay component (play/pause/step/scrub, 4 speeds, entry/exit markers), "Replay Trade" button on trade detail page |
 | Phase 17.5: Scenario Sandbox | COMPLETE | Build clean | Scenario simulator backend, async job endpoint, scenario builder UI (strategy/instrument/timeframe multi-select), results with aggregate equity curve + per-bot breakdown |
 | Phase 18: Strategy Families & Fleet | COMPLETE | 615 pass | Watchlists (WatchlistModel + CRUD API + WatchlistPicker on Charts/Backtests/Bots/Research), Trade Journal (TradeJournalModel + CRUD API + journal panel on trade detail + tag column on trades list), Fleet-Aware Risk (RiskEngine fleet-level checks + correlation monitoring + underperformer detection + Exposure Dashboard fleet panel + Settings fleet limits), Parameter Variation Engine (StrategyVariantModel + variation.py auto-discovery + cartesian generation + Jaccard dedup + variant CRUD API) |
+| Phase 19: UX + Correctness Hardening | COMPLETE | 623 pass | Sidebar reorder, shortlist integration everywhere, backtest promote/bulk delete, assumptions+diagnostics panels, tp_hit cost transparency + regression tests, DRY-UP trade explanations, deterministic E2E (dev seed), chart marker controls + chart-trust Playwright spec |
 
 ### Audit Fixes Applied (Post Phase 4.2)
 - **C1**: Data loader now drops NaN rows after `to_numeric(coerce)` with warning
@@ -2264,6 +2265,48 @@ cd backend && pytest tests/test_journal.py -v
 cd frontend && npx next build
 # Trade detail → add journal note with tags → persists and displays
 # Trades page → filter by journal tag → shows matching trades
+```
+
+---
+
+## Phase 19 — UX + Correctness Hardening
+
+**Objective:** Polish operator workflows, fix correctness issues, and integrate Shortlist as the universal combo source across all surfaces.
+
+**Why this phase exists:** Post-Phase 18, all major features are implemented but operator friction remains: backtests can't promote to shortlist, scenarios/paper bots require manual combo entry instead of selecting from shortlist, backtest detail lacks assumptions transparency, and TP-hit trades with negative PnL confuse operators.
+
+### Slice B — Workflow Affordances
+
+- [x] **T-19.B1** — Sidebar reorder: move Research above Backtests to match operator workflow (research → backtest → paper)
+- [x] **T-19.B2** — Shortlist as universal combo source: add "Load from Shortlist" to Scenario Sandbox (already exists), Paper Bot creation, and Backtesting run page
+- [x] **T-19.B3** — Backtest "Promote to Shortlist": add action on backtest detail and backtests list to upsert shortlist entry from backtest combo
+
+### Slice C — Correctness Audit
+
+- [x] **T-19.C1** — Backtest Assumptions panel: surface all assumptions (capital, sizing, spread, slippage, leverage, compounding, pip conversion) on backtest detail
+- [x] **T-19.C2** — TP-hit negative PnL transparency: document that spread/slippage costs can make TP exits slightly negative; add diagnostic warning; regression test
+- [x] **T-19.C3** — Diagnostics panel: flag suspicious results (extreme Sharpe, impossible win rates) as warnings on backtest detail
+
+### Slice D — Backtest UX
+
+- [x] **T-19.D1** — Bulk delete backtests: multi-select + confirm + batch delete
+- [x] **T-19.D2** — Chart marker noise reduction: toggle entry/exit/connecting-line markers with localStorage persistence, sane defaults (entries+exits ON, lines OFF), trade count hint for >50 trades
+- [x] **T-19.D3** — Backtest detail chart trust: amber fallback when market data missing, canvas dimension assertions, Playwright `chart-trust` spec (3 tests)
+
+### Slice E — Code Quality & Testing
+
+- [x] **T-19.E1** — DRY-UP TP-hit negative PnL: shared helper (`lib/trade-explain.ts`) + component (`TpHitSpreadTip.tsx`), single source of truth for condition and copy
+- [x] **T-19.E2** — Deterministic Playwright E2E: dev-only seed endpoint (`POST /dev/seed/backtest`, gated `FIBOKEI_DEV_SEED=1`), shortlist + chart-trust specs use seed for CI reliability
+- [x] **T-19.E3** — tp_hit regression tests: 4 backend tests documenting spread artefact behaviour (LONG, SHORT, unit-level, zero-spread guarantee)
+
+### Verification
+
+```bash
+cd backend && python3 -m pytest -v
+cd frontend && npm run build
+# Playwright (requires running app + credentials):
+cd frontend && npx playwright test --project=shortlist
+cd frontend && npx playwright test --project=chart-trust
 ```
 
 ---

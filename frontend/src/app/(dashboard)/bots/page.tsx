@@ -11,8 +11,9 @@ import { useWatchlists } from "@/lib/hooks/use-watchlists";
 import { PageHeader } from "@/components/PageHeader";
 import { EmptyState } from "@/components/EmptyState";
 import { StatusBadge } from "@/components/StatusBadge";
-import { Bot, Loader2, Wallet, TrendingUp, CalendarDays, Activity, AlertTriangle, BarChart3, Search } from "lucide-react";
+import { Bot, Loader2, Wallet, TrendingUp, CalendarDays, Activity, AlertTriangle, BarChart3, Search, Star, ChevronDown } from "lucide-react";
 import { InfoTip } from "@/components/InfoTip";
+import { useShortlist } from "@/lib/hooks/use-shortlist";
 import Link from "next/link";
 
 interface BotItem {
@@ -42,6 +43,15 @@ export default function BotsPage() {
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [groupBy, setGroupBy] = useState<"none" | "strategy">("none");
+  const { shortlist } = useShortlist();
+  const [showShortlistPicker, setShowShortlistPicker] = useState(false);
+
+  function loadFromShortlist(entry: { strategy_id: string; instrument: string; timeframe: string }) {
+    setStrategy(entry.strategy_id);
+    setInstrument(entry.instrument);
+    setTimeframe(entry.timeframe);
+    setShowShortlistPicker(false);
+  }
 
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault();
@@ -227,6 +237,36 @@ export default function BotsPage() {
             {creating && <Loader2 size={14} className="animate-spin" />}
             {creating ? "Creating..." : "Add Bot"}
           </button>
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => setShowShortlistPicker(!showShortlistPicker)}
+              className="btn btn-secondary text-xs"
+              disabled={shortlist.length === 0}
+              title={shortlist.length === 0 ? "No shortlisted combos yet" : "Load combo from Shortlist"}
+            >
+              <Star size={12} />
+              From Shortlist
+              <ChevronDown size={12} />
+            </button>
+            {showShortlistPicker && shortlist.length > 0 && (
+              <div className="absolute top-full left-0 mt-1 bg-white border border-border rounded-lg shadow-lg z-20 w-72 max-h-60 overflow-y-auto">
+                {shortlist.filter((e) => e.status === "active").map((e) => (
+                  <button
+                    key={e.id}
+                    type="button"
+                    onClick={() => loadFromShortlist(e)}
+                    className="w-full text-left px-3 py-2 text-sm hover:bg-background-muted transition-colors flex items-center gap-2"
+                  >
+                    <span className="font-medium">{e.strategy_id}</span>
+                    <span className="text-foreground-muted">{e.instrument}</span>
+                    <span className="text-foreground-muted">{e.timeframe}</span>
+                    <span className="ml-auto text-xs text-foreground-muted">{e.score.toFixed(2)}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
         {error && <p className="text-danger text-sm mt-3">{error}</p>}
       </form>

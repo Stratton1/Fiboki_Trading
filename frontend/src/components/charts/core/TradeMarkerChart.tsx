@@ -13,6 +13,9 @@ interface TradeMarkerChartProps {
   trades: Trade[];
   focusTradeId?: number | null;
   onTradeClick?: (tradeId: number) => void;
+  showEntries?: boolean;
+  showExits?: boolean;
+  showLines?: boolean;
 }
 
 export default function TradeMarkerChart({
@@ -20,6 +23,9 @@ export default function TradeMarkerChart({
   trades,
   focusTradeId,
   onTradeClick,
+  showEntries = true,
+  showExits = true,
+  showLines = false,
 }: TradeMarkerChartProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<Chart | null>(null);
@@ -117,55 +123,59 @@ export default function TradeMarkerChart({
       const isProfitable = trade.pnl >= 0;
       const color = isProfitable ? "#16A34A" : "#EF4444";
 
-      // Entry arrow
-      chart.createOverlay({
-        name: "simpleTag",
-        groupId: "trade_markers",
-        points: [{ timestamp: entryTs, value: trade.entry_price }],
-        styles: {
-          text: {
-            color: "#FFFFFF",
-            backgroundColor: isLong ? "#16A34A" : "#EF4444",
-            size: 10,
-            borderRadius: 2,
-            paddingLeft: 3,
-            paddingRight: 3,
-            paddingTop: 2,
-            paddingBottom: 2,
+      // Entry marker
+      if (showEntries) {
+        chart.createOverlay({
+          name: "simpleTag",
+          groupId: "trade_markers",
+          points: [{ timestamp: entryTs, value: trade.entry_price }],
+          styles: {
+            text: {
+              color: "#FFFFFF",
+              backgroundColor: isLong ? "#16A34A" : "#EF4444",
+              size: 10,
+              borderRadius: 2,
+              paddingLeft: 3,
+              paddingRight: 3,
+              paddingTop: 2,
+              paddingBottom: 2,
+            },
           },
-        },
-        extendData: isLong ? "\u25B2 LONG" : "\u25BC SHORT",
-        lock: true,
-        onPressedMoving: () => {},
-        onClick: () => {
-          onTradeClick?.(trade.id);
-        },
-      });
-
-      // Exit arrow
-      chart.createOverlay({
-        name: "simpleTag",
-        groupId: "trade_markers",
-        points: [{ timestamp: exitTs, value: trade.exit_price }],
-        styles: {
-          text: {
-            color: "#FFFFFF",
-            backgroundColor: color,
-            size: 10,
-            borderRadius: 2,
-            paddingLeft: 3,
-            paddingRight: 3,
-            paddingTop: 2,
-            paddingBottom: 2,
+          extendData: isLong ? "\u25B2 LONG" : "\u25BC SHORT",
+          lock: true,
+          onPressedMoving: () => {},
+          onClick: () => {
+            onTradeClick?.(trade.id);
           },
-        },
-        extendData: `EXIT ${formatPnl(trade.pnl)}`,
-        lock: true,
-        onPressedMoving: () => {},
-      });
+        });
+      }
 
-      // SL/TP horizontal lines
-      if (trade.entry_price && trade.exit_price) {
+      // Exit marker
+      if (showExits) {
+        chart.createOverlay({
+          name: "simpleTag",
+          groupId: "trade_markers",
+          points: [{ timestamp: exitTs, value: trade.exit_price }],
+          styles: {
+            text: {
+              color: "#FFFFFF",
+              backgroundColor: color,
+              size: 10,
+              borderRadius: 2,
+              paddingLeft: 3,
+              paddingRight: 3,
+              paddingTop: 2,
+              paddingBottom: 2,
+            },
+          },
+          extendData: `EXIT ${formatPnl(trade.pnl)}`,
+          lock: true,
+          onPressedMoving: () => {},
+        });
+      }
+
+      // Connecting line (entry→exit)
+      if (showLines && trade.entry_price && trade.exit_price) {
         chart.createOverlay({
           name: "segment",
           groupId: "trade_markers",
@@ -185,7 +195,7 @@ export default function TradeMarkerChart({
         });
       }
     }
-  }, [trades, onTradeClick]);
+  }, [trades, onTradeClick, showEntries, showExits, showLines]);
 
   // Focus on a specific trade
   const scrollToTrade = useCallback(

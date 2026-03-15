@@ -12,6 +12,7 @@ import { History, Loader2, ChevronLeft, ChevronRight, Tag } from "lucide-react";
 import { useBookmarks } from "@/lib/hooks/use-bookmarks";
 import { BookmarkButton } from "@/components/BookmarkButton";
 import { InfoTip } from "@/components/InfoTip";
+import { TpHitSpreadTip } from "@/components/TpHitSpreadTip";
 import { useJournalList } from "@/lib/hooks/use-journal";
 
 const PAGE_SIZE = 50;
@@ -184,7 +185,10 @@ export default function TradesPage() {
                   <td className={`text-right tabular-nums font-medium ${t.pnl >= 0 ? "text-primary" : "text-danger"}`}>
                     {formatPnl(t.pnl)}
                   </td>
-                  <td className="text-foreground-muted">{t.exit_reason}</td>
+                  <td className="text-foreground-muted">
+                    {t.exit_reason}
+                    <TpHitSpreadTip trade={t} />
+                  </td>
                   <td>
                     {journal ? (
                       <div className="flex flex-wrap gap-1">

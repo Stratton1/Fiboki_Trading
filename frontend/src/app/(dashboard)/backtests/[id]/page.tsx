@@ -11,6 +11,7 @@ import { EquityCurve } from "@/components/analytics/EquityCurve";
 import { DrawdownChart } from "@/components/analytics/DrawdownChart";
 import type { Trade } from "@/types/contracts/trades";
 import { InfoTip } from "@/components/InfoTip";
+import { TpHitSpreadTip } from "@/components/TpHitSpreadTip";
 
 const TradeMarkerChart = dynamic(
   () => import("@/components/charts/core/TradeMarkerChart"),
@@ -55,6 +56,22 @@ export default function BacktestDetailPage({ params }: { params: Promise<{ id: s
   const [createBotLoading, setCreateBotLoading] = useState(false);
   const [createBotResult, setCreateBotResult] = useState<string | null>(null);
   const [createBotError, setCreateBotError] = useState<string | null>(null);
+  const [promoteResult, setPromoteResult] = useState<string | null>(null);
+  const [promoteLoading, setPromoteLoading] = useState(false);
+
+  // Chart marker controls — persisted in localStorage
+  const [showEntries, setShowEntries] = useState(() => {
+    if (typeof window === "undefined") return true;
+    return localStorage.getItem("fibokei_marker_entries") !== "false";
+  });
+  const [showExits, setShowExits] = useState(() => {
+    if (typeof window === "undefined") return true;
+    return localStorage.getItem("fibokei_marker_exits") !== "false";
+  });
+  const [showLines, setShowLines] = useState(() => {
+    if (typeof window === "undefined") return false;
+    return localStorage.getItem("fibokei_marker_lines") === "true";
+  });
 
   // Sort trades client-side
   const sortedTrades = useMemo(() => {
@@ -91,6 +108,27 @@ export default function BacktestDetailPage({ params }: { params: Promise<{ id: s
     setFocusTradeId(tradeId);
   }
 
+  async function handlePromoteToShortlist() {
+    if (!bt) return;
+    setPromoteLoading(true);
+    try {
+      await api.saveToShortlist({
+        strategy_id: bt.strategy_id,
+        instrument: bt.instrument,
+        timeframe: bt.timeframe,
+        score: bt.sharpe_ratio ?? 0,
+        source_run_id: `backtest-${bt.id}`,
+        metrics_snapshot: bt.metrics_json ?? undefined,
+        note: `Promoted from backtest #${bt.id}`,
+      });
+      setPromoteResult("Saved to Shortlist");
+    } catch {
+      setPromoteResult("Failed to save");
+    } finally {
+      setPromoteLoading(false);
+    }
+  }
+
   async function handleCreateBot() {
     if (!bt) return;
     setCreateBotLoading(true);
@@ -121,7 +159,8 @@ export default function BacktestDetailPage({ params }: { params: Promise<{ id: s
     return <p className="text-foreground-muted">Backtest not found.</p>;
   }
 
-  const metrics = bt.metrics_json ?? {};
+  const metrics = (bt.metrics_json ?? {}) as Record<string, unknown>;
+  const config = (bt.config_json ?? {}) as Record<string, unknown>;
   const equityCurve = equityData?.equity_curve ?? [];
   const allTrades: Trade[] = allTradeData?.items ?? [];
   const totalTrades = tradeData?.total ?? 0;
@@ -138,14 +177,28 @@ export default function BacktestDetailPage({ params }: { params: Promise<{ id: s
           </Link>
           <span className="text-foreground-muted text-sm">/</span>
           <h2 className="text-xl font-semibold">{bt.strategy_id}</h2>
+          {Number(config.initial_capital ?? 0) >= 10000 && (
+            <span className="text-xs bg-amber-100 text-amber-800 px-2 py-0.5 rounded font-medium" title="This backtest used £10,000 starting capital — older default. Current default is £1,000.">
+              LEGACY £10K
+            </span>
+          )}
         </div>
-        <button
-          onClick={handleCreateBot}
-          disabled={createBotLoading || !!createBotResult}
-          className="btn btn-primary text-sm disabled:opacity-50"
-        >
-          {createBotLoading ? "Creating..." : createBotResult ? createBotResult : "Create Paper Bot"}
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={handlePromoteToShortlist}
+            disabled={promoteLoading || !!promoteResult}
+            className="btn btn-secondary text-sm disabled:opacity-50"
+          >
+            {promoteLoading ? "Saving..." : promoteResult ?? "Save to Shortlist"}
+          </button>
+          <button
+            onClick={handleCreateBot}
+            disabled={createBotLoading || !!createBotResult}
+            className="btn btn-primary text-sm disabled:opacity-50"
+          >
+            {createBotLoading ? "Creating..." : createBotResult ? createBotResult : "Create Paper Bot"}
+          </button>
+        </div>
       </div>
       {createBotError && (
         <div className="mb-4 p-3 rounded bg-red-50 border border-red-200 text-red-800 text-sm flex items-center justify-between">
@@ -198,18 +251,131 @@ export default function BacktestDetailPage({ params }: { params: Promise<{ id: s
         </div>
       )}
 
+      {/* Assumptions */}
+      <div className="bg-background-card rounded-lg border border-gray-200 p-5 mb-6">
+        <h3 className="text-sm font-medium text-foreground-muted mb-3">
+          Backtest Assumptions
+          <InfoTip text="These are the assumptions used in this backtest simulation. Results are only as realistic as these inputs." />
+        </h3>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm">
+          <div>
+            <p className="text-xs text-foreground-muted">Initial Capital</p>
+            <p className="font-medium">£{Number(config.initial_capital ?? 1000).toLocaleString()}</p>
+          </div>
+          <div>
+            <p className="text-xs text-foreground-muted">Risk per Trade</p>
+            <p className="font-medium">{String(config.risk_per_trade_pct ?? 1)}%</p>
+          </div>
+          <div>
+            <p className="text-xs text-foreground-muted">Spread</p>
+            <p className="font-medium">{config.spread_points != null && Number(config.spread_points) > 0 ? `${config.spread_points} pts (explicit)` : "Default per instrument"}</p>
+          </div>
+          <div>
+            <p className="text-xs text-foreground-muted">Slippage</p>
+            <p className="font-medium">{config.slippage_points != null && Number(config.slippage_points) > 0 ? `${config.slippage_points} pts` : "0 (none)"}</p>
+          </div>
+          <div>
+            <p className="text-xs text-foreground-muted">Max Leverage</p>
+            <p className="font-medium">{String(config.max_leverage ?? 30)}x (FCA retail)</p>
+          </div>
+          <div>
+            <p className="text-xs text-foreground-muted">Sizing Model</p>
+            <p className="font-medium">Fixed % risk per trade</p>
+          </div>
+          <div>
+            <p className="text-xs text-foreground-muted">Compounding</p>
+            <p className="font-medium">Yes (equity-based sizing)</p>
+          </div>
+          <div>
+            <p className="text-xs text-foreground-muted">Currency Conversion</p>
+            <p className="font-medium">{bt.instrument.endsWith("JPY") ? "JPY → account (÷ price)" : "Direct"}</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Diagnostics */}
+      {(() => {
+        const warnings: string[] = [];
+        const sharpe = bt.sharpe_ratio;
+        const winRate = metrics.win_rate as number | undefined;
+        const netProfit = bt.net_profit;
+        const totalT = bt.total_trades;
+
+        if (sharpe != null && sharpe > 5) warnings.push(`Sharpe ratio of ${sharpe.toFixed(2)} is unusually high — may indicate overfitting or insufficient sample size.`);
+        if (winRate != null && winRate > 0.9 && totalT > 10) warnings.push(`Win rate of ${(winRate * 100).toFixed(0)}% is very high — verify strategy logic is not peeking at future data.`);
+        if (winRate != null && winRate < 0.1 && totalT > 10) warnings.push(`Win rate of ${(winRate * 100).toFixed(0)}% is very low — check if entry/exit logic is inverted.`);
+        if (totalT < 30) warnings.push(`Only ${totalT} trades — results may not be statistically significant. Consider longer test period.`);
+        if (netProfit > 0 && metrics.expectancy != null && (metrics.expectancy as number) < 0) warnings.push("Positive net profit with negative expectancy — result may be driven by a few outlier trades.");
+
+        if (warnings.length === 0) return null;
+        return (
+          <div className="bg-amber-50 border border-amber-200 rounded-lg p-5 mb-6">
+            <h3 className="text-sm font-medium text-amber-800 mb-2">Diagnostics</h3>
+            <ul className="space-y-1">
+              {warnings.map((w, i) => (
+                <li key={i} className="text-xs text-amber-700 flex items-start gap-1.5">
+                  <span className="shrink-0 mt-0.5">&#9888;</span>
+                  <span>{w}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        );
+      })()}
+
       {/* KLineChart with trade markers */}
-      {marketData && (
+      {marketData ? (
         <div className="mb-6">
-          <h3 className="text-sm font-medium text-foreground-muted mb-2">Price Chart with Trade Markers</h3>
+          <div className="flex items-center justify-between mb-2">
+            <h3 className="text-sm font-medium text-foreground-muted">Price Chart with Trade Markers</h3>
+            <div className="flex items-center gap-3 text-xs">
+              <label className="flex items-center gap-1 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={showEntries}
+                  onChange={(e) => { setShowEntries(e.target.checked); localStorage.setItem("fibokei_marker_entries", String(e.target.checked)); }}
+                  className="w-3 h-3"
+                />
+                Entries
+              </label>
+              <label className="flex items-center gap-1 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={showExits}
+                  onChange={(e) => { setShowExits(e.target.checked); localStorage.setItem("fibokei_marker_exits", String(e.target.checked)); }}
+                  className="w-3 h-3"
+                />
+                Exits
+              </label>
+              <label className="flex items-center gap-1 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={showLines}
+                  onChange={(e) => { setShowLines(e.target.checked); localStorage.setItem("fibokei_marker_lines", String(e.target.checked)); }}
+                  className="w-3 h-3"
+                />
+                Connecting lines
+              </label>
+              {allTrades.length > 50 && (
+                <span className="text-foreground-muted">({allTrades.length} trades)</span>
+              )}
+            </div>
+          </div>
           <div className="h-[450px]">
             <TradeMarkerChart
               data={marketData}
               trades={allTrades}
               focusTradeId={focusTradeId}
               onTradeClick={handleJumpToTrade}
+              showEntries={showEntries}
+              showExits={showExits}
+              showLines={showLines}
             />
           </div>
+        </div>
+      ) : bt && !isLoading && (
+        <div className="mb-6 p-4 rounded-lg bg-amber-50 border border-amber-200 text-sm text-amber-800">
+          No market data available for {bt.instrument}/{bt.timeframe}. The price chart cannot be displayed without historical candle data.
         </div>
       )}
 
@@ -270,7 +436,10 @@ export default function BacktestDetailPage({ params }: { params: Promise<{ id: s
                     <td className={`py-2 pr-4 font-medium ${t.pnl >= 0 ? "text-primary" : "text-danger"}`}>
                       {t.pnl >= 0 ? "+" : ""}{t.pnl.toFixed(2)}
                     </td>
-                    <td className="py-2 pr-4 text-xs">{t.exit_reason}</td>
+                    <td className="py-2 pr-4 text-xs">
+                      {t.exit_reason}
+                      <TpHitSpreadTip trade={t} />
+                    </td>
                     <td className="py-2">
                       <button
                         onClick={() => handleJumpToTrade(t.id)}

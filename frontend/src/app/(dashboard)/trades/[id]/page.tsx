@@ -9,6 +9,7 @@ import { formatPnl } from "@/lib/format-currency";
 import { useBacktest } from "@/lib/hooks/use-backtests";
 import { useMarketData } from "@/lib/hooks/use-market-data";
 import { Play, X, Save, Trash2, Tag } from "lucide-react";
+import { isTpHitNegativePnl } from "@/lib/trade-explain";
 
 const TradeMarkerChart = dynamic(
   () => import("@/components/charts/core/TradeMarkerChart"),
@@ -114,7 +115,12 @@ export default function TradeDetailPage({ params }: { params: Promise<{ id: stri
       color: trade.pnl >= 0 ? "text-primary" : "text-danger",
     },
     { label: "Bars in Trade", value: String(trade.bars_in_trade) },
-    { label: "Exit Reason", value: trade.exit_reason },
+    {
+      label: "Exit Reason",
+      value: isTpHitNegativePnl(trade)
+        ? `${trade.exit_reason} (negative PnL due to spread/slippage)`
+        : trade.exit_reason,
+    },
     { label: "Backtest Run", value: String(trade.backtest_run_id) },
   ];
 

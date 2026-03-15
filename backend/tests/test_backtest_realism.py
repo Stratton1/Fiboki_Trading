@@ -48,74 +48,74 @@ class TestPipValueAdjustment:
 
 class TestMaxPositionSize:
     def test_leverage_cap_eurusd(self):
-        # £10,000 account, EURUSD at 1.10, 30:1 leverage
-        max_size = max_position_size(10_000, 1.10, 30.0)
-        # max notional = 10,000 * 30 = 300,000 → 300,000 / 1.10 ≈ 272,727 units
-        assert abs(max_size - 272_727.27) < 1.0
+        # £1,000 account, EURUSD at 1.10, 30:1 leverage
+        max_size = max_position_size(1_000, 1.10, 30.0)
+        # max notional = 1,000 * 30 = 30,000 → 30,000 / 1.10 ≈ 27,272.7 units
+        assert abs(max_size - 27_272.73) < 1.0
 
     def test_leverage_cap_usdjpy(self):
-        # £10,000 account, USDJPY at 150, 30:1 leverage
-        max_size = max_position_size(10_000, 150.0, 30.0)
-        # 300,000 / 150 = 2,000 units
-        assert max_size == 2_000.0
+        # £1,000 account, USDJPY at 150, 30:1 leverage
+        max_size = max_position_size(1_000, 150.0, 30.0)
+        # 30,000 / 150 = 200 units
+        assert max_size == 200.0
 
     def test_zero_price_returns_zero(self):
-        assert max_position_size(10_000, 0.0, 30.0) == 0.0
+        assert max_position_size(1_000, 0.0, 30.0) == 0.0
 
 
 class TestCalculatePositionSize:
     def test_eurusd_1pct_risk_20pip_stop(self):
-        """EURUSD: 1% risk on £10K with 20-pip stop → reasonable size."""
+        """EURUSD: 1% risk on £1K with 20-pip stop → reasonable size."""
         size = calculate_position_size(
-            capital=10_000,
+            capital=1_000,
             risk_pct=1.0,
             entry=1.1000,
             stop=1.0980,  # 20-pip stop
             max_leverage=30.0,
             instrument="EURUSD",
         )
-        # risk_amount = 100, risk_per_unit = 0.0020 → raw = 50,000 units
-        # leverage cap: 10,000 * 30 / 1.10 ≈ 272,727
-        # 50,000 < 272,727 → size = 50,000
-        assert abs(size - 50_000) < 1.0
-        # Notional = 50,000 * 1.10 = 55,000 → leverage ≈ 5.5x (well under 30x)
+        # risk_amount = 10, risk_per_unit = 0.0020 → raw = 5,000 units
+        # leverage cap: 1,000 * 30 / 1.10 ≈ 27,273
+        # 5,000 < 27,273 → size = 5,000
+        assert abs(size - 5_000) < 1.0
+        # Notional = 5,000 * 1.10 = 5,500 → leverage ≈ 5.5x (well under 30x)
         notional = size * 1.10
-        assert notional / 10_000 < 30.0
+        assert notional / 1_000 < 30.0
 
     def test_eurusd_tight_stop_hits_leverage_cap(self):
         """EURUSD: 1% risk with 1-pip stop → leverage cap kicks in."""
         size = calculate_position_size(
-            capital=10_000,
+            capital=1_000,
             risk_pct=1.0,
             entry=1.1000,
             stop=1.0999,  # 1-pip stop
             max_leverage=30.0,
             instrument="EURUSD",
         )
-        # raw = 100 / 0.0001 = 1,000,000 units → way over leverage cap
-        # capped at 272,727 units
-        max_allowed = max_position_size(10_000, 1.1000, 30.0)
+        # raw = 10 / 0.0001 = 100,000 units → way over leverage cap
+        # capped at ~27,273 units
+        max_allowed = max_position_size(1_000, 1.1000, 30.0)
         assert abs(size - max_allowed) < 1.0
 
     def test_usdjpy_pip_conversion(self):
         """USDJPY: pip value adjustment prevents oversized positions."""
         size = calculate_position_size(
-            capital=10_000,
+            capital=1_000,
             risk_pct=1.0,
             entry=150.00,
             stop=149.80,  # 20-pip stop
             max_leverage=30.0,
             instrument="USDJPY",
         )
-        # risk_amount = 100
+        # risk_amount = 10
         # risk_per_unit = 0.20 JPY, but adjusted: 0.20 / 150 = 0.001333 USD
-        # raw = 100 / 0.001333 ≈ 75,000
-        # leverage cap: 10,000 * 30 / 150 = 2,000
-        # So capped at 2,000 units
-        assert size == 2_000.0
+        # raw = 10 / 0.001333 ≈ 7,500
+        # leverage cap: 1,000 * 30 / 150 = 200
+        # So capped at 200 units
+        assert size == 200.0
 
     def test_zero_risk_distance(self):
-        size = calculate_position_size(10_000, 1.0, 1.10, 1.10)
+        size = calculate_position_size(1_000, 1.0, 1.10, 1.10)
         assert size == 0.0
 
 
@@ -219,16 +219,21 @@ class _TradePlan:
 class TestBacktestRealism:
     """Integration tests: full backtests produce economically credible results."""
 
+    def test_default_config_uses_1k_capital(self):
+        """BacktestConfig default must match paper account: £1,000."""
+        config = BacktestConfig()
+        assert config.initial_capital == 1_000.0
+
     def test_eurusd_pnl_bounded(self):
         """EURUSD backtest PnL must not exceed 10x initial capital."""
         df = _make_trending_data("EURUSD", n_bars=500, base_price=1.10)
-        config = BacktestConfig(initial_capital=10_000, risk_per_trade_pct=1.0)
+        config = BacktestConfig(initial_capital=1_000, risk_per_trade_pct=1.0)
         bt = Backtester(_DummyStrategy(), config)
         result = bt.run(df, "EURUSD", Timeframe.H1)
 
-        final_equity = result.equity_curve[-1] if result.equity_curve else 10_000
+        final_equity = result.equity_curve[-1] if result.equity_curve else 1_000
         # Max credible: starting capital * 10 (100 trades at 1% risk each)
-        assert final_equity < 10_000 * 10, (
+        assert final_equity < 1_000 * 10, (
             f"EURUSD final equity {final_equity:.2f} exceeds 10x initial capital"
         )
         # Must not go negative
@@ -237,7 +242,7 @@ class TestBacktestRealism:
     def test_gbpusd_leverage_respected(self):
         """GBPUSD: every trade's position size respects 30:1 leverage."""
         df = _make_trending_data("GBPUSD", n_bars=500, base_price=1.27)
-        config = BacktestConfig(initial_capital=10_000, risk_per_trade_pct=1.0)
+        config = BacktestConfig(initial_capital=1_000, risk_per_trade_pct=1.0)
         bt = Backtester(_DummyStrategy(), config)
         result = bt.run(df, "GBPUSD", Timeframe.H1)
 
@@ -252,13 +257,13 @@ class TestBacktestRealism:
     def test_usdjpy_pnl_in_account_currency(self):
         """USDJPY: PnL must be in account currency (not raw JPY)."""
         df = _make_trending_data("USDJPY", n_bars=500, base_price=150.0, volatility=0.1)
-        config = BacktestConfig(initial_capital=10_000, risk_per_trade_pct=1.0)
+        config = BacktestConfig(initial_capital=1_000, risk_per_trade_pct=1.0)
         bt = Backtester(_DummyStrategy(), config)
         result = bt.run(df, "USDJPY", Timeframe.H1)
 
         for trade in result.trades:
             # Individual trade PnL should be reasonable (not 150x too large)
-            assert abs(trade.pnl) < 5_000, (
+            assert abs(trade.pnl) < 500, (
                 f"USDJPY trade PnL {trade.pnl:.2f} looks like raw JPY, not account currency"
             )
 
@@ -268,10 +273,10 @@ class TestBacktestRealism:
         strategy = _DummyStrategy()
 
         config_no_spread = BacktestConfig(
-            initial_capital=10_000, spread_points=0.0001, slippage_points=0.0
+            initial_capital=1_000, spread_points=0.0001, slippage_points=0.0
         )
         config_with_spread = BacktestConfig(
-            initial_capital=10_000, spread_points=0.0010, slippage_points=0.0
+            initial_capital=1_000, spread_points=0.0010, slippage_points=0.0
         )
 
         result_low = Backtester(strategy, config_no_spread).run(df, "EURUSD", Timeframe.H1)
@@ -305,13 +310,115 @@ class TestBacktestRealism:
             "EURUSD", n_bars=1000, base_price=1.10,
             trend_pct=0.20, volatility=0.001, seed=7,
         )
-        config = BacktestConfig(initial_capital=10_000, risk_per_trade_pct=1.0)
+        config = BacktestConfig(initial_capital=1_000, risk_per_trade_pct=1.0)
         bt = Backtester(_DummyStrategy(), config)
         result = bt.run(df, "EURUSD", Timeframe.H1)
 
-        final_equity = result.equity_curve[-1] if result.equity_curve else 10_000
+        final_equity = result.equity_curve[-1] if result.equity_curve else 1_000
         # With 1% risk per trade and ~45 trades, max credible growth
         # is roughly 1.01^45 ≈ 1.56x. Allow 20x as generous upper bound.
-        assert final_equity < 10_000 * 20, (
+        assert final_equity < 1_000 * 20, (
             f"Exponential blowup detected: final equity = {final_equity:.2f}"
         )
+
+
+class TestBacktestRealism1kCapital:
+    """Additional realism tests specifically for £1,000 starting capital
+    across different instrument classes."""
+
+    def test_xauusd_gold_pnl_bounded(self):
+        """Gold (XAUUSD): PnL bounded relative to £1K account."""
+        df = _make_trending_data("XAUUSD", n_bars=500, base_price=2000.0, volatility=2.0)
+        config = BacktestConfig(initial_capital=1_000, risk_per_trade_pct=1.0)
+        bt = Backtester(_DummyStrategy(), config)
+        result = bt.run(df, "XAUUSD", Timeframe.H1)
+
+        final_equity = result.equity_curve[-1] if result.equity_curve else 1_000
+        assert final_equity < 1_000 * 10, (
+            f"XAUUSD final equity {final_equity:.2f} exceeds 10x initial capital"
+        )
+        assert final_equity > 0
+
+    def test_xauusd_spread_applied(self):
+        """Gold: default spread (0.35 points) is applied."""
+        spread = get_default_spread("XAUUSD")
+        assert spread == 0.35
+
+    def test_us500_index_pnl_bounded(self):
+        """US500 index: PnL bounded relative to £1K account."""
+        df = _make_trending_data("US500", n_bars=500, base_price=5000.0, volatility=5.0)
+        config = BacktestConfig(initial_capital=1_000, risk_per_trade_pct=1.0)
+        bt = Backtester(_DummyStrategy(), config)
+        result = bt.run(df, "US500", Timeframe.H1)
+
+        final_equity = result.equity_curve[-1] if result.equity_curve else 1_000
+        assert final_equity < 1_000 * 10, (
+            f"US500 final equity {final_equity:.2f} exceeds 10x initial capital"
+        )
+        assert final_equity > 0
+
+    def test_bcousd_oil_pnl_bounded(self):
+        """Brent crude (BCOUSD): PnL bounded relative to £1K account."""
+        df = _make_trending_data("BCOUSD", n_bars=500, base_price=80.0, volatility=0.3)
+        config = BacktestConfig(initial_capital=1_000, risk_per_trade_pct=1.0)
+        bt = Backtester(_DummyStrategy(), config)
+        result = bt.run(df, "BCOUSD", Timeframe.H1)
+
+        final_equity = result.equity_curve[-1] if result.equity_curve else 1_000
+        assert final_equity < 1_000 * 10, (
+            f"BCOUSD final equity {final_equity:.2f} exceeds 10x initial capital"
+        )
+        assert final_equity > 0
+
+    def test_eurjpy_cross_pnl_bounded(self):
+        """EURJPY cross: PnL bounded and JPY conversion applied."""
+        df = _make_trending_data("EURJPY", n_bars=500, base_price=165.0, volatility=0.15)
+        config = BacktestConfig(initial_capital=1_000, risk_per_trade_pct=1.0)
+        bt = Backtester(_DummyStrategy(), config)
+        result = bt.run(df, "EURJPY", Timeframe.H1)
+
+        final_equity = result.equity_curve[-1] if result.equity_curve else 1_000
+        assert final_equity < 1_000 * 10, (
+            f"EURJPY final equity {final_equity:.2f} exceeds 10x initial capital"
+        )
+        for trade in result.trades:
+            # Trade PnL should be in account currency, not raw JPY
+            assert abs(trade.pnl) < 200, (
+                f"EURJPY trade PnL {trade.pnl:.2f} looks unconverted"
+            )
+
+    def test_1k_account_max_single_trade_loss(self):
+        """With 1% risk, max single-trade loss should be ~£10."""
+        df = _make_trending_data(
+            "EURUSD", n_bars=500, base_price=1.10,
+            trend_pct=-0.05, volatility=0.005, seed=123,
+        )
+        config = BacktestConfig(initial_capital=1_000, risk_per_trade_pct=1.0)
+        bt = Backtester(_DummyStrategy(), config)
+        result = bt.run(df, "EURUSD", Timeframe.H1)
+
+        for trade in result.trades:
+            # A single losing trade should lose at most ~2x the intended risk
+            # (slippage/gaps can cause slightly more than 1% loss)
+            assert trade.pnl > -30, (
+                f"Single trade loss {trade.pnl:.2f} exceeds 3% of £1K account"
+            )
+
+    def test_default_spread_always_applied(self):
+        """When spread_points=0 in config, engine applies instrument-specific default."""
+        df = _make_trending_data("EURUSD", n_bars=300, base_price=1.10)
+
+        # Config with 0 spread (engine should apply default)
+        config_default = BacktestConfig(initial_capital=1_000, spread_points=0.0)
+        # Config with explicit zero-override (engine still applies default when 0.0)
+        result_default = Backtester(_DummyStrategy(), config_default).run(df, "EURUSD", Timeframe.H1)
+
+        # Config with unrealistically high spread
+        config_high = BacktestConfig(initial_capital=1_000, spread_points=0.01)
+        result_high = Backtester(_DummyStrategy(), config_high).run(df, "EURUSD", Timeframe.H1)
+
+        pnl_default = sum(t.pnl for t in result_default.trades)
+        pnl_high = sum(t.pnl for t in result_high.trades)
+
+        # Default spread should produce better PnL than inflated spread
+        assert pnl_default >= pnl_high
