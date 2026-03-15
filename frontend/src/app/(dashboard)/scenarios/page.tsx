@@ -9,6 +9,7 @@ import { useShortlist } from "@/lib/hooks/use-shortlist";
 import { PageHeader } from "@/components/PageHeader";
 import { EmptyState } from "@/components/EmptyState";
 import { InfoTip } from "@/components/InfoTip";
+import { strategyShortName } from "@/lib/strategy-names";
 import {
   Loader2,
   Play,
@@ -499,7 +500,7 @@ export default function ScenariosPage() {
     }
   }
 
-  function SortHeader({ field, label, align }: { field: SortField; label: string; align?: string }) {
+  function SortHeader({ field, label, align, tip }: { field: SortField; label: string; align?: string; tip?: string }) {
     const active = sortField === field;
     return (
       <th
@@ -509,6 +510,7 @@ export default function ScenariosPage() {
         <span className="inline-flex items-center gap-0.5">
           {label}
           {active && (sortAsc ? <ChevronUp size={10} /> : <ChevronDown size={10} />)}
+          {tip && <InfoTip text={tip} />}
         </span>
       </th>
     );
@@ -670,6 +672,7 @@ export default function ScenariosPage() {
             type="submit"
             disabled={running || comboCount === 0}
             className="flex items-center gap-2 bg-primary text-white px-4 py-1.5 rounded text-sm font-medium disabled:opacity-50 transition-opacity"
+            title={comboCount === 0 ? "Select at least 1 strategy, instrument, and timeframe" : `Run ${comboCount} combinations`}
           >
             {running ? (
               <>
@@ -684,6 +687,20 @@ export default function ScenariosPage() {
             )}
           </button>
         </div>
+
+        {/* Combo breakdown + validation */}
+        {comboCount > 0 && (
+          <p className="text-xs text-foreground-muted">
+            {selectedStrategies.length} strateg{selectedStrategies.length !== 1 ? "ies" : "y"} &times; {selectedInstruments.length} instrument{selectedInstruments.length !== 1 ? "s" : ""} &times; {selectedTimeframes.length} timeframe{selectedTimeframes.length !== 1 ? "s" : ""} = <strong className="text-foreground">{comboCount} bot{comboCount !== 1 ? "s" : ""}</strong>
+          </p>
+        )}
+        {comboCount === 0 && (selectedStrategies.length === 0 || selectedInstruments.length === 0 || selectedTimeframes.length === 0) && (
+          <p className="text-xs text-amber-600">
+            {selectedStrategies.length === 0 && "Select at least one strategy. "}
+            {selectedInstruments.length === 0 && "Select at least one instrument. "}
+            {selectedTimeframes.length === 0 && "Select at least one timeframe."}
+          </p>
+        )}
 
         {running && (
           <div className="w-full h-1.5 bg-background-muted rounded-full overflow-hidden">
@@ -893,17 +910,17 @@ export default function ScenariosPage() {
                     <SortHeader field="total_trades" label="Trades" />
                     <SortHeader field="net_profit" label="Net Profit" />
                     <SortHeader field="win_rate" label="Win %" />
-                    <SortHeader field="sharpe_ratio" label="Sharpe" />
-                    <SortHeader field="max_drawdown_pct" label="Max DD" />
+                    <SortHeader field="sharpe_ratio" label="Sharpe" tip="Annualized Sharpe Ratio: risk-adjusted return. Above 1.0 is good, above 2.0 is excellent." />
+                    <SortHeader field="max_drawdown_pct" label="Max DD" tip="Maximum peak-to-trough drawdown as % of equity. Lower is better — indicates worst-case scenario." />
                     <th className="pb-2 text-right">Equity</th>
                   </tr>
                 </thead>
                 <tbody>
                   {sortedBots.map((bot, i) => (
-                    <tr key={i} className="border-b border-border/50 last:border-0">
+                    <tr key={`${bot.strategy_id}-${bot.instrument}-${bot.timeframe}`} className="border-b border-border/50 last:border-0">
                       {bot.error ? (
                         <>
-                          <td className="py-1.5 pr-3 font-mono text-xs">{bot.strategy_id}</td>
+                          <td className="py-1.5 pr-3 font-mono text-xs" title={strategyShortName(bot.strategy_id)}>{bot.strategy_id}</td>
                           <td className="py-1.5 pr-3">{bot.instrument}</td>
                           <td className="py-1.5 pr-3">{bot.timeframe}</td>
                           <td colSpan={6} className="py-1.5 text-danger text-xs">
@@ -912,7 +929,7 @@ export default function ScenariosPage() {
                         </>
                       ) : (
                         <>
-                          <td className="py-1.5 pr-3 font-mono text-xs">{bot.strategy_id}</td>
+                          <td className="py-1.5 pr-3 font-mono text-xs" title={strategyShortName(bot.strategy_id)}>{bot.strategy_id}</td>
                           <td className="py-1.5 pr-3">{bot.instrument}</td>
                           <td className="py-1.5 pr-3">{bot.timeframe}</td>
                           <td className="py-1.5 pr-3 text-right tabular-nums">

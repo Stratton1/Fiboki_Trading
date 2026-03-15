@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useRef, useMemo } from "react";
 import TradingChart from "./TradingChart";
+import type { TradingChartHandle } from "./TradingChart";
 import { useMarketData, useLiveStatus } from "@/lib/hooks/use-market-data";
 import type { ChartMode } from "@/lib/hooks/use-market-data";
 import { useDrawings } from "@/lib/hooks/use-drawings";
@@ -22,13 +23,27 @@ import {
   Zap,
   HelpCircle,
   ExternalLink,
+  Maximize2,
+  RotateCcw,
+  Bot,
+  SeparatorVertical,
 } from "lucide-react";
 import { MARKET_SESSIONS, getSessionForTimestamp } from "@/lib/sessions";
 import { InfoTip } from "@/components/InfoTip";
 
 const INSTRUMENTS = [
-  "EURUSD", "GBPUSD", "USDJPY", "AUDUSD", "USDCAD", "XAUUSD",
-  "EURJPY", "GBPJPY", "EURGBP", "NZDUSD", "USDCHF",
+  // FX Majors
+  "EURUSD", "GBPUSD", "USDJPY", "AUDUSD", "USDCAD", "USDCHF", "NZDUSD",
+  // FX Crosses
+  "EURJPY", "GBPJPY", "EURGBP", "AUDJPY", "EURAUD",
+  // Metals
+  "XAUUSD", "XAGUSD",
+  // Oil
+  "BCOUSD", "WTIUSD",
+  // Indices
+  "US500", "US100", "UK100", "DE40", "JP225",
+  // Crypto
+  "BTCUSD", "ETHUSD",
 ];
 const TIMEFRAMES = ["M15", "M30", "H1", "H4", "D1"];
 
@@ -36,6 +51,7 @@ const DRAWING_TOOLS = [
   { id: null, label: "Select", icon: MousePointer, shortcut: "V" },
   { id: "straightLine", label: "Trend", icon: TrendingUp, shortcut: "T" },
   { id: "horizontalStraightLine", label: "H-Line", icon: Minus, shortcut: "H" },
+  { id: "verticalStraightLine", label: "V-Line", icon: SeparatorVertical, shortcut: "X" },
   { id: "rayLine", label: "Ray", icon: MoveRight, shortcut: "R" },
   { id: "fibonacciLine", label: "Fib", icon: GitBranch, shortcut: "F" },
   { id: "parallelStraightLine", label: "Channel", icon: Columns3, shortcut: "C" },
@@ -61,6 +77,9 @@ export default function ChartCell({
   const [activeDrawingTool, setActiveDrawingTool] = useState<string | null>(null);
   const [chartMode, setChartMode] = useState<ChartMode>("historical");
   const [showHelp, setShowHelp] = useState(false);
+
+  // Chart instance ref for reset/fit operations
+  const tradingChartRef = useRef<TradingChartHandle>(null);
 
   const { data, error, isLoading } = useMarketData(instrument, timeframe, chartMode);
   const { available: liveAvailable } = useLiveStatus();
@@ -298,7 +317,6 @@ export default function ChartCell({
         {/* Overlay toggles */}
         <button
           onClick={() => setIchimokuEnabled(!ichimokuEnabled)}
-          title="Toggle Ichimoku Cloud overlay"
           className={`flex items-center gap-1 px-1.5 py-0.5 text-[11px] rounded transition ${
             ichimokuEnabled
               ? "bg-blue-100 text-blue-700 font-medium"
@@ -308,11 +326,11 @@ export default function ChartCell({
         >
           <Layers size={11} />
           Ichimoku
+          <InfoTip text="Ichimoku Cloud: Tenkan (blue), Kijun (orange), Senkou A/B (green/red cloud), Chikou (purple). Core indicator for all Fiboki strategies." />
         </button>
 
         <button
           onClick={() => setSessionsVisible(!sessionsVisible)}
-          title="Toggle market session highlights"
           className={`flex items-center gap-1 px-1.5 py-0.5 text-[11px] rounded transition ${
             sessionsVisible
               ? "bg-amber-100 text-amber-700 font-medium"
@@ -322,6 +340,28 @@ export default function ChartCell({
         >
           <Clock size={11} />
           Sessions
+          <InfoTip text="Market sessions: Asian (00-08 UTC), London (08-12), London-NY overlap (12-16), New York (16-21). Best setups often occur during London-NY overlap." />
+        </button>
+
+        {/* Separator */}
+        <div className="w-px h-4 bg-border mx-0.5" />
+
+        {/* Reset / Fit controls */}
+        <button
+          onClick={() => tradingChartRef.current?.resetView()}
+          title="Reset view — restore default zoom and pan"
+          className="p-1 rounded text-foreground-muted hover:text-foreground hover:bg-background-muted transition"
+          data-testid="chart-reset"
+        >
+          <RotateCcw size={12} />
+        </button>
+        <button
+          onClick={() => tradingChartRef.current?.fitToData()}
+          title="Fit to data — show all available bars"
+          className="p-1 rounded text-foreground-muted hover:text-foreground hover:bg-background-muted transition"
+          data-testid="chart-fit"
+        >
+          <Maximize2 size={12} />
         </button>
 
         {/* Spacer */}
@@ -347,6 +387,15 @@ export default function ChartCell({
             >
               <ExternalLink size={10} />
               Research
+            </a>
+            <a
+              href="/bots"
+              className="flex items-center gap-0.5 px-1.5 py-0.5 text-[10px] text-foreground-muted hover:text-primary rounded hover:bg-background-muted transition"
+              title="Paper Bots"
+              data-testid="link-bots"
+            >
+              <Bot size={10} />
+              Bots
             </a>
           </div>
         )}
@@ -421,6 +470,7 @@ export default function ChartCell({
           </div>
         ) : (
           <TradingChart
+            ref={tradingChartRef}
             data={data}
             ichimokuEnabled={ichimokuEnabled}
             activeDrawingTool={activeDrawingTool}

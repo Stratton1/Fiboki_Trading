@@ -75,6 +75,14 @@ export default defineConfig({
       timeout: 30_000,
     },
     {
+      name: "operator-polish",
+      testMatch: /operator-polish\.spec\.ts$/,
+      use: {
+        actionTimeout: 10_000,
+      },
+      timeout: 30_000,
+    },
+    {
       name: "auth-prod",
       testMatch: /auth-prod\.spec\.ts$/,
       use: {

@@ -13,6 +13,7 @@ import { useBookmarks } from "@/lib/hooks/use-bookmarks";
 import { BookmarkButton } from "@/components/BookmarkButton";
 import { InfoTip } from "@/components/InfoTip";
 import { TpHitSpreadTip } from "@/components/TpHitSpreadTip";
+import { strategyShortName } from "@/lib/strategy-names";
 import { useJournalList } from "@/lib/hooks/use-journal";
 
 const PAGE_SIZE = 50;
@@ -173,7 +174,7 @@ export default function TradesPage() {
                       {t.entry_time ? new Date(t.entry_time).toLocaleDateString() : "—"}
                     </Link>
                   </td>
-                  <td>{t.strategy_id}</td>
+                  <td title={strategyShortName(t.strategy_id)}>{t.strategy_id}</td>
                   <td>{t.instrument}</td>
                   <td>
                     <StatusBadge variant={t.direction === "LONG" ? "ok" : "error"}>

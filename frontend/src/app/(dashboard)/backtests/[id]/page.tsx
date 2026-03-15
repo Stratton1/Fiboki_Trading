@@ -12,6 +12,7 @@ import { DrawdownChart } from "@/components/analytics/DrawdownChart";
 import type { Trade } from "@/types/contracts/trades";
 import { InfoTip } from "@/components/InfoTip";
 import { TpHitSpreadTip } from "@/components/TpHitSpreadTip";
+import { strategyShortName } from "@/lib/strategy-names";
 
 const TradeMarkerChart = dynamic(
   () => import("@/components/charts/core/TradeMarkerChart"),
@@ -176,7 +177,7 @@ export default function BacktestDetailPage({ params }: { params: Promise<{ id: s
             Backtests
           </Link>
           <span className="text-foreground-muted text-sm">/</span>
-          <h2 className="text-xl font-semibold">{bt.strategy_id}</h2>
+          <h2 className="text-xl font-semibold">{bt.strategy_id} <span className="text-sm font-normal text-foreground-muted">— {strategyShortName(bt.strategy_id)}</span></h2>
           {Number(config.initial_capital ?? 0) >= 10000 && (
             <span className="text-xs bg-amber-100 text-amber-800 px-2 py-0.5 rounded font-medium" title="This backtest used £10,000 starting capital — older default. Current default is £1,000.">
               LEGACY £10K

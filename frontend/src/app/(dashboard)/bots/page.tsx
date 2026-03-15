@@ -13,6 +13,7 @@ import { EmptyState } from "@/components/EmptyState";
 import { StatusBadge } from "@/components/StatusBadge";
 import { Bot, Loader2, Wallet, TrendingUp, CalendarDays, Activity, AlertTriangle, BarChart3, Search, Star, ChevronDown } from "lucide-react";
 import { InfoTip } from "@/components/InfoTip";
+import { strategyShortName } from "@/lib/strategy-names";
 import { useShortlist } from "@/lib/hooks/use-shortlist";
 import Link from "next/link";
 
@@ -318,7 +319,10 @@ export default function BotsPage() {
                 const fleetBot = fleetBots.find((fb) => fb.bot_id === bot.id);
                 return (
                   <tr key={bot.id} className={fleetBot?.is_stale ? "bg-amber-50/50" : ""}>
-                    <td className="font-medium">{bot.strategy_id}</td>
+                    <td>
+                      <span className="font-medium">{bot.strategy_id}</span>
+                      <span className="block text-[10px] text-foreground-muted truncate max-w-[160px]">{strategyShortName(bot.strategy_id)}</span>
+                    </td>
                     <td>{bot.instrument}</td>
                     <td className="text-foreground-muted">{bot.timeframe}</td>
                     <td>
@@ -369,7 +373,9 @@ export default function BotsPage() {
                   </tr>
                   {bots.map((b) => (
                     <tr key={b.bot_id} className={b.is_stale ? "bg-amber-50/50" : ""}>
-                      <td className="font-medium pl-6">{b.strategy_id}</td>
+                      <td className="pl-6" title={strategyShortName(b.strategy_id)}>
+                        <span className="font-medium">{b.strategy_id}</span>
+                      </td>
                       <td>{b.instrument}</td>
                       <td className="text-foreground-muted">{b.timeframe}</td>
                       <td>

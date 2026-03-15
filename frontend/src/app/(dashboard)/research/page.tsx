@@ -15,6 +15,7 @@ import { PageHeader } from "@/components/PageHeader";
 import { InfoTip } from "@/components/InfoTip";
 import { useBookmarks } from "@/lib/hooks/use-bookmarks";
 import { BookmarkButton } from "@/components/BookmarkButton";
+import { strategyShortName } from "@/lib/strategy-names";
 import type {
   AdvancedResearchResponse,
   ResearchPreset,
@@ -534,7 +535,7 @@ export default function ResearchPage() {
           <Heatmap
             z={z}
             x={instrumentIds}
-            y={strategyIds}
+            y={strategyIds.map((s) => `${s} ${strategyShortName(s)}`)}
             title="Composite Score by Strategy x Instrument"
           />
         </div>
@@ -576,7 +577,10 @@ export default function ResearchPage() {
               <tbody>
                 {shortlist.map((entry) => (
                   <tr key={entry.id} className="border-b border-gray-100 hover:bg-background-muted/50">
-                    <td className="px-3 py-2">{entry.strategy_id}</td>
+                    <td className="px-3 py-2">
+                      <span className="font-medium">{entry.strategy_id}</span>
+                      <span className="block text-[10px] text-foreground-muted">{strategyShortName(entry.strategy_id)}</span>
+                    </td>
                     <td className="px-3 py-2">{entry.instrument}</td>
                     <td className="px-3 py-2">{entry.timeframe}</td>
                     <td className="px-3 py-2 text-right font-medium">
@@ -780,7 +784,10 @@ export default function ResearchPage() {
                   />
                 </td>
                 <td className="px-4 py-3 font-medium">{r.rank}</td>
-                <td className="px-4 py-3">{r.strategy_id}</td>
+                <td className="px-4 py-3">
+                  <span className="font-medium">{r.strategy_id}</span>
+                  <span className="block text-[10px] text-foreground-muted truncate max-w-[160px]">{strategyShortName(r.strategy_id)}</span>
+                </td>
                 <td className="px-4 py-3">{r.instrument}</td>
                 <td className="px-4 py-3">{r.timeframe}</td>
                 {isAllRunsMode && <td className="px-4 py-3 text-xs text-foreground-muted">{r.run_id}</td>}
@@ -807,6 +814,13 @@ export default function ResearchPage() {
                   >
                     {isShortlisted(r.strategy_id, r.instrument, r.timeframe) ? "Saved" : "Save"}
                   </button>
+                  <a
+                    href={`/backtests?strategy=${r.strategy_id}&instrument=${r.instrument}&timeframe=${r.timeframe}`}
+                    className="text-xs text-foreground-muted hover:text-primary hover:underline"
+                    title="Open in Backtests with this combo pre-filled"
+                  >
+                    Backtest
+                  </a>
                   <button
                     onClick={() => handleAdvancedResearch(r.strategy_id, r.instrument, r.timeframe)}
                     disabled={advancedLoading}
@@ -865,9 +879,9 @@ export default function ResearchPage() {
                 </tr>
               </thead>
               <tbody>
-                {validationResult.results.map((v, i) => (
-                  <tr key={i} className="border-b border-gray-100">
-                    <td className="px-3 py-2">{v.strategy_id}</td>
+                {validationResult.results.map((v) => (
+                  <tr key={`${v.strategy_id}-${v.instrument}-${v.timeframe}`} className="border-b border-gray-100">
+                    <td className="px-3 py-2" title={strategyShortName(v.strategy_id)}>{v.strategy_id}</td>
                     <td className="px-3 py-2">{v.instrument}</td>
                     <td className="px-3 py-2">{v.timeframe}</td>
                     <td className="px-3 py-2 text-right">{v.original_score.toFixed(3)}</td>
@@ -1136,7 +1150,7 @@ export default function ResearchPage() {
             <div className="space-y-2 text-sm">
               <div className="flex justify-between">
                 <span className="text-foreground-muted">Strategy</span>
-                <span className="font-medium">{promoteTarget.strategy_id}</span>
+                <span className="font-medium">{promoteTarget.strategy_id} — {strategyShortName(promoteTarget.strategy_id)}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-foreground-muted">Instrument</span>

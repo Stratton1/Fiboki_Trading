@@ -21,7 +21,11 @@ import { useBookmarks } from "@/lib/hooks/use-bookmarks";
 import { BookmarkButton } from "@/components/BookmarkButton";
 import { InfoTip } from "@/components/InfoTip";
 import { useShortlist } from "@/lib/hooks/use-shortlist";
+import { strategyShortName } from "@/lib/strategy-names";
 import type { BacktestSummary } from "@/types/contracts/analytics";
+
+const MIN_TRADES_FOR_RANKING = 80;
+const LEGACY_AGE_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
 
 // ─── Sorting ──────────────────────────────────────────────
 type SortField = "strategy_id" | "instrument" | "timeframe" | "total_trades" | "net_profit" | "sharpe_ratio" | "max_drawdown_pct" | "created_at";
@@ -95,7 +99,7 @@ export default function BacktestsPage() {
     if (bt.total_trades === 0) return true;
     if (!bt.created_at) return true;
     const age = Date.now() - new Date(bt.created_at).getTime();
-    return age > 30 * 24 * 60 * 60 * 1000;
+    return age > LEGACY_AGE_MS;
   }
 
   // ─── Derived data ────────────────────────────────────────
@@ -142,7 +146,9 @@ export default function BacktestsPage() {
       next.delete(id);
       setSelectedIds(next);
       mutate();
-    } catch { /* */ } finally { setDeleting(null); }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to delete backtest");
+    } finally { setDeleting(null); }
   }
 
   async function handleBulkDelete() {
@@ -153,7 +159,9 @@ export default function BacktestsPage() {
       setSelectedIds(new Set());
       setConfirmBulk(false);
       mutate();
-    } catch { /* */ } finally { setBulkDeleting(false); }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to delete backtests");
+    } finally { setBulkDeleting(false); }
   }
 
   function toggleSelect(id: number) {
@@ -182,7 +190,9 @@ export default function BacktestsPage() {
         score: bt.sharpe_ratio ?? 0,
         note: `Promoted from backtest #${bt.id}`,
       });
-    } catch { /* */ } finally { setPromoting(null); }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to save to shortlist");
+    } finally { setPromoting(null); }
   }
 
   function loadFromShortlist(entry: { strategy_id: string; instrument: string; timeframe: string }) {
@@ -387,6 +397,7 @@ export default function BacktestsPage() {
                     className="w-full text-left px-3 py-2 text-sm hover:bg-background-muted transition-colors flex items-center gap-2"
                   >
                     <span className="font-medium">{e.strategy_id}</span>
+                    <span className="text-[10px] text-foreground-muted truncate max-w-[100px]">{strategyShortName(e.strategy_id)}</span>
                     <span className="text-foreground-muted">{e.instrument}</span>
                     <span className="text-foreground-muted">{e.timeframe}</span>
                     <span className="ml-auto text-xs text-foreground-muted tabular-nums">{e.score.toFixed(2)}</span>
@@ -457,7 +468,7 @@ export default function BacktestsPage() {
             data-testid="filter-strategy"
           >
             <option value="">All Strategies</option>
-            {uniqueStrategies.map((s) => <option key={s} value={s}>{s}</option>)}
+            {uniqueStrategies.map((s) => <option key={s} value={s}>{s} — {strategyShortName(s)}</option>)}
           </select>
         )}
 
@@ -654,7 +665,7 @@ export default function BacktestsPage() {
             {displayBacktests.map((bt) => {
               const legacy = isLegacy(bt);
               const shortlisted = isShortlisted(bt.strategy_id, bt.instrument, bt.timeframe);
-              const lowTrades = bt.total_trades > 0 && bt.total_trades < 80;
+              const lowTrades = bt.total_trades > 0 && bt.total_trades < MIN_TRADES_FOR_RANKING;
               return (
                 <tr key={bt.id} className={`${legacy ? "opacity-60" : ""} ${selectedIds.has(bt.id) ? "bg-blue-50/50" : ""}`} data-testid="bt-row">
                   <td>
@@ -676,6 +687,9 @@ export default function BacktestsPage() {
                     <Link href={`/backtests/${bt.id}`} className="text-primary font-medium hover:underline" data-testid="row-strategy">
                       {bt.strategy_id}
                     </Link>
+                    <div className="text-[10px] text-foreground-muted truncate max-w-[180px]" title={strategyShortName(bt.strategy_id)}>
+                      {strategyShortName(bt.strategy_id)}
+                    </div>
                     <div className="flex items-center gap-1 mt-0.5">
                       {legacy && (
                         <span className="text-[9px] px-1 py-0.5 rounded bg-orange-100 text-orange-700 font-medium" data-testid="legacy-badge">LEGACY</span>

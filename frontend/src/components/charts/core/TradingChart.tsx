@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useCallback } from "react";
+import { useEffect, useRef, useCallback, useImperativeHandle, forwardRef } from "react";
 import { init, dispose } from "klinecharts";
 import type { Chart, KLineData } from "klinecharts";
 import { mapCandlesToKLine } from "@/lib/chart-mappers/candle-mapper";
@@ -25,6 +25,11 @@ function extractPoints(
     .map((p) => ({ timestamp: p.timestamp, value: p.value }));
 }
 
+export interface TradingChartHandle {
+  resetView: () => void;
+  fitToData: () => void;
+}
+
 interface TradingChartProps {
   data: MarketDataResponse | null;
   ichimokuEnabled: boolean;
@@ -38,7 +43,7 @@ interface TradingChartProps {
   onDrawingRemoved: (overlayId: string) => void;
 }
 
-export default function TradingChart({
+const TradingChart = forwardRef<TradingChartHandle, TradingChartProps>(function TradingChart({
   data,
   ichimokuEnabled,
   activeDrawingTool,
@@ -46,7 +51,7 @@ export default function TradingChart({
   onDrawingCreated,
   onDrawingUpdated,
   onDrawingRemoved,
-}: TradingChartProps) {
+}, ref) {
   const containerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<Chart | null>(null);
   const ichimokuActiveRef = useRef(false);
@@ -64,6 +69,21 @@ export default function TradingChart({
   onDrawingUpdatedRef.current = onDrawingUpdated;
   const onDrawingRemovedRef = useRef(onDrawingRemoved);
   onDrawingRemovedRef.current = onDrawingRemoved;
+
+  // Expose resetView and fitToData to parent via ref
+  useImperativeHandle(ref, () => ({
+    resetView() {
+      const chart = chartRef.current;
+      if (!chart) return;
+      chart.scrollToRealTime();
+    },
+    fitToData() {
+      const chart = chartRef.current;
+      if (!chart || !dataRef.current.length) return;
+      // Scroll to beginning then zoom out to show all bars
+      chart.scrollToDataIndex(0, 300);
+    },
+  }), []);
 
   // Register the custom Ichimoku indicator once on mount
   useEffect(() => {
@@ -252,4 +272,6 @@ export default function TradingChart({
       className="w-full h-full min-h-[500px] bg-background-card rounded-lg border border-gray-200"
     />
   );
-}
+});
+
+export default TradingChart;
