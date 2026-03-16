@@ -124,26 +124,29 @@ def create_bot(
     instrument_norm = req.instrument.upper()
     timeframe_norm = req.timeframe.upper()
 
-    best_score = get_best_research_score(
-        db, req.strategy_id, instrument_norm, timeframe_norm
-    )
-    # Also try the original case if normalized didn't match
-    if best_score is None and instrument_norm != req.instrument:
+    # Backtest-sourced promotions bypass the research score gate —
+    # the operator has already reviewed the backtest results.
+    if req.source_type != "backtest":
         best_score = get_best_research_score(
-            db, req.strategy_id, req.instrument, timeframe_norm
+            db, req.strategy_id, instrument_norm, timeframe_norm
         )
+        # Also try the original case if normalized didn't match
+        if best_score is None and instrument_norm != req.instrument:
+            best_score = get_best_research_score(
+                db, req.strategy_id, req.instrument, timeframe_norm
+            )
 
-    if best_score is None or best_score < PROMOTION_THRESHOLD:
-        score_str = f"{best_score:.3f}" if best_score is not None else "none"
-        raise HTTPException(
-            status_code=422,
-            detail=(
-                f"Promotion gate: score={score_str}, "
-                f"required>={PROMOTION_THRESHOLD:.3f} for "
-                f"{req.strategy_id}/{req.instrument}/{timeframe_norm}. "
-                f"Run research first."
-            ),
-        )
+        if best_score is None or best_score < PROMOTION_THRESHOLD:
+            score_str = f"{best_score:.3f}" if best_score is not None else "none"
+            raise HTTPException(
+                status_code=422,
+                detail=(
+                    f"Promotion gate: score={score_str}, "
+                    f"required>={PROMOTION_THRESHOLD:.3f} for "
+                    f"{req.strategy_id}/{req.instrument}/{timeframe_norm}. "
+                    f"Run research first."
+                ),
+            )
 
     bot_id = str(uuid.uuid4())[:8]
     source_type = req.source_type or "manual"
