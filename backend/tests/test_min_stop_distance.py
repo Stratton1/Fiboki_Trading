@@ -120,16 +120,16 @@ class TestBot04EURUSDRealism:
         )
         return result
 
-    def test_net_pnl_below_50x(self, bot04_result):
-        """Net PnL must not exceed 50x initial capital.
+    def test_net_pnl_below_10x(self, bot04_result):
+        """Net PnL must not exceed 10x initial capital.
 
-        The old bug produced 111x.  After fix, 15x is typical.
-        We use 50x as a generous upper bound to catch regressions
-        without being fragile against data changes.
+        The original bug produced 111x.  1×ATR fix brought it to 15x.
+        2×ATR fix brings it to ~3x.  We use 10x as a generous upper
+        bound to catch regressions without being fragile.
         """
         metrics = compute_metrics(bot04_result)
         ratio = metrics["total_net_profit"] / 1000.0
-        assert ratio < 50.0, (
+        assert ratio < 10.0, (
             f"bot04/EURUSD/H1 net PnL £{metrics['total_net_profit']:,.0f} "
             f"is {ratio:.0f}x capital — still inflated"
         )
@@ -146,7 +146,7 @@ class TestBot04EURUSDRealism:
             f"Found trade at {max_lev:.1f}x leverage — min_stop_distance not working"
         )
 
-    def test_mean_leverage_below_15x(self, bot04_result):
+    def test_mean_leverage_below_10x(self, bot04_result):
         """Mean leverage should be well below the 30x cap."""
         equity = 1000.0
         leverages = []
@@ -155,7 +155,7 @@ class TestBot04EURUSDRealism:
             leverages.append(lev)
             equity += t.pnl
         mean_lev = np.mean(leverages)
-        assert mean_lev < 15.0, (
+        assert mean_lev < 10.0, (
             f"Mean leverage {mean_lev:.1f}x too high — positions still oversized"
         )
 
@@ -171,9 +171,9 @@ class TestBot04EURUSDRealism:
             equity += t.pnl
 
     def test_best_trade_bounded(self, bot04_result):
-        """Best single trade should not exceed £2,000 from a £1K account."""
+        """Best single trade should not exceed £500 from a £1K account."""
         metrics = compute_metrics(bot04_result)
-        assert metrics["best_trade"] < 2000.0, (
+        assert metrics["best_trade"] < 500.0, (
             f"Best trade £{metrics['best_trade']:,.0f} is implausibly large"
         )
 
@@ -225,7 +225,7 @@ class _TradePlan:
 
 
 class TestEngineMinStopIntegration:
-    """Verify the engine passes ATR as min_stop_distance."""
+    """Verify the engine passes 2×ATR as min_stop_distance."""
 
     def test_tight_stop_strategy_uses_atr_floor(self):
         """A strategy with 1-pip stops should produce moderate leverage."""
@@ -250,11 +250,55 @@ class TestEngineMinStopIntegration:
         )
 
         # Without ATR floor, every trade would be at 30x leverage
-        # With ATR floor, trades should be moderate leverage
+        # With 2×ATR floor, trades should be moderate leverage
         equity = 1000.0
         for t in result.trades:
             lev = t.position_size * t.entry_price / equity if equity > 0 else 0
-            assert lev < 29.9, (
-                f"Trade at {lev:.1f}x leverage — ATR floor not applied in engine"
+            assert lev < 20.0, (
+                f"Trade at {lev:.1f}x leverage — 2×ATR floor not applied in engine"
             )
             equity += t.pnl
+
+
+# ---------------------------------------------------------------------------
+# Cross-timeframe regression: bot04/EURUSD on all timeframes
+# ---------------------------------------------------------------------------
+
+
+class TestBot04CrossTimeframeRealism:
+    """Verify 2×ATR floor produces realistic results across all timeframes."""
+
+    @pytest.fixture(params=["M15", "M30", "H1"])
+    def bot04_tf_result(self, request):
+        """Run bot04 on EURUSD at each timeframe with £1K capital."""
+        from fibokei.data.providers.registry import load_canonical
+        from fibokei.strategies.bot04_chikou_momentum import ChikouMomentum
+
+        label = request.param
+        tf_map = {"M15": Timeframe.M15, "M30": Timeframe.M30, "H1": Timeframe.H1}
+        df = load_canonical("EURUSD", label)
+        if df is None:
+            pytest.skip(f"No canonical EURUSD {label} data available")
+        config = BacktestConfig(initial_capital=1000.0)
+        result = Backtester(ChikouMomentum(), config).run(
+            df, "EURUSD", tf_map[label]
+        )
+        return result
+
+    def test_return_below_10x(self, bot04_tf_result):
+        """No timeframe should produce more than 10x return."""
+        metrics = compute_metrics(bot04_tf_result)
+        ratio = metrics["total_net_profit"] / 1000.0
+        tf = bot04_tf_result.timeframe.value
+        assert ratio < 10.0, (
+            f"bot04/EURUSD/{tf} net PnL £{metrics['total_net_profit']:,.0f} "
+            f"is {ratio:.0f}x capital — still inflated"
+        )
+
+    def test_no_sanity_warnings(self, bot04_tf_result):
+        """No timeframe should trigger sanity warnings."""
+        metrics = compute_metrics(bot04_tf_result)
+        tf = bot04_tf_result.timeframe.value
+        assert len(metrics["sanity_warnings"]) == 0, (
+            f"bot04/EURUSD/{tf} triggered warnings: {metrics['sanity_warnings']}"
+        )

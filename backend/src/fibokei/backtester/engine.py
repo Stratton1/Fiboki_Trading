@@ -112,12 +112,14 @@ class Backtester:
                         signal.proposed_entry, signal.direction, effective_spread
                     )
 
-                    # Use ATR as minimum stop distance floor to prevent
+                    # Use 2×ATR as minimum stop distance floor to prevent
                     # tiny stops from inflating position sizes via leverage.
+                    # 1×ATR was insufficient on lower timeframes (M5/M15/M30)
+                    # where ATR is only 1-5 pips and the leverage cap still binds.
                     atr_val = bar.get("atr", 0.0)
                     if pd.isna(atr_val):
                         atr_val = 0.0
-                    min_stop = float(atr_val)
+                    min_stop = float(atr_val) * 2.0
 
                     pos_size = calculate_position_size(
                         equity,
