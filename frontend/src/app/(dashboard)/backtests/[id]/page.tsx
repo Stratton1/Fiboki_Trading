@@ -304,6 +304,11 @@ export default function BacktestDetailPage({ params }: { params: Promise<{ id: s
         const netProfit = bt.net_profit;
         const totalT = bt.total_trades;
 
+        // Backend sanity warnings (from compute_metrics)
+        const backendWarnings = (metrics.sanity_warnings ?? []) as string[];
+        warnings.push(...backendWarnings);
+
+        // Frontend-only diagnostics
         if (sharpe != null && sharpe > 5) warnings.push(`Sharpe ratio of ${sharpe.toFixed(2)} is unusually high — may indicate overfitting or insufficient sample size.`);
         if (winRate != null && winRate > 0.9 && totalT > 10) warnings.push(`Win rate of ${(winRate * 100).toFixed(0)}% is very high — verify strategy logic is not peeking at future data.`);
         if (winRate != null && winRate < 0.1 && totalT > 10) warnings.push(`Win rate of ${(winRate * 100).toFixed(0)}% is very low — check if entry/exit logic is inverted.`);

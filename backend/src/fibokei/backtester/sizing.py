@@ -133,6 +133,7 @@ def calculate_position_size(
     stop: float,
     max_leverage: float = 30.0,
     instrument: str = "",
+    min_stop_distance: float = 0.0,
 ) -> float:
     """Calculate position size with IG-aligned leverage cap.
 
@@ -140,11 +141,24 @@ def calculate_position_size(
     entry to stop loses risk_pct% of capital, capped by the LOWER of:
       - max_leverage (from BacktestConfig, default 30)
       - IG-specific leverage limit for this instrument
+
+    The ``min_stop_distance`` parameter (in price points) prevents
+    absurdly tight stops from inflating position sizes.  When the
+    actual stop distance is smaller than the minimum, the sizing
+    formula uses the minimum instead.  This ensures the risk-based
+    size — not the leverage cap — governs the position.  Without
+    this floor, a 2-pip stop on EURUSD at 30:1 leverage produces a
+    position whose single-trade P&L swings can exceed 10 % of equity,
+    creating unrealistic compounding over hundreds of trades.
     """
     risk_amount = capital * (risk_pct / 100.0)
     risk_per_unit = abs(entry - stop)
     if risk_per_unit < 1e-10:
         return 0.0
+
+    # Enforce minimum stop distance so that risk-based sizing governs
+    if min_stop_distance > 0:
+        risk_per_unit = max(risk_per_unit, min_stop_distance)
 
     # Adjust risk_per_unit for JPY pairs (PnL in JPY, not account currency)
     adj = pip_value_adjustment(instrument, entry)

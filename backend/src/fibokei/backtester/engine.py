@@ -111,6 +111,14 @@ class Backtester:
                     entry_price = self._apply_costs(
                         signal.proposed_entry, signal.direction, effective_spread
                     )
+
+                    # Use ATR as minimum stop distance floor to prevent
+                    # tiny stops from inflating position sizes via leverage.
+                    atr_val = bar.get("atr", 0.0)
+                    if pd.isna(atr_val):
+                        atr_val = 0.0
+                    min_stop = float(atr_val)
+
                     pos_size = calculate_position_size(
                         equity,
                         self.config.risk_per_trade_pct,
@@ -118,6 +126,7 @@ class Backtester:
                         plan.stop_loss,
                         max_leverage=self.config.max_leverage,
                         instrument=instrument,
+                        min_stop_distance=min_stop,
                     )
 
                     if pos_size > 0:

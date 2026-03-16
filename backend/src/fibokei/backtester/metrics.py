@@ -90,6 +90,17 @@ def compute_metrics(result: BacktestResult) -> dict:
         equity, result.start_date
     )
 
+    # Sanity warnings for operator review
+    warnings = _sanity_check(
+        total_net_profit,
+        result.config.initial_capital,
+        sharpe,
+        profit_factor,
+        max_drawdown_pct,
+        total_trades,
+        total_bars,
+    )
+
     return {
         "initial_capital": result.config.initial_capital,
         "total_net_profit": total_net_profit,
@@ -119,6 +130,7 @@ def compute_metrics(result: BacktestResult) -> dict:
         "consecutive_losses": consecutive_losses,
         "monthly_returns": monthly_returns,
         "yearly_returns": yearly_returns,
+        "sanity_warnings": warnings,
     }
 
 
@@ -323,3 +335,63 @@ def _compute_period_returns(
         yearly[str(period)] = round(ret, 4)
 
     return monthly, yearly
+
+
+# ---------------------------------------------------------------------------
+# Sanity checks — flag implausible results for operator review
+# ---------------------------------------------------------------------------
+
+# Thresholds for backtest sanity warnings.
+_RETURN_MULTIPLE_WARN = 20.0   # >20x initial capital
+_SHARPE_WARN = 4.0             # World-class quant funds are ~3
+_PROFIT_FACTOR_WARN = 3.0      # Very high for systematic trading
+_DRAWDOWN_SUSPICIOUSLY_LOW = 2.0  # <2% DD on 1000+ trades is suspicious
+_TRADES_PER_BAR_WARN = 0.3     # >30% bar utilization = noise trading
+
+
+def _sanity_check(
+    net_profit: float,
+    initial_capital: float,
+    sharpe: float,
+    profit_factor: float,
+    max_dd_pct: float,
+    total_trades: int,
+    total_bars: int,
+) -> list[str]:
+    """Return human-readable warnings for implausible backtest results."""
+    warnings: list[str] = []
+
+    if initial_capital > 0:
+        return_multiple = net_profit / initial_capital
+        if return_multiple > _RETURN_MULTIPLE_WARN:
+            warnings.append(
+                f"Return of {return_multiple:.0f}x initial capital is unusually high. "
+                f"Verify position sizing and leverage are realistic."
+            )
+
+    if math.isfinite(sharpe) and sharpe > _SHARPE_WARN:
+        warnings.append(
+            f"Sharpe ratio {sharpe:.2f} exceeds {_SHARPE_WARN:.1f}. "
+            f"Top quant funds target 1.5–3.0. Check for overfitting or data issues."
+        )
+
+    if math.isfinite(profit_factor) and profit_factor > _PROFIT_FACTOR_WARN:
+        warnings.append(
+            f"Profit factor {profit_factor:.2f} exceeds {_PROFIT_FACTOR_WARN:.1f}. "
+            f"This is rare in live trading — may indicate look-ahead bias."
+        )
+
+    if total_trades > 100 and max_dd_pct < _DRAWDOWN_SUSPICIOUSLY_LOW:
+        warnings.append(
+            f"Max drawdown {max_dd_pct:.1f}% is suspiciously low for {total_trades} trades. "
+            f"Verify that losses are being modeled correctly."
+        )
+
+    if total_bars > 0 and total_trades / total_bars > _TRADES_PER_BAR_WARN:
+        warnings.append(
+            f"Trade frequency ({total_trades} trades / {total_bars} bars = "
+            f"{total_trades / total_bars:.0%}) suggests noise trading. "
+            f"Consider stricter entry filters."
+        )
+
+    return warnings
