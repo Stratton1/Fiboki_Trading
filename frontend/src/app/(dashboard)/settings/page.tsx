@@ -6,27 +6,27 @@ import { useAuth } from "@/lib/auth";
 import { api, API_URL } from "@/lib/api";
 import { StatusBadge } from "@/components/StatusBadge";
 import { PageHeader } from "@/components/PageHeader";
-import { Copy, ExternalLink, Server, User, Shield, Flag, Zap, Users } from "lucide-react";
+import { Copy, ExternalLink, Server, User, Shield, Flag, Zap, Users, Wifi, WifiOff, Loader2 } from "lucide-react";
 import Link from "next/link";
 
-const RISK_PARAMS = [
-  { label: "Risk per Trade", key: "max_risk_per_trade_pct", suffix: "%", default: "1.0" },
-  { label: "Max Portfolio Risk", key: "max_portfolio_risk_pct", suffix: "%", default: "5.0" },
-  { label: "Max Open Positions", key: "max_open_trades", suffix: "", default: "8" },
-  { label: "Max Per Instrument", key: "max_per_instrument", suffix: "", default: "2" },
-  { label: "Daily Soft Stop", key: "daily_soft_stop_pct", suffix: "%", default: "3.0" },
-  { label: "Daily Hard Stop", key: "daily_hard_stop_pct", suffix: "%", default: "4.0" },
-  { label: "Weekly Soft Stop", key: "weekly_soft_stop_pct", suffix: "%", default: "6.0" },
-  { label: "Weekly Hard Stop", key: "weekly_hard_stop_pct", suffix: "%", default: "8.0" },
+const RISK_PARAMS: Array<{ label: string; key: string; suffix: string }> = [
+  { label: "Risk per Trade", key: "max_risk_per_trade_pct", suffix: "%" },
+  { label: "Max Portfolio Risk", key: "max_portfolio_risk_pct", suffix: "%" },
+  { label: "Max Open Positions", key: "max_open_trades", suffix: "" },
+  { label: "Max Per Instrument", key: "max_per_instrument", suffix: "" },
+  { label: "Daily Soft Stop", key: "daily_soft_stop_pct", suffix: "%" },
+  { label: "Daily Hard Stop", key: "daily_hard_stop_pct", suffix: "%" },
+  { label: "Weekly Soft Stop", key: "weekly_soft_stop_pct", suffix: "%" },
+  { label: "Weekly Hard Stop", key: "weekly_hard_stop_pct", suffix: "%" },
 ];
 
-const FLEET_RISK_PARAMS = [
-  { label: "Max Bots / Instrument", key: "fleet_max_bots_per_instrument", suffix: "", default: "5" },
-  { label: "Max Total Positions", key: "fleet_max_total_positions", suffix: "", default: "20" },
-  { label: "Max Exposure / Instrument", key: "fleet_max_exposure_per_instrument", suffix: "", default: "6" },
-  { label: "Correlation Threshold", key: "fleet_correlation_threshold", suffix: "", default: "0.85" },
-  { label: "Auto-Cull Sigma", key: "fleet_cull_sigma", suffix: "σ", default: "2.0" },
-  { label: "Min Trades for Cull", key: "fleet_cull_min_trades", suffix: "", default: "50" },
+const FLEET_RISK_PARAMS: Array<{ label: string; key: string; suffix: string }> = [
+  { label: "Max Bots / Instrument", key: "fleet_max_bots_per_instrument", suffix: "" },
+  { label: "Max Total Positions", key: "fleet_max_total_positions", suffix: "" },
+  { label: "Max Exposure / Instrument", key: "fleet_max_exposure_per_instrument", suffix: "" },
+  { label: "Correlation Threshold", key: "fleet_correlation_threshold", suffix: "" },
+  { label: "Auto-Cull Sigma", key: "fleet_cull_sigma", suffix: "σ" },
+  { label: "Min Trades for Cull", key: "fleet_cull_min_trades", suffix: "" },
 ];
 
 const ENDPOINTS = [
@@ -44,6 +44,12 @@ export default function SettingsPage() {
     refreshInterval: 30000,
   });
   const { data: systemStatus } = useSWR("/system/status", () => api.systemStatus());
+  const { data: riskConfig, isLoading: riskLoading } = useSWR("/system/risk-config", () => api.riskConfig());
+  const { data: igHealth, isLoading: igHealthLoading } = useSWR(
+    execMode?.live_execution_enabled ? "/execution/ig-health" : null,
+    () => api.igHealth(),
+    { refreshInterval: 60000 }
+  );
 
   function copyToClipboard(text: string, key: string) {
     navigator.clipboard.writeText(text);
@@ -90,13 +96,13 @@ export default function SettingsPage() {
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
           <div className="bg-background-muted rounded-lg px-3 py-2.5">
             <p className="text-xs text-foreground-muted mb-1">Mode</p>
-            <StatusBadge variant={execMode?.mode === "ig_demo" ? "warn" : "info"}>
+            <StatusBadge variant={execMode?.mode === "ig_demo" ? "info" : "neutral"}>
               {execMode?.mode === "ig_demo" ? "IG Demo" : "Paper"}
             </StatusBadge>
           </div>
           <div className="bg-background-muted rounded-lg px-3 py-2.5">
             <p className="text-xs text-foreground-muted mb-1">Live Execution</p>
-            <StatusBadge variant={execMode?.live_execution_enabled ? "warn" : "ok"}>
+            <StatusBadge variant={execMode?.live_execution_enabled ? "info" : "ok"}>
               {execMode?.live_execution_enabled ? "Enabled" : "Disabled"}
             </StatusBadge>
           </div>
@@ -120,17 +126,21 @@ export default function SettingsPage() {
             <Shield size={14} className="text-foreground-muted" />
             <p className="section-label !mb-0">Risk Parameters</p>
           </div>
-          <StatusBadge variant="neutral">Server-configured</StatusBadge>
+          <StatusBadge variant="ok">Live from server</StatusBadge>
         </div>
         <p className="text-xs text-foreground-muted mb-3">
-          Risk limits are configured via environment variables on the backend. Values shown are defaults.
+          Risk limits are configured via environment variables on the backend.
         </p>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          {RISK_PARAMS.map(({ label, key, suffix, default: defaultVal }) => (
+          {RISK_PARAMS.map(({ label, key, suffix }) => (
             <div key={key} className="bg-background-muted rounded-lg px-3 py-2.5">
               <p className="text-xs text-foreground-muted mb-0.5">{label}</p>
               <p className="text-lg font-bold tracking-tight">
-                {defaultVal}{suffix}
+                {riskLoading ? (
+                  <Loader2 size={14} className="animate-spin inline text-foreground-muted" />
+                ) : riskConfig ? (
+                  <>{(riskConfig as Record<string, number>)[key]}{suffix}</>
+                ) : "—"}
               </p>
               <p className="text-[10px] text-foreground-muted font-mono mt-0.5">{key}</p>
             </div>
@@ -145,23 +155,75 @@ export default function SettingsPage() {
             <Users size={14} className="text-foreground-muted" />
             <p className="section-label !mb-0">Fleet Risk Limits</p>
           </div>
-          <StatusBadge variant="neutral">Server-configured</StatusBadge>
+          <StatusBadge variant="ok">Live from server</StatusBadge>
         </div>
         <p className="text-xs text-foreground-muted mb-3">
           Fleet-level limits prevent overconcentration when running multiple bots. Configured via environment variables.
         </p>
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-          {FLEET_RISK_PARAMS.map(({ label, key, suffix, default: defaultVal }) => (
+          {FLEET_RISK_PARAMS.map(({ label, key, suffix }) => (
             <div key={key} className="bg-background-muted rounded-lg px-3 py-2.5">
               <p className="text-xs text-foreground-muted mb-0.5">{label}</p>
               <p className="text-lg font-bold tracking-tight">
-                {defaultVal}{suffix}
+                {riskLoading ? (
+                  <Loader2 size={14} className="animate-spin inline text-foreground-muted" />
+                ) : riskConfig ? (
+                  <>{(riskConfig as Record<string, number>)[key]}{suffix}</>
+                ) : "—"}
               </p>
               <p className="text-[10px] text-foreground-muted font-mono mt-0.5">{key}</p>
             </div>
           ))}
         </div>
       </div>
+
+      {/* IG Demo Connectivity — only shown when live execution is enabled */}
+      {execMode?.live_execution_enabled && (
+        <div className="card mb-6">
+          <div className="flex items-center gap-2 mb-4">
+            {igHealthLoading ? (
+              <Loader2 size={14} className="text-foreground-muted animate-spin" />
+            ) : igHealth?.reachable ? (
+              <Wifi size={14} className="text-green-600" />
+            ) : (
+              <WifiOff size={14} className="text-red-500" />
+            )}
+            <p className="section-label !mb-0">IG Demo Connectivity</p>
+          </div>
+          {igHealthLoading ? (
+            <p className="text-sm text-foreground-muted">Checking IG connection...</p>
+          ) : igHealth ? (
+            igHealth.reachable ? (
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <div className="bg-background-muted rounded-lg px-3 py-2.5">
+                  <p className="text-xs text-foreground-muted mb-1">Status</p>
+                  <StatusBadge variant="ok">Connected</StatusBadge>
+                </div>
+                <div className="bg-background-muted rounded-lg px-3 py-2.5">
+                  <p className="text-xs text-foreground-muted mb-1">Account</p>
+                  <p className="text-sm font-semibold">{igHealth.account_id ?? "—"}</p>
+                </div>
+                <div className="bg-background-muted rounded-lg px-3 py-2.5">
+                  <p className="text-xs text-foreground-muted mb-1">Name</p>
+                  <p className="text-sm font-semibold truncate">{igHealth.account_name ?? "—"}</p>
+                </div>
+                <div className="bg-background-muted rounded-lg px-3 py-2.5">
+                  <p className="text-xs text-foreground-muted mb-1">Balance</p>
+                  <p className="text-sm font-semibold">
+                    {igHealth.balance != null ? `£${igHealth.balance.toFixed(2)}` : "—"}
+                  </p>
+                </div>
+              </div>
+            ) : (
+              <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+                <strong>IG Demo unreachable</strong>
+                {igHealth.error && <p className="text-xs mt-1 font-mono">{igHealth.error}</p>}
+                <p className="text-xs mt-1">Check FIBOKEI_IG_API_KEY, FIBOKEI_IG_USERNAME, FIBOKEI_IG_PASSWORD on Railway.</p>
+              </div>
+            )
+          ) : null}
+        </div>
+      )}
 
       {/* Feature Flags */}
       <div className="card mb-6">

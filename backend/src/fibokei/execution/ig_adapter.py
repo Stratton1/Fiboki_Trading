@@ -5,10 +5,15 @@ All operations are routed through the demo API; production is hard-blocked.
 """
 
 import logging
+import time
 
 from fibokei.core.instruments import get_ig_epic, get_symbol_by_epic
 from fibokei.execution.adapter import ExecutionAdapter
 from fibokei.execution.ig_client import IGClient, IGClientError
+
+# Retry config for deal confirmation: IG can take a few seconds to confirm
+_CONFIRM_MAX_ATTEMPTS = 3
+_CONFIRM_RETRY_DELAY = 1.5  # seconds between attempts
 
 logger = logging.getLogger(__name__)
 
@@ -66,8 +71,6 @@ class IGExecutionAdapter(ExecutionAdapter):
         if order.get("limit_distance") is not None:
             params["limitDistance"] = order["limit_distance"]
 
-        import time
-
         requested_price = order.get("requested_price")
         t_start = time.monotonic()
 
@@ -76,7 +79,7 @@ class IGExecutionAdapter(ExecutionAdapter):
             fill_latency_ms = int((time.monotonic() - t_start) * 1000)
             deal_ref = result.get("dealReference", "")
             if deal_ref:
-                confirmation = self._client.get_deal_confirmation(deal_ref)
+                confirmation = self._fetch_confirmation_with_retry(deal_ref)
                 filled_price = confirmation.get("level")
                 slippage_pips = None
                 if filled_price is not None and requested_price is not None:
@@ -99,6 +102,33 @@ class IGExecutionAdapter(ExecutionAdapter):
         except IGClientError as e:
             logger.error("IG place_order failed: %s", e)
             return {"status": "rejected", "reason": str(e), "error_code": e.error_code}
+
+    def _fetch_confirmation_with_retry(self, deal_reference: str) -> dict:
+        """Fetch deal confirmation with retry backoff.
+
+        IG occasionally takes a few seconds to process a deal before
+        the confirmation endpoint is ready.  Retry up to
+        _CONFIRM_MAX_ATTEMPTS times with a short delay before giving up.
+        """
+        last_error: Exception | None = None
+        for attempt in range(1, _CONFIRM_MAX_ATTEMPTS + 1):
+            try:
+                return self._client.get_deal_confirmation(deal_reference)
+            except IGClientError as e:
+                last_error = e
+                if attempt < _CONFIRM_MAX_ATTEMPTS:
+                    logger.warning(
+                        "Deal confirmation attempt %d/%d failed for %s: %s — retrying",
+                        attempt, _CONFIRM_MAX_ATTEMPTS, deal_reference, e,
+                    )
+                    time.sleep(_CONFIRM_RETRY_DELAY)
+        logger.error(
+            "Deal confirmation failed after %d attempts for %s: %s",
+            _CONFIRM_MAX_ATTEMPTS, deal_reference, last_error,
+        )
+        # Return a partial response so the order isn't lost — status will be
+        # "PENDING_CONFIRMATION" and the audit log will capture it.
+        return {"dealStatus": "PENDING_CONFIRMATION", "dealReference": deal_reference}
 
     def cancel_order(self, order_id: str) -> bool:
         """Cancel a working order by deal ID."""
@@ -200,7 +230,7 @@ class IGExecutionAdapter(ExecutionAdapter):
             result = self._client.close_position(position_id, close_direction, float(size))
             deal_ref = result.get("dealReference", "")
             if deal_ref:
-                confirmation = self._client.get_deal_confirmation(deal_ref)
+                confirmation = self._fetch_confirmation_with_retry(deal_ref)
                 return {
                     "status": confirmation.get("dealStatus", "UNKNOWN"),
                     "deal_id": confirmation.get("dealId", ""),

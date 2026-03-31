@@ -71,6 +71,15 @@ class SlippageSummaryResponse(BaseModel):
     instruments: list[SlippageInstrumentResponse]
 
 
+class IGHealthResponse(BaseModel):
+    configured: bool       # Credentials present in env
+    reachable: bool        # Demo API responded to auth attempt
+    account_id: str | None = None
+    account_name: str | None = None
+    balance: float | None = None
+    error: str | None = None
+
+
 # ---------- Endpoints ----------
 
 @router.get("/execution/mode", response_model=ExecutionModeResponse)
@@ -165,6 +174,46 @@ def get_audit_log(
         )
         for e in entries
     ]
+
+
+@router.get("/execution/ig-health", response_model=IGHealthResponse)
+def get_ig_health(
+    user: TokenData = Depends(get_current_user),
+):
+    """Check IG demo connectivity without placing any orders.
+
+    Attempts to authenticate with the IG demo API and fetch account info.
+    Returns credential presence, reachability, and account balance.
+    Safe to call frequently — uses a fresh IGClient each time.
+    """
+    import os
+    from fibokei.execution.ig_client import IGClient, IGClientError
+
+    api_key = os.environ.get("FIBOKEI_IG_API_KEY", "")
+    username = os.environ.get("FIBOKEI_IG_USERNAME", "")
+    password = os.environ.get("FIBOKEI_IG_PASSWORD", "")
+    configured = bool(api_key and username and password)
+
+    if not configured:
+        return IGHealthResponse(configured=False, reachable=False, error="IG credentials not configured")
+
+    try:
+        client = IGClient()
+        client.authenticate()
+        acct = client.get_account_info()
+        client.close()
+        balance_info = acct.get("balance", {})
+        return IGHealthResponse(
+            configured=True,
+            reachable=True,
+            account_id=acct.get("accountId"),
+            account_name=acct.get("accountName"),
+            balance=balance_info.get("balance"),
+        )
+    except IGClientError as e:
+        return IGHealthResponse(configured=True, reachable=False, error=str(e))
+    except Exception as e:
+        return IGHealthResponse(configured=True, reachable=False, error=f"Unexpected error: {e}")
 
 
 @router.get("/execution/slippage", response_model=SlippageSummaryResponse)

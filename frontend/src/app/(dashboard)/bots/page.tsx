@@ -43,6 +43,8 @@ export default function BotsPage() {
   const [timeframe, setTimeframe] = useState("H1");
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
+  const [actingBotId, setActingBotId] = useState<string | null>(null);
   const [groupBy, setGroupBy] = useState<"none" | "strategy">("none");
   const { shortlist } = useShortlist();
   const [showShortlistPicker, setShowShortlistPicker] = useState(false);
@@ -72,20 +74,30 @@ export default function BotsPage() {
   }
 
   async function handlePause(id: string) {
+    if (actingBotId) return;
+    setActingBotId(id);
+    setActionError(null);
     try {
       await api.pauseBot(id);
       await mutateBots();
-    } catch {
-      /* ignore */
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : "Failed to pause bot");
+    } finally {
+      setActingBotId(null);
     }
   }
 
   async function handleStop(id: string) {
+    if (actingBotId) return;
+    setActingBotId(id);
+    setActionError(null);
     try {
       await api.stopBot(id);
       await mutateBots();
-    } catch {
-      /* ignore */
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : "Failed to stop bot");
+    } finally {
+      setActingBotId(null);
     }
   }
 
@@ -272,6 +284,13 @@ export default function BotsPage() {
         {error && <p className="text-danger text-sm mt-3">{error}</p>}
       </form>
 
+      {actionError && (
+        <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800 mb-4 flex items-center justify-between">
+          <span>{actionError}</span>
+          <button onClick={() => setActionError(null)} className="text-red-500 hover:text-red-700 transition text-xs ml-4">Dismiss</button>
+        </div>
+      )}
+
       {/* View controls */}
       <div className="flex items-center gap-3 mb-3">
         <button
@@ -342,13 +361,21 @@ export default function BotsPage() {
                     <td className="text-right">
                       <div className="flex items-center justify-end gap-2">
                         {bot.state === "monitoring" && (
-                          <button onClick={() => handlePause(bot.id)} className="btn-ghost text-xs px-2 py-1 rounded">
-                            Pause
+                          <button
+                            onClick={() => handlePause(bot.id)}
+                            disabled={!!actingBotId}
+                            className="btn-ghost text-xs px-2 py-1 rounded disabled:opacity-40"
+                          >
+                            {actingBotId === bot.id ? <Loader2 size={12} className="animate-spin inline" /> : "Pause"}
                           </button>
                         )}
                         {bot.state !== "stopped" && (
-                          <button onClick={() => handleStop(bot.id)} className="text-xs px-2 py-1 rounded text-danger hover:bg-red-50 transition-colors">
-                            Stop
+                          <button
+                            onClick={() => handleStop(bot.id)}
+                            disabled={!!actingBotId}
+                            className="text-xs px-2 py-1 rounded text-danger hover:bg-red-50 transition-colors disabled:opacity-40"
+                          >
+                            {actingBotId === bot.id ? <Loader2 size={12} className="animate-spin inline" /> : "Stop"}
                           </button>
                         )}
                       </div>
@@ -393,13 +420,21 @@ export default function BotsPage() {
                       <td className="text-right">
                         <div className="flex items-center justify-end gap-2">
                           {b.state === "monitoring" && (
-                            <button onClick={() => handlePause(b.bot_id)} className="btn-ghost text-xs px-2 py-1 rounded">
-                              Pause
+                            <button
+                              onClick={() => handlePause(b.bot_id)}
+                              disabled={!!actingBotId}
+                              className="btn-ghost text-xs px-2 py-1 rounded disabled:opacity-40"
+                            >
+                              {actingBotId === b.bot_id ? <Loader2 size={12} className="animate-spin inline" /> : "Pause"}
                             </button>
                           )}
                           {b.state !== "stopped" && (
-                            <button onClick={() => handleStop(b.bot_id)} className="text-xs px-2 py-1 rounded text-danger hover:bg-red-50 transition-colors">
-                              Stop
+                            <button
+                              onClick={() => handleStop(b.bot_id)}
+                              disabled={!!actingBotId}
+                              className="text-xs px-2 py-1 rounded text-danger hover:bg-red-50 transition-colors disabled:opacity-40"
+                            >
+                              {actingBotId === b.bot_id ? <Loader2 size={12} className="animate-spin inline" /> : "Stop"}
                             </button>
                           )}
                         </div>

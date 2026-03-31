@@ -213,6 +213,12 @@ export default function DashboardPage() {
   const { data: systemStatus } = useSWR("/system/status", () => api.systemStatus(), { refreshInterval: 30000 });
   const { data: execMode } = useSWR("/execution/mode", () => api.executionMode(), { refreshInterval: 15000 });
   const { data: killSwitch } = useSWR("/execution/kill-switch", () => api.killSwitchStatus(), { refreshInterval: 15000 });
+  const isIgDemo = (execMode?.mode ?? systemStatus?.execution_mode) === "ig_demo";
+  const { data: igHealth } = useSWR(
+    isIgDemo ? "/execution/ig-health" : null,
+    () => api.igHealth(),
+    { refreshInterval: 60000 }
+  );
 
   // Derived values
   const balance = account?.balance ?? 0;
@@ -303,8 +309,8 @@ export default function DashboardPage() {
         subtitle="Your trading operations at a glance"
       />
 
-      {/* ─── KPI Cards (6 across) ─────────────────────────────── */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 mb-6" data-testid="kpi-cards">
+      {/* ─── KPI Cards ────────────────────────────────────────── */}
+      <div className={`grid grid-cols-2 sm:grid-cols-3 ${isIgDemo ? "lg:grid-cols-7" : "lg:grid-cols-6"} gap-3 mb-6`} data-testid="kpi-cards">
         <StatCard
           icon={Wallet}
           label="Balance"
@@ -348,6 +354,16 @@ export default function DashboardPage() {
           tip="Paper positions currently open across all bots."
           sub={`${totalTrades} total trades`}
         />
+        {isIgDemo && (
+          <StatCard
+            icon={Zap}
+            label="IG Demo"
+            value={igHealth?.reachable && igHealth.balance != null ? `£${igHealth.balance.toFixed(2)}` : igHealth?.reachable === false ? "Error" : "—"}
+            trend={igHealth?.reachable ? "neutral" : undefined}
+            tip="Live IG demo account balance. Fetched directly from IG — updates every 60s."
+            sub={igHealth?.reachable ? (igHealth.account_name ?? "Connected") : igHealth?.reachable === false ? "Check Settings" : "Connecting..."}
+          />
+        )}
       </div>
 
       {/* ─── Fleet Summary Bar ─────────────────────────────────── */}
@@ -530,7 +546,7 @@ export default function DashboardPage() {
                   <InfoTip text="Current trading execution mode. 'paper' = simulated only. 'ig_demo' = connected to IG demo account." />
                 </span>
               </div>
-              <StatusBadge variant={executionMode === "paper" ? "info" : executionMode === "ig_demo" ? "warn" : "neutral"}>
+              <StatusBadge variant={executionMode === "ig_demo" ? "info" : "neutral"}>
                 {executionMode}
               </StatusBadge>
             </div>

@@ -6,6 +6,7 @@ Only supports IG demo environment — production URLs are explicitly blocked.
 
 import logging
 import os
+import threading
 import time
 from dataclasses import dataclass, field
 
@@ -71,6 +72,7 @@ class IGClient:
         self._base_url = IG_DEMO_BASE
         self._session = IGSession()
         self._http = httpx.Client(timeout=30.0)
+        self._auth_lock = threading.Lock()  # Prevent concurrent re-auth storms
 
     def _ensure_demo_only(self) -> None:
         """Hard block against production usage."""
@@ -149,9 +151,19 @@ class IGClient:
         self._session.account_id = account_id
 
     def ensure_session(self) -> IGSession:
-        """Return a valid session, re-authenticating if needed."""
-        if not self._session.is_valid:
-            self.authenticate()
+        """Return a valid session, re-authenticating if needed.
+
+        Uses a threading lock so concurrent requests don't all try to
+        re-authenticate simultaneously, which would spam the IG session
+        endpoint and risk rate-limiting.
+        """
+        if self._session.is_valid:
+            return self._session
+        with self._auth_lock:
+            # Re-check inside the lock — another thread may have authenticated
+            # while we waited.
+            if not self._session.is_valid:
+                self.authenticate()
         return self._session
 
     def _request(

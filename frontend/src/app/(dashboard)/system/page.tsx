@@ -79,7 +79,7 @@ function ExecutionAuditSection() {
                     {new Date(entry.timestamp).toLocaleString()}
                   </td>
                   <td className="px-3 py-1.5">
-                    <StatusBadge variant={entry.execution_mode === "ig_demo" ? "warn" : "neutral"}>
+                    <StatusBadge variant={entry.execution_mode === "ig_demo" ? "info" : "neutral"}>
                       {entry.execution_mode}
                     </StatusBadge>
                   </td>
@@ -350,7 +350,7 @@ export default function SystemPage() {
           </div>
           <div>
             <p className="text-xs text-foreground-muted mb-1">Execution Mode</p>
-            <StatusBadge variant={execMode?.mode === "ig_demo" ? "warn" : "info"}>
+            <StatusBadge variant={execMode?.mode === "ig_demo" ? "info" : "neutral"}>
               {execMode?.mode === "ig_demo" ? "IG Demo" : "Paper Trading"}
             </StatusBadge>
           </div>

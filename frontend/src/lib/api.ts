@@ -379,6 +379,32 @@ export const api = {
       execution_mode: string;
       kill_switch_active: boolean;
     }>("/system/status"),
+  riskConfig: () =>
+    apiFetch<{
+      max_risk_per_trade_pct: number;
+      max_portfolio_risk_pct: number;
+      max_open_trades: number;
+      max_per_instrument: number;
+      daily_soft_stop_pct: number;
+      daily_hard_stop_pct: number;
+      weekly_soft_stop_pct: number;
+      weekly_hard_stop_pct: number;
+      fleet_max_bots_per_instrument: number;
+      fleet_max_total_positions: number;
+      fleet_max_exposure_per_instrument: number;
+      fleet_correlation_threshold: number;
+      fleet_cull_sigma: number;
+      fleet_cull_min_trades: number;
+    }>("/system/risk-config"),
+  igHealth: () =>
+    apiFetch<{
+      configured: boolean;
+      reachable: boolean;
+      account_id: string | null;
+      account_name: string | null;
+      balance: number | null;
+      error: string | null;
+    }>("/execution/ig-health"),
 
   // Execution
   executionMode: () =>
