@@ -166,7 +166,22 @@ class PaperWorker:
                         # Filter to bars after the last evaluated one
                         new_bars = df[df["timestamp"] > last_eval]
                     else:
-                        new_bars = df
+                        # First run for this bot — use history for indicator
+                        # warmup but only evaluate the final bar as "live".
+                        # Feed the last 120 bars silently, then the final bar
+                        # with signal evaluation enabled.
+                        warmup_count = 120
+                        if len(df) > warmup_count:
+                            warmup = df.iloc[-warmup_count:-1]
+                            for _, row in warmup.iterrows():
+                                bar_time = row["timestamp"]
+                                bar = row[["open", "high", "low", "close", "volume"]]
+                                bot.on_candle_close(bar, bar_time)
+                                bars_fed += 1
+                            # Only the most recent bar is "new"
+                            new_bars = df.iloc[-1:]
+                        else:
+                            new_bars = df.iloc[-1:] if len(df) > 0 else df
 
                     if new_bars.empty:
                         continue
