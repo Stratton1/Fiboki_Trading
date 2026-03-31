@@ -217,6 +217,32 @@ export const api = {
     apiFetch<{ deleted_count: number; run_id: string | null }>(
       `/research/results/non-saved${runId ? `?run_id=${runId}` : ""}`, { method: "DELETE" }
     ),
+  autoScout: (body: {
+    timeframes?: string[];
+    initial_capital?: number;
+    min_trades?: number;
+    asset_classes?: string[];
+  }) =>
+    apiFetch<{ job_id: string; job_type: string; label: string; state: string }>(
+      "/research/auto-scout", { method: "POST", body: JSON.stringify(body) }
+    ),
+  smartDeploy: (body: {
+    top_n?: number;
+    run_id?: string;
+    min_score?: number;
+    risk_pct?: number;
+  }) =>
+    apiFetch<{
+      deployed: number;
+      skipped: number;
+      bots: Array<{
+        bot_id: string;
+        strategy_id: string;
+        instrument: string;
+        timeframe: string;
+        composite_score: number;
+      }>;
+    }>("/research/smart-deploy", { method: "POST", body: JSON.stringify(body) }),
 
   // Paper
   createBot: (body: Record<string, unknown>) =>

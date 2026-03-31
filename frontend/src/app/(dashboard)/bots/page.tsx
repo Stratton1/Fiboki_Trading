@@ -55,6 +55,8 @@ export default function BotsPage() {
   const [groupBy, setGroupBy] = useState<"none" | "strategy">("none");
   const { shortlist } = useShortlist();
   const [showShortlistPicker, setShowShortlistPicker] = useState(false);
+  const [smartDeployLoading, setSmartDeployLoading] = useState(false);
+  const [smartDeployResult, setSmartDeployResult] = useState<string | null>(null);
 
   function loadFromShortlist(entry: { strategy_id: string; instrument: string; timeframe: string }) {
     setStrategy(entry.strategy_id);
@@ -136,6 +138,31 @@ export default function BotsPage() {
     }
   }
 
+  async function handleSmartDeploy() {
+    setSmartDeployLoading(true);
+    setSmartDeployResult(null);
+    setActionError(null);
+    try {
+      const res = await api.smartDeploy({ top_n: 5, min_score: 0.3 });
+      if (res.deployed === 0) {
+        setSmartDeployResult(
+          res.skipped > 0
+            ? `All top combos already have bots (${res.skipped} skipped)`
+            : "No research results found. Run Auto Scout on the Research page first."
+        );
+      } else {
+        setSmartDeployResult(
+          `Deployed ${res.deployed} bot${res.deployed !== 1 ? "s" : ""} from top research results${res.skipped > 0 ? ` (${res.skipped} already existed)` : ""}`
+        );
+        await mutateBots();
+      }
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : "Smart Deploy failed");
+    } finally {
+      setSmartDeployLoading(false);
+    }
+  }
+
   async function handleDeleteAll() {
     if (!confirm("Delete all bots and their trade history? This cannot be undone.")) return;
     setActionError(null);
@@ -172,6 +199,29 @@ export default function BotsPage() {
         title="Bots"
         subtitle="Manage trading bots and monitor fleet performance"
       />
+
+      {/* Smart Deploy */}
+      <div className="card-elevated flex flex-wrap items-center justify-between gap-4 mb-6">
+        <div>
+          <p className="text-sm font-medium">Smart Deploy</p>
+          <p className="text-xs text-foreground-muted">
+            Auto-create bots from your top 5 research results. Skips combos that already have bots.
+          </p>
+        </div>
+        <button
+          onClick={handleSmartDeploy}
+          disabled={smartDeployLoading}
+          className="btn btn-primary"
+        >
+          {smartDeployLoading ? <><Loader2 size={14} className="animate-spin" /> Deploying...</> : "Deploy Top Combos"}
+        </button>
+      </div>
+      {smartDeployResult && (
+        <div className="rounded-lg border border-green-200 bg-green-50 px-4 py-2 text-xs text-green-800 mb-4 flex items-center justify-between">
+          <span>{smartDeployResult}</span>
+          <button onClick={() => setSmartDeployResult(null)} className="text-green-500 hover:text-green-700 text-xs ml-4">Dismiss</button>
+        </div>
+      )}
 
       {/* Fleet Summary */}
       <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-3 mb-6">

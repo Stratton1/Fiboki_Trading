@@ -3,6 +3,7 @@
 import uuid
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from fibokei.api.auth import TokenData, get_current_user
@@ -186,6 +187,150 @@ def run_research(
         job_type=info.job_type,
         label=info.label,
         state=info.state.value,
+    )
+
+
+class AutoScoutRequest(BaseModel):
+    timeframes: list[str] = Field(default=["H1", "H4"], description="Timeframes to sweep")
+    initial_capital: float = 1000.0
+    risk_per_trade_pct: float = 1.0
+    min_trades: int = Field(default=80, ge=1, le=1000)
+    scoring_weights: ScoringWeights | None = None
+    asset_classes: list[str] | None = Field(None, description="Filter instruments by asset class (forex_major, indices, etc.)")
+
+
+@router.post("/research/auto-scout", response_model=JobSubmittedResponse)
+def auto_scout(
+    req: AutoScoutRequest,
+    request: Request,
+    user: TokenData = Depends(get_current_user),
+):
+    """Run a full sweep: all strategies × instruments × timeframes.
+
+    Kicks off a research job that tests every combo and ranks results.
+    Optionally filter instruments by asset class.
+    """
+    from fibokei.core.instruments import INSTRUMENTS, get_instruments_by_class
+    from fibokei.core.models import AssetClass
+    from fibokei.jobs.engine import get_job_engine
+    from fibokei.strategies.registry import strategy_registry
+
+    all_strats = [s["id"] for s in strategy_registry.list_available()]
+
+    if req.asset_classes:
+        instruments = []
+        for ac_name in req.asset_classes:
+            try:
+                ac = AssetClass(ac_name)
+                instruments.extend(inst.symbol for inst in get_instruments_by_class(ac))
+            except ValueError:
+                pass
+        if not instruments:
+            raise HTTPException(400, f"No instruments found for asset classes: {req.asset_classes}")
+    else:
+        # Default: all instruments with canonical data
+        instruments = [inst.symbol for inst in INSTRUMENTS if inst.has_canonical_data]
+
+    combos = len(all_strats) * len(instruments) * len(req.timeframes)
+    label = f"Auto Scout: {len(all_strats)} strategies × {len(instruments)} instruments × {len(req.timeframes)} TFs ({combos} combos)"
+
+    engine = get_job_engine()
+    info = engine.submit(
+        job_type="research",
+        label=label,
+        fn=_run_research_sync,
+        strategy_ids=all_strats,
+        instruments=instruments,
+        timeframes_str=req.timeframes,
+        initial_capital=req.initial_capital,
+        risk_per_trade_pct=req.risk_per_trade_pct,
+        min_trades=req.min_trades,
+        scoring_weights=req.scoring_weights,
+        provider=None,
+        data_dir=None,
+        session_factory=request.app.state.session_factory,
+    )
+    return JobSubmittedResponse(
+        job_id=info.job_id,
+        job_type=info.job_type,
+        label=info.label,
+        state=info.state.value,
+    )
+
+
+class SmartDeployRequest(BaseModel):
+    top_n: int = Field(default=5, ge=1, le=20, description="Number of top combos to deploy")
+    run_id: str | None = Field(None, description="Scope to a specific research run; if None, uses best across all runs")
+    min_score: float = Field(default=0.0, ge=0.0, le=1.0, description="Minimum composite score threshold")
+    risk_pct: float = Field(default=1.0, ge=0.1, le=5.0)
+
+
+class SmartDeployResponse(BaseModel):
+    deployed: int
+    skipped: int
+    bots: list[dict]
+
+
+@router.post("/research/smart-deploy", response_model=SmartDeployResponse)
+def smart_deploy(
+    req: SmartDeployRequest,
+    db: Session = Depends(get_db),
+    user: TokenData = Depends(get_current_user),
+):
+    """Deploy top research results as bots. Skips combos that already have active bots."""
+    from fibokei.db.repository import get_paper_bots, save_paper_bot
+
+    # Get top results
+    results = get_research_rankings(
+        db, sort_by="composite_score", limit=req.top_n * 3,  # over-fetch to account for skips
+        run_id=req.run_id, deduplicate=True if req.run_id is None else False,
+    )
+
+    if req.min_score > 0:
+        results = [r for r in results if r.composite_score >= req.min_score]
+
+    # Get existing bots to avoid duplicates
+    existing_bots = get_paper_bots(db)
+    existing_combos = {
+        (b.strategy_id, b.instrument, b.timeframe)
+        for b in existing_bots
+        if b.state in ("monitoring", "position_open", "paused")
+    }
+
+    deployed = []
+    skipped = 0
+    for r in results:
+        if len(deployed) >= req.top_n:
+            break
+        combo = (r.strategy_id, r.instrument, r.timeframe)
+        if combo in existing_combos:
+            skipped += 1
+            continue
+
+        bot_id = str(uuid.uuid4())[:8]
+        save_paper_bot(db, {
+            "bot_id": bot_id,
+            "strategy_id": r.strategy_id,
+            "instrument": r.instrument,
+            "timeframe": r.timeframe,
+            "risk_pct": req.risk_pct,
+            "source_type": "research",
+            "source_id": r.run_id,
+            "state": "monitoring",
+        })
+        deployed.append({
+            "bot_id": bot_id,
+            "strategy_id": r.strategy_id,
+            "instrument": r.instrument,
+            "timeframe": r.timeframe,
+            "composite_score": r.composite_score,
+        })
+        existing_combos.add(combo)
+
+    return SmartDeployResponse(
+        deployed=len(deployed),
+        skipped=skipped,
+        bots=deployed,
     )
 
 

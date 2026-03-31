@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import useSWR from "swr";
+import { Loader2 } from "lucide-react";
 import { api } from "@/lib/api";
 import { formatCurrency } from "@/lib/format-currency";
 import { useRankings, useResearchRuns } from "@/lib/hooks/use-research";
@@ -101,6 +102,15 @@ export default function ResearchPage() {
   const [promoteLoading, setPromoteLoading] = useState(false);
   const [promoteError, setPromoteError] = useState<string | null>(null);
   const [promoteSuccess, setPromoteSuccess] = useState<string | null>(null);
+
+  // Auto Scout state
+  const [scoutLoading, setScoutLoading] = useState(false);
+  const [scoutResult, setScoutResult] = useState<string | null>(null);
+
+  // Bulk bot creation
+  const [selectedResults, setSelectedResults] = useState<Set<number>>(new Set());
+  const [bulkDeploying, setBulkDeploying] = useState(false);
+  const [bulkResult, setBulkResult] = useState<string | null>(null);
 
   function toggleStrategy(id: string) {
     setSelectedStrategies((prev) =>
@@ -298,6 +308,66 @@ export default function ResearchPage() {
     }
   }
 
+  async function handleAutoScout() {
+    setScoutLoading(true);
+    setScoutResult(null);
+    setError(null);
+    try {
+      const res = await api.autoScout({ timeframes: ["H1", "H4"], min_trades: 80 });
+      setScoutResult(`Auto Scout started (job ${res.job_id}). Check Jobs page for progress.`);
+      setCurrentRunId(null);
+      setRunScope("all");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Auto Scout failed");
+    } finally {
+      setScoutLoading(false);
+    }
+  }
+
+  async function handleBulkCreateBots() {
+    if (selectedResults.size === 0 || !rankings) return;
+    setBulkDeploying(true);
+    setBulkResult(null);
+    const selected = rankings.filter((r) => selectedResults.has(r.id));
+    let created = 0;
+    let failed = 0;
+    for (const r of selected) {
+      try {
+        await api.createBot({
+          strategy_id: r.strategy_id,
+          instrument: r.instrument,
+          timeframe: r.timeframe,
+          source_type: "research",
+          source_id: r.run_id,
+        });
+        created++;
+      } catch {
+        failed++;
+      }
+    }
+    setBulkResult(`Created ${created} bot${created !== 1 ? "s" : ""}${failed > 0 ? `, ${failed} failed` : ""}`);
+    setSelectedResults(new Set());
+    setBulkDeploying(false);
+  }
+
+  function toggleResultSelection(id: number) {
+    setSelectedResults((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  function selectAllResults() {
+    if (!rankings) return;
+    setSelectedResults(new Set(rankings.map((r) => r.id)));
+  }
+
+  function deselectAllResults() {
+    setSelectedResults(new Set());
+  }
+
   const PROMOTION_THRESHOLD = 0.55;
 
   // Heatmap data
@@ -317,10 +387,28 @@ export default function ResearchPage() {
         subtitle="Run batch research, rank strategies, and validate performance"
       />
 
-      {/* Workflow Explainer */}
-      <div className="rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-xs text-blue-800">
-        <strong>Workflow:</strong> Run Research to generate results → review Rankings (transient, per-run) → Save promising combos to your Shortlist (durable, persists across runs) → Promote top performers to Paper Trading.
+      {/* Auto Scout — one-click full sweep */}
+      <div className="card-elevated flex flex-wrap items-center justify-between gap-4">
+        <div>
+          <p className="text-sm font-medium">Auto Scout</p>
+          <p className="text-xs text-foreground-muted">
+            Sweep all 12 strategies × all instruments × H1+H4. Finds the best combos automatically.
+          </p>
+        </div>
+        <button
+          onClick={handleAutoScout}
+          disabled={scoutLoading}
+          className="btn btn-primary"
+        >
+          {scoutLoading ? <><Loader2 size={14} className="animate-spin" /> Launching...</> : "Run Full Sweep"}
+        </button>
       </div>
+      {scoutResult && (
+        <div className="rounded-lg border border-green-200 bg-green-50 px-4 py-2 text-xs text-green-800 flex items-center justify-between">
+          <span>{scoutResult}</span>
+          <button onClick={() => setScoutResult(null)} className="text-green-500 hover:text-green-700 text-xs ml-4">Dismiss</button>
+        </div>
+      )}
 
       {error && <p className="text-danger text-sm">{error}</p>}
 
@@ -745,9 +833,29 @@ export default function ResearchPage() {
             )}
           </div>
         </div>
+        {/* Bulk actions bar */}
+        {selectedResults.size > 0 && (
+          <div className="flex items-center gap-3 px-4 py-2 bg-primary/5 border border-primary/20 rounded-lg mb-2">
+            <span className="text-xs font-medium">{selectedResults.size} selected</span>
+            <button onClick={handleBulkCreateBots} disabled={bulkDeploying} className="btn btn-primary text-xs">
+              {bulkDeploying ? <><Loader2 size={12} className="animate-spin" /> Deploying...</> : `Create ${selectedResults.size} Bot${selectedResults.size !== 1 ? "s" : ""}`}
+            </button>
+            <button onClick={deselectAllResults} className="text-xs text-foreground-muted hover:underline">Clear</button>
+            {bulkResult && <span className="text-xs text-green-600">{bulkResult}</span>}
+          </div>
+        )}
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-gray-200 bg-background-muted">
+              <th className="w-8 px-2">
+                <input
+                  type="checkbox"
+                  checked={rankings != null && selectedResults.size === rankings.length && rankings.length > 0}
+                  onChange={() => selectedResults.size === (rankings?.length ?? 0) ? deselectAllResults() : selectAllResults()}
+                  className="rounded border-gray-300"
+                  title="Select all for bulk bot creation"
+                />
+              </th>
               <th className="w-8 px-2"></th>
               <th className="text-left px-4 py-3 font-medium text-foreground-muted">Rank</th>
               <th className="text-left px-4 py-3 font-medium text-foreground-muted">Strategy</th>
@@ -763,20 +871,28 @@ export default function ResearchPage() {
           <tbody>
             {isLoading && (
               <tr>
-                <td colSpan={isAllRunsMode ? 8 : 7} className="px-4 py-8 text-center text-foreground-muted">Loading...</td>
+                <td colSpan={isAllRunsMode ? 9 : 8} className="px-4 py-8 text-center text-foreground-muted">Loading...</td>
               </tr>
             )}
             {!isLoading && (!rankings || rankings.length === 0) && (
               <tr>
-                <td colSpan={isAllRunsMode ? 8 : 7} className="px-4 py-8 text-center text-foreground-muted">
-                  No research results yet. Configure and run research above.
+                <td colSpan={isAllRunsMode ? 9 : 8} className="px-4 py-8 text-center text-foreground-muted">
+                  No research results yet. Run a full sweep above or configure a custom research run.
                 </td>
               </tr>
             )}
             {rankings
               ?.filter((r) => !showBookmarked || isBookmarked("research_result", r.id))
               .map((r) => (
-              <tr key={r.id} className="border-b border-gray-100 hover:bg-background-muted/50">
+              <tr key={r.id} className={`border-b border-gray-100 hover:bg-background-muted/50 ${selectedResults.has(r.id) ? "bg-primary/5" : ""}`}>
+                <td className="px-2">
+                  <input
+                    type="checkbox"
+                    checked={selectedResults.has(r.id)}
+                    onChange={() => toggleResultSelection(r.id)}
+                    className="rounded border-gray-300"
+                  />
+                </td>
                 <td className="px-2">
                   <BookmarkButton
                     isBookmarked={isBookmarked("research_result", r.id)}
