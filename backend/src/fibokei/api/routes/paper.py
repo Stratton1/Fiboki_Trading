@@ -200,6 +200,22 @@ def pause_bot(
     return {"bot_id": bot_id, "state": updated.state}
 
 
+@router.post("/paper/bots/{bot_id}/resume")
+def resume_bot(
+    bot_id: str,
+    user: TokenData = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Resume a paused paper trading bot."""
+    bot = get_paper_bot(db, bot_id)
+    if not bot:
+        raise HTTPException(status_code=404, detail="Bot not found")
+    if bot.state != "paused":
+        raise HTTPException(status_code=400, detail="Can only resume a paused bot")
+    updated = update_paper_bot_state(db, bot_id, "monitoring")
+    return {"bot_id": bot_id, "state": updated.state}
+
+
 @router.delete("/paper/bots/{bot_id}")
 def delete_bot(
     bot_id: str,

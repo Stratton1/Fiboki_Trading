@@ -27,6 +27,7 @@ from fibokei.db.repository import (
     update_paper_bot_state,
 )
 from fibokei.alerts.telegram import TelegramNotifier
+from fibokei.core.feature_flags import get_execution_adapter
 from fibokei.paper.account import PaperAccount
 from fibokei.paper.bot import BotState, PaperBot
 from fibokei.risk.engine import RiskEngine
@@ -64,6 +65,9 @@ class PaperWorker:
         self.notifier = TelegramNotifier()
         self._last_daily_summary: datetime | None = None
         self._trades_today = 0
+        # Instantiate once — shared across all bots in this worker
+        self._adapter = get_execution_adapter()
+        logger.info("Execution adapter: %s", type(self._adapter).__name__)
 
     def recover(self) -> int:
         """Recover active bots from database. Returns count recovered."""
@@ -89,6 +93,7 @@ class PaperWorker:
                         timeframe=tf_enum,
                         account=self.account,
                         risk_pct=bot_model.risk_pct,
+                        adapter=self._adapter,
                     )
                     bot.state = BotState(bot_model.state)
                     bot.bars_seen = bot_model.bars_seen

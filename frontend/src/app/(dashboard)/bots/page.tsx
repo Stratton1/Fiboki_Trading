@@ -11,7 +11,7 @@ import { useWatchlists } from "@/lib/hooks/use-watchlists";
 import { PageHeader } from "@/components/PageHeader";
 import { EmptyState } from "@/components/EmptyState";
 import { StatusBadge } from "@/components/StatusBadge";
-import { Bot, Loader2, Wallet, TrendingUp, CalendarDays, Activity, AlertTriangle, BarChart3, Search, Star, ChevronDown } from "lucide-react";
+import { Bot, Loader2, Wallet, TrendingUp, CalendarDays, Activity, AlertTriangle, BarChart3, Search, Star, ChevronDown, ExternalLink } from "lucide-react";
 import { InfoTip } from "@/components/InfoTip";
 import { strategyShortName } from "@/lib/strategy-names";
 import { useShortlist } from "@/lib/hooks/use-shortlist";
@@ -96,6 +96,20 @@ export default function BotsPage() {
       await mutateBots();
     } catch (err) {
       setActionError(err instanceof Error ? err.message : "Failed to stop bot");
+    } finally {
+      setActingBotId(null);
+    }
+  }
+
+  async function handleResume(id: string) {
+    if (actingBotId) return;
+    setActingBotId(id);
+    setActionError(null);
+    try {
+      await api.resumeBot(id);
+      await mutateBots();
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : "Failed to resume bot");
     } finally {
       setActingBotId(null);
     }
@@ -393,6 +407,18 @@ export default function BotsPage() {
                     </td>
                     <td className="text-right">
                       <div className="flex items-center justify-end gap-2">
+                        <Link href={`/bots/${bot.id}`} className="btn-ghost text-xs px-2 py-1 rounded" title="View bot detail">
+                          <ExternalLink size={11} />
+                        </Link>
+                        {bot.state === "paused" && (
+                          <button
+                            onClick={() => handleResume(bot.id)}
+                            disabled={!!actingBotId}
+                            className="btn-ghost text-xs px-2 py-1 rounded text-primary disabled:opacity-40"
+                          >
+                            {actingBotId === bot.id ? <Loader2 size={12} className="animate-spin inline" /> : "Resume"}
+                          </button>
+                        )}
                         {bot.state === "monitoring" && (
                           <button
                             onClick={() => handlePause(bot.id)}
@@ -460,6 +486,18 @@ export default function BotsPage() {
                       </td>
                       <td className="text-right">
                         <div className="flex items-center justify-end gap-2">
+                          <Link href={`/bots/${b.bot_id}`} className="btn-ghost text-xs px-2 py-1 rounded" title="View bot detail">
+                            <ExternalLink size={11} />
+                          </Link>
+                          {b.state === "paused" && (
+                            <button
+                              onClick={() => handleResume(b.bot_id)}
+                              disabled={!!actingBotId}
+                              className="btn-ghost text-xs px-2 py-1 rounded text-primary disabled:opacity-40"
+                            >
+                              {actingBotId === b.bot_id ? <Loader2 size={12} className="animate-spin inline" /> : "Resume"}
+                            </button>
+                          )}
                           {b.state === "monitoring" && (
                             <button
                               onClick={() => handlePause(b.bot_id)}

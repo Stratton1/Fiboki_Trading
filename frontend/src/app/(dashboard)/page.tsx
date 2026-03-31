@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import useSWR from "swr";
 import { useAuth } from "@/lib/auth";
@@ -206,13 +207,36 @@ type ShortlistEntry = {
 export default function DashboardPage() {
   const { user } = useAuth();
   const { data: account } = useAccount();
+  const [killSwitchLoading, setKillSwitchLoading] = useState(false);
+
+  async function handleKillSwitch() {
+    if (killSwitchLoading) return;
+    if (killSwitchActive) {
+      if (!confirm("Deactivate kill switch? Bots will resume normal operation.")) return;
+    } else {
+      if (!confirm("Activate kill switch? This will halt all new trades immediately.")) return;
+    }
+    setKillSwitchLoading(true);
+    try {
+      if (killSwitchActive) {
+        await api.deactivateKillSwitch();
+      } else {
+        await api.activateKillSwitch("Dashboard emergency stop");
+      }
+      await mutateKillSwitch();
+    } catch {
+      // silent — user can retry
+    } finally {
+      setKillSwitchLoading(false);
+    }
+  }
   const { data: fleet } = useSWR("/paper/fleet", () => api.fleet(), { refreshInterval: 10000 });
   const { data: jobsData } = useSWR("/jobs", () => api.listJobs(), { refreshInterval: 5000 });
   const { data: alertsData } = useSWR("/alerts?limit=5", () => api.listAlerts("limit=5"), { refreshInterval: 30000 });
   const { data: shortlist } = useSWR("/research/shortlist", () => api.listShortlist());
   const { data: systemStatus } = useSWR("/system/status", () => api.systemStatus(), { refreshInterval: 30000 });
   const { data: execMode } = useSWR("/execution/mode", () => api.executionMode(), { refreshInterval: 15000 });
-  const { data: killSwitch } = useSWR("/execution/kill-switch", () => api.killSwitchStatus(), { refreshInterval: 15000 });
+  const { data: killSwitch, mutate: mutateKillSwitch } = useSWR("/execution/kill-switch", () => api.killSwitchStatus(), { refreshInterval: 15000 });
   const isIgDemo = (execMode?.mode ?? systemStatus?.execution_mode) === "ig_demo";
   const { data: igHealth } = useSWR(
     isIgDemo ? "/execution/ig-health" : null,
@@ -557,12 +581,27 @@ export default function DashboardPage() {
                 {killSwitchActive ? <ShieldAlert size={14} className="text-danger" /> : <ShieldCheck size={14} className="text-primary" />}
                 <span className="text-sm">
                   Kill Switch
-                  <InfoTip text="Emergency stop for all execution. When active, no new trades are opened. Activate from System page if needed." />
+                  <InfoTip text="Emergency stop for all execution. When active, no new trades are opened." />
                 </span>
               </div>
-              <StatusBadge variant={killSwitchActive ? "error" : "ok"}>
-                {killSwitchActive ? "ACTIVE" : "Off"}
-              </StatusBadge>
+              <button
+                onClick={handleKillSwitch}
+                disabled={killSwitchLoading}
+                className={`flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-lg font-medium transition-colors disabled:opacity-50 ${
+                  killSwitchActive
+                    ? "bg-red-100 text-red-700 hover:bg-red-200"
+                    : "bg-green-100 text-green-700 hover:bg-green-200"
+                }`}
+              >
+                {killSwitchLoading ? (
+                  <Loader2 size={11} className="animate-spin" />
+                ) : killSwitchActive ? (
+                  <ShieldAlert size={11} />
+                ) : (
+                  <ShieldCheck size={11} />
+                )}
+                {killSwitchActive ? "ACTIVE — Deactivate" : "Off — Activate"}
+              </button>
             </div>
 
             {/* Database */}

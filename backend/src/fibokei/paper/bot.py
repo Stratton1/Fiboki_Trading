@@ -1,5 +1,6 @@
 """Paper trading bot — wraps a strategy with an account."""
 
+import logging
 from enum import Enum
 
 import pandas as pd
@@ -9,6 +10,8 @@ from fibokei.core.models import Timeframe
 from fibokei.core.trades import ExitReason
 from fibokei.paper.account import PaperAccount
 from fibokei.strategies.base import Strategy
+
+logger = logging.getLogger("fibokei.paper.bot")
 
 
 class BotState(str, Enum):
@@ -30,6 +33,7 @@ class PaperBot:
         timeframe: Timeframe,
         account: PaperAccount,
         risk_pct: float = 1.0,
+        adapter=None,  # ExecutionAdapter | None
     ):
         self.bot_id = bot_id
         self.strategy = strategy
@@ -37,9 +41,11 @@ class PaperBot:
         self.timeframe = timeframe
         self.account = account
         self.risk_pct = risk_pct
+        self._adapter = adapter
 
         self.state = BotState.IDLE
         self.position: Position | None = None
+        self._deal_id: str | None = None  # live deal reference when adapter is active
         self.bars_seen = 0
         self._df: pd.DataFrame | None = None
         self._prepared = False
@@ -103,6 +109,16 @@ class PaperBot:
 
             if exit_reason is not None:
                 exit_price = self._get_exit_price(current_bar, exit_reason)
+                # Close live position via adapter if available
+                if self._adapter is not None and self._deal_id is not None:
+                    try:
+                        self._adapter.close_position(self._deal_id)
+                    except Exception:
+                        logger.exception(
+                            "Bot %s: adapter failed to close deal %s",
+                            self.bot_id, self._deal_id,
+                        )
+                self._deal_id = None
                 trade = self.position.close(exit_price, bar_time, exit_reason)
                 self.account.record_trade(trade)
                 # Remove from open positions
@@ -136,9 +152,28 @@ class PaperBot:
                         position_size=pos_size,
                         max_bars_in_trade=plan.max_bars_in_trade or 100,
                     )
+                    # Place live order via adapter if available
+                    if self._adapter is not None:
+                        try:
+                            order = {
+                                "instrument": self.instrument,
+                                "direction": signal.direction.value,
+                                "size": pos_size,
+                                "entry": entry_price,
+                                "stop_loss": plan.stop_loss,
+                                "take_profit": plan.take_profit_targets[0] if plan.take_profit_targets else None,
+                                "bot_id": self.bot_id,
+                            }
+                            result = self._adapter.place_order(order)
+                            self._deal_id = result.get("deal_id") or result.get("dealId")
+                        except Exception:
+                            logger.exception(
+                                "Bot %s: adapter failed to place order for %s",
+                                self.bot_id, self.instrument,
+                            )
                     self.state = BotState.POSITION_OPEN
                     self.account.open_positions.append(self.position.to_dict())
-                    return {"event": "trade_opened", "signal": signal}
+                    return {"event": "trade_opened", "signal": signal, "deal_id": self._deal_id}
 
         return None
 

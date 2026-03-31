@@ -828,19 +828,17 @@ export default function ResearchPage() {
                   >
                     Analyse
                   </button>
-                  {r.composite_score >= PROMOTION_THRESHOLD && (
-                    <button
-                      onClick={() => setPromoteTarget({
-                        strategy_id: r.strategy_id,
-                        instrument: r.instrument,
-                        timeframe: r.timeframe,
-                        composite_score: r.composite_score,
-                      })}
-                      className="text-xs text-green-600 hover:underline"
-                    >
-                      Promote
-                    </button>
-                  )}
+                  <button
+                    onClick={() => setPromoteTarget({
+                      strategy_id: r.strategy_id,
+                      instrument: r.instrument,
+                      timeframe: r.timeframe,
+                      composite_score: r.composite_score,
+                    })}
+                    className="text-xs text-green-600 hover:underline"
+                  >
+                    Create Bot
+                  </button>
                   <button
                     onClick={async () => {
                       await api.deleteSingleResult(r.id);
