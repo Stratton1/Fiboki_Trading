@@ -212,7 +212,7 @@ export default function BotDetailPage({ params }: { params: Promise<{ id: string
       {equityCurve.length > 1 && (
         <div className="card mb-6">
           <p className="section-label mb-3">Equity Curve</p>
-          <EquityCurve curve={equityCurve} />
+          <EquityCurve data={equityCurve} />
         </div>
       )}
 
