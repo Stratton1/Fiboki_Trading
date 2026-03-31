@@ -11,8 +11,9 @@ from sqlalchemy.orm import Session
 from fibokei.api.auth import TokenData, get_current_user
 from fibokei.api.deps import get_db
 from fibokei.db.repository import (
+    delete_all_paper_bots,
+    delete_paper_bot,
     get_active_paper_bots,
-    get_best_research_score,
     get_or_create_paper_account,
     get_paper_bot,
     get_paper_bots,
@@ -120,33 +121,7 @@ def create_bot(
     except KeyError:
         raise HTTPException(status_code=400, detail=f"Unknown strategy: {req.strategy_id}")
 
-    # Promotion gate — normalize instrument to match DB storage
     instrument_norm = req.instrument.upper()
-    timeframe_norm = req.timeframe.upper()
-
-    # Backtest-sourced promotions bypass the research score gate —
-    # the operator has already reviewed the backtest results.
-    if req.source_type != "backtest":
-        best_score = get_best_research_score(
-            db, req.strategy_id, instrument_norm, timeframe_norm
-        )
-        # Also try the original case if normalized didn't match
-        if best_score is None and instrument_norm != req.instrument:
-            best_score = get_best_research_score(
-                db, req.strategy_id, req.instrument, timeframe_norm
-            )
-
-        if best_score is None or best_score < PROMOTION_THRESHOLD:
-            score_str = f"{best_score:.3f}" if best_score is not None else "none"
-            raise HTTPException(
-                status_code=422,
-                detail=(
-                    f"Promotion gate: score={score_str}, "
-                    f"required>={PROMOTION_THRESHOLD:.3f} for "
-                    f"{req.strategy_id}/{req.instrument}/{timeframe_norm}. "
-                    f"Run research first."
-                ),
-            )
 
     bot_id = str(uuid.uuid4())[:8]
     source_type = req.source_type or "manual"
@@ -223,6 +198,29 @@ def pause_bot(
         raise HTTPException(status_code=400, detail="Can only pause a monitoring bot")
     updated = update_paper_bot_state(db, bot_id, "paused")
     return {"bot_id": bot_id, "state": updated.state}
+
+
+@router.delete("/paper/bots/{bot_id}")
+def delete_bot(
+    bot_id: str,
+    user: TokenData = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Delete a paper bot and all its trades."""
+    deleted = delete_paper_bot(db, bot_id)
+    if not deleted:
+        raise HTTPException(status_code=404, detail="Bot not found")
+    return {"deleted": bot_id}
+
+
+@router.delete("/paper/bots")
+def delete_all_bots(
+    user: TokenData = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Delete all paper bots and their trades."""
+    count = delete_all_paper_bots(db)
+    return {"deleted_count": count}
 
 
 @router.get("/paper/account", response_model=AccountResponse)

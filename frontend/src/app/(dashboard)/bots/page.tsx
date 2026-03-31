@@ -101,6 +101,31 @@ export default function BotsPage() {
     }
   }
 
+  async function handleDelete(id: string) {
+    if (actingBotId) return;
+    setActingBotId(id);
+    setActionError(null);
+    try {
+      await api.deleteBot(id);
+      await mutateBots();
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : "Failed to delete bot");
+    } finally {
+      setActingBotId(null);
+    }
+  }
+
+  async function handleDeleteAll() {
+    if (!confirm("Delete all paper bots and their trade history? This cannot be undone.")) return;
+    setActionError(null);
+    try {
+      await api.deleteAllBots();
+      await mutateBots();
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : "Failed to delete bots");
+    }
+  }
+
   const balance = account?.balance ?? 0;
   const equity = account?.equity ?? 0;
   const dailyPnl = account?.daily_pnl ?? 0;
@@ -292,13 +317,21 @@ export default function BotsPage() {
       )}
 
       {/* View controls */}
-      <div className="flex items-center gap-3 mb-3">
+      <div className="flex items-center justify-between gap-3 mb-3">
         <button
           onClick={() => setGroupBy(groupBy === "none" ? "strategy" : "none")}
           className={`text-xs px-3 py-1 rounded border ${groupBy === "strategy" ? "bg-primary/10 border-primary text-primary" : "border-gray-200"}`}
         >
           {groupBy === "strategy" ? "Grouped by Strategy" : "Group by Strategy"}
         </button>
+        {botList.length > 0 && (
+          <button
+            onClick={handleDeleteAll}
+            className="text-xs px-3 py-1 rounded border border-red-200 text-red-600 hover:bg-red-50 transition-colors"
+          >
+            Delete All Bots
+          </button>
+        )}
       </div>
 
       {/* Bot List */}
@@ -378,6 +411,14 @@ export default function BotsPage() {
                             {actingBotId === bot.id ? <Loader2 size={12} className="animate-spin inline" /> : "Stop"}
                           </button>
                         )}
+                        <button
+                          onClick={() => handleDelete(bot.id)}
+                          disabled={!!actingBotId}
+                          className="text-xs px-2 py-1 rounded text-foreground-muted hover:text-red-600 hover:bg-red-50 transition-colors disabled:opacity-40"
+                          title="Delete bot and trade history"
+                        >
+                          {actingBotId === bot.id ? <Loader2 size={12} className="animate-spin inline" /> : "Delete"}
+                        </button>
                       </div>
                     </td>
                   </tr>
@@ -437,6 +478,14 @@ export default function BotsPage() {
                               {actingBotId === b.bot_id ? <Loader2 size={12} className="animate-spin inline" /> : "Stop"}
                             </button>
                           )}
+                          <button
+                            onClick={() => handleDelete(b.bot_id)}
+                            disabled={!!actingBotId}
+                            className="text-xs px-2 py-1 rounded text-foreground-muted hover:text-red-600 hover:bg-red-50 transition-colors disabled:opacity-40"
+                            title="Delete bot and trade history"
+                          >
+                            {actingBotId === b.bot_id ? <Loader2 size={12} className="animate-spin inline" /> : "Delete"}
+                          </button>
                         </div>
                       </td>
                     </tr>

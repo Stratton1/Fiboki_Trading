@@ -635,6 +635,31 @@ def get_active_paper_bots(session: Session) -> list[PaperBotModel]:
     return list(session.scalars(stmt).all())
 
 
+def delete_paper_bot(session: Session, bot_id: str) -> bool:
+    """Delete a paper bot and its trades. Returns True if deleted."""
+    bot = get_paper_bot(session, bot_id)
+    if not bot:
+        return False
+    # Delete associated trades first
+    from fibokei.db.models import PaperTradeModel
+    session.query(PaperTradeModel).where(PaperTradeModel.bot_id == bot_id).delete()
+    session.delete(bot)
+    session.commit()
+    return True
+
+
+def delete_all_paper_bots(session: Session) -> int:
+    """Delete all paper bots and their trades. Returns count deleted."""
+    from fibokei.db.models import PaperTradeModel
+    bots = get_paper_bots(session)
+    count = len(bots)
+    session.query(PaperTradeModel).delete()
+    for bot in bots:
+        session.delete(bot)
+    session.commit()
+    return count
+
+
 def update_paper_bot_state(
     session: Session,
     bot_id: str,

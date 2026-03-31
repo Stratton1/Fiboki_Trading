@@ -225,6 +225,8 @@ export const api = {
   getBot: (id: string) => apiFetch(`/paper/bots/${id}`),
   stopBot: (id: string) => apiFetch(`/paper/bots/${id}/stop`, { method: "POST" }),
   pauseBot: (id: string) => apiFetch(`/paper/bots/${id}/pause`, { method: "POST" }),
+  deleteBot: (id: string) => apiFetch<{ deleted: string }>(`/paper/bots/${id}`, { method: "DELETE" }),
+  deleteAllBots: () => apiFetch<{ deleted_count: number }>(`/paper/bots`, { method: "DELETE" }),
   account: () => apiFetch("/paper/account"),
   fleet: () => apiFetch<{
     total_bots: number;
