@@ -197,10 +197,18 @@ async def lifespan(app: FastAPI):
     # Log data directory resolution for diagnostics
     _log_data_paths()
 
+    # Start background paper worker thread
+    worker_thread, paper_worker = _start_worker_thread(session_factory)
+
     logger = logging.getLogger("fibokei.startup")
     logger.info("Fiboki Trading API started — database=%s", "postgresql" if "postgresql" in DATABASE_URL else "sqlite")
 
     yield
+
+    # Graceful shutdown
+    if worker_thread is not None and paper_worker is not None:
+        paper_worker.stop()
+        worker_thread.join(timeout=10)
 
 
 def _validate_ig_config() -> None:
@@ -259,6 +267,42 @@ def _log_data_paths() -> None:
         logger.info("Starter dataset: %d parquet files", len(starter_files))
     if not canonical.exists() and not starter.exists():
         logger.warning("No data directories found — charts/backtests will return 404")
+
+
+def _start_worker_thread(session_factory):
+    """Start the paper trading worker as a daemon thread.
+
+    The worker polls for new candle data and feeds it to active bots.
+    When FIBOKEI_LIVE_EXECUTION_ENABLED=true, bot signals route through
+    the IG execution adapter (demo account).
+    """
+    import threading
+
+    from fibokei.worker import PaperWorker
+
+    logger = logging.getLogger("fibokei.startup")
+
+    try:
+        worker = PaperWorker(session_factory)
+        recovered = worker.recover()
+        logger.info("Paper worker: recovered %d active bots", recovered)
+
+        poll_interval = int(os.environ.get("FIBOKEI_WORKER_POLL_INTERVAL", "60"))
+
+        def _run():
+            logger.info(
+                "Paper worker thread started (poll=%ds, adapter=%s)",
+                poll_interval,
+                type(worker._adapter).__name__,
+            )
+            worker.run_loop(poll_interval=poll_interval)
+
+        thread = threading.Thread(target=_run, name="paper-worker", daemon=True)
+        thread.start()
+        return thread, worker
+    except Exception:
+        logger.exception("Failed to start paper worker thread")
+        return None, None
 
 
 def create_app() -> FastAPI:

@@ -22,6 +22,7 @@ from fibokei.db.repository import (
     get_active_paper_bots,
     get_or_create_paper_account,
     get_paper_bot,
+    get_paper_bots,
     save_paper_trade,
     update_paper_account,
     update_paper_bot_state,
@@ -264,6 +265,60 @@ class PaperWorker:
             self.account.reset_daily_pnl()
             logger.info("Daily summary sent via Telegram")
 
+    def sync_bots_from_db(self) -> int:
+        """Pick up newly created bots from DB that aren't in memory yet.
+        Returns count of new bots added."""
+        added = 0
+        with self.session_factory() as session:
+            active_bots = get_active_paper_bots(session)
+            for bot_model in active_bots:
+                if bot_model.bot_id in self.bots:
+                    continue  # already tracked
+                try:
+                    strategy = strategy_registry.get(bot_model.strategy_id)
+                    tf_enum = Timeframe(bot_model.timeframe.upper())
+                    bot = PaperBot(
+                        bot_id=bot_model.bot_id,
+                        strategy=strategy,
+                        instrument=bot_model.instrument,
+                        timeframe=tf_enum,
+                        account=self.account,
+                        risk_pct=bot_model.risk_pct,
+                        adapter=self._adapter,
+                    )
+                    bot.state = BotState(bot_model.state)
+                    bot.bars_seen = bot_model.bars_seen
+                    bot._last_evaluated_bar = bot_model.last_evaluated_bar
+                    self.bots[bot_model.bot_id] = bot
+                    added += 1
+                    logger.info(
+                        "Picked up new bot %s: %s/%s/%s",
+                        bot_model.bot_id,
+                        bot_model.strategy_id,
+                        bot_model.instrument,
+                        bot_model.timeframe,
+                    )
+                except (KeyError, ValueError) as e:
+                    logger.error("Failed to load bot %s: %s", bot_model.bot_id, e)
+
+            # Sync state changes (pause/stop/resume) from DB → memory
+            all_db_bots = {b.bot_id: b for b in get_paper_bots(session)}
+            for bot_id, bot in list(self.bots.items()):
+                db_bot = all_db_bots.get(bot_id)
+                if db_bot is None:
+                    # Deleted from DB — remove from memory
+                    del self.bots[bot_id]
+                    logger.info("Removed deleted bot %s from worker", bot_id)
+                elif db_bot.state != bot.state.value:
+                    # State changed via API (pause/stop/resume)
+                    try:
+                        bot.state = BotState(db_bot.state)
+                        logger.info("Bot %s state synced to %s", bot_id, db_bot.state)
+                    except ValueError:
+                        pass
+
+        return added
+
     def run_loop(self, poll_interval: int = DEFAULT_POLL_INTERVAL) -> None:
         """Main worker loop. Evaluates bots at poll_interval cadence."""
         self._running = True
@@ -272,8 +327,19 @@ class PaperWorker:
             poll_interval, self.dry_run, len(self.bots),
         )
 
+        cycles_since_sync = 0
+        SYNC_EVERY = 5  # Re-sync bots from DB every N cycles
+
         while self._running:
             try:
+                # Periodically pick up new/changed bots from DB
+                cycles_since_sync += 1
+                if cycles_since_sync >= SYNC_EVERY:
+                    new = self.sync_bots_from_db()
+                    if new > 0:
+                        logger.info("Synced %d new bots from DB", new)
+                    cycles_since_sync = 0
+
                 result = self.evaluate_once()
                 trade_events = [
                     e for e in result["events"] if e.get("event") == "trade_closed"

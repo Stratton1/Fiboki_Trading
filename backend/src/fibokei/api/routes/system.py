@@ -22,6 +22,7 @@ class SystemStatusResponse(BaseModel):
     api_version: str
     database: str
     paper_engine: str
+    worker_bots: int
     strategies_loaded: int
     execution_mode: str
     kill_switch_active: bool
@@ -64,8 +65,14 @@ def system_status(
     except Exception:
         db_status = "error"
 
-    # Paper engine status
-    paper_status = "standby"
+    # Paper engine status — check if background worker thread is alive
+    import threading
+
+    worker_thread = next(
+        (t for t in threading.enumerate() if t.name == "paper-worker"), None
+    )
+    paper_status = "running" if worker_thread and worker_thread.is_alive() else "stopped"
+    worker_bots = 0
 
     # Count loaded strategies
     from fibokei.strategies.registry import strategy_registry
@@ -92,6 +99,7 @@ def system_status(
         api_version="1.0.0",
         database=db_status,
         paper_engine=paper_status,
+        worker_bots=worker_bots,
         strategies_loaded=strategies_loaded,
         execution_mode=flags.execution_mode,
         kill_switch_active=ks.is_active,
