@@ -1183,7 +1183,7 @@ export default function ResearchPage() {
                 className="btn btn-primary text-sm"
                 disabled={promoteLoading}
               >
-                {promoteLoading ? "Creating..." : "Create Paper Bot"}
+                {promoteLoading ? "Creating..." : "Create Bot"}
               </button>
             </div>
           </div>

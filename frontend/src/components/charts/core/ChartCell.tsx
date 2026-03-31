@@ -391,7 +391,7 @@ export default function ChartCell({
             <a
               href="/bots"
               className="flex items-center gap-0.5 px-1.5 py-0.5 text-[10px] text-foreground-muted hover:text-primary rounded hover:bg-background-muted transition"
-              title="Paper Bots"
+              title="Bots"
               data-testid="link-bots"
             >
               <Bot size={10} />

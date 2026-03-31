@@ -416,7 +416,7 @@ export default function DashboardPage() {
             <p className="text-lg font-bold tabular-nums">{fleetTrades}</p>
           </div>
           <div>
-            <p className="text-xs text-foreground-muted">Fleet PnL<InfoTip text="Aggregate PnL across all paper bots, including stopped bots." /></p>
+            <p className="text-xs text-foreground-muted">Fleet PnL<InfoTip text="Aggregate PnL across all bots, including stopped bots." /></p>
             <p className={`text-lg font-bold tabular-nums ${fleetPnl >= 0 ? "text-primary" : "text-danger"}`}>
               {formatPnl(fleetPnl, currency)}
             </p>
@@ -433,7 +433,7 @@ export default function DashboardPage() {
         {staleBots > 0 && (
           <div className="mt-3 flex items-center gap-2 text-xs text-amber-700 bg-amber-50 rounded-lg px-3 py-2">
             <AlertTriangle size={13} />
-            {staleBots} bot{staleBots !== 1 ? "s" : ""} with stale data — check <Link href="/bots" className="underline font-medium">Paper Bots</Link>
+            {staleBots} bot{staleBots !== 1 ? "s" : ""} with stale data — check <Link href="/bots" className="underline font-medium">Bots</Link>
           </div>
         )}
       </div>
@@ -478,7 +478,7 @@ export default function DashboardPage() {
           <div className="flex flex-col gap-2">
             <QuickAction href="/backtests" icon={BarChart3} label="Run Backtest" primary />
             <QuickAction href="/research" icon={Search} label="Research Matrix" />
-            <QuickAction href="/bots" icon={Bot} label="Paper Bots" />
+            <QuickAction href="/bots" icon={Bot} label="Bots" />
             <QuickAction href="/charts" icon={ChartCandlestick} label="View Charts" />
             <QuickAction href="/alerts" icon={Bell} label="Alerts" badge={unreadAlerts} />
             <QuickAction href="/jobs" icon={ListTodo} label="Jobs" badge={activeJobs} />
@@ -533,8 +533,8 @@ export default function DashboardPage() {
                         </span>
                       </td>
                       <td className="py-1.5 text-right">
-                        <Link href="/bots" className="text-xs text-primary hover:underline" title="Promote to Paper Bot">
-                          Promote
+                        <Link href="/bots" className="text-xs text-primary hover:underline" title="Create Bot">
+                          Create Bot
                         </Link>
                       </td>
                     </tr>

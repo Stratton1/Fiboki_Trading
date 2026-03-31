@@ -31,7 +31,7 @@ const NAV_ITEMS = [
   { href: "/backtests", label: "Backtests", icon: BarChart3 },
   { href: "/scenarios", label: "Scenarios", icon: Layers },
   { href: "/jobs", label: "Jobs", icon: ListTodo },
-  { href: "/bots", label: "Paper Bots", icon: Bot },
+  { href: "/bots", label: "Bots", icon: Bot },
   { href: "/exposure", label: "Exposure", icon: Shield },
   { href: "/trades", label: "Trade History", icon: History },
   { href: "/alerts", label: "Alerts", icon: Bell },

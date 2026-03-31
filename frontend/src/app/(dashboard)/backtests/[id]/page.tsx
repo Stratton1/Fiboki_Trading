@@ -197,7 +197,7 @@ export default function BacktestDetailPage({ params }: { params: Promise<{ id: s
             disabled={createBotLoading || !!createBotResult}
             className="btn btn-primary text-sm disabled:opacity-50"
           >
-            {createBotLoading ? "Creating..." : createBotResult ? createBotResult : "Create Paper Bot"}
+            {createBotLoading ? "Creating..." : createBotResult ? createBotResult : "Create Bot"}
           </button>
         </div>
       </div>

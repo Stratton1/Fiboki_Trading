@@ -18,7 +18,7 @@ import { useShortlist } from "@/lib/hooks/use-shortlist";
 import Link from "next/link";
 
 interface BotItem {
-  id: string;
+  bot_id: string;
   strategy_id: string;
   instrument: string;
   timeframe: string;
@@ -37,6 +37,13 @@ export default function BotsPage() {
   const { data: fleet } = useSWR("/paper/fleet", () => api.fleet(), { refreshInterval: 5000 });
   const { data: strategies } = useSWR("strategies", () => api.strategies());
   const { data: instruments } = useSWR("instruments", () => api.instruments());
+  const { data: execMode } = useSWR("/execution/mode", () => api.executionMode(), { refreshInterval: 30000 });
+  const isIgDemo = execMode?.mode === "ig_demo";
+  const { data: igHealth } = useSWR(
+    isIgDemo ? "/execution/ig-health" : null,
+    () => api.igHealth(),
+    { refreshInterval: 30000 }
+  );
   const { filterSet } = useWatchlists();
   const [strategy, setStrategy] = useState("");
   const [instrument, setInstrument] = useState("");
@@ -130,7 +137,7 @@ export default function BotsPage() {
   }
 
   async function handleDeleteAll() {
-    if (!confirm("Delete all paper bots and their trade history? This cannot be undone.")) return;
+    if (!confirm("Delete all bots and their trade history? This cannot be undone.")) return;
     setActionError(null);
     try {
       await api.deleteAllBots();
@@ -140,8 +147,9 @@ export default function BotsPage() {
     }
   }
 
-  const balance = account?.balance ?? 0;
-  const equity = account?.equity ?? 0;
+  const igBal = isIgDemo && igHealth?.balance != null ? igHealth.balance : null;
+  const balance = igBal ?? (account?.balance ?? 0);
+  const equity = igBal ?? (account?.equity ?? 0);
   const dailyPnl = account?.daily_pnl ?? 0;
   const currency = account?.currency ?? "GBP";
   const sym = getCurrencySymbol(currency);
@@ -161,8 +169,8 @@ export default function BotsPage() {
   return (
     <div className="max-w-6xl">
       <PageHeader
-        title="Paper Bots"
-        subtitle="Manage paper trading bots and monitor fleet performance"
+        title="Bots"
+        subtitle="Manage trading bots and monitor fleet performance"
       />
 
       {/* Fleet Summary */}
@@ -202,7 +210,7 @@ export default function BotsPage() {
         </div>
         <div className="stat-card">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-medium uppercase tracking-wide text-foreground-muted">Fleet PnL<InfoTip text="Aggregate profit/loss across all paper bots. Combines realised and unrealised PnL from every active and stopped bot." /></span>
+            <span className="text-xs font-medium uppercase tracking-wide text-foreground-muted">Fleet PnL<InfoTip text="Aggregate profit/loss across all bots. Combines realised and unrealised PnL from every active and stopped bot." /></span>
             <BarChart3 size={14} className="text-foreground-muted" />
           </div>
           <p className={`text-xl font-bold tracking-tight ${(fleet?.aggregate_pnl ?? 0) >= 0 ? "text-primary" : "text-danger"}`}>
@@ -248,15 +256,16 @@ export default function BotsPage() {
       {/* Workflow explainer (show when no bots exist) */}
       {botList.length === 0 && (
         <div className="rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-xs text-blue-800 mb-6">
-          <strong>How Paper Bots work:</strong> A paper bot monitors a strategy/instrument/timeframe combo in real time using simulated capital.
-          No real money is at risk. The recommended path: <strong>Research</strong> (find promising combos) → <strong>Save to Shortlist</strong> → <strong>Promote to Paper Bot</strong> → observe performance before going live.
+          <strong>How Bots work:</strong> A bot monitors a strategy/instrument/timeframe combo in real time.
+          {isIgDemo ? " Orders are routed to your IG demo account." : " No real money is at risk."}
+          {" "}The recommended path: <strong>Research</strong> (find promising combos) → <strong>Save to Shortlist</strong> → <strong>Create Bot</strong> → observe performance.
           You can also add bots manually below.
         </div>
       )}
 
       {/* Add Bot Form */}
       <form onSubmit={handleCreate} className="card-elevated mb-6">
-        <p className="section-label">Add Bot<InfoTip text="Creates a paper bot that monitors this strategy/instrument/timeframe combo. The bot starts in 'monitoring' state and evaluates signals on each new candle close." /></p>
+        <p className="section-label">Add Bot<InfoTip text="Creates a bot that monitors this strategy/instrument/timeframe combo. The bot starts in 'monitoring' state and evaluates signals on each new candle close." /></p>
         <div className="flex flex-wrap gap-3 items-end">
           <div>
             <label className="block text-xs text-foreground-muted mb-1.5">Strategy</label>
@@ -368,8 +377,8 @@ export default function BotsPage() {
                 <td colSpan={7}>
                   <EmptyState
                     icon={<Bot size={36} strokeWidth={1.5} />}
-                    title="No paper bots yet"
-                    description="Paper bots simulate live trading with no real money. Add one manually above, or promote a top-scoring combo from your Research shortlist."
+                    title="No bots yet"
+                    description={isIgDemo ? "Create a bot to start trading on your IG demo account. Add one manually above, or promote a top-scoring combo from Research." : "Bots monitor strategies in real time. Add one manually above, or promote a top-scoring combo from your Research shortlist."}
                   />
                   <div className="flex justify-center gap-3 pb-4">
                     <Link href="/research" className="btn btn-secondary text-sm">
@@ -382,9 +391,9 @@ export default function BotsPage() {
             )}
             {groupBy === "none" ? (
               botList.map((bot) => {
-                const fleetBot = fleetBots.find((fb) => fb.bot_id === bot.id);
+                const fleetBot = fleetBots.find((fb) => fb.bot_id === bot.bot_id);
                 return (
-                  <tr key={bot.id} className={fleetBot?.is_stale ? "bg-amber-50/50" : ""}>
+                  <tr key={bot.bot_id} className={fleetBot?.is_stale ? "bg-amber-50/50" : ""}>
                     <td>
                       <span className="font-medium">{bot.strategy_id}</span>
                       <span className="block text-[10px] text-foreground-muted truncate max-w-[160px]">{strategyShortName(bot.strategy_id)}</span>
@@ -407,43 +416,43 @@ export default function BotsPage() {
                     </td>
                     <td className="text-right">
                       <div className="flex items-center justify-end gap-2">
-                        <Link href={`/bots/${bot.id}`} className="btn-ghost text-xs px-2 py-1 rounded" title="View bot detail">
+                        <Link href={`/bots/${bot.bot_id}`} className="btn-ghost text-xs px-2 py-1 rounded" title="View bot detail">
                           <ExternalLink size={11} />
                         </Link>
                         {bot.state === "paused" && (
                           <button
-                            onClick={() => handleResume(bot.id)}
+                            onClick={() => handleResume(bot.bot_id)}
                             disabled={!!actingBotId}
                             className="btn-ghost text-xs px-2 py-1 rounded text-primary disabled:opacity-40"
                           >
-                            {actingBotId === bot.id ? <Loader2 size={12} className="animate-spin inline" /> : "Resume"}
+                            {actingBotId === bot.bot_id ? <Loader2 size={12} className="animate-spin inline" /> : "Resume"}
                           </button>
                         )}
                         {bot.state === "monitoring" && (
                           <button
-                            onClick={() => handlePause(bot.id)}
+                            onClick={() => handlePause(bot.bot_id)}
                             disabled={!!actingBotId}
                             className="btn-ghost text-xs px-2 py-1 rounded disabled:opacity-40"
                           >
-                            {actingBotId === bot.id ? <Loader2 size={12} className="animate-spin inline" /> : "Pause"}
+                            {actingBotId === bot.bot_id ? <Loader2 size={12} className="animate-spin inline" /> : "Pause"}
                           </button>
                         )}
                         {bot.state !== "stopped" && (
                           <button
-                            onClick={() => handleStop(bot.id)}
+                            onClick={() => handleStop(bot.bot_id)}
                             disabled={!!actingBotId}
                             className="text-xs px-2 py-1 rounded text-danger hover:bg-red-50 transition-colors disabled:opacity-40"
                           >
-                            {actingBotId === bot.id ? <Loader2 size={12} className="animate-spin inline" /> : "Stop"}
+                            {actingBotId === bot.bot_id ? <Loader2 size={12} className="animate-spin inline" /> : "Stop"}
                           </button>
                         )}
                         <button
-                          onClick={() => handleDelete(bot.id)}
+                          onClick={() => handleDelete(bot.bot_id)}
                           disabled={!!actingBotId}
                           className="text-xs px-2 py-1 rounded text-foreground-muted hover:text-red-600 hover:bg-red-50 transition-colors disabled:opacity-40"
                           title="Delete bot and trade history"
                         >
-                          {actingBotId === bot.id ? <Loader2 size={12} className="animate-spin inline" /> : "Delete"}
+                          {actingBotId === bot.bot_id ? <Loader2 size={12} className="animate-spin inline" /> : "Delete"}
                         </button>
                       </div>
                     </td>

@@ -154,7 +154,7 @@ export default function TradesPage() {
                   <EmptyState
                     icon={<History size={36} strokeWidth={1.5} />}
                     title="No trades recorded"
-                    description="Trades from backtests and paper bots will appear here."
+                    description="Trades from backtests and bots will appear here."
                   />
                 </td>
               </tr>

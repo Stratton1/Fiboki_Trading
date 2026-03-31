@@ -260,7 +260,7 @@ export default function ExposurePage() {
           <EmptyState
             icon={<Gauge size={36} strokeWidth={1.5} />}
             title="No open positions"
-            description="Exposure data appears when paper bots have open positions."
+            description="Exposure data appears when bots have open positions."
           />
         ) : (
           <div className="table-container">

@@ -777,7 +777,7 @@ export default function BacktestsPage() {
           <LineChart size={12} /> Charts
         </Link>
         <Link href="/bots" className="flex items-center gap-1 hover:text-primary transition-colors">
-          <Bot size={12} /> Paper Bots
+          <Bot size={12} /> Bots
         </Link>
         <Link href="/backtests/compare" className="flex items-center gap-1 hover:text-primary transition-colors">
           <GitCompareArrows size={12} /> Compare
