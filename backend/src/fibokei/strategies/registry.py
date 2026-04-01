@@ -19,6 +19,7 @@ from fibokei.strategies.bot13_golden_zone import GoldenZonePullback
 from fibokei.strategies.bot15_momentum_continuation import MomentumContinuation
 from fibokei.strategies.bot16_golden_momentum import GoldenMomentumConfluence
 from fibokei.strategies.bot17_gartley_harmonic import GartleyHarmonicReversal
+from fibokei.strategies.bot18_fib_ma_confluence import FibMAConfluence
 
 
 class StrategyRegistry:
@@ -75,3 +76,4 @@ strategy_registry.register(GoldenZonePullback)
 strategy_registry.register(MomentumContinuation)
 strategy_registry.register(GoldenMomentumConfluence)
 strategy_registry.register(GartleyHarmonicReversal)
+strategy_registry.register(FibMAConfluence)
