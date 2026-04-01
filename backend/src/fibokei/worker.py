@@ -179,11 +179,21 @@ class PaperWorker:
                         warmup_count = 120
                         if len(df) > warmup_count:
                             warmup = df.iloc[-warmup_count:-1]
+                            # Detach adapter during warmup so no IG orders
+                            # fire on historical bars
+                            saved_adapter = bot._adapter
+                            bot._adapter = None
                             for _, row in warmup.iterrows():
                                 bar_time = row["timestamp"]
                                 bar = row[["open", "high", "low", "close", "volume"]]
                                 bot.on_candle_close(bar, bar_time)
                                 bars_fed += 1
+                            # Close any position opened during warmup so
+                            # the bot starts clean for live evaluation
+                            if bot.position is not None:
+                                bot.position = None
+                                bot.state = BotState.MONITORING
+                            bot._adapter = saved_adapter
                             # Only the most recent bar is "new"
                             new_bars = df.iloc[-1:]
                         else:

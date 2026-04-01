@@ -155,13 +155,19 @@ class PaperBot:
                     # Place live order via adapter if available
                     if self._adapter is not None:
                         try:
+                            # Map LONG/SHORT → BUY/SELL for IG
+                            ig_dir = "BUY" if signal.direction.value == "LONG" else "SELL"
+                            # IG needs stop/limit as distance from entry (positive)
+                            stop_dist = abs(entry_price - plan.stop_loss) if plan.stop_loss else None
+                            tp = plan.take_profit_targets[0] if plan.take_profit_targets else None
+                            limit_dist = abs(tp - entry_price) if tp else None
                             order = {
                                 "instrument": self.instrument,
-                                "direction": signal.direction.value,
+                                "direction": ig_dir,
                                 "size": pos_size,
-                                "entry": entry_price,
-                                "stop_loss": plan.stop_loss,
-                                "take_profit": plan.take_profit_targets[0] if plan.take_profit_targets else None,
+                                "requested_price": entry_price,
+                                "stop_distance": stop_dist,
+                                "limit_distance": limit_dist,
                                 "bot_id": self.bot_id,
                             }
                             result = self._adapter.place_order(order)
