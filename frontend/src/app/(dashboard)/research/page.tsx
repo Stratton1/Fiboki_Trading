@@ -857,26 +857,29 @@ export default function ResearchPage() {
                 />
               </th>
               <th className="w-8 px-2"></th>
-              <th className="text-left px-4 py-3 font-medium text-foreground-muted">Rank</th>
-              <th className="text-left px-4 py-3 font-medium text-foreground-muted">Strategy</th>
-              <th className="text-left px-4 py-3 font-medium text-foreground-muted">Instrument</th>
-              <th className="text-left px-4 py-3 font-medium text-foreground-muted">TF</th>
-              {isAllRunsMode && <th className="text-left px-4 py-3 font-medium text-foreground-muted">Run</th>}
-              <th className="text-right px-4 py-3 font-medium text-foreground-muted">
-                Score<InfoTip text="Composite Score: weighted blend of Sharpe ratio, profit factor, return, drawdown, sample size, and stability. Higher = better risk-adjusted performance." />
-              </th>
-              <th className="text-right px-4 py-3 font-medium text-foreground-muted">Actions</th>
+              <th className="text-left px-3 py-3 font-medium text-foreground-muted">#</th>
+              <th className="text-left px-3 py-3 font-medium text-foreground-muted">Strategy</th>
+              <th className="text-left px-3 py-3 font-medium text-foreground-muted">Instrument</th>
+              <th className="text-left px-3 py-3 font-medium text-foreground-muted">TF</th>
+              {isAllRunsMode && <th className="text-left px-3 py-3 font-medium text-foreground-muted">Run</th>}
+              <th className="text-right px-3 py-3 font-medium text-foreground-muted">Score</th>
+              <th className="text-right px-3 py-3 font-medium text-foreground-muted">Trades</th>
+              <th className="text-right px-3 py-3 font-medium text-foreground-muted">Net PnL</th>
+              <th className="text-right px-3 py-3 font-medium text-foreground-muted">Sharpe</th>
+              <th className="text-right px-3 py-3 font-medium text-foreground-muted">Win%</th>
+              <th className="text-right px-3 py-3 font-medium text-foreground-muted">Max DD</th>
+              <th className="text-right px-3 py-3 font-medium text-foreground-muted">Actions</th>
             </tr>
           </thead>
           <tbody>
             {isLoading && (
               <tr>
-                <td colSpan={isAllRunsMode ? 9 : 8} className="px-4 py-8 text-center text-foreground-muted">Loading...</td>
+                <td colSpan={isAllRunsMode ? 15 : 14} className="px-4 py-8 text-center text-foreground-muted">Loading...</td>
               </tr>
             )}
             {!isLoading && (!rankings || rankings.length === 0) && (
               <tr>
-                <td colSpan={isAllRunsMode ? 9 : 8} className="px-4 py-8 text-center text-foreground-muted">
+                <td colSpan={isAllRunsMode ? 15 : 14} className="px-4 py-8 text-center text-foreground-muted">
                   No research results yet. Run a full sweep above or configure a custom research run.
                 </td>
               </tr>
@@ -899,20 +902,27 @@ export default function ResearchPage() {
                     onToggle={() => toggleBookmark("research_result", r.id)}
                   />
                 </td>
-                <td className="px-4 py-3 font-medium">{r.rank}</td>
-                <td className="px-4 py-3">
-                  <span className="font-medium">{r.strategy_id}</span>
-                  <span className="block text-[10px] text-foreground-muted truncate max-w-[160px]">{strategyShortName(r.strategy_id)}</span>
+                <td className="px-3 py-2 font-medium text-xs">{r.rank}</td>
+                <td className="px-3 py-2">
+                  <span className="font-medium text-sm">{r.strategy_id}</span>
+                  <span className="block text-[10px] text-foreground-muted truncate max-w-[140px]">{strategyShortName(r.strategy_id)}</span>
                 </td>
-                <td className="px-4 py-3">{r.instrument}</td>
-                <td className="px-4 py-3">{r.timeframe}</td>
-                {isAllRunsMode && <td className="px-4 py-3 text-xs text-foreground-muted">{r.run_id}</td>}
-                <td className="px-4 py-3 text-right font-medium">
-                  <span className={r.composite_score >= PROMOTION_THRESHOLD ? "text-green-600" : "text-foreground"}>
+                <td className="px-3 py-2 text-sm">{r.instrument}</td>
+                <td className="px-3 py-2 text-sm">{r.timeframe}</td>
+                {isAllRunsMode && <td className="px-3 py-2 text-xs text-foreground-muted">{r.run_id}</td>}
+                <td className="px-3 py-2 text-right font-medium">
+                  <span className={r.composite_score >= PROMOTION_THRESHOLD ? "text-green-600" : r.composite_score >= 0.3 ? "text-foreground" : "text-red-500"}>
                     {r.composite_score.toFixed(3)}
                   </span>
                 </td>
-                <td className="px-4 py-3 text-right space-x-2">
+                <td className="px-3 py-2 text-right tabular-nums text-xs">{(r.metrics_json as Record<string, unknown>)?.total_trades as number ?? "—"}</td>
+                <td className={`px-3 py-2 text-right tabular-nums text-xs font-medium ${((r.metrics_json as Record<string, unknown>)?.total_net_profit as number ?? 0) >= 0 ? "text-green-600" : "text-red-500"}`}>
+                  {((r.metrics_json as Record<string, unknown>)?.total_net_profit as number) != null ? `£${((r.metrics_json as Record<string, unknown>).total_net_profit as number).toFixed(0)}` : "—"}
+                </td>
+                <td className="px-3 py-2 text-right tabular-nums text-xs">{((r.metrics_json as Record<string, unknown>)?.sharpe_ratio as number) != null ? ((r.metrics_json as Record<string, unknown>).sharpe_ratio as number).toFixed(2) : "—"}</td>
+                <td className="px-3 py-2 text-right tabular-nums text-xs">{((r.metrics_json as Record<string, unknown>)?.win_rate as number) != null ? `${(((r.metrics_json as Record<string, unknown>).win_rate as number) * 100).toFixed(0)}%` : "—"}</td>
+                <td className="px-3 py-2 text-right tabular-nums text-xs text-red-500">{((r.metrics_json as Record<string, unknown>)?.max_drawdown_pct as number) != null ? `${((r.metrics_json as Record<string, unknown>).max_drawdown_pct as number).toFixed(1)}%` : "—"}</td>
+                <td className="px-3 py-2 text-right space-x-1 whitespace-nowrap">
                   <button
                     onClick={() => saveToShortlist({
                       strategy_id: r.strategy_id,
