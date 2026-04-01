@@ -1,5 +1,7 @@
 """Strategy registry for centralized strategy management."""
 
+import os
+
 from fibokei.strategies.base import Strategy
 from fibokei.strategies.bot01_sanyaku import PureSanyakuConfluence
 from fibokei.strategies.bot02_kijun_pullback import KijunPullback
@@ -33,9 +35,14 @@ class StrategyRegistry:
         return self._strategies[strategy_id](**kwargs)
 
     def list_available(self) -> list[dict]:
-        """List all registered strategies with metadata."""
+        """List registered strategies, filtered by FIBOKEI_VISIBLE_STRATEGIES if set."""
+        visible = os.environ.get("FIBOKEI_VISIBLE_STRATEGIES", "")
+        visible_ids = {s.strip() for s in visible.split(",") if s.strip()} if visible else None
+
         result = []
         for sid, cls in sorted(self._strategies.items()):
+            if visible_ids and sid not in visible_ids:
+                continue
             inst = cls()
             result.append({
                 "id": inst.strategy_id,
