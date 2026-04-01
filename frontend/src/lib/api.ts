@@ -254,6 +254,7 @@ export const api = {
   resumeBot: (id: string) => apiFetch(`/paper/bots/${id}/resume`, { method: "POST" }),
   deleteBot: (id: string) => apiFetch<{ deleted: string }>(`/paper/bots/${id}`, { method: "DELETE" }),
   deleteAllBots: () => apiFetch<{ deleted_count: number }>(`/paper/bots`, { method: "DELETE" }),
+  resetAccount: () => apiFetch<{ balance: number; equity: number; message: string }>(`/paper/account/reset`, { method: "POST" }),
   account: () => apiFetch("/paper/account"),
   fleet: () => apiFetch<{
     total_bots: number;

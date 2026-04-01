@@ -743,6 +743,17 @@ def update_paper_account(
     return account
 
 
+def reset_paper_account(session: Session) -> PaperAccountModel:
+    """Reset paper account to initial balance, clear all PnL counters."""
+    account = get_or_create_paper_account(session)
+    account.balance = account.initial_balance
+    account.equity = account.initial_balance
+    account.daily_pnl = 0.0
+    account.weekly_pnl = 0.0
+    session.commit()
+    return account
+
+
 def get_best_research_score(
     session: Session, strategy_id: str, instrument: str, timeframe: str
 ) -> float | None:

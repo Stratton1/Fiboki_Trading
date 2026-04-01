@@ -18,6 +18,7 @@ from fibokei.db.repository import (
     get_paper_bot,
     get_paper_bots,
     get_paper_trades,
+    reset_paper_account,
     save_paper_bot,
     update_paper_bot_state,
 )
@@ -237,6 +238,22 @@ def delete_all_bots(
     """Delete all paper bots and their trades."""
     count = delete_all_paper_bots(db)
     return {"deleted_count": count}
+
+
+@router.post("/paper/account/reset")
+def reset_account(
+    user: TokenData = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Reset paper account to initial balance and clear all PnL."""
+    acct = reset_paper_account(db)
+    return {
+        "balance": acct.balance,
+        "equity": acct.equity,
+        "daily_pnl": acct.daily_pnl,
+        "weekly_pnl": acct.weekly_pnl,
+        "message": f"Account reset to £{acct.initial_balance:.2f}",
+    }
 
 
 @router.get("/paper/account", response_model=AccountResponse)
