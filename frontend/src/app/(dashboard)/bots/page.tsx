@@ -57,6 +57,14 @@ export default function BotsPage() {
   const [showShortlistPicker, setShowShortlistPicker] = useState(false);
   const [smartDeployLoading, setSmartDeployLoading] = useState(false);
   const [smartDeployResult, setSmartDeployResult] = useState<string | null>(null);
+  const [sortField, setSortField] = useState<"strategy" | "instrument" | "tf" | "state" | "bars" | "trades" | "pnl">("instrument");
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
+
+  function handleSort(field: typeof sortField) {
+    if (sortField === field) setSortDir(d => d === "asc" ? "desc" : "asc");
+    else { setSortField(field); setSortDir("asc"); }
+  }
+  const sortArrow = (f: typeof sortField) => sortField === f ? (sortDir === "asc" ? " ▲" : " ▼") : "";
 
   function loadFromShortlist(entry: { strategy_id: string; instrument: string; timeframe: string }) {
     setStrategy(entry.strategy_id);
@@ -182,6 +190,27 @@ export default function BotsPage() {
   const sym = getCurrencySymbol(currency);
   const botList = (bots ?? []) as BotItem[];
   const fleetBots = fleet?.bots ?? [];
+
+  // Sort bots for flat view
+  const sortedBotList = [...botList].sort((a, b) => {
+    const fa = fleetBots.find(fb => fb.bot_id === a.bot_id);
+    const fb_ = fleetBots.find(fb => fb.bot_id === b.bot_id);
+    let cmp = 0;
+    switch (sortField) {
+      case "strategy": cmp = a.strategy_id.localeCompare(b.strategy_id); break;
+      case "instrument": cmp = a.instrument.localeCompare(b.instrument); break;
+      case "tf": {
+        const order = ["M1","M5","M15","M30","H1","H4","D"];
+        cmp = order.indexOf(a.timeframe) - order.indexOf(b.timeframe);
+        break;
+      }
+      case "state": cmp = a.state.localeCompare(b.state); break;
+      case "bars": cmp = (fa?.bars_seen ?? 0) - (fb_?.bars_seen ?? 0); break;
+      case "trades": cmp = (fa?.total_trades ?? 0) - (fb_?.total_trades ?? 0); break;
+      case "pnl": cmp = (fa?.total_pnl ?? 0) - (fb_?.total_pnl ?? 0); break;
+    }
+    return sortDir === "asc" ? cmp : -cmp;
+  });
 
   // Strategy groups for grouped view
   const strategyGroups = fleet?.strategy_groups ?? {};
@@ -412,13 +441,13 @@ export default function BotsPage() {
         <table>
           <thead>
             <tr>
-              <th className="text-left">Strategy</th>
-              <th className="text-left">Instrument</th>
-              <th className="text-left">TF</th>
-              <th className="text-left">State</th>
-              <th className="text-right">Bars</th>
-              <th className="text-right">Trades</th>
-              <th className="text-right">PnL</th>
+              <th className="text-left cursor-pointer select-none" onClick={() => handleSort("strategy")}>Strategy{sortArrow("strategy")}</th>
+              <th className="text-left cursor-pointer select-none" onClick={() => handleSort("instrument")}>Instrument{sortArrow("instrument")}</th>
+              <th className="text-left cursor-pointer select-none" onClick={() => handleSort("tf")}>TF{sortArrow("tf")}</th>
+              <th className="text-left cursor-pointer select-none" onClick={() => handleSort("state")}>State{sortArrow("state")}</th>
+              <th className="text-right cursor-pointer select-none" onClick={() => handleSort("bars")}>Bars{sortArrow("bars")}</th>
+              <th className="text-right cursor-pointer select-none" onClick={() => handleSort("trades")}>Trades{sortArrow("trades")}</th>
+              <th className="text-right cursor-pointer select-none" onClick={() => handleSort("pnl")}>PnL{sortArrow("pnl")}</th>
               <th className="text-right">Actions</th>
             </tr>
           </thead>
@@ -441,7 +470,7 @@ export default function BotsPage() {
               </tr>
             )}
             {groupBy === "none" ? (
-              botList.map((bot) => {
+              sortedBotList.map((bot) => {
                 const fleetBot = fleetBots.find((fb) => fb.bot_id === bot.bot_id);
                 return (
                   <tr key={bot.bot_id} className={fleetBot?.is_stale ? "bg-amber-50/50" : ""}>
