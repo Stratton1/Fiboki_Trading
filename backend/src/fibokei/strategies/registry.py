@@ -19,6 +19,10 @@ from fibokei.strategies.bot15_momentum_continuation import MomentumContinuation
 from fibokei.strategies.bot16_golden_momentum import GoldenMomentumConfluence
 from fibokei.strategies.bot17_gartley_harmonic import GartleyHarmonicReversal
 from fibokei.strategies.bot18_fib_ma_confluence import FibMAConfluence
+from fibokei.strategies.bot19_fib_bb_exhaustion import FibBBExhaustion
+from fibokei.strategies.bot20_golden_pocket_divergence import GoldenPocketDivergence
+from fibokei.strategies.bot21_fib_arc_breakout import FibArcBreakout
+from fibokei.strategies.bot22_fib_volume_confluence import FibVolumeConfluence
 
 
 class StrategyRegistry:
@@ -75,3 +79,7 @@ strategy_registry.register(MomentumContinuation)
 strategy_registry.register(GoldenMomentumConfluence)
 strategy_registry.register(GartleyHarmonicReversal)
 strategy_registry.register(FibMAConfluence)
+strategy_registry.register(FibBBExhaustion)
+strategy_registry.register(GoldenPocketDivergence)
+strategy_registry.register(FibArcBreakout)
+strategy_registry.register(FibVolumeConfluence)
