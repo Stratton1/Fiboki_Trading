@@ -245,6 +245,15 @@ def save_research_results(
     return models
 
 
+def _get_visible_strategy_ids() -> set[str] | None:
+    """Return visible strategy IDs from env, or None if unset (show all)."""
+    import os
+    visible = os.environ.get("FIBOKEI_VISIBLE_STRATEGIES", "")
+    if not visible:
+        return None
+    return {s.strip() for s in visible.split(",") if s.strip()}
+
+
 def get_research_rankings(
     session: Session,
     sort_by: str = "composite_score",
@@ -257,32 +266,15 @@ def get_research_rankings(
     If run_id is provided, results are scoped to that run only.
     If deduplicate is True and run_id is None (all-runs view), returns only the
     best-scoring row per (strategy_id, instrument, timeframe) combo.
+    Respects FIBOKEI_VISIBLE_STRATEGIES filter.
     """
-    if deduplicate and not run_id:
-        # Best-per-combo: subquery to find max-scoring row id per combo
-        from sqlalchemy import func
+    visible = _get_visible_strategy_ids()
 
-        best_ids_sub = (
-            select(
-                func.min(ResearchResultModel.id).label("best_id"),
-            )
-            .group_by(
-                ResearchResultModel.strategy_id,
-                ResearchResultModel.instrument,
-                ResearchResultModel.timeframe,
-            )
-            .having(
-                ResearchResultModel.composite_score == func.max(ResearchResultModel.composite_score)
-            )
-        ).subquery()
-        # Actually, the above won't work cleanly. Use a simpler approach:
-        # fetch all, deduplicate in Python (keeps best score per combo).
-        all_results = list(
-            session.scalars(
-                select(ResearchResultModel)
-                .order_by(ResearchResultModel.composite_score.desc())
-            ).all()
-        )
+    if deduplicate and not run_id:
+        stmt = select(ResearchResultModel).order_by(ResearchResultModel.composite_score.desc())
+        if visible:
+            stmt = stmt.where(ResearchResultModel.strategy_id.in_(visible))
+        all_results = list(session.scalars(stmt).all())
         seen: set[tuple[str, str, str]] = set()
         deduped: list[ResearchResultModel] = []
         for r in all_results:
@@ -297,6 +289,8 @@ def get_research_rankings(
     stmt = select(ResearchResultModel)
     if run_id:
         stmt = stmt.where(ResearchResultModel.run_id == run_id)
+    if visible:
+        stmt = stmt.where(ResearchResultModel.strategy_id.in_(visible))
     if sort_by == "composite_score":
         stmt = stmt.order_by(ResearchResultModel.composite_score.desc())
     elif sort_by == "rank":
