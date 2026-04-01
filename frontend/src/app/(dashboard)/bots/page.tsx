@@ -416,6 +416,7 @@ export default function BotsPage() {
               <th className="text-left">Instrument</th>
               <th className="text-left">TF</th>
               <th className="text-left">State</th>
+              <th className="text-right">Bars</th>
               <th className="text-right">Trades</th>
               <th className="text-right">PnL</th>
               <th className="text-right">Actions</th>
@@ -424,7 +425,7 @@ export default function BotsPage() {
           <tbody>
             {botList.length === 0 && (
               <tr>
-                <td colSpan={7}>
+                <td colSpan={8}>
                   <EmptyState
                     icon={<Bot size={36} strokeWidth={1.5} />}
                     title="No bots yet"
@@ -460,6 +461,7 @@ export default function BotsPage() {
                         )}
                       </div>
                     </td>
+                    <td className="text-right tabular-nums text-foreground-muted">{fleetBot?.bars_seen ?? 0}</td>
                     <td className="text-right tabular-nums">{fleetBot?.total_trades ?? 0}</td>
                     <td className={`text-right tabular-nums font-medium ${(fleetBot?.total_pnl ?? 0) >= 0 ? "text-primary" : "text-danger"}`}>
                       {(fleetBot?.total_pnl ?? 0) >= 0 ? "+" : ""}{sym}{(fleetBot?.total_pnl ?? 0).toFixed(2)}
@@ -513,7 +515,7 @@ export default function BotsPage() {
               Object.entries(groupedBots).map(([sid, bots]) => (
                 <Fragment key={sid}>
                   <tr className="bg-background-muted">
-                    <td colSpan={7} className="text-sm font-semibold py-2">
+                    <td colSpan={8} className="text-sm font-semibold py-2">
                       {sid}
                       <span className="text-foreground-muted font-normal ml-2">
                         ({bots.length} bots &middot; {strategyGroups[sid]?.running ?? 0} active &middot;
@@ -539,6 +541,7 @@ export default function BotsPage() {
                           {b.is_stale && <AlertTriangle size={12} className="text-amber-500" />}
                         </div>
                       </td>
+                      <td className="text-right tabular-nums text-foreground-muted">{b.bars_seen}</td>
                       <td className="text-right tabular-nums">{b.total_trades}</td>
                       <td className={`text-right tabular-nums font-medium ${b.total_pnl >= 0 ? "text-primary" : "text-danger"}`}>
                         {b.total_pnl >= 0 ? "+" : ""}{sym}{b.total_pnl.toFixed(2)}
