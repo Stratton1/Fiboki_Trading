@@ -16,8 +16,8 @@ from fibokei.strategies.bot10_kijun_fib import KijunFibContinuation
 from fibokei.strategies.bot11_sanyaku_fib_ext import SanyakuFibExtension
 from fibokei.strategies.bot12_kumo_fib_tz import KumoFibTimeZone
 from fibokei.strategies.bot13_golden_zone import GoldenZonePullback
-from fibokei.strategies.bot14_fractal_golden_pocket import FractalGoldenPocketScalper
 from fibokei.strategies.bot15_momentum_continuation import MomentumContinuation
+from fibokei.strategies.bot16_golden_momentum import GoldenMomentumConfluence
 
 
 class StrategyRegistry:
@@ -71,5 +71,5 @@ strategy_registry.register(KijunFibContinuation)
 strategy_registry.register(SanyakuFibExtension)
 strategy_registry.register(KumoFibTimeZone)
 strategy_registry.register(GoldenZonePullback)
-strategy_registry.register(FractalGoldenPocketScalper)
 strategy_registry.register(MomentumContinuation)
+strategy_registry.register(GoldenMomentumConfluence)
