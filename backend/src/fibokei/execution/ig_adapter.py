@@ -54,22 +54,25 @@ class IGExecutionAdapter(ExecutionAdapter):
             return {"status": "rejected", "reason": f"No IG epic for {symbol}"}
 
         direction = order.get("direction", "BUY").upper()
-        size = order.get("size", 1.0)
+        raw_size = order.get("size", 1.0)
+        # IG minimum deal size is typically 0.5 for indices, 1000 for FX
+        # Round to 2 decimal places and enforce minimum
+        size = max(round(raw_size, 2), 1.0)
 
         params: dict = {
             "epic": epic,
             "direction": direction,
             "size": str(size),
             "orderType": "MARKET",
-            "currencyCode": order.get("currency", "USD"),
+            "currencyCode": order.get("currency", "GBP"),
             "guaranteedStop": False,
             "forceOpen": True,
         }
 
         if order.get("stop_distance") is not None:
-            params["stopDistance"] = order["stop_distance"]
+            params["stopDistance"] = round(order["stop_distance"], 1)
         if order.get("limit_distance") is not None:
-            params["limitDistance"] = order["limit_distance"]
+            params["limitDistance"] = round(order["limit_distance"], 1)
 
         requested_price = order.get("requested_price")
         t_start = time.monotonic()
@@ -100,7 +103,10 @@ class IGExecutionAdapter(ExecutionAdapter):
                 }
             return {"status": "UNKNOWN", "deal_reference": deal_ref, "raw": result}
         except IGClientError as e:
-            logger.error("IG place_order failed: %s", e)
+            logger.error(
+                "IG place_order failed: %s | params=%s",
+                e, {k: v for k, v in params.items() if k != "guaranteedStop"},
+            )
             return {"status": "rejected", "reason": str(e), "error_code": e.error_code}
 
     def _fetch_confirmation_with_retry(self, deal_reference: str) -> dict:

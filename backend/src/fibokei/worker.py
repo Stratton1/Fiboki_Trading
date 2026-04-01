@@ -233,16 +233,45 @@ class PaperWorker:
             "events": all_events,
         }
 
+    @staticmethod
+    def _make_json_safe(obj):
+        """Convert position dict to JSON-serializable types."""
+        import json
+        from datetime import datetime as _dt
+        from enum import Enum
+
+        def _convert(v):
+            if v is None:
+                return v
+            if isinstance(v, Enum):
+                return v.value
+            if isinstance(v, _dt):
+                return v.isoformat()
+            if hasattr(v, "isoformat"):  # pandas Timestamp
+                return v.isoformat()
+            if isinstance(v, dict):
+                return {k: _convert(val) for k, val in v.items()}
+            if isinstance(v, (list, tuple)):
+                return [_convert(i) for i in v]
+            return v
+
+        return _convert(obj)
+
     def _persist_bot_state(self, bot: PaperBot) -> None:
         """Save bot state to DB."""
+        pos_dict = self._make_json_safe(bot.position.to_dict()) if bot.position else None
+        last_eval = getattr(bot, "_last_evaluated_bar", None)
+        # Convert pandas Timestamp to Python datetime for DB
+        if hasattr(last_eval, "to_pydatetime"):
+            last_eval = last_eval.to_pydatetime()
         with self.session_factory() as session:
             update_paper_bot_state(
                 session,
                 bot.bot_id,
                 state=bot.state.value,
-                last_evaluated_bar=getattr(bot, "_last_evaluated_bar", None),
+                last_evaluated_bar=last_eval,
                 bars_seen=bot.bars_seen,
-                position_json=bot.position.to_dict() if bot.position else None,
+                position_json=pos_dict,
             )
 
     def _persist_trade(self, bot: PaperBot, trade) -> None:
