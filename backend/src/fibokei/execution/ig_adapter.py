@@ -54,10 +54,19 @@ class IGExecutionAdapter(ExecutionAdapter):
             return {"status": "rejected", "reason": f"No IG epic for {symbol}"}
 
         direction = order.get("direction", "BUY").upper()
+
+        # IG CFDs use contract size (£ per point), not unit size.
+        # For demo: use fixed small size based on risk, clamped to
+        # sensible range. 1 contract = £1/pip for FX, £1/point for indices.
         raw_size = order.get("size", 1.0)
-        # IG minimum deal size is typically 0.5 for indices, 1000 for FX
-        # Round to 2 decimal places and enforce minimum
-        size = max(round(raw_size, 2), 1.0)
+        # Convert unit-based position size to IG contract size:
+        # For FX pairs (price ~1.0): units / 10000 ≈ contracts
+        # For indices (price ~5000+): units as-is are way too large
+        # Simplest safe approach for demo: cap at reasonable size
+        if raw_size > 100:
+            size = 1.0  # default to minimum for oversized calculations
+        else:
+            size = max(round(raw_size, 1), 0.5)
 
         params: dict = {
             "epic": epic,
@@ -69,10 +78,13 @@ class IGExecutionAdapter(ExecutionAdapter):
             "forceOpen": True,
         }
 
-        if order.get("stop_distance") is not None:
-            params["stopDistance"] = round(order["stop_distance"], 1)
-        if order.get("limit_distance") is not None:
-            params["limitDistance"] = round(order["limit_distance"], 1)
+        # IG rejects stopDistance/limitDistance of 0 — omit if zero or None
+        stop_dist = order.get("stop_distance")
+        if stop_dist is not None and stop_dist > 0:
+            params["stopDistance"] = round(stop_dist, 1)
+        limit_dist = order.get("limit_distance")
+        if limit_dist is not None and limit_dist > 0:
+            params["limitDistance"] = round(limit_dist, 1)
 
         requested_price = order.get("requested_price")
         t_start = time.monotonic()
