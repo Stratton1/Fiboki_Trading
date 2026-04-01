@@ -260,15 +260,20 @@ def get_research_rankings(
     limit: int = 50,
     run_id: str | None = None,
     deduplicate: bool = False,
+    strategy_id: str | None = None,
 ) -> list[ResearchResultModel]:
     """Get research results ranked by score.
 
     If run_id is provided, results are scoped to that run only.
     If deduplicate is True and run_id is None (all-runs view), returns only the
     best-scoring row per (strategy_id, instrument, timeframe) combo.
-    Respects FIBOKEI_VISIBLE_STRATEGIES filter.
+    Respects FIBOKEI_VISIBLE_STRATEGIES filter unless strategy_id is specified.
     """
-    visible = _get_visible_strategy_ids()
+    # If a specific strategy_id is requested, bypass visible filter
+    if strategy_id:
+        visible = {strategy_id}
+    else:
+        visible = _get_visible_strategy_ids()
 
     if deduplicate and not run_id:
         stmt = select(ResearchResultModel).order_by(ResearchResultModel.composite_score.desc())

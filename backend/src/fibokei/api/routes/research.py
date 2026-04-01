@@ -340,11 +340,12 @@ def get_rankings(
     limit: int = Query(50, ge=1, le=500),
     run_id: str | None = Query(None, description="Scope results to a specific run"),
     deduplicate: bool = Query(False, description="When viewing all runs, show only best score per combo"),
+    strategy_id: str | None = Query(None, description="Filter to a specific strategy (bypasses visible filter)"),
     db: Session = Depends(get_db),
     user: TokenData = Depends(get_current_user),
 ):
     """Get ranked research results, optionally scoped to a single run."""
-    results = get_research_rankings(db, sort_by=sort_by, limit=limit, run_id=run_id, deduplicate=deduplicate)
+    results = get_research_rankings(db, sort_by=sort_by, limit=limit, run_id=run_id, deduplicate=deduplicate, strategy_id=strategy_id)
     return [
         {
             "id": r.id,
