@@ -163,8 +163,14 @@ class PaperWorker:
                     # Determine which bars are new
                     last_eval = getattr(bot, "_last_evaluated_bar", None)
                     if last_eval is not None:
+                        # Ensure tz-aware comparison (Yahoo data is UTC)
+                        from datetime import timezone as _tz
+
+                        le = last_eval
+                        if hasattr(le, "tzinfo") and le.tzinfo is None:
+                            le = le.replace(tzinfo=_tz.utc)
                         # Filter to bars after the last evaluated one
-                        new_bars = df[df["timestamp"] > last_eval]
+                        new_bars = df[df["timestamp"] > le]
                     else:
                         # First run for this bot — use history for indicator
                         # warmup but only evaluate the final bar as "live".
