@@ -15,6 +15,7 @@ from fibokei.strategies.bot09_golden_cloud import GoldenCloudConfluence
 from fibokei.strategies.bot10_kijun_fib import KijunFibContinuation
 from fibokei.strategies.bot11_sanyaku_fib_ext import SanyakuFibExtension
 from fibokei.strategies.bot12_kumo_fib_tz import KumoFibTimeZone
+from fibokei.strategies.bot13_chikou_session import ChikouSessionGuard
 from fibokei.strategies.bot15_momentum_continuation import MomentumContinuation
 from fibokei.strategies.bot16_golden_momentum import GoldenMomentumConfluence
 from fibokei.strategies.bot17_gartley_harmonic import GartleyHarmonicReversal
@@ -75,6 +76,7 @@ strategy_registry.register(GoldenCloudConfluence)
 strategy_registry.register(KijunFibContinuation)
 strategy_registry.register(SanyakuFibExtension)
 strategy_registry.register(KumoFibTimeZone)
+strategy_registry.register(ChikouSessionGuard)
 strategy_registry.register(MomentumContinuation)
 strategy_registry.register(GoldenMomentumConfluence)
 strategy_registry.register(GartleyHarmonicReversal)
