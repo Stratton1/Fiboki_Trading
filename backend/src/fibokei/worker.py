@@ -180,14 +180,25 @@ class PaperWorker:
                         if len(df) > warmup_count:
                             warmup = df.iloc[-warmup_count:-1]
                             # Detach adapter during warmup so no IG orders
-                            # fire on historical bars
+                            # fire on historical bars. Also freeze account
+                            # state so warmup trades don't corrupt balance.
                             saved_adapter = bot._adapter
                             bot._adapter = None
+                            _saved_balance = self.account.balance
+                            _saved_equity = self.account.equity
+                            _saved_daily_pnl = self.account.daily_pnl
+                            _saved_weekly_pnl = self.account.weekly_pnl
                             for _, row in warmup.iterrows():
                                 bar_time = row["timestamp"]
                                 bar = row[["open", "high", "low", "close", "volume"]]
                                 bot.on_candle_close(bar, bar_time)
                                 bars_fed += 1
+                            # Restore account state — warmup PnL must not
+                            # bleed into the live balance or daily counters
+                            self.account.balance = _saved_balance
+                            self.account.equity = _saved_equity
+                            self.account.daily_pnl = _saved_daily_pnl
+                            self.account.weekly_pnl = _saved_weekly_pnl
                             # Close any position opened during warmup so
                             # the bot starts clean for live evaluation
                             if bot.position is not None:

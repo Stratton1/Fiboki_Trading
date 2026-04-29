@@ -19,6 +19,7 @@ from fibokei.db.repository import (
     get_paper_bots,
     get_paper_trades,
     reset_paper_account,
+    reset_paper_counters_and_recalculate,
     save_paper_bot,
     update_paper_bot_state,
 )
@@ -253,6 +254,27 @@ def reset_account(
         "daily_pnl": acct.daily_pnl,
         "weekly_pnl": acct.weekly_pnl,
         "message": f"Account reset to £{acct.initial_balance:.2f}",
+    }
+
+
+@router.post("/paper/account/reset-counters")
+def reset_counters(
+    user: TokenData = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Reset daily/weekly PnL counters and recalculate balance from closed trades.
+
+    Use this to correct balance corruption caused by warmup-phase PnL bleed.
+    Balance is rebuilt as initial_balance + sum(all closed trade PnL).
+    Does NOT wipe trade history or reset balance to zero.
+    """
+    acct = reset_paper_counters_and_recalculate(db)
+    return {
+        "balance": acct.balance,
+        "equity": acct.equity,
+        "daily_pnl": acct.daily_pnl,
+        "weekly_pnl": acct.weekly_pnl,
+        "message": f"Counters reset. Balance recalculated to £{acct.balance:.2f}",
     }
 
 

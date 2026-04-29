@@ -753,6 +753,28 @@ def reset_paper_account(session: Session) -> PaperAccountModel:
     return account
 
 
+def reset_paper_counters_and_recalculate(session: Session) -> PaperAccountModel:
+    """Reset daily/weekly counters and recalculate balance from closed trades.
+
+    Corrects balance corruption caused by warmup-phase PnL bleeding into the
+    account before the warmup fix was deployed. Balance is rebuilt as:
+        initial_balance + sum(all closed trade PnL)
+    Daily and weekly PnL counters are zeroed — the worker will accumulate
+    them correctly from this point forward.
+    """
+    from sqlalchemy import func as _func
+    account = get_or_create_paper_account(session)
+    total_pnl = session.scalar(
+        select(_func.coalesce(_func.sum(PaperTradeModel.pnl), 0.0))
+    ) or 0.0
+    account.balance = account.initial_balance + total_pnl
+    account.equity = account.balance
+    account.daily_pnl = 0.0
+    account.weekly_pnl = 0.0
+    session.commit()
+    return account
+
+
 def get_best_research_score(
     session: Session, strategy_id: str, instrument: str, timeframe: str
 ) -> float | None:
