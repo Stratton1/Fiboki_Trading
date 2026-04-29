@@ -21,6 +21,33 @@ services:
         sync: false
     rootDir: backend
 
+  - type: worker
+    name: fibokei-worker
+    runtime: python
+    plan: free
+    buildCommand: pip install -e .
+    startCommand: python -m fibokei.worker --poll-interval 60
+    envVars:
+      - key: FIBOKEI_DATABASE_URL
+        fromDatabase:
+          name: fibokei-db
+          property: connectionString
+      - key: FIBOKEI_LIVE_EXECUTION_ENABLED
+        value: "true"
+      - key: FIBOKEI_IG_API_KEY
+        sync: false
+      - key: FIBOKEI_IG_USERNAME
+        sync: false
+      - key: FIBOKEI_IG_PASSWORD
+        sync: false
+      - key: FIBOKEI_IG_ACCOUNT_ID
+        sync: false
+      - key: FIBOKEI_TELEGRAM_BOT_TOKEN
+        sync: false
+      - key: FIBOKEI_TELEGRAM_CHAT_ID
+        sync: false
+    rootDir: backend
+
 databases:
   - name: fibokei-db
     plan: free
