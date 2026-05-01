@@ -10,26 +10,49 @@ logger = logging.getLogger(__name__)
 
 # Map Fiboki symbols to Yahoo Finance tickers
 SYMBOL_MAP = {
+    # ── Forex Major ──────────────────────────────────────────────────────
     "EURUSD": "EURUSD=X",
     "GBPUSD": "GBPUSD=X",
     "USDJPY": "USDJPY=X",
     "AUDUSD": "AUDUSD=X",
-    "EURGBP": "EURGBP=X",
-    "GBPJPY": "GBPJPY=X",
+    "USDCHF": "USDCHF=X",
     "USDCAD": "USDCAD=X",
     "NZDUSD": "NZDUSD=X",
-    "USDCHF": "USDCHF=X",
+    # ── Forex Cross ──────────────────────────────────────────────────────
     "EURJPY": "EURJPY=X",
-    "EURCHF": "EURCHF=X",
+    "GBPJPY": "GBPJPY=X",
+    "EURGBP": "EURGBP=X",
     "AUDJPY": "AUDJPY=X",
-    "GBPCHF": "GBPCHF=X",
     "EURAUD": "EURAUD=X",
+    # ── Forex G10 Cross ──────────────────────────────────────────────────
+    "AUDCAD": "AUDCAD=X",
+    "AUDCHF": "AUDCHF=X",
+    "AUDNZD": "AUDNZD=X",
+    "CADCHF": "CADCHF=X",
+    "CADJPY": "CADJPY=X",
+    "CHFJPY": "CHFJPY=X",
+    "EURCAD": "EURCAD=X",
+    "EURCHF": "EURCHF=X",
     "EURNZD": "EURNZD=X",
+    "GBPAUD": "GBPAUD=X",
+    "GBPCAD": "GBPCAD=X",
+    "GBPCHF": "GBPCHF=X",
+    "GBPNZD": "GBPNZD=X",
+    "NZDCAD": "NZDCAD=X",
+    "NZDCHF": "NZDCHF=X",
+    "NZDJPY": "NZDJPY=X",
+    "SGDJPY": "SGDJPY=X",
+    # ── Commodities ──────────────────────────────────────────────────────
     "XAUUSD": "GC=F",
     "XAGUSD": "SI=F",
+    "BCOUSD": "BZ=F",
+    "WTIUSD": "CL=F",
+    "NATGAS": "NG=F",
+    # legacy symbols kept for compat
     "XTIUSD": "CL=F",
     "XNGUSD": "NG=F",
     "XBRUSD": "BZ=F",
+    # ── Indices ──────────────────────────────────────────────────────────
     "US500": "^GSPC",
     "US30": "^DJI",
     "US100": "^IXIC",
@@ -37,9 +60,14 @@ SYMBOL_MAP = {
     "DE40": "^GDAXI",
     "JP225": "^N225",
     "AU200": "^AXJO",
+    "CAC40": "^FCHI",
+    "HK50": "^HSI",
+    "DXY": "DX-Y.NYB",
+    # ── Crypto ───────────────────────────────────────────────────────────
     "BTCUSD": "BTC-USD",
     "ETHUSD": "ETH-USD",
     "XRPUSD": "XRP-USD",
+    "LTCUSD": "LTC-USD",
 }
 
 # Map Fiboki timeframes to yfinance intervals
