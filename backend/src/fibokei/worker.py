@@ -23,6 +23,7 @@ from fibokei.db.repository import (
     get_or_create_paper_account,
     get_paper_bot,
     get_paper_bots,
+    save_execution_audit,
     save_paper_trade,
     update_paper_account,
     update_paper_bot_state,
@@ -229,10 +230,13 @@ class PaperWorker:
                     if not self.dry_run:
                         self._persist_bot_state(bot)
 
-                        # Persist trade if one was closed
+                        # Persist trade and execution audit for events from this bot
                         for event in all_events:
-                            if event.get("event") == "trade_closed" and event.get("bot_id") == bot.bot_id:
+                            if event.get("bot_id") != bot.bot_id:
+                                continue
+                            if event.get("event") == "trade_closed":
                                 self._persist_trade(bot, event["trade"])
+                            self._persist_execution_audit(event)
 
         # Persist account state
         if not self.dry_run and bars_fed > 0:
@@ -316,6 +320,70 @@ class PaperWorker:
                 daily_pnl=self.account.daily_pnl,
                 weekly_pnl=self.account.weekly_pnl,
             )
+
+    def _persist_execution_audit(self, event: dict) -> None:
+        """Write an execution audit entry for a trade_opened or trade_closed event.
+
+        This is the central place where IG deal outcomes are stored. It gives
+        operators a queryable record of every order attempt — whether the IG
+        placement succeeded, was rejected, or was paper-only.
+        """
+        from fibokei.core.feature_flags import FeatureFlags
+
+        execution_mode = FeatureFlags().execution_mode
+        bot_id = event.get("bot_id", "")
+        ev_type = event.get("event", "")
+
+        try:
+            if ev_type == "trade_opened":
+                signal = event.get("signal")
+                deal_id = event.get("deal_id")  # None if adapter didn't place or failed
+                bot = self.bots.get(bot_id)
+                instrument = bot.instrument if bot else ""
+                direction = signal.direction.value if signal else ""
+                audit = {
+                    "execution_mode": execution_mode,
+                    "action": "place_order",
+                    "instrument": instrument,
+                    "direction": direction,
+                    "bot_id": bot_id,
+                    "deal_id": deal_id or "",
+                    "status": "success" if deal_id else "paper_only",
+                    "detail_json": {
+                        "strategy_id": signal.strategy_id if signal else "",
+                        "entry_price": signal.proposed_entry if signal else None,
+                        "stop_loss": signal.stop_loss if signal else None,
+                        "deal_id": deal_id,
+                    },
+                    "error_message": None if deal_id else "No IG deal placed (adapter rejected or paper mode)",
+                }
+
+            elif ev_type == "trade_closed":
+                trade = event.get("trade")
+                bot = self.bots.get(bot_id)
+                audit = {
+                    "execution_mode": execution_mode,
+                    "action": "close_position",
+                    "instrument": trade.instrument if trade else "",
+                    "direction": trade.direction.value if trade else "",
+                    "bot_id": bot_id,
+                    "deal_id": "",
+                    "status": "success",
+                    "detail_json": {
+                        "exit_reason": trade.exit_reason.value if trade else "",
+                        "pnl": trade.pnl if trade else None,
+                        "bars_in_trade": trade.bars_in_trade if trade else None,
+                    },
+                    "error_message": None,
+                }
+            else:
+                return
+
+            with self.session_factory() as session:
+                save_execution_audit(session, audit)
+
+        except Exception:
+            logger.exception("Failed to persist execution audit for event %s", ev_type)
 
     def _maybe_send_daily_summary(self) -> None:
         """Send Telegram daily summary once per UTC day."""

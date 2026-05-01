@@ -72,7 +72,14 @@ def system_status(
         (t for t in threading.enumerate() if t.name == "paper-worker"), None
     )
     paper_status = "running" if worker_thread and worker_thread.is_alive() else "stopped"
-    worker_bots = 0
+
+    # Count monitoring/position_open bots from DB (not hardcoded)
+    try:
+        from fibokei.db.repository import get_active_paper_bots
+        active_bots = get_active_paper_bots(db)
+        worker_bots = len(active_bots)
+    except Exception:
+        worker_bots = 0
 
     # Count loaded strategies
     from fibokei.strategies.registry import strategy_registry

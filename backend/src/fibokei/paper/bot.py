@@ -172,9 +172,29 @@ class PaperBot:
                             }
                             result = self._adapter.place_order(order)
                             self._deal_id = result.get("deal_id") or result.get("dealId")
+                            # Log outcome explicitly — rejected responses arrive as dicts
+                            # (not exceptions) so logger.exception won't catch them.
+                            result_status = result.get("status", "UNKNOWN")
+                            if self._deal_id:
+                                logger.info(
+                                    "Bot %s: IG order ACCEPTED — deal_id=%s instrument=%s "
+                                    "dir=%s size=%s epic=%s level=%s",
+                                    self.bot_id, self._deal_id, self.instrument,
+                                    ig_dir, result.get("size"), result.get("epic"),
+                                    result.get("filled_price") or result.get("level"),
+                                )
+                            else:
+                                logger.warning(
+                                    "Bot %s: IG order NOT placed — status=%s reason=%s "
+                                    "error_code=%s instrument=%s dir=%s",
+                                    self.bot_id, result_status,
+                                    result.get("reason", ""),
+                                    result.get("error_code", ""),
+                                    self.instrument, ig_dir,
+                                )
                         except Exception:
                             logger.exception(
-                                "Bot %s: adapter failed to place order for %s",
+                                "Bot %s: adapter raised exception placing order for %s",
                                 self.bot_id, self.instrument,
                             )
                     self.state = BotState.POSITION_OPEN
