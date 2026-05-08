@@ -124,9 +124,23 @@ class IGClient:
             created_at=time.time(),
         )
 
-        # Switch to target account if specified
+        # Switch to target account if specified.
+        # IG sometimes rejects the switch immediately after login — a short
+        # pause reduces the risk of a stale-token 401 from their side.
         if self._target_account and self._session.account_id != self._target_account:
-            self._switch_account(self._target_account)
+            time.sleep(0.5)
+            try:
+                self._switch_account(self._target_account)
+            except IGClientError as e:
+                # Non-fatal: log the failure and proceed with the authenticated
+                # account.  This keeps the session usable even when IG's account-
+                # switch endpoint is flaky.  Execution will use whatever account
+                # IG logged us into by default.
+                logger.warning(
+                    "Account switch to %s failed (%s) — proceeding with default account %s. "
+                    "Set FIBOKEI_IG_ACCOUNT_ID to the default login account to suppress.",
+                    self._target_account, e, self._session.account_id,
+                )
 
         logger.info("IG demo session established for account %s", self._session.account_id)
         return self._session

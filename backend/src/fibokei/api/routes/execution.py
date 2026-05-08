@@ -177,6 +177,21 @@ def get_audit_log(
     ]
 
 
+# Module-level IG client singleton — avoids re-authenticating (and
+# triggering IG's account-switch endpoint) on every health-check poll.
+# The client's ensure_session() handles token refresh internally.
+_ig_health_client: "IGClient | None" = None
+
+
+def _get_ig_health_client() -> "IGClient":
+    """Return the singleton IGClient, creating it on first use."""
+    global _ig_health_client
+    from fibokei.execution.ig_client import IGClient
+    if _ig_health_client is None:
+        _ig_health_client = IGClient()
+    return _ig_health_client
+
+
 @router.get("/execution/ig-health", response_model=IGHealthResponse)
 def get_ig_health(
     user: TokenData = Depends(get_current_user),
@@ -185,10 +200,11 @@ def get_ig_health(
 
     Attempts to authenticate with the IG demo API and fetch account info.
     Returns credential presence, reachability, and account balance.
-    Safe to call frequently — uses a fresh IGClient each time.
+    Uses a cached IGClient so it does not re-authenticate on every poll —
+    IG rate-limits rapid repeated logins and account switches.
     """
     import os
-    from fibokei.execution.ig_client import IGClient, IGClientError
+    from fibokei.execution.ig_client import IGClientError
 
     api_key = os.environ.get("FIBOKEI_IG_API_KEY", "")
     username = os.environ.get("FIBOKEI_IG_USERNAME", "")
@@ -199,10 +215,9 @@ def get_ig_health(
         return IGHealthResponse(configured=False, reachable=False, error="IG credentials not configured")
 
     try:
-        client = IGClient()
-        client.authenticate()
+        client = _get_ig_health_client()
+        client.ensure_session()  # re-authenticates only if session expired
         acct = client.get_account_info()
-        client.close()
         balance_info = acct.get("balance", {})
         return IGHealthResponse(
             configured=True,
@@ -212,6 +227,9 @@ def get_ig_health(
             balance=balance_info.get("balance"),
         )
     except IGClientError as e:
+        # Reset the cached client on auth errors so the next poll tries fresh
+        global _ig_health_client
+        _ig_health_client = None
         return IGHealthResponse(configured=True, reachable=False, error=str(e))
     except Exception as e:
         return IGHealthResponse(configured=True, reachable=False, error=f"Unexpected error: {e}")
