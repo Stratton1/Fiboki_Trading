@@ -447,13 +447,12 @@ class PaperWorker:
     def _persist_execution_audit(self, event: dict) -> None:
         """Write execution audit entries for a trade_opened or trade_closed event.
 
-        Phase 1 fan-out: when the router emits multiple attempts, each
-        attempt becomes its own audit row, stamped with a shared
-        ``parent_signal_id`` inside ``detail_json``. This keeps the
-        existing ``execution_audit`` table compatible with the legacy
-        ``/execution/audit`` endpoint while making partial-success
-        visible. The legacy single-broker path (``adapter`` only) writes
-        the same single-row shape it always did.
+        Phase 3 first-class parent-child: each fan-out also writes one
+        ``bot_signals`` parent row plus one ``execution_attempts`` child
+        row per attempt. The legacy ``execution_audit`` table is still
+        populated for back-compat with the existing UI/API.
+
+        Phase 1 single-broker (``adapter`` only) path is unchanged.
         """
         ev_type = event.get("event", "")
         bot_id = event.get("bot_id", "")
@@ -461,11 +460,125 @@ class PaperWorker:
 
         try:
             if attempts:
+                self._persist_parent_child(ev_type, bot_id, event, attempts)
                 self._persist_attempts(ev_type, bot_id, event, attempts)
             else:
                 self._persist_legacy_single(ev_type, bot_id, event)
         except Exception:
             logger.exception("Failed to persist execution audit for event %s", ev_type)
+
+    def _persist_parent_child(
+        self,
+        ev_type: str,
+        bot_id: str,
+        event: dict,
+        attempts: list[dict],
+    ) -> None:
+        """Write Phase 3 parent ``bot_signals`` + child ``execution_attempts`` rows.
+
+        Idempotent across repeated retries: each call creates a fresh signal
+        row, so callers must invoke this exactly once per event.
+        """
+        from fibokei.db.repository import (
+            create_bot_signal,
+            create_execution_attempt,
+        )
+
+        signal = event.get("signal")
+        bot = self.bots.get(bot_id)
+        instrument = (
+            (bot.instrument if bot else "")
+            or (attempts[0].get("instrument") if attempts else "")
+        )
+        timeframe = bot.timeframe.value if bot else ""
+        strategy_id = (signal.strategy_id if signal else None) or (
+            bot.strategy.strategy_id if bot else "unknown"
+        )
+        if ev_type == "trade_opened":
+            kind = "open"
+            direction = signal.direction.value if signal else (
+                attempts[0].get("direction") if attempts else "LONG"
+            )
+            plan_json = {
+                "entry_price": signal.proposed_entry if signal else None,
+                "stop_loss": signal.stop_loss if signal else None,
+            }
+        else:
+            kind = "close"
+            trade = event.get("trade")
+            direction = "CLOSE"
+            plan_json = {
+                "exit_reason": trade.exit_reason.value if trade else None,
+                "pnl": trade.pnl if trade else None,
+            }
+
+        # Bar time / timestamp from the first attempt (all siblings share these)
+        bar_time = None
+        signal_ts = datetime.now(timezone.utc)
+
+        with self.session_factory() as session:
+            parent = create_bot_signal(session, {
+                "bot_id": bot_id,
+                "strategy_id": strategy_id,
+                "instrument": instrument,
+                "timeframe": timeframe,
+                "direction": direction,
+                "signal_timestamp": signal_ts,
+                "bar_time": bar_time,
+                "plan_json": plan_json,
+                "kind": kind,
+            })
+
+            for attempt in attempts:
+                # Map the Phase 1 status vocabulary to the Phase 3 column.
+                ph1_status = attempt.get("status") or "pending"
+                if ph1_status in ("filled", "paper_filled"):
+                    db_status = "filled" if kind == "open" else "closed"
+                elif ph1_status == "rejected":
+                    db_status = "rejected"
+                elif ph1_status == "skipped":
+                    db_status = "skipped"
+                elif ph1_status == "error":
+                    db_status = "failed"
+                else:
+                    db_status = "pending"
+
+                target_id = attempt.get("target_id")
+                # ``target_id`` from the router is currently a stable string
+                # (e.g. ``acct-3``); only the integer DB ids map to FK rows.
+                exec_target_id = None
+                exec_account_id = None
+                if isinstance(target_id, str) and target_id.startswith("acct-"):
+                    try:
+                        exec_account_id = int(target_id[5:])
+                    except (TypeError, ValueError):
+                        exec_account_id = None
+
+                create_execution_attempt(session, {
+                    "bot_signal_id": parent.id,
+                    "execution_target_id": exec_target_id,
+                    "execution_account_id": exec_account_id,
+                    "broker": attempt.get("broker") or "paper",
+                    "environment": attempt.get("environment") or "paper",
+                    "broker_account_id": None,
+                    "instrument": attempt.get("instrument") or instrument,
+                    "broker_symbol": attempt.get("broker_symbol"),
+                    "direction": attempt.get("direction"),
+                    "requested_size": attempt.get("requested_size"),
+                    "adjusted_size": attempt.get("adjusted_size"),
+                    "filled_size": attempt.get("filled_size"),
+                    "requested_price": attempt.get("requested_price"),
+                    "filled_price": attempt.get("filled_price"),
+                    "status": db_status,
+                    "broker_order_id": attempt.get("broker_order_id"),
+                    "broker_deal_id": attempt.get("broker_deal_id"),
+                    "broker_fill_id": None,
+                    "rejection_reason": attempt.get("rejection_reason"),
+                    "error_code": attempt.get("error_code"),
+                    "latency_ms": attempt.get("latency_ms"),
+                    "slippage_pips": attempt.get("slippage_pips"),
+                    "detail_json": attempt.get("extra") or None,
+                })
 
     def _persist_attempts(
         self,

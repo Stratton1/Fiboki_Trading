@@ -515,6 +515,46 @@ export const api = {
         detail_json: { ig_reason?: string; ig_error_code?: string; [key: string]: unknown } | null;
       }>
     >(`/execution/audit${params ? `?${params}` : ""}`),
+  listExecutionSignals: (params?: { bot_id?: string; instrument?: string; limit?: number }) => {
+    const q = new URLSearchParams();
+    if (params?.bot_id) q.set("bot_id", params.bot_id);
+    if (params?.instrument) q.set("instrument", params.instrument);
+    if (params?.limit) q.set("limit", String(params.limit));
+    const qs = q.toString();
+    return apiFetch<Array<{
+      id: number;
+      bot_id: string;
+      strategy_id: string;
+      instrument: string;
+      timeframe: string;
+      direction: string;
+      kind: string;
+      signal_timestamp: string | null;
+      bar_time: string | null;
+      created_at: string | null;
+      parent_status: string;
+      attempt_count: number;
+      attempts: Array<{
+        id: number;
+        broker: string;
+        environment: string;
+        instrument: string;
+        broker_symbol: string | null;
+        direction: string | null;
+        requested_size: number | null;
+        filled_size: number | null;
+        requested_price: number | null;
+        filled_price: number | null;
+        status: string;
+        broker_order_id: string | null;
+        broker_deal_id: string | null;
+        rejection_reason: string | null;
+        error_code: string | null;
+        latency_ms: number | null;
+        slippage_pips: number | null;
+      }>;
+    }>>(`/execution/signals${qs ? `?${qs}` : ""}`);
+  },
   routerState: () =>
     apiFetch<{
       router_mode: string;

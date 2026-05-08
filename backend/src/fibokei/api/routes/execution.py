@@ -651,6 +651,168 @@ def delete_bot_target_endpoint(
     return {"deleted": target_id}
 
 
+class ExecutionAttemptResponse(BaseModel):
+    id: int
+    bot_signal_id: int
+    execution_target_id: int | None = None
+    execution_account_id: int | None = None
+    broker: str
+    environment: str
+    instrument: str
+    broker_symbol: str | None = None
+    direction: str | None = None
+    requested_size: float | None = None
+    adjusted_size: float | None = None
+    filled_size: float | None = None
+    requested_price: float | None = None
+    filled_price: float | None = None
+    status: str
+    broker_order_id: str | None = None
+    broker_deal_id: str | None = None
+    broker_fill_id: str | None = None
+    rejection_reason: str | None = None
+    error_code: str | None = None
+    latency_ms: int | None = None
+    slippage_pips: float | None = None
+    detail_json: dict | None = None
+    created_at: str | None = None
+
+
+class BotSignalResponse(BaseModel):
+    id: int
+    bot_id: str
+    strategy_id: str
+    instrument: str
+    timeframe: str
+    direction: str
+    kind: str
+    signal_timestamp: str | None = None
+    bar_time: str | None = None
+    plan_json: dict | None = None
+    created_at: str | None = None
+    parent_status: str
+    attempt_count: int
+    attempts: list[ExecutionAttemptResponse] | None = None
+
+
+def _attempt_to_response(a) -> ExecutionAttemptResponse:
+    return ExecutionAttemptResponse(
+        id=a.id,
+        bot_signal_id=a.bot_signal_id,
+        execution_target_id=a.execution_target_id,
+        execution_account_id=a.execution_account_id,
+        broker=a.broker,
+        environment=a.environment,
+        instrument=a.instrument,
+        broker_symbol=a.broker_symbol,
+        direction=a.direction,
+        requested_size=a.requested_size,
+        adjusted_size=a.adjusted_size,
+        filled_size=a.filled_size,
+        requested_price=a.requested_price,
+        filled_price=a.filled_price,
+        status=a.status,
+        broker_order_id=a.broker_order_id,
+        broker_deal_id=a.broker_deal_id,
+        broker_fill_id=a.broker_fill_id,
+        rejection_reason=a.rejection_reason,
+        error_code=a.error_code,
+        latency_ms=a.latency_ms,
+        slippage_pips=a.slippage_pips,
+        detail_json=a.detail_json,
+        created_at=a.created_at.isoformat() if a.created_at else None,
+    )
+
+
+def _signal_to_response(
+    s, *, attempts: list | None = None, include_attempts: bool = True
+) -> BotSignalResponse:
+    from fibokei.db.repository import derive_parent_signal_status
+
+    atts = attempts if attempts is not None else list(s.attempts)
+    return BotSignalResponse(
+        id=s.id,
+        bot_id=s.bot_id,
+        strategy_id=s.strategy_id,
+        instrument=s.instrument,
+        timeframe=s.timeframe,
+        direction=s.direction,
+        kind=s.kind,
+        signal_timestamp=s.signal_timestamp.isoformat() if s.signal_timestamp else None,
+        bar_time=s.bar_time.isoformat() if s.bar_time else None,
+        plan_json=s.plan_json,
+        created_at=s.created_at.isoformat() if s.created_at else None,
+        parent_status=derive_parent_signal_status(atts),
+        attempt_count=len(atts),
+        attempts=[_attempt_to_response(a) for a in atts] if include_attempts else None,
+    )
+
+
+@router.get("/execution/signals", response_model=list[BotSignalResponse])
+def list_execution_signals_endpoint(
+    bot_id: str | None = None,
+    instrument: str | None = None,
+    limit: int = 50,
+    offset: int = 0,
+    user: TokenData = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """List parent signals with embedded child attempt summaries.
+
+    Newest first. Each signal is returned with its full attempt list and
+    a derived ``parent_status`` so the frontend can render partial-success
+    badges without a second round trip.
+    """
+    from fibokei.db.repository import list_bot_signals
+
+    signals = list_bot_signals(
+        db, bot_id=bot_id, instrument=instrument, limit=limit, offset=offset
+    )
+    return [_signal_to_response(s) for s in signals]
+
+
+@router.get("/execution/signals/{signal_id}", response_model=BotSignalResponse)
+def get_execution_signal_endpoint(
+    signal_id: int,
+    user: TokenData = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    from fibokei.db.repository import get_bot_signal
+
+    signal = get_bot_signal(db, signal_id)
+    if signal is None:
+        raise HTTPException(status_code=404, detail="Signal not found")
+    return _signal_to_response(signal)
+
+
+@router.get(
+    "/execution/signals/{signal_id}/attempts",
+    response_model=list[ExecutionAttemptResponse],
+)
+def list_signal_attempts_endpoint(
+    signal_id: int,
+    status: str | None = None,
+    broker: str | None = None,
+    user: TokenData = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    from fibokei.db.repository import (
+        get_bot_signal,
+        list_execution_attempts,
+    )
+
+    signal = get_bot_signal(db, signal_id)
+    if signal is None:
+        raise HTTPException(status_code=404, detail="Signal not found")
+    atts = list_execution_attempts(
+        db,
+        bot_signal_id=signal_id,
+        broker=broker,
+        status=status,
+    )
+    return [_attempt_to_response(a) for a in atts]
+
+
 @router.get("/execution/router", response_model=RouterStateResponse)
 def get_router_state(
     user: TokenData = Depends(get_current_user),

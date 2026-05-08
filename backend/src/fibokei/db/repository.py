@@ -1298,6 +1298,161 @@ def list_targets_with_accounts(
     return [(t, a) for t, a in session.execute(stmt).all()]
 
 
+# ── Bot Signals + Execution Attempts (Phase 3) ─────────────
+
+from fibokei.db.models import (  # noqa: E402
+    BotSignalModel,
+    ExecutionAttemptModel,
+)
+
+
+# Status vocabulary for ExecutionAttemptModel.status. Constants are exported
+# so the router and API layer never use stringly-typed values directly.
+ATTEMPT_STATUS_PENDING = "pending"
+ATTEMPT_STATUS_SKIPPED = "skipped"
+ATTEMPT_STATUS_REJECTED = "rejected"
+ATTEMPT_STATUS_SUBMITTED = "submitted"
+ATTEMPT_STATUS_FILLED = "filled"
+ATTEMPT_STATUS_PARTIALLY_FILLED = "partially_filled"
+ATTEMPT_STATUS_CLOSED = "closed"
+ATTEMPT_STATUS_FAILED = "failed"
+
+VALID_ATTEMPT_STATUSES = frozenset({
+    ATTEMPT_STATUS_PENDING,
+    ATTEMPT_STATUS_SKIPPED,
+    ATTEMPT_STATUS_REJECTED,
+    ATTEMPT_STATUS_SUBMITTED,
+    ATTEMPT_STATUS_FILLED,
+    ATTEMPT_STATUS_PARTIALLY_FILLED,
+    ATTEMPT_STATUS_CLOSED,
+    ATTEMPT_STATUS_FAILED,
+})
+
+
+def create_bot_signal(session: Session, data: dict) -> BotSignalModel:
+    """Create a parent ``bot_signals`` row for a fan-out dispatch."""
+    model = BotSignalModel(**data)
+    session.add(model)
+    session.commit()
+    session.refresh(model)
+    return model
+
+
+def get_bot_signal(session: Session, signal_id: int) -> BotSignalModel | None:
+    return session.get(BotSignalModel, signal_id)
+
+
+def list_bot_signals(
+    session: Session,
+    *,
+    bot_id: str | None = None,
+    instrument: str | None = None,
+    limit: int = 100,
+    offset: int = 0,
+) -> list[BotSignalModel]:
+    """List bot signals, newest first."""
+    stmt = select(BotSignalModel)
+    if bot_id is not None:
+        stmt = stmt.where(BotSignalModel.bot_id == bot_id)
+    if instrument is not None:
+        stmt = stmt.where(BotSignalModel.instrument == instrument)
+    stmt = stmt.order_by(BotSignalModel.signal_timestamp.desc()).offset(offset).limit(limit)
+    return list(session.scalars(stmt).all())
+
+
+def create_execution_attempt(
+    session: Session, data: dict
+) -> ExecutionAttemptModel:
+    """Create a child ``execution_attempts`` row.
+
+    ``data`` must include ``bot_signal_id``, ``broker``, ``environment``,
+    ``instrument``, ``status``. Other fields fall back to column defaults.
+    """
+    model = ExecutionAttemptModel(**data)
+    session.add(model)
+    session.commit()
+    session.refresh(model)
+    return model
+
+
+def update_execution_attempt(
+    session: Session, attempt_id: int, updates: dict
+) -> ExecutionAttemptModel | None:
+    attempt = session.get(ExecutionAttemptModel, attempt_id)
+    if attempt is None:
+        return None
+    for field, value in updates.items():
+        if field in ("id", "bot_signal_id", "created_at"):
+            continue
+        if hasattr(attempt, field):
+            setattr(attempt, field, value)
+    session.commit()
+    session.refresh(attempt)
+    return attempt
+
+
+def list_execution_attempts(
+    session: Session,
+    *,
+    bot_signal_id: int | None = None,
+    bot_id: str | None = None,
+    broker: str | None = None,
+    execution_account_id: int | None = None,
+    status: str | None = None,
+    limit: int = 200,
+) -> list[ExecutionAttemptModel]:
+    """List execution attempts with common filters, newest first."""
+    stmt = select(ExecutionAttemptModel)
+    if bot_signal_id is not None:
+        stmt = stmt.where(ExecutionAttemptModel.bot_signal_id == bot_signal_id)
+    if broker is not None:
+        stmt = stmt.where(ExecutionAttemptModel.broker == broker)
+    if execution_account_id is not None:
+        stmt = stmt.where(
+            ExecutionAttemptModel.execution_account_id == execution_account_id
+        )
+    if status is not None:
+        stmt = stmt.where(ExecutionAttemptModel.status == status)
+    if bot_id is not None:
+        stmt = stmt.join(
+            BotSignalModel, ExecutionAttemptModel.bot_signal_id == BotSignalModel.id
+        ).where(BotSignalModel.bot_id == bot_id)
+    stmt = stmt.order_by(ExecutionAttemptModel.created_at.desc()).limit(limit)
+    return list(session.scalars(stmt).all())
+
+
+def derive_parent_signal_status(attempts: list[ExecutionAttemptModel]) -> str:
+    """Roll attempt statuses up to a single parent-signal status label.
+
+    Vocabulary returned:
+      - ``empty`` — no attempts at all
+      - ``all_filled`` — every attempt filled or closed
+      - ``all_skipped`` — every attempt skipped (kill switch / disabled / unsupported)
+      - ``all_rejected`` — every attempt rejected by gate or broker
+      - ``failed`` — every attempt failed (adapter exception etc.)
+      - ``partial_success`` — at least one filled and at least one not-filled
+      - ``mixed`` — anything else (e.g. mix of skipped + rejected)
+    """
+    if not attempts:
+        return "empty"
+    statuses = [a.status for a in attempts]
+    distinct = set(statuses)
+    filled_set = {ATTEMPT_STATUS_FILLED, ATTEMPT_STATUS_CLOSED, ATTEMPT_STATUS_PARTIALLY_FILLED}
+    if distinct <= filled_set:
+        return "all_filled"
+    if distinct == {ATTEMPT_STATUS_SKIPPED}:
+        return "all_skipped"
+    if distinct == {ATTEMPT_STATUS_REJECTED}:
+        return "all_rejected"
+    if distinct == {ATTEMPT_STATUS_FAILED}:
+        return "failed"
+    has_filled = any(s in filled_set for s in statuses)
+    has_not_filled = any(s not in filled_set for s in statuses)
+    if has_filled and has_not_filled:
+        return "partial_success"
+    return "mixed"
+
+
 # ── Strategy Variants ──────────────────────────────────────
 
 from fibokei.db.models import StrategyVariantModel  # noqa: E402

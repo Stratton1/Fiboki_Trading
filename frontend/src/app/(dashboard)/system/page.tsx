@@ -23,6 +23,7 @@ import {
 import { useManifest } from "@/lib/hooks/use-manifest";
 import { InfoTip } from "@/components/InfoTip";
 import { ExecutionAccountsCard } from "@/components/ExecutionAccountsCard";
+import { ExecutionSignalsCard } from "@/components/ExecutionSignalsCard";
 
 type DiagResult = { status: "idle" | "running" | "pass" | "fail"; detail: string };
 
@@ -526,7 +527,10 @@ export default function SystemPage() {
       {/* Phase 2: execution accounts and router mode */}
       <ExecutionAccountsCard />
 
-      {/* Execution Audit Log */}
+      {/* Phase 3: parent-child signals */}
+      <ExecutionSignalsCard />
+
+      {/* Execution Audit Log (legacy flat view) */}
       <ExecutionAuditSection />
 
       {/* Slippage Analytics */}

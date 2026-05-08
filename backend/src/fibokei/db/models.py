@@ -541,6 +541,90 @@ class BotExecutionTargetModel(Base):
     account: Mapped["ExecutionAccountModel"] = relationship(back_populates="targets")
 
 
+class BotSignalModel(Base):
+    """Phase 3 parent signal record — one per bot evaluation that produced a trade plan.
+
+    A signal is the broker-neutral decision to trade. Its child
+    :class:`ExecutionAttemptModel` rows record the per-target outcome of
+    fanning that signal out to one or more execution accounts.
+
+    Backwards-compatibility: the legacy ``execution_audit`` table is still
+    populated alongside these tables so the existing ``/execution/audit``
+    endpoint continues to work for older clients.
+    """
+
+    __tablename__ = "bot_signals"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    bot_id: Mapped[str] = mapped_column(String(20), nullable=False, index=True)
+    strategy_id: Mapped[str] = mapped_column(String(50), nullable=False, index=True)
+    instrument: Mapped[str] = mapped_column(String(20), nullable=False, index=True)
+    timeframe: Mapped[str] = mapped_column(String(10), nullable=False)
+    direction: Mapped[str] = mapped_column(String(10), nullable=False)  # LONG|SHORT|CLOSE
+    signal_timestamp: Mapped[datetime] = mapped_column(
+        DateTime, nullable=False, default=lambda: datetime.now(timezone.utc), index=True
+    )
+    bar_time: Mapped[datetime | None] = mapped_column(DateTime)
+    plan_json: Mapped[dict | None] = mapped_column(JSON)
+    # Optional kind so close-on-exit signals are distinguishable from opens.
+    kind: Mapped[str] = mapped_column(String(20), nullable=False, default="open")  # open|close
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, default=lambda: datetime.now(timezone.utc)
+    )
+
+    attempts: Mapped[list["ExecutionAttemptModel"]] = relationship(
+        back_populates="signal", cascade="all, delete-orphan"
+    )
+
+
+class ExecutionAttemptModel(Base):
+    """Phase 3 child attempt record — one per (signal × execution target) pair.
+
+    The router writes one row per enabled target during dispatch. Failures,
+    rejections, skips, and successful fills all have a row so the audit log
+    is complete and partial successes are obvious.
+    """
+
+    __tablename__ = "execution_attempts"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    bot_signal_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("bot_signals.id"), nullable=False, index=True
+    )
+    execution_target_id: Mapped[int | None] = mapped_column(
+        Integer, ForeignKey("bot_execution_targets.id"), nullable=True, index=True
+    )
+    execution_account_id: Mapped[int | None] = mapped_column(
+        Integer, ForeignKey("execution_accounts.id"), nullable=True, index=True
+    )
+    broker: Mapped[str] = mapped_column(String(20), nullable=False)
+    environment: Mapped[str] = mapped_column(String(20), nullable=False)
+    broker_account_id: Mapped[str | None] = mapped_column(String(100))
+    instrument: Mapped[str] = mapped_column(String(20), nullable=False)
+    broker_symbol: Mapped[str | None] = mapped_column(String(100))
+    direction: Mapped[str | None] = mapped_column(String(10))
+    requested_size: Mapped[float | None] = mapped_column(Float)
+    adjusted_size: Mapped[float | None] = mapped_column(Float)
+    filled_size: Mapped[float | None] = mapped_column(Float)
+    requested_price: Mapped[float | None] = mapped_column(Float)
+    filled_price: Mapped[float | None] = mapped_column(Float)
+    # Vocabulary: pending|skipped|rejected|submitted|filled|partially_filled|closed|failed
+    status: Mapped[str] = mapped_column(String(30), nullable=False, default="pending", index=True)
+    broker_order_id: Mapped[str | None] = mapped_column(String(100))
+    broker_deal_id: Mapped[str | None] = mapped_column(String(100))
+    broker_fill_id: Mapped[str | None] = mapped_column(String(100))
+    rejection_reason: Mapped[str | None] = mapped_column(Text)
+    error_code: Mapped[str | None] = mapped_column(String(50))
+    latency_ms: Mapped[int | None] = mapped_column(Integer)
+    slippage_pips: Mapped[float | None] = mapped_column(Float)
+    detail_json: Mapped[dict | None] = mapped_column(JSON)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, default=lambda: datetime.now(timezone.utc), index=True
+    )
+
+    signal: Mapped["BotSignalModel"] = relationship(back_populates="attempts")
+
+
 class AlertModel(Base):
     """In-app alert for signals, trades, risk events, and summaries."""
 
