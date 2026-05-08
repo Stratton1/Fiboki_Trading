@@ -90,6 +90,16 @@ def _create_engine_and_session():
 
     Base.metadata.create_all(engine)
     _ensure_new_columns(engine)
+    # Phase 2: idempotently seed the default Paper execution account so the
+    # multi-broker router has a stable destination on a fresh install.
+    try:
+        from fibokei.db.database import _seed_default_paper_account
+
+        _seed_default_paper_account(engine)
+    except Exception:
+        logging.getLogger("fibokei.startup").exception(
+            "Failed to seed default execution account; continuing without seed"
+        )
     session_factory = sessionmaker(bind=engine)
     return engine, session_factory
 

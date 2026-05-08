@@ -53,6 +53,11 @@ logger = logging.getLogger(__name__)
 
 
 KillSwitchCheck = Callable[[], bool]
+TargetProvider = Callable[[str], list["ResolvedTarget"]]
+"""Phase 2 hook: ``bot_id → list of resolved targets``. When supplied to
+``ExecutionRouter``, it is consulted on every dispatch so each bot can fan
+out to a different set of accounts. Phase 1 routers leave this ``None`` and
+fall back to the static ``targets`` list."""
 
 
 def _direction_to_broker(direction: str) -> str:
@@ -104,10 +109,24 @@ class ExecutionRouter:
         mode: str,
         targets: list[ResolvedTarget],
         kill_switch_check: KillSwitchCheck | None = None,
+        target_provider: TargetProvider | None = None,
     ) -> None:
         self.mode = mode
         self._targets: list[ResolvedTarget] = list(targets)
         self._kill_switch_check = kill_switch_check or (lambda: False)
+        self._target_provider = target_provider
+
+    def _targets_for(self, bot_id: str | None) -> list[ResolvedTarget]:
+        """Phase 2: per-bot target lookup with Phase 1 static fallback."""
+        if self._target_provider is not None and bot_id:
+            try:
+                return list(self._target_provider(bot_id))
+            except Exception:
+                logger.exception(
+                    "target_provider(bot_id=%s) raised; falling back to static targets",
+                    bot_id,
+                )
+        return self._targets
 
     # ── Read-only views ─────────────────────────────────────────────
 
@@ -155,12 +174,17 @@ class ExecutionRouter:
         Returns one :class:`ExecutionAttempt` per enabled target. Disabled
         targets are silently omitted from the list (their existence is
         visible via :meth:`summary`, but they don't get audited per signal).
+
+        In Phase 2 ``db_targets`` mode the target list is resolved per
+        ``plan.bot_id`` via the configured ``target_provider``; falls back
+        to the static list if no provider is wired or the lookup fails.
         """
         parent_signal_id = uuid.uuid4().hex
         attempts: list[ExecutionAttempt] = []
         kill_active = self.is_kill_switch_active
+        bot_targets = self._targets_for(plan.bot_id)
 
-        for target in self._targets:
+        for target in bot_targets:
             if not target.is_enabled:
                 continue
             attempts.append(self._dispatch_one_open(parent_signal_id, target, plan, kill_active))
@@ -276,8 +300,11 @@ class ExecutionRouter:
         """
         signal_id = parent_signal_id or uuid.uuid4().hex
         attempts: list[ExecutionAttempt] = []
+        # Use the per-bot target list when available so close-on-exit
+        # consults the same targets the open dispatch saw.
+        targets_for_close = self._targets_for(bot_id)
 
-        for target in self._targets:
+        for target in targets_for_close:
             deal_id = target_deal_ids.get(target.target_id)
             if not deal_id:
                 continue

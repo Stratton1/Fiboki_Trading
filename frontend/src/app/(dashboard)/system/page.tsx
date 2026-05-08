@@ -22,6 +22,7 @@ import {
 } from "lucide-react";
 import { useManifest } from "@/lib/hooks/use-manifest";
 import { InfoTip } from "@/components/InfoTip";
+import { ExecutionAccountsCard } from "@/components/ExecutionAccountsCard";
 
 type DiagResult = { status: "idle" | "running" | "pass" | "fail"; detail: string };
 
@@ -521,6 +522,9 @@ export default function SystemPage() {
           })}
         </div>
       </div>
+
+      {/* Phase 2: execution accounts and router mode */}
+      <ExecutionAccountsCard />
 
       {/* Execution Audit Log */}
       <ExecutionAuditSection />

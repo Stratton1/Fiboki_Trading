@@ -458,6 +458,89 @@ class StrategyVariantModel(Base):
     )
 
 
+class ExecutionAccountModel(Base):
+    """A configured execution destination (paper / IG demo / Tradovate demo / live).
+
+    Phase 2 of the multi-broker fan-out architecture: replaces the env-driven
+    Phase 1 ``ResolvedTarget`` config with a DB-backed source of truth.
+
+    When ``FIBOKEI_EXECUTION_ROUTER_MODE=db_targets`` the router builds its
+    target list from rows in this table joined to ``bot_execution_targets``.
+    Phase 1 ``env_global_fanout`` and ``legacy_single`` modes remain as
+    fallbacks.
+    """
+
+    __tablename__ = "execution_accounts"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    name: Mapped[str] = mapped_column(String(100), nullable=False, unique=True)
+    broker: Mapped[str] = mapped_column(String(20), nullable=False)  # paper|ig|tradovate
+    environment: Mapped[str] = mapped_column(String(20), nullable=False)  # paper|demo|live
+    broker_account_id: Mapped[str | None] = mapped_column(String(100))
+    base_currency: Mapped[str] = mapped_column(String(3), nullable=False, default="GBP")
+    starting_balance: Mapped[float] = mapped_column(Float, nullable=False, default=1000.0)
+    allocated_capital: Mapped[float] = mapped_column(Float, nullable=False, default=1000.0)
+    risk_per_trade_pct: Mapped[float] = mapped_column(Float, nullable=False, default=1.0)
+    max_daily_loss_pct: Mapped[float] = mapped_column(Float, nullable=False, default=4.0)
+    max_weekly_loss_pct: Mapped[float] = mapped_column(Float, nullable=False, default=8.0)
+    max_open_positions: Mapped[int] = mapped_column(Integer, nullable=False, default=20)
+    is_enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    is_default: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    # Live-trading explicit allow flag — required *in addition* to global gates
+    # for any live-environment account to be permitted by the router.
+    live_allowed: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    config_json: Mapped[dict | None] = mapped_column(JSON)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, default=lambda: datetime.now(timezone.utc)
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime,
+        default=lambda: datetime.now(timezone.utc),
+        onupdate=lambda: datetime.now(timezone.utc),
+    )
+
+    targets: Mapped[list["BotExecutionTargetModel"]] = relationship(
+        back_populates="account", cascade="all, delete-orphan"
+    )
+
+
+class BotExecutionTargetModel(Base):
+    """Links a paper bot to one or more execution accounts.
+
+    A bot with no targets defaults to the seeded Paper account in
+    ``db_targets`` mode (preserves Phase 1 paper-only behaviour for existing
+    bots). Each target may override the account's allocation or risk %.
+    """
+
+    __tablename__ = "bot_execution_targets"
+    __table_args__ = (
+        UniqueConstraint("bot_id", "execution_account_id", name="uq_bot_target"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    bot_id: Mapped[str] = mapped_column(String(20), nullable=False, index=True)
+    execution_account_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("execution_accounts.id"), nullable=False, index=True
+    )
+    is_enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    allocation_override: Mapped[float | None] = mapped_column(Float)
+    risk_per_trade_pct_override: Mapped[float | None] = mapped_column(Float)
+    sizing_mode: Mapped[str] = mapped_column(
+        String(30), nullable=False, default="static_allocation"
+    )
+    config_json: Mapped[dict | None] = mapped_column(JSON)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, default=lambda: datetime.now(timezone.utc)
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime,
+        default=lambda: datetime.now(timezone.utc),
+        onupdate=lambda: datetime.now(timezone.utc),
+    )
+
+    account: Mapped["ExecutionAccountModel"] = relationship(back_populates="targets")
+
+
 class AlertModel(Base):
     """In-app alert for signals, trades, risk events, and summaries."""
 

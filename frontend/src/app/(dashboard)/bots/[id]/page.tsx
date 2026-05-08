@@ -7,6 +7,7 @@ import { api } from "@/lib/api";
 import { PageHeader } from "@/components/PageHeader";
 import { StatusBadge } from "@/components/StatusBadge";
 import { EquityCurve } from "@/components/analytics/EquityCurve";
+import { BotExecutionTargetsCard } from "@/components/BotExecutionTargetsCard";
 import { strategyShortName } from "@/lib/strategy-names";
 import {
   ArrowLeft,
@@ -165,6 +166,9 @@ export default function BotDetailPage({ params }: { params: Promise<{ id: string
           <p className="text-danger text-xs mt-3 pt-3 border-t border-border">{actionError}</p>
         )}
       </div>
+
+      {/* Phase 2: per-bot execution targets */}
+      <BotExecutionTargetsCard botId={id} />
 
       {/* Metrics */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">

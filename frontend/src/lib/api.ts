@@ -515,6 +515,127 @@ export const api = {
         detail_json: { ig_reason?: string; ig_error_code?: string; [key: string]: unknown } | null;
       }>
     >(`/execution/audit${params ? `?${params}` : ""}`),
+  routerState: () =>
+    apiFetch<{
+      router_mode: string;
+      kill_switch_active: boolean;
+      targets: Array<{
+        target_id: string;
+        name: string;
+        broker: string;
+        environment: string;
+        is_enabled: boolean;
+        live_allowed: boolean;
+        allocated_capital: number;
+        risk_per_trade_pct: number;
+      }>;
+      warning: string | null;
+    }>("/execution/router"),
+
+  // ── Phase 2: execution accounts + per-bot targets ─────
+  listExecutionAccounts: (enabledOnly = false) =>
+    apiFetch<Array<{
+      id: number;
+      name: string;
+      broker: string;
+      environment: string;
+      broker_account_id: string | null;
+      base_currency: string;
+      starting_balance: number;
+      allocated_capital: number;
+      risk_per_trade_pct: number;
+      max_daily_loss_pct: number;
+      max_weekly_loss_pct: number;
+      max_open_positions: number;
+      is_enabled: boolean;
+      is_default: boolean;
+      live_allowed: boolean;
+      created_at: string | null;
+      updated_at: string | null;
+    }>>(`/execution/accounts${enabledOnly ? "?enabled_only=true" : ""}`),
+  getExecutionAccount: (id: number) =>
+    apiFetch<{
+      id: number;
+      name: string;
+      broker: string;
+      environment: string;
+      allocated_capital: number;
+      risk_per_trade_pct: number;
+      is_enabled: boolean;
+      is_default: boolean;
+      live_allowed: boolean;
+    }>(`/execution/accounts/${id}`),
+  createExecutionAccount: (body: {
+    name: string;
+    broker: string;
+    environment: string;
+    broker_account_id?: string;
+    allocated_capital?: number;
+    risk_per_trade_pct?: number;
+    is_enabled?: boolean;
+    is_default?: boolean;
+    live_allowed?: boolean;
+  }) =>
+    apiFetch<{ id: number; name: string }>("/execution/accounts", {
+      method: "POST",
+      body: JSON.stringify(body),
+    }),
+  updateExecutionAccount: (id: number, body: Record<string, unknown>) =>
+    apiFetch<{ id: number; name: string }>(`/execution/accounts/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify(body),
+    }),
+  executionAccountStatus: (id: number) =>
+    apiFetch<{
+      id: number;
+      name: string;
+      broker: string;
+      environment: string;
+      is_enabled: boolean;
+      live_allowed: boolean;
+      allocated_capital: number;
+      risk_per_trade_pct: number;
+      configured: boolean;
+    }>(`/execution/accounts/${id}/status`),
+  listBotTargets: (botId: string) =>
+    apiFetch<Array<{
+      id: number;
+      bot_id: string;
+      execution_account_id: number;
+      is_enabled: boolean;
+      allocation_override: number | null;
+      risk_per_trade_pct_override: number | null;
+      sizing_mode: string;
+      account: {
+        id: number;
+        name: string;
+        broker: string;
+        environment: string;
+        allocated_capital: number;
+        is_enabled: boolean;
+      } | null;
+    }>>(`/paper/bots/${botId}/targets`),
+  attachBotTarget: (botId: string, body: {
+    execution_account_id: number;
+    is_enabled?: boolean;
+    allocation_override?: number;
+    risk_per_trade_pct_override?: number;
+    sizing_mode?: string;
+  }) =>
+    apiFetch<{ id: number }>(`/paper/bots/${botId}/targets`, {
+      method: "POST",
+      body: JSON.stringify(body),
+    }),
+  patchBotTarget: (botId: string, targetId: number, body: Record<string, unknown>) =>
+    apiFetch<{ id: number }>(`/paper/bots/${botId}/targets/${targetId}`, {
+      method: "PATCH",
+      body: JSON.stringify(body),
+    }),
+  deleteBotTarget: (botId: string, targetId: number) =>
+    apiFetch<{ deleted: number }>(`/paper/bots/${botId}/targets/${targetId}`, {
+      method: "DELETE",
+    }),
+
   slippage: (instrument?: string) =>
     apiFetch<{
       total_fills: number;

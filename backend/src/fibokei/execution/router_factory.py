@@ -171,6 +171,7 @@ def _build_tradovate_target() -> ResolvedTarget | None:
 def build_execution_router_from_env(
     account: PaperAccount | None = None,
     kill_switch_check: Callable[[], bool] | None = None,
+    session_factory: Callable | None = None,
 ) -> ExecutionRouter:
     """Build the router according to the current router mode.
 
@@ -181,17 +182,27 @@ def build_execution_router_from_env(
     * ``env_global_fanout`` — every enabled account becomes a target. All
       bots fan out to all enabled targets.
 
-    * ``db_targets`` — Phase 2; for now we log a warning and fall back to
-      ``env_global_fanout``.
+    * ``db_targets`` (Phase 2) — per-bot targets read from the database.
+      Requires ``session_factory``. Falls back to ``env_global_fanout`` if
+      no factory is supplied (e.g. in tests that don't need DB-backed
+      targets).
     """
     mode = get_router_mode()
 
-    if mode == ROUTER_MODE_DB_TARGETS:
+    if mode == ROUTER_MODE_DB_TARGETS and session_factory is None:
         logger.warning(
-            "FIBOKEI_EXECUTION_ROUTER_MODE=db_targets is a Phase-2 placeholder. "
-            "Falling back to env_global_fanout for now."
+            "FIBOKEI_EXECUTION_ROUTER_MODE=db_targets requires a session_factory; "
+            "falling back to env_global_fanout."
         )
         mode = ROUTER_MODE_ENV_GLOBAL_FANOUT
+
+    if mode == ROUTER_MODE_DB_TARGETS:
+        # Phase 2: per-bot targets resolved from DB on every dispatch.
+        return _build_db_router(
+            account=account,
+            kill_switch_check=kill_switch_check,
+            session_factory=session_factory,
+        )
 
     targets: list[ResolvedTarget] = []
     if mode == ROUTER_MODE_LEGACY_SINGLE:
@@ -281,3 +292,152 @@ def _build_legacy_ig_target() -> ResolvedTarget:
         adapter=IGExecutionAdapter(),
         live_allowed=False,  # Demo only in legacy.
     )
+
+
+# ── Phase 2: db_targets builder ──────────────────────────────────
+
+
+# Cached adapter instances per (broker, environment) so each broker's
+# session/HTTP client is reused across signals. Keyed on the unique account
+# id so two IG demo accounts (rare) keep separate adapters.
+from fibokei.execution.adapter import ExecutionAdapter  # noqa: E402
+
+_ADAPTER_CACHE: dict[int, ExecutionAdapter] = {}
+
+
+def _adapter_for_account(account_row, paper_account: PaperAccount | None):
+    """Return (cached) adapter instance for an ExecutionAccountModel row.
+
+    Each broker gets one adapter per account row. Reused across dispatches
+    so authenticated sessions persist between signals.
+    """
+    cached = _ADAPTER_CACHE.get(account_row.id)
+    if cached is not None:
+        return cached
+    if account_row.broker == BROKER_PAPER:
+        from fibokei.execution.paper_adapter import PaperExecutionAdapter
+        adapter = PaperExecutionAdapter(account=paper_account)
+    elif account_row.broker == BROKER_IG:
+        from fibokei.execution.ig_adapter import IGExecutionAdapter
+        adapter = IGExecutionAdapter()
+    elif account_row.broker == BROKER_TRADOVATE:
+        from fibokei.execution.tradovate_adapter import TradovateExecutionAdapter
+        adapter = TradovateExecutionAdapter()
+    else:
+        logger.warning(
+            "Unknown broker '%s' for account %s; using paper",
+            account_row.broker, account_row.name,
+        )
+        from fibokei.execution.paper_adapter import PaperExecutionAdapter
+        adapter = PaperExecutionAdapter(account=paper_account)
+    _ADAPTER_CACHE[account_row.id] = adapter
+    return adapter
+
+
+def _resolved_target_from_db(target_row, account_row, paper_account):
+    """Convert a (target, account) DB pair into a :class:`ResolvedTarget`."""
+    capital = (
+        target_row.allocation_override
+        if target_row.allocation_override is not None
+        else account_row.allocated_capital
+    )
+    risk_pct = (
+        target_row.risk_per_trade_pct_override
+        if target_row.risk_per_trade_pct_override is not None
+        else account_row.risk_per_trade_pct
+    )
+    # Live execution requires both the account-level live_allowed flag AND
+    # the global FIBOKEI_LIVE_EXECUTION_ENABLED master lock to be true.
+    live_master = _bool_env("FIBOKEI_LIVE_EXECUTION_ENABLED", False)
+    live_allowed = (
+        bool(account_row.live_allowed)
+        and account_row.environment == ENV_LIVE
+        and live_master
+    )
+    return ResolvedTarget(
+        target_id=f"acct-{account_row.id}",
+        name=account_row.name,
+        broker=account_row.broker,
+        environment=account_row.environment,
+        allocated_capital=float(capital),
+        risk_per_trade_pct=float(risk_pct),
+        is_enabled=bool(target_row.is_enabled and account_row.is_enabled),
+        adapter=_adapter_for_account(account_row, paper_account),
+        live_allowed=live_allowed,
+    )
+
+
+def _build_db_router(
+    account: PaperAccount | None,
+    kill_switch_check: Callable[[], bool] | None,
+    session_factory: Callable | None,
+) -> ExecutionRouter:
+    """Phase 2 router with per-bot targets resolved from the database."""
+    from fibokei.db.repository import (
+        get_default_execution_account,
+        list_targets_with_accounts,
+    )
+
+    paper_account = account
+
+    def target_provider(bot_id: str) -> list[ResolvedTarget]:
+        """Resolve a fresh list of ResolvedTarget for the given bot.
+
+        Reads ``bot_execution_targets`` joined to ``execution_accounts``;
+        disabled rows on either side are excluded by the query. Bots with
+        no explicit targets fall back to the default Paper account so
+        existing bots continue to run safely after the Phase 2 migration.
+        """
+        if session_factory is None:
+            return []
+        with session_factory() as session:
+            pairs = list_targets_with_accounts(session, bot_id=bot_id)
+            if pairs:
+                return [
+                    _resolved_target_from_db(t, a, paper_account)
+                    for t, a in pairs
+                ]
+            # No explicit targets — fall back to the default account.
+            default_account = get_default_execution_account(session)
+            if default_account is None or not default_account.is_enabled:
+                return []
+            class _SyntheticTarget:  # mimics BotExecutionTargetModel duck-typed for resolved
+                is_enabled = True
+                allocation_override = None
+                risk_per_trade_pct_override = None
+            return [
+                _resolved_target_from_db(_SyntheticTarget(), default_account, paper_account)
+            ]
+
+    # Build a small static snapshot of currently-enabled accounts for the
+    # router summary (System page). The provider is the source of truth at
+    # dispatch time; this list is informational only.
+    static_snapshot: list[ResolvedTarget] = []
+    if session_factory is not None:
+        try:
+            from fibokei.db.repository import list_execution_accounts
+
+            with session_factory() as session:
+                for acct in list_execution_accounts(session, enabled_only=True):
+                    class _Synthetic:
+                        is_enabled = True
+                        allocation_override = None
+                        risk_per_trade_pct_override = None
+                    static_snapshot.append(
+                        _resolved_target_from_db(_Synthetic(), acct, paper_account)
+                    )
+        except Exception:
+            logger.exception("Failed to build static snapshot of execution accounts")
+
+    router = ExecutionRouter(
+        mode=ROUTER_MODE_DB_TARGETS,
+        targets=static_snapshot,
+        kill_switch_check=kill_switch_check,
+        target_provider=target_provider,
+    )
+    logger.info(
+        "ExecutionRouter built: mode=db_targets accounts_enabled=%d "
+        "(per-bot targets resolved on dispatch)",
+        len(static_snapshot),
+    )
+    return router

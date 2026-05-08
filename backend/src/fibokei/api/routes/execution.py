@@ -284,6 +284,373 @@ def get_tradovate_health(
     )
 
 
+class ExecutionAccountResponse(BaseModel):
+    id: int
+    name: str
+    broker: str
+    environment: str
+    broker_account_id: str | None = None
+    base_currency: str = "GBP"
+    starting_balance: float = 1000.0
+    allocated_capital: float = 1000.0
+    risk_per_trade_pct: float = 1.0
+    max_daily_loss_pct: float = 4.0
+    max_weekly_loss_pct: float = 8.0
+    max_open_positions: int = 20
+    is_enabled: bool = True
+    is_default: bool = False
+    live_allowed: bool = False
+    config_json: dict | None = None
+    created_at: str | None = None
+    updated_at: str | None = None
+
+
+class CreateExecutionAccountRequest(BaseModel):
+    name: str
+    broker: str  # paper|ig|tradovate
+    environment: str = "paper"  # paper|demo|live
+    broker_account_id: str | None = None
+    base_currency: str = "GBP"
+    starting_balance: float = 1000.0
+    allocated_capital: float = 1000.0
+    risk_per_trade_pct: float = 1.0
+    max_daily_loss_pct: float = 4.0
+    max_weekly_loss_pct: float = 8.0
+    max_open_positions: int = 20
+    is_enabled: bool = True
+    is_default: bool = False
+    live_allowed: bool = False
+    config_json: dict | None = None
+
+
+class UpdateExecutionAccountRequest(BaseModel):
+    name: str | None = None
+    broker_account_id: str | None = None
+    base_currency: str | None = None
+    starting_balance: float | None = None
+    allocated_capital: float | None = None
+    risk_per_trade_pct: float | None = None
+    max_daily_loss_pct: float | None = None
+    max_weekly_loss_pct: float | None = None
+    max_open_positions: int | None = None
+    is_enabled: bool | None = None
+    is_default: bool | None = None
+    live_allowed: bool | None = None
+    config_json: dict | None = None
+
+
+class BotExecutionTargetResponse(BaseModel):
+    id: int
+    bot_id: str
+    execution_account_id: int
+    is_enabled: bool = True
+    allocation_override: float | None = None
+    risk_per_trade_pct_override: float | None = None
+    sizing_mode: str = "static_allocation"
+    config_json: dict | None = None
+    created_at: str | None = None
+    updated_at: str | None = None
+    # Nested account view for convenient frontend rendering.
+    account: ExecutionAccountResponse | None = None
+
+
+class CreateBotExecutionTargetRequest(BaseModel):
+    execution_account_id: int
+    is_enabled: bool = True
+    allocation_override: float | None = None
+    risk_per_trade_pct_override: float | None = None
+    sizing_mode: str = "static_allocation"
+    config_json: dict | None = None
+
+
+class UpdateBotExecutionTargetRequest(BaseModel):
+    is_enabled: bool | None = None
+    allocation_override: float | None = None
+    risk_per_trade_pct_override: float | None = None
+    sizing_mode: str | None = None
+    config_json: dict | None = None
+
+
+def _account_to_response(acct) -> ExecutionAccountResponse:
+    return ExecutionAccountResponse(
+        id=acct.id,
+        name=acct.name,
+        broker=acct.broker,
+        environment=acct.environment,
+        broker_account_id=acct.broker_account_id,
+        base_currency=acct.base_currency,
+        starting_balance=acct.starting_balance,
+        allocated_capital=acct.allocated_capital,
+        risk_per_trade_pct=acct.risk_per_trade_pct,
+        max_daily_loss_pct=acct.max_daily_loss_pct,
+        max_weekly_loss_pct=acct.max_weekly_loss_pct,
+        max_open_positions=acct.max_open_positions,
+        is_enabled=acct.is_enabled,
+        is_default=acct.is_default,
+        live_allowed=acct.live_allowed,
+        config_json=acct.config_json,
+        created_at=acct.created_at.isoformat() if acct.created_at else None,
+        updated_at=acct.updated_at.isoformat() if acct.updated_at else None,
+    )
+
+
+def _target_to_response(target, account=None) -> BotExecutionTargetResponse:
+    return BotExecutionTargetResponse(
+        id=target.id,
+        bot_id=target.bot_id,
+        execution_account_id=target.execution_account_id,
+        is_enabled=target.is_enabled,
+        allocation_override=target.allocation_override,
+        risk_per_trade_pct_override=target.risk_per_trade_pct_override,
+        sizing_mode=target.sizing_mode,
+        config_json=target.config_json,
+        created_at=target.created_at.isoformat() if target.created_at else None,
+        updated_at=target.updated_at.isoformat() if target.updated_at else None,
+        account=_account_to_response(account) if account else None,
+    )
+
+
+@router.get("/execution/accounts", response_model=list[ExecutionAccountResponse])
+def list_execution_accounts_endpoint(
+    enabled_only: bool = False,
+    user: TokenData = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """List all execution accounts, oldest first."""
+    from fibokei.db.repository import list_execution_accounts
+
+    accounts = list_execution_accounts(db, enabled_only=enabled_only)
+    return [_account_to_response(a) for a in accounts]
+
+
+@router.get("/execution/accounts/{account_id}", response_model=ExecutionAccountResponse)
+def get_execution_account_endpoint(
+    account_id: int,
+    user: TokenData = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    from fibokei.db.repository import get_execution_account
+
+    acct = get_execution_account(db, account_id)
+    if acct is None:
+        raise HTTPException(status_code=404, detail="Execution account not found")
+    return _account_to_response(acct)
+
+
+@router.post("/execution/accounts", response_model=ExecutionAccountResponse)
+def create_execution_account_endpoint(
+    req: CreateExecutionAccountRequest,
+    user: TokenData = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Create a new execution account.
+
+    Names must be unique. ``broker`` ∈ ``{paper, ig, tradovate}``;
+    ``environment`` ∈ ``{paper, demo, live}``. Live setup is gated by the
+    router separately — creating a live-environment account does not by
+    itself enable real-money execution.
+    """
+    from fibokei.db.repository import (
+        create_execution_account,
+        get_execution_account_by_name,
+    )
+
+    if req.broker not in ("paper", "ig", "tradovate"):
+        raise HTTPException(status_code=400, detail=f"Unknown broker: {req.broker}")
+    if req.environment not in ("paper", "demo", "live"):
+        raise HTTPException(
+            status_code=400, detail=f"Unknown environment: {req.environment}"
+        )
+    existing = get_execution_account_by_name(db, req.name)
+    if existing is not None:
+        raise HTTPException(
+            status_code=409,
+            detail=f"Execution account with name '{req.name}' already exists",
+        )
+
+    acct = create_execution_account(db, req.model_dump())
+    return _account_to_response(acct)
+
+
+@router.patch("/execution/accounts/{account_id}", response_model=ExecutionAccountResponse)
+def update_execution_account_endpoint(
+    account_id: int,
+    req: UpdateExecutionAccountRequest,
+    user: TokenData = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Patch fields on an execution account. Identity fields cannot be changed."""
+    from fibokei.db.repository import update_execution_account
+
+    updates = {k: v for k, v in req.model_dump().items() if v is not None}
+    if not updates:
+        raise HTTPException(status_code=400, detail="No fields to update")
+    acct = update_execution_account(db, account_id, updates)
+    if acct is None:
+        raise HTTPException(status_code=404, detail="Execution account not found")
+    return _account_to_response(acct)
+
+
+@router.get("/execution/accounts/{account_id}/status")
+def get_execution_account_status_endpoint(
+    account_id: int,
+    user: TokenData = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Operator readiness summary for a single account.
+
+    Reports broker, environment, enabled state, allocated capital, and a
+    broker-specific ``configured`` flag indicating whether credentials are
+    set in env. Does NOT call the broker — safe to poll.
+    """
+    import os as _os
+
+    from fibokei.db.repository import get_execution_account
+
+    acct = get_execution_account(db, account_id)
+    if acct is None:
+        raise HTTPException(status_code=404, detail="Execution account not found")
+
+    if acct.broker == "ig":
+        configured = bool(
+            _os.environ.get("FIBOKEI_IG_API_KEY")
+            and _os.environ.get("FIBOKEI_IG_USERNAME")
+            and _os.environ.get("FIBOKEI_IG_PASSWORD")
+        )
+    elif acct.broker == "tradovate":
+        configured = bool(
+            _os.environ.get("FIBOKEI_TRADOVATE_USERNAME")
+            and _os.environ.get("FIBOKEI_TRADOVATE_PASSWORD")
+            and _os.environ.get("FIBOKEI_TRADOVATE_CID")
+            and _os.environ.get("FIBOKEI_TRADOVATE_SECRET")
+        )
+    else:  # paper
+        configured = True
+
+    return {
+        "id": acct.id,
+        "name": acct.name,
+        "broker": acct.broker,
+        "environment": acct.environment,
+        "is_enabled": acct.is_enabled,
+        "live_allowed": acct.live_allowed,
+        "allocated_capital": acct.allocated_capital,
+        "risk_per_trade_pct": acct.risk_per_trade_pct,
+        "configured": configured,
+    }
+
+
+@router.get(
+    "/paper/bots/{bot_id}/targets",
+    response_model=list[BotExecutionTargetResponse],
+)
+def list_bot_targets_endpoint(
+    bot_id: str,
+    user: TokenData = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """List execution targets attached to a bot."""
+    from fibokei.db.repository import (
+        get_execution_account,
+        list_bot_execution_targets,
+    )
+
+    targets = list_bot_execution_targets(db, bot_id=bot_id)
+    out: list[BotExecutionTargetResponse] = []
+    for t in targets:
+        acct = get_execution_account(db, t.execution_account_id)
+        out.append(_target_to_response(t, acct))
+    return out
+
+
+@router.post(
+    "/paper/bots/{bot_id}/targets",
+    response_model=BotExecutionTargetResponse,
+)
+def create_bot_target_endpoint(
+    bot_id: str,
+    req: CreateBotExecutionTargetRequest,
+    user: TokenData = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Attach an execution target to a bot.
+
+    The (bot_id, execution_account_id) pair must be unique. To re-enable a
+    previously-disabled target, ``PATCH`` the existing row instead.
+    """
+    from sqlalchemy.exc import IntegrityError
+
+    from fibokei.db.repository import (
+        create_bot_execution_target,
+        get_execution_account,
+    )
+
+    acct = get_execution_account(db, req.execution_account_id)
+    if acct is None:
+        raise HTTPException(status_code=404, detail="Execution account not found")
+
+    payload = {"bot_id": bot_id, **req.model_dump()}
+    try:
+        target = create_bot_execution_target(db, payload)
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(
+            status_code=409,
+            detail=(
+                f"Bot '{bot_id}' already has a target on account {req.execution_account_id}; "
+                "PATCH the existing row instead."
+            ),
+        ) from None
+    return _target_to_response(target, acct)
+
+
+@router.patch(
+    "/paper/bots/{bot_id}/targets/{target_id}",
+    response_model=BotExecutionTargetResponse,
+)
+def update_bot_target_endpoint(
+    bot_id: str,
+    target_id: int,
+    req: UpdateBotExecutionTargetRequest,
+    user: TokenData = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    from fibokei.db.repository import (
+        get_bot_execution_target,
+        get_execution_account,
+        update_bot_execution_target,
+    )
+
+    target = get_bot_execution_target(db, target_id)
+    if target is None or target.bot_id != bot_id:
+        raise HTTPException(status_code=404, detail="Bot execution target not found")
+    updates = {k: v for k, v in req.model_dump().items() if v is not None}
+    if not updates:
+        raise HTTPException(status_code=400, detail="No fields to update")
+    target = update_bot_execution_target(db, target_id, updates)
+    acct = get_execution_account(db, target.execution_account_id)
+    return _target_to_response(target, acct)
+
+
+@router.delete("/paper/bots/{bot_id}/targets/{target_id}")
+def delete_bot_target_endpoint(
+    bot_id: str,
+    target_id: int,
+    user: TokenData = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    from fibokei.db.repository import (
+        delete_bot_execution_target,
+        get_bot_execution_target,
+    )
+
+    target = get_bot_execution_target(db, target_id)
+    if target is None or target.bot_id != bot_id:
+        raise HTTPException(status_code=404, detail="Bot execution target not found")
+    delete_bot_execution_target(db, target_id)
+    return {"deleted": target_id}
+
+
 @router.get("/execution/router", response_model=RouterStateResponse)
 def get_router_state(
     user: TokenData = Depends(get_current_user),
