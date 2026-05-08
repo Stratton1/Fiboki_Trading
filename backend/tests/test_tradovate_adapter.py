@@ -69,10 +69,13 @@ class TestPlaceOrder:
         # Adapter sent the right payload
         sent = client.place_order.call_args[0][0]
         assert sent["accountId"] == 42
+        # accountSpec (account NAME) is required by Tradovate alongside accountId
+        assert sent["accountSpec"] == "DEMO42"
         assert sent["action"] == "Buy"
         assert sent["symbol"] == "ESM6"
         assert sent["orderQty"] == 2
         assert sent["orderType"] == "Market"
+        assert sent["isAutomated"] is True
 
     def test_unsupported_instrument(self):
         adapter, client = _make_adapter()
@@ -148,8 +151,10 @@ class TestClosePosition:
         result = adapter.close_position(deal)
         assert result["status"] == "ACCEPTED"
         sent = client.place_order.call_args[0][0]
-        # Original was Buy → close action is Sell
+        # Original was Buy → close action is Sell. accountSpec must persist
+        # on close payloads too (required by Tradovate /order/placeOrder).
         assert sent["action"] == "Sell"
+        assert sent["accountSpec"] == "DEMO42"
         assert sent["orderQty"] == 3
         assert sent["symbol"] == "ESM6"
 

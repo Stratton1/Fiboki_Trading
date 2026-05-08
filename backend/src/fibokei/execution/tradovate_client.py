@@ -212,9 +212,12 @@ class TradovateClient:
     def authenticate(self) -> TradovateSession:
         """Authenticate with Tradovate and return a session.
 
-        TODO_VERIFY: confirm the auth path (``/auth/accessTokenRequest``) and
-        payload field names against the latest Tradovate REST docs before
-        any demo-account smoke test.
+        Audited 2026-05-08 against the official Tradovate API tutorial repo
+        (`tradovate/example-api-js`). Path is lowercase
+        ``/auth/accesstokenrequest`` per the EX-1-Simple-Request example.
+        Payload field names (``name``, ``password``, ``appId``, ``appVersion``,
+        ``cid`` numeric, ``sec``, ``deviceId``) match the official
+        ``tutorialsCredentials.js`` template exactly.
         """
         self._ensure_env_allowed()
 
@@ -236,7 +239,7 @@ class TradovateClient:
         }
         try:
             resp = self._http.post(
-                f"{self._base_url}/auth/accessTokenRequest",
+                f"{self._base_url}/auth/accesstokenrequest",
                 json=payload,
                 headers={"Content-Type": "application/json"},
             )

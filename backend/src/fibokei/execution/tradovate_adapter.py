@@ -57,10 +57,15 @@ class TradovateExecutionAdapter(ExecutionAdapter):
         client: TradovateClient | None = None,
         resolver: TradovateContractResolver | None = None,
         account_id: int | None = None,
+        account_spec: str | None = None,
     ) -> None:
         self._client = client or TradovateClient()
         self._resolver = resolver or get_default_tradovate_resolver()
         self._account_id = account_id or 0
+        # ``accountSpec`` is the account *name* (e.g. "DEMO12345") and is a
+        # required field on /order/placeOrder per the Tradovate tutorial.
+        # Without both id + spec the API responds with a Violation.
+        self._account_spec = account_spec or ""
         self._authenticated = False
         # Local cache of (deal_id → contract) so close_position can construct
         # the reverse-side payload without re-querying Tradovate.
@@ -72,14 +77,19 @@ class TradovateExecutionAdapter(ExecutionAdapter):
         if self._authenticated:
             return
         self._client.authenticate()
-        if not self._account_id:
+        if not self._account_id or not self._account_spec:
             try:
                 accounts = self._client.list_accounts()
                 if accounts:
-                    self._account_id = accounts[0].account_id
+                    if not self._account_id:
+                        self._account_id = accounts[0].account_id
+                    if not self._account_spec:
+                        # accountSpec is the account NAME (required by
+                        # /order/placeOrder per Tradovate tutorial).
+                        self._account_spec = accounts[0].name
             except TradovateClientError:
-                # Leave account_id at 0 — place_order will surface a clean
-                # rejection rather than crashing.
+                # Leave account_id/spec unset — place_order will surface a
+                # clean rejection rather than crashing.
                 pass
         self._authenticated = True
 
@@ -91,12 +101,27 @@ class TradovateExecutionAdapter(ExecutionAdapter):
     ) -> dict:
         """Construct the Tradovate ``/order/placeOrder`` body.
 
+        Required fields per the official tutorial repo
+        (`tradovate/example-api-js`, EX-4a-Place-An-Order):
+
+          * ``accountId`` — integer account id (from /account/list)
+          * ``accountSpec`` — account NAME string (also from /account/list).
+            Without BOTH id and spec, the API returns a Violation.
+          * ``action`` — "Buy" or "Sell" (case-sensitive)
+          * ``symbol`` — Tradovate contract symbol (e.g. "ESM6")
+          * ``orderQty`` — integer contract count
+          * ``orderType`` — "Market" / "Limit" / "Stop" etc.
+          * ``isAutomated`` — MUST be ``true`` for bot-placed orders. The
+            tutorial explicitly warns this is an exchange-policy
+            requirement.
+
         Phase 1 sends a market order with no bracket orders attached.
         Stop-loss / take-profit are tracked client-side via the bot's
         Position object; broker-side OCO/OSO orders arrive in a later phase.
         """
         return {
             "accountId": int(self._account_id),
+            "accountSpec": self._account_spec,
             "action": action,
             "symbol": contract.contract_symbol,
             "orderQty": int(size),
@@ -277,6 +302,7 @@ class TradovateExecutionAdapter(ExecutionAdapter):
 
         payload = {
             "accountId": int(self._account_id),
+            "accountSpec": self._account_spec,
             "action": _opposite_action(record["action"]),
             "symbol": record["contract_symbol"],
             "orderQty": int(record["size"]),
@@ -328,6 +354,7 @@ class TradovateExecutionAdapter(ExecutionAdapter):
 
         payload = {
             "accountId": int(self._account_id),
+            "accountSpec": self._account_spec,
             "action": _opposite_action(record["action"]),
             "symbol": record["contract_symbol"],
             "orderQty": close_size,
