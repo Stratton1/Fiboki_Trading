@@ -86,9 +86,23 @@ function ExecutionAuditSection() {
                   <td className="px-3 py-1.5 font-medium">{entry.action}</td>
                   <td className="px-3 py-1.5">{entry.instrument}</td>
                   <td className="px-3 py-1.5">
-                    <StatusBadge variant={AUDIT_STATUS_VARIANT[entry.status] ?? "neutral"}>
-                      {entry.status}
-                    </StatusBadge>
+                    <div className="flex flex-col gap-0.5">
+                      <StatusBadge variant={AUDIT_STATUS_VARIANT[entry.status] ?? "neutral"}>
+                        {entry.status}
+                      </StatusBadge>
+                      {entry.status === "paper_only" && entry.detail_json?.ig_reason && (
+                        <span className="text-[10px] text-amber-700 leading-tight max-w-[160px] truncate" title={entry.detail_json.ig_reason}>
+                          {entry.detail_json.ig_error_code
+                            ? `${entry.detail_json.ig_error_code}: ${entry.detail_json.ig_reason}`
+                            : entry.detail_json.ig_reason}
+                        </span>
+                      )}
+                      {entry.status === "paper_only" && !entry.detail_json?.ig_reason && entry.error_message && (
+                        <span className="text-[10px] text-foreground-muted leading-tight max-w-[160px] truncate" title={entry.error_message}>
+                          {entry.error_message}
+                        </span>
+                      )}
+                    </div>
                   </td>
                   <td className="px-3 py-1.5 text-xs text-foreground-muted">
                     {entry.bot_id ?? "—"}

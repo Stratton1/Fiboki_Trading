@@ -373,20 +373,24 @@ class PaperWorker:
             elif ev_type == "trade_closed":
                 trade = event.get("trade")
                 bot = self.bots.get(bot_id)
+                # closed_deal_id is set if the adapter actually closed an IG position;
+                # empty means the position was paper-only and IG was never touched.
+                closed_deal_id = event.get("closed_deal_id", "")
                 audit = {
                     "execution_mode": execution_mode,
                     "action": "close_position",
                     "instrument": trade.instrument if trade else "",
                     "direction": trade.direction.value if trade else "",
                     "bot_id": bot_id,
-                    "deal_id": "",
-                    "status": "success",
+                    "deal_id": closed_deal_id,
+                    # "success" = IG close confirmed; "paper_only" = paper trade only
+                    "status": "success" if closed_deal_id else "paper_only",
                     "detail_json": {
                         "exit_reason": trade.exit_reason.value if trade else "",
                         "pnl": trade.pnl if trade else None,
                         "bars_in_trade": trade.bars_in_trade if trade else None,
                     },
-                    "error_message": None,
+                    "error_message": None if closed_deal_id else "No IG position closed (opened as paper_only)",
                 }
             else:
                 return

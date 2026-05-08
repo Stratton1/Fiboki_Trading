@@ -251,7 +251,7 @@ class IGClient:
         payload = {
             "dealId": deal_id,
             "direction": direction,
-            "size": str(size),
+            "size": float(size),  # must be numeric — IG v2 API rejects string-encoded sizes
             "orderType": "MARKET",
         }
         return self._request(

@@ -510,6 +510,7 @@ export const api = {
         status: string;
         error_message: string | null;
         bot_id: string | null;
+        detail_json: { ig_reason?: string; ig_error_code?: string; [key: string]: unknown } | null;
       }>
     >(`/execution/audit${params ? `?${params}` : ""}`),
   slippage: (instrument?: string) =>
