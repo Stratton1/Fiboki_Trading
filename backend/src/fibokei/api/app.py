@@ -290,8 +290,9 @@ def _start_worker_thread(session_factory):
     """Start the paper trading worker as a daemon thread.
 
     The worker polls for new candle data and feeds it to active bots.
-    When FIBOKEI_LIVE_EXECUTION_ENABLED=true, bot signals route through
-    the IG execution adapter (demo account).
+    Bot signals route through the multi-broker ExecutionRouter; when
+    FIBOKEI_EXECUTION_ROUTER_MODE=env_global_fanout each enabled
+    broker account receives every signal.
     """
     import threading
 
@@ -307,10 +308,15 @@ def _start_worker_thread(session_factory):
         poll_interval = int(os.environ.get("FIBOKEI_WORKER_POLL_INTERVAL", "60"))
 
         def _run():
+            router = getattr(worker, "_router", None)
+            target_brokers = (
+                ", ".join(t.broker for t in router.enabled_targets) if router else "n/a"
+            )
             logger.info(
-                "Paper worker thread started (poll=%ds, adapter=%s)",
+                "Paper worker thread started (poll=%ds, router_mode=%s, targets=[%s])",
                 poll_interval,
-                type(worker._adapter).__name__,
+                router.mode if router else "unknown",
+                target_brokers,
             )
             worker.run_loop(poll_interval=poll_interval)
 

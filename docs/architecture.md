@@ -140,13 +140,46 @@ These rules are enforced project-wide (from `CLAUDE.md`):
 | `FIBOKEI_USER_TOM_PASSWORD` | Seeded user password |
 | `FIBOKEI_DATABASE_URL` | Database connection string (default: `sqlite:///fibokei.db`) |
 | `FIBOKEI_CORS_ORIGINS` | Comma-separated allowed origins |
-| `FIBOKEI_LIVE_EXECUTION_ENABLED` | Enable IG demo execution (default: `false`) |
+| `FIBOKEI_LIVE_EXECUTION_ENABLED` | Master live-execution lock (default: `false`) |
 | `FIBOKEI_IG_PAPER_MODE` | IG adapter uses demo account (default: `true`) |
 | `FIBOKEI_IG_API_KEY` | IG demo API key (required if IG enabled) |
 | `FIBOKEI_IG_USERNAME` | IG demo username (required if IG enabled) |
 | `FIBOKEI_IG_PASSWORD` | IG demo password (required if IG enabled) |
 | `FIBOKEI_IG_ACCOUNT_ID` | IG sub-account ID (optional) |
+| `FIBOKEI_EXECUTION_ROUTER_MODE` | `legacy_single` (default) \| `env_global_fanout` \| `db_targets` (Phase 2) |
+| `FIBOKEI_PAPER_ACCOUNT_ENABLED` | Paper target enabled (default: `true`) |
+| `FIBOKEI_IG_ACCOUNT_ENABLED` | IG target enabled in fan-out mode (default: `false`) |
+| `FIBOKEI_IG_ACCOUNT_CAPITAL` | Allocated capital used for IG sizing (default: `1000`) |
+| `FIBOKEI_IG_ACCOUNT_RISK_PCT` | Per-trade risk % for IG target (default: `1.0`) |
+| `FIBOKEI_TRADOVATE_ACCOUNT_ENABLED` | Tradovate target enabled (default: `false`) |
+| `FIBOKEI_TRADOVATE_ACCOUNT_CAPITAL` | Allocated capital for Tradovate sizing (default: `5000`) |
+| `FIBOKEI_TRADOVATE_ACCOUNT_RISK_PCT` | Per-trade risk % for Tradovate target (default: `1.0`) |
+| `FIBOKEI_TRADOVATE_USERNAME` etc. | Tradovate creds (see `docs/brokers/tradovate-integration-design.md`) |
+| `FIBOKEI_TRADOVATE_SYMBOL_MAP` | `FIBOKI:PRODUCT` pairs (e.g. `US500:ES,US100:NQ`) |
+| `FIBOKEI_TRADOVATE_FRONT_MONTH` | Front-month suffix appended to product code (e.g. `M6`) |
 | `NEXT_PUBLIC_API_URL` | Frontend -> backend URL (default: `http://localhost:8000`) |
+
+### Multi-broker execution (Phase 1 fan-out)
+
+The execution layer is broker-neutral. Bots produce a `NormalisedTradePlan`
+which the `ExecutionRouter` fans out to every enabled `ResolvedTarget`
+(paper / IG demo / Tradovate demo). Each target is sized, gated, and
+dispatched independently; each attempt is audited as its own row tagged
+with a shared `parent_signal_id`.
+
+`FIBOKEI_EXECUTION_ROUTER_MODE` selects the dispatch shape:
+
+- `legacy_single` (default) — exactly the pre-Phase-1 single-adapter
+  behaviour. Paper unless `FIBOKEI_LIVE_EXECUTION_ENABLED=true` enables IG.
+  No fan-out.
+- `env_global_fanout` — every running bot fans out to every account
+  enabled by `FIBOKEI_*_ACCOUNT_ENABLED`. Operator must opt in. Per-bot
+  target selection arrives in Phase 2.
+- `db_targets` — Phase 2 placeholder; currently behaves like
+  `env_global_fanout`.
+
+See [`docs/brokers/README.md`](brokers/README.md) and the
+[Tradovate design note](brokers/tradovate-integration-design.md).
 
 ## 8. Related Documents
 
@@ -155,3 +188,5 @@ These rules are enforced project-wide (from `CLAUDE.md`):
 - [API Contracts](api_contracts.md)
 - [Authentication Specification](auth_spec.md)
 - [Phase 5 Design Doc](plans/2026-03-07-phase5-web-platform-design.md)
+- [Brokers overview](brokers/README.md)
+- [Tradovate integration design](brokers/tradovate-integration-design.md)

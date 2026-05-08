@@ -205,6 +205,85 @@ Set `FIBOKEI_LIVE_EXECUTION_ENABLED=false` in Railway and redeploy. No other cha
 
 ---
 
+## Multi-Broker Fan-Out (Phase 1)
+
+Phase 1 introduces controlled fan-out so a single bot signal can fire on
+multiple broker accounts simultaneously (paper / IG demo / Tradovate demo),
+each with its own capital, sizing, mapping, and audit trail.
+
+The default is **off**: existing deployments behave exactly as before
+(legacy single-broker selection by `FIBOKEI_LIVE_EXECUTION_ENABLED`).
+
+### Enabling fan-out
+
+```
+FIBOKEI_EXECUTION_ROUTER_MODE=env_global_fanout
+
+# Paper account (default: enabled)
+FIBOKEI_PAPER_ACCOUNT_ENABLED=true
+FIBOKEI_PAPER_ACCOUNT_CAPITAL=1000
+FIBOKEI_PAPER_ACCOUNT_RISK_PCT=1.0
+
+# IG demo target — explicit opt-in
+FIBOKEI_IG_ACCOUNT_ENABLED=true
+FIBOKEI_IG_ACCOUNT_ENV=demo
+FIBOKEI_IG_ACCOUNT_CAPITAL=1000
+FIBOKEI_IG_ACCOUNT_RISK_PCT=1.0
+# Plus the existing FIBOKEI_IG_API_KEY / USERNAME / PASSWORD / ACCOUNT_ID
+
+# Tradovate demo target — explicit opt-in
+FIBOKEI_TRADOVATE_ACCOUNT_ENABLED=true
+FIBOKEI_TRADOVATE_ACCOUNT_ENV=demo
+FIBOKEI_TRADOVATE_ACCOUNT_CAPITAL=5000
+FIBOKEI_TRADOVATE_ACCOUNT_RISK_PCT=1.0
+FIBOKEI_TRADOVATE_USERNAME=<demo-username>
+FIBOKEI_TRADOVATE_PASSWORD=<demo-password>
+FIBOKEI_TRADOVATE_CID=<demo-cid>
+FIBOKEI_TRADOVATE_SECRET=<demo-secret>
+FIBOKEI_TRADOVATE_APP_ID=Fiboki
+FIBOKEI_TRADOVATE_APP_VERSION=1.0
+FIBOKEI_TRADOVATE_SYMBOL_MAP=US500:ES,US100:NQ
+FIBOKEI_TRADOVATE_FRONT_MONTH=M6
+```
+
+After setting these on Railway and **restarting the worker**, every
+running bot fans out to every enabled account.
+
+### Verifying fan-out
+
+- `GET /api/v1/execution/router` → returns `router_mode`, `kill_switch_active`,
+  enabled targets, and a warning string when `env_global_fanout` is active
+  with multiple targets.
+- `GET /api/v1/execution/tradovate-health` → confirms Tradovate creds and
+  reachability without placing any orders.
+- `GET /api/v1/execution/audit?execution_mode=tradovate_demo` → audit rows
+  filtered to Tradovate attempts. Each row's `detail_json.parent_signal_id`
+  groups sibling attempts of the same fan-out.
+
+### Live trading remains disabled
+
+For Tradovate live to be permitted, **all** of the following must be true:
+
+- `FIBOKEI_TRADOVATE_ACCOUNT_ENV=live`
+- `FIBOKEI_TRADOVATE_LIVE_ALLOWED=true`
+- `FIBOKEI_LIVE_EXECUTION_ENABLED=true`
+- The kill switch must be inactive
+
+If any one fails, `TradovateClient` raises `LIVE_BLOCKED` before any HTTP
+call. IG production remains hard-blocked at the `IGClient` URL level
+regardless of router config.
+
+### Phase 1 known limitation
+
+In `env_global_fanout` mode every running bot fans out to every enabled
+account. Per-bot target selection (so e.g. bot04 EURUSD fans only to IG)
+arrives in Phase 2 with the `execution_accounts` and `bot_execution_targets`
+tables.
+
+See `docs/brokers/tradovate-integration-design.md` for the full design.
+
+---
+
 ## Starter Dataset
 
 The Docker image bundles a lightweight **starter dataset** (~2.3MB) at `data/starter/histdata/` containing H1 parquet files for 7 forex majors: EURUSD, GBPUSD, USDJPY, AUDUSD, USDCHF, USDCAD, NZDUSD.
