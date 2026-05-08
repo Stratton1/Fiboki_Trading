@@ -42,7 +42,8 @@ export default function ResearchPage() {
   const [error, setError] = useState<string | null>(null);
   const [currentRunId, setCurrentRunId] = useState<string | null>(null);
   // Run scope: "current" = latest run, "all" = all runs (deduped best-per-combo), or a specific run_id
-  const [runScope, setRunScope] = useState<"current" | "all" | string>("current");
+  // Default to "all" so persisted results show immediately on page open
+  const [runScope, setRunScope] = useState<"current" | "all" | string>("all");
   const [lastSummary, setLastSummary] = useState<{
     run_id: string;
     completed: number;
@@ -106,6 +107,9 @@ export default function ResearchPage() {
   // Auto Scout state
   const [scoutLoading, setScoutLoading] = useState(false);
   const [scoutResult, setScoutResult] = useState<string | null>(null);
+
+  // Run All Symbols state
+  const [runningAll, setRunningAll] = useState(false);
 
   // Bulk bot creation
   const [selectedResults, setSelectedResults] = useState<Set<number>>(new Set());
@@ -321,6 +325,70 @@ export default function ResearchPage() {
       setError(err instanceof Error ? err.message : "Auto Scout failed");
     } finally {
       setScoutLoading(false);
+    }
+  }
+
+  async function handleRunAllSymbols() {
+    if (selectedStrategies.length === 0 || selectedTimeframes.length === 0 || !instruments) return;
+    setRunningAll(true);
+    setRunProgress(0);
+    setError(null);
+    setLastSummary(null);
+    setCurrentRunId(null);
+    setRunScope("current");
+    try {
+      // Use all instruments that have data for at least one selected timeframe
+      const allInstruments = instruments
+        .map((i: any) => (typeof i === "string" ? i : i.symbol ?? i.id ?? i))
+        .filter((sym: string) => selectedTimeframes.some((tf) => hasData(sym, tf)));
+
+      const body: Record<string, unknown> = {
+        strategy_ids: selectedStrategies,
+        instruments: allInstruments,
+        timeframes: selectedTimeframes,
+        min_trades: minTrades,
+      };
+      if (showWeights) {
+        body.scoring_weights = weights;
+      }
+      const result = await api.runResearch(body);
+      const jobId = result.job_id;
+
+      const pollInterval = setInterval(async () => {
+        try {
+          const job = await api.getJob(jobId);
+          setRunProgress(job.progress ?? 0);
+
+          if (job.state === "completed" && job.result) {
+            clearInterval(pollInterval);
+            const r = job.result as Record<string, unknown>;
+            const runId = r.run_id as string;
+            setCurrentRunId(runId);
+            setLastSummary({
+              run_id: runId,
+              completed: (r.completed as number) ?? 0,
+              qualified: (r.qualified as number) ?? 0,
+              total_combinations: (r.total_combinations as number) ?? 0,
+              min_trades: (r.min_trades as number) ?? minTrades,
+            });
+            await mutate();
+            setRunningAll(false);
+          } else if (job.state === "failed") {
+            clearInterval(pollInterval);
+            setError(job.error || "Research job failed");
+            setRunningAll(false);
+          } else if (job.state === "cancelled") {
+            clearInterval(pollInterval);
+            setError("Research job was cancelled");
+            setRunningAll(false);
+          }
+        } catch {
+          // Poll error — keep trying
+        }
+      }, 2000);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to run research");
+      setRunningAll(false);
     }
   }
 
@@ -590,20 +658,29 @@ export default function ResearchPage() {
         </div>
 
         {/* Submit */}
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
           <button
             type="submit"
-            disabled={running || selectedStrategies.length === 0 || !selectedInstrument || selectedTimeframes.length === 0}
+            disabled={running || runningAll || selectedStrategies.length === 0 || !selectedInstrument || selectedTimeframes.length === 0}
             className="btn btn-primary"
           >
             {running ? "Running..." : "Run Research"}
           </button>
-          {running && (
+          <button
+            type="button"
+            onClick={handleRunAllSymbols}
+            disabled={running || runningAll || selectedStrategies.length === 0 || selectedTimeframes.length === 0}
+            className="btn btn-secondary"
+            title="Run selected strategies × all instruments with data × selected timeframes"
+          >
+            {runningAll ? <><Loader2 size={14} className="animate-spin inline mr-1" />Running All...</> : "Run All Symbols"}
+          </button>
+          {(running || runningAll) && (
             <span className="text-xs text-foreground-muted">
-              Running... {runProgress}%
+              {runProgress > 0 ? `${runProgress}%` : "Starting..."}
             </span>
           )}
-          {!running && lastSummary && (
+          {!running && !runningAll && lastSummary && (
             <span className="text-xs text-foreground-muted">
               Run {lastSummary.run_id}: {lastSummary.completed}/{lastSummary.total_combinations} completed, {lastSummary.qualified} qualified
               <InfoTip text="Completed = combos backtested. Qualified = combos that met the minimum trade threshold (default 80 trades) and are ranked." />
