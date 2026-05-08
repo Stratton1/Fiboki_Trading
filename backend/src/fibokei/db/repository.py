@@ -1260,7 +1260,10 @@ def archive_current_phase(
         session.add(phase)
         session.flush()  # get phase.id
 
-    # Assign all unassigned bots to this phase and mark archived
+    # Record which bots were running during this phase (for reporting).
+    # Bots are NOT stopped and NOT marked archived — they are cross-phase entities
+    # that continue running into the next phase.  Only their phase_id is set so
+    # the phase record knows which bots existed during the period.
     unassigned_bots = list(
         session.scalars(
             select(PaperBotModel).where(PaperBotModel.phase_id.is_(None))
@@ -1268,7 +1271,7 @@ def archive_current_phase(
     )
     for bot in unassigned_bots:
         bot.phase_id = phase.id
-        bot.archived_at = now
+        # Do NOT set archived_at — bots are not archived, only their trades are
 
     # Assign all unassigned trades to this phase
     # Use bulk update for efficiency

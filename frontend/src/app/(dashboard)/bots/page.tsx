@@ -190,6 +190,16 @@ export default function BotsPage() {
     }
   }
 
+  async function handleRestartAll() {
+    setActionError(null);
+    try {
+      await api.restartAllBots();
+      await mutateBots();
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : "Failed to restart bots");
+    }
+  }
+
   const igBal = isIgDemo && igHealth?.balance != null ? igHealth.balance : null;
   const balance = igBal ?? (account?.balance ?? 0);
   const equity = igBal ?? (account?.equity ?? 0);
@@ -197,6 +207,7 @@ export default function BotsPage() {
   const currency = account?.currency ?? "GBP";
   const sym = getCurrencySymbol(currency);
   const botList = (bots ?? []) as BotItem[];
+  const stoppedBots = botList.filter(b => b.state === "stopped");
   const fleetBots = fleet?.bots ?? [];
 
   // Sort bots for flat view
@@ -426,6 +437,21 @@ export default function BotsPage() {
         </div>
       )}
 
+      {stoppedBots.length > 0 && (
+        <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 mb-4 flex items-center justify-between">
+          <span>
+            <strong>{stoppedBots.length} bot{stoppedBots.length !== 1 ? "s" : ""} stopped</strong>
+            {" "}— click Restart All to put them back into monitoring mode.
+          </span>
+          <button
+            onClick={handleRestartAll}
+            className="btn btn-secondary text-xs ml-4 flex items-center gap-1.5 shrink-0"
+          >
+            <Activity size={11} /> Restart All
+          </button>
+        </div>
+      )}
+
       {/* View controls */}
       <div className="flex items-center justify-between gap-3 mb-3">
         <button
@@ -588,13 +614,13 @@ export default function BotsPage() {
                           <Link href={`/bots/${b.bot_id}`} className="btn-ghost text-xs px-2 py-1 rounded" title="View bot detail">
                             <ExternalLink size={11} />
                           </Link>
-                          {b.state === "paused" && (
+                          {(b.state === "paused" || b.state === "stopped") && (
                             <button
                               onClick={() => handleResume(b.bot_id)}
                               disabled={!!actingBotId}
                               className="btn-ghost text-xs px-2 py-1 rounded text-primary disabled:opacity-40"
                             >
-                              {actingBotId === b.bot_id ? <Loader2 size={12} className="animate-spin inline" /> : "Resume"}
+                              {actingBotId === b.bot_id ? <Loader2 size={12} className="animate-spin inline" /> : b.state === "stopped" ? "Restart" : "Resume"}
                             </button>
                           )}
                           {b.state === "monitoring" && (
@@ -815,7 +841,7 @@ export default function BotsPage() {
                     new_phase_label: slugify(newPhaseName.trim()),
                     new_initial_balance: 1000,
                     new_normalized_baseline: 1000,
-                    stop_active_bots: true,
+                    stop_active_bots: false,
                     reset_account: true,
                   });
                   setTransitionResult(`Done. "${archiveName.trim()}" archived. "${newPhaseName.trim()}" is now active with a clean £1,000 baseline.`);

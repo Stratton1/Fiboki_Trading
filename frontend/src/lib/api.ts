@@ -278,6 +278,7 @@ export const api = {
   stopBot: (id: string) => apiFetch(`/paper/bots/${id}/stop`, { method: "POST" }),
   pauseBot: (id: string) => apiFetch(`/paper/bots/${id}/pause`, { method: "POST" }),
   resumeBot: (id: string) => apiFetch(`/paper/bots/${id}/resume`, { method: "POST" }),
+  restartAllBots: () => apiFetch<{ restarted: string[]; count: number }>(`/paper/bots/restart-all`, { method: "POST" }),
   deleteBot: (id: string) => apiFetch<{ deleted: string }>(`/paper/bots/${id}`, { method: "DELETE" }),
   deleteAllBots: () => apiFetch<{ deleted_count: number }>(`/paper/bots`, { method: "DELETE" }),
   resetAccount: () => apiFetch<{ balance: number; equity: number; message: string }>(`/paper/account/reset`, { method: "POST" }),
