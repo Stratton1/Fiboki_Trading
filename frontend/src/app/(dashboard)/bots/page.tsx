@@ -452,214 +452,6 @@ export default function BotsPage() {
         </div>
       )}
 
-      {/* View controls */}
-      <div className="flex items-center justify-between gap-3 mb-3">
-        <button
-          onClick={() => setGroupBy(groupBy === "none" ? "strategy" : "none")}
-          className={`text-xs px-3 py-1 rounded border ${groupBy === "strategy" ? "bg-primary/10 border-primary text-primary" : "border-gray-200"}`}
-        >
-          {groupBy === "strategy" ? "Grouped by Strategy" : "Group by Strategy"}
-        </button>
-        {botList.length > 0 && (
-          <button
-            onClick={handleDeleteAll}
-            className="text-xs px-3 py-1 rounded border border-red-200 text-red-600 hover:bg-red-50 transition-colors"
-          >
-            Delete All Bots
-          </button>
-        )}
-      </div>
-
-      {/* Bot List */}
-      <div className="table-container">
-        <table>
-          <thead>
-            <tr>
-              <th className="text-left cursor-pointer select-none" onClick={() => handleSort("strategy")}>Strategy{sortArrow("strategy")}</th>
-              <th className="text-left cursor-pointer select-none" onClick={() => handleSort("instrument")}>Instrument{sortArrow("instrument")}</th>
-              <th className="text-left cursor-pointer select-none" onClick={() => handleSort("tf")}>TF{sortArrow("tf")}</th>
-              <th className="text-left cursor-pointer select-none" onClick={() => handleSort("state")}>State{sortArrow("state")}</th>
-              <th className="text-right cursor-pointer select-none" onClick={() => handleSort("bars")}>Bars{sortArrow("bars")}</th>
-              <th className="text-right cursor-pointer select-none" onClick={() => handleSort("trades")}>Trades{sortArrow("trades")}</th>
-              <th className="text-right cursor-pointer select-none" onClick={() => handleSort("pnl")}>PnL{sortArrow("pnl")}</th>
-              <th className="text-right">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {botList.length === 0 && (
-              <tr>
-                <td colSpan={8}>
-                  <EmptyState
-                    icon={<Bot size={36} strokeWidth={1.5} />}
-                    title="No bots yet"
-                    description={isIgDemo ? "Create a bot to start trading on your IG demo account. Add one manually above, or promote a top-scoring combo from Research." : "Bots monitor strategies in real time. Add one manually above, or promote a top-scoring combo from your Research shortlist."}
-                  />
-                  <div className="flex justify-center gap-3 pb-4">
-                    <Link href="/research" className="btn btn-secondary text-sm">
-                      <Search size={14} />
-                      Go to Research
-                    </Link>
-                  </div>
-                </td>
-              </tr>
-            )}
-            {groupBy === "none" ? (
-              sortedBotList.map((bot) => {
-                const fleetBot = fleetBots.find((fb) => fb.bot_id === bot.bot_id);
-                return (
-                  <tr key={bot.bot_id} className={fleetBot?.is_stale ? "bg-amber-50/50" : ""}>
-                    <td>
-                      <span className="font-medium">{bot.strategy_id}</span>
-                      <span className="block text-[10px] text-foreground-muted truncate max-w-[160px]">{strategyShortName(bot.strategy_id)}</span>
-                    </td>
-                    <td>{bot.instrument}</td>
-                    <td className="text-foreground-muted">{bot.timeframe}</td>
-                    <td>
-                      <div className="flex items-center gap-1.5">
-                        <StatusBadge variant={STATE_VARIANT[bot.state] ?? "neutral"}>
-                          {bot.state}
-                        </StatusBadge>
-                        {fleetBot?.is_stale && (
-                          <AlertTriangle size={12} className="text-amber-500" />
-                        )}
-                      </div>
-                    </td>
-                    <td className="text-right tabular-nums text-foreground-muted">{fleetBot?.bars_seen ?? 0}</td>
-                    <td className="text-right tabular-nums">{fleetBot?.total_trades ?? 0}</td>
-                    <td className={`text-right tabular-nums font-medium ${(fleetBot?.total_pnl ?? 0) >= 0 ? "text-primary" : "text-danger"}`}>
-                      {(fleetBot?.total_pnl ?? 0) >= 0 ? "+" : ""}{sym}{(fleetBot?.total_pnl ?? 0).toFixed(2)}
-                    </td>
-                    <td className="text-right">
-                      <div className="flex items-center justify-end gap-2">
-                        <Link href={`/bots/${bot.bot_id}`} className="btn-ghost text-xs px-2 py-1 rounded" title="View bot detail">
-                          <ExternalLink size={11} />
-                        </Link>
-                        {bot.state === "paused" && (
-                          <button
-                            onClick={() => handleResume(bot.bot_id)}
-                            disabled={!!actingBotId}
-                            className="btn-ghost text-xs px-2 py-1 rounded text-primary disabled:opacity-40"
-                          >
-                            {actingBotId === bot.bot_id ? <Loader2 size={12} className="animate-spin inline" /> : "Resume"}
-                          </button>
-                        )}
-                        {bot.state === "monitoring" && (
-                          <button
-                            onClick={() => handlePause(bot.bot_id)}
-                            disabled={!!actingBotId}
-                            className="btn-ghost text-xs px-2 py-1 rounded disabled:opacity-40"
-                          >
-                            {actingBotId === bot.bot_id ? <Loader2 size={12} className="animate-spin inline" /> : "Pause"}
-                          </button>
-                        )}
-                        {bot.state !== "stopped" && (
-                          <button
-                            onClick={() => handleStop(bot.bot_id)}
-                            disabled={!!actingBotId}
-                            className="text-xs px-2 py-1 rounded text-danger hover:bg-red-50 transition-colors disabled:opacity-40"
-                          >
-                            {actingBotId === bot.bot_id ? <Loader2 size={12} className="animate-spin inline" /> : "Stop"}
-                          </button>
-                        )}
-                        <button
-                          onClick={() => handleDelete(bot.bot_id)}
-                          disabled={!!actingBotId}
-                          className="text-xs px-2 py-1 rounded text-foreground-muted hover:text-red-600 hover:bg-red-50 transition-colors disabled:opacity-40"
-                          title="Delete bot and trade history"
-                        >
-                          {actingBotId === bot.bot_id ? <Loader2 size={12} className="animate-spin inline" /> : "Delete"}
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })
-            ) : (
-              Object.entries(groupedBots).map(([sid, bots]) => (
-                <Fragment key={sid}>
-                  <tr className="bg-background-muted">
-                    <td colSpan={8} className="text-sm font-semibold py-2">
-                      {sid}
-                      <span className="text-foreground-muted font-normal ml-2">
-                        ({bots.length} bots &middot; {strategyGroups[sid]?.running ?? 0} active &middot;
-                        <span className={`ml-1 ${(strategyGroups[sid]?.pnl ?? 0) >= 0 ? "text-primary" : "text-danger"}`}>
-                          {(strategyGroups[sid]?.pnl ?? 0) >= 0 ? "+" : ""}{sym}{(strategyGroups[sid]?.pnl ?? 0).toFixed(2)}
-                        </span>
-                        )
-                      </span>
-                    </td>
-                  </tr>
-                  {bots.map((b) => (
-                    <tr key={b.bot_id} className={b.is_stale ? "bg-amber-50/50" : ""}>
-                      <td className="pl-6" title={strategyShortName(b.strategy_id)}>
-                        <span className="font-medium">{b.strategy_id}</span>
-                      </td>
-                      <td>{b.instrument}</td>
-                      <td className="text-foreground-muted">{b.timeframe}</td>
-                      <td>
-                        <div className="flex items-center gap-1.5">
-                          <StatusBadge variant={STATE_VARIANT[b.state] ?? "neutral"}>
-                            {b.state}
-                          </StatusBadge>
-                          {b.is_stale && <AlertTriangle size={12} className="text-amber-500" />}
-                        </div>
-                      </td>
-                      <td className="text-right tabular-nums text-foreground-muted">{b.bars_seen}</td>
-                      <td className="text-right tabular-nums">{b.total_trades}</td>
-                      <td className={`text-right tabular-nums font-medium ${b.total_pnl >= 0 ? "text-primary" : "text-danger"}`}>
-                        {b.total_pnl >= 0 ? "+" : ""}{sym}{b.total_pnl.toFixed(2)}
-                      </td>
-                      <td className="text-right">
-                        <div className="flex items-center justify-end gap-2">
-                          <Link href={`/bots/${b.bot_id}`} className="btn-ghost text-xs px-2 py-1 rounded" title="View bot detail">
-                            <ExternalLink size={11} />
-                          </Link>
-                          {(b.state === "paused" || b.state === "stopped") && (
-                            <button
-                              onClick={() => handleResume(b.bot_id)}
-                              disabled={!!actingBotId}
-                              className="btn-ghost text-xs px-2 py-1 rounded text-primary disabled:opacity-40"
-                            >
-                              {actingBotId === b.bot_id ? <Loader2 size={12} className="animate-spin inline" /> : b.state === "stopped" ? "Restart" : "Resume"}
-                            </button>
-                          )}
-                          {b.state === "monitoring" && (
-                            <button
-                              onClick={() => handlePause(b.bot_id)}
-                              disabled={!!actingBotId}
-                              className="btn-ghost text-xs px-2 py-1 rounded disabled:opacity-40"
-                            >
-                              {actingBotId === b.bot_id ? <Loader2 size={12} className="animate-spin inline" /> : "Pause"}
-                            </button>
-                          )}
-                          {b.state !== "stopped" && (
-                            <button
-                              onClick={() => handleStop(b.bot_id)}
-                              disabled={!!actingBotId}
-                              className="text-xs px-2 py-1 rounded text-danger hover:bg-red-50 transition-colors disabled:opacity-40"
-                            >
-                              {actingBotId === b.bot_id ? <Loader2 size={12} className="animate-spin inline" /> : "Stop"}
-                            </button>
-                          )}
-                          <button
-                            onClick={() => handleDelete(b.bot_id)}
-                            disabled={!!actingBotId}
-                            className="text-xs px-2 py-1 rounded text-foreground-muted hover:text-red-600 hover:bg-red-50 transition-colors disabled:opacity-40"
-                            title="Delete bot and trade history"
-                          >
-                            {actingBotId === b.bot_id ? <Loader2 size={12} className="animate-spin inline" /> : "Delete"}
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </Fragment>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
-
       {/* ── Phase Management ─────────────────────────────────── */}
       {(() => {
         const isFirstUse = !phases?.length && !activePhase;
@@ -667,7 +459,7 @@ export default function BotsPage() {
           s.toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_|_$/g, "").slice(0, 20);
 
         return (
-      <div className="card mt-6" data-testid="phase-management">
+      <div className="card mb-6" data-testid="phase-management">
       <div className="flex items-center justify-between mb-4">
         <div>
           <h2 className="text-sm font-semibold flex items-center gap-2">
@@ -872,6 +664,215 @@ export default function BotsPage() {
       </div>
         );
       })()}
+
+      {/* View controls */}
+      <div className="flex items-center justify-between gap-3 mb-3">
+        <button
+          onClick={() => setGroupBy(groupBy === "none" ? "strategy" : "none")}
+          className={`text-xs px-3 py-1 rounded border ${groupBy === "strategy" ? "bg-primary/10 border-primary text-primary" : "border-gray-200"}`}
+        >
+          {groupBy === "strategy" ? "Grouped by Strategy" : "Group by Strategy"}
+        </button>
+        {botList.length > 0 && (
+          <button
+            onClick={handleDeleteAll}
+            className="text-xs px-3 py-1 rounded border border-red-200 text-red-600 hover:bg-red-50 transition-colors"
+          >
+            Delete All Bots
+          </button>
+        )}
+      </div>
+
+      {/* Bot List */}
+      <div className="table-container">
+        <table>
+          <thead>
+            <tr>
+              <th className="text-left cursor-pointer select-none" onClick={() => handleSort("strategy")}>Strategy{sortArrow("strategy")}</th>
+              <th className="text-left cursor-pointer select-none" onClick={() => handleSort("instrument")}>Instrument{sortArrow("instrument")}</th>
+              <th className="text-left cursor-pointer select-none" onClick={() => handleSort("tf")}>TF{sortArrow("tf")}</th>
+              <th className="text-left cursor-pointer select-none" onClick={() => handleSort("state")}>State{sortArrow("state")}</th>
+              <th className="text-right cursor-pointer select-none" onClick={() => handleSort("bars")}>Bars{sortArrow("bars")}</th>
+              <th className="text-right cursor-pointer select-none" onClick={() => handleSort("trades")}>Trades{sortArrow("trades")}</th>
+              <th className="text-right cursor-pointer select-none" onClick={() => handleSort("pnl")}>PnL{sortArrow("pnl")}</th>
+              <th className="text-right">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {botList.length === 0 && (
+              <tr>
+                <td colSpan={8}>
+                  <EmptyState
+                    icon={<Bot size={36} strokeWidth={1.5} />}
+                    title="No bots yet"
+                    description={isIgDemo ? "Create a bot to start trading on your IG demo account. Add one manually above, or promote a top-scoring combo from Research." : "Bots monitor strategies in real time. Add one manually above, or promote a top-scoring combo from your Research shortlist."}
+                  />
+                  <div className="flex justify-center gap-3 pb-4">
+                    <Link href="/research" className="btn btn-secondary text-sm">
+                      <Search size={14} />
+                      Go to Research
+                    </Link>
+                  </div>
+                </td>
+              </tr>
+            )}
+            {groupBy === "none" ? (
+              sortedBotList.map((bot) => {
+                const fleetBot = fleetBots.find((fb) => fb.bot_id === bot.bot_id);
+                return (
+                  <tr key={bot.bot_id} className={fleetBot?.is_stale ? "bg-amber-50/50" : ""}>
+                    <td>
+                      <span className="font-medium">{bot.strategy_id}</span>
+                      <span className="block text-[10px] text-foreground-muted truncate max-w-[160px]">{strategyShortName(bot.strategy_id)}</span>
+                    </td>
+                    <td>{bot.instrument}</td>
+                    <td className="text-foreground-muted">{bot.timeframe}</td>
+                    <td>
+                      <div className="flex items-center gap-1.5">
+                        <StatusBadge variant={STATE_VARIANT[bot.state] ?? "neutral"}>
+                          {bot.state}
+                        </StatusBadge>
+                        {fleetBot?.is_stale && (
+                          <AlertTriangle size={12} className="text-amber-500" />
+                        )}
+                      </div>
+                    </td>
+                    <td className="text-right tabular-nums text-foreground-muted">{fleetBot?.bars_seen ?? 0}</td>
+                    <td className="text-right tabular-nums">{fleetBot?.total_trades ?? 0}</td>
+                    <td className={`text-right tabular-nums font-medium ${(fleetBot?.total_pnl ?? 0) >= 0 ? "text-primary" : "text-danger"}`}>
+                      {(fleetBot?.total_pnl ?? 0) >= 0 ? "+" : ""}{sym}{(fleetBot?.total_pnl ?? 0).toFixed(2)}
+                    </td>
+                    <td className="text-right">
+                      <div className="flex items-center justify-end gap-2">
+                        <Link href={`/bots/${bot.bot_id}`} className="btn-ghost text-xs px-2 py-1 rounded" title="View bot detail">
+                          <ExternalLink size={11} />
+                        </Link>
+                        {(bot.state === "paused" || bot.state === "stopped") && (
+                          <button
+                            onClick={() => handleResume(bot.bot_id)}
+                            disabled={!!actingBotId}
+                            className="btn-ghost text-xs px-2 py-1 rounded text-primary disabled:opacity-40"
+                          >
+                            {actingBotId === bot.bot_id ? <Loader2 size={12} className="animate-spin inline" /> : bot.state === "stopped" ? "Restart" : "Resume"}
+                          </button>
+                        )}
+                        {bot.state === "monitoring" && (
+                          <button
+                            onClick={() => handlePause(bot.bot_id)}
+                            disabled={!!actingBotId}
+                            className="btn-ghost text-xs px-2 py-1 rounded disabled:opacity-40"
+                          >
+                            {actingBotId === bot.bot_id ? <Loader2 size={12} className="animate-spin inline" /> : "Pause"}
+                          </button>
+                        )}
+                        {bot.state !== "stopped" && (
+                          <button
+                            onClick={() => handleStop(bot.bot_id)}
+                            disabled={!!actingBotId}
+                            className="text-xs px-2 py-1 rounded text-danger hover:bg-red-50 transition-colors disabled:opacity-40"
+                          >
+                            {actingBotId === bot.bot_id ? <Loader2 size={12} className="animate-spin inline" /> : "Stop"}
+                          </button>
+                        )}
+                        <button
+                          onClick={() => handleDelete(bot.bot_id)}
+                          disabled={!!actingBotId}
+                          className="text-xs px-2 py-1 rounded text-foreground-muted hover:text-red-600 hover:bg-red-50 transition-colors disabled:opacity-40"
+                          title="Delete bot and trade history"
+                        >
+                          {actingBotId === bot.bot_id ? <Loader2 size={12} className="animate-spin inline" /> : "Delete"}
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })
+            ) : (
+              Object.entries(groupedBots).map(([sid, bots]) => (
+                <Fragment key={sid}>
+                  <tr className="bg-background-muted">
+                    <td colSpan={8} className="text-sm font-semibold py-2">
+                      {sid}
+                      <span className="text-foreground-muted font-normal ml-2">
+                        ({bots.length} bots &middot; {strategyGroups[sid]?.running ?? 0} active &middot;
+                        <span className={`ml-1 ${(strategyGroups[sid]?.pnl ?? 0) >= 0 ? "text-primary" : "text-danger"}`}>
+                          {(strategyGroups[sid]?.pnl ?? 0) >= 0 ? "+" : ""}{sym}{(strategyGroups[sid]?.pnl ?? 0).toFixed(2)}
+                        </span>
+                        )
+                      </span>
+                    </td>
+                  </tr>
+                  {bots.map((b) => (
+                    <tr key={b.bot_id} className={b.is_stale ? "bg-amber-50/50" : ""}>
+                      <td className="pl-6" title={strategyShortName(b.strategy_id)}>
+                        <span className="font-medium">{b.strategy_id}</span>
+                      </td>
+                      <td>{b.instrument}</td>
+                      <td className="text-foreground-muted">{b.timeframe}</td>
+                      <td>
+                        <div className="flex items-center gap-1.5">
+                          <StatusBadge variant={STATE_VARIANT[b.state] ?? "neutral"}>
+                            {b.state}
+                          </StatusBadge>
+                          {b.is_stale && <AlertTriangle size={12} className="text-amber-500" />}
+                        </div>
+                      </td>
+                      <td className="text-right tabular-nums text-foreground-muted">{b.bars_seen}</td>
+                      <td className="text-right tabular-nums">{b.total_trades}</td>
+                      <td className={`text-right tabular-nums font-medium ${b.total_pnl >= 0 ? "text-primary" : "text-danger"}`}>
+                        {b.total_pnl >= 0 ? "+" : ""}{sym}{b.total_pnl.toFixed(2)}
+                      </td>
+                      <td className="text-right">
+                        <div className="flex items-center justify-end gap-2">
+                          <Link href={`/bots/${b.bot_id}`} className="btn-ghost text-xs px-2 py-1 rounded" title="View bot detail">
+                            <ExternalLink size={11} />
+                          </Link>
+                          {(b.state === "paused" || b.state === "stopped") && (
+                            <button
+                              onClick={() => handleResume(b.bot_id)}
+                              disabled={!!actingBotId}
+                              className="btn-ghost text-xs px-2 py-1 rounded text-primary disabled:opacity-40"
+                            >
+                              {actingBotId === b.bot_id ? <Loader2 size={12} className="animate-spin inline" /> : b.state === "stopped" ? "Restart" : "Resume"}
+                            </button>
+                          )}
+                          {b.state === "monitoring" && (
+                            <button
+                              onClick={() => handlePause(b.bot_id)}
+                              disabled={!!actingBotId}
+                              className="btn-ghost text-xs px-2 py-1 rounded disabled:opacity-40"
+                            >
+                              {actingBotId === b.bot_id ? <Loader2 size={12} className="animate-spin inline" /> : "Pause"}
+                            </button>
+                          )}
+                          {b.state !== "stopped" && (
+                            <button
+                              onClick={() => handleStop(b.bot_id)}
+                              disabled={!!actingBotId}
+                              className="text-xs px-2 py-1 rounded text-danger hover:bg-red-50 transition-colors disabled:opacity-40"
+                            >
+                              {actingBotId === b.bot_id ? <Loader2 size={12} className="animate-spin inline" /> : "Stop"}
+                            </button>
+                          )}
+                          <button
+                            onClick={() => handleDelete(b.bot_id)}
+                            disabled={!!actingBotId}
+                            className="text-xs px-2 py-1 rounded text-foreground-muted hover:text-red-600 hover:bg-red-50 transition-colors disabled:opacity-40"
+                            title="Delete bot and trade history"
+                          >
+                            {actingBotId === b.bot_id ? <Loader2 size={12} className="animate-spin inline" /> : "Delete"}
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </Fragment>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
+
     </div>
   );
 }
