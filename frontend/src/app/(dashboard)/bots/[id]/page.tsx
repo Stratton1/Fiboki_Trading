@@ -30,6 +30,10 @@ const STATE_VARIANT: Record<string, "ok" | "warn" | "neutral"> = {
 export default function BotDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
 
+  const [liveOnly, setLiveOnly] = useState(true);
+  const [actingBotId, setActingBotId] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
+
   const { data: bot, mutate: mutateBot } = useSWR(
     id ? `/paper/bots/${id}` : null,
     () => api.getBot(id),
@@ -41,10 +45,6 @@ export default function BotDetailPage({ params }: { params: Promise<{ id: string
     () => api.botTrades(id, liveOnly),
     { refreshInterval: 10000 }
   );
-
-  const [liveOnly, setLiveOnly] = useState(true);
-  const [actingBotId, setActingBotId] = useState<string | null>(null);
-  const [actionError, setActionError] = useState<string | null>(null);
 
   async function handleAction(fn: () => Promise<unknown>) {
     setActingBotId(id);
