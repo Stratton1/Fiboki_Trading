@@ -567,6 +567,67 @@ def get_execution_account_status_endpoint(
     }
 
 
+@router.get("/execution/accounts/{account_id}/reconcile")
+def reconcile_execution_account_endpoint(
+    account_id: int,
+    user: TokenData = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Phase 5: per-account reconciliation status.
+
+    Returns a typed ``status`` (clean / mismatch / unavailable /
+    credentials_missing / unsupported) plus mismatch details. Never raises
+    — broker networking errors are surfaced as ``unavailable`` so the
+    System page can render a clean status pill.
+    """
+    from fibokei.db.repository import (
+        get_execution_account,
+        get_paper_bots,
+    )
+    from fibokei.execution.reconciliation import reconcile_account
+
+    acct = get_execution_account(db, account_id)
+    if acct is None:
+        raise HTTPException(status_code=404, detail="Execution account not found")
+
+    # Phase 5 stub: pull tracked positions from in-memory paper bots' DB
+    # rows. A future Phase will pull these from execution_attempts joined
+    # to bot_signals so reconciliation reflects the broker side per-target.
+    fiboki_positions: list[dict] = []
+    for bot in get_paper_bots(db):
+        if bot.position_json:
+            fiboki_positions.append({
+                "deal_id": bot.position_json.get("trade_id"),
+                "instrument": bot.instrument,
+                "direction": bot.position_json.get("direction"),
+                "size": bot.position_json.get("position_size"),
+            })
+
+    status = reconcile_account(acct, fiboki_positions)
+    return {
+        "account_id": status.account_id,
+        "account_name": status.account_name,
+        "broker": status.broker,
+        "environment": status.environment,
+        "status": status.status,
+        "fiboki_position_count": status.fiboki_position_count,
+        "broker_position_count": status.broker_position_count,
+        "matched": status.matched,
+        "mismatch_count": status.mismatch_count,
+        "detail": status.detail,
+        "mismatches": [
+            {
+                "type": m.type,
+                "instrument": m.instrument,
+                "fiboki_deal_id": m.fiboki_deal_id,
+                "broker_deal_id": m.broker_deal_id,
+                "detail": m.detail,
+            }
+            for m in status.mismatches
+        ],
+    }
+
+
 @router.get(
     "/paper/bots/{bot_id}/targets",
     response_model=list[BotExecutionTargetResponse],

@@ -19,9 +19,9 @@ from sqlalchemy import create_engine
 from fibokei.db.database import get_session_factory, init_db
 from fibokei.db.repository import (
     create_bot_execution_target,
+    create_bot_signal,
     create_execution_account,
     create_execution_attempt,
-    create_bot_signal,
     update_execution_account,
 )
 from fibokei.execution.account_risk import (
@@ -38,7 +38,6 @@ from fibokei.execution.targets import (
     BROKER_PAPER,
     NormalisedTradePlan,
 )
-
 
 _ENV = [
     "FIBOKEI_EXECUTION_ROUTER_MODE",
@@ -348,8 +347,8 @@ class TestPaperBackwardsCompat:
         # No Phase 1 env-driven target carries an integer account id, so the
         # risk engine must not be triggered for legacy/static targets.
         from fibokei.execution.account_risk import AccountRiskEngine
-        from fibokei.execution.router import ExecutionRouter
         from fibokei.execution.paper_adapter import PaperExecutionAdapter
+        from fibokei.execution.router import ExecutionRouter
         from fibokei.execution.targets import (
             ENV_PAPER,
             ROUTER_MODE_LEGACY_SINGLE,

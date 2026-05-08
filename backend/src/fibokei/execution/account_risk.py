@@ -31,7 +31,6 @@ from typing import Callable, Optional
 
 from sqlalchemy import func, select
 
-
 # ── Risk decision ────────────────────────────────────────────
 
 

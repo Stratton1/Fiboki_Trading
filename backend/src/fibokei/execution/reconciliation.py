@@ -5,11 +5,16 @@ actually reports, flagging discrepancies for operator review.
 
 Phase 1 of the multi-broker fan-out architecture: the function now accepts
 any :class:`ExecutionAdapter` (IG, Tradovate, or paper) so reconciliation
-can be invoked per-target. The mismatch type vocabulary is unchanged.
+can be invoked per-target.
+
+Phase 5 adds :func:`reconcile_account` for per-execution-account checks
+that surface a typed status (clean / mismatch / unavailable /
+credentials_missing / unsupported) and never require live broker
+credentials at app startup.
 """
 
 import logging
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from fibokei.execution.adapter import ExecutionAdapter
 
@@ -138,3 +143,125 @@ def reconcile_positions(
             logger.warning("  [%s] %s: %s", m.type, m.instrument, m.detail)
 
     return result
+
+
+# ── Phase 5: per-account reconciliation status ──────────────────────────────
+
+# Status vocabulary returned by :func:`reconcile_account`:
+RECON_STATUS_CLEAN = "clean"
+RECON_STATUS_MISMATCH = "mismatch"
+RECON_STATUS_UNAVAILABLE = "unavailable"
+RECON_STATUS_CREDENTIALS_MISSING = "credentials_missing"
+RECON_STATUS_UNSUPPORTED = "unsupported"
+
+
+@dataclass
+class AccountReconciliationStatus:
+    """Per-account reconciliation summary for the System page.
+
+    The status vocabulary lets the frontend pick a colour and message
+    without parsing free-form strings:
+
+    * ``clean`` — Fiboki and broker positions match exactly.
+    * ``mismatch`` — at least one discrepancy (count in ``mismatch_count``).
+    * ``unavailable`` — broker reachable but request failed (network, auth
+      timeout, etc).
+    * ``credentials_missing`` — operator hasn't configured creds yet.
+    * ``unsupported`` — Phase 5 broker reconciliation not implemented (e.g.
+      future broker scaffolds).
+    """
+
+    account_id: int
+    account_name: str
+    broker: str
+    environment: str
+    status: str
+    fiboki_position_count: int = 0
+    broker_position_count: int = 0
+    matched: int = 0
+    mismatch_count: int = 0
+    detail: str = ""
+    mismatches: list[PositionMismatch] = field(default_factory=list)
+
+
+def reconcile_account(
+    account,
+    fiboki_positions: list[dict],
+    *,
+    adapter: ExecutionAdapter | None = None,
+) -> AccountReconciliationStatus:
+    """Run reconciliation for a single execution account.
+
+    Builds the right adapter for the account if one isn't supplied. Never
+    raises — networking/credential errors are converted into a typed status.
+    Paper accounts always reconcile clean against the supplied
+    ``fiboki_positions`` (which is already the source of truth).
+    """
+    broker = getattr(account, "broker", "paper")
+    environment = getattr(account, "environment", "paper")
+    account_id = getattr(account, "id", 0)
+    account_name = getattr(account, "name", str(broker))
+    base = AccountReconciliationStatus(
+        account_id=account_id,
+        account_name=account_name,
+        broker=broker,
+        environment=environment,
+        status=RECON_STATUS_CLEAN,
+        fiboki_position_count=len(fiboki_positions),
+    )
+
+    # Build the adapter lazily so that callers only need to supply the
+    # account row; the factory imports stay local so cyclic imports are
+    # avoided.
+    if adapter is None:
+        try:
+            if broker == "paper":
+                from fibokei.execution.paper_adapter import PaperExecutionAdapter
+                adapter = PaperExecutionAdapter()
+            elif broker == "ig":
+                from fibokei.execution.ig_adapter import IGExecutionAdapter
+                adapter = IGExecutionAdapter()
+            elif broker == "tradovate":
+                from fibokei.execution.tradovate_adapter import (
+                    TradovateExecutionAdapter,
+                )
+                adapter = TradovateExecutionAdapter()
+            else:
+                base.status = RECON_STATUS_UNSUPPORTED
+                base.detail = f"No reconciler for broker '{broker}'"
+                return base
+        except Exception as e:  # pragma: no cover — defensive
+            base.status = RECON_STATUS_UNAVAILABLE
+            base.detail = f"Adapter construction failed: {e}"
+            return base
+
+    # Paper: positions table is already the source of truth.
+    if broker == "paper":
+        base.broker_position_count = len(fiboki_positions)
+        base.matched = len(fiboki_positions)
+        base.detail = "Paper account — Fiboki state is authoritative"
+        return base
+
+    # Real broker: probe credentials/positions but never raise.
+    try:
+        result = reconcile_positions(fiboki_positions, adapter)
+    except Exception as e:
+        msg = str(e)
+        if "MISSING_CREDENTIALS" in msg or "credentials" in msg.lower():
+            base.status = RECON_STATUS_CREDENTIALS_MISSING
+        else:
+            base.status = RECON_STATUS_UNAVAILABLE
+        base.detail = msg
+        return base
+
+    base.broker_position_count = result.broker_position_count
+    base.matched = result.matched
+    base.mismatch_count = len(result.mismatches)
+    base.mismatches = list(result.mismatches)
+    if result.is_clean:
+        base.status = RECON_STATUS_CLEAN
+        base.detail = "All positions match"
+    else:
+        base.status = RECON_STATUS_MISMATCH
+        base.detail = f"{len(result.mismatches)} mismatch(es)"
+    return base

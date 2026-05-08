@@ -284,6 +284,122 @@ See `docs/brokers/tradovate-integration-design.md` for the full design.
 
 ---
 
+## Recommended deployment: db_targets mode (Phase 2-5)
+
+This is the supported production path now Phases 2-5 have shipped. Per-bot
+target control via the database, parent-child audit, per-account risk
+engine, per-account reconciliation status.
+
+### Worker service env vars (Railway)
+
+```
+FIBOKEI_DATABASE_URL=postgresql://…           # shared with API
+FIBOKEI_EXECUTION_ROUTER_MODE=db_targets
+
+# IG demo (existing IG demo path remains)
+FIBOKEI_IG_API_KEY=…
+FIBOKEI_IG_USERNAME=…
+FIBOKEI_IG_PASSWORD=…
+FIBOKEI_IG_ACCOUNT_ID=…
+
+# Tradovate demo — credentials needed from Joe before first run
+FIBOKEI_TRADOVATE_USERNAME=…
+FIBOKEI_TRADOVATE_PASSWORD=…
+FIBOKEI_TRADOVATE_CID=…
+FIBOKEI_TRADOVATE_SECRET=…
+FIBOKEI_TRADOVATE_APP_ID=Fiboki
+FIBOKEI_TRADOVATE_APP_VERSION=1.0
+FIBOKEI_TRADOVATE_ACCOUNT_ID=…              # populated after first auth
+FIBOKEI_TRADOVATE_ENV=demo
+FIBOKEI_TRADOVATE_SYMBOL_MAP=US500:ES,US100:NQ   # see contract mapping notes
+FIBOKEI_TRADOVATE_FRONT_MONTH=M6                 # current front-month suffix
+
+# Live trading remains OFF by default
+FIBOKEI_LIVE_EXECUTION_ENABLED=false
+
+# Telegram (optional)
+FIBOKEI_TELEGRAM_BOT_TOKEN=…
+FIBOKEI_TELEGRAM_CHAT_ID=…
+```
+
+### API service env vars (Railway)
+
+The API does not place orders but it does serve `/execution/*` endpoints
+that read live router state, so it needs visibility on broker creds:
+
+```
+FIBOKEI_DATABASE_URL=postgresql://…           # shared with worker
+FIBOKEI_JWT_SECRET=…
+FIBOKEI_USER_JOE_PASSWORD=…
+FIBOKEI_USER_TOM_PASSWORD=…
+FIBOKEI_CORS_ORIGINS=https://fiboki.uk,https://www.fiboki.uk
+
+# Same broker creds as worker (read-only — for /execution/*-health probes)
+FIBOKEI_IG_API_KEY=…
+FIBOKEI_IG_USERNAME=…
+FIBOKEI_IG_PASSWORD=…
+FIBOKEI_TRADOVATE_USERNAME=…
+FIBOKEI_TRADOVATE_PASSWORD=…
+FIBOKEI_TRADOVATE_CID=…
+FIBOKEI_TRADOVATE_SECRET=…
+FIBOKEI_TRADOVATE_APP_ID=Fiboki
+FIBOKEI_TRADOVATE_APP_VERSION=1.0
+
+FIBOKEI_EXECUTION_ROUTER_MODE=db_targets
+```
+
+### Frontend env vars (Vercel)
+
+```
+NEXT_PUBLIC_API_URL=https://api.fiboki.uk
+```
+
+### Restart sequence
+
+1. Deploy API first. Verify via `GET /api/v1/system/status` that
+   `router_mode=db_targets` and `database=connected`.
+2. Run Alembic migrations: `alembic upgrade head` (or rely on
+   `init_db()` which calls `Base.metadata.create_all` and seeds the
+   default Paper account on a fresh database).
+3. Verify the seeded Paper account exists:
+   `GET /api/v1/execution/accounts` → at least one row, `is_default=true`.
+4. Deploy worker. The router builds at startup; check logs for
+   `ExecutionRouter built: mode=db_targets accounts_enabled=N`.
+5. From the System page, create IG demo and Tradovate demo accounts as
+   needed. Attach targets to bots from the bot detail page.
+
+### Health checks
+
+* `GET /api/v1/system/health` → `{status:"ok"}`.
+* `GET /api/v1/execution/router` → router mode + targets.
+* `GET /api/v1/execution/ig-health` → IG demo reachability.
+* `GET /api/v1/execution/tradovate-health` → Tradovate demo reachability.
+* `GET /api/v1/execution/accounts/{id}/status` → per-account readiness +
+  live risk state.
+* `GET /api/v1/execution/accounts/{id}/reconcile` → per-account reconciliation
+  status.
+
+### Going live (still off by default)
+
+Live broker execution requires three flags **all** to be `true`:
+
+1. `execution_account.environment="live"` (DB row).
+2. `execution_account.live_allowed=true` (DB row).
+3. `FIBOKEI_LIVE_EXECUTION_ENABLED=true` (env var on the worker).
+
+For Tradovate live, additionally:
+* `FIBOKEI_TRADOVATE_ENV=live`
+* `FIBOKEI_TRADOVATE_LIVE_ALLOWED=true`
+
+If any one fails, the router records the attempt as `skipped` with
+`error_code=ENV_BLOCKED`. IG production URL is also hard-blocked at the
+client layer regardless of these flags.
+
+See [`docs/execution/fan-out-execution-architecture.md`](execution/fan-out-execution-architecture.md)
+for the architectural picture.
+
+---
+
 ## Starter Dataset
 
 The Docker image bundles a lightweight **starter dataset** (~2.3MB) at `data/starter/histdata/` containing H1 parquet files for 7 forex majors: EURUSD, GBPUSD, USDJPY, AUDUSD, USDCHF, USDCAD, NZDUSD.

@@ -178,8 +178,19 @@ with a shared `parent_signal_id`.
 - `db_targets` — Phase 2 placeholder; currently behaves like
   `env_global_fanout`.
 
-See [`docs/brokers/README.md`](brokers/README.md) and the
-[Tradovate design note](brokers/tradovate-integration-design.md).
+See [`docs/brokers/README.md`](brokers/README.md), the
+[Tradovate design note](brokers/tradovate-integration-design.md), and the
+[fan-out execution architecture doc](execution/fan-out-execution-architecture.md)
+which is the single source of truth for the multi-broker layer (Phases 1-5).
+
+### Phase 2-5 capabilities
+
+| Phase | Status | What it added |
+|-------|--------|---------------|
+| 2 | ✅ | DB-backed `execution_accounts` + `bot_execution_targets` tables, `db_targets` router mode, accounts and per-bot targets API + UI |
+| 3 | ✅ | First-class parent-child audit (`bot_signals` + `execution_attempts`), `/execution/signals` endpoints, grouped audit UI |
+| 4 | ✅ | Per-account risk engine: daily / weekly stop, max-open-positions, sibling-isolated rejections at gate 5 of router dispatch |
+| 5 | ✅ | Per-account reconciliation status (`/execution/accounts/{id}/reconcile`), typed clean/mismatch/unavailable/credentials_missing/unsupported vocabulary |
 
 ## 8. Related Documents
 
