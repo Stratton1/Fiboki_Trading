@@ -263,6 +263,7 @@ class PaperBot:
                                 "stop_distance": stop_dist,
                                 "limit_distance": limit_dist,
                                 "bot_id": self.bot_id,
+                                "risk_pct": self.risk_pct,
                             }
                             result = self._adapter.place_order(order)
                             self._deal_id = result.get("deal_id") or result.get("dealId")
