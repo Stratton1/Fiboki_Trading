@@ -700,12 +700,14 @@ def get_paper_trades(
     bot_id: str | None = None,
     limit: int = 100,
     is_live: bool | None = None,
+    since: "datetime | None" = None,
 ) -> list[PaperTradeModel]:
-    """Get paper trades, optionally filtered by bot_id and/or is_live.
+    """Get paper trades, optionally filtered by bot_id, is_live, and/or since.
 
     is_live=True  → only forward-monitoring trades (entry_time >= bot.created_at)
     is_live=False → only historical-replay trades
     is_live=None  → all trades (default)
+    since         → only trades with entry_time >= since (used for phase-scoped stats)
     """
     stmt = select(PaperTradeModel)
     if bot_id:
@@ -714,6 +716,8 @@ def get_paper_trades(
         stmt = stmt.where(PaperTradeModel.is_live == True)  # noqa: E712
     elif is_live is False:
         stmt = stmt.where(PaperTradeModel.is_live == False)  # noqa: E712
+    if since is not None:
+        stmt = stmt.where(PaperTradeModel.entry_time >= since)
     stmt = stmt.order_by(PaperTradeModel.created_at.desc()).limit(limit)
     return list(session.scalars(stmt).all())
 
@@ -1129,6 +1133,169 @@ def list_journal_entries(
         stmt = stmt.where(TradeJournalModel.tags.contains(tag))
     stmt = stmt.order_by(TradeJournalModel.created_at.desc()).limit(limit)
     return list(session.scalars(stmt).all())
+
+
+# ── Execution Accounts (Phase 2) ───────────────────────────
+
+from fibokei.db.models import (  # noqa: E402
+    BotExecutionTargetModel,
+    ExecutionAccountModel,
+)
+
+
+def list_execution_accounts(
+    session: Session, *, enabled_only: bool = False
+) -> list[ExecutionAccountModel]:
+    """Return all execution accounts ordered by creation time."""
+    stmt = select(ExecutionAccountModel)
+    if enabled_only:
+        stmt = stmt.where(ExecutionAccountModel.is_enabled == True)  # noqa: E712
+    stmt = stmt.order_by(ExecutionAccountModel.created_at.asc())
+    return list(session.scalars(stmt).all())
+
+
+def get_execution_account(
+    session: Session, account_id: int
+) -> ExecutionAccountModel | None:
+    return session.get(ExecutionAccountModel, account_id)
+
+
+def get_execution_account_by_name(
+    session: Session, name: str
+) -> ExecutionAccountModel | None:
+    return session.scalar(
+        select(ExecutionAccountModel).where(ExecutionAccountModel.name == name)
+    )
+
+
+def get_default_execution_account(
+    session: Session,
+) -> ExecutionAccountModel | None:
+    """Return the default execution account (typically the seeded Paper)."""
+    return session.scalar(
+        select(ExecutionAccountModel).where(
+            ExecutionAccountModel.is_default == True  # noqa: E712
+        )
+    )
+
+
+def create_execution_account(
+    session: Session, data: dict
+) -> ExecutionAccountModel:
+    """Create a new execution account.
+
+    ``data`` must include ``name``, ``broker``, ``environment``. Other
+    fields fall back to the SQLAlchemy column defaults.
+    """
+    model = ExecutionAccountModel(**data)
+    session.add(model)
+    session.commit()
+    session.refresh(model)
+    return model
+
+
+def update_execution_account(
+    session: Session, account_id: int, updates: dict
+) -> ExecutionAccountModel | None:
+    acct = session.get(ExecutionAccountModel, account_id)
+    if acct is None:
+        return None
+    for field, value in updates.items():
+        if field in ("id", "created_at"):
+            continue
+        if hasattr(acct, field):
+            setattr(acct, field, value)
+    session.commit()
+    session.refresh(acct)
+    return acct
+
+
+# ── Bot Execution Targets (Phase 2) ────────────────────────
+
+
+def list_bot_execution_targets(
+    session: Session,
+    *,
+    bot_id: str | None = None,
+    enabled_only: bool = False,
+) -> list[BotExecutionTargetModel]:
+    """List execution targets, optionally filtered by bot or enabled state."""
+    stmt = select(BotExecutionTargetModel)
+    if bot_id is not None:
+        stmt = stmt.where(BotExecutionTargetModel.bot_id == bot_id)
+    if enabled_only:
+        stmt = stmt.where(BotExecutionTargetModel.is_enabled == True)  # noqa: E712
+    stmt = stmt.order_by(BotExecutionTargetModel.created_at.asc())
+    return list(session.scalars(stmt).all())
+
+
+def get_bot_execution_target(
+    session: Session, target_id: int
+) -> BotExecutionTargetModel | None:
+    return session.get(BotExecutionTargetModel, target_id)
+
+
+def create_bot_execution_target(
+    session: Session, data: dict
+) -> BotExecutionTargetModel:
+    """Create a per-bot execution target.
+
+    The (bot_id, execution_account_id) unique constraint will raise on
+    duplicate inserts — operators must update an existing row instead.
+    """
+    model = BotExecutionTargetModel(**data)
+    session.add(model)
+    session.commit()
+    session.refresh(model)
+    return model
+
+
+def update_bot_execution_target(
+    session: Session, target_id: int, updates: dict
+) -> BotExecutionTargetModel | None:
+    target = session.get(BotExecutionTargetModel, target_id)
+    if target is None:
+        return None
+    for field, value in updates.items():
+        if field in ("id", "bot_id", "execution_account_id", "created_at"):
+            continue
+        if hasattr(target, field):
+            setattr(target, field, value)
+    session.commit()
+    session.refresh(target)
+    return target
+
+
+def delete_bot_execution_target(session: Session, target_id: int) -> bool:
+    target = session.get(BotExecutionTargetModel, target_id)
+    if target is None:
+        return False
+    session.delete(target)
+    session.commit()
+    return True
+
+
+def list_targets_with_accounts(
+    session: Session, *, bot_id: str
+) -> list[tuple[BotExecutionTargetModel, ExecutionAccountModel]]:
+    """Return ``(target, account)`` pairs for a bot, enabled-only on both sides.
+
+    Used by the router-factory ``db_targets`` mode to construct
+    :class:`ResolvedTarget` objects per signal. Disabled targets and
+    disabled accounts are filtered out.
+    """
+    stmt = (
+        select(BotExecutionTargetModel, ExecutionAccountModel)
+        .join(
+            ExecutionAccountModel,
+            BotExecutionTargetModel.execution_account_id == ExecutionAccountModel.id,
+        )
+        .where(BotExecutionTargetModel.bot_id == bot_id)
+        .where(BotExecutionTargetModel.is_enabled == True)  # noqa: E712
+        .where(ExecutionAccountModel.is_enabled == True)  # noqa: E712
+        .order_by(ExecutionAccountModel.created_at.asc())
+    )
+    return [(t, a) for t, a in session.execute(stmt).all()]
 
 
 # ── Strategy Variants ──────────────────────────────────────

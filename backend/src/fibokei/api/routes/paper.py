@@ -36,19 +36,40 @@ router = APIRouter(tags=["paper"])
 # Minimum composite score to promote a combo from research to paper
 PROMOTION_THRESHOLD = float(os.environ.get("FIBOKEI_PROMOTION_THRESHOLD", "0.55"))
 
-# Stale-data thresholds: max seconds since last evaluation per timeframe
+# Stale-data thresholds: max seconds since last evaluation per timeframe.
+# Values are intentionally generous to account for market closures (weekends,
+# bank holidays). A bot is only stale if it hasn't seen a bar well beyond
+# what a weekend closure would explain.
+#   H1  → 26 h (covers overnight + long weekend)
+#   H4  → 4 days (covers full weekend + Mon open lag)
+#   D   → 14 days (weekly charts, holidays)
 STALE_THRESHOLDS = {
-    "M1": 180,
-    "M5": 900,
-    "M15": 2700,
-    "M30": 5400,
-    "H1": 7200,
-    "H4": 21600,
-    "D": 172800,
+    "M1": 300,       # 5 min
+    "M5": 1800,      # 30 min
+    "M15": 5400,     # 90 min
+    "M30": 10800,    # 3 h
+    "H1": 93600,     # 26 h
+    "H4": 345600,    # 4 days
+    "D": 1209600,    # 14 days
 }
 
 
 # ---------- Request / Response schemas ----------
+
+class BotExecutionTargetSpec(BaseModel):
+    """Inline target spec for ``POST /paper/bots`` — Phase 2.
+
+    If supplied, the new bot is wired to these execution accounts at
+    creation time. Without this list the bot has no targets and (in
+    ``db_targets`` mode) defaults to the seeded Paper account.
+    """
+
+    execution_account_id: int
+    is_enabled: bool = True
+    allocation_override: float | None = None
+    risk_per_trade_pct_override: float | None = None
+    sizing_mode: str = "static_allocation"
+
 
 class CreateBotRequest(BaseModel):
     strategy_id: str
@@ -57,6 +78,9 @@ class CreateBotRequest(BaseModel):
     risk_pct: float = 1.0
     source_type: str | None = None  # "research" | "backtest" | "manual"
     source_id: str | None = None  # research run_id or backtest id
+    # Phase 2: optional explicit execution targets. Empty / omitted →
+    # bot defaults to the seeded Paper account in ``db_targets`` mode.
+    execution_targets: list[BotExecutionTargetSpec] | None = None
 
 
 class CreateBotResponse(BaseModel):
@@ -67,6 +91,7 @@ class CreateBotResponse(BaseModel):
     state: str
     source_type: str | None = None
     source_id: str | None = None
+    execution_targets: list[dict] = []
 
 
 class BotStatusResponse(BaseModel):
@@ -144,6 +169,50 @@ def create_bot(
         "state": "monitoring",
     })
 
+    # Phase 2: attach explicit execution targets if supplied.
+    target_summaries: list[dict] = []
+    if req.execution_targets:
+        from fibokei.db.repository import (
+            create_bot_execution_target,
+            get_execution_account,
+        )
+
+        for spec in req.execution_targets:
+            acct = get_execution_account(db, spec.execution_account_id)
+            if acct is None:
+                raise HTTPException(
+                    status_code=404,
+                    detail=(
+                        f"Execution account {spec.execution_account_id} not found"
+                    ),
+                )
+            try:
+                target = create_bot_execution_target(
+                    db,
+                    {
+                        "bot_id": bot_id,
+                        "execution_account_id": spec.execution_account_id,
+                        "is_enabled": spec.is_enabled,
+                        "allocation_override": spec.allocation_override,
+                        "risk_per_trade_pct_override": spec.risk_per_trade_pct_override,
+                        "sizing_mode": spec.sizing_mode,
+                    },
+                )
+            except Exception:
+                # Roll back the bot we just created so we don't leave orphans.
+                db.rollback()
+                raise
+            target_summaries.append(
+                {
+                    "id": target.id,
+                    "execution_account_id": target.execution_account_id,
+                    "account_name": acct.name,
+                    "broker": acct.broker,
+                    "environment": acct.environment,
+                    "is_enabled": target.is_enabled,
+                }
+            )
+
     return CreateBotResponse(
         bot_id=bot_id,
         strategy_id=req.strategy_id,
@@ -152,6 +221,7 @@ def create_bot(
         state=bot_model.state,
         source_type=source_type,
         source_id=req.source_id,
+        execution_targets=target_summaries,
     )
 
 
@@ -441,7 +511,12 @@ def get_fleet_overview(
     user: TokenData = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    """Fleet-level dashboard: aggregate metrics + per-bot stats."""
+    """Fleet-level dashboard: aggregate metrics + per-bot stats.
+
+    All PnL and trade counts are scoped to the current active evaluation phase
+    (trades with entry_time >= phase.started_at). If no phase is active, all
+    trades are included for backward compatibility.
+    """
     all_bots = get_paper_bots(db)
     now = datetime.now(timezone.utc)
     items: list[BotFleetItem] = []
@@ -450,8 +525,16 @@ def get_fleet_overview(
     total_trades_count = 0
     open_count = 0
 
+    # Phase-scoped stats: only count trades from the current evaluation phase
+    active_phase = get_active_phase(db)
+    phase_since = active_phase.started_at if active_phase else None
+    # Ensure timezone-aware for comparison
+    if phase_since is not None and phase_since.tzinfo is None:
+        from datetime import timezone as _tz
+        phase_since = phase_since.replace(tzinfo=_tz.utc)
+
     for bot in all_bots:
-        trades = get_paper_trades(db, bot_id=bot.bot_id, limit=10000)
+        trades = get_paper_trades(db, bot_id=bot.bot_id, limit=10000, since=phase_since)
         bot_pnl = sum(t.pnl for t in trades)
         bot_trades = len(trades)
         total_pnl += bot_pnl
