@@ -1,6 +1,9 @@
 """Paper trading bot — wraps a strategy with an account."""
 
+from __future__ import annotations
+
 import logging
+from datetime import datetime, timezone
 from enum import Enum
 
 import pandas as pd
@@ -23,7 +26,16 @@ class BotState(str, Enum):
 
 
 class PaperBot:
-    """Runs a strategy on live/simulated bar data with a paper account."""
+    """Runs a strategy on live/simulated bar data with a paper account.
+
+    Phase 1 of the multi-broker fan-out architecture: the bot accepts
+    *either* a single ``adapter`` (legacy single-broker path, untouched) or
+    a multi-broker ``router`` (new fan-out path). When ``router`` is set,
+    every signal fans out to all enabled execution targets and the bot
+    tracks per-target deal ids for close-on-exit dispatch. The legacy
+    single-adapter path is preserved bit-for-bit so existing IG demo
+    behaviour and tests continue to work unchanged.
+    """
 
     def __init__(
         self,
@@ -33,7 +45,8 @@ class PaperBot:
         timeframe: Timeframe,
         account: PaperAccount,
         risk_pct: float = 1.0,
-        adapter=None,  # ExecutionAdapter | None
+        adapter=None,  # ExecutionAdapter | None — legacy single-broker path
+        router=None,   # ExecutionRouter | None — multi-broker fan-out path
     ):
         self.bot_id = bot_id
         self.strategy = strategy
@@ -42,10 +55,14 @@ class PaperBot:
         self.account = account
         self.risk_pct = risk_pct
         self._adapter = adapter
+        self._router = router
 
         self.state = BotState.IDLE
         self.position: Position | None = None
-        self._deal_id: str | None = None  # live deal reference when adapter is active
+        # Legacy single-broker deal id (used only when ``adapter`` is set).
+        self._deal_id: str | None = None
+        # Fan-out per-target deal ids (used only when ``router`` is set).
+        self._target_deal_ids: dict[str, str] = {}
         self.bars_seen = 0
         self._df: pd.DataFrame | None = None
         self._prepared = False
@@ -109,8 +126,31 @@ class PaperBot:
 
             if exit_reason is not None:
                 exit_price = self._get_exit_price(current_bar, exit_reason)
-                # Close live position via adapter if available
-                if self._adapter is not None and self._deal_id is not None:
+                close_attempts: list[dict] = []
+                closed_deal_id = ""
+                # Router path: close per-target on exit (open targets only).
+                if self._router is not None and self._target_deal_ids:
+                    try:
+                        attempts = self._router.dispatch_close(
+                            target_deal_ids=self._target_deal_ids,
+                            instrument=self.instrument,
+                            bot_id=self.bot_id,
+                        )
+                        close_attempts = [a.to_dict() for a in attempts]
+                        # Record one of the broker deal ids for the legacy
+                        # ``closed_deal_id`` field used by the audit writer.
+                        for a in attempts:
+                            if a.broker_deal_id:
+                                closed_deal_id = a.broker_deal_id
+                                break
+                    except Exception:
+                        logger.exception(
+                            "Bot %s: router failed to dispatch close for %s",
+                            self.bot_id, self.instrument,
+                        )
+                    self._target_deal_ids = {}
+                # Legacy single-adapter path
+                elif self._adapter is not None and self._deal_id is not None:
                     try:
                         self._adapter.close_position(self._deal_id)
                     except Exception:
@@ -118,7 +158,9 @@ class PaperBot:
                             "Bot %s: adapter failed to close deal %s",
                             self.bot_id, self._deal_id,
                         )
-                self._deal_id = None
+                    closed_deal_id = self._deal_id or ""
+                    self._deal_id = None
+
                 trade = self.position.close(exit_price, bar_time, exit_reason)
                 self.account.record_trade(trade)
                 # Remove from open positions
@@ -128,7 +170,12 @@ class PaperBot:
                 ]
                 self.position = None
                 self.state = BotState.MONITORING
-                return {"event": "trade_closed", "trade": trade}
+                event: dict = {"event": "trade_closed", "trade": trade}
+                if closed_deal_id:
+                    event["closed_deal_id"] = closed_deal_id
+                if close_attempts:
+                    event["close_attempts"] = close_attempts
+                return event
 
         # Look for new entry (not if paused)
         if self.position is None and self.state == BotState.MONITORING:
@@ -152,15 +199,60 @@ class PaperBot:
                         position_size=pos_size,
                         max_bars_in_trade=plan.max_bars_in_trade or 100,
                     )
-                    # Place live order via adapter if available
+
+                    # Router path (multi-broker fan-out)
+                    open_attempts: list[dict] = []
+                    parent_signal_id: str | None = None
+                    if self._router is not None:
+                        from fibokei.execution.targets import NormalisedTradePlan
+
+                        normalised = NormalisedTradePlan(
+                            bot_id=self.bot_id,
+                            strategy_id=self.strategy.strategy_id,
+                            instrument=self.instrument,
+                            timeframe=self.timeframe.value,
+                            direction=signal.direction.value,
+                            entry_price=entry_price,
+                            stop_loss=plan.stop_loss,
+                            take_profit_targets=tuple(plan.take_profit_targets or []),
+                            bar_time=bar_time
+                            if isinstance(bar_time, datetime)
+                            else datetime.now(timezone.utc),
+                            signal_timestamp=datetime.now(timezone.utc),
+                            max_bars_in_trade=plan.max_bars_in_trade or 100,
+                        )
+                        try:
+                            attempts = self._router.dispatch_open(normalised)
+                            open_attempts = [a.to_dict() for a in attempts]
+                            for a in attempts:
+                                if a.is_open and a.broker_deal_id:
+                                    self._target_deal_ids[a.target_id] = a.broker_deal_id
+                                    if parent_signal_id is None:
+                                        parent_signal_id = a.parent_signal_id
+                            if parent_signal_id is None and attempts:
+                                parent_signal_id = attempts[0].parent_signal_id
+                            logger.info(
+                                "Bot %s: router fan-out — %d attempts, %d filled "
+                                "(instrument=%s direction=%s)",
+                                self.bot_id, len(attempts), len(self._target_deal_ids),
+                                self.instrument, signal.direction.value,
+                            )
+                        except Exception:
+                            logger.exception(
+                                "Bot %s: router raised exception placing fan-out for %s",
+                                self.bot_id, self.instrument,
+                            )
+
+                    # Legacy single-adapter path — preserved untouched
                     ig_rejection_reason: str = ""
                     ig_error_code: str = ""
-                    if self._adapter is not None:
+                    if self._router is None and self._adapter is not None:
                         try:
                             # Map LONG/SHORT → BUY/SELL for IG
                             ig_dir = "BUY" if signal.direction.value == "LONG" else "SELL"
-                            # IG needs stop/limit as distance from entry (positive)
-                            stop_dist = abs(entry_price - plan.stop_loss) if plan.stop_loss else None
+                            stop_dist = (
+                                abs(entry_price - plan.stop_loss) if plan.stop_loss else None
+                            )
                             tp = plan.take_profit_targets[0] if plan.take_profit_targets else None
                             limit_dist = abs(tp - entry_price) if tp else None
                             order = {
@@ -174,8 +266,6 @@ class PaperBot:
                             }
                             result = self._adapter.place_order(order)
                             self._deal_id = result.get("deal_id") or result.get("dealId")
-                            # Log outcome explicitly — rejected responses arrive as dicts
-                            # (not exceptions) so logger.exception won't catch them.
                             result_status = result.get("status", "UNKNOWN")
                             if self._deal_id:
                                 logger.info(
@@ -192,8 +282,7 @@ class PaperBot:
                                     "Bot %s: IG order NOT placed — status=%s reason=%s "
                                     "error_code=%s instrument=%s dir=%s",
                                     self.bot_id, result_status,
-                                    ig_rejection_reason,
-                                    ig_error_code,
+                                    ig_rejection_reason, ig_error_code,
                                     self.instrument, ig_dir,
                                 )
                         except Exception as exc:
@@ -202,15 +291,23 @@ class PaperBot:
                                 "Bot %s: adapter raised exception placing order for %s",
                                 self.bot_id, self.instrument,
                             )
+
                     self.state = BotState.POSITION_OPEN
                     self.account.open_positions.append(self.position.to_dict())
-                    return {
+                    event = {
                         "event": "trade_opened",
                         "signal": signal,
+                        # Legacy single-broker fields
                         "deal_id": self._deal_id,
                         "ig_reason": ig_rejection_reason,
                         "ig_error_code": ig_error_code,
                     }
+                    # Fan-out fields (only present when router is wired)
+                    if self._router is not None:
+                        event["attempts"] = open_attempts
+                        event["parent_signal_id"] = parent_signal_id
+                        event["target_deal_ids"] = dict(self._target_deal_ids)
+                    return event
 
         return None
 

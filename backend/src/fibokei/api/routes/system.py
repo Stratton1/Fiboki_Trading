@@ -27,6 +27,12 @@ class SystemStatusResponse(BaseModel):
     execution_mode: str
     kill_switch_active: bool
     data_source: str
+    # Phase 1 multi-broker fan-out: router state + enabled-target summary.
+    # ``execution_mode`` is retained for back-compat (legacy single-broker
+    # vocabulary). For multi-broker visibility the frontend should rely on
+    # ``router_mode`` + ``execution_targets``.
+    router_mode: str = "legacy_single"
+    execution_targets: list[dict] = []
 
 
 class RiskConfigResponse(BaseModel):
@@ -102,6 +108,20 @@ def system_status(
     else:
         data_source = "fixtures"
 
+    # Multi-broker router snapshot — built from env vars, mirrors what the
+    # worker would see on a fresh restart. The API process never executes
+    # orders, so this is purely informational.
+    try:
+        from fibokei.execution.router_factory import build_execution_router_from_env
+
+        exec_router = build_execution_router_from_env(kill_switch_check=lambda: ks.is_active)
+        router_summary = exec_router.summary()
+        router_mode = router_summary["router_mode"]
+        execution_targets = router_summary["targets"]
+    except Exception:  # pragma: no cover — degrade gracefully
+        router_mode = flags.execution_router_mode
+        execution_targets = []
+
     return SystemStatusResponse(
         api_version="1.0.0",
         database=db_status,
@@ -111,6 +131,8 @@ def system_status(
         execution_mode=flags.execution_mode,
         kill_switch_active=ks.is_active,
         data_source=data_source,
+        router_mode=router_mode,
+        execution_targets=execution_targets,
     )
 
 

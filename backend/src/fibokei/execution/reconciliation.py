@@ -1,14 +1,17 @@
-"""Reconciliation between Fiboki internal state and IG broker state.
+"""Reconciliation between Fiboki internal state and broker state.
 
-Compares positions tracked by Fiboki paper bots with what IG actually reports,
-flagging discrepancies for operator review.
+Compares positions tracked by Fiboki paper bots with what the broker
+actually reports, flagging discrepancies for operator review.
+
+Phase 1 of the multi-broker fan-out architecture: the function now accepts
+any :class:`ExecutionAdapter` (IG, Tradovate, or paper) so reconciliation
+can be invoked per-target. The mismatch type vocabulary is unchanged.
 """
 
 import logging
 from dataclasses import dataclass
 
-from fibokei.core.instruments import get_symbol_by_epic
-from fibokei.execution.ig_adapter import IGExecutionAdapter
+from fibokei.execution.adapter import ExecutionAdapter
 
 logger = logging.getLogger(__name__)
 
@@ -40,13 +43,14 @@ class ReconciliationResult:
 
 def reconcile_positions(
     fiboki_positions: list[dict],
-    adapter: IGExecutionAdapter,
+    adapter: ExecutionAdapter,
 ) -> ReconciliationResult:
-    """Compare Fiboki's tracked positions against IG broker positions.
+    """Compare Fiboki's tracked positions against broker positions.
 
     Args:
         fiboki_positions: List of dicts with keys: deal_id, instrument, direction, size.
-        adapter: Authenticated IG adapter to query broker state.
+        adapter: Authenticated execution adapter (IG, Tradovate, or paper)
+            to query broker state.
 
     Returns:
         ReconciliationResult with any mismatches found.

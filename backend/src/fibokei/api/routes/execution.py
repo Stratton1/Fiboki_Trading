@@ -226,3 +226,97 @@ def get_slippage(
     """Get slippage analytics summary, optionally filtered by instrument."""
     summary = get_slippage_summary(db, instrument=instrument)
     return summary
+
+
+# ── Multi-broker (Phase 1 fan-out) endpoints ─────────────────────────────
+
+
+class TradovateHealthResponse(BaseModel):
+    configured: bool
+    reachable: bool
+    env: str
+    account_id: str | None = None
+    account_name: str | None = None
+    supported_symbols_count: int = 0
+    error: str | None = None
+
+
+class RouterTargetView(BaseModel):
+    target_id: str
+    name: str
+    broker: str
+    environment: str
+    is_enabled: bool
+    live_allowed: bool
+    allocated_capital: float
+    risk_per_trade_pct: float
+
+
+class RouterStateResponse(BaseModel):
+    router_mode: str
+    kill_switch_active: bool
+    targets: list[RouterTargetView]
+    warning: str | None = None
+
+
+@router.get("/execution/tradovate-health", response_model=TradovateHealthResponse)
+def get_tradovate_health(
+    user: TokenData = Depends(get_current_user),
+):
+    """Check Tradovate readiness without placing any orders.
+
+    Probe builds a fresh adapter+client, runs healthcheck, and returns
+    a small summary. Demo by default. Live is hard-blocked unless the
+    operator has explicitly opted in.
+    """
+    from fibokei.execution.tradovate_adapter import TradovateExecutionAdapter
+
+    adapter = TradovateExecutionAdapter()
+    info = adapter.healthcheck()
+    return TradovateHealthResponse(
+        configured=bool(info.get("configured", False)),
+        reachable=bool(info.get("reachable", False)),
+        env=str(info.get("env", "demo")),
+        account_id=info.get("account_id"),
+        account_name=info.get("account_name"),
+        supported_symbols_count=int(info.get("supported_symbols_count", 0) or 0),
+        error=info.get("error"),
+    )
+
+
+@router.get("/execution/router", response_model=RouterStateResponse)
+def get_router_state(
+    user: TokenData = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Return the current execution-router mode and configured targets.
+
+    The API process builds its own router snapshot from the same env-var
+    factory the worker uses, so the response reflects the configuration
+    that *would* be in effect for a freshly-started worker. Useful for
+    verifying env vars before restarting Render/Railway.
+    """
+    from fibokei.execution.router_factory import build_execution_router_from_env
+    from fibokei.execution.targets import ROUTER_MODE_ENV_GLOBAL_FANOUT
+
+    def _ks_check() -> bool:
+        ks = get_kill_switch(db)
+        return bool(ks.is_active)
+
+    router = build_execution_router_from_env(kill_switch_check=_ks_check)
+    summary = router.summary()
+    warning: str | None = None
+    if (
+        summary["router_mode"] == ROUTER_MODE_ENV_GLOBAL_FANOUT
+        and len([t for t in summary["targets"] if t["is_enabled"]]) > 1
+    ):
+        warning = (
+            "env_global_fanout active: every running bot will fan out to every "
+            "enabled execution account. Per-bot target control arrives in Phase 2."
+        )
+    return RouterStateResponse(
+        router_mode=summary["router_mode"],
+        kill_switch_active=summary["kill_switch_active"],
+        targets=[RouterTargetView(**t) for t in summary["targets"]],
+        warning=warning,
+    )
