@@ -27,6 +27,7 @@ from fibokei.alerts.telegram import TelegramNotifier
 from fibokei.core.feature_flags import FeatureFlags
 from fibokei.core.models import Timeframe
 from fibokei.data.ingestion import fetch_ohlcv
+from fibokei.data.live_provider import is_live_available, load_live
 from fibokei.db.models import Base
 from fibokei.db.repository import (
     get_active_paper_bots,
@@ -62,6 +63,47 @@ TIMEFRAME_SECONDS = {
 DEFAULT_POLL_INTERVAL = 60
 
 
+def _fetch_candles_for_monitoring(instrument: str, tf: str) -> "pd.DataFrame | None":
+    """Fetch candle data for live bot monitoring.
+
+    Priority:
+    1. IG demo REST API (live_provider) — same price feed as execution,
+       CFD-accurate prices, TTL-cached per timeframe. Requires IG credentials
+       to be configured (FIBOKEI_IG_API_KEY / USERNAME / PASSWORD).
+    2. Yahoo Finance (fetch_ohlcv) — fallback if IG is unavailable or errors.
+
+    Both paths return a DataFrame with a flat 'timestamp' column (UTC) and
+    open/high/low/close/volume columns, matching the format the worker expects.
+
+    Note: IG provides max 200 candles per request which is sufficient for
+    Ichimoku (needs ~52 bars) and all supported timeframes.
+    Backtesting and research always use yfinance / canonical data — this
+    function is worker-only.
+    """
+    import pandas as pd
+
+    if is_live_available():
+        try:
+            df, source = load_live(instrument, tf)
+            # load_live returns a DatetimeIndex; reset to flat timestamp column
+            # to match the format fetch_ohlcv produces.
+            df = df.reset_index()
+            if "timestamp" not in df.columns and df.index.name:
+                df = df.rename(columns={df.columns[0]: "timestamp"})
+            df["timestamp"] = pd.to_datetime(df["timestamp"], utc=True)
+            logger.debug(
+                "Fetched %d bars for %s/%s via %s", len(df), instrument, tf, source
+            )
+            return df
+        except Exception as exc:
+            logger.warning(
+                "IG live feed failed for %s/%s (%s) — falling back to yfinance",
+                instrument, tf, exc,
+            )
+
+    return fetch_ohlcv(instrument, tf)
+
+
 class PaperWorker:
     """Manages paper trading bot lifecycle with DB persistence."""
 
@@ -78,9 +120,12 @@ class PaperWorker:
         self._last_daily_summary: datetime | None = None
         self._trades_today = 0
         # Build the multi-broker execution router with a kill-switch hook.
+        # session_factory is passed so Phase 2 ``db_targets`` mode can read
+        # ``execution_accounts`` and ``bot_execution_targets`` per signal.
         self._router = build_execution_router_from_env(
             account=self.account,
             kill_switch_check=self._kill_switch_active,
+            session_factory=self.session_factory,
         )
         logger.info(
             "ExecutionRouter ready: mode=%s targets=%d",
@@ -209,8 +254,8 @@ class PaperWorker:
         for instrument in instruments:
             timeframes = self._get_timeframes_for_instrument(instrument)
             for tf in timeframes:
-                # Fetch latest data
-                df = fetch_ohlcv(instrument, tf)
+                # Fetch latest data — IG live feed preferred, yfinance fallback
+                df = _fetch_candles_for_monitoring(instrument, tf)
                 if df is None or df.empty:
                     logger.warning("No data for %s/%s", instrument, tf)
                     continue
