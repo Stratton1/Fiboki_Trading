@@ -334,6 +334,131 @@ def smart_deploy(
     )
 
 
+class SmartPipelineRequest(BaseModel):
+    top_n: int = Field(default=20, ge=1, le=200, description="Number of top combos to seed from rankings")
+    min_score: float = Field(default=0.55, ge=0.0, le=1.0, description="Min composite score to include in seed")
+    timeframes: list[str] = Field(
+        default=["M1", "M5", "M15", "M30", "H1", "H4"],
+        description="Timeframes to test (no D — all intraday by default)",
+    )
+    source_run_id: str | None = Field(
+        None,
+        description="Seed combos from a specific run; None = deduplicated best across all runs",
+    )
+    min_trades: int = Field(default=80, ge=1, le=1000)
+    initial_capital: float = 1000.0
+    risk_per_trade_pct: float = 1.0
+    scoring_weights: ScoringWeights | None = None
+
+
+class SmartPipelineResponse(BaseModel):
+    job_id: str
+    job_type: str
+    label: str
+    state: str
+    seeded_strategies: list[str]
+    seeded_instruments: list[str]
+    seeded_pairs: int
+    total_combinations: int
+
+
+@router.post("/research/smart-pipeline", response_model=SmartPipelineResponse)
+def smart_pipeline(
+    req: SmartPipelineRequest,
+    request: Request,
+    db: Session = Depends(get_db),
+    user: TokenData = Depends(get_current_user),
+):
+    """Auto-identify top strategy×instrument combos from rankings and re-run across all timeframes.
+
+    Workflow:
+      1. Fetch top_n results from research_results (deduplicated best-per-combo).
+      2. Filter to those at or above min_score.
+      3. Extract the unique (strategy_id, instrument) pairs.
+      4. Submit a research job: those pairs × requested timeframes.
+
+    The job results land in the rankings table and are immediately visible
+    (since the frontend defaults to "all runs" deduplicated view).
+    """
+    from fibokei.jobs.engine import get_job_engine
+
+    # 1. Fetch seed combos from current rankings
+    deduplicate = req.source_run_id is None
+    candidates = get_research_rankings(
+        db,
+        sort_by="composite_score",
+        limit=req.top_n * 5,  # over-fetch; we'll filter and deduplicate below
+        run_id=req.source_run_id,
+        deduplicate=deduplicate,
+    )
+
+    # 2. Apply min_score filter
+    if req.min_score > 0.0:
+        candidates = [r for r in candidates if r.composite_score >= req.min_score]
+
+    if not candidates:
+        from fastapi import HTTPException
+        raise HTTPException(
+            status_code=422,
+            detail=f"No combos found with composite_score >= {req.min_score}. "
+                   "Lower the threshold or run more research first.",
+        )
+
+    # 3. Extract unique (strategy_id, instrument) pairs — preserve score order
+    seen: set[tuple[str, str]] = set()
+    strategies_ordered: list[str] = []
+    instruments_ordered: list[str] = []
+    pairs: list[tuple[str, str]] = []
+
+    for r in candidates:
+        key = (r.strategy_id, r.instrument)
+        if key not in seen:
+            seen.add(key)
+            pairs.append(key)
+            if r.strategy_id not in strategies_ordered:
+                strategies_ordered.append(r.strategy_id)
+            if r.instrument not in instruments_ordered:
+                instruments_ordered.append(r.instrument)
+        if len(pairs) >= req.top_n:
+            break
+
+    # 4. Submit research job for pairs × timeframes
+    # Pass the full cross-product — the matrix engine handles all combos
+    total_combos = len(pairs) * len(req.timeframes)
+    label = (
+        f"Smart Pipeline: top {len(pairs)} combos × {len(req.timeframes)} TFs "
+        f"({total_combos} combinations)"
+    )
+
+    engine = get_job_engine()
+    info = engine.submit(
+        job_type="research",
+        label=label,
+        fn=_run_research_sync,
+        strategy_ids=strategies_ordered,
+        instruments=instruments_ordered,
+        timeframes_str=req.timeframes,
+        initial_capital=req.initial_capital,
+        risk_per_trade_pct=req.risk_per_trade_pct,
+        min_trades=req.min_trades,
+        scoring_weights=req.scoring_weights,
+        provider=None,
+        data_dir=None,
+        session_factory=request.app.state.session_factory,
+    )
+
+    return SmartPipelineResponse(
+        job_id=info.job_id,
+        job_type=info.job_type,
+        label=info.label,
+        state=info.state.value,
+        seeded_strategies=strategies_ordered,
+        seeded_instruments=instruments_ordered,
+        seeded_pairs=len(pairs),
+        total_combinations=total_combos,
+    )
+
+
 @router.get("/research/rankings", response_model=list[ResearchResultResponse])
 def get_rankings(
     sort_by: str = Query("composite_score", pattern="^(composite_score|rank)$"),

@@ -226,6 +226,23 @@ export const api = {
     apiFetch<{ job_id: string; job_type: string; label: string; state: string }>(
       "/research/auto-scout", { method: "POST", body: JSON.stringify(body) }
     ),
+  smartPipeline: (body: {
+    top_n?: number;
+    min_score?: number;
+    timeframes?: string[];
+    source_run_id?: string | null;
+    min_trades?: number;
+  }) =>
+    apiFetch<{
+      job_id: string;
+      job_type: string;
+      label: string;
+      state: string;
+      seeded_strategies: string[];
+      seeded_instruments: string[];
+      seeded_pairs: number;
+      total_combinations: number;
+    }>("/research/smart-pipeline", { method: "POST", body: JSON.stringify(body) }),
   smartDeploy: (body: {
     top_n?: number;
     run_id?: string;

@@ -111,6 +111,19 @@ export default function ResearchPage() {
   // Run All Symbols state
   const [runningAll, setRunningAll] = useState(false);
 
+  // Smart Pipeline state
+  const PIPELINE_TFS = ["M1", "M5", "M15", "M30", "H1", "H4"];
+  const [pipelineLoading, setPipelineLoading] = useState(false);
+  const [pipelineTopN, setPipelineTopN] = useState(20);
+  const [pipelineMinScore, setPipelineMinScore] = useState(0.55);
+  const [pipelineTfs, setPipelineTfs] = useState<string[]>(["M1", "M5", "M15", "M30", "H1", "H4"]);
+  const [pipelineResult, setPipelineResult] = useState<{
+    seeded_pairs: number;
+    total_combinations: number;
+    label: string;
+  } | null>(null);
+  const [pipelineProgress, setPipelineProgress] = useState(0);
+
   // Bulk bot creation
   const [selectedResults, setSelectedResults] = useState<Set<number>>(new Set());
   const [bulkDeploying, setBulkDeploying] = useState(false);
@@ -328,6 +341,50 @@ export default function ResearchPage() {
     }
   }
 
+  async function handleSmartPipeline() {
+    setPipelineLoading(true);
+    setPipelineResult(null);
+    setPipelineProgress(0);
+    setError(null);
+    try {
+      const res = await api.smartPipeline({
+        top_n: pipelineTopN,
+        min_score: pipelineMinScore,
+        timeframes: pipelineTfs,
+      });
+      setPipelineResult({
+        seeded_pairs: res.seeded_pairs,
+        total_combinations: res.total_combinations,
+        label: res.label,
+      });
+      const jobId = res.job_id;
+
+      // Poll for completion — reuse mutate() so rankings update when done
+      const pollInterval = setInterval(async () => {
+        try {
+          const job = await api.getJob(jobId);
+          setPipelineProgress(job.progress ?? 0);
+          if (job.state === "completed") {
+            clearInterval(pollInterval);
+            setRunScope("all");
+            await mutate();
+            await mutateRuns();
+            setPipelineLoading(false);
+          } else if (job.state === "failed" || job.state === "cancelled") {
+            clearInterval(pollInterval);
+            setError(job.error || "Smart Pipeline job failed");
+            setPipelineLoading(false);
+          }
+        } catch {
+          // keep polling
+        }
+      }, 2000);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Smart Pipeline failed");
+      setPipelineLoading(false);
+    }
+  }
+
   async function handleRunAllSymbols() {
     if (selectedStrategies.length === 0 || selectedTimeframes.length === 0 || !instruments) return;
     setRunningAll(true);
@@ -477,6 +534,81 @@ export default function ResearchPage() {
           <button onClick={() => setScoutResult(null)} className="text-green-500 hover:text-green-700 text-xs ml-4">Dismiss</button>
         </div>
       )}
+
+      {/* Smart Pipeline — auto-identify top combos and deep-test across all TFs */}
+      <div className="card-elevated space-y-3">
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <p className="text-sm font-medium">Smart Pipeline</p>
+            <p className="text-xs text-foreground-muted">
+              Pick top combos from current rankings → automatically re-run them across all intraday timeframes → ranked table updates instantly.
+            </p>
+          </div>
+          <button
+            onClick={handleSmartPipeline}
+            disabled={pipelineLoading || !rankings || rankings.length === 0}
+            className="btn btn-primary"
+            title={!rankings || rankings.length === 0 ? "Run Auto Scout or a research job first to populate rankings" : undefined}
+          >
+            {pipelineLoading
+              ? <><Loader2 size={14} className="animate-spin inline mr-1" />{pipelineProgress > 0 ? `${pipelineProgress}%` : "Starting..."}</>
+              : "Run Smart Pipeline"}
+          </button>
+        </div>
+        <div className="flex flex-wrap items-end gap-4">
+          <div>
+            <label className="block text-xs text-foreground-muted mb-1">Top N combos</label>
+            <input
+              type="number"
+              value={pipelineTopN}
+              onChange={(e) => setPipelineTopN(Number(e.target.value))}
+              min={1} max={100}
+              className="input w-20"
+              disabled={pipelineLoading}
+            />
+          </div>
+          <div>
+            <label className="block text-xs text-foreground-muted mb-1">Min score</label>
+            <input
+              type="number"
+              value={pipelineMinScore}
+              onChange={(e) => setPipelineMinScore(Number(e.target.value))}
+              min={0} max={1} step={0.05}
+              className="input w-20"
+              disabled={pipelineLoading}
+            />
+          </div>
+          <div>
+            <label className="block text-xs text-foreground-muted mb-1">Timeframes</label>
+            <div className="flex gap-1">
+              {PIPELINE_TFS.map((tf) => (
+                <button
+                  key={tf}
+                  type="button"
+                  disabled={pipelineLoading}
+                  onClick={() => setPipelineTfs((prev) =>
+                    prev.includes(tf) ? prev.filter((t) => t !== tf) : [...prev, tf]
+                  )}
+                  className={`px-2 py-1 rounded text-xs border transition ${
+                    pipelineTfs.includes(tf)
+                      ? "bg-primary text-white border-primary"
+                      : "bg-background border-gray-300"
+                  }`}
+                >
+                  {tf}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+        {pipelineResult && (
+          <div className="rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-xs text-blue-800">
+            <strong>Pipeline running:</strong> {pipelineResult.seeded_pairs} combos × {pipelineTfs.length} TFs = {pipelineResult.total_combinations} combinations.
+            Rankings will update when complete.
+            {pipelineLoading && <span className="ml-2 text-blue-600">{pipelineProgress}%</span>}
+          </div>
+        )}
+      </div>
 
       {error && <p className="text-danger text-sm">{error}</p>}
 
