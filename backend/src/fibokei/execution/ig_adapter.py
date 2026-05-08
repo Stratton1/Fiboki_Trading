@@ -55,24 +55,32 @@ class IGExecutionAdapter(ExecutionAdapter):
 
         direction = order.get("direction", "BUY").upper()
 
-        # IG CFDs use contract size (£ per point), not unit size.
-        # For demo: use fixed small size based on risk, clamped to
-        # sensible range. 1 contract = £1/pip for FX, £1/point for indices.
-        raw_size = order.get("size", 1.0)
-        # Convert unit-based position size to IG contract size:
-        # For FX pairs (price ~1.0): units / 10000 ≈ contracts
-        # For indices (price ~5000+): units as-is are way too large
-        # Simplest safe approach for demo: cap at reasonable size
-        if raw_size > 100:
-            size = 1.0  # default to minimum for oversized calculations
+        # IG CFDs use contract size, not notional units.
+        # The risk engine outputs position size in raw notional units which
+        # bear no direct relationship to IG's contract sizing.  Until a
+        # proper pip-value-aware sizing model is wired in, we use safe
+        # minimum sizes that will always be accepted by IG demo:
+        #   - FX pairs:    0.5 contracts  (£0.50/pip — small but valid)
+        #   - Indices:     1.0 contract   (IG minimum for most index CFDs)
+        #   - Commodities: 1.0 contract
+        # Any raw_size from the risk engine is ignored for IG execution;
+        # it continues to be used for paper-trade P&L tracking only.
+        _is_index = epic.startswith("IX.")
+        _is_fx = epic.startswith("CS.D.") and "CFD" in epic
+        if _is_index:
+            size = 1.0   # minimum for Nikkei, HK50, DAX, etc.
+        elif _is_fx:
+            size = 0.5   # £0.50/pip — well above IG FX minimum of 0.01
         else:
-            size = max(round(raw_size, 1), 0.5)
+            size = 1.0   # commodities, crypto, catch-all
 
         params: dict = {
             "epic": epic,
             "direction": direction,
-            "size": size,  # must be numeric — IG v2 API rejects string-encoded sizes
+            "size": size,        # must be numeric — IG v2 API rejects strings
             "orderType": "MARKET",
+            "expiry": "-",       # required by IG for rolling CFDs (.IP instruments);
+                                 # "-" = no fixed expiry (daily rolling contract)
             "currencyCode": order.get("currency", "GBP"),
             "guaranteedStop": False,
             "forceOpen": True,
