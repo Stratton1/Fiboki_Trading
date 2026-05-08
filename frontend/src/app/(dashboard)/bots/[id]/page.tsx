@@ -110,6 +110,16 @@ export default function BotDetailPage({ params }: { params: Promise<{ id: string
             )}
           </div>
           <div className="flex items-center gap-2">
+            {(botAny.state as string) === "stopped" && (
+              <button
+                onClick={() => handleAction(() => api.restartBot(id))}
+                disabled={!!actingBotId}
+                className="btn btn-primary text-xs"
+                title="Continue monitoring from where this bot left off"
+              >
+                {actingBotId ? <Loader2 size={12} className="animate-spin" /> : "Restart"}
+              </button>
+            )}
             {(botAny.state as string) === "paused" && (
               <button
                 onClick={() => handleAction(() => api.resumeBot(id))}

@@ -3,23 +3,34 @@
 Designed to run as a separate process from the API (e.g. on Railway).
 Recovers active bots from the database on startup and avoids duplicate
 candle processing by tracking last_evaluated_bar per bot.
+
+Phase 1 of the multi-broker fan-out architecture: the worker now
+instantiates an :class:`ExecutionRouter` from environment variables and
+hands it to every bot. In ``legacy_single`` router mode this is exactly
+the pre-Phase-1 single-adapter behaviour (paper, or IG demo when
+``FIBOKEI_LIVE_EXECUTION_ENABLED=true``). In ``env_global_fanout`` mode
+every bot signal fans out to every enabled execution account, with each
+attempt persisted as its own audit row tagged with a shared
+``parent_signal_id``.
 """
 
 import logging
 import os
 import signal
-import sys
 import time
 from datetime import datetime, timezone
 
 from sqlalchemy import create_engine
-from sqlalchemy.orm import Session, sessionmaker
+from sqlalchemy.orm import sessionmaker
 
+from fibokei.alerts.telegram import TelegramNotifier
+from fibokei.core.feature_flags import FeatureFlags
 from fibokei.core.models import Timeframe
 from fibokei.data.ingestion import fetch_ohlcv
-from fibokei.db.models import Base, PaperBotModel
+from fibokei.db.models import Base
 from fibokei.db.repository import (
     get_active_paper_bots,
+    get_kill_switch,
     get_or_create_paper_account,
     get_paper_bot,
     get_paper_bots,
@@ -28,8 +39,7 @@ from fibokei.db.repository import (
     update_paper_account,
     update_paper_bot_state,
 )
-from fibokei.alerts.telegram import TelegramNotifier
-from fibokei.core.feature_flags import get_execution_adapter
+from fibokei.execution.router_factory import build_execution_router_from_env
 from fibokei.paper.account import PaperAccount
 from fibokei.paper.bot import BotState, PaperBot
 from fibokei.risk.engine import RiskEngine
@@ -67,9 +77,27 @@ class PaperWorker:
         self.notifier = TelegramNotifier()
         self._last_daily_summary: datetime | None = None
         self._trades_today = 0
-        # Instantiate once — shared across all bots in this worker
-        self._adapter = get_execution_adapter()
-        logger.info("Execution adapter: %s", type(self._adapter).__name__)
+        # Build the multi-broker execution router with a kill-switch hook.
+        self._router = build_execution_router_from_env(
+            account=self.account,
+            kill_switch_check=self._kill_switch_active,
+        )
+        logger.info(
+            "ExecutionRouter ready: mode=%s targets=%d",
+            self._router.mode, len(self._router.targets),
+        )
+
+    # ── Kill-switch hook ────────────────────────────────────────────
+
+    def _kill_switch_active(self) -> bool:
+        """Return True if the DB-backed kill switch is currently active."""
+        try:
+            with self.session_factory() as session:
+                ks = get_kill_switch(session)
+                return bool(ks.is_active)
+        except Exception:
+            logger.exception("Kill-switch check failed; assuming active for safety")
+            return True
 
     def recover(self) -> int:
         """Recover active bots from database. Returns count recovered."""
@@ -95,7 +123,7 @@ class PaperWorker:
                         timeframe=tf_enum,
                         account=self.account,
                         risk_pct=bot_model.risk_pct,
-                        adapter=self._adapter,
+                        router=self._router,
                     )
                     bot.state = BotState(bot_model.state)
                     bot.bars_seen = bot_model.bars_seen
@@ -134,8 +162,43 @@ class PaperWorker:
             if bot.instrument == instrument and bot.state != BotState.STOPPED
         }
 
+    def _sync_states_from_db(self) -> None:
+        """Sync bot state changes (stop/pause/resume) from DB → memory every cycle.
+
+        This runs at the start of every evaluate_once() call so that an API-triggered
+        stop/pause/resume takes effect *before* candle processing and before
+        _persist_bot_state writes the in-memory state back to DB.
+
+        Without this, the worker overwrites an API-set "stopped" state with the
+        previous in-memory "monitoring" state on the very next cycle.
+        """
+        if not self.bots:
+            return
+        with self.session_factory() as session:
+            all_db_bots = {b.bot_id: b for b in get_paper_bots(session)}
+            for bot_id, bot in list(self.bots.items()):
+                db_bot = all_db_bots.get(bot_id)
+                if db_bot is None:
+                    continue  # deletion handled by sync_bots_from_db (every 5 cycles)
+                if db_bot.state != bot.state.value:
+                    prev = bot.state.value
+                    try:
+                        bot.state = BotState(db_bot.state)
+                        logger.info(
+                            "Bot %s state synced %s → %s (API-triggered)",
+                            bot_id, prev, db_bot.state,
+                        )
+                    except ValueError:
+                        logger.warning(
+                            "Bot %s: unknown state from DB: %s", bot_id, db_bot.state
+                        )
+
     def evaluate_once(self) -> dict:
         """Run one evaluation cycle. Returns summary of events."""
+        # Sync API-controlled state changes every cycle so stop/pause/resume
+        # are respected before candle processing and state persist.
+        self._sync_states_from_db()
+
         instruments = self._get_instruments_to_poll()
         if not instruments:
             return {"instruments": 0, "bars_fed": 0, "events": []}
@@ -180,11 +243,14 @@ class PaperWorker:
                         warmup_count = 120
                         if len(df) > warmup_count:
                             warmup = df.iloc[-warmup_count:-1]
-                            # Detach adapter during warmup so no IG orders
-                            # fire on historical bars. Also freeze account
-                            # state so warmup trades don't corrupt balance.
+                            # Detach router/adapter during warmup so no real
+                            # broker orders fire on historical bars. Also
+                            # freeze account state so warmup trades don't
+                            # corrupt balance.
                             saved_adapter = bot._adapter
+                            saved_router = bot._router
                             bot._adapter = None
+                            bot._router = None
                             _saved_balance = self.account.balance
                             _saved_equity = self.account.equity
                             _saved_daily_pnl = self.account.daily_pnl
@@ -206,6 +272,7 @@ class PaperWorker:
                                 bot.position = None
                                 bot.state = BotState.MONITORING
                             bot._adapter = saved_adapter
+                            bot._router = saved_router
                             # Only the most recent bar is "new"
                             new_bars = df.iloc[-1:]
                         else:
@@ -251,7 +318,6 @@ class PaperWorker:
     @staticmethod
     def _make_json_safe(obj):
         """Convert position dict to JSON-serializable types."""
-        import json
         from datetime import datetime as _dt
         from enum import Enum
 
@@ -295,12 +361,10 @@ class PaperWorker:
             bot_model = get_paper_bot(session, bot.bot_id)
             if not bot_model:
                 return
-            # A trade is "live" if its entry occurred on or after the bot's creation
-            # date — i.e., it was generated during forward monitoring, not historical
-            # replay that pre-dates when the bot was deployed.
+            # Determine is_live: was the trade entry AFTER the bot was created?
+            # Warmup (historical replay) trades have entry_time < created_at.
             bot_created = bot_model.created_at
             entry_time = trade.entry_time
-            # Normalise both to UTC-aware for safe comparison
             if hasattr(bot_created, "tzinfo") and bot_created.tzinfo is None:
                 bot_created = bot_created.replace(tzinfo=timezone.utc)
             if hasattr(entry_time, "tzinfo") and entry_time.tzinfo is None:
@@ -333,23 +397,125 @@ class PaperWorker:
                 weekly_pnl=self.account.weekly_pnl,
             )
 
+    # ── Audit log writers ──────────────────────────────────────────
+
     def _persist_execution_audit(self, event: dict) -> None:
-        """Write an execution audit entry for a trade_opened or trade_closed event.
+        """Write execution audit entries for a trade_opened or trade_closed event.
 
-        This is the central place where IG deal outcomes are stored. It gives
-        operators a queryable record of every order attempt — whether the IG
-        placement succeeded, was rejected, or was paper-only.
+        Phase 1 fan-out: when the router emits multiple attempts, each
+        attempt becomes its own audit row, stamped with a shared
+        ``parent_signal_id`` inside ``detail_json``. This keeps the
+        existing ``execution_audit`` table compatible with the legacy
+        ``/execution/audit`` endpoint while making partial-success
+        visible. The legacy single-broker path (``adapter`` only) writes
+        the same single-row shape it always did.
         """
-        from fibokei.core.feature_flags import FeatureFlags
-
-        execution_mode = FeatureFlags().execution_mode
-        bot_id = event.get("bot_id", "")
         ev_type = event.get("event", "")
+        bot_id = event.get("bot_id", "")
+        attempts = event.get("attempts") or event.get("close_attempts")
 
         try:
+            if attempts:
+                self._persist_attempts(ev_type, bot_id, event, attempts)
+            else:
+                self._persist_legacy_single(ev_type, bot_id, event)
+        except Exception:
+            logger.exception("Failed to persist execution audit for event %s", ev_type)
+
+    def _persist_attempts(
+        self,
+        ev_type: str,
+        bot_id: str,
+        event: dict,
+        attempts: list[dict],
+    ) -> None:
+        """Persist one audit row per child attempt (router fan-out path)."""
+        action = "place_order" if ev_type == "trade_opened" else "close_position"
+        with self.session_factory() as session:
+            for attempt in attempts:
+                broker = attempt.get("broker") or "paper"
+                env = attempt.get("environment") or "paper"
+                # Map (broker, env) → existing execution_mode vocabulary so
+                # the legacy /execution/audit?execution_mode=... filter
+                # still works.
+                if broker == "paper":
+                    mode = "paper"
+                elif broker == "ig":
+                    mode = "ig_demo" if env == "demo" else "ig_live"
+                elif broker == "tradovate":
+                    mode = "tradovate_demo" if env == "demo" else "tradovate_live"
+                else:
+                    mode = f"{broker}_{env}"
+                status_norm = attempt.get("status") or "unknown"
+                # Compress paper_filled → success for the existing column
+                # vocabulary (success/failed/rejected/paper_only).
+                if status_norm in ("filled", "paper_filled"):
+                    audit_status = "success"
+                elif status_norm == "rejected":
+                    audit_status = "rejected"
+                elif status_norm in ("skipped", "error"):
+                    audit_status = "failed"
+                else:
+                    audit_status = "unknown"
+
+                error_msg = attempt.get("rejection_reason")
+                error_code = attempt.get("error_code")
+                if error_msg and error_code:
+                    error_message = f"{error_code}: {error_msg}"
+                elif error_msg:
+                    error_message = error_msg
+                elif error_code:
+                    error_message = error_code
+                else:
+                    error_message = None
+
+                detail = {
+                    "parent_signal_id": attempt.get("parent_signal_id"),
+                    "target_id": attempt.get("target_id"),
+                    "target_name": attempt.get("target_name"),
+                    "broker": broker,
+                    "environment": env,
+                    "broker_symbol": attempt.get("broker_symbol"),
+                    "account_capital": attempt.get("account_capital"),
+                    "risk_pct": attempt.get("risk_pct"),
+                    "rejection_reason": attempt.get("rejection_reason"),
+                    "error_code": attempt.get("error_code"),
+                    "extra": attempt.get("extra") or {},
+                    # Backwards-compat keys for the existing UI
+                    "broker_reason": attempt.get("rejection_reason"),
+                    "broker_error_code": attempt.get("error_code"),
+                }
+                if ev_type == "trade_closed":
+                    trade = event.get("trade")
+                    if trade is not None:
+                        detail["exit_reason"] = trade.exit_reason.value
+                        detail["pnl"] = trade.pnl
+                        detail["bars_in_trade"] = trade.bars_in_trade
+
+                save_execution_audit(session, {
+                    "execution_mode": mode,
+                    "action": action,
+                    "instrument": attempt.get("instrument") or "",
+                    "direction": attempt.get("direction"),
+                    "size": attempt.get("filled_size") or attempt.get("requested_size"),
+                    "deal_id": attempt.get("broker_deal_id") or "",
+                    "status": audit_status,
+                    "detail_json": detail,
+                    "error_message": error_message,
+                    "bot_id": bot_id,
+                    "requested_price": attempt.get("requested_price"),
+                    "filled_price": attempt.get("filled_price"),
+                    "slippage_pips": attempt.get("slippage_pips"),
+                    "fill_latency_ms": attempt.get("latency_ms"),
+                })
+
+    def _persist_legacy_single(self, ev_type: str, bot_id: str, event: dict) -> None:
+        """Single-broker audit path — preserves the pre-Phase-1 row shape."""
+        execution_mode = FeatureFlags().execution_mode
+        with self.session_factory() as session:
             if ev_type == "trade_opened":
                 signal = event.get("signal")
-                deal_id = event.get("deal_id")  # None if adapter didn't place or failed
+                deal_id = event.get("deal_id")
                 ig_reason = event.get("ig_reason", "")
                 ig_error_code = event.get("ig_error_code", "")
                 bot = self.bots.get(bot_id)
@@ -363,7 +529,7 @@ class PaperWorker:
                     error_msg = f"IG rejected: {ig_reason}"
                 else:
                     error_msg = "No IG deal placed (adapter rejected or paper mode)"
-                audit = {
+                save_execution_audit(session, {
                     "execution_mode": execution_mode,
                     "action": "place_order",
                     "instrument": instrument,
@@ -380,22 +546,17 @@ class PaperWorker:
                         "ig_error_code": ig_error_code,
                     },
                     "error_message": error_msg,
-                }
-
+                })
             elif ev_type == "trade_closed":
                 trade = event.get("trade")
-                bot = self.bots.get(bot_id)
-                # closed_deal_id is set if the adapter actually closed an IG position;
-                # empty means the position was paper-only and IG was never touched.
                 closed_deal_id = event.get("closed_deal_id", "")
-                audit = {
+                save_execution_audit(session, {
                     "execution_mode": execution_mode,
                     "action": "close_position",
                     "instrument": trade.instrument if trade else "",
                     "direction": trade.direction.value if trade else "",
                     "bot_id": bot_id,
                     "deal_id": closed_deal_id,
-                    # "success" = IG close confirmed; "paper_only" = paper trade only
                     "status": "success" if closed_deal_id else "paper_only",
                     "detail_json": {
                         "exit_reason": trade.exit_reason.value if trade else "",
@@ -403,15 +564,7 @@ class PaperWorker:
                         "bars_in_trade": trade.bars_in_trade if trade else None,
                     },
                     "error_message": None if closed_deal_id else "No IG position closed (opened as paper_only)",
-                }
-            else:
-                return
-
-            with self.session_factory() as session:
-                save_execution_audit(session, audit)
-
-        except Exception:
-            logger.exception("Failed to persist execution audit for event %s", ev_type)
+                })
 
     def _maybe_send_daily_summary(self) -> None:
         """Send Telegram daily summary once per UTC day."""
@@ -451,7 +604,7 @@ class PaperWorker:
                         timeframe=tf_enum,
                         account=self.account,
                         risk_pct=bot_model.risk_pct,
-                        adapter=self._adapter,
+                        router=self._router,
                     )
                     bot.state = BotState(bot_model.state)
                     bot.bars_seen = bot_model.bars_seen
