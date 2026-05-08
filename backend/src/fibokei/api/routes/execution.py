@@ -54,6 +54,7 @@ class AuditEntryResponse(BaseModel):
     filled_price: float | None = None
     slippage_pips: float | None = None
     fill_latency_ms: int | None = None
+    detail_json: dict | None = None
 
 
 class SlippageInstrumentResponse(BaseModel):

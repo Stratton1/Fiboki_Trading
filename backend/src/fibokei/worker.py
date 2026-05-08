@@ -338,9 +338,19 @@ class PaperWorker:
             if ev_type == "trade_opened":
                 signal = event.get("signal")
                 deal_id = event.get("deal_id")  # None if adapter didn't place or failed
+                ig_reason = event.get("ig_reason", "")
+                ig_error_code = event.get("ig_error_code", "")
                 bot = self.bots.get(bot_id)
                 instrument = bot.instrument if bot else ""
                 direction = signal.direction.value if signal else ""
+                if deal_id:
+                    error_msg = None
+                elif ig_error_code:
+                    error_msg = f"IG rejected: {ig_reason} (error_code={ig_error_code})"
+                elif ig_reason:
+                    error_msg = f"IG rejected: {ig_reason}"
+                else:
+                    error_msg = "No IG deal placed (adapter rejected or paper mode)"
                 audit = {
                     "execution_mode": execution_mode,
                     "action": "place_order",
@@ -354,8 +364,10 @@ class PaperWorker:
                         "entry_price": signal.proposed_entry if signal else None,
                         "stop_loss": signal.stop_loss if signal else None,
                         "deal_id": deal_id,
+                        "ig_reason": ig_reason,
+                        "ig_error_code": ig_error_code,
                     },
-                    "error_message": None if deal_id else "No IG deal placed (adapter rejected or paper mode)",
+                    "error_message": error_msg,
                 }
 
             elif ev_type == "trade_closed":

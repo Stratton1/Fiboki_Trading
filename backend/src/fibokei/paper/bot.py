@@ -153,6 +153,8 @@ class PaperBot:
                         max_bars_in_trade=plan.max_bars_in_trade or 100,
                     )
                     # Place live order via adapter if available
+                    ig_rejection_reason: str = ""
+                    ig_error_code: str = ""
                     if self._adapter is not None:
                         try:
                             # Map LONG/SHORT → BUY/SELL for IG
@@ -184,22 +186,31 @@ class PaperBot:
                                     result.get("filled_price") or result.get("level"),
                                 )
                             else:
+                                ig_rejection_reason = result.get("reason", "")
+                                ig_error_code = result.get("error_code", "")
                                 logger.warning(
                                     "Bot %s: IG order NOT placed — status=%s reason=%s "
                                     "error_code=%s instrument=%s dir=%s",
                                     self.bot_id, result_status,
-                                    result.get("reason", ""),
-                                    result.get("error_code", ""),
+                                    ig_rejection_reason,
+                                    ig_error_code,
                                     self.instrument, ig_dir,
                                 )
-                        except Exception:
+                        except Exception as exc:
+                            ig_rejection_reason = str(exc)
                             logger.exception(
                                 "Bot %s: adapter raised exception placing order for %s",
                                 self.bot_id, self.instrument,
                             )
                     self.state = BotState.POSITION_OPEN
                     self.account.open_positions.append(self.position.to_dict())
-                    return {"event": "trade_opened", "signal": signal, "deal_id": self._deal_id}
+                    return {
+                        "event": "trade_opened",
+                        "signal": signal,
+                        "deal_id": self._deal_id,
+                        "ig_reason": ig_rejection_reason,
+                        "ig_error_code": ig_error_code,
+                    }
 
         return None
 

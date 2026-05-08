@@ -71,7 +71,7 @@ class IGExecutionAdapter(ExecutionAdapter):
         params: dict = {
             "epic": epic,
             "direction": direction,
-            "size": str(size),
+            "size": size,  # must be numeric — IG v2 API rejects string-encoded sizes
             "orderType": "MARKET",
             "currencyCode": order.get("currency", "GBP"),
             "guaranteedStop": False,
