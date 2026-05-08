@@ -97,60 +97,72 @@ export default function BotDetailPage({ params }: { params: Promise<{ id: string
 
       {/* Status + actions */}
       <div className="card mb-6">
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <StatusBadge variant={STATE_VARIANT[botAny.state as string] ?? "neutral"}>
-              {botAny.state as string}
-            </StatusBadge>
-            <span className="text-xs text-foreground-muted">{sourceLabel}</span>
-            {(botAny.state as string) === "monitoring" && (
-              <span className="flex items-center gap-1 text-xs text-foreground-muted">
-                <Activity size={11} className="text-green-500" /> Watching for signals
-              </span>
-            )}
-          </div>
-          <div className="flex items-center gap-2">
-            {(botAny.state as string) === "stopped" && (
+        {/* Status row */}
+        <div className="flex flex-wrap items-center gap-3 mb-4 pb-4 border-b border-border">
+          <StatusBadge variant={STATE_VARIANT[botAny.state as string] ?? "neutral"}>
+            {botAny.state as string}
+          </StatusBadge>
+          <span className="text-xs text-foreground-muted">{sourceLabel}</span>
+          {(botAny.state as string) === "monitoring" && (
+            <span className="flex items-center gap-1 text-xs text-foreground-muted">
+              <Activity size={11} className="text-green-500" /> Watching for signals
+            </span>
+          )}
+          {((botAny.state as string) === "stopped" || (botAny.state as string) === "idle") && (
+            <span className="flex items-center gap-1 text-xs text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200">
+              <AlertTriangle size={10} /> Not monitoring — use Restart to resume
+            </span>
+          )}
+        </div>
+
+        {/* Controls row */}
+        <div>
+          <p className="text-xs font-medium text-foreground-muted uppercase tracking-wide mb-3">Bot Controls</p>
+          <div className="flex flex-wrap items-center gap-2">
+            {((botAny.state as string) === "stopped" || (botAny.state as string) === "idle") && (
               <button
                 onClick={() => handleAction(() => api.restartBot(id))}
                 disabled={!!actingBotId}
-                className="btn btn-primary text-xs"
-                title="Continue monitoring from where this bot left off"
+                className="btn btn-primary text-sm px-4 py-2 flex items-center gap-2"
+                title="Put bot back into monitoring mode to resume signal detection"
               >
-                {actingBotId ? <Loader2 size={12} className="animate-spin" /> : "Restart"}
+                {actingBotId ? <Loader2 size={14} className="animate-spin" /> : <Activity size={14} />}
+                {actingBotId ? "Restarting…" : "Restart Bot"}
               </button>
             )}
             {(botAny.state as string) === "paused" && (
               <button
                 onClick={() => handleAction(() => api.resumeBot(id))}
                 disabled={!!actingBotId}
-                className="btn btn-primary text-xs"
+                className="btn btn-primary text-sm px-4 py-2 flex items-center gap-2"
               >
-                {actingBotId ? <Loader2 size={12} className="animate-spin" /> : "Resume"}
+                {actingBotId ? <Loader2 size={14} className="animate-spin" /> : <Activity size={14} />}
+                {actingBotId ? "Resuming…" : "Resume Bot"}
               </button>
             )}
             {(botAny.state as string) === "monitoring" && (
               <button
                 onClick={() => handleAction(() => api.pauseBot(id))}
                 disabled={!!actingBotId}
-                className="btn btn-secondary text-xs"
+                className="btn btn-secondary text-sm px-4 py-2"
               >
-                {actingBotId ? <Loader2 size={12} className="animate-spin" /> : "Pause"}
+                {actingBotId ? <Loader2 size={14} className="animate-spin" /> : "Pause"}
               </button>
             )}
-            {(botAny.state as string) !== "stopped" && (
+            {(botAny.state as string) !== "stopped" && (botAny.state as string) !== "idle" && (
               <button
                 onClick={() => handleAction(() => api.stopBot(id))}
                 disabled={!!actingBotId}
-                className="btn text-xs border border-red-200 text-danger hover:bg-red-50"
+                className="btn text-sm px-4 py-2 border border-red-200 text-danger hover:bg-red-50"
               >
-                {actingBotId ? <Loader2 size={12} className="animate-spin" /> : "Stop"}
+                {actingBotId ? <Loader2 size={14} className="animate-spin" /> : "Stop Bot"}
               </button>
             )}
           </div>
         </div>
+
         {actionError && (
-          <p className="text-danger text-xs mt-2">{actionError}</p>
+          <p className="text-danger text-xs mt-3 pt-3 border-t border-border">{actionError}</p>
         )}
       </div>
 

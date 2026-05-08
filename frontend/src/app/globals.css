@@ -44,7 +44,8 @@ body {
   background: var(--color-background-card);
   border: 1px solid var(--color-border);
   border-radius: 0.75rem;
-  overflow: hidden;
+  overflow-x: auto;
+  overflow-y: hidden;
 }
 
 .table-container table {

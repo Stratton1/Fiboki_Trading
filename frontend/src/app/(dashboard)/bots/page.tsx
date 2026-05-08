@@ -260,6 +260,17 @@ export default function BotsPage() {
       <PageHeader
         title="Bots"
         subtitle="Manage trading bots and monitor fleet performance"
+        actions={
+          botList.length > 0 ? (
+            <button
+              onClick={handleRestartAll}
+              className="btn btn-primary flex items-center gap-2"
+              title="Restart all stopped bots and put them back into monitoring mode"
+            >
+              <Activity size={14} /> Start All Bots
+            </button>
+          ) : undefined
+        }
       />
 
       {/* Smart Deploy */}
