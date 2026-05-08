@@ -110,11 +110,16 @@ class ExecutionRouter:
         targets: list[ResolvedTarget],
         kill_switch_check: KillSwitchCheck | None = None,
         target_provider: TargetProvider | None = None,
+        account_risk_engine=None,
     ) -> None:
         self.mode = mode
         self._targets: list[ResolvedTarget] = list(targets)
         self._kill_switch_check = kill_switch_check or (lambda: False)
         self._target_provider = target_provider
+        # Phase 4: optional per-account risk engine. When wired (db_targets
+        # mode), it runs after sizing and before adapter dispatch and can
+        # short-circuit the dispatch with a typed RiskDecision.
+        self._account_risk_engine = account_risk_engine
 
     def _targets_for(self, bot_id: str | None) -> list[ResolvedTarget]:
         """Phase 2: per-bot target lookup with Phase 1 static fallback."""
@@ -248,10 +253,20 @@ class ExecutionRouter:
         attempt.requested_size = size
         attempt.adjusted_size = size
 
-        # Gate 5: account-level risk — Phase 1 deferred (see Phase 4 plan).
-        # The bot still runs the existing global RiskEngine.check_trade_allowed
-        # before reaching the router, so global drawdown / per-instrument caps
-        # are enforced at the bot level. Per-account risk arrives in Phase 4.
+        # Gate 5: per-account risk (Phase 4). Sibling targets are unaffected
+        # by this account's failure — the router still continues to dispatch
+        # to other enabled targets after recording this rejection.
+        if self._account_risk_engine is not None:
+            account_id = _account_id_from_target(target)
+            if account_id is not None:
+                decision = self._account_risk_engine.evaluate(account_id)
+                if not decision.allowed:
+                    attempt.status = ATTEMPT_REJECTED
+                    attempt.rejection_reason = decision.reason
+                    attempt.error_code = decision.code
+                    if decision.detail:
+                        attempt.extra["risk_detail"] = decision.detail
+                    return attempt
 
         # Dispatch
         order = {
@@ -334,6 +349,22 @@ class ExecutionRouter:
                 continue
             attempts.append(_populate_close_attempt_from_result(attempt, result, target.broker))
         return attempts
+
+
+def _account_id_from_target(target: ResolvedTarget) -> int | None:
+    """Phase 4 helper: extract the integer account id from a target_id string.
+
+    db_targets mode generates ``target_id="acct-{int}"``. Phase 1 env-driven
+    targets use string ids (``ig-demo-main`` etc.) — those targets aren't
+    backed by a DB row, so per-account risk doesn't apply.
+    """
+    raw = target.target_id or ""
+    if raw.startswith("acct-"):
+        try:
+            return int(raw[5:])
+        except (TypeError, ValueError):
+            return None
+    return None
 
 
 def _populate_attempt_from_result(

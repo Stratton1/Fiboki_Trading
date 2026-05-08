@@ -527,6 +527,32 @@ def get_execution_account_status_endpoint(
     else:  # paper
         configured = True
 
+    # Phase 4: surface live risk state when available. We read directly via
+    # AccountRiskEngine using the API process's session_factory so the
+    # response is current without a worker round-trip.
+    risk_state: dict | None = None
+    try:
+        from fibokei.execution.account_risk import AccountRiskEngine
+
+        engine = AccountRiskEngine(lambda: db.__class__(bind=db.get_bind()))
+        snap = engine.state_for(account_id)
+        if snap is not None:
+            risk_state = {
+                "open_positions": snap.open_positions,
+                "max_open_positions": snap.max_open_positions,
+                "daily_realised_pnl": snap.daily_realised_pnl,
+                "weekly_realised_pnl": snap.weekly_realised_pnl,
+                "daily_dd_pct": round(snap.daily_dd_pct, 2),
+                "weekly_dd_pct": round(snap.weekly_dd_pct, 2),
+                "max_daily_loss_pct": snap.max_daily_loss_pct,
+                "max_weekly_loss_pct": snap.max_weekly_loss_pct,
+                "blocked": snap.blocked,
+                "block_reason": snap.block_reason or None,
+                "block_code": snap.block_code or None,
+            }
+    except Exception:  # pragma: no cover — degrade gracefully
+        risk_state = None
+
     return {
         "id": acct.id,
         "name": acct.name,
@@ -537,6 +563,7 @@ def get_execution_account_status_endpoint(
         "allocated_capital": acct.allocated_capital,
         "risk_per_trade_pct": acct.risk_per_trade_pct,
         "configured": configured,
+        "risk_state": risk_state,
     }
 
 

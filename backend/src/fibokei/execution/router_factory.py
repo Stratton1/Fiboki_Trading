@@ -429,11 +429,22 @@ def _build_db_router(
         except Exception:
             logger.exception("Failed to build static snapshot of execution accounts")
 
+    # Phase 4: per-account risk engine. Reads parent-child audit tables so
+    # daily/weekly stops and max-open-positions are enforced per account.
+    account_risk_engine = None
+    if session_factory is not None:
+        try:
+            from fibokei.execution.account_risk import AccountRiskEngine
+            account_risk_engine = AccountRiskEngine(session_factory)
+        except Exception:
+            logger.exception("Failed to build AccountRiskEngine; risk checks disabled")
+
     router = ExecutionRouter(
         mode=ROUTER_MODE_DB_TARGETS,
         targets=static_snapshot,
         kill_switch_check=kill_switch_check,
         target_provider=target_provider,
+        account_risk_engine=account_risk_engine,
     )
     logger.info(
         "ExecutionRouter built: mode=db_targets accounts_enabled=%d "
