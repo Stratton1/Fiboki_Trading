@@ -156,7 +156,7 @@ def _ensure_new_columns(engine) -> None:
             if "phase_id" not in pb_cols:
                 conn.execute(text("ALTER TABLE paper_bots ADD COLUMN phase_id INTEGER"))
             if "archived_at" not in pb_cols:
-                conn.execute(text("ALTER TABLE paper_bots ADD COLUMN archived_at DATETIME"))
+                conn.execute(text("ALTER TABLE paper_bots ADD COLUMN archived_at TIMESTAMP WITH TIME ZONE"))
 
     # Add phase_id to paper_trades (Phase B migration)
     if "paper_trades" in table_names:
