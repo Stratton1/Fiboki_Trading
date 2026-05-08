@@ -244,6 +244,32 @@ export const api = {
       }>;
     }>("/research/smart-deploy", { method: "POST", body: JSON.stringify(body) }),
 
+  // Paper Analytics
+  paperAnalytics: () =>
+    apiFetch<{
+      total_trades: number;
+      win_trades: number;
+      loss_trades: number;
+      win_rate: number;
+      avg_win: number;
+      avg_loss: number;
+      profit_factor: number;
+      expectancy: number;
+      total_pnl: number;
+      max_trade_pnl: number;
+      min_trade_pnl: number;
+      equity_curve: number[];
+      equity_dates: (string | null)[];
+      pnl_by_strategy: Record<string, { trades: number; pnl: number; wins: number }>;
+      pnl_by_instrument: Record<string, { trades: number; pnl: number; wins: number }>;
+      pnl_by_direction: Record<string, { trades: number; pnl: number; wins: number }>;
+      pnl_by_exit_reason: Record<string, { trades: number; pnl: number; wins: number }>;
+      trade_pnl_list: number[];
+      first_trade_date: string | null;
+      last_trade_date: string | null;
+      days_active: number;
+    }>("/paper/analytics"),
+
   // Paper
   createBot: (body: Record<string, unknown>) =>
     apiFetch("/paper/bots", { method: "POST", body: JSON.stringify(body) }),
@@ -255,7 +281,18 @@ export const api = {
   deleteBot: (id: string) => apiFetch<{ deleted: string }>(`/paper/bots/${id}`, { method: "DELETE" }),
   deleteAllBots: () => apiFetch<{ deleted_count: number }>(`/paper/bots`, { method: "DELETE" }),
   resetAccount: () => apiFetch<{ balance: number; equity: number; message: string }>(`/paper/account/reset`, { method: "POST" }),
-  account: () => apiFetch("/paper/account"),
+  account: () => apiFetch<{
+    balance: number;
+    equity: number;
+    initial_balance: number;
+    currency: string;
+    total_pnl: number;
+    total_pnl_pct: number;
+    daily_pnl: number;
+    weekly_pnl: number;
+    open_positions: number;
+    total_trades: number;
+  }>("/paper/account"),
   fleet: () => apiFetch<{
     total_bots: number;
     running: number;

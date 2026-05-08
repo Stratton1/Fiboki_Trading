@@ -1114,3 +1114,98 @@ def get_fleet_risk_analysis(
         "correlation_alerts": correlation_alerts,
         "underperformers": underperformers,
     }
+
+
+@router.get("/paper/analytics")
+def get_paper_analytics(
+    user: TokenData = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Aggregate analytics across all closed paper trades — powers the Analytics dashboard."""
+    from collections import defaultdict
+    from sqlalchemy import select as sa_select
+    from fibokei.db.models import PaperTradeModel
+
+    trades = list(
+        db.scalars(
+            sa_select(PaperTradeModel).order_by(PaperTradeModel.entry_time.asc())
+        ).all()
+    )
+
+    empty = {
+        "total_trades": 0, "win_trades": 0, "loss_trades": 0,
+        "win_rate": 0.0, "avg_win": 0.0, "avg_loss": 0.0,
+        "profit_factor": 0.0, "expectancy": 0.0, "total_pnl": 0.0,
+        "max_trade_pnl": 0.0, "min_trade_pnl": 0.0,
+        "equity_curve": [], "equity_dates": [],
+        "pnl_by_strategy": {}, "pnl_by_instrument": {},
+        "pnl_by_direction": {}, "pnl_by_exit_reason": {},
+        "trade_pnl_list": [], "first_trade_date": None,
+        "last_trade_date": None, "days_active": 0,
+    }
+    if not trades:
+        return empty
+
+    wins = [t.pnl for t in trades if t.pnl > 0]
+    losses = [t.pnl for t in trades if t.pnl <= 0]
+    total = len(trades)
+    gross_profit = sum(wins)
+    gross_loss = abs(sum(losses))
+
+    cumulative = 0.0
+    equity_curve: list[float] = []
+    equity_dates: list[str | None] = []
+    for t in trades:
+        cumulative += t.pnl
+        equity_curve.append(round(cumulative, 2))
+        equity_dates.append(t.entry_time.isoformat() if t.entry_time else None)
+
+    def make_group() -> dict:
+        return {"trades": 0, "pnl": 0.0, "wins": 0}
+
+    by_strategy: dict = defaultdict(make_group)
+    by_instrument: dict = defaultdict(make_group)
+    by_direction: dict = defaultdict(make_group)
+    by_exit_reason: dict = defaultdict(make_group)
+
+    for t in trades:
+        for grp, key in [
+            (by_strategy, t.strategy_id or "unknown"),
+            (by_instrument, t.instrument or "unknown"),
+            (by_direction, t.direction or "unknown"),
+            (by_exit_reason, t.exit_reason or "unknown"),
+        ]:
+            grp[key]["trades"] += 1
+            grp[key]["pnl"] = round(grp[key]["pnl"] + t.pnl, 2)
+            if t.pnl > 0:
+                grp[key]["wins"] += 1
+
+    first_date = trades[0].entry_time.isoformat() if trades[0].entry_time else None
+    last_date = trades[-1].entry_time.isoformat() if trades[-1].entry_time else None
+    days_active = 0
+    if trades[0].entry_time and trades[-1].entry_time:
+        days_active = (trades[-1].entry_time - trades[0].entry_time).days + 1
+
+    return {
+        "total_trades": total,
+        "win_trades": len(wins),
+        "loss_trades": len(losses),
+        "win_rate": round(len(wins) / total * 100, 1) if total > 0 else 0.0,
+        "avg_win": round(gross_profit / len(wins), 2) if wins else 0.0,
+        "avg_loss": round(sum(losses) / len(losses), 2) if losses else 0.0,
+        "profit_factor": round(gross_profit / gross_loss, 2) if gross_loss > 0 else 0.0,
+        "expectancy": round(sum(t.pnl for t in trades) / total, 2) if total > 0 else 0.0,
+        "total_pnl": round(sum(t.pnl for t in trades), 2),
+        "max_trade_pnl": round(max(t.pnl for t in trades), 2),
+        "min_trade_pnl": round(min(t.pnl for t in trades), 2),
+        "equity_curve": equity_curve,
+        "equity_dates": equity_dates,
+        "pnl_by_strategy": dict(by_strategy),
+        "pnl_by_instrument": dict(by_instrument),
+        "pnl_by_direction": dict(by_direction),
+        "pnl_by_exit_reason": dict(by_exit_reason),
+        "trade_pnl_list": [round(t.pnl, 2) for t in trades],
+        "first_trade_date": first_date,
+        "last_trade_date": last_date,
+        "days_active": days_active,
+    }
