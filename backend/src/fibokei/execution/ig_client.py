@@ -132,7 +132,12 @@ class IGClient:
         return self._session
 
     def _switch_account(self, account_id: str) -> None:
-        """Switch to a different IG sub-account."""
+        """Switch to a different IG sub-account.
+
+        IG returns a new X-SECURITY-TOKEN in the PUT /session response headers
+        when switching accounts.  The old token becomes invalid for the new
+        account context immediately, so we must capture and store the new one.
+        """
         headers = {
             **self._common_headers(),
             **self._session.headers,
@@ -148,6 +153,13 @@ class IGClient:
                 f"Account switch failed: {resp.status_code} {resp.text}",
                 status_code=resp.status_code,
             )
+        # Capture the refreshed tokens that IG issues on account switch
+        new_token = resp.headers.get("X-SECURITY-TOKEN", "")
+        new_cst = resp.headers.get("CST", "")
+        if new_token:
+            self._session.x_security_token = new_token
+        if new_cst:
+            self._session.cst = new_cst
         self._session.account_id = account_id
 
     def ensure_session(self) -> IGSession:
