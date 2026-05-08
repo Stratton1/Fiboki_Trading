@@ -112,6 +112,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               onClick={handleLogout}
               className="text-foreground-muted hover:text-danger transition-colors p-1 rounded-md hover:bg-red-50"
               title="Sign out"
+              aria-label="Sign out"
             >
               <LogOut size={16} />
             </button>

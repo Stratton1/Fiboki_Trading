@@ -28,8 +28,10 @@ export function ExecutionModeBanner() {
         <>
           <ShieldCheck size={14} />
           <span>
-            IG Demo mode active
-            {execMode.live_execution_enabled ? " — live execution enabled" : ""}
+            IG Demo mode active — orders route to the IG demo account
+            {execMode.live_execution_enabled
+              ? " (execution enabled, no real money)"
+              : " (execution disabled, paper-only)"}
           </span>
         </>
       )}

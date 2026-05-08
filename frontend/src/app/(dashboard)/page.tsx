@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import useSWR from "swr";
 import { useAuth } from "@/lib/auth";
@@ -10,6 +10,7 @@ import { formatCurrency, formatPnl, currencySymbol } from "@/lib/format-currency
 import { PageHeader } from "@/components/PageHeader";
 import { StatusBadge } from "@/components/StatusBadge";
 import { InfoTip } from "@/components/InfoTip";
+import { KillSwitchModal } from "@/components/KillSwitchModal";
 import {
   ArrowUpRight,
   ArrowDownRight,
@@ -39,7 +40,37 @@ import {
   Crosshair,
   Eye,
   Gauge,
+  Clock,
 } from "lucide-react";
+
+// ─── Helpers ──────────────────────────────────────────────────
+
+/** Title-case a username for the welcome heading. */
+function titleCase(s?: string | null): string {
+  if (!s) return "";
+  return s.charAt(0).toUpperCase() + s.slice(1);
+}
+
+/** Format an ISO timestamp as a human-relative "Xs ago" / "Xm ago" string. */
+function formatTime(iso: string | number): string {
+  try {
+    const d = typeof iso === "number" ? new Date(iso) : new Date(iso);
+    const now = new Date();
+    const diffMs = now.getTime() - d.getTime();
+    const diffSec = Math.floor(diffMs / 1000);
+    if (diffSec < 5) return "just now";
+    if (diffSec < 60) return `${diffSec}s ago`;
+    const diffMins = Math.floor(diffSec / 60);
+    if (diffMins < 60) return `${diffMins}m ago`;
+    const diffHours = Math.floor(diffMins / 60);
+    if (diffHours < 24) return `${diffHours}h ago`;
+    const diffDays = Math.floor(diffHours / 24);
+    if (diffDays < 7) return `${diffDays}d ago`;
+    return d.toLocaleDateString();
+  } catch {
+    return String(iso);
+  }
+}
 
 // ─── Stat Card ────────────────────────────────────────────────
 
@@ -50,6 +81,7 @@ function StatCard({
   trend,
   sub,
   tip,
+  testId,
 }: {
   icon: React.ElementType;
   label: string;
@@ -57,6 +89,8 @@ function StatCard({
   trend?: "up" | "down" | "neutral";
   sub?: string;
   tip?: string;
+  /** Override the auto-generated test id (else derived from label). */
+  testId?: string;
 }) {
   const trendColor =
     trend === "up"
@@ -65,9 +99,12 @@ function StatCard({
         ? "text-danger"
         : "text-foreground";
   return (
-    <div className="stat-card group" data-testid={`stat-${label.toLowerCase().replace(/\s+/g, "-")}`}>
+    <div
+      className="stat-card group"
+      data-testid={testId ?? `stat-${label.toLowerCase().replace(/\s+/g, "-")}`}
+    >
       <div className="flex items-center justify-between mb-2">
-        <span className="text-xs font-medium uppercase tracking-wide text-foreground-muted">
+        <span className="text-[11px] font-semibold tracking-wide text-foreground-muted inline-flex items-center">
           {label}
           {tip && <InfoTip text={tip} />}
         </span>
@@ -96,18 +133,20 @@ function QuickAction({
   label,
   primary,
   badge,
+  testId,
 }: {
   href: string;
   icon: React.ElementType;
   label: string;
   primary?: boolean;
   badge?: number;
+  testId?: string;
 }) {
   return (
     <Link
       href={href}
       className={`btn ${primary ? "btn-primary" : "btn-secondary"} justify-between`}
-      data-testid={`qa-${label.toLowerCase().replace(/\s+/g, "-")}`}
+      data-testid={testId ?? `qa-${label.toLowerCase().replace(/\s+/g, "-")}`}
     >
       <span className="flex items-center gap-2">
         <Icon size={15} />
@@ -153,25 +192,13 @@ function ActivityItem({
   return content;
 }
 
-// ─── Helpers ──────────────────────────────────────────────────
+// ─── Skeleton helper ──────────────────────────────────────────
 
-function formatTime(iso: string): string {
-  try {
-    const d = new Date(iso);
-    const now = new Date();
-    const diffMs = now.getTime() - d.getTime();
-    const diffMins = Math.floor(diffMs / 60000);
-    if (diffMins < 1) return "Just now";
-    if (diffMins < 60) return `${diffMins}m ago`;
-    const diffHours = Math.floor(diffMins / 60);
-    if (diffHours < 24) return `${diffHours}h ago`;
-    const diffDays = Math.floor(diffHours / 24);
-    if (diffDays < 7) return `${diffDays}d ago`;
-    return d.toLocaleDateString();
-  } catch {
-    return iso;
-  }
+function SkeletonRow({ width = "w-full" }: { width?: string }) {
+  return <div className={`h-3 bg-background-muted/70 rounded ${width} animate-pulse`} />;
 }
+
+// ─── Types ────────────────────────────────────────────────────
 
 type JobItem = {
   job_id: string;
@@ -209,28 +236,9 @@ export default function DashboardPage() {
   const { user } = useAuth();
   const { data: account } = useAccount();
   const [killSwitchLoading, setKillSwitchLoading] = useState(false);
+  const [killSwitchModalOpen, setKillSwitchModalOpen] = useState(false);
 
-  async function handleKillSwitch() {
-    if (killSwitchLoading) return;
-    if (killSwitchActive) {
-      if (!confirm("Deactivate kill switch? Bots will resume normal operation.")) return;
-    } else {
-      if (!confirm("Activate kill switch? This will halt all new trades immediately.")) return;
-    }
-    setKillSwitchLoading(true);
-    try {
-      if (killSwitchActive) {
-        await api.deactivateKillSwitch();
-      } else {
-        await api.activateKillSwitch("Dashboard emergency stop");
-      }
-      await mutateKillSwitch();
-    } catch {
-      // silent — user can retry
-    } finally {
-      setKillSwitchLoading(false);
-    }
-  }
+  // ─── Data fetching ──────────────────────────────────────────
   const { data: fleet } = useSWR("/paper/fleet", () => api.fleet(), { refreshInterval: 10000 });
   const { data: jobsData } = useSWR("/jobs", () => api.listJobs(), { refreshInterval: 5000 });
   const { data: alertsData } = useSWR("/alerts?limit=5", () => api.listAlerts("limit=5"), { refreshInterval: 30000 });
@@ -246,13 +254,13 @@ export default function DashboardPage() {
     { refreshInterval: 60000 }
   );
 
-  // Derived values
+  // ─── Derived values ────────────────────────────────────────
   const balance = account?.balance ?? 0;
   const equity = account?.equity ?? 0;
   const initialBalance = account?.initial_balance ?? 1000;
   const dailyPnl = account?.daily_pnl ?? 0;
   const weeklyPnl = account?.weekly_pnl ?? 0;
-  const openPositions = account?.open_positions ?? 0;
+  const accountOpenPositions = account?.open_positions ?? 0;
   const totalTrades = account?.total_trades ?? 0;
   const currency = account?.currency ?? "GBP";
   const sym = currencySymbol(currency);
@@ -267,14 +275,59 @@ export default function DashboardPage() {
   const pausedBots = fleet?.paused ?? 0;
   const fleetPnl = fleet?.aggregate_pnl ?? 0;
   const fleetTrades = fleet?.aggregate_trades ?? 0;
+  const fleetOpenPositions = fleet?.open_positions ?? 0;
+  // Active = running and *not* stale. Operators care about bots that are
+  // both alive and producing fresh data.
+  const activeBots = Math.max(0, runningBots - staleBots);
   const topShortlist = ((shortlist ?? []) as ShortlistEntry[]).slice(0, 5);
 
   const executionMode = execMode?.mode ?? systemStatus?.execution_mode ?? "paper";
   const killSwitchActive = killSwitch?.is_active ?? execMode?.kill_switch_active ?? false;
-  const strategiesLoaded = systemStatus?.strategies_loaded ?? 12;
-  const dbStatus = systemStatus?.database ?? "ok";
+  // Show the raw count from the API. If it disagrees with the expected 12,
+  // that surfaces a backend strategy-registry issue rather than masking it.
+  const strategiesLoaded = systemStatus?.strategies_loaded;
+  const dbStatus = systemStatus?.database;
+  // Treat both "ok" and "connected" as healthy — the API has historically
+  // returned either, and the dashboard should not light red on either.
+  const dbHealthy = dbStatus === "ok" || dbStatus === "connected";
 
-  // Build activity feed from jobs + alerts
+  // ─── Kill switch handler ───────────────────────────────────
+  // Defined *after* killSwitchActive so we don't depend on its TDZ-evading
+  // closure capture and so ESLint stays quiet.
+  async function handleKillSwitchConfirm() {
+    if (killSwitchLoading) return;
+    setKillSwitchLoading(true);
+    try {
+      if (killSwitchActive) {
+        await api.deactivateKillSwitch();
+      } else {
+        await api.activateKillSwitch("Dashboard emergency stop");
+      }
+      await mutateKillSwitch();
+      setKillSwitchModalOpen(false);
+    } catch {
+      // Modal stays open; operator can retry. A future improvement is to
+      // surface the error inline within the modal.
+    } finally {
+      setKillSwitchLoading(false);
+    }
+  }
+
+  // ─── Last-updated indicator ────────────────────────────────
+  const [lastUpdated, setLastUpdated] = useState<number | null>(null);
+  // Bump the timestamp whenever any underlying SWR result changes.
+  useEffect(() => {
+    setLastUpdated(Date.now());
+  }, [account, fleet, jobsData, alertsData, shortlist, systemStatus, execMode, killSwitch, activePhase, igHealth]);
+  // Tick once a second so the relative timestamp re-renders.
+  const [now, setNow] = useState<number>(() => Date.now());
+  useEffect(() => {
+    const id = window.setInterval(() => setNow(Date.now()), 1000);
+    return () => window.clearInterval(id);
+  }, []);
+
+  // ─── Activity feed ─────────────────────────────────────────
+  const activityLoading = jobsData === undefined && alertsData === undefined;
   const activityFeed: Array<{
     id: string;
     icon: React.ElementType;
@@ -296,11 +349,22 @@ export default function DashboardPage() {
     } else if (isRunning) {
       href = "/jobs";
     }
+    // De-duplicate the job-type prefix when the label already starts with it
+    // (avoids "Research: Research 60 combos").
+    const jobTypeLabel =
+      j.job_type === "backtest" ? "Backtest" :
+      j.job_type === "research" ? "Research" :
+      "Job";
+    const labelLower = (j.label ?? "").toLowerCase();
+    const prefix = jobTypeLabel.toLowerCase();
+    const cleanedLabel =
+      labelLower.startsWith(prefix) ? j.label : `${jobTypeLabel}: ${j.label}`;
+    const suffix = isRunning ? ` (${j.progress}%)` : isFailed ? " — failed" : "";
     activityFeed.push({
       id: `job-${j.job_id}`,
       icon: isComplete ? CheckCircle2 : isFailed ? XCircle : isRunning ? Loader2 : ListTodo,
       iconColor: isComplete ? "text-primary" : isFailed ? "text-danger" : isRunning ? "text-amber-500" : "text-foreground-muted",
-      text: `${j.job_type === "backtest" ? "Backtest" : j.job_type === "research" ? "Research" : "Job"}: ${j.label}${isRunning ? ` (${j.progress}%)` : isFailed ? " — failed" : ""}`,
+      text: `${cleanedLabel}${suffix}`,
       time: j.completed_at ?? j.created_at,
       href,
     });
@@ -317,7 +381,6 @@ export default function DashboardPage() {
     });
   }
 
-  // Sort by time descending
   activityFeed.sort((a, b) => {
     try {
       return new Date(b.time).getTime() - new Date(a.time).getTime();
@@ -328,15 +391,31 @@ export default function DashboardPage() {
 
   const activityItems = activityFeed.slice(0, 8);
 
+  // ─── Saved combos: row-grouping helper ─────────────────────
+  // Dim the strategy name when it repeats in consecutive rows so the table
+  // groups visually without restructuring it.
+  const groupedShortlist = useMemo(
+    () =>
+      topShortlist.map((s, i) => ({
+        ...s,
+        repeatStrategy: i > 0 && topShortlist[i - 1].strategy_id === s.strategy_id,
+      })),
+    [topShortlist]
+  );
+  const shortlistLoading = shortlist === undefined;
+
   return (
-    <div className="max-w-6xl" data-testid="dashboard">
+    <div className="max-w-7xl" data-testid="dashboard">
       <PageHeader
-        title={`Welcome back${user ? `, ${user.username}` : ""}`}
+        title={`Welcome back${user ? `, ${titleCase(user.username)}` : ""}`}
         subtitle="Your trading operations at a glance"
       />
 
       {/* ─── KPI Cards ────────────────────────────────────────── */}
-      <div className={`grid grid-cols-2 sm:grid-cols-3 ${isIgDemo ? "lg:grid-cols-7" : "lg:grid-cols-6"} gap-3 mb-6`} data-testid="kpi-cards">
+      <div
+        className={`grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 ${isIgDemo ? "xl:grid-cols-7" : "xl:grid-cols-6"} gap-3 mb-6`}
+        data-testid="kpi-cards"
+      >
         <StatCard
           icon={Wallet}
           label="Balance"
@@ -348,9 +427,17 @@ export default function DashboardPage() {
           icon={TrendingUp}
           label="Equity"
           value={formatCurrency(equity, currency)}
-          trend={equity >= initialBalance ? "up" : equity < initialBalance ? "down" : "neutral"}
+          trend={
+            account === undefined
+              ? "neutral"
+              : equity > initialBalance
+                ? "up"
+                : equity < initialBalance
+                  ? "down"
+                  : "neutral"
+          }
           tip="Balance plus unrealised PnL from open positions."
-          sub={openPositions > 0 ? `${openPositions} open position${openPositions !== 1 ? "s" : ""}` : "No open positions"}
+          sub={accountOpenPositions > 0 ? `${accountOpenPositions} open position${accountOpenPositions !== 1 ? "s" : ""}` : "No open positions"}
         />
         <StatCard
           icon={CalendarDays}
@@ -358,27 +445,41 @@ export default function DashboardPage() {
           value={formatPnl(dailyPnl, currency)}
           trend={dailyPnl > 0 ? "up" : dailyPnl < 0 ? "down" : "neutral"}
           tip="Realised profit/loss from trades closed today (UTC)."
+          sub="Today, UTC"
+          testId="stat-daily-pnl"
         />
         <StatCard
           icon={CalendarRange}
           label="Weekly PnL"
           value={formatPnl(weeklyPnl, currency)}
           trend={weeklyPnl > 0 ? "up" : weeklyPnl < 0 ? "down" : "neutral"}
-          tip="Realised profit/loss from trades closed this week (UTC Monday reset)."
+          tip="Realised profit/loss from trades closed this week (UTC, Monday reset)."
+          sub="This week, UTC"
+          testId="stat-weekly-pnl"
         />
         <StatCard
           icon={Bot}
-          label="Running Bots"
-          value={`${runningBots}/${totalBots}`}
-          tip="Active paper trading bots vs total registered. Running bots monitor candle closes for signals."
-          sub={pausedBots > 0 ? `${pausedBots} paused` : staleBots > 0 ? `${staleBots} stale` : totalBots === 0 ? "None created" : "All healthy"}
+          label="Active Bots"
+          value={`${activeBots}/${totalBots}`}
+          tip="Bots running and producing fresh data. Excludes stale bots; running but stale bots are flagged below."
+          sub={
+            staleBots > 0
+              ? `${staleBots} stale`
+              : pausedBots > 0
+                ? `${pausedBots} paused`
+                : totalBots === 0
+                  ? "None created"
+                  : "All healthy"
+          }
+          testId="stat-running-bots"
         />
         <StatCard
           icon={Crosshair}
-          label="Open Positions"
-          value={String(openPositions)}
-          tip="Paper positions currently open across all bots."
-          sub={`${totalTrades} total trades`}
+          label="Account Open Positions"
+          value={String(accountOpenPositions)}
+          tip="Open paper-account positions reported by the account ledger. Compare to fleet open positions in the Fleet Overview."
+          sub={`${totalTrades} lifetime trades`}
+          testId="stat-open-positions"
         />
         {isIgDemo && (
           <StatCard
@@ -386,7 +487,7 @@ export default function DashboardPage() {
             label="IG Demo"
             value={igHealth?.reachable && igHealth.balance != null ? `£${igHealth.balance.toFixed(2)}` : igHealth?.reachable === false ? "Error" : "—"}
             trend={igHealth?.reachable ? "neutral" : undefined}
-            tip="Live IG demo account balance. Fetched directly from IG — updates every 60s."
+            tip="Live IG demo account balance — independent from the Fiboki paper account. Fetched directly from IG, refreshes every 60s."
             sub={igHealth?.reachable ? (igHealth.account_name ?? "Connected") : igHealth?.reachable === false ? "Check Settings" : "Connecting..."}
           />
         )}
@@ -410,15 +511,24 @@ export default function DashboardPage() {
             <p className="text-lg font-bold tabular-nums">{totalBots}</p>
           </div>
           <div>
-            <p className="text-xs text-foreground-muted">Open Positions</p>
-            <p className="text-lg font-bold tabular-nums">{openPositions}</p>
+            <p className="text-xs text-foreground-muted inline-flex items-center">
+              Fleet Open Positions
+              <InfoTip text="Aggregate open positions across the bot fleet. May differ from the account-level open positions when reconciliation is mid-cycle." />
+            </p>
+            <p className="text-lg font-bold tabular-nums">{fleetOpenPositions}</p>
           </div>
           <div>
-            <p className="text-xs text-foreground-muted">Fleet Trades</p>
+            <p className="text-xs text-foreground-muted inline-flex items-center">
+              Fleet Trades
+              <InfoTip text="Aggregate closed trades across the bot fleet for the current execution session. Resets when bots are restarted or a new evaluation phase is started." />
+            </p>
             <p className="text-lg font-bold tabular-nums">{fleetTrades}</p>
           </div>
           <div>
-            <p className="text-xs text-foreground-muted">Fleet PnL<InfoTip text="Aggregate PnL across all bots, including stopped bots." /></p>
+            <p className="text-xs text-foreground-muted inline-flex items-center">
+              Fleet PnL
+              <InfoTip text="Aggregate PnL across all bots, including stopped bots." />
+            </p>
             <p className={`text-lg font-bold tabular-nums ${fleetPnl >= 0 ? "text-primary" : "text-danger"}`}>
               {formatPnl(fleetPnl, currency)}
             </p>
@@ -449,7 +559,13 @@ export default function DashboardPage() {
             <p className="section-label !mb-0">Recent Activity</p>
             <Link href="/jobs" className="text-xs text-primary hover:underline">View jobs</Link>
           </div>
-          {activityItems.length === 0 ? (
+          {activityLoading ? (
+            <div className="space-y-3 py-2" data-testid="activity-loading">
+              <SkeletonRow width="w-3/4" />
+              <SkeletonRow width="w-1/2" />
+              <SkeletonRow width="w-2/3" />
+            </div>
+          ) : activityItems.length === 0 ? (
             <div className="py-6 text-center" data-testid="activity-empty">
               <Activity size={28} className="mx-auto text-foreground-muted/30 mb-2" />
               <p className="text-sm text-foreground-muted">No recent activity</p>
@@ -494,13 +610,19 @@ export default function DashboardPage() {
         {/* Top Saved Combos */}
         <div className="card" data-testid="shortlist-panel">
           <div className="flex items-center justify-between mb-3">
-            <p className="section-label !mb-0">
+            <p className="section-label !mb-0 inline-flex items-center">
               Saved Combos
               <InfoTip text="Your curated shortlist of strategy/instrument/timeframe combos. Promote top scorers to paper trading." />
             </p>
             <Link href="/research" className="text-xs text-primary hover:underline">Manage</Link>
           </div>
-          {topShortlist.length === 0 ? (
+          {shortlistLoading ? (
+            <div className="space-y-2 py-2" data-testid="shortlist-loading">
+              <SkeletonRow width="w-full" />
+              <SkeletonRow width="w-5/6" />
+              <SkeletonRow width="w-2/3" />
+            </div>
+          ) : topShortlist.length === 0 ? (
             <div className="py-6 text-center" data-testid="shortlist-empty">
               <Star size={28} className="mx-auto text-foreground-muted/30 mb-2" />
               <p className="text-sm text-foreground-muted">No saved combos yet</p>
@@ -524,23 +646,39 @@ export default function DashboardPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {topShortlist.map((s) => (
-                    <tr key={s.id} className="border-b border-gray-100 hover:bg-background-muted/50 transition-colors">
-                      <td className="py-1.5 pr-3 font-medium">{s.strategy_id}</td>
-                      <td className="py-1.5 pr-3">{s.instrument}</td>
-                      <td className="py-1.5 pr-3 text-foreground-muted">{s.timeframe}</td>
-                      <td className="py-1.5 pr-2 text-right tabular-nums">
-                        <span className={s.score >= 0.7 ? "text-primary font-medium" : s.score >= 0.55 ? "" : "text-foreground-muted"}>
-                          {s.score.toFixed(3)}
-                        </span>
-                      </td>
-                      <td className="py-1.5 text-right">
-                        <Link href="/bots" className="text-xs text-primary hover:underline" title="Create Bot">
-                          Create Bot
-                        </Link>
-                      </td>
-                    </tr>
-                  ))}
+                  {groupedShortlist.map((s) => {
+                    const params = new URLSearchParams({
+                      new: "1",
+                      strategy: s.strategy_id,
+                      instrument: s.instrument,
+                      tf: s.timeframe,
+                      shortlistId: String(s.id),
+                    }).toString();
+                    return (
+                      <tr key={s.id} className="border-b border-gray-100 hover:bg-background-muted/50 transition-colors">
+                        <td className={`py-1.5 pr-3 font-medium ${s.repeatStrategy ? "text-foreground-muted/60" : ""}`}>
+                          {s.repeatStrategy ? <span aria-hidden="true">↳ </span> : null}
+                          {s.strategy_id}
+                        </td>
+                        <td className="py-1.5 pr-3">{s.instrument}</td>
+                        <td className="py-1.5 pr-3 text-foreground-muted">{s.timeframe}</td>
+                        <td className="py-1.5 pr-2 text-right tabular-nums">
+                          <span className={s.score >= 0.7 ? "text-primary font-medium" : s.score >= 0.55 ? "" : "text-foreground-muted"}>
+                            {s.score.toFixed(3)}
+                          </span>
+                        </td>
+                        <td className="py-1.5 text-right">
+                          <Link
+                            href={`/bots?${params}`}
+                            className="text-xs text-primary hover:underline"
+                            title={`Create a bot from ${s.strategy_id} on ${s.instrument} ${s.timeframe}`}
+                          >
+                            Create Bot
+                          </Link>
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
@@ -549,7 +687,7 @@ export default function DashboardPage() {
 
         {/* Health / Risk / Readiness Panel */}
         <div className="card" data-testid="health-panel">
-          <p className="section-label">
+          <p className="section-label inline-flex items-center">
             System Health & Readiness
             <InfoTip text="Operational status of the Fiboki platform. All safety controls including kill switch and execution mode are shown here." />
           </p>
@@ -567,9 +705,9 @@ export default function DashboardPage() {
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2.5">
                 <Gauge size={14} className="text-foreground-muted" />
-                <span className="text-sm">
+                <span className="text-sm inline-flex items-center">
                   Execution Mode
-                  <InfoTip text="Current trading execution mode. 'paper' = simulated only. 'ig_demo' = connected to IG demo account." />
+                  <InfoTip text="Current trading execution mode. 'paper' = simulated only. 'ig_demo' = connected to IG demo account (no real money)." />
                 </span>
               </div>
               <StatusBadge variant={executionMode === "ig_demo" ? "info" : "neutral"}>
@@ -581,19 +719,20 @@ export default function DashboardPage() {
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2.5">
                 {killSwitchActive ? <ShieldAlert size={14} className="text-danger" /> : <ShieldCheck size={14} className="text-primary" />}
-                <span className="text-sm">
+                <span className="text-sm inline-flex items-center">
                   Kill Switch
-                  <InfoTip text="Emergency stop for all execution. When active, no new trades are opened." />
+                  <InfoTip text="Emergency stop for all execution. When active, no new trades are opened. Existing positions continue under their own stops/targets." />
                 </span>
               </div>
               <button
-                onClick={handleKillSwitch}
+                onClick={() => setKillSwitchModalOpen(true)}
                 disabled={killSwitchLoading}
-                className={`flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-lg font-medium transition-colors disabled:opacity-50 ${
+                className={`flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-lg font-medium transition-colors disabled:opacity-50 border ${
                   killSwitchActive
-                    ? "bg-red-100 text-red-700 hover:bg-red-200"
-                    : "bg-green-100 text-green-700 hover:bg-green-200"
+                    ? "bg-red-100 text-red-800 border-red-300 hover:bg-red-200"
+                    : "bg-background-muted text-foreground border-gray-300 hover:bg-gray-200"
                 }`}
+                aria-label={killSwitchActive ? "Deactivate kill switch" : "Activate kill switch"}
               >
                 {killSwitchLoading ? (
                   <Loader2 size={11} className="animate-spin" />
@@ -602,7 +741,7 @@ export default function DashboardPage() {
                 ) : (
                   <ShieldCheck size={11} />
                 )}
-                {killSwitchActive ? "ACTIVE — Deactivate" : "Off — Activate"}
+                {killSwitchActive ? "Active — Deactivate" : "Armed — Activate"}
               </button>
             </div>
 
@@ -612,8 +751,8 @@ export default function DashboardPage() {
                 <Layers size={14} className="text-foreground-muted" />
                 <span className="text-sm">Database</span>
               </div>
-              <StatusBadge variant={dbStatus === "ok" ? "ok" : "error"}>
-                {dbStatus === "ok" ? "Connected" : dbStatus}
+              <StatusBadge variant={dbHealthy ? "ok" : dbStatus === undefined ? "neutral" : "error"}>
+                {dbHealthy ? "Connected" : (dbStatus ?? "—")}
               </StatusBadge>
             </div>
 
@@ -621,9 +760,20 @@ export default function DashboardPage() {
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2.5">
                 <Target size={14} className="text-foreground-muted" />
-                <span className="text-sm">Strategies</span>
+                <span className="text-sm inline-flex items-center">
+                  Strategies
+                  <InfoTip text="Strategies registered in the running backend (per /system/status). Fiboki ships with 12 strategy bots — a count below 12 indicates a registry / discovery issue worth checking on the System page." />
+                </span>
               </div>
-              <span className="text-sm font-medium tabular-nums">{strategiesLoaded} loaded</span>
+              {strategiesLoaded === undefined ? (
+                <span className="text-sm text-foreground-muted">—</span>
+              ) : strategiesLoaded < 12 ? (
+                <Link href="/system" className="text-sm font-medium tabular-nums text-amber-700 hover:underline">
+                  {strategiesLoaded} loaded ⚠
+                </Link>
+              ) : (
+                <span className="text-sm font-medium tabular-nums">{strategiesLoaded} loaded</span>
+              )}
             </div>
 
             {/* API */}
@@ -639,7 +789,7 @@ export default function DashboardPage() {
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2.5">
                 <Bell size={14} className={unreadAlerts > 0 ? "text-amber-500" : "text-foreground-muted"} />
-                <span className="text-sm">
+                <span className="text-sm inline-flex items-center">
                   Alerts
                   <InfoTip text="Unread platform alerts. Check Alerts page for trade events, risk warnings, and system notifications." />
                 </span>
@@ -657,7 +807,7 @@ export default function DashboardPage() {
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2.5">
                 <Flag size={14} className="text-foreground-muted" />
-                <span className="text-sm">
+                <span className="text-sm inline-flex items-center">
                   Eval Phase
                   <InfoTip text="Current evaluation phase. Each phase tracks performance from a clean £1,000 baseline. Archived phases preserve the full trade history." />
                 </span>
@@ -680,7 +830,7 @@ export default function DashboardPage() {
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2.5">
                   <Eye size={14} className="text-foreground-muted" />
-                  <span className="text-sm">
+                  <span className="text-sm inline-flex items-center">
                     IG Demo Readiness
                     <InfoTip text="IG demo broker integration status. Adapter and execution pipeline are built and tested. Activation requires IG API credentials (env vars)." />
                   </span>
@@ -726,6 +876,28 @@ export default function DashboardPage() {
           </div>
         </div>
       )}
+
+      {/* ─── Footer: data freshness indicator ─────────────────── */}
+      <div className="flex items-center justify-end gap-2 pt-2 mt-2 border-t border-gray-100 text-[11px] text-foreground-muted" data-testid="dashboard-freshness">
+        <Clock size={11} />
+        <span>
+          Auto-refresh enabled.{" "}
+          {lastUpdated
+            ? <>Last updated <span className="tabular-nums" title={new Date(lastUpdated).toISOString()}>{formatTime(lastUpdated)}</span> · {new Date(now).toUTCString().slice(17, 25)} UTC</>
+            : "Loading..."}
+        </span>
+      </div>
+
+      {/* ─── Kill switch confirmation modal ───────────────────── */}
+      <KillSwitchModal
+        open={killSwitchModalOpen}
+        isActive={killSwitchActive}
+        loading={killSwitchLoading}
+        onCancel={() => (killSwitchLoading ? null : setKillSwitchModalOpen(false))}
+        onConfirm={handleKillSwitchConfirm}
+        openPositions={Math.max(accountOpenPositions, fleetOpenPositions)}
+        runningBots={runningBots}
+      />
     </div>
   );
 }
