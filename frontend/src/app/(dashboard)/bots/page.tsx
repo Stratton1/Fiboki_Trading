@@ -851,13 +851,23 @@ export default function BotsPage() {
                           <Link href={`/bots/${b.bot_id}`} className="btn-ghost text-xs px-2 py-1 rounded" title="View bot detail">
                             <ExternalLink size={11} />
                           </Link>
-                          {(b.state === "paused" || b.state === "stopped") && (
+                          {b.state === "stopped" && (
+                            <button
+                              onClick={() => handleRestart(b.bot_id)}
+                              disabled={!!actingBotId}
+                              className="btn-ghost text-xs px-2 py-1 rounded text-primary disabled:opacity-40"
+                              title="Continue from where this bot left off"
+                            >
+                              {actingBotId === b.bot_id ? <Loader2 size={12} className="animate-spin inline" /> : "Restart"}
+                            </button>
+                          )}
+                          {b.state === "paused" && (
                             <button
                               onClick={() => handleResume(b.bot_id)}
                               disabled={!!actingBotId}
                               className="btn-ghost text-xs px-2 py-1 rounded text-primary disabled:opacity-40"
                             >
-                              {actingBotId === b.bot_id ? <Loader2 size={12} className="animate-spin inline" /> : b.state === "stopped" ? "Restart" : "Resume"}
+                              {actingBotId === b.bot_id ? <Loader2 size={12} className="animate-spin inline" /> : "Resume"}
                             </button>
                           )}
                           {b.state === "monitoring" && (
