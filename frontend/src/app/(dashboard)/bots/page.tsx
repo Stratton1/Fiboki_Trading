@@ -63,6 +63,7 @@ export default function BotsPage() {
   const [transitionLoading, setTransitionLoading] = useState(false);
   const [transitionError, setTransitionError] = useState<string | null>(null);
   const [transitionResult, setTransitionResult] = useState<string | null>(null);
+  const [archiveName, setArchiveName] = useState("Phase A — Initial Testing");
   const [newPhaseName, setNewPhaseName] = useState("Phase B — Live Forward Tracking");
   const [sortField, setSortField] = useState<"strategy" | "instrument" | "tf" | "state" | "bars" | "trades" | "pnl">("instrument");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
@@ -634,6 +635,12 @@ export default function BotsPage() {
       </div>
 
       {/* ── Phase Management ─────────────────────────────────── */}
+      {(() => {
+        const isFirstUse = !phases?.length && !activePhase;
+        const slugify = (s: string) =>
+          s.toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_|_$/g, "").slice(0, 20);
+
+        return (
       <div className="card mt-6" data-testid="phase-management">
       <div className="flex items-center justify-between mb-4">
         <div>
@@ -643,15 +650,35 @@ export default function BotsPage() {
             <InfoTip text="Each evaluation phase tracks paper + IG demo performance from a clean £1,000 baseline. Archiving a phase preserves the full trade history so you can compare periods side-by-side." />
           </h2>
           <p className="text-xs text-foreground-muted mt-0.5">
-            Archive the current phase and start a clean £1,000 forward-tracking evaluation.
+            {isFirstUse
+              ? "Capture your existing bots & trades as Phase A, then start a fresh £1,000 evaluation."
+              : "Archive the current phase and start a clean £1,000 forward-tracking evaluation."}
           </p>
         </div>
-        {!activePhase && (
+        {isFirstUse && (
+          <span className="text-xs text-blue-700 bg-blue-50 px-2 py-1 rounded-lg flex items-center gap-1.5">
+            <Flag size={11} /> Not yet set up
+          </span>
+        )}
+        {!isFirstUse && !activePhase && (
           <span className="text-xs text-amber-700 bg-amber-50 px-2 py-1 rounded-lg flex items-center gap-1.5">
             <AlertTriangle size={11} /> No active phase
           </span>
         )}
       </div>
+
+      {/* First-use explanation */}
+      {isFirstUse && (
+        <div className="mb-4 p-3 rounded-lg border border-blue-200 bg-blue-50 text-xs text-blue-800">
+          <p className="font-medium mb-1">How to get started</p>
+          <p>Click <strong>Initialize Phase Tracking</strong> below. It will:</p>
+          <ol className="mt-1 ml-3 space-y-0.5 list-decimal">
+            <li>Save all your existing bots &amp; trades as <strong>Phase A</strong> (nothing is deleted)</li>
+            <li>Reset the paper account to a clean <strong>£1,000</strong> baseline</li>
+            <li>Start a new forward-tracking evaluation phase</li>
+          </ol>
+        </div>
+      )}
 
       {/* Active Phase */}
       {activePhase && (
@@ -732,7 +759,7 @@ export default function BotsPage() {
           disabled={transitionLoading}
         >
           <Flag size={12} />
-          Begin Phase Transition
+          {isFirstUse ? "Initialize Phase Tracking" : "Begin Phase Transition"}
           <ChevronRight size={10} />
         </button>
       )}
@@ -740,12 +767,26 @@ export default function BotsPage() {
       {/* Transition Dialog */}
       {showTransitionDialog && (
         <div className="mt-4 p-4 rounded-xl border border-amber-200 bg-amber-50 space-y-3">
-          <p className="text-sm font-semibold text-amber-900">Phase Transition</p>
-          <p className="text-xs text-amber-800">
-            This will archive all current bots and trades as <strong>Phase A — Initial Testing</strong>,
-            reset the paper account to <strong>£1,000</strong>, and start a new clean evaluation phase.
-            No data will be deleted.
+          <p className="text-sm font-semibold text-amber-900">
+            {isFirstUse ? "Initialize Phase Tracking" : "Phase Transition"}
           </p>
+          <p className="text-xs text-amber-800">
+            {isFirstUse
+              ? "Name the archive for your existing data (Phase A) and the new evaluation phase. No data will be deleted."
+              : "This will archive the current active phase, reset the paper account to £1,000, and start a new evaluation. No data will be deleted."}
+          </p>
+          <div>
+            <label className="text-xs font-medium text-foreground-muted block mb-1">
+              Archive Name <span className="text-foreground-muted font-normal">(current bots &amp; trades)</span>
+            </label>
+            <input
+              type="text"
+              value={archiveName}
+              onChange={(e) => setArchiveName(e.target.value)}
+              className="input text-sm w-full"
+              placeholder="Phase A — Initial Testing"
+            />
+          </div>
           <div>
             <label className="text-xs font-medium text-foreground-muted block mb-1">New Phase Name</label>
             <input
@@ -762,24 +803,22 @@ export default function BotsPage() {
           <div className="flex gap-2">
             <button
               onClick={async () => {
-                if (!newPhaseName.trim()) return;
+                if (!newPhaseName.trim() || !archiveName.trim()) return;
                 setTransitionLoading(true);
                 setTransitionError(null);
                 try {
                   await api.performPhaseTransition({
-                    archive_name: "Phase A — Initial Testing",
-                    archive_label: "phase_a",
-                    archive_description: "Initial paper trading test period before live IG demo forward-tracking.",
+                    archive_name: archiveName.trim(),
+                    archive_label: slugify(archiveName.trim()),
                     archive_initial_balance: 1000,
                     new_phase_name: newPhaseName.trim(),
-                    new_phase_label: "phase_b",
+                    new_phase_label: slugify(newPhaseName.trim()),
                     new_initial_balance: 1000,
                     new_normalized_baseline: 1000,
-                    new_description: "Clean £1,000 baseline forward-tracking phase. Bots operate under live IG demo execution.",
                     stop_active_bots: true,
                     reset_account: true,
                   });
-                  setTransitionResult(`Transition complete. ${newPhaseName} is now active with a clean £1,000 baseline.`);
+                  setTransitionResult(`Done. "${archiveName.trim()}" archived. "${newPhaseName.trim()}" is now active with a clean £1,000 baseline.`);
                   setShowTransitionDialog(false);
                   await Promise.all([mutateBots(), mutatePhases(), mutateActivePhase()]);
                 } catch (err) {
@@ -788,11 +827,11 @@ export default function BotsPage() {
                   setTransitionLoading(false);
                 }
               }}
-              disabled={transitionLoading || !newPhaseName.trim()}
+              disabled={transitionLoading || !newPhaseName.trim() || !archiveName.trim()}
               className="btn btn-primary text-xs disabled:opacity-50 flex items-center gap-2"
             >
               {transitionLoading ? <Loader2 size={12} className="animate-spin" /> : <Flag size={12} />}
-              Confirm Transition
+              {isFirstUse ? "Initialize" : "Confirm Transition"}
             </button>
             <button
               onClick={() => setShowTransitionDialog(false)}
@@ -805,6 +844,8 @@ export default function BotsPage() {
         </div>
       )}
       </div>
+        );
+      })()}
     </div>
   );
 }
