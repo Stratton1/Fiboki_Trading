@@ -134,21 +134,36 @@ def _ensure_new_columns(engine) -> None:
                     "ALTER TABLE paper_bots ADD COLUMN source_id VARCHAR(100)"
                 ))
 
-    if "execution_audit" not in table_names:
-        return
-    existing = {col["name"] for col in inspector.get_columns("execution_audit")}
-    new_cols = {
-        "requested_price": "FLOAT",
-        "filled_price": "FLOAT",
-        "slippage_pips": "FLOAT",
-        "fill_latency_ms": "INTEGER",
-    }
-    with engine.begin() as conn:
-        for col_name, col_type in new_cols.items():
-            if col_name not in existing:
-                conn.execute(text(
-                    f"ALTER TABLE execution_audit ADD COLUMN {col_name} {col_type}"
-                ))
+    if "execution_audit" in table_names:
+        existing = {col["name"] for col in inspector.get_columns("execution_audit")}
+        new_cols = {
+            "requested_price": "FLOAT",
+            "filled_price": "FLOAT",
+            "slippage_pips": "FLOAT",
+            "fill_latency_ms": "INTEGER",
+        }
+        with engine.begin() as conn:
+            for col_name, col_type in new_cols.items():
+                if col_name not in existing:
+                    conn.execute(text(
+                        f"ALTER TABLE execution_audit ADD COLUMN {col_name} {col_type}"
+                    ))
+
+    # Add phase_id + archived_at to paper_bots (Phase B migration)
+    if "paper_bots" in table_names:
+        pb_cols = {col["name"] for col in inspector.get_columns("paper_bots")}
+        with engine.begin() as conn:
+            if "phase_id" not in pb_cols:
+                conn.execute(text("ALTER TABLE paper_bots ADD COLUMN phase_id INTEGER"))
+            if "archived_at" not in pb_cols:
+                conn.execute(text("ALTER TABLE paper_bots ADD COLUMN archived_at DATETIME"))
+
+    # Add phase_id to paper_trades (Phase B migration)
+    if "paper_trades" in table_names:
+        pt_cols = {col["name"] for col in inspector.get_columns("paper_trades")}
+        with engine.begin() as conn:
+            if "phase_id" not in pt_cols:
+                conn.execute(text("ALTER TABLE paper_trades ADD COLUMN phase_id INTEGER"))
 
 
 def _init_sentry() -> None:

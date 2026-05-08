@@ -11,7 +11,7 @@ import { useWatchlists } from "@/lib/hooks/use-watchlists";
 import { PageHeader } from "@/components/PageHeader";
 import { EmptyState } from "@/components/EmptyState";
 import { StatusBadge } from "@/components/StatusBadge";
-import { Bot, Loader2, Wallet, TrendingUp, CalendarDays, Activity, AlertTriangle, BarChart3, Search, Star, ChevronDown, ExternalLink } from "lucide-react";
+import { Bot, Loader2, Wallet, TrendingUp, CalendarDays, Activity, AlertTriangle, BarChart3, Search, Star, ChevronDown, ExternalLink, Flag, Download, Archive, ChevronRight } from "lucide-react";
 import { InfoTip } from "@/components/InfoTip";
 import { strategyShortName } from "@/lib/strategy-names";
 import { useShortlist } from "@/lib/hooks/use-shortlist";
@@ -57,6 +57,13 @@ export default function BotsPage() {
   const [showShortlistPicker, setShowShortlistPicker] = useState(false);
   const [smartDeployLoading, setSmartDeployLoading] = useState(false);
   const [smartDeployResult, setSmartDeployResult] = useState<string | null>(null);
+  const { data: phases, mutate: mutatePhases } = useSWR("/paper/phases", () => api.listPhases(), { refreshInterval: 60000 });
+  const { data: activePhase, mutate: mutateActivePhase } = useSWR("/paper/phases/active", () => api.getActivePhase(), { refreshInterval: 60000 });
+  const [showTransitionDialog, setShowTransitionDialog] = useState(false);
+  const [transitionLoading, setTransitionLoading] = useState(false);
+  const [transitionError, setTransitionError] = useState<string | null>(null);
+  const [transitionResult, setTransitionResult] = useState<string | null>(null);
+  const [newPhaseName, setNewPhaseName] = useState("Phase B — Live Forward Tracking");
   const [sortField, setSortField] = useState<"strategy" | "instrument" | "tf" | "state" | "bars" | "trades" | "pnl">("instrument");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
 
@@ -624,6 +631,179 @@ export default function BotsPage() {
             )}
           </tbody>
         </table>
+      </div>
+
+      {/* ── Phase Management ─────────────────────────────────── */}
+      <div className="card mt-6" data-testid="phase-management">
+      <div className="flex items-center justify-between mb-4">
+        <div>
+          <h2 className="text-sm font-semibold flex items-center gap-2">
+            <Flag size={14} className="text-primary" />
+            Evaluation Phases
+            <InfoTip text="Each evaluation phase tracks paper + IG demo performance from a clean £1,000 baseline. Archiving a phase preserves the full trade history so you can compare periods side-by-side." />
+          </h2>
+          <p className="text-xs text-foreground-muted mt-0.5">
+            Archive the current phase and start a clean £1,000 forward-tracking evaluation.
+          </p>
+        </div>
+        {!activePhase && (
+          <span className="text-xs text-amber-700 bg-amber-50 px-2 py-1 rounded-lg flex items-center gap-1.5">
+            <AlertTriangle size={11} /> No active phase
+          </span>
+        )}
+      </div>
+
+      {/* Active Phase */}
+      {activePhase && (
+        <div className="mb-4 p-3 rounded-lg border border-primary/20 bg-primary/4">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <p className="text-xs font-semibold text-primary flex items-center gap-1.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-primary inline-block" />
+                Active — {activePhase.name}
+              </p>
+              <p className="text-xs text-foreground-muted mt-0.5">
+                Started {new Date(activePhase.started_at).toLocaleDateString()} &middot;{" "}
+                {activePhase.total_trades} trade{activePhase.total_trades !== 1 ? "s" : ""} &middot;{" "}
+                Baseline: £{activePhase.normalized_baseline.toFixed(0)}
+                {activePhase.net_pnl !== 0 && (
+                  <span className={`ml-1 font-medium ${activePhase.net_pnl >= 0 ? "text-primary" : "text-danger"}`}>
+                    ({activePhase.net_pnl >= 0 ? "+" : ""}£{activePhase.net_pnl.toFixed(2)})
+                  </span>
+                )}
+              </p>
+            </div>
+            <a
+              href={`${api.exportAllTrades()}${typeof window !== "undefined" && localStorage.getItem("fibokei_token") ? `?token=${localStorage.getItem("fibokei_token")}` : ""}`}
+              className="btn btn-secondary text-xs flex items-center gap-1.5 shrink-0"
+              title="Export all trades to Excel"
+            >
+              <Download size={11} /> Export Trades
+            </a>
+          </div>
+        </div>
+      )}
+
+      {/* Archived Phases */}
+      {(phases ?? []).filter((p) => !p.is_active).length > 0 && (
+        <div className="mb-4">
+          <p className="text-xs font-medium text-foreground-muted mb-2 flex items-center gap-1.5">
+            <Archive size={11} /> Archived Phases
+          </p>
+          <div className="space-y-2">
+            {(phases ?? []).filter((p) => !p.is_active).map((p) => (
+              <div key={p.id} className="flex items-center justify-between gap-3 p-2.5 rounded-lg bg-background-muted text-sm">
+                <div>
+                  <p className="font-medium text-xs">{p.name}</p>
+                  <p className="text-[11px] text-foreground-muted">
+                    {new Date(p.started_at).toLocaleDateString()} → {p.archived_at ? new Date(p.archived_at).toLocaleDateString() : "—"} &middot;{" "}
+                    {p.total_trades} trades &middot;{" "}
+                    Net PnL:{" "}
+                    <span className={p.net_pnl >= 0 ? "text-primary font-medium" : "text-danger font-medium"}>
+                      {p.net_pnl >= 0 ? "+" : ""}£{p.net_pnl.toFixed(2)}
+                    </span>
+                    {p.final_balance != null && (
+                      <> &middot; Final: £{p.final_balance.toFixed(2)}</>
+                    )}
+                  </p>
+                </div>
+                <a
+                  href={api.exportPhase(p.id)}
+                  className="btn btn-secondary text-xs flex items-center gap-1 shrink-0"
+                  title={`Export ${p.name} trades`}
+                >
+                  <Download size={10} /> .xlsx
+                </a>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Transition Button */}
+      {transitionResult ? (
+        <div className="p-3 rounded-lg bg-green-50 border border-green-200 text-sm text-green-800 flex items-center gap-2">
+          <span>✓</span> {transitionResult}
+        </div>
+      ) : (
+        <button
+          onClick={() => { setShowTransitionDialog(true); setTransitionError(null); }}
+          className="btn btn-secondary text-xs flex items-center gap-2"
+          disabled={transitionLoading}
+        >
+          <Flag size={12} />
+          Begin Phase Transition
+          <ChevronRight size={10} />
+        </button>
+      )}
+
+      {/* Transition Dialog */}
+      {showTransitionDialog && (
+        <div className="mt-4 p-4 rounded-xl border border-amber-200 bg-amber-50 space-y-3">
+          <p className="text-sm font-semibold text-amber-900">Phase Transition</p>
+          <p className="text-xs text-amber-800">
+            This will archive all current bots and trades as <strong>Phase A — Initial Testing</strong>,
+            reset the paper account to <strong>£1,000</strong>, and start a new clean evaluation phase.
+            No data will be deleted.
+          </p>
+          <div>
+            <label className="text-xs font-medium text-foreground-muted block mb-1">New Phase Name</label>
+            <input
+              type="text"
+              value={newPhaseName}
+              onChange={(e) => setNewPhaseName(e.target.value)}
+              className="input text-sm w-full"
+              placeholder="Phase B — Live Forward Tracking"
+            />
+          </div>
+          {transitionError && (
+            <p className="text-xs text-red-700 bg-red-50 rounded px-2 py-1">{transitionError}</p>
+          )}
+          <div className="flex gap-2">
+            <button
+              onClick={async () => {
+                if (!newPhaseName.trim()) return;
+                setTransitionLoading(true);
+                setTransitionError(null);
+                try {
+                  await api.performPhaseTransition({
+                    archive_name: "Phase A — Initial Testing",
+                    archive_label: "phase_a",
+                    archive_description: "Initial paper trading test period before live IG demo forward-tracking.",
+                    archive_initial_balance: 1000,
+                    new_phase_name: newPhaseName.trim(),
+                    new_phase_label: "phase_b",
+                    new_initial_balance: 1000,
+                    new_normalized_baseline: 1000,
+                    new_description: "Clean £1,000 baseline forward-tracking phase. Bots operate under live IG demo execution.",
+                    stop_active_bots: true,
+                    reset_account: true,
+                  });
+                  setTransitionResult(`Transition complete. ${newPhaseName} is now active with a clean £1,000 baseline.`);
+                  setShowTransitionDialog(false);
+                  await Promise.all([mutateBots(), mutatePhases(), mutateActivePhase()]);
+                } catch (err) {
+                  setTransitionError(err instanceof Error ? err.message : "Transition failed");
+                } finally {
+                  setTransitionLoading(false);
+                }
+              }}
+              disabled={transitionLoading || !newPhaseName.trim()}
+              className="btn btn-primary text-xs disabled:opacity-50 flex items-center gap-2"
+            >
+              {transitionLoading ? <Loader2 size={12} className="animate-spin" /> : <Flag size={12} />}
+              Confirm Transition
+            </button>
+            <button
+              onClick={() => setShowTransitionDialog(false)}
+              className="btn btn-secondary text-xs"
+              disabled={transitionLoading}
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
       </div>
     </div>
   );

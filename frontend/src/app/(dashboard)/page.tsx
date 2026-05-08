@@ -22,6 +22,7 @@ import {
   ChartCandlestick,
   Search,
   Layers,
+  Flag,
   Zap,
   ListTodo,
   Bell,
@@ -237,6 +238,7 @@ export default function DashboardPage() {
   const { data: systemStatus } = useSWR("/system/status", () => api.systemStatus(), { refreshInterval: 30000 });
   const { data: execMode } = useSWR("/execution/mode", () => api.executionMode(), { refreshInterval: 15000 });
   const { data: killSwitch, mutate: mutateKillSwitch } = useSWR("/execution/kill-switch", () => api.killSwitchStatus(), { refreshInterval: 15000 });
+  const { data: activePhase } = useSWR("/paper/phases/active", () => api.getActivePhase(), { refreshInterval: 60000 });
   const isIgDemo = (execMode?.mode ?? systemStatus?.execution_mode) === "ig_demo";
   const { data: igHealth } = useSWR(
     isIgDemo ? "/execution/ig-health" : null,
@@ -648,6 +650,28 @@ export default function DashboardPage() {
                 </Link>
               ) : (
                 <span className="text-sm text-foreground-muted">None</span>
+              )}
+            </div>
+
+            {/* Evaluation Phase */}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <Flag size={14} className="text-foreground-muted" />
+                <span className="text-sm">
+                  Eval Phase
+                  <InfoTip text="Current evaluation phase. Each phase tracks performance from a clean £1,000 baseline. Archived phases preserve the full trade history." />
+                </span>
+              </div>
+              {activePhase === undefined ? (
+                <span className="text-xs text-foreground-muted">—</span>
+              ) : activePhase === null ? (
+                <Link href="/bots" className="text-xs text-amber-700 bg-amber-50 px-2 py-0.5 rounded-lg hover:bg-amber-100 transition-colors">
+                  No active phase
+                </Link>
+              ) : (
+                <Link href="/bots" className="text-xs font-medium text-primary bg-primary/8 px-2 py-0.5 rounded-lg hover:bg-primary/12 transition-colors">
+                  {activePhase.name}
+                </Link>
               )}
             </div>
 

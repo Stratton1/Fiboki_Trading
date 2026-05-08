@@ -11,16 +11,22 @@ from sqlalchemy.orm import Session
 from fibokei.api.auth import TokenData, get_current_user
 from fibokei.api.deps import get_db
 from fibokei.db.repository import (
+    archive_current_phase,
+    create_new_phase,
     delete_all_paper_bots,
     delete_paper_bot,
     get_active_paper_bots,
+    get_active_phase,
     get_or_create_paper_account,
     get_paper_bot,
     get_paper_bots,
     get_paper_trades,
+    get_phase,
+    list_phases,
     reset_paper_account,
     reset_paper_counters_and_recalculate,
     save_paper_bot,
+    transition_to_new_phase,
     update_paper_bot_state,
 )
 from fibokei.strategies.registry import strategy_registry
@@ -628,6 +634,407 @@ def _bot_to_response(bot) -> BotStatusResponse:
 
 
 # ── Fleet Risk Analysis ─────────────────────────────────────
+
+
+# ── Evaluation Phases ─────────────────────────────────────────
+
+
+class PhaseResponse(BaseModel):
+    id: int
+    name: str
+    phase_label: str
+    is_active: bool
+    started_at: str
+    archived_at: str | None = None
+    initial_balance: float
+    final_balance: float | None = None
+    normalized_baseline: float
+    broker_balance_at_start: float | None = None
+    currency: str
+    description: str | None = None
+    total_trades: int
+    net_pnl: float
+
+
+class PhaseTransitionRequest(BaseModel):
+    # Archive config
+    archive_name: str = "Phase A — Initial Testing"
+    archive_label: str = "phase_a"
+    archive_description: str | None = None
+    archive_final_balance: float | None = None
+    archive_initial_balance: float = 1000.0
+    # New phase config
+    new_phase_name: str
+    new_phase_label: str
+    new_initial_balance: float = 1000.0
+    new_normalized_baseline: float = 1000.0
+    new_broker_balance: float | None = None
+    new_description: str | None = None
+    # Bot action: stop all bots before transition?
+    stop_active_bots: bool = True
+    # Account: reset the paper account balance?
+    reset_account: bool = True
+
+
+def _phase_to_response(p) -> PhaseResponse:
+    return PhaseResponse(
+        id=p.id,
+        name=p.name,
+        phase_label=p.phase_label,
+        is_active=p.is_active,
+        started_at=p.started_at.isoformat() if p.started_at else "",
+        archived_at=p.archived_at.isoformat() if p.archived_at else None,
+        initial_balance=p.initial_balance,
+        final_balance=p.final_balance,
+        normalized_baseline=p.normalized_baseline,
+        broker_balance_at_start=p.broker_balance_at_start,
+        currency=p.currency,
+        description=p.description,
+        total_trades=p.total_trades or 0,
+        net_pnl=p.net_pnl or 0.0,
+    )
+
+
+@router.get("/paper/phases", response_model=list[PhaseResponse])
+def list_evaluation_phases(
+    user: TokenData = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """List all evaluation phases (active + archived)."""
+    return [_phase_to_response(p) for p in list_phases(db)]
+
+
+@router.get("/paper/phases/active", response_model=PhaseResponse | None)
+def get_active_evaluation_phase(
+    user: TokenData = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Get the currently active evaluation phase (or null if none)."""
+    p = get_active_phase(db)
+    return _phase_to_response(p) if p else None
+
+
+@router.get("/paper/phases/{phase_id}", response_model=PhaseResponse)
+def get_evaluation_phase(
+    phase_id: int,
+    user: TokenData = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Get a specific evaluation phase by ID."""
+    p = get_phase(db, phase_id)
+    if not p:
+        raise HTTPException(status_code=404, detail="Phase not found")
+    return _phase_to_response(p)
+
+
+@router.post("/paper/phases/transition")
+def perform_phase_transition(
+    req: PhaseTransitionRequest,
+    user: TokenData = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Archive the current paper trading phase and start a clean new one.
+
+    This operation:
+    1. Optionally stops all active bots (so no trades bleed across phases)
+    2. Archives all existing bots and trades into the named archive phase
+    3. Optionally resets the paper account to the new initial balance
+    4. Creates a new active evaluation phase with a clean £1,000 baseline
+    """
+    import logging
+    logger = logging.getLogger("fibokei.paper.phases")
+
+    # 1. Optionally stop all active bots
+    if req.stop_active_bots:
+        active_bots = get_active_paper_bots(db)
+        for bot in active_bots:
+            update_paper_bot_state(db, bot.bot_id, "stopped")
+        logger.info(
+            "Phase transition: stopped %d active bots", len(active_bots)
+        )
+
+    # 2. Archive + create new phase
+    try:
+        archived, new_phase = transition_to_new_phase(
+            db,
+            new_phase_name=req.new_phase_name,
+            new_phase_label=req.new_phase_label,
+            archive_name=req.archive_name,
+            archive_label=req.archive_label,
+            archive_description=req.archive_description,
+            archive_final_balance=req.archive_final_balance,
+            archive_initial_balance=req.archive_initial_balance,
+            new_initial_balance=req.new_initial_balance,
+            new_normalized_baseline=req.new_normalized_baseline,
+            new_broker_balance=req.new_broker_balance,
+            new_description=req.new_description,
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=409, detail=str(e))
+
+    # 3. Optionally reset paper account to new initial balance
+    if req.reset_account:
+        acct = get_or_create_paper_account(db)
+        acct.initial_balance = req.new_initial_balance
+        acct.balance = req.new_initial_balance
+        acct.equity = req.new_initial_balance
+        acct.daily_pnl = 0.0
+        acct.weekly_pnl = 0.0
+        db.commit()
+        logger.info(
+            "Phase transition: paper account reset to £%.2f", req.new_initial_balance
+        )
+
+    logger.info(
+        "Phase transition complete: archived='%s' (id=%d), new='%s' (id=%d)",
+        archived.name, archived.id, new_phase.name, new_phase.id,
+    )
+
+    return {
+        "archived_phase": _phase_to_response(archived),
+        "new_phase": _phase_to_response(new_phase),
+        "bots_stopped": req.stop_active_bots,
+        "account_reset": req.reset_account,
+    }
+
+
+@router.get("/paper/phases/{phase_id}/export")
+def export_phase_trades(
+    phase_id: int,
+    user: TokenData = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Download all trades from a specific phase as an Excel (.xlsx) file.
+
+    Returns a streaming Excel response. The file contains:
+      - Sheet 1: Summary (phase metadata + key metrics)
+      - Sheet 2: All trades (chronological)
+    """
+    import io
+
+    try:
+        import openpyxl
+        from openpyxl.styles import Alignment, Font, PatternFill
+        from openpyxl.utils import get_column_letter
+    except ImportError:
+        raise HTTPException(
+            status_code=500,
+            detail="openpyxl not installed — cannot export Excel",
+        )
+
+    from fastapi.responses import StreamingResponse
+    from sqlalchemy import select as _select
+
+    from fibokei.db.models import PaperTradeModel as _PaperTradeModel
+
+    phase = get_phase(db, phase_id)
+    if not phase:
+        raise HTTPException(status_code=404, detail="Phase not found")
+
+    trades = list(
+        db.scalars(
+            _select(_PaperTradeModel)
+            .where(_PaperTradeModel.phase_id == phase_id)
+            .order_by(_PaperTradeModel.entry_time.asc())
+        ).all()
+    )
+
+    wb = openpyxl.Workbook()
+
+    # ── Summary sheet ─────────────────────────────────
+    ws_summary = wb.active
+    ws_summary.title = "Summary"
+    header_font = Font(bold=True, color="FFFFFF")
+    header_fill = PatternFill("solid", fgColor="1F4E79")
+
+    def _header(cell_ref, text):
+        c = ws_summary[cell_ref]
+        c.value = text
+        c.font = header_font
+        c.fill = header_fill
+
+    def _row(row_num, label, value):
+        ws_summary.cell(row=row_num, column=1, value=label).font = Font(bold=True)
+        ws_summary.cell(row=row_num, column=2, value=value)
+
+    ws_summary.column_dimensions["A"].width = 32
+    ws_summary.column_dimensions["B"].width = 30
+
+    _row(1, "Phase Name", phase.name)
+    _row(2, "Phase Label", phase.phase_label)
+    _row(3, "Status", "Active" if phase.is_active else "Archived")
+    _row(4, "Started", phase.started_at.isoformat() if phase.started_at else "")
+    _row(5, "Archived", phase.archived_at.isoformat() if phase.archived_at else "—")
+    _row(6, "Initial Balance (£)", phase.initial_balance)
+    _row(7, "Final Balance (£)", phase.final_balance or "—")
+    _row(8, "Normalised Baseline (£)", phase.normalized_baseline)
+    _row(9, "IG Broker Balance at Start (£)", phase.broker_balance_at_start or "—")
+    _row(10, "Currency", phase.currency)
+    _row(11, "Total Trades", phase.total_trades)
+    _row(12, "Net PnL (£)", round(phase.net_pnl or 0.0, 2))
+    if phase.initial_balance and phase.initial_balance > 0:
+        pnl_pct = round((phase.net_pnl or 0.0) / phase.initial_balance * 100, 2)
+    else:
+        pnl_pct = 0.0
+    _row(13, "Net PnL (%)", pnl_pct)
+
+    # Trade-level stats
+    if trades:
+        winners = [t for t in trades if t.pnl > 0]
+        win_rate = round(len(winners) / len(trades) * 100, 1)
+        avg_pnl = round(sum(t.pnl for t in trades) / len(trades), 2)
+        avg_bars = round(sum(t.bars_in_trade for t in trades) / len(trades), 1)
+        best = max(trades, key=lambda t: t.pnl)
+        worst = min(trades, key=lambda t: t.pnl)
+        _row(15, "Win Rate (%)", win_rate)
+        _row(16, "Avg PnL per Trade (£)", avg_pnl)
+        _row(17, "Avg Bars in Trade", avg_bars)
+        _row(18, "Best Trade PnL (£)", round(best.pnl, 2))
+        _row(19, "Worst Trade PnL (£)", round(worst.pnl, 2))
+        _row(20, "Description", phase.description or "—")
+
+    # ── Trades sheet ────────────────────────────────────
+    ws_trades = wb.create_sheet("Trades")
+    trade_headers = [
+        "ID", "Bot ID", "Strategy", "Instrument", "Direction",
+        "Entry Time", "Entry Price", "Exit Time", "Exit Price",
+        "Exit Reason", "PnL (£)", "Bars in Trade",
+    ]
+    for col_idx, h in enumerate(trade_headers, start=1):
+        cell = ws_trades.cell(row=1, column=col_idx, value=h)
+        cell.font = Font(bold=True, color="FFFFFF")
+        cell.fill = PatternFill("solid", fgColor="1F4E79")
+        cell.alignment = Alignment(horizontal="center")
+
+    # Cumulative equity curve column
+    ws_trades.cell(row=1, column=len(trade_headers) + 1, value="Cumulative PnL (£)").font = Font(bold=True)
+
+    cumulative = 0.0
+    for row_idx, t in enumerate(trades, start=2):
+        cumulative += t.pnl
+        ws_trades.cell(row=row_idx, column=1, value=t.id)
+        ws_trades.cell(row=row_idx, column=2, value=t.bot_id)
+        ws_trades.cell(row=row_idx, column=3, value=t.strategy_id)
+        ws_trades.cell(row=row_idx, column=4, value=t.instrument)
+        ws_trades.cell(row=row_idx, column=5, value=t.direction)
+        ws_trades.cell(row=row_idx, column=6, value=t.entry_time.isoformat() if t.entry_time else "")
+        ws_trades.cell(row=row_idx, column=7, value=t.entry_price)
+        ws_trades.cell(row=row_idx, column=8, value=t.exit_time.isoformat() if t.exit_time else "")
+        ws_trades.cell(row=row_idx, column=9, value=t.exit_price)
+        ws_trades.cell(row=row_idx, column=10, value=t.exit_reason)
+        ws_trades.cell(row=row_idx, column=11, value=round(t.pnl, 2))
+        ws_trades.cell(row=row_idx, column=12, value=t.bars_in_trade)
+        ws_trades.cell(row=row_idx, column=13, value=round(cumulative, 2))
+        # Colour PnL cells
+        pnl_cell = ws_trades.cell(row=row_idx, column=11)
+        if t.pnl >= 0:
+            pnl_cell.fill = PatternFill("solid", fgColor="C6EFCE")
+        else:
+            pnl_cell.fill = PatternFill("solid", fgColor="FFC7CE")
+
+    # Auto-fit column widths (approximate)
+    for col_idx in range(1, len(trade_headers) + 2):
+        max_len = max(
+            (len(str(ws_trades.cell(r, col_idx).value or "")) for r in range(1, len(trades) + 2)),
+            default=10,
+        )
+        ws_trades.column_dimensions[get_column_letter(col_idx)].width = min(max_len + 4, 40)
+
+    # Stream the file
+    buffer = io.BytesIO()
+    wb.save(buffer)
+    buffer.seek(0)
+
+    filename = f"fiboki_phase_{phase.phase_label}_{phase.id}_trades.xlsx"
+    return StreamingResponse(
+        buffer,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
+@router.get("/paper/trades/export")
+def export_all_trades(
+    user: TokenData = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Export ALL paper trades (all phases) as an Excel file.
+
+    Useful for the pre-transition archive snapshot. Includes all trades
+    regardless of phase assignment, sorted chronologically.
+    """
+    import io
+
+    try:
+        import openpyxl
+        from openpyxl.styles import Alignment, Font, PatternFill
+        from openpyxl.utils import get_column_letter
+    except ImportError:
+        raise HTTPException(
+            status_code=500,
+            detail="openpyxl not installed — cannot export Excel",
+        )
+
+    from fastapi.responses import StreamingResponse
+
+    trades = get_paper_trades(db, limit=100_000)
+    trades_sorted = sorted(trades, key=lambda t: t.entry_time if t.entry_time else datetime.min)
+
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "All Trades"
+
+    headers = [
+        "ID", "Bot ID", "Strategy", "Instrument", "Direction",
+        "Entry Time", "Entry Price", "Exit Time", "Exit Price",
+        "Exit Reason", "PnL (£)", "Bars in Trade", "Phase ID", "Cumulative PnL (£)",
+    ]
+    for col_idx, h in enumerate(headers, start=1):
+        cell = ws.cell(row=1, column=col_idx, value=h)
+        cell.font = Font(bold=True, color="FFFFFF")
+        cell.fill = PatternFill("solid", fgColor="1F4E79")
+        cell.alignment = Alignment(horizontal="center")
+
+    cumulative = 0.0
+    for row_idx, t in enumerate(trades_sorted, start=2):
+        cumulative += t.pnl
+        ws.cell(row=row_idx, column=1, value=t.id)
+        ws.cell(row=row_idx, column=2, value=t.bot_id)
+        ws.cell(row=row_idx, column=3, value=t.strategy_id)
+        ws.cell(row=row_idx, column=4, value=t.instrument)
+        ws.cell(row=row_idx, column=5, value=t.direction)
+        ws.cell(row=row_idx, column=6, value=t.entry_time.isoformat() if t.entry_time else "")
+        ws.cell(row=row_idx, column=7, value=t.entry_price)
+        ws.cell(row=row_idx, column=8, value=t.exit_time.isoformat() if t.exit_time else "")
+        ws.cell(row=row_idx, column=9, value=t.exit_price)
+        ws.cell(row=row_idx, column=10, value=t.exit_reason)
+        ws.cell(row=row_idx, column=11, value=round(t.pnl, 2))
+        ws.cell(row=row_idx, column=12, value=t.bars_in_trade)
+        ws.cell(row=row_idx, column=13, value=getattr(t, "phase_id", None))
+        ws.cell(row=row_idx, column=14, value=round(cumulative, 2))
+        pnl_cell = ws.cell(row=row_idx, column=11)
+        if t.pnl >= 0:
+            pnl_cell.fill = PatternFill("solid", fgColor="C6EFCE")
+        else:
+            pnl_cell.fill = PatternFill("solid", fgColor="FFC7CE")
+
+    for col_idx in range(1, len(headers) + 1):
+        max_len = max(
+            (len(str(ws.cell(r, col_idx).value or "")) for r in range(1, len(trades_sorted) + 2)),
+            default=10,
+        )
+        ws.column_dimensions[get_column_letter(col_idx)].width = min(max_len + 4, 40)
+
+    buffer = io.BytesIO()
+    wb.save(buffer)
+    buffer.seek(0)
+
+    filename = "fiboki_all_trades_export.xlsx"
+    return StreamingResponse(
+        buffer,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
 
 
 @router.get("/paper/fleet/risk")

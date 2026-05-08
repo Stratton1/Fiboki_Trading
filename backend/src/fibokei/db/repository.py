@@ -31,6 +31,7 @@ from fibokei.db.models import (
     ChartDrawingModel,
     DatasetModel,
     DrawingTemplateModel,
+    EvaluationPhaseModel,
     ExecutionAuditModel,
     KillSwitchModel,
     PaperAccountModel,
@@ -1190,3 +1191,191 @@ def delete_variant(session: Session, variant_id: int) -> bool:
     session.delete(variant)
     session.commit()
     return True
+
+
+# ── Evaluation Phases ─────────────────────────────────────────
+
+
+def get_active_phase(session: Session) -> EvaluationPhaseModel | None:
+    """Return the current active evaluation phase, or None if none exists."""
+    return session.scalars(
+        select(EvaluationPhaseModel).where(EvaluationPhaseModel.is_active == True)  # noqa: E712
+    ).first()
+
+
+def get_phase(session: Session, phase_id: int) -> EvaluationPhaseModel | None:
+    """Return a phase by ID."""
+    return session.get(EvaluationPhaseModel, phase_id)
+
+
+def list_phases(session: Session) -> list[EvaluationPhaseModel]:
+    """List all evaluation phases, newest first."""
+    return list(
+        session.scalars(
+            select(EvaluationPhaseModel).order_by(EvaluationPhaseModel.started_at.desc())
+        ).all()
+    )
+
+
+def archive_current_phase(
+    session: Session,
+    phase_name: str = "Phase A — Initial Testing",
+    phase_label: str = "phase_a",
+    description: str | None = None,
+    final_balance: float | None = None,
+    initial_balance: float = 1000.0,
+    started_at: "datetime | None" = None,
+) -> EvaluationPhaseModel:
+    """Archive all existing bots and trades into a named phase record.
+
+    This is idempotent — if an active phase already exists, bots/trades
+    without a phase_id are assigned to it. If no active phase exists, one
+    is created first.
+
+    After archiving:
+      - All existing bots are assigned to the phase and marked archived_at=now
+      - All existing trades are assigned to the phase
+      - phase.is_active = False, phase.archived_at = now
+      - phase.total_trades and phase.net_pnl are computed from trades
+    """
+    from datetime import datetime, timezone
+    from sqlalchemy import func as _func
+
+    now = datetime.now(timezone.utc)
+
+    # Find or create an active phase to receive the archived bots/trades
+    phase = get_active_phase(session)
+    if not phase:
+        phase_started = started_at or now
+        phase = EvaluationPhaseModel(
+            name=phase_name,
+            phase_label=phase_label,
+            is_active=True,
+            started_at=phase_started,
+            initial_balance=initial_balance,
+            normalized_baseline=initial_balance,
+            currency="GBP",
+            description=description,
+        )
+        session.add(phase)
+        session.flush()  # get phase.id
+
+    # Assign all unassigned bots to this phase and mark archived
+    unassigned_bots = list(
+        session.scalars(
+            select(PaperBotModel).where(PaperBotModel.phase_id.is_(None))
+        ).all()
+    )
+    for bot in unassigned_bots:
+        bot.phase_id = phase.id
+        bot.archived_at = now
+
+    # Assign all unassigned trades to this phase
+    # Use bulk update for efficiency
+    from sqlalchemy import update as _update
+    session.execute(
+        _update(PaperTradeModel)
+        .where(PaperTradeModel.phase_id.is_(None))
+        .values(phase_id=phase.id)
+    )
+
+    # Compute totals from trades assigned to this phase
+    totals = session.execute(
+        select(
+            _func.count(PaperTradeModel.id).label("total"),
+            _func.coalesce(_func.sum(PaperTradeModel.pnl), 0.0).label("net_pnl"),
+        ).where(PaperTradeModel.phase_id == phase.id)
+    ).one()
+    phase.total_trades = int(totals.total)
+    phase.net_pnl = float(totals.net_pnl)
+
+    if final_balance is not None:
+        phase.final_balance = final_balance
+    elif phase.total_trades > 0:
+        phase.final_balance = phase.initial_balance + float(totals.net_pnl)
+
+    phase.is_active = False
+    phase.archived_at = now
+    if description:
+        phase.description = description
+
+    session.commit()
+    return phase
+
+
+def create_new_phase(
+    session: Session,
+    name: str,
+    phase_label: str,
+    initial_balance: float = 1000.0,
+    normalized_baseline: float = 1000.0,
+    broker_balance_at_start: float | None = None,
+    description: str | None = None,
+) -> EvaluationPhaseModel:
+    """Create a new active evaluation phase.
+
+    Any existing active phase must have been archived first — this function
+    will raise if an active phase already exists.
+    """
+    existing = get_active_phase(session)
+    if existing:
+        raise ValueError(
+            f"Active phase '{existing.phase_label}' already exists (id={existing.id}). "
+            "Archive it first via archive_current_phase()."
+        )
+
+    from datetime import datetime, timezone
+
+    phase = EvaluationPhaseModel(
+        name=name,
+        phase_label=phase_label,
+        is_active=True,
+        started_at=datetime.now(timezone.utc),
+        initial_balance=initial_balance,
+        normalized_baseline=normalized_baseline,
+        broker_balance_at_start=broker_balance_at_start,
+        currency="GBP",
+        description=description,
+    )
+    session.add(phase)
+    session.commit()
+    return phase
+
+
+def transition_to_new_phase(
+    session: Session,
+    new_phase_name: str,
+    new_phase_label: str,
+    archive_name: str = "Phase A — Initial Testing",
+    archive_label: str = "phase_a",
+    archive_description: str | None = None,
+    archive_final_balance: float | None = None,
+    archive_initial_balance: float = 1000.0,
+    new_initial_balance: float = 1000.0,
+    new_normalized_baseline: float = 1000.0,
+    new_broker_balance: float | None = None,
+    new_description: str | None = None,
+) -> tuple[EvaluationPhaseModel, EvaluationPhaseModel]:
+    """Archive the current phase and create a new one atomically.
+
+    Returns (archived_phase, new_phase).
+    All existing bots and trades are assigned to the archived phase.
+    """
+    archived = archive_current_phase(
+        session,
+        phase_name=archive_name,
+        phase_label=archive_label,
+        description=archive_description,
+        final_balance=archive_final_balance,
+        initial_balance=archive_initial_balance,
+    )
+    new_phase = create_new_phase(
+        session,
+        name=new_phase_name,
+        phase_label=new_phase_label,
+        initial_balance=new_initial_balance,
+        normalized_baseline=new_normalized_baseline,
+        broker_balance_at_start=new_broker_balance,
+        description=new_description,
+    )
+    return archived, new_phase

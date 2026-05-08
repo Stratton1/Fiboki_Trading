@@ -535,6 +535,67 @@ export const api = {
   clearFinishedJobs: () =>
     apiFetch<{ deleted_count: number }>("/jobs", { method: "DELETE" }),
 
+  // Evaluation Phases
+  listPhases: () =>
+    apiFetch<Array<{
+      id: number;
+      name: string;
+      phase_label: string;
+      is_active: boolean;
+      started_at: string;
+      archived_at: string | null;
+      initial_balance: number;
+      final_balance: number | null;
+      normalized_baseline: number;
+      broker_balance_at_start: number | null;
+      currency: string;
+      description: string | null;
+      total_trades: number;
+      net_pnl: number;
+    }>>("/paper/phases"),
+  getActivePhase: () =>
+    apiFetch<{
+      id: number;
+      name: string;
+      phase_label: string;
+      is_active: boolean;
+      started_at: string;
+      archived_at: string | null;
+      initial_balance: number;
+      final_balance: number | null;
+      normalized_baseline: number;
+      broker_balance_at_start: number | null;
+      currency: string;
+      description: string | null;
+      total_trades: number;
+      net_pnl: number;
+    } | null>("/paper/phases/active"),
+  performPhaseTransition: (body: {
+    archive_name?: string;
+    archive_label?: string;
+    archive_description?: string | null;
+    archive_final_balance?: number | null;
+    archive_initial_balance?: number;
+    new_phase_name: string;
+    new_phase_label: string;
+    new_initial_balance?: number;
+    new_normalized_baseline?: number;
+    new_broker_balance?: number | null;
+    new_description?: string | null;
+    stop_active_bots?: boolean;
+    reset_account?: boolean;
+  }) =>
+    apiFetch<{
+      archived_phase: Record<string, unknown>;
+      new_phase: Record<string, unknown>;
+      bots_stopped: boolean;
+      account_reset: boolean;
+    }>("/paper/phases/transition", { method: "POST", body: JSON.stringify(body) }),
+  exportPhase: (phaseId: number) =>
+    `${API_URL}/api/v1/paper/phases/${phaseId}/export`,
+  exportAllTrades: () =>
+    `${API_URL}/api/v1/paper/trades/export`,
+
   // Drawings
   listDrawings: (instrument: string, timeframe: string) =>
     apiFetch<import("@/types/contracts/drawings").ChartDrawing[]>(

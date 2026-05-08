@@ -110,6 +110,43 @@ class StrategyConfigModel(Base):
     )
 
 
+class EvaluationPhaseModel(Base):
+    """An evaluation phase — archive of a period of paper/demo trading.
+
+    Phase A captures the initial test period (existing bots/trades).
+    Phase B and beyond are clean forward-tracking evaluations.
+    Each phase carries its own initial_balance baseline (normalised to £1,000
+    for evaluation purposes, regardless of the IG broker account size).
+    """
+
+    __tablename__ = "evaluation_phases"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    name: Mapped[str] = mapped_column(String(100), nullable=False)
+    phase_label: Mapped[str] = mapped_column(String(20), nullable=False)  # "phase_a", "phase_b", …
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    started_at: Mapped[datetime] = mapped_column(
+        DateTime, nullable=False, default=lambda: datetime.now(timezone.utc)
+    )
+    archived_at: Mapped[datetime | None] = mapped_column(DateTime)
+    initial_balance: Mapped[float] = mapped_column(Float, nullable=False, default=1000.0)
+    final_balance: Mapped[float | None] = mapped_column(Float)   # set when archived
+    currency: Mapped[str] = mapped_column(String(3), nullable=False, default="GBP")
+    # Normalised baseline for IG demo tracking (£1,000 virtual baseline)
+    normalized_baseline: Mapped[float] = mapped_column(Float, nullable=False, default=1000.0)
+    # IG broker actual balance at phase start (for reference / scaling)
+    broker_balance_at_start: Mapped[float | None] = mapped_column(Float)
+    description: Mapped[str | None] = mapped_column(Text)
+    total_trades: Mapped[int] = mapped_column(Integer, default=0)
+    net_pnl: Mapped[float] = mapped_column(Float, default=0.0)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, default=lambda: datetime.now(timezone.utc)
+    )
+
+    bots: Mapped[list["PaperBotModel"]] = relationship(back_populates="phase")
+    trades: Mapped[list["PaperTradeModel"]] = relationship(back_populates="phase")
+
+
 class PaperBotModel(Base):
     """Persistent state for a paper trading bot."""
 
@@ -128,6 +165,11 @@ class PaperBotModel(Base):
     last_evaluated_bar: Mapped[datetime | None] = mapped_column(DateTime)
     position_json: Mapped[dict | None] = mapped_column(JSON)
     error_message: Mapped[str | None] = mapped_column(Text)
+    # Phase tracking — nullable for backward compat with pre-phase bots
+    phase_id: Mapped[int | None] = mapped_column(
+        Integer, ForeignKey("evaluation_phases.id"), nullable=True, index=True
+    )
+    archived_at: Mapped[datetime | None] = mapped_column(DateTime)
     created_at: Mapped[datetime] = mapped_column(
         DateTime, default=lambda: datetime.now(timezone.utc)
     )
@@ -139,6 +181,9 @@ class PaperBotModel(Base):
 
     trades: Mapped[list["PaperTradeModel"]] = relationship(
         back_populates="paper_bot", cascade="all, delete-orphan"
+    )
+    phase: Mapped["EvaluationPhaseModel | None"] = relationship(
+        back_populates="bots", foreign_keys=[phase_id]
     )
 
 
@@ -162,11 +207,18 @@ class PaperTradeModel(Base):
     exit_reason: Mapped[str] = mapped_column(String(50), nullable=False)
     pnl: Mapped[float] = mapped_column(Float, nullable=False)
     bars_in_trade: Mapped[int] = mapped_column(Integer, default=0)
+    # Phase tracking — nullable for backward compat
+    phase_id: Mapped[int | None] = mapped_column(
+        Integer, ForeignKey("evaluation_phases.id"), nullable=True, index=True
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime, default=lambda: datetime.now(timezone.utc)
     )
 
     paper_bot: Mapped["PaperBotModel"] = relationship(back_populates="trades")
+    phase: Mapped["EvaluationPhaseModel | None"] = relationship(
+        back_populates="trades", foreign_keys=[phase_id]
+    )
 
 
 class PaperAccountModel(Base):
