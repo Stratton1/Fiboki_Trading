@@ -696,12 +696,24 @@ def save_paper_trade(session: Session, trade_data: dict) -> PaperTradeModel:
 
 
 def get_paper_trades(
-    session: Session, bot_id: str | None = None, limit: int = 100
+    session: Session,
+    bot_id: str | None = None,
+    limit: int = 100,
+    is_live: bool | None = None,
 ) -> list[PaperTradeModel]:
-    """Get paper trades, optionally filtered by bot_id."""
+    """Get paper trades, optionally filtered by bot_id and/or is_live.
+
+    is_live=True  → only forward-monitoring trades (entry_time >= bot.created_at)
+    is_live=False → only historical-replay trades
+    is_live=None  → all trades (default)
+    """
     stmt = select(PaperTradeModel)
     if bot_id:
         stmt = stmt.where(PaperTradeModel.bot_id == bot_id)
+    if is_live is True:
+        stmt = stmt.where(PaperTradeModel.is_live == True)  # noqa: E712
+    elif is_live is False:
+        stmt = stmt.where(PaperTradeModel.is_live == False)  # noqa: E712
     stmt = stmt.order_by(PaperTradeModel.created_at.desc()).limit(limit)
     return list(session.scalars(stmt).all())
 

@@ -207,6 +207,11 @@ class PaperTradeModel(Base):
     exit_reason: Mapped[str] = mapped_column(String(50), nullable=False)
     pnl: Mapped[float] = mapped_column(Float, nullable=False)
     bars_in_trade: Mapped[int] = mapped_column(Integer, default=0)
+    # True for trades generated during live forward monitoring (entry_time >= bot.created_at).
+    # False for trades replayed from historical data before the bot was deployed.
+    # Nullable for backward compat — existing rows are NULL and treated as live by default
+    # unless filtered explicitly.
+    is_live: Mapped[bool | None] = mapped_column(Boolean, nullable=True, index=True)
     # Phase tracking — nullable for backward compat
     phase_id: Mapped[int | None] = mapped_column(
         Integer, ForeignKey("evaluation_phases.id"), nullable=True, index=True

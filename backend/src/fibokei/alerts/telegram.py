@@ -97,6 +97,48 @@ class TelegramNotifier:
         )
         return self.send_message(text)
 
+    def send_trade_opened(
+        self,
+        signal: Signal,
+        bot_id: str = "",
+        deal_id: str = "",
+        db: Session | None = None,
+    ) -> bool:
+        """Send trade opened notification with entry, SL, and TP details."""
+        arrow = "↑" if signal.direction.value == "LONG" else "↓"
+        mode_tag = f" [IG #{deal_id}]" if deal_id else " [Paper]"
+        sl_text = f"{signal.stop_loss:.5f}" if signal.stop_loss else "—"
+        tp_text = f"{signal.take_profit_primary:.5f}" if signal.take_profit_primary else "—"
+        text = (
+            f"<b>{arrow} Trade Opened: {signal.strategy_id}</b>{mode_tag}\n"
+            f"Instrument: {signal.instrument} {signal.timeframe.value}\n"
+            f"Direction: {signal.direction.value}\n"
+            f"Entry: {signal.proposed_entry:.5f}\n"
+            f"Stop Loss: {sl_text}\n"
+            f"Take Profit: {tp_text}\n"
+            f"Confidence: {signal.confidence_score:.0%}"
+            + (f"\nBot: {bot_id}" if bot_id else "")
+        )
+        _save_alert_to_db(
+            alert_type="trade",
+            severity="info",
+            title=f"Trade Opened: {signal.strategy_id} {signal.instrument}",
+            message=f"{signal.direction.value} — Entry {signal.proposed_entry:.5f}, SL {sl_text}, TP {tp_text}",
+            metadata_json={
+                "strategy_id": signal.strategy_id,
+                "instrument": signal.instrument,
+                "timeframe": signal.timeframe.value,
+                "direction": signal.direction.value,
+                "entry": signal.proposed_entry,
+                "stop_loss": signal.stop_loss,
+                "take_profit": signal.take_profit_primary,
+                "bot_id": bot_id,
+                "deal_id": deal_id,
+            },
+            db=db,
+        )
+        return self.send_message(text)
+
     def send_trade_closed(self, trade: TradeResult, db: Session | None = None) -> bool:
         """Send trade closed notification."""
         emoji = "\u2705" if trade.pnl > 0 else "\u274c"

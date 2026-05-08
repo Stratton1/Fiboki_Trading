@@ -37,11 +37,12 @@ export default function BotDetailPage({ params }: { params: Promise<{ id: string
   );
 
   const { data: tradeData, isLoading: tradesLoading } = useSWR(
-    id ? `/paper/bots/${id}/trades` : null,
-    () => api.botTrades(id),
+    id ? `/paper/bots/${id}/trades?live_only=${liveOnly}` : null,
+    () => api.botTrades(id, liveOnly),
     { refreshInterval: 10000 }
   );
 
+  const [liveOnly, setLiveOnly] = useState(true);
   const [actingBotId, setActingBotId] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
 
@@ -218,12 +219,32 @@ export default function BotDetailPage({ params }: { params: Promise<{ id: string
 
       {/* Recent trades */}
       <div className="card">
-        <p className="section-label mb-3">
-          Trade History
-          {tradesLoading && <Loader2 size={12} className="animate-spin inline ml-2" />}
-        </p>
+        <div className="flex items-center justify-between mb-3">
+          <p className="section-label">
+            Trade History
+            {tradesLoading && <Loader2 size={12} className="animate-spin inline ml-2" />}
+          </p>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setLiveOnly(!liveOnly)}
+              className={`text-xs px-3 py-1 rounded border transition-colors ${
+                liveOnly
+                  ? "bg-primary/10 border-primary text-primary"
+                  : "border-gray-200 text-foreground-muted"
+              }`}
+              title={liveOnly ? "Showing live trades only (since bot was created). Click to show all trades including historical replay." : "Showing all trades including historical replay. Click to show only live trades."}
+            >
+              {liveOnly ? "Live Only" : "All Trades"}
+            </button>
+            <span className="text-xs text-foreground-muted">
+              {tradeData?.total ?? 0} trades
+            </span>
+          </div>
+        </div>
         {trades.length === 0 ? (
-          <p className="text-sm text-foreground-muted">No trades yet.</p>
+          <p className="text-sm text-foreground-muted">
+            {liveOnly ? "No live trades yet (trades generated after bot creation). Toggle to 'All Trades' to see historical replay trades." : "No trades yet."}
+          </p>
         ) : (
           <div className="table-container">
             <table>

@@ -278,6 +278,7 @@ export const api = {
   stopBot: (id: string) => apiFetch(`/paper/bots/${id}/stop`, { method: "POST" }),
   pauseBot: (id: string) => apiFetch(`/paper/bots/${id}/pause`, { method: "POST" }),
   resumeBot: (id: string) => apiFetch(`/paper/bots/${id}/resume`, { method: "POST" }),
+  restartBot: (id: string) => apiFetch<{ bot_id: string; state: string }>(`/paper/bots/${id}/restart`, { method: "POST" }),
   restartAllBots: () => apiFetch<{ restarted: string[]; count: number }>(`/paper/bots/restart-all`, { method: "POST" }),
   deleteBot: (id: string) => apiFetch<{ deleted: string }>(`/paper/bots/${id}`, { method: "DELETE" }),
   deleteAllBots: () => apiFetch<{ deleted_count: number }>(`/paper/bots`, { method: "DELETE" }),
@@ -319,12 +320,13 @@ export const api = {
     }>;
     strategy_groups: Record<string, { count: number; running: number; pnl: number; trades: number }>;
   }>("/paper/fleet"),
-  botTrades: (botId: string) => apiFetch<{
+  botTrades: (botId: string, liveOnly?: boolean) => apiFetch<{
     bot_id: string;
     total: number;
+    live_only: boolean;
     trades: Array<Record<string, unknown>>;
     equity_curve: number[];
-  }>(`/paper/bots/${botId}/trades`),
+  }>(`/paper/bots/${botId}/trades${liveOnly ? "?live_only=true" : ""}`),
   exposure: () => apiFetch<{
     instrument_exposure: Record<string, { long: number; short: number; net: number; bot_count: number }>;
     asset_class_exposure: Record<string, { long: number; short: number; instruments: number }>;

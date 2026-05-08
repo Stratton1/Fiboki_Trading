@@ -295,6 +295,17 @@ class PaperWorker:
             bot_model = get_paper_bot(session, bot.bot_id)
             if not bot_model:
                 return
+            # A trade is "live" if its entry occurred on or after the bot's creation
+            # date — i.e., it was generated during forward monitoring, not historical
+            # replay that pre-dates when the bot was deployed.
+            bot_created = bot_model.created_at
+            entry_time = trade.entry_time
+            # Normalise both to UTC-aware for safe comparison
+            if hasattr(bot_created, "tzinfo") and bot_created.tzinfo is None:
+                bot_created = bot_created.replace(tzinfo=timezone.utc)
+            if hasattr(entry_time, "tzinfo") and entry_time.tzinfo is None:
+                entry_time = entry_time.replace(tzinfo=timezone.utc)
+            is_live = entry_time >= bot_created
             save_paper_trade(session, {
                 "paper_bot_id": bot_model.id,
                 "bot_id": bot.bot_id,
@@ -308,6 +319,7 @@ class PaperWorker:
                 "exit_reason": trade.exit_reason.value,
                 "pnl": trade.pnl,
                 "bars_in_trade": trade.bars_in_trade,
+                "is_live": is_live,
             })
 
     def _persist_account(self) -> None:
@@ -503,8 +515,19 @@ class PaperWorker:
 
                 # Send Telegram alerts for trade events
                 for event in result["events"]:
-                    if event.get("event") == "trade_closed" and self.notifier.is_configured:
+                    ev_type = event.get("event")
+                    if not self.notifier.is_configured:
+                        continue
+                    if ev_type == "trade_closed":
                         self.notifier.send_trade_closed(event["trade"])
+                    elif ev_type == "trade_opened":
+                        signal = event.get("signal")
+                        if signal is not None:
+                            self.notifier.send_trade_opened(
+                                signal=signal,
+                                bot_id=event.get("bot_id", ""),
+                                deal_id=event.get("deal_id", "") or "",
+                            )
 
                 if result["bars_fed"] > 0:
                     logger.info(

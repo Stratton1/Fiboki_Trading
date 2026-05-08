@@ -15,17 +15,21 @@ class RiskEngine:
         self,
         max_risk_per_trade_pct: float = 1.0,
         max_portfolio_risk_pct: float = 5.0,
-        max_open_trades: int = 8,
-        max_per_instrument: int = 2,
+        # max_open_trades is intentionally not the primary gate.
+        # Portfolio-level drawdown monitoring is the primary control.
+        # This hard cap is set very high and only acts as an emergency backstop.
+        # Set FIBOKEI_RISK_MAX_OPEN_TRADES env var to override.
+        max_open_trades: int = 100,
+        max_per_instrument: int = 5,
         max_correlated_group_pct: float = 2.5,
         daily_soft_stop_pct: float = 3.0,
         daily_hard_stop_pct: float = 4.0,
         weekly_soft_stop_pct: float = 6.0,
         weekly_hard_stop_pct: float = 8.0,
-        # Fleet-level limits
-        fleet_max_bots_per_instrument: int = 5,
-        fleet_max_total_positions: int = 20,
-        fleet_max_exposure_per_instrument: int = 6,
+        # Fleet-level limits — permissive defaults; drawdown is the primary control
+        fleet_max_bots_per_instrument: int = 10,
+        fleet_max_total_positions: int = 100,
+        fleet_max_exposure_per_instrument: int = 10,
         fleet_correlation_threshold: float = 0.85,
         fleet_cull_sigma: float = 2.0,
         fleet_cull_min_trades: int = 50,
@@ -59,11 +63,12 @@ class RiskEngine:
         """
         portfolio_state = portfolio_state or {}
 
-        # Max open trades
-        if len(account.open_positions) >= self.max_open_trades:
-            return False, f"Max open trades reached ({self.max_open_trades})"
+        # PRIMARY control: drawdown limits — checked before position count
+        safe, alert = self.check_drawdown_limits(account)
+        if not safe:
+            return False, f"Drawdown limit breached: {alert}"
 
-        # Per-instrument limit
+        # Per-instrument limit (concentration control, not a hard fleet cap)
         inst_count = sum(
             1 for p in account.open_positions
             if p.get("instrument") == signal.instrument
@@ -79,10 +84,9 @@ class RiskEngine:
                 if risk_pct > self.max_risk_per_trade_pct * 5:
                     return False, f"Trade risk too high ({risk_pct:.1f}%)"
 
-        # Drawdown limits
-        safe, alert = self.check_drawdown_limits(account)
-        if not safe:
-            return False, f"Drawdown limit breached: {alert}"
+        # BACKSTOP: absolute position count limit (set very high — not the primary gate)
+        if len(account.open_positions) >= self.max_open_trades:
+            return False, f"Emergency position cap reached ({self.max_open_trades})"
 
         return True, ""
 

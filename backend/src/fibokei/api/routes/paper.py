@@ -238,6 +238,22 @@ def restart_all_stopped_bots(
     return {"restarted": restarted, "count": len(restarted)}
 
 
+@router.post("/paper/bots/{bot_id}/restart")
+def restart_bot(
+    bot_id: str,
+    user: TokenData = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Restart a stopped bot — continues from where it left off (same phase, cumulative PnL)."""
+    bot = get_paper_bot(db, bot_id)
+    if not bot:
+        raise HTTPException(status_code=404, detail="Bot not found")
+    if bot.state != "stopped":
+        raise HTTPException(status_code=400, detail="Can only restart a stopped bot")
+    updated = update_paper_bot_state(db, bot_id, "monitoring")
+    return {"bot_id": bot_id, "state": updated.state}
+
+
 @router.delete("/paper/bots/{bot_id}")
 def delete_bot(
     bot_id: str,
@@ -504,14 +520,20 @@ def get_fleet_overview(
 def get_bot_trades(
     bot_id: str,
     limit: int = Query(100, ge=1, le=1000),
+    live_only: bool = Query(False, description="If true, return only live (forward-monitoring) trades"),
     user: TokenData = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    """Get trades for a specific bot with equity curve."""
+    """Get trades for a specific bot with equity curve.
+
+    Use live_only=true to filter to trades generated after the bot was created
+    (forward-monitoring trades only, excluding historical replay).
+    """
     bot = get_paper_bot(db, bot_id)
     if not bot:
         raise HTTPException(status_code=404, detail="Bot not found")
-    trades = get_paper_trades(db, bot_id=bot_id, limit=limit)
+    is_live_filter = True if live_only else None
+    trades = get_paper_trades(db, bot_id=bot_id, limit=limit, is_live=is_live_filter)
     # Build equity curve (chronological)
     sorted_trades = sorted(trades, key=lambda t: t.entry_time)
     cumulative = 0.0
@@ -522,6 +544,7 @@ def get_bot_trades(
     return {
         "bot_id": bot_id,
         "total": len(trades),
+        "live_only": live_only,
         "trades": [
             {
                 "id": t.id,
@@ -535,6 +558,7 @@ def get_bot_trades(
                 "exit_reason": t.exit_reason,
                 "pnl": t.pnl,
                 "bars_in_trade": t.bars_in_trade,
+                "is_live": t.is_live,
             }
             for t in trades
         ],
@@ -613,6 +637,8 @@ def get_exposure(
         "concentration_warnings": concentration_warnings,
         "risk_utilization": {
             "open_trades": active_positions,
+            # max_open_trades is an emergency backstop — not the primary gate.
+            # Primary risk control is drawdown monitoring (daily/weekly limits below).
             "max_open_trades": limits["max_open_trades"],
             "open_trades_pct": round(active_positions / limits["max_open_trades"] * 100, 1) if limits["max_open_trades"] > 0 else 0,
             "daily_dd_pct": round(daily_dd_pct, 2),
@@ -621,6 +647,8 @@ def get_exposure(
             "weekly_dd_pct": round(weekly_dd_pct, 2),
             "weekly_soft_stop_pct": limits["weekly_soft_stop_pct"],
             "weekly_hard_stop_pct": limits["weekly_hard_stop_pct"],
+            # Exposure alert: fires when daily or weekly hard stop is approached
+            "drawdown_primary_control": True,
         },
         "total_bots": len(all_bots),
         "total_trades": len(trades),

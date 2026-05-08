@@ -158,12 +158,14 @@ def _ensure_new_columns(engine) -> None:
             if "archived_at" not in pb_cols:
                 conn.execute(text("ALTER TABLE paper_bots ADD COLUMN archived_at TIMESTAMP WITH TIME ZONE"))
 
-    # Add phase_id to paper_trades (Phase B migration)
+    # Add phase_id and is_live to paper_trades
     if "paper_trades" in table_names:
         pt_cols = {col["name"] for col in inspector.get_columns("paper_trades")}
         with engine.begin() as conn:
             if "phase_id" not in pt_cols:
                 conn.execute(text("ALTER TABLE paper_trades ADD COLUMN phase_id INTEGER"))
+            if "is_live" not in pt_cols:
+                conn.execute(text("ALTER TABLE paper_trades ADD COLUMN is_live BOOLEAN"))
 
 
 def _init_sentry() -> None:

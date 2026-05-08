@@ -140,6 +140,20 @@ export default function BotsPage() {
     }
   }
 
+  async function handleRestart(id: string) {
+    if (actingBotId) return;
+    setActingBotId(id);
+    setActionError(null);
+    try {
+      await api.restartBot(id);
+      await mutateBots();
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : "Failed to restart bot");
+    } finally {
+      setActingBotId(null);
+    }
+  }
+
   async function handleDelete(id: string) {
     if (actingBotId) return;
     setActingBotId(id);
@@ -747,13 +761,23 @@ export default function BotsPage() {
                         <Link href={`/bots/${bot.bot_id}`} className="btn-ghost text-xs px-2 py-1 rounded" title="View bot detail">
                           <ExternalLink size={11} />
                         </Link>
-                        {(bot.state === "paused" || bot.state === "stopped") && (
+                        {bot.state === "stopped" && (
+                          <button
+                            onClick={() => handleRestart(bot.bot_id)}
+                            disabled={!!actingBotId}
+                            className="btn-ghost text-xs px-2 py-1 rounded text-primary disabled:opacity-40"
+                            title="Continue from where this bot left off"
+                          >
+                            {actingBotId === bot.bot_id ? <Loader2 size={12} className="animate-spin inline" /> : "Restart"}
+                          </button>
+                        )}
+                        {bot.state === "paused" && (
                           <button
                             onClick={() => handleResume(bot.bot_id)}
                             disabled={!!actingBotId}
                             className="btn-ghost text-xs px-2 py-1 rounded text-primary disabled:opacity-40"
                           >
-                            {actingBotId === bot.bot_id ? <Loader2 size={12} className="animate-spin inline" /> : bot.state === "stopped" ? "Restart" : "Resume"}
+                            {actingBotId === bot.bot_id ? <Loader2 size={12} className="animate-spin inline" /> : "Resume"}
                           </button>
                         )}
                         {bot.state === "monitoring" && (
