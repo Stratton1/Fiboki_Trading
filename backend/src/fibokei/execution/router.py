@@ -283,6 +283,9 @@ class ExecutionRouter:
                 else None
             ),
             "bot_id": plan.bot_id,
+            # Pass risk_pct so adapters that recalculate sizing (e.g. IG) use
+            # the correct per-target risk percentage rather than defaulting.
+            "risk_pct": target.risk_per_trade_pct,
         }
         try:
             result = target.adapter.place_order(order)

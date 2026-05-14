@@ -41,9 +41,16 @@ class IGExecutionAdapter(ExecutionAdapter):
         self._balance_cache_at: float = 0.0
 
     def _ensure_auth(self) -> None:
-        if not self._authenticated:
-            self._client.authenticate()
-            self._authenticated = True
+        """Ensure a valid IG session exists.
+
+        Delegates to IGClient.ensure_session() which handles TTL-based
+        re-authentication with a threading lock.  The local _authenticated
+        flag is kept for backwards compatibility with callers that check it
+        but has no real effect — session validity is managed entirely by
+        the client.
+        """
+        self._client.ensure_session()
+        self._authenticated = True
 
     def _get_market_details(self, epic: str) -> dict:
         """Return cached market details for an epic.
@@ -219,6 +226,18 @@ class IGExecutionAdapter(ExecutionAdapter):
             params["limitDistance"] = round(limit_in_pips, 1)
 
         requested_price = order.get("requested_price")
+
+        # Diagnostic log — shows every IG order attempt with all key parameters
+        # so failures are immediately diagnosable from Railway logs.
+        logger.info(
+            "IG place_order: epic=%s dir=%s size=%.2f expiry=%s stop=%.1f limit=%.1f "
+            "currency=%s entry=%.5f bot=%s",
+            epic, direction, size, params["expiry"],
+            params.get("stopDistance", 0.0), params.get("limitDistance", 0.0),
+            params["currencyCode"], requested_price or 0.0,
+            order.get("bot_id", ""),
+        )
+
         t_start = time.monotonic()
 
         try:
