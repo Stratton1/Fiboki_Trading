@@ -82,7 +82,17 @@ def _fetch_candles_for_monitoring(instrument: str, tf: str) -> "pd.DataFrame | N
     """
     import pandas as pd
 
-    if is_live_available():
+    # Quota economics: IG's historical-price allowance is ~10,000 points per
+    # WEEK. Polling ~18 instrument/TF combos at 200 candles per fetch burns
+    # the entire allowance in minutes (observed: every /prices request → 403
+    # exceeded-allowance within an hour of deploy). Until the Lightstreamer
+    # streaming supervisor exists (which does not consume the allowance),
+    # yfinance is the routine monitoring feed and IG prices are reserved for
+    # charts/diagnostics. Set FIBOKEI_MONITOR_FEED=ig to deliberately opt
+    # the worker back into IG REST polling.
+    monitor_feed = os.environ.get("FIBOKEI_MONITOR_FEED", "yfinance").strip().lower()
+
+    if monitor_feed == "ig" and is_live_available():
         try:
             df, source = load_live(instrument, tf)
             # load_live returns a DatetimeIndex; reset to flat timestamp column
