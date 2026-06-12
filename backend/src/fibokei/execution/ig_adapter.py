@@ -134,6 +134,12 @@ class IGExecutionAdapter(ExecutionAdapter):
                 "min_stop_distance": float(
                     (rules.get("minNormalStopOrLimitDistance") or {}).get("value") or 0.0
                 ),
+                # IG quote scale reference: FX CFDs quote in points (EURUSD
+                # ≈ 13050.9) while strategy feeds quote classic (≈ 1.3051).
+                # Used to detect and normalise the price-scale mismatch.
+                "snapshot_bid": float(
+                    (data.get("snapshot", {}) or {}).get("bid") or 0.0
+                ),
                 "is_default": False,
                 "_at": time.time(),
             }
@@ -277,6 +283,38 @@ class IGExecutionAdapter(ExecutionAdapter):
                 "error_code": "MARKET_DETAILS_UNAVAILABLE",
             }
 
+        # ── Price-scale normalisation ────────────────────────────────
+        # Strategies compute prices/distances on the classic feed scale
+        # (EURUSD ≈ 1.3051) but IG CFD epics may quote in points
+        # (EURUSD ≈ 13050.9, a clean power-of-10 multiple). Detect the
+        # scale from the live IG snapshot vs the strategy's requested
+        # price and normalise distances + requested price accordingly.
+        # Verified on real IG demo 2026-06-12: without this, a valid
+        # 45-pip stop converts to 0.0045 IG points (STOP_TOO_TIGHT).
+        requested_price = order.get("requested_price")
+        snapshot_bid = float(market_spec.get("snapshot_bid") or 0.0)
+        if requested_price and requested_price > 0 and snapshot_bid > 0:
+            import math
+            ratio = snapshot_bid / requested_price
+            if ratio > 3.0 or ratio < 1 / 3.0:
+                power = round(math.log10(ratio))
+                scale = 10.0 ** power
+                # Only trust clean power-of-10 scale mismatches (±25%);
+                # anything else means prices disagree for another reason
+                # (stale feed, wrong instrument) — leave untouched and let
+                # the stop gates reject if conversion is wrong.
+                if 0.75 <= (ratio / scale) <= 1.25:
+                    if stop_price_dist:
+                        stop_price_dist = stop_price_dist * scale
+                    if limit_price_dist:
+                        limit_price_dist = limit_price_dist * scale
+                    requested_price = requested_price * scale
+                    logger.info(
+                        "IG price-scale normalised for %s: feed→IG ×%g "
+                        "(snapshot=%.2f, requested=%.5f)",
+                        symbol, scale, snapshot_bid, order.get("requested_price"),
+                    )
+
         size, stop_in_pips = self._calculate_size(epic, stop_price_dist, risk_pct)
 
         # Convert limit distance to IG-native pips the same way
@@ -345,7 +383,8 @@ class IGExecutionAdapter(ExecutionAdapter):
                 "error_code": "MISSING_STOP",
             }
 
-        requested_price = order.get("requested_price")
+        # NOTE: requested_price was resolved (and possibly scale-normalised)
+        # above — do not re-read it from the order here.
 
         # Diagnostic log — shows every IG order attempt with all key parameters
         # so failures are immediately diagnosable from Railway logs.
@@ -369,7 +408,10 @@ class IGExecutionAdapter(ExecutionAdapter):
                 filled_price = confirmation.get("level")
                 slippage_pips = None
                 if filled_price is not None and requested_price is not None:
-                    slippage_pips = round(abs(filled_price - requested_price) * 10000, 2)
+                    # Both prices are on IG's quote scale here; convert the
+                    # difference to IG pips/points via onePipMeans.
+                    opm_s = float(market_spec.get("one_pip_means") or 1.0) or 1.0
+                    slippage_pips = round(abs(filled_price - requested_price) / opm_s, 2)
                 return {
                     "status": confirmation.get("dealStatus", "UNKNOWN"),
                     "deal_id": confirmation.get("dealId", ""),

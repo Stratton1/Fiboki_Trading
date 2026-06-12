@@ -233,6 +233,72 @@ class TestMarketSpecSafety:
         assert client.open_position.call_args[0][0]["stopDistance"] == 45.0
 
 
+class TestPriceScaleNormalisation:
+    """IG FX CFDs quote in points (EURUSD ≈ 13050.9) while strategies use
+    classic scale (≈ 1.3051). Verified on real IG demo 2026-06-12."""
+
+    def _ig_points_market(self, client, bid=13050.9):
+        client.get_market.return_value = {
+            "instrument": {"valueOfOnePip": "1", "onePipMeans": "1"},
+            "dealingRules": {
+                "minDealSize": {"value": 1.0},
+                "minNormalStopOrLimitDistance": {"value": 2},
+            },
+            "snapshot": {"bid": bid},
+        }
+
+    def test_classic_stop_scaled_to_ig_points(self):
+        adapter, client = _make_adapter()
+        self._ig_points_market(client)
+        client.open_position.return_value = {"dealReference": "REFS"}
+        client.get_deal_confirmation.return_value = {
+            "dealStatus": "ACCEPTED", "dealId": "DS", "level": 13051.2, "reason": "",
+        }
+        result = adapter.place_order(_base_order(
+            requested_price=1.30509, stop_distance=0.0045, limit_distance=0.0090,
+        ))
+        assert result["status"] == "ACCEPTED"
+        params = client.open_position.call_args[0][0]
+        # 0.0045 classic × 10^4 = 45 IG points
+        assert params["stopDistance"] == 45.0
+        assert params["limitDistance"] == 90.0
+        # Slippage computed on IG scale: |13051.2 - 13050.9| / opm(1) = 0.3
+        assert result["slippage_pips"] == 0.3
+
+    def test_matching_scale_untouched(self):
+        adapter, client = _make_adapter()
+        # Index-style: feed and IG agree (DAX ≈ 24600 both sides)
+        client.get_market.return_value = {
+            "instrument": {"valueOfOnePip": "1", "onePipMeans": "1"},
+            "dealingRules": {"minDealSize": {"value": 1.0}},
+            "snapshot": {"bid": 24611.2},
+        }
+        client.open_position.return_value = {"dealReference": "REFD"}
+        client.get_deal_confirmation.return_value = {
+            "dealStatus": "ACCEPTED", "dealId": "DD", "level": 24611.5, "reason": "",
+        }
+        result = adapter.place_order(_base_order(
+            instrument="DE40", requested_price=24611.0,
+            stop_distance=60.0, limit_distance=120.0,
+        ))
+        assert result["status"] == "ACCEPTED"
+        params = client.open_position.call_args[0][0]
+        assert params["stopDistance"] == 60.0
+        assert params["limitDistance"] == 120.0
+
+    def test_non_power_of_ten_ratio_not_scaled(self):
+        adapter, client = _make_adapter()
+        # Ratio ~4.2: disagreement, but not a clean scale — leave distances
+        # alone; the STOP_TOO_TIGHT gate then rejects rather than guessing.
+        self._ig_points_market(client, bid=4.2)
+        result = adapter.place_order(_base_order(
+            requested_price=1.0, stop_distance=0.0045,
+        ))
+        assert result["status"] == "rejected"
+        assert result["error_code"] == "STOP_TOO_TIGHT"
+        client.open_position.assert_not_called()
+
+
 class TestAuth401Retry:
     def test_401_triggers_single_reauth_retry(self):
         client = IGClient()
