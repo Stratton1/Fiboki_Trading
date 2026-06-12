@@ -40,3 +40,14 @@ open → confirm → reconcile → **amend** → **close** → reconcile-after-r
 6. Lifecycle attempt 3 (clean session, valid order, stop 26.1 pts): IG 403 `unauthorised access, apiUser has no access to the relevant exchange. Epic=CS.D.EURUSD.CFD.IP exchangeId=FX_EURUSD_ST`.
 
 **Conclusion:** default account Z5ZAW has data access but NO dealing rights; dealing account is Z5ZAV but the account-switch endpoint rejects with token-invalid. Gate 2 is blocked on IG account entitlements — an operator action in IG's dashboard (verify Z5ZAV is active and the API key is attached to it), or an account-switch repair (capture-and-replace token semantics) once entitlements are confirmed. All failure modes ended in safe rejection; zero naked or duplicate orders.
+
+## 2026-06-12 late — Gate 2 chain fully unblocked (technical)
+
+7. Account enumeration (read-only): **Z5ZAV = Demo-CFD (ENABLED)**, **Z5ZAW = Demo-Spread bet (preferred)**. The original FIBOKEI_IG_ACCOUNT_ID=Z5ZAV was correct; reverted.
+8. Raw console experiment: PUT /session switch to Z5ZAV → **200, dealingEnabled=true** when sent without the shared client's cookie jar; identical request through the client 401s. Root cause: IG login cookies in the shared httpx.Client conflict with header tokens on switch. Fixed (one-shot request + cookie-jar clear, commit 528a224).
+9. Post-fix lifecycle: clean session on Z5ZAV, no 401s, no switch failure. New defect caught safely: CFD-account onePipMeans='0.0001 USD/EUR' (unit suffix) broke float() → MARKET_DETAILS_UNAVAILABLE abort. Parser fixed (commit ebf8d9c).
+10. Final run: full chain healthy — auth ✓ switch ✓ spec parsed ✓ — **aborted on marketStatus=EDITS_ONLY** (Friday pre-weekend dealing restriction). Market-status gate verified on real IG.
+
+**Status: Gate 2 is technically unblocked. The remaining step is a market-hours window** (FX reopens Sunday ~22:05 BST). One command completes the proof from the worker console:
+
+    python -m fibokei.diag lifecycle --confirm-demo-order
