@@ -157,16 +157,27 @@ class IGClient:
             **self._session.headers,
             "VERSION": "1",
         }
-        resp = self._http.put(
+        # Use a one-shot request WITHOUT the shared client: the shared
+        # httpx.Client accumulates IG session cookies at login, and sending
+        # those cookies alongside the header tokens makes the switch PUT
+        # fail with 401 error.security.account-token-invalid. Verified on
+        # real IG demo 2026-06-12: identical request succeeds (200,
+        # dealingEnabled=true) without the cookie jar.
+        resp = httpx.put(
             f"{self._base_url}/session",
             headers=headers,
             json={"accountId": account_id},
+            timeout=30.0,
         )
         if resp.status_code != 200:
             raise IGClientError(
                 f"Account switch failed: {resp.status_code} {resp.text}",
                 status_code=resp.status_code,
             )
+        # The old cookie jar is now stale for the new account context —
+        # clear it so subsequent shared-client requests rely on the fresh
+        # header tokens captured below.
+        self._http.cookies.clear()
         # Capture the refreshed tokens that IG issues on account switch
         new_token = resp.headers.get("X-SECURITY-TOKEN", "")
         new_cst = resp.headers.get("CST", "")
