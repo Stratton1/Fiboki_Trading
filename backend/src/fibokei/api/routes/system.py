@@ -33,6 +33,9 @@ class SystemStatusResponse(BaseModel):
     # ``router_mode`` + ``execution_targets``.
     router_mode: str = "legacy_single"
     execution_targets: list[dict] = []
+    # Dedicated-worker heartbeats (worker_heartbeats table). ``paper_engine``
+    # is derived from these when no in-process thread exists.
+    worker_heartbeats: list[dict] = []
 
 
 class RiskConfigResponse(BaseModel):
@@ -78,6 +81,37 @@ def system_status(
         (t for t in threading.enumerate() if t.name == "paper-worker"), None
     )
     paper_status = "running" if worker_thread and worker_thread.is_alive() else "stopped"
+
+    # Dedicated-worker heartbeats: when FIBOKEI_WORKER_EXTERNAL=true the
+    # in-process thread is intentionally absent, so liveness comes from the
+    # worker_heartbeats table. Fresh = beat within 3 poll intervals.
+    heartbeats: list[dict] = []
+    try:
+        from datetime import datetime, timezone
+
+        from fibokei.db.repository import get_worker_heartbeats
+
+        now = datetime.now(timezone.utc)
+        for hb in get_worker_heartbeats(db):
+            beat_at = hb.last_beat_at
+            if beat_at.tzinfo is None:
+                beat_at = beat_at.replace(tzinfo=timezone.utc)
+            age_s = (now - beat_at).total_seconds()
+            fresh = age_s < max(hb.poll_interval_s, 60) * 3
+            heartbeats.append({
+                "worker_id": hb.worker_id,
+                "hostname": hb.hostname,
+                "last_beat_age_s": round(age_s, 1),
+                "fresh": fresh,
+                "bots_active": hb.bots_active,
+                "loops_completed": hb.loops_completed,
+                "poll_interval_s": hb.poll_interval_s,
+                "last_error": hb.last_error,
+            })
+        if paper_status == "stopped" and any(h["fresh"] for h in heartbeats):
+            paper_status = "running"
+    except Exception:
+        pass  # table may not exist yet on first deploy
 
     # Count monitoring/position_open bots from DB (not hardcoded)
     try:
@@ -133,6 +167,7 @@ def system_status(
         data_source=data_source,
         router_mode=router_mode,
         execution_targets=execution_targets,
+        worker_heartbeats=heartbeats,
     )
 
 

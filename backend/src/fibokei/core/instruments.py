@@ -71,8 +71,12 @@ INSTRUMENTS: list[Instrument] = [
     Instrument(symbol="EURHUF", name="Euro / Hungarian Forint", asset_class=_EM, ig_epic="CS.D.EURHUF.CFD.IP"),
     Instrument(symbol="EURDKK", name="Euro / Danish Krone", asset_class=_EM, ig_epic="CS.D.EURDKK.CFD.IP"),
     # ── Commodity Metal (2) ──────────────────────────────────────────────
-    Instrument(symbol="XAUUSD", name="Gold / US Dollar", asset_class=_MTL, ig_epic="CS.D.USCGC.TODAY.IP"),
-    Instrument(symbol="XAGUSD", name="Silver / US Dollar", asset_class=_MTL, ig_epic="CS.D.USCSI.TODAY.IP"),
+    # CFD-account epics, discovered via /markets search on the deployed
+    # demo CFD account (Z5ZAV) 2026-06-12. The previous .TODAY.IP epics are
+    # spread-bet instruments and returned 403 'no access to the relevant
+    # exchange' (exchangeId=FX_BET_ALL) on every order for weeks.
+    Instrument(symbol="XAUUSD", name="Gold / US Dollar", asset_class=_MTL, ig_epic="CS.D.CFPGOLD.CFP.IP"),
+    Instrument(symbol="XAGUSD", name="Silver / US Dollar", asset_class=_MTL, ig_epic="CS.D.CFDSILVER.CFM.IP"),
     # ── Commodity Energy (2 HistData + 1 alternate) ──────────────────────
     Instrument(symbol="BCOUSD", name="Brent Crude Oil", asset_class=_NRG, ig_epic="EN.D.LCO.Month2.IP"),
     Instrument(symbol="WTIUSD", name="WTI Crude Oil", asset_class=_NRG, ig_epic="EN.D.CL.Month1.IP"),

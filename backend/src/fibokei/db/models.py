@@ -640,3 +640,29 @@ class AlertModel(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime, default=lambda: datetime.now(timezone.utc), index=True
     )
+
+
+class WorkerHeartbeatModel(Base):
+    """Liveness record for trading workers (one row per worker identity).
+
+    The dedicated Railway worker upserts its row every poll loop; the API
+    surfaces it via /system/status so operators can see worker health
+    without reading Railway logs. A stale ``last_beat_at`` (> ~3 poll
+    intervals) means the worker is down or wedged.
+    """
+
+    __tablename__ = "worker_heartbeats"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    worker_id: Mapped[str] = mapped_column(String(100), nullable=False, unique=True, index=True)
+    hostname: Mapped[str] = mapped_column(String(200), nullable=False, default="")
+    started_at: Mapped[datetime] = mapped_column(
+        DateTime, default=lambda: datetime.now(timezone.utc)
+    )
+    last_beat_at: Mapped[datetime] = mapped_column(
+        DateTime, default=lambda: datetime.now(timezone.utc), index=True
+    )
+    poll_interval_s: Mapped[int] = mapped_column(Integer, default=60)
+    bots_active: Mapped[int] = mapped_column(Integer, default=0)
+    loops_completed: Mapped[int] = mapped_column(Integer, default=0)
+    last_error: Mapped[str | None] = mapped_column(Text)

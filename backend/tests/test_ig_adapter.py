@@ -28,7 +28,9 @@ class TestEpicMapping:
         assert get_ig_epic("EURUSD") == "CS.D.EURUSD.CFD.IP"
 
     def test_get_ig_epic_commodity(self):
-        assert get_ig_epic("XAUUSD") == "CS.D.USCGC.TODAY.IP"
+        # CFD-account epic (discovered on real IG demo 2026-06-12); the old
+        # CS.D.USCGC.TODAY.IP was a spread-bet epic this key cannot deal.
+        assert get_ig_epic("XAUUSD") == "CS.D.CFPGOLD.CFP.IP"
 
     def test_get_ig_epic_index(self):
         assert get_ig_epic("US500") == "IX.D.SPTRD.IFD.IP"

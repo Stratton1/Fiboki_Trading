@@ -1716,3 +1716,46 @@ def transition_to_new_phase(
         description=new_description,
     )
     return archived, new_phase
+
+
+def beat_worker_heartbeat(
+    session: Session,
+    worker_id: str,
+    hostname: str = "",
+    poll_interval_s: int = 60,
+    bots_active: int = 0,
+    loops_completed: int = 0,
+    last_error: str | None = None,
+) -> None:
+    """Upsert the heartbeat row for ``worker_id`` (called every poll loop)."""
+    from datetime import datetime, timezone
+
+    from fibokei.db.models import WorkerHeartbeatModel
+
+    row = session.scalars(
+        select(WorkerHeartbeatModel).where(WorkerHeartbeatModel.worker_id == worker_id)
+    ).first()
+    now = datetime.now(timezone.utc)
+    if row is None:
+        row = WorkerHeartbeatModel(
+            worker_id=worker_id, hostname=hostname, started_at=now,
+            poll_interval_s=poll_interval_s,
+        )
+        session.add(row)
+    row.last_beat_at = now
+    row.poll_interval_s = poll_interval_s
+    row.bots_active = bots_active
+    row.loops_completed = loops_completed
+    row.last_error = last_error
+    session.commit()
+
+
+def get_worker_heartbeats(session: Session) -> list:
+    """All worker heartbeat rows, freshest first."""
+    from fibokei.db.models import WorkerHeartbeatModel
+
+    return list(
+        session.scalars(
+            select(WorkerHeartbeatModel).order_by(WorkerHeartbeatModel.last_beat_at.desc())
+        )
+    )

@@ -818,7 +818,14 @@ class PaperWorker:
         cycles_since_sync = 0
         SYNC_EVERY = 5  # Re-sync bots from DB every N cycles
 
+        # Heartbeat identity: stable per service, distinct per process kind.
+        import socket
+        worker_id = os.environ.get("FIBOKEI_WORKER_ID", "railway-worker")
+        hostname = socket.gethostname()
+        loops_completed = 0
+
         while self._running:
+            loop_error: str | None = None
             try:
                 # Periodically pick up new/changed bots from DB
                 cycles_since_sync += 1
@@ -859,8 +866,26 @@ class PaperWorker:
                     )
 
                 self._maybe_send_daily_summary()
-            except Exception:
+            except Exception as exc:
+                loop_error = str(exc)[:500]
                 logger.exception("Error in worker cycle")
+
+            # Heartbeat: visible via /system/status without Railway access.
+            loops_completed += 1
+            try:
+                from fibokei.db.repository import beat_worker_heartbeat
+                with self.session_factory() as hb_session:
+                    beat_worker_heartbeat(
+                        hb_session,
+                        worker_id=worker_id,
+                        hostname=hostname,
+                        poll_interval_s=poll_interval,
+                        bots_active=len(self.bots),
+                        loops_completed=loops_completed,
+                        last_error=loop_error,
+                    )
+            except Exception:
+                logger.exception("Failed to write worker heartbeat")
 
             time.sleep(poll_interval)
 
