@@ -121,13 +121,28 @@ class IGExecutionAdapter(ExecutionAdapter):
             "value_per_pip": 1.0, "one_pip_means": 1.0, "min_deal_size": 1.0,
             "min_stop_distance": 0.0, "is_default": True, "_at": time.time(),
         }
+
+        def _num(value, fallback: float) -> float:
+            """Parse IG numeric fields that may carry unit suffixes.
+
+            The CFD account returns e.g. onePipMeans='0.0001 USD/EUR' and
+            valueOfOnePip='10 USD' — take the leading numeric token.
+            (Verified on real IG demo 2026-06-12.)
+            """
+            if value is None:
+                return fallback
+            try:
+                return float(str(value).split()[0].replace(",", ""))
+            except (ValueError, IndexError):
+                return fallback
+
         try:
             data = self._client.get_market(epic)
             instr = data.get("instrument", {})
             rules = data.get("dealingRules", {})
             details = {
-                "value_per_pip": float(instr.get("valueOfOnePip") or 1.0),
-                "one_pip_means": float(instr.get("onePipMeans") or 1.0),
+                "value_per_pip": _num(instr.get("valueOfOnePip"), 1.0),
+                "one_pip_means": _num(instr.get("onePipMeans"), 1.0),
                 "min_deal_size": float(
                     (rules.get("minDealSize") or {}).get("value") or 1.0
                 ),

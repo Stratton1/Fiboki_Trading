@@ -328,3 +328,35 @@ class TestAuth401Retry:
                 raised = True
                 assert e.status_code == 401
         assert raised
+
+
+class TestUnitSuffixedMarketFields:
+    """CFD-account market fields carry unit suffixes (real IG demo 2026-06-12):
+    onePipMeans='0.0001 USD/EUR', valueOfOnePip='10 USD'."""
+
+    def test_unit_suffixed_spec_parsed(self):
+        adapter, client = _make_adapter()
+        client.get_market.return_value = {
+            "instrument": {"valueOfOnePip": "10 USD", "onePipMeans": "0.0001 USD/EUR"},
+            "dealingRules": {
+                "minDealSize": {"value": 1.0},
+                "minNormalStopOrLimitDistance": {"value": 2},
+            },
+            "snapshot": {"bid": 1.16505},
+        }
+        spec = adapter._get_market_details("CS.D.EURUSD.CFD.IP")
+        assert spec["is_default"] is False
+        assert spec["one_pip_means"] == 0.0001
+        assert spec["value_per_pip"] == 10.0
+
+    def test_garbage_field_falls_back_not_crash(self):
+        adapter, client = _make_adapter()
+        client.get_market.return_value = {
+            "instrument": {"valueOfOnePip": "n/a", "onePipMeans": None},
+            "dealingRules": {"minDealSize": {"value": 1.0}},
+            "snapshot": {"bid": 100.0},
+        }
+        spec = adapter._get_market_details("X.TEST.IP")
+        assert spec["is_default"] is False
+        assert spec["one_pip_means"] == 1.0
+        assert spec["value_per_pip"] == 1.0
