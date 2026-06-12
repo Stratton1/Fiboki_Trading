@@ -194,7 +194,7 @@ class IGClient:
 
     def _request(
         self, method: str, path: str, *, version: str = "1", json: dict | None = None,
-        delete_method_override: bool = False,
+        delete_method_override: bool = False, _is_auth_retry: bool = False,
     ) -> dict:
         """Make an authenticated API request.
 
@@ -222,6 +222,21 @@ class IGClient:
             resp = self._http.post(url, headers=headers, json=json)
         else:
             resp = self._http.request(method, url, headers=headers, json=json)
+
+        if resp.status_code == 401 and not _is_auth_retry:
+            # Session token invalidated server-side (e.g. after an account
+            # switch or broker-side expiry ahead of our TTL). Force a fresh
+            # authentication and retry the request exactly once.
+            logger.warning(
+                "IG 401 on %s %s — forcing re-authentication and retrying once",
+                method, path,
+            )
+            self._session = IGSession()
+            return self._request(
+                method, path, version=version, json=json,
+                delete_method_override=delete_method_override,
+                _is_auth_retry=True,
+            )
 
         if resp.status_code >= 400:
             body = {}

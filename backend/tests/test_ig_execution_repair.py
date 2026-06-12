@@ -159,3 +159,106 @@ class TestEpicResolutionRetry:
         result = adapter.place_order(_base_order())
         assert result["status"] == "rejected"
         client.search_markets.assert_not_called()
+
+
+class TestMarketSpecSafety:
+    """The adapter must never size or convert stops on default specs.
+
+    Deployed evidence: with fallback onePipMeans=1.0, a valid 45-pip FX stop
+    converted to 0.0045 'pips', rounded to stopDistance 0.0 and went to IG
+    as a naked order at the size cap (bots e01595a5, d62888c1, 49f9b893).
+    """
+
+    def test_market_details_failure_rejects_order(self):
+        adapter, client = _make_adapter()
+        client.get_market.side_effect = IGClientError("boom", status_code=500)
+        result = adapter.place_order(_base_order())
+        assert result["status"] == "rejected"
+        assert result["error_code"] == "MARKET_DETAILS_UNAVAILABLE"
+        client.open_position.assert_not_called()
+
+    def test_market_details_failure_not_cached(self):
+        adapter, client = _make_adapter()
+        client.get_market.side_effect = [
+            IGClientError("boom", status_code=500),
+            {
+                "instrument": {"valueOfOnePip": "1", "onePipMeans": "0.0001"},
+                "dealingRules": {"minDealSize": {"value": 0.5}},
+                "snapshot": {},
+            },
+        ]
+        first = adapter._get_market_details("CS.D.EURUSD.CFD.IP")
+        assert first["is_default"] is True
+        second = adapter._get_market_details("CS.D.EURUSD.CFD.IP")
+        assert second["is_default"] is False
+
+    def test_stop_rounding_to_zero_rejected(self):
+        """Wrong onePipMeans (1.0) must not let a stop round to 0.0."""
+        adapter, client = _make_adapter()
+        client.get_market.return_value = {
+            "instrument": {"valueOfOnePip": "1", "onePipMeans": "1"},  # bad spec
+            "dealingRules": {"minDealSize": {"value": 0.5}},
+            "snapshot": {},
+        }
+        client.fetch_account_balance = MagicMock(return_value=1000.0)
+        result = adapter.place_order(_base_order(stop_distance=0.0045))
+        assert result["status"] == "rejected"
+        assert result["error_code"] == "STOP_TOO_TIGHT"
+        client.open_position.assert_not_called()
+
+    def test_broker_min_stop_distance_enforced(self):
+        adapter, client = _make_adapter()
+        client.get_market.return_value = {
+            "instrument": {"valueOfOnePip": "1", "onePipMeans": "0.0001"},
+            "dealingRules": {
+                "minDealSize": {"value": 0.5},
+                "minNormalStopOrLimitDistance": {"value": 50},
+            },
+            "snapshot": {},
+        }
+        # 0.0045 / 0.0001 = 45 pips < broker minimum 50
+        result = adapter.place_order(_base_order(stop_distance=0.0045))
+        assert result["status"] == "rejected"
+        assert result["error_code"] == "STOP_TOO_TIGHT"
+
+    def test_valid_stop_passes_min_distance(self):
+        adapter, client = _make_adapter()
+        _wire_happy_market(client)
+        client.open_position.return_value = {"dealReference": "REF9"}
+        client.get_deal_confirmation.return_value = {
+            "dealStatus": "ACCEPTED", "dealId": "D9", "level": 1.0851, "reason": "",
+        }
+        result = adapter.place_order(_base_order())
+        assert result["status"] == "ACCEPTED"
+        assert client.open_position.call_args[0][0]["stopDistance"] == 45.0
+
+
+class TestAuth401Retry:
+    def test_401_triggers_single_reauth_retry(self):
+        client = IGClient()
+        ok = MagicMock(status_code=200, content=b"{}")
+        ok.json.return_value = {"ok": True}
+        unauth = MagicMock(status_code=401, content=b"{}")
+        unauth.json.return_value = {"errorCode": "error.security.client-token-invalid"}
+        with mock.patch.object(client, "ensure_session") as ses, \
+             mock.patch.object(client._http, "request", side_effect=[unauth, ok]) as req:
+            ses.return_value = MagicMock(headers={})
+            result = client._request("GET", "/markets/X", version="3")
+        assert result == {"ok": True}
+        assert req.call_count == 2
+        assert ses.call_count == 2  # fresh session forced before retry
+
+    def test_second_401_raises(self):
+        client = IGClient()
+        unauth = MagicMock(status_code=401, content=b"{}")
+        unauth.json.return_value = {"errorCode": "error.security.client-token-invalid"}
+        with mock.patch.object(client, "ensure_session") as ses, \
+             mock.patch.object(client._http, "request", side_effect=[unauth, unauth]):
+            ses.return_value = MagicMock(headers={})
+            try:
+                client._request("GET", "/markets/X", version="3")
+                raised = False
+            except IGClientError as e:
+                raised = True
+                assert e.status_code == 401
+        assert raised

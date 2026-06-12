@@ -117,7 +117,10 @@ class IGExecutionAdapter(ExecutionAdapter):
         if cached and (time.time() - cached["_at"]) < _MARKET_CACHE_TTL:
             return cached
 
-        defaults = {"value_per_pip": 1.0, "one_pip_means": 1.0, "min_deal_size": 1.0, "_at": time.time()}
+        defaults = {
+            "value_per_pip": 1.0, "one_pip_means": 1.0, "min_deal_size": 1.0,
+            "min_stop_distance": 0.0, "is_default": True, "_at": time.time(),
+        }
         try:
             data = self._client.get_market(epic)
             instr = data.get("instrument", {})
@@ -128,6 +131,10 @@ class IGExecutionAdapter(ExecutionAdapter):
                 "min_deal_size": float(
                     (rules.get("minDealSize") or {}).get("value") or 1.0
                 ),
+                "min_stop_distance": float(
+                    (rules.get("minNormalStopOrLimitDistance") or {}).get("value") or 0.0
+                ),
+                "is_default": False,
                 "_at": time.time(),
             }
             self._market_cache[epic] = details
@@ -137,8 +144,16 @@ class IGExecutionAdapter(ExecutionAdapter):
             )
             return details
         except Exception as exc:
-            logger.warning("Failed to fetch market details for %s: %s — using defaults", epic, exc)
-            self._market_cache[epic] = defaults
+            # DO NOT cache the defaults: dealing on default specs destroyed
+            # FX stops (onePipMeans=1.0 turned a 45-pip stop into 0.0) and
+            # exploded sizes to the hard cap. Defaults are returned for
+            # read-only callers but are flagged so place_order refuses to
+            # deal on them, and the next call retries the fetch.
+            logger.warning(
+                "Failed to fetch market details for %s: %s — returning "
+                "is_default specs (orders on this epic will be rejected)",
+                epic, exc,
+            )
             return defaults
 
     def _get_account_balance(self) -> float:
@@ -248,6 +263,20 @@ class IGExecutionAdapter(ExecutionAdapter):
         stop_price_dist = order.get("stop_distance")    # price units from strategy
         limit_price_dist = order.get("limit_distance")  # price units from strategy
 
+        # Refuse to deal on default/unfetched market specs — risk-sizing and
+        # pip conversion are meaningless without the real contract spec.
+        market_spec = self._get_market_details(epic)
+        if market_spec.get("is_default"):
+            logger.warning(
+                "IG order rejected pre-submission: market details unavailable "
+                "for %s (symbol=%s bot=%s)", epic, symbol, order.get("bot_id", ""),
+            )
+            return {
+                "status": "rejected",
+                "reason": f"Market details unavailable for {epic}; refusing to size blind",
+                "error_code": "MARKET_DETAILS_UNAVAILABLE",
+            }
+
         size, stop_in_pips = self._calculate_size(epic, stop_price_dist, risk_pct)
 
         # Convert limit distance to IG-native pips the same way
@@ -274,6 +303,28 @@ class IGExecutionAdapter(ExecutionAdapter):
             params["stopDistance"] = round(stop_in_pips, 1)
         if limit_in_pips > 0:
             params["limitDistance"] = round(limit_in_pips, 1)
+
+        # Validate the BROKER-UNIT stop after conversion and rounding.
+        # A valid 45-pip price-unit stop converted with a wrong onePipMeans
+        # rounds to 0.0 and reaches IG as a naked order. Require the final
+        # stopDistance to clear IG's own minimum for this market.
+        broker_stop = params.get("stopDistance", 0.0)
+        min_stop = max(float(market_spec.get("min_stop_distance") or 0.0), 0.1)
+        if 0.0 < stop_in_pips and broker_stop < min_stop:
+            logger.warning(
+                "IG order rejected pre-submission: converted stop %.2f below "
+                "minimum %.2f (epic=%s symbol=%s bot=%s opm=%.6f)",
+                broker_stop, min_stop, epic, symbol,
+                order.get("bot_id", ""), market_spec.get("one_pip_means", 0.0),
+            )
+            return {
+                "status": "rejected",
+                "reason": (
+                    f"Converted stop {broker_stop} below broker minimum "
+                    f"{min_stop} for {epic}"
+                ),
+                "error_code": "STOP_TOO_TIGHT",
+            }
 
         # Safety gate: refuse to open broker positions without a stop-loss.
         # Deployed logs showed naked size-capped orders (size=20, stop=0.0)

@@ -124,6 +124,16 @@ def _make_mock_client(positions=None, accounts=None):
     client.get_positions.return_value = positions or []
     client.get_accounts.return_value = accounts or []
     client.get_account_info.return_value = accounts[0] if accounts else {}
+    # Real market spec required: the adapter now refuses to deal on
+    # default/unfetched market details (MARKET_DETAILS_UNAVAILABLE).
+    client.get_market.return_value = {
+        "instrument": {"valueOfOnePip": "1", "onePipMeans": "0.0001"},
+        "dealingRules": {
+            "minDealSize": {"value": 0.5},
+            "minNormalStopOrLimitDistance": {"value": 2},
+        },
+        "snapshot": {},
+    }
     return client
 
 
@@ -185,8 +195,10 @@ class TestIGAdapterPlaceOrder:
             "instrument": "GBPUSD",
             "direction": "SELL",
             "size": 2.0,
-            "stop_distance": 50,
-            "limit_distance": 100,
+            # Price-unit distances (strategy convention); the adapter
+            # converts to IG pips via onePipMeans=0.0001 → 50 / 100 pips.
+            "stop_distance": 0.0050,
+            "limit_distance": 0.0100,
         })
         assert result["status"] == "ACCEPTED"
         call_args = client.open_position.call_args[0][0]
