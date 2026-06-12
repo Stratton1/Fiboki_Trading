@@ -125,14 +125,21 @@ def cmd_lifecycle(adapter: IGExecutionAdapter, confirm: bool) -> int:
     bid = float(snapshot.get("bid") or 0)
     evidence["market"] = {"epic": epic, "min_size": min_size, "bid": bid}
 
-    # 2. Open: minimum size, wide 30-pip stop, 30-pip limit
+    # 2. Open: minimum size, stop/limit at 0.2% of the live IG price.
+    # IG quotes FX CFDs in points (EURUSD ≈ 13050.9, onePipMeans=1), so
+    # distances must be computed from IG's own price scale, not classic
+    # 1.3050-style quotes. 0.2% ≈ 26 points here — comfortably above the
+    # broker minimum while keeping the test position tight.
+    opm = float(spec.get("one_pip_means") or 1.0)
+    min_stop_pts = float(spec.get("min_stop_distance") or 0.0)
+    dist_price_units = max(bid * 0.002, (min_stop_pts * 2 or 4.0)) * opm
     order = {
         "instrument": "EURUSD",
         "direction": "BUY",
         "size": min_size,
         "currency": "GBP",
-        "stop_distance": 0.0030,
-        "limit_distance": 0.0030,
+        "stop_distance": dist_price_units,
+        "limit_distance": dist_price_units,
         "requested_price": bid,
         "risk_pct": 0.1,
         "bot_id": "gate2-lifecycle-proof",
@@ -153,7 +160,7 @@ def cmd_lifecycle(adapter: IGExecutionAdapter, confirm: bool) -> int:
 
     # 4. Amend stop (widen by 10 pips)
     level = result.get("filled_price") or bid
-    new_stop = round(level - 0.0040, 5)
+    new_stop = round(level - (dist_price_units / opm) * 1.3, 2)
     try:
         amend = adapter.update_stop_limit(deal_id, stop_level=new_stop)
         evidence["amend"] = amend
