@@ -83,8 +83,20 @@ The frontend is a static/SSR app that calls the backend API. It contains **zero*
 | `FIBOKEI_USER_TOM_PASSWORD` | Tom's login password | Yes |
 | `FIBOKEI_TELEGRAM_BOT_TOKEN` | Telegram bot token | Optional |
 | `FIBOKEI_TELEGRAM_CHAT_ID` | Telegram chat ID | Optional |
-| `FIBOKEI_LIVE_EXECUTION_ENABLED` | Enable IG demo execution (`true`/`false`) | No (default: `false`) |
+| `FIBOKEI_EXECUTION_ROUTER_MODE` | `legacy_single` (default) / `env_global_fanout` / `db_targets` | No |
+| `FIBOKEI_LIVE_EXECUTION_ENABLED` | **legacy_single mode only:** selects IG demo adapter instead of paper | No (default: `false`) |
+| `FIBOKEI_IG_ACCOUNT_ENABLED` | **env_global_fanout mode only:** adds IG target to fan-out (default: `false`) | No |
+| `FIBOKEI_IG_ACCOUNT_ENV` | IG environment for fan-out target: `demo` (default) / `live` (live is hard-blocked) | No |
+| `FIBOKEI_WORKER_EXTERNAL` | Set `true` on API service when dedicated worker service is deployed | No (default: `false`) |
 | `FIBOKEI_IG_PAPER_MODE` | IG adapter uses demo account (`true`/`false`) | No (default: `true`) |
+
+> **Adapter-selection truth table (matches `execution/router_factory.py`):**
+> - `legacy_single` + `FIBOKEI_LIVE_EXECUTION_ENABLED=false` → paper only.
+> - `legacy_single` + `FIBOKEI_LIVE_EXECUTION_ENABLED=true` → IG demo only.
+> - `env_global_fanout` → every enabled account (`FIBOKEI_PAPER_ACCOUNT_ENABLED`, `FIBOKEI_IG_ACCOUNT_ENABLED`, `FIBOKEI_TRADOVATE_ACCOUNT_ENABLED`) receives every signal. `FIBOKEI_LIVE_EXECUTION_ENABLED` is **not** consulted for demo targets in this mode.
+> - `db_targets` → per-bot targets from `execution_accounts` / `bot_execution_targets` tables; bots without rows fall back to the default paper account.
+>
+> A deployment that sets only `FIBOKEI_LIVE_EXECUTION_ENABLED=true` while running in `env_global_fanout` or `db_targets` mode will record trades **locally only** and never reach IG. Verify the startup log line `ExecutionRouter built: mode=… targets=[…]`.
 | `FIBOKEI_IG_API_KEY` | IG API key (from IG demo account settings) | Only if IG demo enabled |
 | `FIBOKEI_IG_USERNAME` | IG demo account username | Only if IG demo enabled |
 | `FIBOKEI_IG_PASSWORD` | IG demo account password | Only if IG demo enabled |
@@ -109,20 +121,22 @@ The frontend is a static/SSR app that calls the backend API. It contains **zero*
 
 The database URL is injected automatically by the hosting platform. Railway and Render inject `DATABASE_URL` by default. The app checks `FIBOKEI_DATABASE_URL` first, then falls back to `DATABASE_URL`, then defaults to SQLite. This means Railway's auto-injected PostgreSQL URL is picked up automatically without additional configuration. SQLAlchemy handles the `postgres://` → `postgresql://` prefix normalisation that some providers require.
 
-### 4. Worker Service — Paper Bot Orchestration (future)
+### 4. Worker Service — Paper Bot Orchestration
 
 | Item | Value |
 |------|-------|
 | Runtime | Same Python codebase |
-| Start command | `python -m fibokei.worker` (to be built) |
-| Purpose | Long-running paper bot loops, signal evaluation |
+| Start command | `python -m fibokei.worker --poll-interval 60` |
+| Purpose | Long-running bot loops, closed-candle signal evaluation, broker dispatch |
 
-Currently, paper bots run in-process with the API server. For V1 this is acceptable. When scaling, split into a dedicated worker that:
+The worker entry point is **built** (`fibokei/worker.py`) and supports `--once`, `--dry-run`, graceful SIGTERM/SIGINT shutdown, and DB recovery on startup.
 
-- Reads bot configs from the database
-- Runs signal evaluation loops on closed candles
-- Writes trade records back to the database
-- Sends Telegram alerts
+**Two deployment modes:**
+
+1. **In-process (current default):** the API starts the worker as a daemon thread during startup. Simple, but the worker dies with the API process and is invisible to health checks.
+2. **Dedicated service (preferred):** deploy a second Railway service from the same repo/Dockerfile with start command `python -m fibokei.worker --poll-interval 60`, sharing `FIBOKEI_DATABASE_URL` and all IG/execution env vars with the API service. Then set `FIBOKEI_WORKER_EXTERNAL=true` on the **API** service so it does not start its own thread — otherwise two workers evaluate the same bots and duplicate execution attempts.
+
+See `docs/autonomous_build/DEPLOYMENT_RUNBOOK.md` for the step-by-step migration.
 
 ### 5. Cron / Scheduled Jobs (future)
 

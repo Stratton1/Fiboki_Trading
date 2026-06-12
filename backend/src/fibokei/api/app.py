@@ -303,12 +303,27 @@ def _start_worker_thread(session_factory):
     Bot signals route through the multi-broker ExecutionRouter; when
     FIBOKEI_EXECUTION_ROUTER_MODE=env_global_fanout each enabled
     broker account receives every signal.
+
+    When ``FIBOKEI_WORKER_EXTERNAL=true`` the API does NOT start the
+    in-process worker thread. Set this on the API service once a
+    dedicated worker service (``python -m fibokei.worker``) is deployed,
+    so two workers never evaluate the same bots concurrently.
     """
     import threading
 
     from fibokei.worker import PaperWorker
 
     logger = logging.getLogger("fibokei.startup")
+
+    external = os.environ.get("FIBOKEI_WORKER_EXTERNAL", "false").strip().lower() in (
+        "1", "true", "yes", "on"
+    )
+    if external:
+        logger.info(
+            "FIBOKEI_WORKER_EXTERNAL=true — in-process worker thread disabled; "
+            "expecting dedicated worker service (python -m fibokei.worker)"
+        )
+        return None, None
 
     try:
         worker = PaperWorker(session_factory)
