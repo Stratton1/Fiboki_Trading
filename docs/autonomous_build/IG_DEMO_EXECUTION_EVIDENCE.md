@@ -29,3 +29,14 @@
 ### Outstanding for Gate 2 (full EURUSD H1 lifecycle proof)
 
 open → confirm → reconcile → **amend** → **close** → reconcile-after-restart, with audit-trail screenshots. Submission+confirmation legs are already evidenced above; amendment/closure legs and restart drill still need a deliberate controlled run.
+
+## 2026-06-12 evening — Gate 2 attempt chain (deployed worker console, real IG demo)
+
+1. Dedicated worker service live: `ExecutionRouter built: mode=legacy_single targets=[ig:demo(on)]`, 21 bots recovered; API logs `in-process worker thread disabled` → exactly one worker (Gate 1 core).
+2. EPIC diag: XAUUSD static epic readable; account switch to Z5ZAV → 401 `error.security.account-token-invalid`, fallback to default Z5ZAW; failed switch poisons session tokens (serial 401s) — explains intermittent 401s in production logs.
+3. Lifecycle attempt 1 (poisoned session): aborted safely — MARKET_DETAILS_UNAVAILABLE. No blind order. Gate works on real IG.
+4. Config fix: FIBOKEI_IG_ACCOUNT_ID → Z5ZAW. Auth then clean (no 401s).
+5. Lifecycle attempt 2: STOP_TOO_TIGHT rejection — exposed IG FX CFD price scale (EURUSD bid 13050.9, onePipMeans=1): classic-scale stops are 1e4 too small. Complete explanation of historic naked orders. Diag fixed to IG-native distances.
+6. Lifecycle attempt 3 (clean session, valid order, stop 26.1 pts): IG 403 `unauthorised access, apiUser has no access to the relevant exchange. Epic=CS.D.EURUSD.CFD.IP exchangeId=FX_EURUSD_ST`.
+
+**Conclusion:** default account Z5ZAW has data access but NO dealing rights; dealing account is Z5ZAV but the account-switch endpoint rejects with token-invalid. Gate 2 is blocked on IG account entitlements — an operator action in IG's dashboard (verify Z5ZAV is active and the API key is attached to it), or an account-switch repair (capture-and-replace token semantics) once entitlements are confirmed. All failure modes ended in safe rejection; zero naked or duplicate orders.
