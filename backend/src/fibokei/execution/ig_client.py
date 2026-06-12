@@ -347,11 +347,32 @@ class IGClient:
             snapshotTime, openPrice, highPrice, lowPrice, closePrice,
             lastTradedVolume.
         """
+        # NOTE: the path-style prices endpoint /prices/{epic}/{resolution}/{numPoints}
+        # is IG API VERSION 2. Sending VERSION 3 against this path returns
+        # 404 Not Found for every epic (v3 uses /prices/{epic} with query
+        # params). This was the root cause of the deployed "IG live feed
+        # failed ... → 404 — falling back to yfinance" log spam.
         return self._request(
             "GET",
             f"/prices/{epic}/{resolution}/{num_points}",
-            version="3",
+            version="2",
         )
+
+    def search_markets(self, search_term: str) -> list[dict]:
+        """Search IG markets by free-text term (GET /markets?searchTerm=).
+
+        Returns the ``markets`` list; each entry includes ``epic``,
+        ``instrumentName``, ``instrumentType``, ``expiry`` and
+        ``marketStatus``. Used to resolve account-type-correct epics when
+        the static mapping points at an exchange this apiUser cannot
+        access (e.g. spread-bet .TODAY.IP epics on a CFD-only key).
+        """
+        result = self._request(
+            "GET",
+            f"/markets?searchTerm={search_term}",
+            version="1",
+        )
+        return result.get("markets", []) or []
 
     def close(self) -> None:
         """Close the HTTP client."""

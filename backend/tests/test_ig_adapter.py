@@ -142,6 +142,9 @@ class TestIGAdapterPlaceOrder:
             "instrument": "EURUSD",
             "direction": "BUY",
             "size": 1.0,
+            # Stop-loss now required by default (FIBOKEI_IG_REQUIRE_STOP);
+            # stopless submission is covered in test_ig_execution_repair.py.
+            "stop_distance": 0.0045,
         })
         assert result["status"] == "ACCEPTED"
         assert result["deal_id"] == "DEAL456"

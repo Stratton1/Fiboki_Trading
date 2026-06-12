@@ -5,9 +5,10 @@ All operations are routed through the demo API; production is hard-blocked.
 """
 
 import logging
+import os
 import time
 
-from fibokei.core.instruments import get_ig_epic, get_symbol_by_epic
+from fibokei.core.instruments import get_ig_epic, get_instrument, get_symbol_by_epic
 from fibokei.execution.adapter import ExecutionAdapter
 from fibokei.execution.ig_client import IGClient, IGClientError
 
@@ -39,6 +40,55 @@ class IGExecutionAdapter(ExecutionAdapter):
         # account balance cache
         self._balance_cache: float = 0.0
         self._balance_cache_at: float = 0.0
+        # symbol → account-type-correct epic, resolved at runtime when the
+        # static mapping points at an exchange this apiUser cannot access
+        # (observed: 'unauthorised access, apiUser has no access to the
+        # relevant exchange. Epic=CS.D.USCGC.TODAY.IP exchangeId=FX_BET_ALL')
+        self._resolved_epics: dict[str, str] = {}
+
+    def _resolve_epic_for_account(self, symbol: str, bad_epic: str) -> str | None:
+        """Find an epic for ``symbol`` that this account can actually trade.
+
+        Searches IG markets by the instrument's human name (falling back to
+        the symbol) and returns the first TRADEABLE candidate that differs
+        from the inaccessible static epic. Result is cached per symbol and
+        every remap is logged so the catalogue can be corrected later.
+        """
+        cached = self._resolved_epics.get(symbol)
+        if cached:
+            return cached
+        try:
+            inst = get_instrument(symbol)
+            terms = [inst.name.split("/")[0].strip(), symbol]
+        except KeyError:
+            terms = [symbol]
+        for term in terms:
+            try:
+                markets = self._client.search_markets(term)
+            except IGClientError as e:
+                logger.warning("IG epic search '%s' failed: %s", term, e)
+                continue
+            for m in markets:
+                epic = m.get("epic", "")
+                if not epic or epic == bad_epic:
+                    continue
+                if m.get("marketStatus") not in (None, "TRADEABLE", "EDITS_ONLY"):
+                    continue
+                # Verify this account can read the market's details — proxy
+                # for exchange access without placing an order.
+                try:
+                    self._client.get_market(epic)
+                except IGClientError:
+                    continue
+                self._resolved_epics[symbol] = epic
+                logger.warning(
+                    "IG epic remapped for %s: %s → %s (%s). Static mapping in "
+                    "core/instruments.py is not valid for this account type.",
+                    symbol, bad_epic, epic, m.get("instrumentName", ""),
+                )
+                return epic
+        logger.error("IG epic resolution failed for %s (static epic %s)", symbol, bad_epic)
+        return None
 
     def _ensure_auth(self) -> None:
         """Ensure a valid IG session exists.
@@ -183,7 +233,7 @@ class IGExecutionAdapter(ExecutionAdapter):
 
         symbol = order.get("instrument", "")
         try:
-            epic = get_ig_epic(symbol)
+            epic = self._resolved_epics.get(symbol) or get_ig_epic(symbol)
         except KeyError:
             return {"status": "rejected", "reason": f"No IG epic for {symbol}"}
 
@@ -224,6 +274,25 @@ class IGExecutionAdapter(ExecutionAdapter):
             params["stopDistance"] = round(stop_in_pips, 1)
         if limit_in_pips > 0:
             params["limitDistance"] = round(limit_in_pips, 1)
+
+        # Safety gate: refuse to open broker positions without a stop-loss.
+        # Deployed logs showed naked size-capped orders (size=20, stop=0.0)
+        # reaching IG. Default-on; set FIBOKEI_IG_REQUIRE_STOP=false to
+        # restore the old behaviour deliberately.
+        require_stop = os.environ.get(
+            "FIBOKEI_IG_REQUIRE_STOP", "true"
+        ).strip().lower() in ("1", "true", "yes", "on")
+        if require_stop and stop_in_pips <= 0:
+            logger.warning(
+                "IG order rejected pre-submission: no stop-loss (symbol=%s bot=%s). "
+                "Strategy emitted stop_distance=%s.",
+                symbol, order.get("bot_id", ""), stop_price_dist,
+            )
+            return {
+                "status": "rejected",
+                "reason": "Stop-loss required for IG execution (FIBOKEI_IG_REQUIRE_STOP)",
+                "error_code": "MISSING_STOP",
+            }
 
         requested_price = order.get("requested_price")
 
@@ -266,6 +335,23 @@ class IGExecutionAdapter(ExecutionAdapter):
                 }
             return {"status": "UNKNOWN", "deal_reference": deal_ref, "raw": result}
         except IGClientError as e:
+            # Account-type/exchange mismatch: the static epic belongs to an
+            # exchange this apiUser cannot access (e.g. spread-bet epics on
+            # a CFD key → 'no access to the relevant exchange'). The 403 is
+            # raised before any deal is created, so one retry with a
+            # runtime-resolved epic is duplicate-safe.
+            if (
+                "no access to the relevant exchange" in str(e)
+                and self._resolved_epics.get(symbol) != epic
+                and not order.get("_epic_retry")
+            ):
+                resolved = self._resolve_epic_for_account(symbol, epic)
+                if resolved and resolved != epic:
+                    retry_order = {**order, "_epic_retry": True}
+                    logger.info(
+                        "Retrying IG order for %s on resolved epic %s", symbol, resolved
+                    )
+                    return self.place_order(retry_order)
             logger.error(
                 "IG place_order failed: %s | params=%s",
                 e, {k: v for k, v in params.items() if k != "guaranteedStop"},
