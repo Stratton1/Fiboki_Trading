@@ -103,7 +103,18 @@ class TestStrategyRegistry:
             assert sid in ids, f"{sid} not registered"
 
     def test_total_strategy_count(self):
-        from fibokei.strategies.registry import strategy_registry
+        # Same defect class as tests/test_api_strategies.py::test_list_strategies
+        # and the dashboard's hardcoded '< 12' threshold: the registry has grown
+        # past the original 12 bots and a frozen literal here causes spurious
+        # CI failures every time it does. Compare against the canonical
+        # architectural minimum (EXPECTED_MIN_STRATEGIES) instead.
+        from fibokei.strategies.registry import EXPECTED_MIN_STRATEGIES, strategy_registry
 
         available = strategy_registry.list_available()
-        assert len(available) == 12
+        # list_available() honours FIBOKEI_VISIBLE_STRATEGIES — in CI/dev this
+        # env var is unset, so we expect the full registry. Production sets
+        # it for the operator shortlist UI.
+        assert len(available) >= EXPECTED_MIN_STRATEGIES, (
+            f"Strategy registry is under-populated ({len(available)} < {EXPECTED_MIN_STRATEGIES}) "
+            "— investigate registry imports"
+        )
