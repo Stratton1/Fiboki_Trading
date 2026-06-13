@@ -599,7 +599,9 @@ def get_fleet_overview(
 def get_bot_trades(
     bot_id: str,
     limit: int = Query(100, ge=1, le=1000),
-    live_only: bool = Query(False, description="If true, return only live (forward-monitoring) trades"),
+    live_only: bool = Query(
+        False, description="If true, return only live (forward-monitoring) trades"
+    ),
     user: TokenData = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
@@ -705,8 +707,14 @@ def get_exposure(
     total_long = sum(e["long"] for e in instrument_exposure.values())
     total_short = sum(e["short"] for e in instrument_exposure.values())
 
-    daily_dd_pct = abs(min(acct.daily_pnl, 0.0)) / acct.initial_balance * 100 if acct.initial_balance > 0 else 0.0
-    weekly_dd_pct = abs(min(acct.weekly_pnl, 0.0)) / acct.initial_balance * 100 if acct.initial_balance > 0 else 0.0
+    daily_dd_pct = (
+        abs(min(acct.daily_pnl, 0.0)) / acct.initial_balance * 100
+        if acct.initial_balance > 0 else 0.0
+    )
+    weekly_dd_pct = (
+        abs(min(acct.weekly_pnl, 0.0)) / acct.initial_balance * 100
+        if acct.initial_balance > 0 else 0.0
+    )
 
     return {
         "instrument_exposure": instrument_exposure,
@@ -719,7 +727,10 @@ def get_exposure(
             # max_open_trades is an emergency backstop — not the primary gate.
             # Primary risk control is drawdown monitoring (daily/weekly limits below).
             "max_open_trades": limits["max_open_trades"],
-            "open_trades_pct": round(active_positions / limits["max_open_trades"] * 100, 1) if limits["max_open_trades"] > 0 else 0,
+            "open_trades_pct": (
+                round(active_positions / limits["max_open_trades"] * 100, 1)
+                if limits["max_open_trades"] > 0 else 0
+            ),
             "daily_dd_pct": round(daily_dd_pct, 2),
             "daily_soft_stop_pct": limits["daily_soft_stop_pct"],
             "daily_hard_stop_pct": limits["daily_hard_stop_pct"],
@@ -1028,7 +1039,9 @@ def export_phase_trades(
         cell.alignment = Alignment(horizontal="center")
 
     # Cumulative equity curve column
-    ws_trades.cell(row=1, column=len(trade_headers) + 1, value="Cumulative PnL (£)").font = Font(bold=True)
+    ws_trades.cell(
+        row=1, column=len(trade_headers) + 1, value="Cumulative PnL (£)"
+    ).font = Font(bold=True)
 
     cumulative = 0.0
     for row_idx, t in enumerate(trades, start=2):
@@ -1038,7 +1051,10 @@ def export_phase_trades(
         ws_trades.cell(row=row_idx, column=3, value=t.strategy_id)
         ws_trades.cell(row=row_idx, column=4, value=t.instrument)
         ws_trades.cell(row=row_idx, column=5, value=t.direction)
-        ws_trades.cell(row=row_idx, column=6, value=t.entry_time.isoformat() if t.entry_time else "")
+        ws_trades.cell(
+            row=row_idx, column=6,
+            value=t.entry_time.isoformat() if t.entry_time else "",
+        )
         ws_trades.cell(row=row_idx, column=7, value=t.entry_price)
         ws_trades.cell(row=row_idx, column=8, value=t.exit_time.isoformat() if t.exit_time else "")
         ws_trades.cell(row=row_idx, column=9, value=t.exit_price)

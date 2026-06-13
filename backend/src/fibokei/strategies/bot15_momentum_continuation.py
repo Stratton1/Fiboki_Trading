@@ -113,7 +113,10 @@ class MomentumContinuation(Strategy):
         df["fib_50_long"] = np.where(valid, df["swing_high"] - 0.500 * swing_range, np.nan)
         df["fib_786_long"] = np.where(valid, df["swing_high"] - 0.786 * swing_range, np.nan)
         df["fib_0_long"] = df["swing_high"]  # TP1
-        df["fib_ext_long"] = np.where(valid, df["swing_high"] + 0.272 * swing_range, np.nan)  # 127.2% ext
+        # 127.2% extension
+        df["fib_ext_long"] = np.where(
+            valid, df["swing_high"] + 0.272 * swing_range, np.nan
+        )
 
         # Short side: retracement from swing_low up
         df["fib_236_short"] = np.where(valid, df["swing_low"] + 0.236 * swing_range, np.nan)
@@ -121,7 +124,10 @@ class MomentumContinuation(Strategy):
         df["fib_50_short"] = np.where(valid, df["swing_low"] + 0.500 * swing_range, np.nan)
         df["fib_786_short"] = np.where(valid, df["swing_low"] + 0.786 * swing_range, np.nan)
         df["fib_0_short"] = df["swing_low"]  # TP1
-        df["fib_ext_short"] = np.where(valid, df["swing_low"] - 0.272 * swing_range, np.nan)  # 127.2% ext
+        # 127.2% extension
+        df["fib_ext_short"] = np.where(
+            valid, df["swing_low"] - 0.272 * swing_range, np.nan
+        )
 
         # ATR
         df = ATR(period=14).compute(df)
@@ -241,7 +247,10 @@ class MomentumContinuation(Strategy):
                 "macd_hist": row.get("macd_hist", 0),
             }),
             regime_label=regime,
-            rationale_summary=f"38.2% momentum pullback {direction.value}: MACD trigger, R:R {reward/risk:.1f}",
+            rationale_summary=(
+                f"38.2% momentum pullback {direction.value}: MACD trigger, "
+                f"R:R {reward/risk:.1f}"
+            ),
             supporting_factors=[
                 f"EMA trend: 20>{50 if regime == 'trending_bullish' else '20<50'}",
                 "Price pulled back to 23.6%-50% zone",

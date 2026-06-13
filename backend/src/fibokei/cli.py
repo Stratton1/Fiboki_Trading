@@ -434,7 +434,10 @@ def show_paper_status():
     if bots:
         rows = []
         for b in bots:
-            last_bar = b.last_evaluated_bar.strftime("%Y-%m-%d %H:%M") if b.last_evaluated_bar else "-"
+            last_bar = (
+                b.last_evaluated_bar.strftime("%Y-%m-%d %H:%M")
+                if b.last_evaluated_bar else "-"
+            )
             rows.append([
                 b.bot_id, b.strategy_id, b.instrument, b.timeframe,
                 b.state, b.bars_seen, last_bar,

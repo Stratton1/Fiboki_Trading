@@ -81,7 +81,9 @@ def run_sensitivity(
     baseline_value = getattr(baseline_strategy, param_name, None)
     if baseline_value is None:
         # Check nested config / indicator params
-        baseline_value = baseline_strategy.config.get(param_name, param_values[len(param_values) // 2])
+        baseline_value = baseline_strategy.config.get(
+            param_name, param_values[len(param_values) // 2]
+        )
 
     result = SensitivityResult(
         strategy_id=strategy_id,

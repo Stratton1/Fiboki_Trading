@@ -120,7 +120,10 @@ def cmd_lifecycle(adapter: IGExecutionAdapter, confirm: bool) -> int:
     min_size = spec["min_deal_size"]
     snapshot = client.get_market(epic).get("snapshot", {})
     if snapshot.get("marketStatus") != "TRADEABLE":
-        _print("LIFECYCLE ABORT", {"reason": f"market not tradeable: {snapshot.get('marketStatus')}"})
+        _print(
+            "LIFECYCLE ABORT",
+            {"reason": f"market not tradeable: {snapshot.get('marketStatus')}"},
+        )
         return 1
     bid = float(snapshot.get("bid") or 0)
     evidence["market"] = {"epic": epic, "min_size": min_size, "bid": bid}

@@ -66,8 +66,12 @@ def compute_metrics(result: BacktestResult) -> dict:
 
     # Risk-adjusted metrics — use trade-level returns to avoid
     # inflation from sparse equity curves (most bars have zero change).
-    sharpe = _compute_sharpe_from_trades(trades, result.config.initial_capital, total_bars, periods_per_year)
-    sortino = _compute_sortino_from_trades(trades, result.config.initial_capital, total_bars, periods_per_year)
+    sharpe = _compute_sharpe_from_trades(
+        trades, result.config.initial_capital, total_bars, periods_per_year
+    )
+    sortino = _compute_sortino_from_trades(
+        trades, result.config.initial_capital, total_bars, periods_per_year
+    )
     calmar = _compute_calmar(equity, max_drawdown_pct)
     recovery_factor = (
         total_net_profit / max_drawdown if max_drawdown > 0 else float("inf")

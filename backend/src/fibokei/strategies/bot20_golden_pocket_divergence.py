@@ -20,7 +20,13 @@ from fibokei.strategies.base import Strategy
 class GoldenPocketDivergence(Strategy):
     """Golden Pocket (61.8%-65%) with RSI divergence confirmation."""
 
-    def __init__(self, swing_lookback: int = 40, rsi_period: int = 14, divergence_lookback: int = 10, max_bars: int = 30):
+    def __init__(
+        self,
+        swing_lookback: int = 40,
+        rsi_period: int = 14,
+        divergence_lookback: int = 10,
+        max_bars: int = 30,
+    ):
         self.swing_lookback = swing_lookback
         self.rsi_period = rsi_period
         self.divergence_lookback = divergence_lookback
@@ -194,8 +200,14 @@ class GoldenPocketDivergence(Strategy):
             take_profit_secondary=tp2 if not pd.isna(tp2) else None,
             confidence_score=min(0.7 + (0.1 if reward/risk >= 2.0 else 0), 1.0),
             regime_label=regime,
-            rationale_summary=f"Golden Pocket + RSI divergence {direction.value}, R:R {reward/risk:.1f}",
-            supporting_factors=["Price in 61.8%-65% Golden Pocket", "RSI divergence confirmed", f"R:R {reward/risk:.1f}"],
+            rationale_summary=(
+                f"Golden Pocket + RSI divergence {direction.value}, R:R {reward/risk:.1f}"
+            ),
+            supporting_factors=[
+                "Price in 61.8%-65% Golden Pocket",
+                "RSI divergence confirmed",
+                f"R:R {reward/risk:.1f}",
+            ],
         ), context)
 
     def validate_signal(self, signal, context):
@@ -204,7 +216,10 @@ class GoldenPocketDivergence(Strategy):
     def build_trade_plan(self, signal, context):
         return TradePlan(
             entry_price=signal.proposed_entry, stop_loss=signal.stop_loss,
-            take_profit_targets=[signal.take_profit_primary] + ([signal.take_profit_secondary] if signal.take_profit_secondary else []),
+            take_profit_targets=(
+                [signal.take_profit_primary]
+                + ([signal.take_profit_secondary] if signal.take_profit_secondary else [])
+            ),
             max_bars_in_trade=self.max_bars, partial_close_pcts=[0.5],
         )
 
@@ -213,7 +228,9 @@ class GoldenPocketDivergence(Strategy):
 
     def generate_exit(self, position, df, idx, context):
         row = df.iloc[idx]
-        d, sl, tp = position.get("direction"), position.get("stop_loss", 0), position.get("take_profit_targets", [])
+        d = position.get("direction")
+        sl = position.get("stop_loss", 0)
+        tp = position.get("take_profit_targets", [])
         bars = position.get("bars_in_trade", 0)
         if d == "LONG" and row["low"] <= sl:
             return ExitReason.STOP_LOSS_HIT
@@ -232,4 +249,7 @@ class GoldenPocketDivergence(Strategy):
         return 0.7
 
     def explain_decision(self, context):
-        return "Golden Pocket + RSI divergence: price in 61.8%-65% zone with momentum divergence confirming reversal."
+        return (
+            "Golden Pocket + RSI divergence: price in 61.8%-65% zone with momentum "
+            "divergence confirming reversal."
+        )

@@ -196,7 +196,10 @@ class AutoScoutRequest(BaseModel):
     risk_per_trade_pct: float = 1.0
     min_trades: int = Field(default=80, ge=1, le=1000)
     scoring_weights: ScoringWeights | None = None
-    asset_classes: list[str] | None = Field(None, description="Filter instruments by asset class (forex_major, indices, etc.)")
+    asset_classes: list[str] | None = Field(
+        None,
+        description="Filter instruments by asset class (forex_major, indices, etc.)",
+    )
 
 
 @router.post("/research/auto-scout", response_model=JobSubmittedResponse)
@@ -226,13 +229,18 @@ def auto_scout(
             except ValueError:
                 pass
         if not instruments:
-            raise HTTPException(400, f"No instruments found for asset classes: {req.asset_classes}")
+            raise HTTPException(
+                400, f"No instruments found for asset classes: {req.asset_classes}"
+            )
     else:
         # Default: all instruments with canonical data
         instruments = [inst.symbol for inst in INSTRUMENTS if inst.has_canonical_data]
 
     combos = len(all_strats) * len(instruments) * len(req.timeframes)
-    label = f"Auto Scout: {len(all_strats)} strategies × {len(instruments)} instruments × {len(req.timeframes)} TFs ({combos} combos)"
+    label = (
+        f"Auto Scout: {len(all_strats)} strategies × {len(instruments)} instruments × "
+        f"{len(req.timeframes)} TFs ({combos} combos)"
+    )
 
     engine = get_job_engine()
     info = engine.submit(
@@ -259,9 +267,16 @@ def auto_scout(
 
 
 class SmartDeployRequest(BaseModel):
-    top_n: int = Field(default=5, ge=1, le=20, description="Number of top combos to deploy")
-    run_id: str | None = Field(None, description="Scope to a specific research run; if None, uses best across all runs")
-    min_score: float = Field(default=0.0, ge=0.0, le=1.0, description="Minimum composite score threshold")
+    top_n: int = Field(
+        default=5, ge=1, le=20, description="Number of top combos to deploy"
+    )
+    run_id: str | None = Field(
+        None,
+        description="Scope to a specific research run; if None, uses best across all runs",
+    )
+    min_score: float = Field(
+        default=0.0, ge=0.0, le=1.0, description="Minimum composite score threshold"
+    )
     risk_pct: float = Field(default=1.0, ge=0.1, le=5.0)
 
 
@@ -335,8 +350,14 @@ def smart_deploy(
 
 
 class SmartPipelineRequest(BaseModel):
-    top_n: int = Field(default=20, ge=1, le=200, description="Number of top combos to seed from rankings")
-    min_score: float = Field(default=0.55, ge=0.0, le=1.0, description="Min composite score to include in seed")
+    top_n: int = Field(
+        default=20, ge=1, le=200,
+        description="Number of top combos to seed from rankings",
+    )
+    min_score: float = Field(
+        default=0.55, ge=0.0, le=1.0,
+        description="Min composite score to include in seed",
+    )
     timeframes: list[str] = Field(
         default=["M1", "M5", "M15", "M30", "H1", "H4"],
         description="Timeframes to test (no D — all intraday by default)",
@@ -464,13 +485,24 @@ def get_rankings(
     sort_by: str = Query("composite_score", pattern="^(composite_score|rank)$"),
     limit: int = Query(50, ge=1, le=500),
     run_id: str | None = Query(None, description="Scope results to a specific run"),
-    deduplicate: bool = Query(False, description="When viewing all runs, show only best score per combo"),
-    strategy_id: str | None = Query(None, description="Filter to a specific strategy (bypasses visible filter)"),
+    deduplicate: bool = Query(
+        False, description="When viewing all runs, show only best score per combo"
+    ),
+    strategy_id: str | None = Query(
+        None, description="Filter to a specific strategy (bypasses visible filter)"
+    ),
     db: Session = Depends(get_db),
     user: TokenData = Depends(get_current_user),
 ):
     """Get ranked research results, optionally scoped to a single run."""
-    results = get_research_rankings(db, sort_by=sort_by, limit=limit, run_id=run_id, deduplicate=deduplicate, strategy_id=strategy_id)
+    results = get_research_rankings(
+        db,
+        sort_by=sort_by,
+        limit=limit,
+        run_id=run_id,
+        deduplicate=deduplicate,
+        strategy_id=strategy_id,
+    )
     return [
         {
             "id": r.id,

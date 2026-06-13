@@ -18,7 +18,13 @@ from fibokei.strategies.base import Strategy
 class FibBBExhaustion(Strategy):
     """Fibonacci 61.8% + Bollinger Band exhaustion confluence."""
 
-    def __init__(self, swing_lookback: int = 50, bb_period: int = 20, bb_std: float = 2.0, max_bars: int = 30):
+    def __init__(
+        self,
+        swing_lookback: int = 50,
+        bb_period: int = 20,
+        bb_std: float = 2.0,
+        max_bars: int = 30,
+    ):
         self.swing_lookback = swing_lookback
         self.bb_period = bb_period
         self.bb_std = bb_std
@@ -160,8 +166,14 @@ class FibBBExhaustion(Strategy):
             proposed_entry=entry, stop_loss=sl, take_profit_primary=tp1, take_profit_secondary=tp2,
             confidence_score=min(0.65 + (0.1 if reward/risk >= 1.5 else 0), 1.0),
             regime_label=regime,
-            rationale_summary=f"Fib 61.8% + BB exhaustion {direction.value}, R:R {reward/risk:.1f}",
-            supporting_factors=["Fib 61.8% confluence with BB", "Candle closed inside band", f"R:R {reward/risk:.1f}"],
+            rationale_summary=(
+                f"Fib 61.8% + BB exhaustion {direction.value}, R:R {reward/risk:.1f}"
+            ),
+            supporting_factors=[
+                "Fib 61.8% confluence with BB",
+                "Candle closed inside band",
+                f"R:R {reward/risk:.1f}",
+            ],
         ), context)
 
     def validate_signal(self, signal: Signal, context: dict) -> Signal:
@@ -170,16 +182,25 @@ class FibBBExhaustion(Strategy):
     def build_trade_plan(self, signal: Signal, context: dict) -> TradePlan:
         return TradePlan(
             entry_price=signal.proposed_entry, stop_loss=signal.stop_loss,
-            take_profit_targets=[signal.take_profit_primary] + ([signal.take_profit_secondary] if signal.take_profit_secondary else []),
+            take_profit_targets=(
+                [signal.take_profit_primary]
+                + ([signal.take_profit_secondary] if signal.take_profit_secondary else [])
+            ),
             max_bars_in_trade=self.max_bars, partial_close_pcts=[0.5],
         )
 
-    def manage_position(self, position: dict, df: pd.DataFrame, idx: int, context: dict) -> dict:
+    def manage_position(
+        self, position: dict, df: pd.DataFrame, idx: int, context: dict
+    ) -> dict:
         return position
 
-    def generate_exit(self, position: dict, df: pd.DataFrame, idx: int, context: dict) -> ExitReason | None:
+    def generate_exit(
+        self, position: dict, df: pd.DataFrame, idx: int, context: dict
+    ) -> ExitReason | None:
         row = df.iloc[idx]
-        d, sl, tp = position.get("direction"), position.get("stop_loss", 0), position.get("take_profit_targets", [])
+        d = position.get("direction")
+        sl = position.get("stop_loss", 0)
+        tp = position.get("take_profit_targets", [])
         bars = position.get("bars_in_trade", 0)
         if d == "LONG" and row["low"] <= sl:
             return ExitReason.STOP_LOSS_HIT
@@ -198,4 +219,7 @@ class FibBBExhaustion(Strategy):
         return 0.65
 
     def explain_decision(self, context: dict) -> str:
-        return "Fib 61.8% aligned with Bollinger Band extremity — exhaustion confirmed by candle closing back inside band."
+        return (
+            "Fib 61.8% aligned with Bollinger Band extremity — exhaustion confirmed "
+            "by candle closing back inside band."
+        )

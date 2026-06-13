@@ -37,6 +37,11 @@ def get_session_for_timestamp(ts: datetime) -> str:
 def get_sessions_metadata() -> list[dict]:
     """Return session definitions for frontend rendering."""
     return [
-        {"name": s["name"], "start_utc": s["start"].strftime("%H:%M"), "end_utc": s["end"].strftime("%H:%M"), "color": s["color"]}
+        {
+            "name": s["name"],
+            "start_utc": s["start"].strftime("%H:%M"),
+            "end_utc": s["end"].strftime("%H:%M"),
+            "color": s["color"],
+        }
         for s in SESSIONS
     ]

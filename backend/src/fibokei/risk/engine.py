@@ -138,11 +138,17 @@ class RiskEngine:
             1 for p in fleet_positions if p.get("instrument") == instrument
         )
         if bots_on_instrument >= self.fleet_max_bots_per_instrument:
-            return False, f"Fleet max bots per instrument reached ({self.fleet_max_bots_per_instrument})"
+            return False, (
+                f"Fleet max bots per instrument reached "
+                f"({self.fleet_max_bots_per_instrument})"
+            )
 
         # Aggregate exposure per instrument (long + short)
         if bots_on_instrument >= self.fleet_max_exposure_per_instrument:
-            return False, f"Fleet max exposure per instrument reached ({self.fleet_max_exposure_per_instrument})"
+            return False, (
+                f"Fleet max exposure per instrument reached "
+                f"({self.fleet_max_exposure_per_instrument})"
+            )
 
         return True, ""
 

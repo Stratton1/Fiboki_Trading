@@ -4,12 +4,19 @@ on the same historical period with shared capital and portfolio-level risk."""
 import logging
 from dataclasses import dataclass, field
 
-from fibokei.backtester.backtester import Backtester
 from fibokei.backtester.config import BacktestConfig
+
+# NOTE: pre-existing typo fix — the Backtester class lives in
+# fibokei.backtester.engine; the previous "from fibokei.backtester.backtester"
+# import was broken at runtime, which meant /api/v1/research/scenario-sandbox
+# raised ModuleNotFoundError as soon as it was called. The test suite never
+# exercised this path so the failure stayed dormant. Surfaced while verifying
+# imports during the E501 lint cleanup.
+from fibokei.backtester.engine import Backtester
+from fibokei.backtester.metrics import compute_metrics
 from fibokei.core.models import Timeframe
-from fibokei.data.loading import load_canonical
-from fibokei.research.metrics import compute_metrics
-from fibokei.strategies import strategy_registry
+from fibokei.data.providers.registry import load_canonical
+from fibokei.strategies.registry import strategy_registry
 
 logger = logging.getLogger(__name__)
 
@@ -49,7 +56,12 @@ def run_scenario(
     """
     result = ScenarioResult()
     result.combos = [
-        {"strategy_id": c.strategy_id, "instrument": c.instrument, "timeframe": c.timeframe, "risk_pct": c.risk_pct}
+        {
+            "strategy_id": c.strategy_id,
+            "instrument": c.instrument,
+            "timeframe": c.timeframe,
+            "risk_pct": c.risk_pct,
+        }
         for c in combos
     ]
 
@@ -99,7 +111,10 @@ def run_scenario(
             equity_curves.append(bt_result.equity_curve)
 
         except Exception as e:
-            logger.error("Scenario combo %s/%s/%s failed: %s", combo.strategy_id, combo.instrument, combo.timeframe, e)
+            logger.error(
+                "Scenario combo %s/%s/%s failed: %s",
+                combo.strategy_id, combo.instrument, combo.timeframe, e,
+            )
             result.per_bot.append({
                 "strategy_id": combo.strategy_id,
                 "instrument": combo.instrument,

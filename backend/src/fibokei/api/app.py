@@ -31,7 +31,10 @@ def _configure_logging() -> None:
 
     if is_production:
         # JSON-style structured logging for production
-        fmt = '{"time":"%(asctime)s","level":"%(levelname)s","logger":"%(name)s","message":"%(message)s"}'
+        fmt = (
+            '{"time":"%(asctime)s","level":"%(levelname)s",'
+            '"logger":"%(name)s","message":"%(message)s"}'
+        )
     else:
         # Human-readable for local dev
         fmt = "%(asctime)s %(levelname)-8s [%(name)s] %(message)s"
@@ -68,7 +71,9 @@ def _validate_required_env_vars() -> None:
     # Warn about weak JWT secret
     jwt_secret = os.environ.get("FIBOKEI_JWT_SECRET", "")
     if jwt_secret and len(jwt_secret) < 32:
-        logger.warning("FIBOKEI_JWT_SECRET is shorter than 32 characters — consider using a stronger secret")
+        logger.warning(
+            "FIBOKEI_JWT_SECRET is shorter than 32 characters — consider using a stronger secret"
+        )
 
     if missing:
         msg = "Missing required environment variables:\n  " + "\n  ".join(missing)
@@ -117,10 +122,16 @@ def _ensure_new_columns(engine) -> None:
 
     # Verify critical tables exist (helpful for diagnosing production issues)
     logger = logging.getLogger("fibokei.startup")
-    critical_tables = ["paper_account", "paper_bots", "paper_trades", "execution_audit", "watchlists", "saved_shortlist", "trade_journal", "strategy_variants"]
+    critical_tables = [
+        "paper_account", "paper_bots", "paper_trades", "execution_audit",
+        "watchlists", "saved_shortlist", "trade_journal", "strategy_variants",
+    ]
     for table in critical_tables:
         if table not in table_names:
-            logger.warning("Table '%s' missing after create_all — will be created on next restart", table)
+            logger.warning(
+                "Table '%s' missing after create_all — will be created on next restart",
+                table,
+            )
 
     # Add currency column to paper_account if missing
     if "paper_account" in table_names:
@@ -166,7 +177,9 @@ def _ensure_new_columns(engine) -> None:
             if "phase_id" not in pb_cols:
                 conn.execute(text("ALTER TABLE paper_bots ADD COLUMN phase_id INTEGER"))
             if "archived_at" not in pb_cols:
-                conn.execute(text("ALTER TABLE paper_bots ADD COLUMN archived_at TIMESTAMP WITH TIME ZONE"))
+                conn.execute(text(
+                    "ALTER TABLE paper_bots ADD COLUMN archived_at TIMESTAMP WITH TIME ZONE"
+                ))
 
     # Add phase_id and is_live to paper_trades
     if "paper_trades" in table_names:
@@ -228,7 +241,10 @@ async def lifespan(app: FastAPI):
     worker_thread, paper_worker = _start_worker_thread(session_factory)
 
     logger = logging.getLogger("fibokei.startup")
-    logger.info("Fiboki Trading API started — database=%s", "postgresql" if "postgresql" in DATABASE_URL else "sqlite")
+    logger.info(
+        "Fiboki Trading API started — database=%s",
+        "postgresql" if "postgresql" in DATABASE_URL else "sqlite",
+    )
 
     yield
 

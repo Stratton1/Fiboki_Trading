@@ -104,9 +104,15 @@ class GoldenMomentumConfluence(Strategy):
         df["macd_prev"] = df["macd_line"].shift(1)
         df["macd_sig_prev"] = df["macd_signal_line"].shift(1)
         # MACD bullish cross: macd crosses above signal
-        df["macd_bull_cross"] = (df["macd_line"] > df["macd_signal_line"]) & (df["macd_prev"] <= df["macd_sig_prev"])
+        df["macd_bull_cross"] = (
+            (df["macd_line"] > df["macd_signal_line"])
+            & (df["macd_prev"] <= df["macd_sig_prev"])
+        )
         # MACD bearish cross: macd crosses below signal
-        df["macd_bear_cross"] = (df["macd_line"] < df["macd_signal_line"]) & (df["macd_prev"] >= df["macd_sig_prev"])
+        df["macd_bear_cross"] = (
+            (df["macd_line"] < df["macd_signal_line"])
+            & (df["macd_prev"] >= df["macd_sig_prev"])
+        )
 
         # Swing high/low
         df["swing_high"] = df["high"].rolling(window=self.swing_lookback).max()
@@ -251,7 +257,10 @@ class GoldenMomentumConfluence(Strategy):
                 "rsi": row.get("rsi", 50),
             }),
             regime_label=regime,
-            rationale_summary=f"Golden Zone + RSI + MACD confluence {direction.value}: RSI={row['rsi']:.0f}, R:R {reward/risk:.1f}",
+            rationale_summary=(
+                f"Golden Zone + RSI + MACD confluence {direction.value}: "
+                f"RSI={row['rsi']:.0f}, R:R {reward/risk:.1f}"
+            ),
             supporting_factors=[
                 f"Trend: {regime}",
                 "Price at 61.8% Golden Zone",

@@ -188,7 +188,10 @@ class IGExecutionAdapter(ExecutionAdapter):
             self._balance_cache_at = time.time()
             logger.debug("IG account balance refreshed: %.2f", self._balance_cache)
         except Exception as exc:
-            logger.warning("Failed to refresh account balance: %s — using cached %.2f", exc, self._balance_cache)
+            logger.warning(
+                "Failed to refresh account balance: %s — using cached %.2f",
+                exc, self._balance_cache,
+            )
         return self._balance_cache
 
     def _calculate_size(
@@ -265,7 +268,11 @@ class IGExecutionAdapter(ExecutionAdapter):
             self._ensure_auth()
         except IGClientError as e:
             logger.error("IG auth failed: %s", e)
-            return {"status": "rejected", "reason": str(e), "error_code": getattr(e, "error_code", "")}
+            return {
+                "status": "rejected",
+                "reason": str(e),
+                "error_code": getattr(e, "error_code", ""),
+            }
 
         symbol = order.get("instrument", "")
         try:

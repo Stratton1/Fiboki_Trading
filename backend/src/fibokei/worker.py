@@ -737,7 +737,10 @@ class PaperWorker:
                         "pnl": trade.pnl if trade else None,
                         "bars_in_trade": trade.bars_in_trade if trade else None,
                     },
-                    "error_message": None if closed_deal_id else "No IG position closed (opened as paper_only)",
+                    "error_message": (
+                        None if closed_deal_id
+                        else "No IG position closed (opened as paper_only)"
+                    ),
                 })
 
     def _maybe_send_daily_summary(self) -> None:

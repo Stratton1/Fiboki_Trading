@@ -91,8 +91,14 @@ class FibMAConfluence(Strategy):
         # MA crossover detection
         df["ema_short_prev"] = df["ema_short"].shift(1)
         df["ema_long_prev"] = df["ema_long"].shift(1)
-        df["ma_bull_cross"] = (df["ema_short"] > df["ema_long"]) & (df["ema_short_prev"] <= df["ema_long_prev"])
-        df["ma_bear_cross"] = (df["ema_short"] < df["ema_long"]) & (df["ema_short_prev"] >= df["ema_long_prev"])
+        df["ma_bull_cross"] = (
+            (df["ema_short"] > df["ema_long"])
+            & (df["ema_short_prev"] <= df["ema_long_prev"])
+        )
+        df["ma_bear_cross"] = (
+            (df["ema_short"] < df["ema_long"])
+            & (df["ema_short_prev"] >= df["ema_long_prev"])
+        )
 
         # Swing high/low
         df["swing_high"] = df["high"].rolling(window=self.swing_lookback).max()
@@ -227,7 +233,10 @@ class FibMAConfluence(Strategy):
                 "regime": regime, "rr": reward / risk,
             }),
             regime_label=regime,
-            rationale_summary=f"Fib 61.8% + MA confluence {direction.value}: MA cross confirmed, R:R {reward/risk:.1f}",
+            rationale_summary=(
+                f"Fib 61.8% + MA confluence {direction.value}: MA cross confirmed, "
+                f"R:R {reward/risk:.1f}"
+            ),
             supporting_factors=[
                 f"200 EMA trend: {regime}",
                 "Fib 61.8% aligns with 20/50 EMA",

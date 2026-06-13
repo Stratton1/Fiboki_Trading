@@ -190,8 +190,14 @@ def save_backtest_result(
         end_date=result.end_date,
         total_trades=len(result.trades),
         net_profit=float(metrics.get("total_net_profit", 0.0)),
-        sharpe_ratio=float(metrics["sharpe_ratio"]) if metrics.get("sharpe_ratio") is not None else None,
-        max_drawdown_pct=float(metrics["max_drawdown_pct"]) if metrics.get("max_drawdown_pct") is not None else None,
+        sharpe_ratio=(
+            float(metrics["sharpe_ratio"])
+            if metrics.get("sharpe_ratio") is not None else None
+        ),
+        max_drawdown_pct=(
+            float(metrics["max_drawdown_pct"])
+            if metrics.get("max_drawdown_pct") is not None else None
+        ),
         metrics_json=_sanitize_for_json(metrics),
     )
     session.add(run)

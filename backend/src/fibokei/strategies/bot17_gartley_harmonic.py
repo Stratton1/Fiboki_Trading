@@ -331,7 +331,10 @@ class GartleyHarmonicReversal(Strategy):
                 "rsi": row["rsi"],
             }),
             regime_label=f"gartley_{self._current_direction}",
-            rationale_summary=f"Gartley {self._current_direction}: D at {pat['d_ratio']:.3f} XA, B at {pat['b_ratio']:.3f} XA, RSI trigger",
+            rationale_summary=(
+                f"Gartley {self._current_direction}: D at {pat['d_ratio']:.3f} XA, "
+                f"B at {pat['b_ratio']:.3f} XA, RSI trigger"
+            ),
             supporting_factors=[
                 f"B at {pat['b_ratio']:.3f} of XA (target 0.618)",
                 f"C at {pat['c_ratio']:.3f} of AB",

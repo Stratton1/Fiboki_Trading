@@ -76,7 +76,9 @@ class FibArcBreakout(Strategy):
         valid = sr > 0
 
         # Time since swing high/low (approximate with rolling argmax/argmin)
-        swing_high_idx = df["high"].rolling(window=self.swing_lookback).apply(lambda x: x.argmax(), raw=True)
+        swing_high_idx = (
+            df["high"].rolling(window=self.swing_lookback).apply(lambda x: x.argmax(), raw=True)
+        )
         bars_since_high = np.arange(n) - swing_high_idx.fillna(0).values.astype(int)
         bars_since_high = np.clip(bars_since_high, 1, self.swing_lookback)
 
@@ -150,8 +152,16 @@ class FibArcBreakout(Strategy):
         else:
             direction = Direction.SHORT
             entry = row["close"]
-            sl = row["arc_50_short"] if not pd.isna(row.get("arc_50_short")) else entry + 2 * atr
-            tp1 = row["arc_236_short"] if not pd.isna(row.get("arc_236_short")) else entry - 1.5 * atr
+            sl = (
+                row["arc_50_short"]
+                if not pd.isna(row.get("arc_50_short"))
+                else entry + 2 * atr
+            )
+            tp1 = (
+                row["arc_236_short"]
+                if not pd.isna(row.get("arc_236_short"))
+                else entry - 1.5 * atr
+            )
 
         risk = abs(entry - sl)
         reward = abs(tp1 - entry)
@@ -163,10 +173,19 @@ class FibArcBreakout(Strategy):
             instrument=instrument, timeframe=timeframe, strategy_id=self.strategy_id,
             direction=direction, setup_type="fib_arc_breakout", entry_type="market",
             proposed_entry=entry, stop_loss=sl, take_profit_primary=tp1,
-            confidence_score=min(0.55 + (0.1 if reward/risk >= 1.0 else 0), 1.0),
+            confidence_score=min(
+                0.55 + (0.1 if reward / risk >= 1.0 else 0), 1.0
+            ),
             regime_label=self._setup_direction,
-            rationale_summary=f"Fib Arc breakout {direction.value}: arc-to-arc scalp, R:R {reward/risk:.1f}",
-            supporting_factors=["Price broke through 38.2% Fibonacci Arc", "Target: next arc level", f"R:R {reward/risk:.1f}"],
+            rationale_summary=(
+                f"Fib Arc breakout {direction.value}: arc-to-arc scalp, "
+                f"R:R {reward/risk:.1f}"
+            ),
+            supporting_factors=[
+                "Price broke through 38.2% Fibonacci Arc",
+                "Target: next arc level",
+                f"R:R {reward/risk:.1f}",
+            ],
         ), context)
 
     def validate_signal(self, signal, context):
@@ -184,7 +203,9 @@ class FibArcBreakout(Strategy):
 
     def generate_exit(self, position, df, idx, context):
         row = df.iloc[idx]
-        d, sl, tp = position.get("direction"), position.get("stop_loss", 0), position.get("take_profit_targets", [])
+        d = position.get("direction")
+        sl = position.get("stop_loss", 0)
+        tp = position.get("take_profit_targets", [])
         bars = position.get("bars_in_trade", 0)
         if d == "LONG" and row["low"] <= sl:
             return ExitReason.STOP_LOSS_HIT
@@ -203,4 +224,7 @@ class FibArcBreakout(Strategy):
         return 0.55
 
     def explain_decision(self, context):
-        return "Fibonacci Arc breakout: price broke through a curved Fibonacci level, targeting the next arc."
+        return (
+            "Fibonacci Arc breakout: price broke through a curved Fibonacci level, "
+            "targeting the next arc."
+        )

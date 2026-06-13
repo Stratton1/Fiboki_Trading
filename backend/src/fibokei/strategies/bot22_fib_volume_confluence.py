@@ -21,7 +21,13 @@ from fibokei.strategies.base import Strategy
 class FibVolumeConfluence(Strategy):
     """Fibonacci + Volume Profile High Volume Node confluence."""
 
-    def __init__(self, swing_lookback: int = 50, vol_profile_period: int = 100, num_bins: int = 20, max_bars: int = 40):
+    def __init__(
+        self,
+        swing_lookback: int = 50,
+        vol_profile_period: int = 100,
+        num_bins: int = 20,
+        max_bars: int = 40,
+    ):
         self.swing_lookback = swing_lookback
         self.vol_profile_period = vol_profile_period
         self.num_bins = num_bins
@@ -41,7 +47,10 @@ class FibVolumeConfluence(Strategy):
 
     @property
     def description(self) -> str:
-        return "Fibonacci retracement confluent with Volume Profile HVN for institutional-level entries."
+        return (
+            "Fibonacci retracement confluent with Volume Profile HVN for "
+            "institutional-level entries."
+        )
 
     @property
     def valid_market_regimes(self) -> list[str]:
@@ -237,8 +246,15 @@ class FibVolumeConfluence(Strategy):
             take_profit_secondary=tp2,
             confidence_score=min(0.65 + (0.1 if reward/risk >= 1.5 else 0), 1.0),
             regime_label=regime,
-            rationale_summary=f"Fib + Volume Profile HVN {direction.value}: institutional level, R:R {reward/risk:.1f}",
-            supporting_factors=["Fib level aligns with HVN", "Volume shelf support/resistance", f"POC at {vp.get('poc',0):.4f}"],
+            rationale_summary=(
+                f"Fib + Volume Profile HVN {direction.value}: institutional level, "
+                f"R:R {reward/risk:.1f}"
+            ),
+            supporting_factors=[
+                "Fib level aligns with HVN",
+                "Volume shelf support/resistance",
+                f"POC at {vp.get('poc', 0):.4f}",
+            ],
         ), context)
 
     def validate_signal(self, signal, context):
@@ -247,7 +263,10 @@ class FibVolumeConfluence(Strategy):
     def build_trade_plan(self, signal, context):
         return TradePlan(
             entry_price=signal.proposed_entry, stop_loss=signal.stop_loss,
-            take_profit_targets=[signal.take_profit_primary] + ([signal.take_profit_secondary] if signal.take_profit_secondary else []),
+            take_profit_targets=(
+                [signal.take_profit_primary]
+                + ([signal.take_profit_secondary] if signal.take_profit_secondary else [])
+            ),
             max_bars_in_trade=self.max_bars,
         )
 
@@ -256,7 +275,9 @@ class FibVolumeConfluence(Strategy):
 
     def generate_exit(self, position, df, idx, context):
         row = df.iloc[idx]
-        d, sl, tp = position.get("direction"), position.get("stop_loss", 0), position.get("take_profit_targets", [])
+        d = position.get("direction")
+        sl = position.get("stop_loss", 0)
+        tp = position.get("take_profit_targets", [])
         bars = position.get("bars_in_trade", 0)
         if d == "LONG" and row["low"] <= sl:
             return ExitReason.STOP_LOSS_HIT
@@ -275,4 +296,7 @@ class FibVolumeConfluence(Strategy):
         return 0.65
 
     def explain_decision(self, context):
-        return "Fib + Volume Profile: Fibonacci level aligned with institutional High Volume Node creating strong support/resistance."
+        return (
+            "Fib + Volume Profile: Fibonacci level aligned with institutional High "
+            "Volume Node creating strong support/resistance."
+        )

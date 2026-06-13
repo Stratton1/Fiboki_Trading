@@ -22,10 +22,14 @@ class ResearchRunRequest(BaseModel):
     instruments: list[str] = Field(..., min_length=1)
     timeframes: list[str] = Field(..., min_length=1)
     data_dir: str | None = None
-    provider: str | None = Field(None, description="Data provider: histdata, dukascopy, or None for auto")
+    provider: str | None = Field(
+        None, description="Data provider: histdata, dukascopy, or None for auto"
+    )
     initial_capital: float = 10000.0
     risk_per_trade_pct: float = 1.0
-    min_trades: int = Field(default=80, ge=1, le=1000, description="Minimum trades for qualification")
+    min_trades: int = Field(
+        default=80, ge=1, le=1000, description="Minimum trades for qualification"
+    )
     scoring_weights: ScoringWeights | None = Field(None, description="Custom scoring weights")
 
 

@@ -78,11 +78,16 @@ def seed_backtest(
 
     # Create sample trades (mix of wins/losses, different exit reasons)
     trades_data = [
-        {"dir": "LONG", "entry": 1.0850, "exit": 1.0885, "reason": "take_profit_hit", "pnl": 17.50, "bars": 8, "offset_h": 24},
-        {"dir": "SHORT", "entry": 1.0890, "exit": 1.0870, "reason": "take_profit_hit", "pnl": 10.00, "bars": 5, "offset_h": 72},
-        {"dir": "LONG", "entry": 1.0860, "exit": 1.0840, "reason": "stop_loss_hit", "pnl": -10.00, "bars": 3, "offset_h": 120},
-        {"dir": "LONG", "entry": 1.0855, "exit": 1.0880, "reason": "take_profit_hit", "pnl": 12.50, "bars": 12, "offset_h": 200},
-        {"dir": "SHORT", "entry": 1.0895, "exit": 1.0882, "reason": "take_profit_hit", "pnl": -0.50, "bars": 6, "offset_h": 350},
+        {"dir": "LONG",  "entry": 1.0850, "exit": 1.0885,
+         "reason": "take_profit_hit", "pnl":  17.50, "bars":  8, "offset_h":  24},
+        {"dir": "SHORT", "entry": 1.0890, "exit": 1.0870,
+         "reason": "take_profit_hit", "pnl":  10.00, "bars":  5, "offset_h":  72},
+        {"dir": "LONG",  "entry": 1.0860, "exit": 1.0840,
+         "reason": "stop_loss_hit",   "pnl": -10.00, "bars":  3, "offset_h": 120},
+        {"dir": "LONG",  "entry": 1.0855, "exit": 1.0880,
+         "reason": "take_profit_hit", "pnl":  12.50, "bars": 12, "offset_h": 200},
+        {"dir": "SHORT", "entry": 1.0895, "exit": 1.0882,
+         "reason": "take_profit_hit", "pnl":  -0.50, "bars":  6, "offset_h": 350},
     ]
 
     for td in trades_data:
