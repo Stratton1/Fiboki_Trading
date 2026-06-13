@@ -148,7 +148,22 @@ def run_scenario(
                 max_dd = dd
         result.aggregate_max_dd = round(max_dd, 2)
 
-    # Compute aggregate Sharpe from combined equity returns
+    # Compute aggregate Sharpe from combined equity returns.
+    #
+    # Implementation note — alignment with /scenarios InfoTip:
+    # the frontend tooltip on /scenarios explicitly tells operators this
+    # Sharpe is "NOT annualised — compare across scenarios, not against
+    # published annualised benchmarks". We therefore compute the raw
+    # Sharpe (mean / stdev of bar-to-bar returns) and skip annualisation.
+    #
+    # Rationale:
+    #   1. Match what the UI tells operators (do not lie to the operator).
+    #   2. Annualising trade-level / bar-level returns with a single
+    #      constant (e.g. sqrt(252) for daily bars) is meaningless when
+    #      scenarios mix timeframes (H1 / H4 / M15 in the same simulation)
+    #      because the bar cadence is no longer uniform.
+    #   3. Per the project quant-correctness rule, prefer honest
+    #      underperformance over inflated performance.
     if equity_curves:
         all_returns: list[float] = []
         for ec in equity_curves:
@@ -161,7 +176,9 @@ def run_scenario(
             import statistics
             mean_r = statistics.mean(all_returns)
             std_r = statistics.stdev(all_returns)
-            result.aggregate_sharpe = round(mean_r / std_r * (252 ** 0.5) if std_r > 0 else 0.0, 4)
+            result.aggregate_sharpe = round(
+                mean_r / std_r if std_r > 0 else 0.0, 4
+            )
 
     # Compute aggregate win rate
     successful = [b for b in result.per_bot if "error" not in b]
