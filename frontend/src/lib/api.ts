@@ -463,6 +463,10 @@ export const api = {
       database: string;
       paper_engine: string;
       strategies_loaded: number;
+      /** Architectural minimum from the backend (registry.EXPECTED_MIN_STRATEGIES).
+       *  Optional during the deploy window where older API builds may not yet
+       *  emit the field — the dashboard falls back to never-warn in that case. */
+      strategies_expected_min?: number;
       execution_mode: string;
       kill_switch_active: boolean;
     }>("/system/status"),

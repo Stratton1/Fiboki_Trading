@@ -24,6 +24,10 @@ class SystemStatusResponse(BaseModel):
     paper_engine: str
     worker_bots: int
     strategies_loaded: int
+    # Architectural minimum the dashboard compares against to decide whether
+    # to warn. Owned by the backend so the UI never hardcodes a magic number
+    # against a growing registry. See strategies.registry.EXPECTED_MIN_STRATEGIES.
+    strategies_expected_min: int
     execution_mode: str
     kill_switch_active: bool
     data_source: str
@@ -126,9 +130,10 @@ def system_status(
     # FIBOKEI_VISIBLE_STRATEGIES (which is for UI shortlisting), and using
     # it here caused /system/status to report e.g. 2 strategies when the
     # registry actually held the full architectural set.
-    from fibokei.strategies.registry import strategy_registry
+    from fibokei.strategies.registry import EXPECTED_MIN_STRATEGIES, strategy_registry
 
     strategies_loaded = strategy_registry.loaded_count
+    strategies_expected_min = EXPECTED_MIN_STRATEGIES
 
     flags = FeatureFlags()
     from fibokei.db.repository import get_kill_switch
@@ -166,6 +171,7 @@ def system_status(
         paper_engine=paper_status,
         worker_bots=worker_bots,
         strategies_loaded=strategies_loaded,
+        strategies_expected_min=strategies_expected_min,
         execution_mode=flags.execution_mode,
         kill_switch_active=ks.is_active,
         data_source=data_source,

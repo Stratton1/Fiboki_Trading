@@ -26,6 +26,13 @@ from fibokei.strategies.bot21_fib_arc_breakout import FibArcBreakout
 from fibokei.strategies.bot22_fib_volume_confluence import FibVolumeConfluence
 
 
+# Architectural minimum number of hand-coded strategies expected to be
+# registered. Used by /system/status to flag a registry that's failed to
+# load adequately (e.g. import error wiped most of the registry) without
+# the dashboard hardcoding a magic number against a growing registry.
+EXPECTED_MIN_STRATEGIES = 12
+
+
 class StrategyRegistry:
     """Registry for strategy classes."""
 

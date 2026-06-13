@@ -48,3 +48,18 @@ class TestSystemStatus:
             response = api_client.get("/api/v1/system/status", headers=auth_headers)
             assert response.status_code == 200
             assert response.json()["strategies_loaded"] == expected
+
+    def test_strategies_expected_min_exposed(self, api_client, auth_headers):
+        """Dashboard reads strategies_expected_min instead of hardcoding 12.
+        The field must be present and match the registry's published constant."""
+        from fibokei.strategies.registry import EXPECTED_MIN_STRATEGIES
+
+        response = api_client.get("/api/v1/system/status", headers=auth_headers)
+        assert response.status_code == 200
+        data = response.json()
+        assert "strategies_expected_min" in data
+        assert data["strategies_expected_min"] == EXPECTED_MIN_STRATEGIES
+        assert data["strategies_loaded"] >= data["strategies_expected_min"], (
+            "Production registry is below the architectural minimum — fix "
+            "strategy imports before shipping"
+        )

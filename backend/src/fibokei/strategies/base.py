@@ -10,7 +10,16 @@ from fibokei.core.trades import ExitReason, TradePlan
 
 
 class Strategy(ABC):
-    """Base class that all 12 Fiboki bots must implement."""
+    """Base class that every registered Fiboki strategy must implement.
+
+    The original architecture defined 12 hand-coded bots; the canonical
+    registry has since grown beyond that, and Phase 20 introduced a factory
+    pipeline (``CompiledStrategy``) that produces additional Strategy
+    instances at runtime. The strategy registry
+    (``fibokei.strategies.registry``) is the source of truth for what's
+    loaded; consult ``StrategyRegistry.loaded_count`` rather than this
+    docstring.
+    """
 
     # --- Identity (override in subclass) ---
 

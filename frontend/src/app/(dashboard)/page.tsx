@@ -283,9 +283,16 @@ export default function DashboardPage() {
 
   const executionMode = execMode?.mode ?? systemStatus?.execution_mode ?? "paper";
   const killSwitchActive = killSwitch?.is_active ?? execMode?.kill_switch_active ?? false;
-  // Show the raw count from the API. If it disagrees with the expected 12,
-  // that surfaces a backend strategy-registry issue rather than masking it.
+  // Show the raw count from the API. Compare against the backend-provided
+  // architectural minimum (strategies_expected_min) rather than a hardcoded
+  // dashboard threshold — when the registry grows, the backend updates the
+  // minimum and the dashboard follows automatically.
   const strategiesLoaded = systemStatus?.strategies_loaded;
+  const strategiesExpectedMin = systemStatus?.strategies_expected_min;
+  const strategiesUnderloaded =
+    strategiesLoaded !== undefined &&
+    strategiesExpectedMin !== undefined &&
+    strategiesLoaded < strategiesExpectedMin;
   const dbStatus = systemStatus?.database;
   // Treat both "ok" and "connected" as healthy — the API has historically
   // returned either, and the dashboard should not light red on either.
@@ -762,13 +769,17 @@ export default function DashboardPage() {
                 <Target size={14} className="text-foreground-muted" />
                 <span className="text-sm inline-flex items-center">
                   Strategies
-                  <InfoTip text="Strategies registered in the running backend (per /system/status). Fiboki ships with 12 strategy bots — a count below 12 indicates a registry / discovery issue worth checking on the System page." />
+                  <InfoTip text="Strategy classes registered in the running backend (per /system/status). The amber warning fires only when the count falls below the architectural minimum reported by the API (strategies_expected_min); the operator-visibility whitelist (FIBOKEI_VISIBLE_STRATEGIES) does not affect this number." />
                 </span>
               </div>
               {strategiesLoaded === undefined ? (
                 <span className="text-sm text-foreground-muted">—</span>
-              ) : strategiesLoaded < 12 ? (
-                <Link href="/system" className="text-sm font-medium tabular-nums text-amber-700 hover:underline">
+              ) : strategiesUnderloaded ? (
+                <Link
+                  href="/system"
+                  className="text-sm font-medium tabular-nums text-amber-700 hover:underline"
+                  title={`Below architectural minimum of ${strategiesExpectedMin} — check the System page`}
+                >
                   {strategiesLoaded} loaded ⚠
                 </Link>
               ) : (
