@@ -1,6 +1,23 @@
 """Background job engine using threading + concurrent.futures.
 
-Jobs are submitted to a thread pool, tracked in-memory and persisted to the DB.
+Jobs are submitted to a thread pool and tracked **in-memory only**.
+
+Important operational notes:
+
+- Job state is held in the in-process ``_jobs`` dict and is **not persisted
+  to the database**. A backend restart (Railway redeploy, OOM kill, host
+  reboot) loses every job's progress, result, and error — including
+  completed jobs the operator has not yet drilled through to.  Persisted
+  artefacts (research runs, backtest rows) survive restarts independently;
+  jobs are only the orchestration shell.
+
+- Cancellation is **cooperative**. ``cancel()`` flips ``state`` to
+  ``CANCELLED`` and returns immediately, but the worker function only
+  observes this flag the next time it calls ``progress_callback``. A job
+  that never calls ``progress_callback`` will keep running on the thread
+  pool until completion and then notice it has been cancelled (and discard
+  its result).  ``future.cancel()`` is not invoked.
+
 Each job has a UUID, state lifecycle (pending → running → completed/failed),
 progress tracking (0–100), and optional result references.
 """
