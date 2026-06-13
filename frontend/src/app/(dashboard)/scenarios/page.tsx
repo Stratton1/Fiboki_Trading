@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import useSWR from "swr";
 import { api } from "@/lib/api";
 import { formatPnl, formatCurrency, currencySymbol } from "@/lib/format-currency";
@@ -343,6 +343,26 @@ export default function ScenariosPage() {
   const [result, setResult] = useState<ScenarioResult | null>(null);
   const [resultJobId, setResultJobId] = useState<string | null>(null);
 
+  // P0-2: pre-flight estimate dialog for explosive combo counts.
+  // Combo dispatch can easily reach thousands (21 × 40 × 6 = 5,040 backtests);
+  // the operator should explicitly confirm before saturating the backend.
+  const PREFLIGHT_THRESHOLD = 50;
+  const [preflightAcknowledged, setPreflightAcknowledged] = useState(false);
+
+  // P0-1: poll-interval cleanup. Lifted into a ref so unmount and re-entry
+  // always clear the timer — previously, network errors during polling fell
+  // into 'keep trying' and the interval leaked. Mirrors the /research and
+  // /backtests polling refactors (commits 1984782 and 8d4bf70).
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  useEffect(() => {
+    return () => {
+      if (pollRef.current) clearInterval(pollRef.current);
+    };
+  }, []);
+
+  // P0-5: surface errors when loading a past scenario from the Recent panel.
+  const [pastLoadError, setPastLoadError] = useState<string | null>(null);
+
   // Sort state for per-bot table
   const [sortField, setSortField] = useState<SortField>("net_profit");
   const [sortAsc, setSortAsc] = useState(false);
@@ -381,6 +401,13 @@ export default function ScenariosPage() {
     e.preventDefault();
     if (comboCount === 0) return;
 
+    // P0-2 pre-flight gate. Once acknowledged we skip the check for this
+    // session so the operator isn't pestered after they've confirmed once
+    // the work they're doing.
+    if (comboCount > PREFLIGHT_THRESHOLD && !preflightAcknowledged) {
+      return;
+    }
+
     setRunning(true);
     setProgress(0);
     setError(null);
@@ -401,29 +428,38 @@ export default function ScenariosPage() {
       const res = await api.runScenario({ combos, capital });
       const jobId = res.job_id;
 
-      const poll = setInterval(async () => {
+      // P0-1: poll-interval cleanup via ref + 15-error guard so a dropped
+      // backend doesn't keep the timer alive forever.
+      let consecutivePollErrors = 0;
+      if (pollRef.current) clearInterval(pollRef.current);
+      pollRef.current = setInterval(async () => {
         try {
           const job = await api.getJob(jobId);
+          consecutivePollErrors = 0;
           setProgress(job.progress ?? 0);
 
           if (job.state === "completed" && job.result) {
-            clearInterval(poll);
+            if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null; }
             setResult(job.result as unknown as ScenarioResult);
             setResultJobId(jobId);
             setRunning(false);
             // Update URL so result can be restored on page revisit
             window.history.replaceState(null, "", `?job=${jobId}`);
           } else if (job.state === "failed") {
-            clearInterval(poll);
+            if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null; }
             setError(job.error || "Scenario job failed");
             setRunning(false);
           } else if (job.state === "cancelled") {
-            clearInterval(poll);
+            if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null; }
             setError("Scenario job was cancelled");
             setRunning(false);
           }
         } catch {
-          // poll error — keep trying
+          if (++consecutivePollErrors >= 15) {
+            if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null; }
+            setError("Lost contact with the scenario poller — refresh to retry");
+            setRunning(false);
+          }
         }
       }, 2000);
     } catch (err) {
@@ -506,10 +542,29 @@ export default function ScenariosPage() {
       <th
         className={`pb-2 pr-3 cursor-pointer select-none hover:text-foreground transition ${align ?? "text-right"}`}
         onClick={() => handleSort(field)}
+        // P2-7: lightweight keyboard support without restructuring the cell.
+        tabIndex={0}
+        role="button"
+        aria-label={`Sort by ${label}${active ? `, currently ${sortAsc ? "ascending" : "descending"}` : ""}`}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            handleSort(field);
+          }
+        }}
       >
         <span className="inline-flex items-center gap-0.5">
           {label}
-          {active && (sortAsc ? <ChevronUp size={10} /> : <ChevronDown size={10} />)}
+          {/* P1-5: always render an indicator on the active column so the
+              default sort is visible without a click. Inactive columns
+              show a subtle low-opacity chevron-pair to hint at sortability. */}
+          {active ? (
+            sortAsc ? <ChevronUp size={10} /> : <ChevronDown size={10} />
+          ) : (
+            <span className="opacity-30">
+              <ChevronDown size={10} />
+            </span>
+          )}
           {tip && <InfoTip text={tip} />}
         </span>
       </th>
@@ -642,7 +697,11 @@ export default function ScenariosPage() {
               </button>
             ))}
           </div>
-          {isMixedTimeframe && (
+          {/* P1-1: when a result is already showing, the in-card amber banner
+              repeats the same caveat — keep this pre-run hint only when no
+              result is on screen so the operator sees it once, where it's
+              actionable. */}
+          {isMixedTimeframe && !result && (
             <p className="text-[11px] text-amber-600 mt-2 flex items-center gap-1">
               <Info size={12} />
               Mixed timeframes selected — aggregate equity curve will be bar-indexed, not time-aligned
@@ -665,14 +724,25 @@ export default function ScenariosPage() {
               className="border border-gray-300 rounded px-3 py-1.5 text-sm w-32 bg-background"
             />
           </div>
-          <div className="text-xs text-foreground-muted py-1.5">
+          <div className="text-xs text-foreground-muted py-1.5 inline-flex items-center">
             = {formatCurrency(comboCount > 0 ? capital / comboCount : capital, currency, 0)} per bot
+            <InfoTip text="Display only — the scenario engine does not split capital per bot. Each bot is backtested against its own simulated account at the full Starting Capital. Use this number as a portfolio-allocation hint when later promoting combos to paper trading, not as a constraint on the simulation." />
           </div>
           <button
             type="submit"
-            disabled={running || comboCount === 0}
+            disabled={
+              running ||
+              comboCount === 0 ||
+              (comboCount > PREFLIGHT_THRESHOLD && !preflightAcknowledged)
+            }
             className="flex items-center gap-2 bg-primary text-white px-4 py-1.5 rounded text-sm font-medium disabled:opacity-50 transition-opacity"
-            title={comboCount === 0 ? "Select at least 1 strategy, instrument, and timeframe" : `Run ${comboCount} combinations`}
+            title={
+              comboCount === 0
+                ? "Select at least 1 strategy, instrument, and timeframe"
+                : comboCount > PREFLIGHT_THRESHOLD && !preflightAcknowledged
+                  ? `Acknowledge the ${comboCount}-backtest pre-flight notice above to enable`
+                  : `Run ${comboCount} combinations`
+            }
           >
             {running ? (
               <>
@@ -711,6 +781,54 @@ export default function ScenariosPage() {
           </div>
         )}
       </form>
+
+      {/* P0-2: pre-flight estimate when combos > threshold. The form's Run
+          button submits but handleRun short-circuits and the operator must
+          confirm here. */}
+      {comboCount > PREFLIGHT_THRESHOLD && !preflightAcknowledged && !running && (
+        <div className="rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 mb-4 text-sm space-y-2" data-testid="scenarios-preflight">
+          <div className="flex items-start gap-2">
+            <AlertTriangle size={16} className="text-amber-700 mt-0.5 shrink-0" />
+            <div>
+              <p className="font-semibold text-amber-900">
+                {comboCount.toLocaleString()} backtests in one dispatch
+              </p>
+              <p className="text-xs text-amber-800 mt-1">
+                {selectedStrategies.length} strateg{selectedStrategies.length !== 1 ? "ies" : "y"}
+                {" × "}{selectedInstruments.length} instrument{selectedInstruments.length !== 1 ? "s" : ""}
+                {" × "}{selectedTimeframes.length} timeframe{selectedTimeframes.length !== 1 ? "s" : ""}.
+                Large sweeps can take several minutes and dominate the worker
+                queue. Acknowledge below before clicking Run, or reduce the
+                selection to under {PREFLIGHT_THRESHOLD} combos.
+              </p>
+            </div>
+          </div>
+          <label className="flex items-center gap-2 text-xs text-amber-900 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={preflightAcknowledged}
+              onChange={(e) => setPreflightAcknowledged(e.target.checked)}
+              className="rounded border-amber-400"
+            />
+            <span>I understand and want to dispatch {comboCount.toLocaleString()} backtests.</span>
+          </label>
+        </div>
+      )}
+
+      {/* P0-5: surface past-scenario load failures (silently swallowed before) */}
+      {pastLoadError && (
+        <div className="flex items-center gap-2 text-amber-800 text-sm mb-4 bg-amber-50 border border-amber-200 rounded-lg px-4 py-2">
+          <AlertTriangle size={14} />
+          <span className="flex-1">{pastLoadError}</span>
+          <button
+            type="button"
+            onClick={() => setPastLoadError(null)}
+            className="text-xs text-amber-700 hover:underline"
+          >
+            Dismiss
+          </button>
+        </div>
+      )}
 
       {/* Error */}
       {error && (
@@ -754,13 +872,22 @@ export default function ScenariosPage() {
                     <button
                       key={j.job_id}
                       onClick={() => {
+                        setPastLoadError(null);
                         api.getJob(j.job_id).then((job) => {
                           if (job.result) {
                             setResult(job.result as unknown as ScenarioResult);
                             setResultJobId(j.job_id);
                             window.history.replaceState(null, "", `?job=${j.job_id}`);
+                          } else {
+                            setPastLoadError(
+                              `Couldn't load job ${j.job_id.slice(0, 8)} — no result on the server (state: ${job.state}).`
+                            );
                           }
-                        }).catch(() => {});
+                        }).catch((err) => {
+                          setPastLoadError(
+                            `Failed to load job ${j.job_id.slice(0, 8)}: ${err instanceof Error ? err.message : String(err)}`
+                          );
+                        });
                       }}
                       className="w-full flex items-center justify-between px-3 py-2 rounded-md text-sm bg-background-muted hover:bg-background-muted/70 transition-colors text-left"
                     >
@@ -843,7 +970,7 @@ export default function ScenariosPage() {
               <div>
                 <p className="text-xs text-foreground-muted flex items-center gap-1">
                   Sharpe
-                  <InfoTip text="Annualized Sharpe ratio computed from the combined equity curve returns across all bots in the scenario." />
+                  <InfoTip text="Sharpe ratio computed from trade-level returns across the combined equity curve (mean / stdev). NOT annualised — compare across scenarios, not against published annualised benchmarks." />
                 </p>
                 <p className={`text-lg font-semibold ${(result.aggregate_sharpe ?? 0) >= 1 ? "text-primary" : (result.aggregate_sharpe ?? 0) < 0 ? "text-danger" : ""}`}>
                   {result.aggregate_sharpe != null
@@ -910,7 +1037,7 @@ export default function ScenariosPage() {
                     <SortHeader field="total_trades" label="Trades" />
                     <SortHeader field="net_profit" label="Net Profit" />
                     <SortHeader field="win_rate" label="Win %" />
-                    <SortHeader field="sharpe_ratio" label="Sharpe" tip="Annualized Sharpe Ratio: risk-adjusted return. Above 1.0 is good, above 2.0 is excellent." />
+                    <SortHeader field="sharpe_ratio" label="Sharpe" tip="Sharpe ratio computed from trade-level returns (not annualised). Compare across scenarios rather than against published annualised benchmarks." />
                     <SortHeader field="max_drawdown_pct" label="Max DD" tip="Maximum peak-to-trough drawdown as % of equity. Lower is better — indicates worst-case scenario." />
                     <th className="pb-2 text-right">Equity</th>
                   </tr>
@@ -920,7 +1047,12 @@ export default function ScenariosPage() {
                     <tr key={`${bot.strategy_id}-${bot.instrument}-${bot.timeframe}`} className="border-b border-border/50 last:border-0">
                       {bot.error ? (
                         <>
-                          <td className="py-1.5 pr-3 font-mono text-xs" title={strategyShortName(bot.strategy_id)}>{bot.strategy_id}</td>
+                          <td className="py-1.5 pr-3 text-xs">
+                            <div className="font-mono">{bot.strategy_id}</div>
+                            <div className="text-[10px] text-foreground-muted truncate max-w-[160px]">
+                              {strategyShortName(bot.strategy_id)}
+                            </div>
+                          </td>
                           <td className="py-1.5 pr-3">{bot.instrument}</td>
                           <td className="py-1.5 pr-3">{bot.timeframe}</td>
                           <td colSpan={6} className="py-1.5 text-danger text-xs">
@@ -929,7 +1061,12 @@ export default function ScenariosPage() {
                         </>
                       ) : (
                         <>
-                          <td className="py-1.5 pr-3 font-mono text-xs" title={strategyShortName(bot.strategy_id)}>{bot.strategy_id}</td>
+                          <td className="py-1.5 pr-3 text-xs">
+                            <div className="font-mono">{bot.strategy_id}</div>
+                            <div className="text-[10px] text-foreground-muted truncate max-w-[160px]">
+                              {strategyShortName(bot.strategy_id)}
+                            </div>
+                          </td>
                           <td className="py-1.5 pr-3">{bot.instrument}</td>
                           <td className="py-1.5 pr-3">{bot.timeframe}</td>
                           <td className="py-1.5 pr-3 text-right tabular-nums">
