@@ -10,11 +10,11 @@ from pydantic import BaseModel, Field
 from fibokei.api.auth import TokenData, get_current_user
 from fibokei.data.manifest import generate_manifest, load_manifest
 from fibokei.data.paths import get_canonical_dir
-
-logger = logging.getLogger(__name__)
 from fibokei.data.providers.base import ProviderID
 from fibokei.data.providers.registry import get_provider, list_providers, load_canonical
 from fibokei.data.providers.symbol_map import list_mapped_symbols, provider_has_symbol
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(tags=["data"])
 
@@ -166,7 +166,9 @@ def get_manifest(user: TokenData = Depends(get_current_user)):
     if _cached_manifest is None:
         _cached_manifest = load_manifest(_CANONICAL_DIR)
     if _cached_manifest is None:
-        raise HTTPException(status_code=404, detail="No manifest found. Run 'fibokei manifest' to generate.")
+        raise HTTPException(
+            status_code=404, detail="No manifest found. Run 'fibokei manifest' to generate."
+        )
     return _cached_manifest
 
 

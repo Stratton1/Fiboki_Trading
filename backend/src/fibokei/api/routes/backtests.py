@@ -93,7 +93,9 @@ def run_backtest(
         raise HTTPException(status_code=400, detail=f"Unknown strategy: {req.strategy_id}")
 
     try:
-        tf_enum = Timeframe(req.timeframe.upper())
+        # Validation-only — the raised ValueError on an invalid timeframe is
+        # the real side effect; we don't need the enum value itself here.
+        Timeframe(req.timeframe.upper())
     except ValueError:
         raise HTTPException(status_code=400, detail=f"Invalid timeframe: {req.timeframe}")
 

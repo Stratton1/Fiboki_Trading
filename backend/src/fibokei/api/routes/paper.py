@@ -11,8 +11,6 @@ from sqlalchemy.orm import Session
 from fibokei.api.auth import TokenData, get_current_user
 from fibokei.api.deps import get_db
 from fibokei.db.repository import (
-    archive_current_phase,
-    create_new_phase,
     delete_all_paper_bots,
     delete_paper_bot,
     get_active_paper_bots,
@@ -153,8 +151,6 @@ def create_bot(
         strategy_registry.get(req.strategy_id)
     except KeyError:
         raise HTTPException(status_code=400, detail=f"Unknown strategy: {req.strategy_id}")
-
-    instrument_norm = req.instrument.upper()
 
     bot_id = str(uuid.uuid4())[:8]
     source_type = req.source_type or "manual"
@@ -1248,7 +1244,9 @@ def get_paper_analytics(
 ):
     """Aggregate analytics across all closed paper trades — powers the Analytics dashboard."""
     from collections import defaultdict
+
     from sqlalchemy import select as sa_select
+
     from fibokei.db.models import PaperTradeModel
 
     trades = list(

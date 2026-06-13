@@ -254,7 +254,7 @@ class GoldenMomentumConfluence(Strategy):
             rationale_summary=f"Golden Zone + RSI + MACD confluence {direction.value}: RSI={row['rsi']:.0f}, R:R {reward/risk:.1f}",
             supporting_factors=[
                 f"Trend: {regime}",
-                f"Price at 61.8% Golden Zone",
+                "Price at 61.8% Golden Zone",
                 f"RSI exhaustion: {row['rsi']:.0f}",
                 "MACD cross confirmed",
                 f"R:R to TP1: {reward/risk:.1f}",

@@ -7,7 +7,6 @@ Includes a TTL cache to avoid excessive API calls.
 
 import logging
 import time
-from datetime import datetime, timezone
 
 import pandas as pd
 

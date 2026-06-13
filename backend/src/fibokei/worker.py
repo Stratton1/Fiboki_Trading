@@ -19,9 +19,15 @@ import os
 import signal
 import time
 from datetime import datetime, timezone
+from typing import TYPE_CHECKING
 
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
+
+if TYPE_CHECKING:
+    # Type-only — runtime callers either receive None or a DataFrame produced
+    # by the data adapters, which already import pandas themselves.
+    import pandas as pd  # noqa: F401
 
 from fibokei.alerts.telegram import TelegramNotifier
 from fibokei.core.feature_flags import FeatureFlags

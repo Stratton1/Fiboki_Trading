@@ -83,7 +83,10 @@ class TelegramNotifier:
             alert_type="signal",
             severity="info",
             title=f"Signal: {signal.strategy_id} {signal.direction.value} {signal.instrument}",
-            message=f"{signal.instrument} {signal.timeframe.value} — Entry {signal.proposed_entry:.5f}, Confidence {signal.confidence_score:.0%}",
+            message=(
+                f"{signal.instrument} {signal.timeframe.value} — Entry "
+                f"{signal.proposed_entry:.5f}, Confidence {signal.confidence_score:.0%}"
+            ),
             metadata_json={
                 "strategy_id": signal.strategy_id,
                 "instrument": signal.instrument,
@@ -123,7 +126,10 @@ class TelegramNotifier:
             alert_type="trade",
             severity="info",
             title=f"Trade Opened: {signal.strategy_id} {signal.instrument}",
-            message=f"{signal.direction.value} — Entry {signal.proposed_entry:.5f}, SL {sl_text}, TP {tp_text}",
+            message=(
+                f"{signal.direction.value} — Entry {signal.proposed_entry:.5f}, "
+                f"SL {sl_text}, TP {tp_text}"
+            ),
             metadata_json={
                 "strategy_id": signal.strategy_id,
                 "instrument": signal.instrument,
@@ -155,7 +161,10 @@ class TelegramNotifier:
             alert_type="trade",
             severity="info",
             title=f"Trade Closed: {trade.strategy_id} {trade.instrument}",
-            message=f"{trade.direction.value} — PnL {trade.pnl:+.2f} ({trade.pnl_pct:+.2f}%), {trade.exit_reason.value}",
+            message=(
+                f"{trade.direction.value} — PnL {trade.pnl:+.2f} "
+                f"({trade.pnl_pct:+.2f}%), {trade.exit_reason.value}"
+            ),
             metadata_json={
                 "strategy_id": trade.strategy_id,
                 "instrument": trade.instrument,
@@ -184,7 +193,9 @@ class TelegramNotifier:
         )
         return self.send_message(text)
 
-    def send_daily_summary(self, account_status: dict, trades_today: int, db: Session | None = None) -> bool:
+    def send_daily_summary(
+        self, account_status: dict, trades_today: int, db: Session | None = None
+    ) -> bool:
         """Send daily performance summary."""
         text = (
             f"\ud83d\udcca <b>Daily Summary</b>\n"
@@ -198,7 +209,10 @@ class TelegramNotifier:
             alert_type="summary",
             severity="info",
             title="Daily Summary",
-            message=f"Balance {account_status['balance']:.2f}, PnL {account_status['daily_pnl']:+.2f}, {trades_today} trades",
+            message=(
+                f"Balance {account_status['balance']:.2f}, "
+                f"PnL {account_status['daily_pnl']:+.2f}, {trades_today} trades"
+            ),
             metadata_json=account_status,
             db=db,
         )

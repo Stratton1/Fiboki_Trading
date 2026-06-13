@@ -993,8 +993,10 @@ def delete_results_bulk(
 
 # ---------- Scenario Sandbox ----------
 
-
-from pydantic import BaseModel as _BaseModel
+# Local alias retained for clarity inside this section. `BaseModel` is already
+# imported at module top; the alias is just to keep this block visually
+# self-contained without re-importing in mid-file (E402).
+_BaseModel = BaseModel
 
 
 class ScenarioComboRequest(_BaseModel):

@@ -277,7 +277,7 @@ def _validate_ig_config() -> None:
 def _log_data_paths() -> None:
     """Log resolved data paths and available starter files at startup."""
     logger = logging.getLogger("fibokei.startup")
-    from fibokei.data.paths import get_data_root, get_starter_dir, get_canonical_dir
+    from fibokei.data.paths import get_canonical_dir, get_data_root, get_starter_dir
 
     data_root = get_data_root()
     starter = get_starter_dir()

@@ -8,8 +8,6 @@ validation (e.g. Dukascopy cross-check).
 from dataclasses import dataclass, field
 from enum import Enum
 
-import pandas as pd
-
 from fibokei.backtester.config import BacktestConfig
 from fibokei.backtester.engine import Backtester
 from fibokei.backtester.metrics import compute_metrics

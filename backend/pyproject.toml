@@ -53,3 +53,13 @@ target-version = "py311"
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "W"]
+
+[tool.ruff.lint.per-file-ignores]
+# Pure data registry. Each entry is a single Instrument(...) literal whose
+# columns (symbol, name, asset_class, ig_epic) read more cleanly on one
+# line — splitting would make the table harder to audit, not easier.
+"src/fibokei/core/instruments.py" = ["E501"]
+# ORM model declarations. SQLAlchemy column definitions are conventionally
+# one-line statements; reformatting them buys no clarity and obscures the
+# table layout.
+"src/fibokei/db/models.py" = ["E501"]

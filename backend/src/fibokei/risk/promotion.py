@@ -1,7 +1,7 @@
 """Promotion gates — Paper→Demo and Demo→Live validation."""
 
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 
 
 @dataclass

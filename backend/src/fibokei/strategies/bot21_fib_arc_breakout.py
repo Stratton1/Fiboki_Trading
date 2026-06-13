@@ -166,7 +166,7 @@ class FibArcBreakout(Strategy):
             confidence_score=min(0.55 + (0.1 if reward/risk >= 1.0 else 0), 1.0),
             regime_label=self._setup_direction,
             rationale_summary=f"Fib Arc breakout {direction.value}: arc-to-arc scalp, R:R {reward/risk:.1f}",
-            supporting_factors=["Price broke through 38.2% Fibonacci Arc", f"Target: next arc level", f"R:R {reward/risk:.1f}"],
+            supporting_factors=["Price broke through 38.2% Fibonacci Arc", "Target: next arc level", f"R:R {reward/risk:.1f}"],
         ), context)
 
     def validate_signal(self, signal, context):
@@ -186,12 +186,17 @@ class FibArcBreakout(Strategy):
         row = df.iloc[idx]
         d, sl, tp = position.get("direction"), position.get("stop_loss", 0), position.get("take_profit_targets", [])
         bars = position.get("bars_in_trade", 0)
-        if d == "LONG" and row["low"] <= sl: return ExitReason.STOP_LOSS_HIT
-        if d == "SHORT" and row["high"] >= sl: return ExitReason.STOP_LOSS_HIT
+        if d == "LONG" and row["low"] <= sl:
+            return ExitReason.STOP_LOSS_HIT
+        if d == "SHORT" and row["high"] >= sl:
+            return ExitReason.STOP_LOSS_HIT
         if tp:
-            if d == "LONG" and row["high"] >= tp[0]: return ExitReason.TAKE_PROFIT_HIT
-            if d == "SHORT" and row["low"] <= tp[0]: return ExitReason.TAKE_PROFIT_HIT
-        if bars >= self.max_bars: return ExitReason.TIME_STOP_EXIT
+            if d == "LONG" and row["high"] >= tp[0]:
+                return ExitReason.TAKE_PROFIT_HIT
+            if d == "SHORT" and row["low"] <= tp[0]:
+                return ExitReason.TAKE_PROFIT_HIT
+        if bars >= self.max_bars:
+            return ExitReason.TIME_STOP_EXIT
         return None
 
     def score_confidence(self, signal, context):

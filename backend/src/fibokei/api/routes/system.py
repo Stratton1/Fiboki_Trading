@@ -140,7 +140,7 @@ def system_status(
     ks = get_kill_switch(db)
 
     # Determine active data source
-    from fibokei.data.paths import get_data_root, get_canonical_dir
+    from fibokei.data.paths import get_canonical_dir, get_data_root
 
     data_root = get_data_root()
     canonical = get_canonical_dir()
@@ -195,10 +195,16 @@ def get_risk_config(
         daily_hard_stop_pct=float(os.environ.get("FIBOKEI_DAILY_HARD_STOP_PCT", "4.0")),
         weekly_soft_stop_pct=float(os.environ.get("FIBOKEI_WEEKLY_SOFT_STOP_PCT", "6.0")),
         weekly_hard_stop_pct=float(os.environ.get("FIBOKEI_WEEKLY_HARD_STOP_PCT", "8.0")),
-        fleet_max_bots_per_instrument=int(os.environ.get("FIBOKEI_FLEET_MAX_BOTS_PER_INSTRUMENT", "5")),
+        fleet_max_bots_per_instrument=int(
+            os.environ.get("FIBOKEI_FLEET_MAX_BOTS_PER_INSTRUMENT", "5")
+        ),
         fleet_max_total_positions=int(os.environ.get("FIBOKEI_FLEET_MAX_TOTAL_POSITIONS", "20")),
-        fleet_max_exposure_per_instrument=int(os.environ.get("FIBOKEI_FLEET_MAX_EXPOSURE_PER_INSTRUMENT", "6")),
-        fleet_correlation_threshold=float(os.environ.get("FIBOKEI_FLEET_CORRELATION_THRESHOLD", "0.85")),
+        fleet_max_exposure_per_instrument=int(
+            os.environ.get("FIBOKEI_FLEET_MAX_EXPOSURE_PER_INSTRUMENT", "6")
+        ),
+        fleet_correlation_threshold=float(
+            os.environ.get("FIBOKEI_FLEET_CORRELATION_THRESHOLD", "0.85")
+        ),
         fleet_cull_sigma=float(os.environ.get("FIBOKEI_FLEET_CULL_SIGMA", "2.0")),
         fleet_cull_min_trades=int(os.environ.get("FIBOKEI_FLEET_CULL_MIN_TRADES", "50")),
     )

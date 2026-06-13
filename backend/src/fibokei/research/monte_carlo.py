@@ -1,6 +1,6 @@
 """Monte Carlo robustness checks via bootstrap resampling of trade returns."""
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
 import numpy as np
 

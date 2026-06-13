@@ -1,5 +1,7 @@
 """Execution control API — kill switch, audit logs, IG demo status."""
 
+from typing import TYPE_CHECKING
+
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
@@ -14,6 +16,12 @@ from fibokei.db.repository import (
     get_kill_switch,
     get_slippage_summary,
 )
+
+if TYPE_CHECKING:
+    # Imported only for type-annotation resolution. The runtime path
+    # delays the IGClient import so this module doesn't depend on the IG
+    # adapter being importable before its lazy-init helper runs.
+    from fibokei.execution.ig_client import IGClient
 
 router = APIRouter(tags=["execution"])
 
@@ -204,6 +212,7 @@ def get_ig_health(
     IG rate-limits rapid repeated logins and account switches.
     """
     import os
+
     from fibokei.execution.ig_client import IGClientError
 
     api_key = os.environ.get("FIBOKEI_IG_API_KEY", "")
@@ -212,7 +221,9 @@ def get_ig_health(
     configured = bool(api_key and username and password)
 
     if not configured:
-        return IGHealthResponse(configured=False, reachable=False, error="IG credentials not configured")
+        return IGHealthResponse(
+            configured=False, reachable=False, error="IG credentials not configured"
+        )
 
     try:
         client = _get_ig_health_client()

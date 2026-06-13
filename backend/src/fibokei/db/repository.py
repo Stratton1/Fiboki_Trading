@@ -1,28 +1,11 @@
 """Data access functions for Fiboki persistence."""
 
 import math
+from typing import TYPE_CHECKING
 
 import numpy as np
 from sqlalchemy import select
 from sqlalchemy.orm import Session
-
-
-def _sanitize_for_json(obj):
-    """Convert numpy types to native Python types for JSON/SQL serialization."""
-    if isinstance(obj, dict):
-        return {k: _sanitize_for_json(v) for k, v in obj.items()}
-    if isinstance(obj, list):
-        return [_sanitize_for_json(v) for v in obj]
-    if isinstance(obj, (np.floating, np.float64, np.float32)):
-        v = float(obj)
-        return None if math.isnan(v) or math.isinf(v) else v
-    if isinstance(obj, (np.integer, np.int64, np.int32)):
-        return int(obj)
-    if isinstance(obj, np.bool_):
-        return bool(obj)
-    if isinstance(obj, np.ndarray):
-        return [_sanitize_for_json(v) for v in obj.tolist()]
-    return obj
 
 from fibokei.backtester.result import BacktestResult
 from fibokei.db.models import (
@@ -42,6 +25,31 @@ from fibokei.db.models import (
     TradeModel,
     WatchlistModel,
 )
+
+if TYPE_CHECKING:
+    # Type-only import for the quoted "datetime | None" parameter annotations
+    # used throughout this module; runtime call sites already import datetime
+    # locally where needed.
+    from datetime import datetime  # noqa: F401
+
+
+def _sanitize_for_json(obj):
+    """Convert numpy types to native Python types for JSON/SQL serialization."""
+    if isinstance(obj, dict):
+        return {k: _sanitize_for_json(v) for k, v in obj.items()}
+    if isinstance(obj, list):
+        return [_sanitize_for_json(v) for v in obj]
+    if isinstance(obj, (np.floating, np.float64, np.float32)):
+        v = float(obj)
+        return None if math.isnan(v) or math.isinf(v) else v
+    if isinstance(obj, (np.integer, np.int64, np.int32)):
+        return int(obj)
+    if isinstance(obj, np.bool_):
+        return bool(obj)
+    if isinstance(obj, np.ndarray):
+        return [_sanitize_for_json(v) for v in obj.tolist()]
+    return obj
+
 
 # ---------- Chart drawings ----------
 
@@ -726,7 +734,7 @@ def get_or_create_paper_account(
     session: Session, initial_balance: float = 1000.0
 ) -> PaperAccountModel:
     """Get the single paper account record, creating if needed."""
-    from fibokei.paper.account import DEFAULT_INITIAL_BALANCE, DEFAULT_CURRENCY
+    from fibokei.paper.account import DEFAULT_CURRENCY, DEFAULT_INITIAL_BALANCE
 
     balance = initial_balance if initial_balance != 1000.0 else DEFAULT_INITIAL_BALANCE
     account = session.scalars(select(PaperAccountModel)).first()
@@ -1305,7 +1313,6 @@ from fibokei.db.models import (  # noqa: E402
     ExecutionAttemptModel,
 )
 
-
 # Status vocabulary for ExecutionAttemptModel.status. Constants are exported
 # so the router and API layer never use stringly-typed values directly.
 ATTEMPT_STATUS_PENDING = "pending"
@@ -1573,6 +1580,7 @@ def archive_current_phase(
       - phase.total_trades and phase.net_pnl are computed from trades
     """
     from datetime import datetime, timezone
+
     from sqlalchemy import func as _func
 
     now = datetime.now(timezone.utc)

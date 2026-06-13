@@ -130,7 +130,6 @@ class FibBBExhaustion(Strategy):
             return None
         row = df.iloc[idx]
         regime = self.detect_market_regime(df, idx)
-        atr = row.get("atr", 0)
         instrument = context.get("instrument", "UNKNOWN")
         timeframe = context.get("timeframe", Timeframe.H1)
 
@@ -182,12 +181,17 @@ class FibBBExhaustion(Strategy):
         row = df.iloc[idx]
         d, sl, tp = position.get("direction"), position.get("stop_loss", 0), position.get("take_profit_targets", [])
         bars = position.get("bars_in_trade", 0)
-        if d == "LONG" and row["low"] <= sl: return ExitReason.STOP_LOSS_HIT
-        if d == "SHORT" and row["high"] >= sl: return ExitReason.STOP_LOSS_HIT
+        if d == "LONG" and row["low"] <= sl:
+            return ExitReason.STOP_LOSS_HIT
+        if d == "SHORT" and row["high"] >= sl:
+            return ExitReason.STOP_LOSS_HIT
         if tp:
-            if d == "LONG" and row["high"] >= tp[0]: return ExitReason.TAKE_PROFIT_HIT
-            if d == "SHORT" and row["low"] <= tp[0]: return ExitReason.TAKE_PROFIT_HIT
-        if bars >= self.max_bars: return ExitReason.TIME_STOP_EXIT
+            if d == "LONG" and row["high"] >= tp[0]:
+                return ExitReason.TAKE_PROFIT_HIT
+            if d == "SHORT" and row["low"] <= tp[0]:
+                return ExitReason.TAKE_PROFIT_HIT
+        if bars >= self.max_bars:
+            return ExitReason.TIME_STOP_EXIT
         return None
 
     def score_confidence(self, signal, context: dict) -> float:

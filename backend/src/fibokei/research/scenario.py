@@ -107,17 +107,11 @@ def run_scenario(
                 "error": str(e),
             })
 
-    # Determine if this is a mixed-timeframe scenario
-    successful_timeframes = {
-        b["timeframe"] for b in result.per_bot if "error" not in b
-    }
-    is_mixed_timeframe = len(successful_timeframes) > 1
-
     # Aggregate equity curve: sum across bots, aligned by index.
-    # NOTE: When timeframes differ, bar-index alignment is approximate —
-    # an H4 bar and an M15 bar cover very different time periods.
-    # The aggregate curve is still useful for overall shape but the
-    # x-axis does not represent uniform time.
+    # Mixed-timeframe note: when bots span different timeframes the bar-index
+    # alignment below is approximate (an H4 bar and an M15 bar cover very
+    # different time periods). Result.aggregate_equity is still useful for
+    # overall shape but the x-axis is not uniform time.
     if equity_curves:
         max_len = max(len(ec) for ec in equity_curves)
         aggregate = []

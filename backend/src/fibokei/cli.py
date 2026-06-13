@@ -394,9 +394,10 @@ def list_data(_args=None):
 
 def run_paper_worker(args):
     """Run the paper trading worker."""
-    from fibokei.worker import main as worker_main
     # Re-use worker's own CLI parsing by calling its main directly
     import sys as _sys
+
+    from fibokei.worker import main as worker_main
     worker_args = []
     if args.dry_run:
         worker_args.append("--dry-run")
@@ -410,12 +411,12 @@ def run_paper_worker(args):
 
 def show_paper_status():
     """Show paper bot and account status from the database."""
-    from fibokei.worker import _build_db_session
     from fibokei.db.repository import (
         get_or_create_paper_account,
         get_paper_bots,
         get_paper_trades,
     )
+    from fibokei.worker import _build_db_session
 
     session_factory = _build_db_session()
     with session_factory() as session:

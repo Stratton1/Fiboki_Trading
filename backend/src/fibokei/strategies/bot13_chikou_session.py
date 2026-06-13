@@ -296,8 +296,6 @@ class ChikouSessionGuard(Strategy):
         if pd.isna(tenkan_now):
             return None
 
-        close_now = df["close"].iloc[idx]
-
         # Check N consecutive closes through Tenkan before exiting.
         # This prevents the single-candle whipsaws that cost BOT-04 £341.
         def _crossed(bar_idx: int) -> bool:
