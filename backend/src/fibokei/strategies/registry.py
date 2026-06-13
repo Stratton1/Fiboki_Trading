@@ -37,6 +37,18 @@ class StrategyRegistry:
         instance = strategy_class()
         self._strategies[instance.strategy_id] = strategy_class
 
+    @property
+    def loaded_count(self) -> int:
+        """Total number of registered strategy classes.
+
+        This is the canonical "what's loaded in the running process" count,
+        independent of the FIBOKEI_VISIBLE_STRATEGIES operator-visibility
+        filter applied by :meth:`list_available`. Use this for system-status
+        observability so the dashboard never reports a misleadingly-low
+        number when the visibility filter is set.
+        """
+        return len(self._strategies)
+
     def get(self, strategy_id: str, **kwargs) -> Strategy:
         """Get a strategy instance by ID."""
         if strategy_id not in self._strategies:

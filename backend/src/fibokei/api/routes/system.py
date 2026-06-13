@@ -121,10 +121,14 @@ def system_status(
     except Exception:
         worker_bots = 0
 
-    # Count loaded strategies
+    # Count loaded strategies — the *total* registered, not the operator-
+    # visibility filter result. `list_available()` honours
+    # FIBOKEI_VISIBLE_STRATEGIES (which is for UI shortlisting), and using
+    # it here caused /system/status to report e.g. 2 strategies when the
+    # registry actually held the full architectural set.
     from fibokei.strategies.registry import strategy_registry
 
-    strategies_loaded = len(strategy_registry.list_available())
+    strategies_loaded = strategy_registry.loaded_count
 
     flags = FeatureFlags()
     from fibokei.db.repository import get_kill_switch
