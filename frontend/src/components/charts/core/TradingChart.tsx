@@ -5,10 +5,10 @@ import { init, dispose } from "klinecharts";
 import type { Chart, KLineData } from "klinecharts";
 import { mapCandlesToKLine } from "@/lib/chart-mappers/candle-mapper";
 import {
-  registerIchimokuIndicator,
-  setIchimokuData,
-  clearIchimokuData,
-  ICHIMOKU_INDICATOR_NAME,
+  registerIchimokuForChart,
+  ichimokuIndicatorName,
+  setIchimokuDataForChart,
+  clearIchimokuDataForChart,
 } from "@/components/charts/overlays/IchimokuOverlay";
 import type { MarketDataResponse } from "@/types/contracts/chart";
 import type { ChartDrawing } from "@/types/contracts/drawings";
@@ -76,6 +76,16 @@ const TradingChart = forwardRef<TradingChartHandle, TradingChartProps>(function 
   const chartRef = useRef<Chart | null>(null);
   const ichimokuActiveRef = useRef(false);
   const dataRef = useRef<KLineData[]>([]);
+  // Unique chart-instance id used to scope Ichimoku overlay state. Stable for
+  // the lifetime of this component instance — remounting (e.g. switching layout
+  // mode in MultiChartLayout) yields a fresh id so cells never share state.
+  const chartIdRef = useRef<string>("");
+  if (chartIdRef.current === "") {
+    chartIdRef.current =
+      typeof crypto !== "undefined" && "randomUUID" in crypto
+        ? crypto.randomUUID()
+        : `tc_${Math.random().toString(36).slice(2)}_${Date.now().toString(36)}`;
+  }
 
   // Track drawing overlay IDs to avoid conflicting with Ichimoku overlays
   const drawingOverlayIdsRef = useRef<Set<string>>(new Set());
@@ -113,9 +123,11 @@ const TradingChart = forwardRef<TradingChartHandle, TradingChartProps>(function 
     },
   }), []);
 
-  // Register the custom Ichimoku indicator once on mount
+  // Register a chart-instance-scoped Ichimoku indicator on mount. Subsequent
+  // renders see the same id (stored in chartIdRef) so the registration is
+  // idempotent inside klinecharts.
   useEffect(() => {
-    registerIchimokuIndicator();
+    registerIchimokuForChart(chartIdRef.current);
   }, []);
 
   // Initialize chart
@@ -178,7 +190,9 @@ const TradingChart = forwardRef<TradingChartHandle, TradingChartProps>(function 
       ichimokuActiveRef.current = false;
       drawingOverlayIdsRef.current.clear();
       overlayToDrawingIdRef.current.clear();
-      clearIchimokuData();
+      // Instance-scoped cleanup: drop only this chart's slot — sibling cells'
+      // overlay data must remain untouched.
+      clearIchimokuDataForChart(chartIdRef.current);
     };
   }, []);
 
@@ -188,9 +202,9 @@ const TradingChart = forwardRef<TradingChartHandle, TradingChartProps>(function 
     if (!chart || !data) return;
 
     if (data.ichimoku) {
-      setIchimokuData(data.ichimoku);
+      setIchimokuDataForChart(chartIdRef.current, data.ichimoku);
     } else {
-      clearIchimokuData();
+      clearIchimokuDataForChart(chartIdRef.current);
     }
 
     const klineData = mapCandlesToKLine(data.candles);
@@ -218,16 +232,18 @@ const TradingChart = forwardRef<TradingChartHandle, TradingChartProps>(function 
     });
   }, [data, timeframe, precision]);
 
-  // Toggle Ichimoku indicator
+  // Toggle Ichimoku indicator. Uses the instance-scoped indicator name so
+  // toggling on cell A doesn't touch cell B's overlay.
   useEffect(() => {
     const chart = chartRef.current;
     if (!chart) return;
+    const name = ichimokuIndicatorName(chartIdRef.current);
 
     if (ichimokuEnabled && !ichimokuActiveRef.current) {
-      chart.createIndicator(ICHIMOKU_INDICATOR_NAME, true);
+      chart.createIndicator(name, true);
       ichimokuActiveRef.current = true;
     } else if (!ichimokuEnabled && ichimokuActiveRef.current) {
-      chart.removeIndicator({ name: ICHIMOKU_INDICATOR_NAME });
+      chart.removeIndicator({ name });
       ichimokuActiveRef.current = false;
     }
   }, [ichimokuEnabled]);
