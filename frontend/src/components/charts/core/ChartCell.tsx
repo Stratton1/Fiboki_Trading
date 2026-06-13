@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useRef, useMemo } from "react";
+import { useState, useCallback, useRef, useMemo, useEffect } from "react";
 import TradingChart from "./TradingChart";
 import type { TradingChartHandle } from "./TradingChart";
 import { useMarketData, useLiveStatus } from "@/lib/hooks/use-market-data";
@@ -31,21 +31,26 @@ import {
 import { MARKET_SESSIONS, getSessionForTimestamp } from "@/lib/sessions";
 import { InfoTip } from "@/components/InfoTip";
 
-const INSTRUMENTS = [
-  // FX Majors
-  "EURUSD", "GBPUSD", "USDJPY", "AUDUSD", "USDCAD", "USDCHF", "NZDUSD",
-  // FX Crosses
-  "EURJPY", "GBPJPY", "EURGBP", "AUDJPY", "EURAUD",
-  // Metals
-  "XAUUSD", "XAGUSD",
-  // Oil
-  "BCOUSD", "WTIUSD",
-  // Indices
-  "US500", "US100", "UK100", "DE40", "JP225",
-  // Crypto
-  "BTCUSD", "ETHUSD",
+/** Instruments grouped by asset class so the <select> renders <optgroup>s
+ * instead of a flat 22-item list. Order within each group is intentional. */
+const INSTRUMENT_GROUPS: Array<{ label: string; items: string[] }> = [
+  { label: "FX Majors",  items: ["EURUSD", "GBPUSD", "USDJPY", "AUDUSD", "USDCAD", "USDCHF", "NZDUSD"] },
+  { label: "FX Crosses", items: ["EURJPY", "GBPJPY", "EURGBP", "AUDJPY", "EURAUD"] },
+  { label: "Metals",     items: ["XAUUSD", "XAGUSD"] },
+  { label: "Oil",        items: ["BCOUSD", "WTIUSD"] },
+  { label: "Indices",    items: ["US500", "US100", "UK100", "DE40", "JP225"] },
+  { label: "Crypto",     items: ["BTCUSD", "ETHUSD"] },
 ];
+
 const TIMEFRAMES = ["M15", "M30", "H1", "H4", "D1"];
+
+/** Price precision for the y-axis formatter — JPY pairs quote to 3dp, all
+ * other FX/indices/metals to 5dp, crypto to 2dp. */
+function pricePrecisionFor(instrument: string): number {
+  if (instrument.includes("JPY")) return 3;
+  if (instrument === "BTCUSD" || instrument === "ETHUSD") return 2;
+  return 5;
+}
 
 const DRAWING_TOOLS = [
   { id: null, label: "Select", icon: MousePointer, shortcut: "V" },
@@ -164,6 +169,61 @@ export default function ChartCell({
     onConfigChange?.(instrument, v);
   };
 
+  // ── Keyboard shortcuts for drawing tools ───────────────────
+  // Bind V/T/H/X/R/F/C globally for the active chart. We previously surfaced
+  // these in tooltips but never bound them, which made the hint misleading.
+  // Skip when the user is typing in an input, select, or contentEditable
+  // surface so we don't hijack typing in the instrument <select>.
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
+      const target = e.target as HTMLElement | null;
+      if (target && (
+        target.tagName === "INPUT" ||
+        target.tagName === "TEXTAREA" ||
+        target.tagName === "SELECT" ||
+        target.isContentEditable
+      )) return;
+      const key = e.key.toUpperCase();
+      const match = DRAWING_TOOLS.find((t) => t.shortcut === key);
+      if (!match) return;
+      e.preventDefault();
+      setActiveDrawingTool((cur) => (cur === match.id ? null : match.id));
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
+
+  // Close the help popup on Escape or click-outside.
+  const helpRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!showHelp) return;
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") setShowHelp(false);
+    }
+    function onClickOutside(e: MouseEvent) {
+      if (helpRef.current && !helpRef.current.contains(e.target as Node)) {
+        setShowHelp(false);
+      }
+    }
+    document.addEventListener("keydown", onKey);
+    document.addEventListener("mousedown", onClickOutside);
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      document.removeEventListener("mousedown", onClickOutside);
+    };
+  }, [showHelp]);
+
+  // Inline message when an operator clicks Live with live unavailable.
+  const [liveDisabledHint, setLiveDisabledHint] = useState(false);
+  useEffect(() => {
+    if (!liveDisabledHint) return;
+    const id = window.setTimeout(() => setLiveDisabledHint(false), 3000);
+    return () => window.clearTimeout(id);
+  }, [liveDisabledHint]);
+
+  const precision = pricePrecisionFor(instrument);
+
   return (
     <div className="flex flex-col h-full border border-border rounded-lg overflow-hidden bg-background-card" data-testid="chart-cell">
       {/* ── Header / Context Bar ─────────────────────────────── */}
@@ -174,9 +234,14 @@ export default function ChartCell({
           onChange={(e) => handleInstrumentChange(e.target.value)}
           className="bg-background border border-border rounded px-1.5 py-0.5 text-xs font-medium"
           data-testid="instrument-select"
+          aria-label="Select instrument"
         >
-          {INSTRUMENTS.map((i) => (
-            <option key={i} value={i}>{i.slice(0, 3)}/{i.slice(3)}</option>
+          {INSTRUMENT_GROUPS.map((group) => (
+            <optgroup key={group.label} label={group.label}>
+              {group.items.map((i) => (
+                <option key={i} value={i}>{i.slice(0, 3)}/{i.slice(3)}</option>
+              ))}
+            </optgroup>
           ))}
         </select>
 
@@ -254,15 +319,19 @@ export default function ChartCell({
             Hist
           </button>
           <button
-            onClick={() => liveAvailable && setChartMode("live")}
-            disabled={!liveAvailable}
+            onClick={() => {
+              if (liveAvailable) setChartMode("live");
+              else setLiveDisabledHint(true);
+            }}
+            aria-disabled={!liveAvailable}
+            aria-label={liveAvailable ? "Switch to live data" : "Live data unavailable — IG demo credentials not configured"}
             title={!liveAvailable ? "IG demo credentials not configured" : "Live data from IG"}
             className={`px-1.5 py-0.5 text-[10px] rounded transition ${
               chartMode === "live"
                 ? "bg-green-600 text-white font-medium"
                 : liveAvailable
                   ? "text-foreground-muted hover:text-foreground"
-                  : "text-foreground-muted/40 cursor-not-allowed"
+                  : "text-foreground-muted/60 hover:text-foreground-muted cursor-help"
             }`}
           >
             <span className="flex items-center gap-0.5">
@@ -284,6 +353,8 @@ export default function ChartCell({
               key={tool.id ?? "pointer"}
               onClick={() => setActiveDrawingTool(isActive && tool.id !== null ? null : tool.id)}
               title={`${tool.label} (${tool.shortcut})`}
+              aria-label={`${tool.label} drawing tool, keyboard shortcut ${tool.shortcut}`}
+              aria-pressed={isActive}
               className={`p-1 rounded transition ${
                 isActive
                   ? "bg-primary text-white"
@@ -302,6 +373,7 @@ export default function ChartCell({
             <button
               onClick={() => clearDrawings()}
               title="Clear all drawings"
+              aria-label={`Clear all ${drawings.length} drawing${drawings.length === 1 ? "" : "s"}`}
               className="p-1 rounded text-foreground-muted hover:text-red-500 hover:bg-background-muted transition"
               data-testid="draw-clear"
             >
@@ -350,6 +422,7 @@ export default function ChartCell({
         <button
           onClick={() => tradingChartRef.current?.resetView()}
           title="Reset view — restore default zoom and pan"
+          aria-label="Reset chart view"
           className="p-1 rounded text-foreground-muted hover:text-foreground hover:bg-background-muted transition"
           data-testid="chart-reset"
         >
@@ -358,6 +431,7 @@ export default function ChartCell({
         <button
           onClick={() => tradingChartRef.current?.fitToData()}
           title="Fit to data — show all available bars"
+          aria-label="Fit chart to all available bars"
           className="p-1 rounded text-foreground-muted hover:text-foreground hover:bg-background-muted transition"
           data-testid="chart-fit"
         >
@@ -389,9 +463,9 @@ export default function ChartCell({
               Research
             </a>
             <a
-              href="/bots"
+              href={`/bots?instrument=${instrument}`}
               className="flex items-center gap-0.5 px-1.5 py-0.5 text-[10px] text-foreground-muted hover:text-primary rounded hover:bg-background-muted transition"
-              title="Bots"
+              title={`Bots filtered to ${instrument}`}
               data-testid="link-bots"
             >
               <Bot size={10} />
@@ -401,11 +475,13 @@ export default function ChartCell({
         )}
 
         {/* Help */}
-        <div className="relative">
+        <div className="relative" ref={helpRef}>
           <button
             onClick={() => setShowHelp(!showHelp)}
             className="p-1 rounded text-foreground-muted hover:text-foreground hover:bg-background-muted transition"
             title="Chart help"
+            aria-label="Chart help"
+            aria-expanded={showHelp}
             data-testid="chart-help-btn"
           >
             <HelpCircle size={12} />
@@ -445,6 +521,17 @@ export default function ChartCell({
         </div>
       )}
 
+      {/* ── Inline status banner ──────────────────────────────── */}
+      {liveDisabledHint && (
+        <div
+          role="status"
+          className="px-3 py-1 text-[11px] bg-amber-50 text-amber-800 border-b border-amber-200"
+          data-testid="live-disabled-hint"
+        >
+          Live data is unavailable — set IG demo credentials in Settings to enable.
+        </div>
+      )}
+
       {/* ── Chart Area ────────────────────────────────────────── */}
       <div className="flex-1 min-h-0">
         {error ? (
@@ -472,6 +559,8 @@ export default function ChartCell({
           <TradingChart
             ref={tradingChartRef}
             data={data}
+            timeframe={timeframe}
+            precision={precision}
             ichimokuEnabled={ichimokuEnabled}
             activeDrawingTool={activeDrawingTool}
             savedDrawings={drawings}

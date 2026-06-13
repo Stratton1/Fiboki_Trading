@@ -21,9 +21,14 @@ export default function ChartsPage() {
             </p>
           </div>
         </div>
-        <div className="flex items-center gap-2 text-[10px] text-foreground-muted">
-          <Keyboard size={11} />
-          <span>Scroll to pan · Ctrl+Scroll to zoom</span>
+        <div className="flex items-center gap-3 text-[10px] text-foreground-muted">
+          <span className="flex items-center gap-1">
+            <Keyboard size={11} />
+            Scroll to pan · Ctrl+Scroll to zoom
+          </span>
+          <span className="hidden lg:inline text-foreground-muted/70">
+            V Select · T Trend · H H-line · F Fib · R Ray · C Channel
+          </span>
         </div>
       </div>
 

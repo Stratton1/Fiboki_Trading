@@ -41,6 +41,24 @@ interface TradingChartProps {
   }) => void;
   onDrawingUpdated: (overlayId: string, points: Array<{ timestamp: number; value: number }>) => void;
   onDrawingRemoved: (overlayId: string) => void;
+  /** Instrument timeframe (M15, M30, H1, H4, D1). Drives klinecharts period
+   * so tooltip dates and time-axis grouping match what's actually rendered. */
+  timeframe?: string;
+  /** Price precision for the y-axis formatter (e.g. 3 for JPY pairs, 5 for FX). */
+  precision?: number;
+}
+
+/** Map an internal timeframe code to klinecharts {span, type}. Falls back to
+ * H1 for unknowns so the chart still renders. */
+function timeframeToPeriod(tf?: string): { span: number; type: "minute" | "hour" | "day" } {
+  switch (tf) {
+    case "M15": return { span: 15, type: "minute" };
+    case "M30": return { span: 30, type: "minute" };
+    case "H4":  return { span: 4,  type: "hour" };
+    case "D1":  return { span: 1,  type: "day" };
+    case "H1":
+    default:    return { span: 1,  type: "hour" };
+  }
 }
 
 const TradingChart = forwardRef<TradingChartHandle, TradingChartProps>(function TradingChart({
@@ -51,6 +69,8 @@ const TradingChart = forwardRef<TradingChartHandle, TradingChartProps>(function 
   onDrawingCreated,
   onDrawingUpdated,
   onDrawingRemoved,
+  timeframe,
+  precision,
 }, ref) {
   const containerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<Chart | null>(null);
@@ -79,8 +99,16 @@ const TradingChart = forwardRef<TradingChartHandle, TradingChartProps>(function 
     },
     fitToData() {
       const chart = chartRef.current;
-      if (!chart || !dataRef.current.length) return;
-      // Scroll to beginning then zoom out to show all bars
+      if (!chart || !dataRef.current.length || !containerRef.current) return;
+      // True "fit": size each bar so all bars fit horizontally, then scroll
+      // to the first bar. `scrollToDataIndex` alone only scrolls — it does
+      // not change zoom — so without setBarSpace the operator sees the first
+      // bar at the previous zoom level instead of the full series.
+      const bars = dataRef.current.length;
+      // Leave ~60px on the right for the price axis.
+      const usable = Math.max(100, containerRef.current.clientWidth - 60);
+      const space = Math.max(2, Math.floor(usable / bars));
+      chart.setBarSpace(space);
       chart.scrollToDataIndex(0, 300);
     },
   }), []);
@@ -169,8 +197,16 @@ const TradingChart = forwardRef<TradingChartHandle, TradingChartProps>(function 
     dataRef.current = klineData;
 
     const instrument = data.instrument || "UNKNOWN";
-    chart.setSymbol({ ticker: instrument });
-    chart.setPeriod({ span: 1, type: "day" });
+    // klinecharts v10 sets price/volume precision via setSymbol — without
+    // pricePrecision the y-axis rounds to ~2dp and tight FX ranges show
+    // duplicate "1.04" tick labels.
+    chart.setSymbol({
+      ticker: instrument,
+      ...(precision != null ? { pricePrecision: precision, volumePrecision: 0 } : {}),
+    });
+    // Map the active timeframe to klinecharts' period so tooltip date
+    // formatting and intra-bar grouping match the rendered data.
+    chart.setPeriod(timeframeToPeriod(timeframe));
     chart.setDataLoader({
       getBars: ({ type, callback }) => {
         if (type === "init" || type === "backward") {
@@ -180,7 +216,7 @@ const TradingChart = forwardRef<TradingChartHandle, TradingChartProps>(function 
         }
       },
     });
-  }, [data]);
+  }, [data, timeframe, precision]);
 
   // Toggle Ichimoku indicator
   useEffect(() => {
