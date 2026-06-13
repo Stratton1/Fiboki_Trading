@@ -58,6 +58,7 @@ export default function BacktestDetailPage({ params }: { params: Promise<{ id: s
   const [createBotResult, setCreateBotResult] = useState<string | null>(null);
   const [createBotError, setCreateBotError] = useState<string | null>(null);
   const [promoteResult, setPromoteResult] = useState<string | null>(null);
+  const [promoteError, setPromoteError] = useState<string | null>(null);
   const [promoteLoading, setPromoteLoading] = useState(false);
 
   // Chart marker controls — persisted in localStorage
@@ -109,22 +110,34 @@ export default function BacktestDetailPage({ params }: { params: Promise<{ id: s
     setFocusTradeId(tradeId);
   }
 
+  // Sharpe is unbounded but Shortlist `score` is a [0, 1] composite — pass
+  // Sharpe through a soft logistic so backtest-promoted entries don't
+  // outrank every research combo. Raw Sharpe is preserved in the note.
+  // Same normalisation as the list page (see notes there).
+  function normaliseSharpeToScore(sharpe: number | null | undefined): number {
+    if (sharpe == null || !isFinite(sharpe)) return 0;
+    return 1 / (1 + Math.exp(-0.6 * sharpe));
+  }
+
   async function handlePromoteToShortlist() {
     if (!bt) return;
     setPromoteLoading(true);
+    setPromoteError(null);
     try {
       await api.saveToShortlist({
         strategy_id: bt.strategy_id,
         instrument: bt.instrument,
         timeframe: bt.timeframe,
-        score: bt.sharpe_ratio ?? 0,
+        score: normaliseSharpeToScore(bt.sharpe_ratio),
         source_run_id: `backtest-${bt.id}`,
         metrics_snapshot: bt.metrics_json ?? undefined,
-        note: `Promoted from backtest #${bt.id}`,
+        note: `Promoted from backtest #${bt.id} (Sharpe ${bt.sharpe_ratio?.toFixed(2) ?? "—"})`,
       });
       setPromoteResult("Saved to Shortlist");
-    } catch {
-      setPromoteResult("Failed to save");
+    } catch (err) {
+      // P1-2: do NOT lock the button on failure — clear promoteResult and
+      // surface an inline error so the operator can retry without refresh.
+      setPromoteError(err instanceof Error ? err.message : "Failed to save to Shortlist");
     } finally {
       setPromoteLoading(false);
     }
@@ -187,8 +200,9 @@ export default function BacktestDetailPage({ params }: { params: Promise<{ id: s
         <div className="flex items-center gap-2">
           <button
             onClick={handlePromoteToShortlist}
-            disabled={promoteLoading || !!promoteResult}
+            disabled={promoteLoading || promoteResult === "Saved to Shortlist"}
             className="btn btn-secondary text-sm disabled:opacity-50"
+            aria-label="Save this backtest combo to the Shortlist"
           >
             {promoteLoading ? "Saving..." : promoteResult ?? "Save to Shortlist"}
           </button>
@@ -205,6 +219,22 @@ export default function BacktestDetailPage({ params }: { params: Promise<{ id: s
         <div className="mb-4 p-3 rounded bg-red-50 border border-red-200 text-red-800 text-sm flex items-center justify-between">
           <span>{createBotError}</span>
           <button onClick={() => setCreateBotError(null)} className="text-red-600 hover:underline text-xs">Dismiss</button>
+        </div>
+      )}
+      {promoteError && (
+        <div className="mb-4 p-3 rounded bg-red-50 border border-red-200 text-red-800 text-sm flex items-center justify-between">
+          <span>{promoteError}</span>
+          <button onClick={() => setPromoteError(null)} className="text-red-600 hover:underline text-xs">Dismiss</button>
+        </div>
+      )}
+      {bt.total_trades === 0 && (
+        <div className="mb-4 p-3 rounded bg-amber-50 border border-amber-300 text-amber-900 text-sm">
+          <strong>Zero-trade run.</strong> The backtest engine ran successfully
+          but the strategy produced no entries on this combo and date range.
+          Net Profit, Sharpe, and Max DD below are placeholders — nothing was
+          actually traded. Common causes: filters too strict for the regime,
+          insufficient data, or strategy ill-suited to this instrument /
+          timeframe.
         </div>
       )}
 
@@ -268,12 +298,18 @@ export default function BacktestDetailPage({ params }: { params: Promise<{ id: s
             <p className="font-medium">{String(config.risk_per_trade_pct ?? 1)}%</p>
           </div>
           <div>
-            <p className="text-xs text-foreground-muted">Spread</p>
+            <p className="text-xs text-foreground-muted inline-flex items-center">
+              Spread
+              <InfoTip text="Static per-instrument estimate. Real IG-demo spreads widen at session opens, around news, and into the rollover; the backtester does not model this — treat backtest fills as best-case." />
+            </p>
             <p className="font-medium">{config.spread_points != null && Number(config.spread_points) > 0 ? `${config.spread_points} pts (explicit)` : "Default per instrument"}</p>
           </div>
           <div>
-            <p className="text-xs text-foreground-muted">Slippage</p>
-            <p className="font-medium">{config.slippage_points != null && Number(config.slippage_points) > 0 ? `${config.slippage_points} pts` : "0 (none)"}</p>
+            <p className="text-xs text-foreground-muted inline-flex items-center">
+              Slippage
+              <InfoTip text="Default backtest slippage is 0 — a known approximation. Real fills suffer occasional adverse slippage, especially on stops and at session opens. Live paper / IG demo results will diverge somewhat from these numbers." />
+            </p>
+            <p className="font-medium">{config.slippage_points != null && Number(config.slippage_points) > 0 ? `${config.slippage_points} pts` : "0 pts (default — approximation)"}</p>
           </div>
           <div>
             <p className="text-xs text-foreground-muted">Max Leverage</p>

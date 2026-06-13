@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import useSWR from "swr";
 import { api } from "@/lib/api";
@@ -85,8 +85,20 @@ export default function BacktestsPage() {
   const [filterStrategy, setFilterStrategy] = useState("");
   const [filterInstrument, setFilterInstrument] = useState("");
   const [filterBookmarked, setFilterBookmarked] = useState(false);
-  const [hideLegacy, setHideLegacy] = useState(true);
+  // P0-1: hideLegacy used to default true with a 30-day cutoff. In production
+  // backtests sit unrun for weeks while operators do other work — every
+  // result ages past 30 days and the page rendered "0 shown of N". Default
+  // is now false; the filter chip is opt-in.
+  const [hideLegacy, setHideLegacy] = useState(false);
   const [filterProfitable, setFilterProfitable] = useState(false);
+
+  // P0-3: single-row delete confirm — replace native confirm() with the
+  // same in-page banner pattern used by bulk delete.
+  const [confirmSingle, setConfirmSingle] = useState<BacktestSummary | null>(null);
+
+  // P1-2: track promote success vs failure so the button can re-enable after
+  // a failure rather than locking until refresh.
+  const [promoteFailedFor, setPromoteFailedFor] = useState<number | null>(null);
 
   // Sorting
   const [sortField, setSortField] = useState<SortField>("created_at");
@@ -138,17 +150,29 @@ export default function BacktestsPage() {
 
   // ─── Handlers ─────────────────────────────────────────────
   async function handleDelete(id: number) {
-    if (!confirm("Delete this backtest run and all its trades?")) return;
     setDeleting(id);
     try {
       await api.deleteBacktest(id);
       const next = new Set(selectedIds);
       next.delete(id);
       setSelectedIds(next);
+      setConfirmSingle(null);
       mutate();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to delete backtest");
     } finally { setDeleting(null); }
+  }
+
+  // P0-2: Sharpe is unbounded (production runs hit 1.7+ regularly), but the
+  // Shortlist `score` column is a composite in [0, 1] from research scoring.
+  // Promoting with `score = sharpe` mixed scales — every backtest-promoted
+  // combo ranked above every research combo. Normalise via a soft logistic
+  // so Sharpe 0 → 0.5, Sharpe 2 → ~0.88, Sharpe 5+ → ~0.99. Keep the raw
+  // value in metrics_snapshot for inspection.
+  function normaliseSharpeToScore(sharpe: number | null | undefined): number {
+    if (sharpe == null || !isFinite(sharpe)) return 0;
+    // Sigmoid centred at 0; k=0.6 gives the intended Sharpe→score mapping.
+    return 1 / (1 + Math.exp(-0.6 * sharpe));
   }
 
   async function handleBulkDelete() {
@@ -182,16 +206,20 @@ export default function BacktestsPage() {
 
   async function handlePromote(bt: BacktestSummary) {
     setPromoting(bt.id);
+    setPromoteFailedFor(null);
     try {
       await saveToShortlist({
         strategy_id: bt.strategy_id,
         instrument: bt.instrument,
         timeframe: bt.timeframe,
-        score: bt.sharpe_ratio ?? 0,
-        note: `Promoted from backtest #${bt.id}`,
+        // P0-2: normalised score, raw Sharpe preserved in note.
+        score: normaliseSharpeToScore(bt.sharpe_ratio),
+        note: `Promoted from backtest #${bt.id} (Sharpe ${bt.sharpe_ratio?.toFixed(2) ?? "—"})`,
       });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to save to shortlist");
+      // P1-2: remember the failure so we can re-enable the button.
+      setPromoteFailedFor(bt.id);
     } finally { setPromoting(null); }
   }
 
@@ -208,6 +236,17 @@ export default function BacktestsPage() {
   const comboInfo = instrument && timeframe ? datasetInfo(instrument, timeframe) : undefined;
   const canRun = !!strategy && !!instrument && !noDataForCombo && !running;
 
+  // P0-4: poll-interval cleanup. Stored on a ref so the unmount effect can
+  // clear it even if the run is still in flight, and a consecutive-error
+  // counter ensures a dropped backend doesn't keep the interval alive
+  // forever — same pattern as /research's polling refactor (commit 1984782).
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  useEffect(() => {
+    return () => {
+      if (pollRef.current) clearInterval(pollRef.current);
+    };
+  }, []);
+
   async function handleRun(e: React.FormEvent) {
     e.preventDefault();
     if (!strategy || !instrument) return;
@@ -217,14 +256,33 @@ export default function BacktestsPage() {
     try {
       const res = await api.runBacktest({ strategy_id: strategy, instrument, timeframe }, true);
       const jobId = (res as Record<string, unknown>).job_id as string;
-      const poll = setInterval(async () => {
+      let consecutivePollErrors = 0;
+      if (pollRef.current) clearInterval(pollRef.current);
+      pollRef.current = setInterval(async () => {
         try {
           const job = await api.getJob(jobId);
+          consecutivePollErrors = 0;
           setRunProgress(job.progress ?? 0);
-          if (job.state === "completed") { clearInterval(poll); await mutate(); setRunning(false); }
-          else if (job.state === "failed") { clearInterval(poll); setError(job.error || "Backtest failed"); setRunning(false); }
-          else if (job.state === "cancelled") { clearInterval(poll); setError("Backtest was cancelled"); setRunning(false); }
-        } catch { /* poll error */ }
+          if (job.state === "completed") {
+            if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null; }
+            await mutate();
+            setRunning(false);
+          } else if (job.state === "failed") {
+            if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null; }
+            setError(job.error || "Backtest failed");
+            setRunning(false);
+          } else if (job.state === "cancelled") {
+            if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null; }
+            setError("Backtest was cancelled");
+            setRunning(false);
+          }
+        } catch {
+          if (++consecutivePollErrors >= 15) {
+            if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null; }
+            setError("Lost contact with the job poller — refresh to retry");
+            setRunning(false);
+          }
+        }
       }, 2000);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to run backtest");
@@ -447,11 +505,16 @@ export default function BacktestsPage() {
         )}
         {displayBacktests.length > 0 && bestSharpe > -Infinity && (
           <span className="flex items-center gap-1">
-            <TrendingUp size={11} /> Best Sharpe: <strong className="text-foreground">{bestSharpe.toFixed(2)}</strong>
+            <TrendingUp size={11} />
+            Best Sharpe{activeFilterCount > 0 ? " (visible)" : ""}:{" "}
+            <strong className="text-foreground">{bestSharpe.toFixed(2)}</strong>
           </span>
         )}
         {displayBacktests.length > 0 && bestProfit > -Infinity && (
-          <span>Best PnL: <strong className={bestProfit >= 0 ? "text-primary" : "text-danger"}>{formatPnl(bestProfit)}</strong></span>
+          <span>
+            Best PnL{activeFilterCount > 0 ? " (visible)" : ""}:{" "}
+            <strong className={bestProfit >= 0 ? "text-primary" : "text-danger"}>{formatPnl(bestProfit)}</strong>
+          </span>
         )}
       </div>
 
@@ -558,6 +621,29 @@ export default function BacktestsPage() {
           </div>
         )}
       </div>
+
+      {/* Single-row delete confirmation — replaces native confirm() */}
+      {confirmSingle && (
+        <div className="mb-4 p-3 rounded bg-red-50 border border-red-200 text-sm flex items-center gap-3" data-testid="single-confirm">
+          <AlertTriangle size={16} className="text-red-600 shrink-0" />
+          <span className="text-red-800">
+            Delete backtest <strong>#{confirmSingle.id}</strong> ({confirmSingle.strategy_id} /{" "}
+            {confirmSingle.instrument} / {confirmSingle.timeframe}) and all its trades, equity
+            curve, and markers? This cannot be undone.
+          </span>
+          <button
+            onClick={() => handleDelete(confirmSingle.id)}
+            disabled={deleting === confirmSingle.id}
+            className="ml-auto text-xs px-3 py-1 rounded bg-red-600 text-white hover:bg-red-700 disabled:opacity-50"
+            data-testid="confirm-single-delete-btn"
+          >
+            {deleting === confirmSingle.id ? "Deleting..." : "Confirm Delete"}
+          </button>
+          <button onClick={() => setConfirmSingle(null)} className="text-xs text-red-600 hover:underline">
+            Cancel
+          </button>
+        </div>
+      )}
 
       {/* Bulk delete confirmation */}
       {confirmBulk && (
@@ -744,17 +830,19 @@ export default function BacktestsPage() {
                       <button
                         onClick={() => handlePromote(bt)}
                         disabled={promoting === bt.id || shortlisted}
-                        className={`transition-colors disabled:opacity-50 p-1 ${shortlisted ? "text-amber-500" : "text-foreground-muted hover:text-amber-500"}`}
-                        title={shortlisted ? "Already in Shortlist" : "Save to Shortlist"}
+                        className={`transition-colors disabled:opacity-50 p-1 ${shortlisted ? "text-amber-500" : promoteFailedFor === bt.id ? "text-red-500" : "text-foreground-muted hover:text-amber-500"}`}
+                        title={shortlisted ? "Already in Shortlist" : promoteFailedFor === bt.id ? "Save failed — click to retry" : "Save to Shortlist"}
+                        aria-label={`Save backtest ${bt.id} to shortlist`}
                         data-testid="row-promote"
                       >
                         {promoting === bt.id ? <Loader2 size={13} className="animate-spin" /> : <Star size={13} fill={shortlisted ? "currentColor" : "none"} />}
                       </button>
                       <button
-                        onClick={() => handleDelete(bt.id)}
+                        onClick={() => setConfirmSingle(bt)}
                         disabled={deleting === bt.id}
                         className="text-foreground-muted hover:text-danger transition-colors disabled:opacity-50 p-1"
-                        title="Delete backtest"
+                        title={`Delete backtest #${bt.id} (${bt.strategy_id} / ${bt.instrument} / ${bt.timeframe})`}
+                        aria-label={`Delete backtest ${bt.id} for ${bt.strategy_id} on ${bt.instrument} ${bt.timeframe}`}
                         data-testid="row-delete"
                       >
                         {deleting === bt.id ? <Loader2 size={13} className="animate-spin" /> : <Trash2 size={13} />}
