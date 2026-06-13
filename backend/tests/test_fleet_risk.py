@@ -159,5 +159,12 @@ def test_fleet_risk_api_endpoint(api_client, auth_headers):
     assert "instrument_alerts" in data
     assert "correlation_alerts" in data
     assert "underperformers" in data
-    assert data["fleet_limits"]["max_bots_per_instrument"] == 5
-    assert data["fleet_limits"]["max_total_positions"] == 20
+    # Fleet defaults can be tuned via FIBOKEI_FLEET_MAX_* env vars (see
+    # risk/limits.py). Compare to the canonical defaults dict instead of the
+    # historical 5 (raised to 10 during fleet tuning), which would silently
+    # drift again the next time a default is bumped.
+    from fibokei.risk.limits import get_risk_limits
+
+    defaults = get_risk_limits()
+    assert data["fleet_limits"]["max_bots_per_instrument"] == defaults["fleet_max_bots_per_instrument"]
+    assert data["fleet_limits"]["max_total_positions"] == defaults["fleet_max_total_positions"]

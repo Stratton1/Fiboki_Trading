@@ -107,10 +107,16 @@ class TestArchiveCurrentPhase:
 
         db_session.refresh(bot1)
         db_session.refresh(bot2)
+        # Bots get their phase_id tagged but are NOT marked archived — they
+        # are cross-phase entities that continue running into the next phase.
+        # See archive_current_phase() in repository.py: only trades carry an
+        # archived_at; bots' archived_at stays None. The earlier assertion
+        # was a stale leftover from the original phase model where bots were
+        # archived alongside their trades.
         assert bot1.phase_id == phase.id
         assert bot2.phase_id == phase.id
-        assert bot1.archived_at is not None
-        assert bot2.archived_at is not None
+        assert bot1.archived_at is None
+        assert bot2.archived_at is None
 
     def test_assigns_unassigned_trades(self, db_session):
         bot = _make_bot(db_session, "bot001")

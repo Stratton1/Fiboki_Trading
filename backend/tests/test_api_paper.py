@@ -147,9 +147,12 @@ def test_create_bot_default_source_type(api_client, auth_headers):
     assert response.json()["source_id"] is None
 
 
-def test_promotion_gate_rejects_low_score(api_client, auth_headers):
-    """Combo with score below threshold is rejected."""
-    # Seed a low score
+def test_promotion_gate_accepts_low_score(api_client, auth_headers):
+    """Backend promotion gate was removed by commit 94947d0 — the API now
+    accepts any score and the operator-facing /research Promote dialog
+    (commit 1984782) is the below-threshold guard. See sibling tests in
+    test_paper_persistence.py::TestPromotionGateAPI for the same contract.
+    """
     session_factory = api_client.app.state.session_factory
     with session_factory() as session:
         save_research_results(session, [{
@@ -167,17 +170,18 @@ def test_promotion_gate_rejects_low_score(api_client, auth_headers):
         "timeframe": "H1",
     }
     response = api_client.post("/api/v1/paper/bots", json=req, headers=auth_headers)
-    assert response.status_code == 422
-    assert "Promotion gate" in response.json()["detail"]
+    assert response.status_code == 200, response.text
+    assert response.json()["state"] == "monitoring"
 
 
-def test_promotion_gate_rejects_no_research(api_client, auth_headers):
-    """Combo with no research results is rejected."""
+def test_promotion_gate_accepts_no_research(api_client, auth_headers):
+    """Same — backend accepts combos with no research backing; the UI is
+    where the below-threshold acknowledgement now lives."""
     req = {
         "strategy_id": "bot01_sanyaku",
         "instrument": "NZDUSD",
-        "timeframe": "D",
+        "timeframe": "H1",
     }
     response = api_client.post("/api/v1/paper/bots", json=req, headers=auth_headers)
-    assert response.status_code == 422
-    assert "score=none" in response.json()["detail"]
+    assert response.status_code == 200, response.text
+    assert response.json()["state"] == "monitoring"

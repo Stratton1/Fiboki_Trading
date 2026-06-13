@@ -2,8 +2,15 @@
 
 import subprocess
 import sys
+from pathlib import Path
 
 import pytest
+
+# Resolve the backend directory from the test file's own location so the
+# tests work on any developer machine and in CI. The previous hardcoded
+# /Users/joseph/Projects/Fiboki_Trading/backend path was the smoking-gun
+# instance of local-environment drift the previous slice surfaced.
+BACKEND_DIR = Path(__file__).resolve().parent.parent
 
 
 class TestCLI:
@@ -11,7 +18,7 @@ class TestCLI:
         result = subprocess.run(
             [sys.executable, "-m", "fibokei", "list-strategies"],
             capture_output=True, text=True,
-            cwd="/Users/joseph/Projects/Fiboki_Trading/backend",
+            cwd=str(BACKEND_DIR),
         )
         assert result.returncode == 0
         assert "bot01_sanyaku" in result.stdout
@@ -20,7 +27,7 @@ class TestCLI:
         result = subprocess.run(
             [sys.executable, "-m", "fibokei", "list-indicators"],
             capture_output=True, text=True,
-            cwd="/Users/joseph/Projects/Fiboki_Trading/backend",
+            cwd=str(BACKEND_DIR),
         )
         assert result.returncode == 0
         assert "ichimoku_cloud" in result.stdout
@@ -35,7 +42,7 @@ class TestCLI:
                 "--timeframe", "H1",
             ],
             capture_output=True, text=True,
-            cwd="/Users/joseph/Projects/Fiboki_Trading/backend",
+            cwd=str(BACKEND_DIR),
             timeout=30,
         )
         assert result.returncode == 0

@@ -379,10 +379,23 @@ class TestHealthEndpoint:
 
 
 # ─── API Promotion Gate Tests ─────────────────────────────────
+#
+# The API-level promotion gate was deliberately removed by commit 94947d0
+# ("feat: delete bots, remove promotion gate, clean up fleet"). The gate
+# now lives in the operator UI (the /research Promote dialog gates
+# below-threshold scores behind an explicit acknowledgement checkbox —
+# see fix(research) commit 1984782) rather than the backend, so the API
+# accepts any strategy/instrument/timeframe combo and trusts the caller.
+#
+# These tests are kept to document the contract and assert the current
+# behaviour: backend no longer enforces the gate; if the gate is ever
+# reinstated server-side, these tests should be re-tightened.
 
 class TestPromotionGateAPI:
-    def test_create_bot_without_research_fails(self, auth_headers, api_client):
-        """Creating a bot without qualifying research score should fail."""
+    def test_create_bot_without_research_succeeds(self, auth_headers, api_client):
+        """Backend gate was removed (commit 94947d0); the create_bot route
+        no longer requires a qualifying research score. The UI is responsible
+        for surfacing the below-threshold warning."""
         resp = api_client.post(
             "/api/v1/paper/bots",
             headers=auth_headers,
@@ -392,13 +405,12 @@ class TestPromotionGateAPI:
                 "timeframe": "H1",
             },
         )
-        assert resp.status_code == 422
-        assert "Promotion gate" in resp.json()["detail"]
+        assert resp.status_code == 200, resp.text
+        assert resp.json()["state"] == "monitoring"
 
-    def test_create_bot_with_low_score_fails(self, auth_headers, api_client):
-        """Creating a bot with score below threshold should fail."""
-        # First seed a low research score via the DB
-        # The api_client uses in-memory DB, so we need to insert directly
+    def test_create_bot_with_low_score_succeeds(self, auth_headers, api_client):
+        """Same contract — a low-score combo is accepted by the API. The
+        UI's Promote dialog (commit 1984782) is the operator-facing guard."""
         from fibokei.db.repository import save_research_results
         session_factory = api_client.app.state.session_factory
         with session_factory() as session:
@@ -420,8 +432,8 @@ class TestPromotionGateAPI:
                 "timeframe": "H1",
             },
         )
-        assert resp.status_code == 422
-        assert "Promotion gate" in resp.json()["detail"]
+        assert resp.status_code == 200, resp.text
+        assert resp.json()["state"] == "monitoring"
 
     def test_create_bot_with_passing_score(self, auth_headers, api_client):
         """Creating a bot with qualifying score should succeed."""

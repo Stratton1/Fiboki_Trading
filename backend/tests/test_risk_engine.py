@@ -36,13 +36,19 @@ class TestRiskEngine:
         assert reason == ""
 
     def test_max_open_trades_reached(self):
+        # The reason text was reworded from "Max open trades" to
+        # "Emergency position cap reached (N)" when max_open_trades was
+        # repositioned as an emergency backstop rather than the primary
+        # gate (see risk/limits.py: "Emergency backstop — not the primary
+        # gate (drawdown is)"). The test now matches the production wording.
         engine = RiskEngine(max_open_trades=2)
         account = PaperAccount()
         account.open_positions = [{"instrument": "GBPUSD"}, {"instrument": "USDJPY"}]
         signal = _make_signal()
         allowed, reason = engine.check_trade_allowed(signal, account)
         assert allowed is False
-        assert "Max open trades" in reason
+        assert "Emergency position cap" in reason
+        assert "(2)" in reason
 
     def test_max_per_instrument_reached(self):
         engine = RiskEngine(max_per_instrument=1)
