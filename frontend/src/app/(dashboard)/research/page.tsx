@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import useSWR from "swr";
 import { Loader2 } from "lucide-react";
 import { api } from "@/lib/api";
@@ -129,6 +129,42 @@ export default function ResearchPage() {
   const [bulkDeploying, setBulkDeploying] = useState(false);
   const [bulkResult, setBulkResult] = useState<string | null>(null);
 
+  // Pre-flight estimate dialog for Run All Symbols
+  const [runAllPreflight, setRunAllPreflight] = useState<{
+    strategyCount: number;
+    instrumentCount: number;
+    timeframeCount: number;
+    totalCombinations: number;
+  } | null>(null);
+
+  // Promote-below-threshold acknowledgement — gates the Create Bot button in
+  // the promote dialog when composite_score < PROMOTION_THRESHOLD. Resets
+  // whenever the dialog closes.
+  const [promoteBelowAck, setPromoteBelowAck] = useState(false);
+
+  // Centralised poll-interval cleanup. Each long-running async handler stores
+  // its setInterval id here so unmount and re-entry always clear the timer
+  // — previously, network errors during polling fell into a "keep trying"
+  // catch and the interval leaked indefinitely.
+  const pollIntervalsRef = useRef<Set<ReturnType<typeof setInterval>>>(new Set());
+  const registerPoll = (id: ReturnType<typeof setInterval>) => pollIntervalsRef.current.add(id);
+  const clearPoll = (id: ReturnType<typeof setInterval>) => {
+    clearInterval(id);
+    pollIntervalsRef.current.delete(id);
+  };
+  useEffect(() => {
+    const set = pollIntervalsRef.current;
+    return () => {
+      for (const id of set) clearInterval(id);
+      set.clear();
+    };
+  }, []);
+
+  // Weight-sum diagnostic — research scoring expects the six weights to sum
+  // to 1.0. Drift is silent without this hint.
+  const weightSum = Object.values(weights).reduce((a, b) => a + b, 0);
+  const weightSumOk = Math.abs(weightSum - 1.0) <= 0.05;
+
   function toggleStrategy(id: string) {
     setSelectedStrategies((prev) =>
       prev.includes(id) ? prev.filter((s) => s !== id) : [...prev, id]
@@ -211,14 +247,18 @@ export default function ResearchPage() {
       const result = await api.runResearch(body);
       const jobId = result.job_id;
 
-      // Poll for completion — track progress
-      const pollInterval = setInterval(async () => {
+      // Poll for completion — track progress. Interval is registered so the
+      // page-unmount cleanup clears it even if polling races forever on a
+      // pathological network error.
+      let consecutivePollErrors = 0;
+      const pollInterval: ReturnType<typeof setInterval> = setInterval(async () => {
         try {
           const job = await api.getJob(jobId);
+          consecutivePollErrors = 0;
           setRunProgress(job.progress ?? 0);
 
           if (job.state === "completed" && job.result) {
-            clearInterval(pollInterval);
+            clearPoll(pollInterval);
             const r = job.result as Record<string, unknown>;
             const runId = r.run_id as string;
             setCurrentRunId(runId);
@@ -232,18 +272,25 @@ export default function ResearchPage() {
             await mutate();
             setRunning(false);
           } else if (job.state === "failed") {
-            clearInterval(pollInterval);
+            clearPoll(pollInterval);
             setError(job.error || "Research job failed");
             setRunning(false);
           } else if (job.state === "cancelled") {
-            clearInterval(pollInterval);
+            clearPoll(pollInterval);
             setError("Research job was cancelled");
             setRunning(false);
           }
         } catch {
-          // Poll error — keep trying
+          // After 15 consecutive failed polls (~30s) give up so a dropped
+          // backend doesn't keep this interval alive forever.
+          if (++consecutivePollErrors >= 15) {
+            clearPoll(pollInterval);
+            setError("Lost contact with the job poller — refresh the page to retry");
+            setRunning(false);
+          }
         }
       }, 2000);
+      registerPoll(pollInterval);
       return; // Don't setRunning(false) here — the poll handles it
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to run research");
@@ -359,26 +406,34 @@ export default function ResearchPage() {
       });
       const jobId = res.job_id;
 
-      // Poll for completion — reuse mutate() so rankings update when done
-      const pollInterval = setInterval(async () => {
+      // Poll for completion — registered with the page-level cleanup so unmount
+      // always frees the interval.
+      let consecutivePollErrors = 0;
+      const pollInterval: ReturnType<typeof setInterval> = setInterval(async () => {
         try {
           const job = await api.getJob(jobId);
+          consecutivePollErrors = 0;
           setPipelineProgress(job.progress ?? 0);
           if (job.state === "completed") {
-            clearInterval(pollInterval);
+            clearPoll(pollInterval);
             setRunScope("all");
             await mutate();
             await mutateRuns();
             setPipelineLoading(false);
           } else if (job.state === "failed" || job.state === "cancelled") {
-            clearInterval(pollInterval);
+            clearPoll(pollInterval);
             setError(job.error || "Smart Pipeline job failed");
             setPipelineLoading(false);
           }
         } catch {
-          // keep polling
+          if (++consecutivePollErrors >= 15) {
+            clearPoll(pollInterval);
+            setError("Lost contact with the pipeline poller — refresh the page to retry");
+            setPipelineLoading(false);
+          }
         }
       }, 2000);
+      registerPoll(pollInterval);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Smart Pipeline failed");
       setPipelineLoading(false);
@@ -387,6 +442,25 @@ export default function ResearchPage() {
 
   async function handleRunAllSymbols() {
     if (selectedStrategies.length === 0 || selectedTimeframes.length === 0 || !instruments) return;
+
+    // Pre-flight: research is expensive. Show an estimate and require explicit
+    // confirmation when the combination count exceeds 50.
+    const allInstrumentsPreview = instruments
+      .map((i: { symbol?: string; id?: string } | string) =>
+        typeof i === "string" ? i : (i.symbol ?? i.id ?? "")
+      )
+      .filter((sym: string) => sym && selectedTimeframes.some((tf) => hasData(sym, tf)));
+    const total = selectedStrategies.length * allInstrumentsPreview.length * selectedTimeframes.length;
+    if (total > 50 && runAllPreflight === null) {
+      setRunAllPreflight({
+        strategyCount: selectedStrategies.length,
+        instrumentCount: allInstrumentsPreview.length,
+        timeframeCount: selectedTimeframes.length,
+        totalCombinations: total,
+      });
+      return;
+    }
+    setRunAllPreflight(null);
     setRunningAll(true);
     setRunProgress(0);
     setError(null);
@@ -411,13 +485,15 @@ export default function ResearchPage() {
       const result = await api.runResearch(body);
       const jobId = result.job_id;
 
-      const pollInterval = setInterval(async () => {
+      let consecutivePollErrors = 0;
+      const pollInterval: ReturnType<typeof setInterval> = setInterval(async () => {
         try {
           const job = await api.getJob(jobId);
+          consecutivePollErrors = 0;
           setRunProgress(job.progress ?? 0);
 
           if (job.state === "completed" && job.result) {
-            clearInterval(pollInterval);
+            clearPoll(pollInterval);
             const r = job.result as Record<string, unknown>;
             const runId = r.run_id as string;
             setCurrentRunId(runId);
@@ -431,18 +507,23 @@ export default function ResearchPage() {
             await mutate();
             setRunningAll(false);
           } else if (job.state === "failed") {
-            clearInterval(pollInterval);
+            clearPoll(pollInterval);
             setError(job.error || "Research job failed");
             setRunningAll(false);
           } else if (job.state === "cancelled") {
-            clearInterval(pollInterval);
+            clearPoll(pollInterval);
             setError("Research job was cancelled");
             setRunningAll(false);
           }
         } catch {
-          // Poll error — keep trying
+          if (++consecutivePollErrors >= 15) {
+            clearPoll(pollInterval);
+            setError("Lost contact with the job poller — refresh the page to retry");
+            setRunningAll(false);
+          }
         }
       }, 2000);
+      registerPoll(pollInterval);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to run research");
       setRunningAll(false);
@@ -515,9 +596,17 @@ export default function ResearchPage() {
       {/* Auto Scout — one-click full sweep */}
       <div className="card-elevated flex flex-wrap items-center justify-between gap-4">
         <div>
-          <p className="text-sm font-medium">Auto Scout</p>
+          <p className="text-sm font-medium inline-flex items-center">
+            Auto Scout
+            <InfoTip text="Sweeps your visible strategies (whitelisted via FIBOKEI_VISIBLE_STRATEGIES) across all instruments on H1+H4 and ranks them. Use Run Research below for a wider-than-visible sweep." />
+          </p>
           <p className="text-xs text-foreground-muted">
-            Sweep all 12 strategies × all instruments × H1+H4. Finds the best combos automatically.
+            Sweep your visible{" "}
+            <span className="tabular-nums">
+              {strategies ? strategies.length : "?"}
+            </span>
+            {" "}strateg{strategies?.length === 1 ? "y" : "ies"} × all instruments × H1+H4. Finds the
+            best combos automatically.
           </p>
         </div>
         <button
@@ -716,24 +805,49 @@ export default function ResearchPage() {
             {showWeights ? "Hide scoring weights" : "Customise scoring weights"}
           </button>
           {showWeights && (
-            <div className="mt-2 grid grid-cols-2 sm:grid-cols-3 gap-2">
-              {(Object.keys(DEFAULT_WEIGHTS) as (keyof ScoringWeights)[]).map((key) => (
-                <div key={key}>
-                  <label className="block text-xs text-foreground-muted mb-0.5">
-                    {key.replace("weight_", "").replace(/_/g, " ")}
-                  </label>
-                  <input
-                    type="number"
-                    value={weights[key]}
-                    onChange={(e) => updateWeight(key, Number(e.target.value))}
-                    min={0}
-                    max={1}
-                    step={0.05}
-                    className="border border-gray-300 rounded px-2 py-1 text-xs bg-background w-full"
-                  />
-                </div>
-              ))}
-            </div>
+            <>
+              <div className="mt-2 grid grid-cols-2 sm:grid-cols-3 gap-2">
+                {(Object.keys(DEFAULT_WEIGHTS) as (keyof ScoringWeights)[]).map((key) => (
+                  <div key={key}>
+                    <label className="block text-xs text-foreground-muted mb-0.5">
+                      {key.replace("weight_", "").replace(/_/g, " ")}
+                    </label>
+                    <input
+                      type="number"
+                      value={weights[key]}
+                      onChange={(e) => updateWeight(key, Number(e.target.value))}
+                      min={0}
+                      max={1}
+                      step={0.05}
+                      className="border border-gray-300 rounded px-2 py-1 text-xs bg-background w-full"
+                    />
+                  </div>
+                ))}
+              </div>
+              <div className="flex items-center gap-2 mt-2 text-xs">
+                <span className="text-foreground-muted">Sum:</span>
+                <span
+                  className={`tabular-nums font-medium ${
+                    weightSumOk ? "text-foreground" : "text-amber-700"
+                  }`}
+                >
+                  {weightSum.toFixed(2)}
+                </span>
+                {!weightSumOk && (
+                  <span className="text-amber-700">
+                    — weights should sum to 1.00 (currently off by{" "}
+                    {(weightSum - 1).toFixed(2)})
+                  </span>
+                )}
+                <button
+                  type="button"
+                  onClick={() => setWeights(DEFAULT_WEIGHTS)}
+                  className="ml-auto text-foreground-muted hover:text-foreground hover:underline"
+                >
+                  Reset to defaults
+                </button>
+              </div>
+            </>
           )}
         </div>
 
@@ -1071,20 +1185,56 @@ export default function ResearchPage() {
               <th className="text-left px-3 py-3 font-medium text-foreground-muted">Instrument</th>
               <th className="text-left px-3 py-3 font-medium text-foreground-muted">TF</th>
               {isAllRunsMode && <th className="text-left px-3 py-3 font-medium text-foreground-muted">Run</th>}
-              <th className="text-right px-3 py-3 font-medium text-foreground-muted">Score</th>
-              <th className="text-right px-3 py-3 font-medium text-foreground-muted">Trades</th>
-              <th className="text-right px-3 py-3 font-medium text-foreground-muted">Net PnL</th>
-              <th className="text-right px-3 py-3 font-medium text-foreground-muted">Sharpe</th>
-              <th className="text-right px-3 py-3 font-medium text-foreground-muted">Win%</th>
-              <th className="text-right px-3 py-3 font-medium text-foreground-muted">Max DD</th>
+              <th className="text-right px-3 py-3 font-medium text-foreground-muted">
+                <span className="inline-flex items-center justify-end">
+                  Score
+                  <InfoTip text="Composite score (0–1) combining risk-adjusted return, profit factor, drawdown, sample size, and stability. Combos at or above 0.55 are eligible for promotion to paper trading." />
+                </span>
+              </th>
+              <th className="text-right px-3 py-3 font-medium text-foreground-muted">
+                <span className="inline-flex items-center justify-end">
+                  Trades
+                  <InfoTip text="Total trades executed during the backtest. The ranking only includes combos that met the configured min-trades threshold." />
+                </span>
+              </th>
+              <th className="text-right px-3 py-3 font-medium text-foreground-muted">
+                <span className="inline-flex items-center justify-end">
+                  Net PnL
+                  <InfoTip text="Sum of realised PnL across all trades during the backtest window, in GBP. Spreads and slippage are applied per the backtester's realism settings." />
+                </span>
+              </th>
+              <th className="text-right px-3 py-3 font-medium text-foreground-muted">
+                <span className="inline-flex items-center justify-end">
+                  Sharpe
+                  <InfoTip text="Sharpe ratio computed on trade-level returns (not annualised). Higher is better; above 1.0 indicates favourable risk-adjusted performance for this dataset." />
+                </span>
+              </th>
+              <th className="text-right px-3 py-3 font-medium text-foreground-muted">
+                <span className="inline-flex items-center justify-end">
+                  Win%
+                  <InfoTip text="Percentage of closed trades with a positive realised PnL. Sensitive to fixed risk:reward strategies — read alongside Sharpe and Net PnL." />
+                </span>
+              </th>
+              <th className="text-right px-3 py-3 font-medium text-foreground-muted">
+                <span className="inline-flex items-center justify-end">
+                  Max DD
+                  <InfoTip text="Peak-to-trough drawdown as a percentage of account equity during the backtest. Negative values mean a deeper drawdown." />
+                </span>
+              </th>
               <th className="text-right px-3 py-3 font-medium text-foreground-muted">Actions</th>
             </tr>
           </thead>
           <tbody>
             {isLoading && (
-              <tr>
-                <td colSpan={isAllRunsMode ? 15 : 14} className="px-4 py-8 text-center text-foreground-muted">Loading...</td>
-              </tr>
+              <>
+                {[0, 1, 2, 3, 4].map((i) => (
+                  <tr key={`sk-${i}`} className="border-b border-gray-100" data-testid="results-skeleton">
+                    <td colSpan={isAllRunsMode ? 15 : 14} className="px-4 py-3">
+                      <div className="h-3 bg-background-muted/70 rounded animate-pulse" style={{ width: `${85 - i * 8}%` }} />
+                    </td>
+                  </tr>
+                ))}
+              </>
             )}
             {!isLoading && (!rankings || rankings.length === 0) && (
               <tr>
@@ -1164,13 +1314,18 @@ export default function ResearchPage() {
                     Analyse
                   </button>
                   <button
-                    onClick={() => setPromoteTarget({
-                      strategy_id: r.strategy_id,
-                      instrument: r.instrument,
-                      timeframe: r.timeframe,
-                      composite_score: r.composite_score,
-                    })}
+                    onClick={() => {
+                      setPromoteBelowAck(false);
+                      setPromoteError(null);
+                      setPromoteTarget({
+                        strategy_id: r.strategy_id,
+                        instrument: r.instrument,
+                        timeframe: r.timeframe,
+                        composite_score: r.composite_score,
+                      });
+                    }}
                     className="text-xs text-green-600 hover:underline"
+                    aria-label={`Create paper bot from ${r.strategy_id} on ${r.instrument} ${r.timeframe}`}
                   >
                     Create Bot
                   </button>
@@ -1476,49 +1631,126 @@ export default function ResearchPage() {
       )}
 
       {/* Promotion confirmation dialog */}
-      {promoteTarget && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-background rounded-lg shadow-xl p-6 max-w-md w-full mx-4 space-y-4">
-            <h3 className="text-lg font-semibold">Promote to Paper Trading</h3>
-            <div className="space-y-2 text-sm">
-              <div className="flex justify-between">
-                <span className="text-foreground-muted">Strategy</span>
-                <span className="font-medium">{promoteTarget.strategy_id} — {strategyShortName(promoteTarget.strategy_id)}</span>
+      {promoteTarget && (() => {
+        const belowThreshold = promoteTarget.composite_score < PROMOTION_THRESHOLD;
+        const blocked = belowThreshold && !promoteBelowAck;
+        return (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+            <div className="bg-background-card rounded-lg shadow-xl p-6 max-w-md w-full mx-4 space-y-4">
+              <h3 className="text-lg font-semibold">Promote to Paper Trading</h3>
+              <div className="space-y-2 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-foreground-muted">Strategy</span>
+                  <span className="font-medium">{promoteTarget.strategy_id} — {strategyShortName(promoteTarget.strategy_id)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-foreground-muted">Instrument</span>
+                  <span className="font-medium">{promoteTarget.instrument}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-foreground-muted">Timeframe</span>
+                  <span className="font-medium">{promoteTarget.timeframe}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-foreground-muted">Composite Score</span>
+                  <span className={`font-medium ${belowThreshold ? "text-amber-700" : "text-green-600"}`}>
+                    {promoteTarget.composite_score.toFixed(3)}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-foreground-muted">Threshold</span>
+                  <span className="font-medium">{PROMOTION_THRESHOLD.toFixed(3)}</span>
+                </div>
               </div>
-              <div className="flex justify-between">
-                <span className="text-foreground-muted">Instrument</span>
-                <span className="font-medium">{promoteTarget.instrument}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-foreground-muted">Timeframe</span>
-                <span className="font-medium">{promoteTarget.timeframe}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-foreground-muted">Composite Score</span>
-                <span className="font-medium text-green-600">{promoteTarget.composite_score.toFixed(3)}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-foreground-muted">Threshold</span>
-                <span className="font-medium">{PROMOTION_THRESHOLD.toFixed(3)}</span>
+              {belowThreshold && (
+                <div className="rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-900 space-y-2">
+                  <p>
+                    This combo is <strong>below the promotion threshold</strong>{" "}
+                    ({promoteTarget.composite_score.toFixed(3)} &lt; {PROMOTION_THRESHOLD.toFixed(3)}).
+                    Promoting now means the paper bot will start with a combo
+                    that did not clear research's risk bar.
+                  </p>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={promoteBelowAck}
+                      onChange={(e) => setPromoteBelowAck(e.target.checked)}
+                      className="rounded border-amber-400"
+                    />
+                    <span>I understand and want to promote anyway.</span>
+                  </label>
+                </div>
+              )}
+              {promoteError && (
+                <p className="text-sm text-red-600">{promoteError}</p>
+              )}
+              <div className="flex gap-3 justify-end pt-2">
+                <button
+                  onClick={() => { setPromoteTarget(null); setPromoteError(null); setPromoteBelowAck(false); }}
+                  className="btn btn-secondary text-sm"
+                  disabled={promoteLoading}
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handlePromote}
+                  className="btn btn-primary text-sm"
+                  disabled={promoteLoading || blocked}
+                  title={blocked ? "Acknowledge the below-threshold warning to enable" : undefined}
+                >
+                  {promoteLoading ? "Creating..." : "Create Bot"}
+                </button>
               </div>
             </div>
-            {promoteError && (
-              <p className="text-sm text-red-600">{promoteError}</p>
-            )}
+          </div>
+        );
+      })()}
+
+      {/* Run All Symbols pre-flight estimate */}
+      {runAllPreflight && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-background-card rounded-lg shadow-xl p-6 max-w-md w-full mx-4 space-y-4">
+            <h3 className="text-lg font-semibold">Run All Symbols — estimate</h3>
+            <p className="text-sm text-foreground-muted">
+              This will dispatch a research sweep of:
+            </p>
+            <div className="space-y-1 text-sm">
+              <div className="flex justify-between">
+                <span className="text-foreground-muted">Strategies</span>
+                <span className="font-medium tabular-nums">{runAllPreflight.strategyCount}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-foreground-muted">Instruments with data</span>
+                <span className="font-medium tabular-nums">{runAllPreflight.instrumentCount}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-foreground-muted">Timeframes</span>
+                <span className="font-medium tabular-nums">{runAllPreflight.timeframeCount}</span>
+              </div>
+              <div className="flex justify-between pt-1 border-t border-gray-100">
+                <span className="text-foreground-muted">Total backtests</span>
+                <span className="font-semibold tabular-nums text-amber-700">
+                  {runAllPreflight.totalCombinations.toLocaleString()}
+                </span>
+              </div>
+            </div>
+            <p className="text-xs text-foreground-muted">
+              Each backtest hits the deterministic engine; large sweeps can take
+              minutes and will dominate your jobs queue. The Saved Shortlist is
+              not affected.
+            </p>
             <div className="flex gap-3 justify-end pt-2">
               <button
-                onClick={() => { setPromoteTarget(null); setPromoteError(null); }}
+                onClick={() => setRunAllPreflight(null)}
                 className="btn btn-secondary text-sm"
-                disabled={promoteLoading}
               >
                 Cancel
               </button>
               <button
-                onClick={handlePromote}
+                onClick={() => { handleRunAllSymbols(); }}
                 className="btn btn-primary text-sm"
-                disabled={promoteLoading}
               >
-                {promoteLoading ? "Creating..." : "Create Bot"}
+                Run {runAllPreflight.totalCombinations.toLocaleString()} backtests
               </button>
             </div>
           </div>
