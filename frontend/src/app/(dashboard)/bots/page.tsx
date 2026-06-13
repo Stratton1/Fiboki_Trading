@@ -11,7 +11,7 @@ import { useWatchlists } from "@/lib/hooks/use-watchlists";
 import { PageHeader } from "@/components/PageHeader";
 import { EmptyState } from "@/components/EmptyState";
 import { StatusBadge } from "@/components/StatusBadge";
-import { Bot, Loader2, Wallet, TrendingUp, CalendarDays, Activity, AlertTriangle, BarChart3, Search, Star, ChevronDown, ExternalLink, Flag, Download, Archive, ChevronRight } from "lucide-react";
+import { Bot, Loader2, Wallet, TrendingUp, CalendarDays, Activity, AlertTriangle, BarChart3, Search, Star, ChevronDown, ExternalLink, Flag, Download, Archive, ChevronRight, ShieldAlert, X } from "lucide-react";
 import { InfoTip } from "@/components/InfoTip";
 import { strategyShortName } from "@/lib/strategy-names";
 import { useShortlist } from "@/lib/hooks/use-shortlist";
@@ -25,11 +25,26 @@ interface BotItem {
   state: string;
 }
 
+// P0-7: include position_open so a bot in a trade renders distinctly from
+// a stopped bot on the list view. The detail page already does this.
 const STATE_VARIANT: Record<string, "ok" | "warn" | "neutral"> = {
   monitoring: "ok",
+  position_open: "ok",
   paused: "warn",
   stopped: "neutral",
 };
+
+// P0-6: actions whose semantics depend on execution being permitted.
+// When the kill switch is active the worker silently refuses to route
+// orders, so even though these transitions succeed in the DB the bot
+// will not actually trade. We block them at the UI layer to stop the
+// operator believing they have restored execution.
+type PendingAction =
+  | { kind: "delete-bot"; botId: string; label: string }
+  | { kind: "stop-bot"; botId: string; label: string }
+  | { kind: "delete-all"; count: number; trades: number }
+  | { kind: "restart-all"; count: number }
+  | { kind: "smart-deploy" };
 
 export default function BotsPage() {
   const { data: bots, mutate: mutateBots } = useBots();
@@ -39,6 +54,11 @@ export default function BotsPage() {
   const { data: instruments } = useSWR("instruments", () => api.instruments());
   const { data: execMode } = useSWR("/execution/mode", () => api.executionMode(), { refreshInterval: 30000 });
   const isIgDemo = execMode?.mode === "ig_demo";
+  // P0-6: kill-switch state drives action gating on this page.
+  const killSwitchActive = execMode?.kill_switch_active ?? false;
+  // P1-9: surface the registered-strategy count alongside the
+  // operator-visible filter. systemStatus reports both numbers.
+  const { data: systemStatus } = useSWR("/system/status", () => api.systemStatus(), { refreshInterval: 60000 });
   const { data: igHealth } = useSWR(
     isIgDemo ? "/execution/ig-health" : null,
     () => api.igHealth(),
@@ -67,6 +87,10 @@ export default function BotsPage() {
   const [newPhaseName, setNewPhaseName] = useState("Phase B — Live Forward Tracking");
   const [sortField, setSortField] = useState<"strategy" | "instrument" | "tf" | "state" | "bars" | "trades" | "pnl">("instrument");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
+
+  // P0-1..5: pending destructive / fleet-wide action awaiting confirmation.
+  const [pendingAction, setPendingAction] = useState<PendingAction | null>(null);
+  const [confirmBusy, setConfirmBusy] = useState(false);
 
   function handleSort(field: typeof sortField) {
     if (sortField === field) setSortDir(d => d === "asc" ? "desc" : "asc");
@@ -168,7 +192,7 @@ export default function BotsPage() {
     }
   }
 
-  async function handleSmartDeploy() {
+  async function doSmartDeploy() {
     setSmartDeployLoading(true);
     setSmartDeployResult(null);
     setActionError(null);
@@ -193,8 +217,7 @@ export default function BotsPage() {
     }
   }
 
-  async function handleDeleteAll() {
-    if (!confirm("Delete all bots and their trade history? This cannot be undone.")) return;
+  async function doDeleteAll() {
     setActionError(null);
     try {
       await api.deleteAllBots();
@@ -204,13 +227,44 @@ export default function BotsPage() {
     }
   }
 
-  async function handleRestartAll() {
+  async function doRestartAll() {
     setActionError(null);
     try {
       await api.restartAllBots();
       await mutateBots();
     } catch (err) {
       setActionError(err instanceof Error ? err.message : "Failed to restart bots");
+    }
+  }
+
+  // P0-1..5: every destructive or fleet-wide action goes through
+  // pendingAction so the operator sees an in-page confirm with the exact
+  // damage / scope. Routine reversible actions (Pause / Resume / Restart
+  // for a single bot) still execute on first click.
+  async function confirmPendingAction() {
+    if (!pendingAction) return;
+    setConfirmBusy(true);
+    try {
+      switch (pendingAction.kind) {
+        case "delete-bot":
+          await handleDelete(pendingAction.botId);
+          break;
+        case "stop-bot":
+          await handleStop(pendingAction.botId);
+          break;
+        case "delete-all":
+          await doDeleteAll();
+          break;
+        case "restart-all":
+          await doRestartAll();
+          break;
+        case "smart-deploy":
+          await doSmartDeploy();
+          break;
+      }
+      setPendingAction(null);
+    } finally {
+      setConfirmBusy(false);
     }
   }
 
@@ -222,7 +276,38 @@ export default function BotsPage() {
   const sym = getCurrencySymbol(currency);
   const botList = (bots ?? []) as BotItem[];
   const stoppedBots = botList.filter(b => b.state === "stopped");
+  const pausedBots = botList.filter(b => b.state === "paused");
   const fleetBots = fleet?.bots ?? [];
+
+  // P1-10: human-readable execution-mode label for the subtitle. The
+  // global ExecutionModeBanner says it once at the top of the layout;
+  // operators on /bots benefit from seeing it next to the page title too.
+  const execLabel = (() => {
+    if (!execMode) return null;
+    if (execMode.mode === "paper") return "Paper mode";
+    if (execMode.mode === "ig_demo") {
+      return execMode.live_execution_enabled
+        ? "IG Demo · execution enabled (no real money)"
+        : "IG Demo · execution disabled (paper-only)";
+    }
+    return execMode.mode;
+  })();
+  const subtitle = execLabel
+    ? `Manage trading bots and monitor fleet performance · ${execLabel}`
+    : "Manage trading bots and monitor fleet performance";
+
+  // P1-9: how many of the registered strategies are exposed to the
+  // operator. Helps the "why are there only 2 strategies in the dropdown"
+  // confusion when FIBOKEI_VISIBLE_STRATEGIES is set.
+  const visibleStrategyCount = strategies?.length ?? 0;
+  const registeredStrategyCount = systemStatus?.strategies_loaded ?? null;
+  const showStrategyHint =
+    registeredStrategyCount !== null &&
+    registeredStrategyCount > visibleStrategyCount &&
+    visibleStrategyCount > 0;
+
+  // Aggregate counts for confirm-banner copy.
+  const totalTradeCount = fleet?.aggregate_trades ?? 0;
 
   // Sort bots for flat view
   const sortedBotList = [...botList].sort((a, b) => {
@@ -259,19 +344,49 @@ export default function BotsPage() {
     <div className="max-w-6xl">
       <PageHeader
         title="Bots"
-        subtitle="Manage trading bots and monitor fleet performance"
+        subtitle={subtitle}
         actions={
-          botList.length > 0 ? (
+          stoppedBots.length > 0 ? (
             <button
-              onClick={handleRestartAll}
-              className="btn btn-primary flex items-center gap-2"
-              title="Restart all stopped bots and put them back into monitoring mode"
+              onClick={() =>
+                setPendingAction({ kind: "restart-all", count: stoppedBots.length })
+              }
+              disabled={killSwitchActive}
+              className="btn btn-primary flex items-center gap-2 disabled:opacity-50"
+              title={
+                killSwitchActive
+                  ? "Kill switch is active — execution is halted"
+                  : "Restart all stopped bots and put them back into monitoring mode"
+              }
+              aria-label={`Start all ${stoppedBots.length} stopped bots`}
             >
-              <Activity size={14} /> Start All Bots
+              <Activity size={14} /> Start All Bots ({stoppedBots.length})
             </button>
           ) : undefined
         }
       />
+
+      {/* P0-6: when the kill switch is active, every "is this bot
+          trading?" answer from this page becomes "no, regardless of state
+          badge". Surface this clearly so the operator does not click
+          Resume / Restart and believe execution has resumed. */}
+      {killSwitchActive && (
+        <div
+          role="alert"
+          className="mb-4 flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-900"
+        >
+          <ShieldAlert size={16} className="mt-0.5 shrink-0 text-red-700" />
+          <div>
+            <p className="font-medium">Kill switch is active — execution is halted</p>
+            <p className="mt-0.5 text-xs text-red-800">
+              Bots can still appear in <strong>monitoring</strong> state but the
+              worker will not route any orders. Resume / Restart / Start-All
+              / Smart Deploy are disabled until the kill switch is deactivated
+              from <Link href="/system" className="underline hover:no-underline">System</Link>.
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Smart Deploy */}
       <div className="card-elevated flex flex-wrap items-center justify-between gap-4 mb-6">
@@ -282,9 +397,11 @@ export default function BotsPage() {
           </p>
         </div>
         <button
-          onClick={handleSmartDeploy}
-          disabled={smartDeployLoading}
-          className="btn btn-primary"
+          onClick={() => setPendingAction({ kind: "smart-deploy" })}
+          disabled={smartDeployLoading || killSwitchActive}
+          className="btn btn-primary disabled:opacity-50"
+          title={killSwitchActive ? "Kill switch is active — execution is halted" : undefined}
+          aria-label="Smart Deploy top research combos"
         >
           {smartDeployLoading ? <><Loader2 size={14} className="animate-spin" /> Deploying...</> : "Deploy Top Combos"}
         </button>
@@ -333,7 +450,7 @@ export default function BotsPage() {
         </div>
         <div className="stat-card">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-medium uppercase tracking-wide text-foreground-muted">Fleet PnL<InfoTip text="Aggregate profit/loss across all bots. Combines realised and unrealised PnL from every active and stopped bot." /></span>
+            <span className="text-xs font-medium uppercase tracking-wide text-foreground-muted">Fleet PnL<InfoTip text="Realised PnL from closed trades across all bots in the current evaluation phase. Open positions are not marked-to-market in this number." /></span>
             <BarChart3 size={14} className="text-foreground-muted" />
           </div>
           <p className={`text-xl font-bold tracking-tight ${(fleet?.aggregate_pnl ?? 0) >= 0 ? "text-primary" : "text-danger"}`}>
@@ -417,7 +534,12 @@ export default function BotsPage() {
               <option value="H4">H4</option>
             </select>
           </div>
-          <button type="submit" disabled={creating || !strategy || !instrument} className="btn btn-primary">
+          <button
+            type="submit"
+            disabled={creating || !strategy || !instrument || killSwitchActive}
+            className="btn btn-primary disabled:opacity-50"
+            title={killSwitchActive ? "Kill switch is active — execution is halted" : undefined}
+          >
             {creating && <Loader2 size={14} className="animate-spin" />}
             {creating ? "Creating..." : "Add Bot"}
           </button>
@@ -453,6 +575,14 @@ export default function BotsPage() {
           </div>
         </div>
         {error && <p className="text-danger text-sm mt-3">{error}</p>}
+        {showStrategyHint && (
+          <p className="text-xs text-foreground-muted mt-3">
+            Showing {visibleStrategyCount} of {registeredStrategyCount} registered strategies.
+            The remaining {registeredStrategyCount - visibleStrategyCount} are hidden by the
+            <code className="mx-1 px-1 bg-background-muted rounded text-[10px]">FIBOKEI_VISIBLE_STRATEGIES</code>
+            environment variable. Edit it on Railway to expose more.
+          </p>
+        )}
       </form>
 
       {actionError && (
@@ -469,11 +599,25 @@ export default function BotsPage() {
             {" "}— click Restart All to put them back into monitoring mode.
           </span>
           <button
-            onClick={handleRestartAll}
-            className="btn btn-secondary text-xs ml-4 flex items-center gap-1.5 shrink-0"
+            onClick={() => setPendingAction({ kind: "restart-all", count: stoppedBots.length })}
+            disabled={killSwitchActive}
+            className="btn btn-secondary text-xs ml-4 flex items-center gap-1.5 shrink-0 disabled:opacity-50"
+            title={killSwitchActive ? "Kill switch is active — execution is halted" : undefined}
           >
             <Activity size={11} /> Restart All
           </button>
+        </div>
+      )}
+
+      {/* P1-11: paused bots get the same banner shape as stopped bots
+          since the operational impact (no new signal evaluation) is
+          identical. */}
+      {pausedBots.length > 0 && (
+        <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 mb-4 flex items-center justify-between">
+          <span>
+            <strong>{pausedBots.length} bot{pausedBots.length !== 1 ? "s" : ""} paused</strong>
+            {" "}— signal evaluation is halted. Resume each from the row controls or detail page.
+          </span>
         </div>
       )}
 
@@ -700,10 +844,17 @@ export default function BotsPage() {
         </button>
         {botList.length > 0 && (
           <button
-            onClick={handleDeleteAll}
+            onClick={() =>
+              setPendingAction({
+                kind: "delete-all",
+                count: botList.length,
+                trades: totalTradeCount,
+              })
+            }
             className="text-xs px-3 py-1 rounded border border-red-200 text-red-600 hover:bg-red-50 transition-colors"
+            aria-label={`Delete all ${botList.length} bots`}
           >
-            Delete All Bots
+            Delete All Bots ({botList.length})
           </button>
         )}
       </div>
@@ -758,8 +909,32 @@ export default function BotsPage() {
                           {bot.state}
                         </StatusBadge>
                         {fleetBot?.is_stale && (
-                          <AlertTriangle size={12} className="text-amber-500" />
+                          // P1-12: surface last-evaluated timestamp on hover
+                          // so operators can tell 30s-stale from 3d-stale.
+                          // Lucide icons don't accept `title`, so wrap in span.
+                          <span
+                            title={
+                              fleetBot?.last_evaluated_bar
+                                ? `Last evaluated ${new Date(fleetBot.last_evaluated_bar).toLocaleString()}`
+                                : "Stale — last_evaluated_bar unknown"
+                            }
+                          >
+                            <AlertTriangle
+                              size={12}
+                              className="text-amber-500"
+                              aria-label="Stale — bot has not evaluated recently"
+                            />
+                          </span>
                         )}
+                        {killSwitchActive &&
+                          (bot.state === "monitoring" || bot.state === "position_open") && (
+                            <span
+                              className="inline-flex items-center gap-0.5 text-[10px] px-1.5 py-0.5 rounded bg-red-50 text-red-700 border border-red-200"
+                              title="Kill switch is active — worker will not route orders"
+                            >
+                              <ShieldAlert size={10} /> halted
+                            </span>
+                          )}
                       </div>
                     </td>
                     <td className="text-right tabular-nums text-foreground-muted">{fleetBot?.bars_seen ?? 0}</td>
@@ -769,15 +944,20 @@ export default function BotsPage() {
                     </td>
                     <td className="text-right">
                       <div className="flex items-center justify-end gap-2">
-                        <Link href={`/bots/${bot.bot_id}`} className="btn-ghost text-xs px-2 py-1 rounded" title="View bot detail">
+                        <Link
+                          href={`/bots/${bot.bot_id}`}
+                          className="btn-ghost text-xs px-2 py-1 rounded"
+                          title="View bot detail"
+                          aria-label={`View detail for bot ${bot.strategy_id} ${bot.instrument} ${bot.timeframe}`}
+                        >
                           <ExternalLink size={11} />
                         </Link>
                         {bot.state === "stopped" && (
                           <button
                             onClick={() => handleRestart(bot.bot_id)}
-                            disabled={!!actingBotId}
+                            disabled={!!actingBotId || killSwitchActive}
                             className="btn-ghost text-xs px-2 py-1 rounded text-primary disabled:opacity-40"
-                            title="Continue from where this bot left off"
+                            title={killSwitchActive ? "Kill switch is active — execution is halted" : "Continue from where this bot left off"}
                           >
                             {actingBotId === bot.bot_id ? <Loader2 size={12} className="animate-spin inline" /> : "Restart"}
                           </button>
@@ -785,8 +965,9 @@ export default function BotsPage() {
                         {bot.state === "paused" && (
                           <button
                             onClick={() => handleResume(bot.bot_id)}
-                            disabled={!!actingBotId}
+                            disabled={!!actingBotId || killSwitchActive}
                             className="btn-ghost text-xs px-2 py-1 rounded text-primary disabled:opacity-40"
+                            title={killSwitchActive ? "Kill switch is active — execution is halted" : undefined}
                           >
                             {actingBotId === bot.bot_id ? <Loader2 size={12} className="animate-spin inline" /> : "Resume"}
                           </button>
@@ -802,18 +983,32 @@ export default function BotsPage() {
                         )}
                         {bot.state !== "stopped" && (
                           <button
-                            onClick={() => handleStop(bot.bot_id)}
+                            onClick={() =>
+                              setPendingAction({
+                                kind: "stop-bot",
+                                botId: bot.bot_id,
+                                label: `${bot.strategy_id} ${bot.instrument} ${bot.timeframe}`,
+                              })
+                            }
                             disabled={!!actingBotId}
                             className="text-xs px-2 py-1 rounded text-danger hover:bg-red-50 transition-colors disabled:opacity-40"
+                            aria-label={`Stop bot ${bot.strategy_id} ${bot.instrument} ${bot.timeframe}`}
                           >
                             {actingBotId === bot.bot_id ? <Loader2 size={12} className="animate-spin inline" /> : "Stop"}
                           </button>
                         )}
                         <button
-                          onClick={() => handleDelete(bot.bot_id)}
+                          onClick={() =>
+                            setPendingAction({
+                              kind: "delete-bot",
+                              botId: bot.bot_id,
+                              label: `${bot.strategy_id} ${bot.instrument} ${bot.timeframe}`,
+                            })
+                          }
                           disabled={!!actingBotId}
                           className="text-xs px-2 py-1 rounded text-foreground-muted hover:text-red-600 hover:bg-red-50 transition-colors disabled:opacity-40"
                           title="Delete bot and trade history"
+                          aria-label={`Delete bot ${bot.strategy_id} ${bot.instrument} ${bot.timeframe}`}
                         >
                           {actingBotId === bot.bot_id ? <Loader2 size={12} className="animate-spin inline" /> : "Delete"}
                         </button>
@@ -849,7 +1044,30 @@ export default function BotsPage() {
                           <StatusBadge variant={STATE_VARIANT[b.state] ?? "neutral"}>
                             {b.state}
                           </StatusBadge>
-                          {b.is_stale && <AlertTriangle size={12} className="text-amber-500" />}
+                          {b.is_stale && (
+                            <span
+                              title={
+                                b.last_evaluated_bar
+                                  ? `Last evaluated ${new Date(b.last_evaluated_bar).toLocaleString()}`
+                                  : "Stale — last_evaluated_bar unknown"
+                              }
+                            >
+                              <AlertTriangle
+                                size={12}
+                                className="text-amber-500"
+                                aria-label="Stale — bot has not evaluated recently"
+                              />
+                            </span>
+                          )}
+                          {killSwitchActive &&
+                            (b.state === "monitoring" || b.state === "position_open") && (
+                              <span
+                                className="inline-flex items-center gap-0.5 text-[10px] px-1.5 py-0.5 rounded bg-red-50 text-red-700 border border-red-200"
+                                title="Kill switch is active — worker will not route orders"
+                              >
+                                <ShieldAlert size={10} /> halted
+                              </span>
+                            )}
                         </div>
                       </td>
                       <td className="text-right tabular-nums text-foreground-muted">{b.bars_seen}</td>
@@ -859,15 +1077,20 @@ export default function BotsPage() {
                       </td>
                       <td className="text-right">
                         <div className="flex items-center justify-end gap-2">
-                          <Link href={`/bots/${b.bot_id}`} className="btn-ghost text-xs px-2 py-1 rounded" title="View bot detail">
+                          <Link
+                            href={`/bots/${b.bot_id}`}
+                            className="btn-ghost text-xs px-2 py-1 rounded"
+                            title="View bot detail"
+                            aria-label={`View detail for bot ${b.strategy_id} ${b.instrument} ${b.timeframe}`}
+                          >
                             <ExternalLink size={11} />
                           </Link>
                           {b.state === "stopped" && (
                             <button
                               onClick={() => handleRestart(b.bot_id)}
-                              disabled={!!actingBotId}
+                              disabled={!!actingBotId || killSwitchActive}
                               className="btn-ghost text-xs px-2 py-1 rounded text-primary disabled:opacity-40"
-                              title="Continue from where this bot left off"
+                              title={killSwitchActive ? "Kill switch is active — execution is halted" : "Continue from where this bot left off"}
                             >
                               {actingBotId === b.bot_id ? <Loader2 size={12} className="animate-spin inline" /> : "Restart"}
                             </button>
@@ -875,8 +1098,9 @@ export default function BotsPage() {
                           {b.state === "paused" && (
                             <button
                               onClick={() => handleResume(b.bot_id)}
-                              disabled={!!actingBotId}
+                              disabled={!!actingBotId || killSwitchActive}
                               className="btn-ghost text-xs px-2 py-1 rounded text-primary disabled:opacity-40"
+                              title={killSwitchActive ? "Kill switch is active — execution is halted" : undefined}
                             >
                               {actingBotId === b.bot_id ? <Loader2 size={12} className="animate-spin inline" /> : "Resume"}
                             </button>
@@ -892,18 +1116,32 @@ export default function BotsPage() {
                           )}
                           {b.state !== "stopped" && (
                             <button
-                              onClick={() => handleStop(b.bot_id)}
+                              onClick={() =>
+                                setPendingAction({
+                                  kind: "stop-bot",
+                                  botId: b.bot_id,
+                                  label: `${b.strategy_id} ${b.instrument} ${b.timeframe}`,
+                                })
+                              }
                               disabled={!!actingBotId}
                               className="text-xs px-2 py-1 rounded text-danger hover:bg-red-50 transition-colors disabled:opacity-40"
+                              aria-label={`Stop bot ${b.strategy_id} ${b.instrument} ${b.timeframe}`}
                             >
                               {actingBotId === b.bot_id ? <Loader2 size={12} className="animate-spin inline" /> : "Stop"}
                             </button>
                           )}
                           <button
-                            onClick={() => handleDelete(b.bot_id)}
+                            onClick={() =>
+                              setPendingAction({
+                                kind: "delete-bot",
+                                botId: b.bot_id,
+                                label: `${b.strategy_id} ${b.instrument} ${b.timeframe}`,
+                              })
+                            }
                             disabled={!!actingBotId}
                             className="text-xs px-2 py-1 rounded text-foreground-muted hover:text-red-600 hover:bg-red-50 transition-colors disabled:opacity-40"
                             title="Delete bot and trade history"
+                            aria-label={`Delete bot ${b.strategy_id} ${b.instrument} ${b.timeframe}`}
                           >
                             {actingBotId === b.bot_id ? <Loader2 size={12} className="animate-spin inline" /> : "Delete"}
                           </button>
@@ -918,6 +1156,148 @@ export default function BotsPage() {
         </table>
       </div>
 
+      {/* P0-1..5: in-page confirmation modal for destructive / fleet-wide
+          actions. Mirrors the KillSwitchModal idiom so the workstation
+          feels consistent across high-impact operator controls. */}
+      {pendingAction && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="bots-confirm-title"
+          className="fixed inset-0 z-[10000] flex items-center justify-center"
+        >
+          <div
+            className="absolute inset-0 bg-black/40"
+            onClick={confirmBusy ? undefined : () => setPendingAction(null)}
+          />
+          <div className="relative bg-background-card rounded-2xl shadow-2xl border border-gray-200 w-full max-w-md mx-4 p-6">
+            <button
+              type="button"
+              onClick={() => setPendingAction(null)}
+              disabled={confirmBusy}
+              aria-label="Close dialog"
+              className="absolute top-3 right-3 text-foreground-muted hover:text-foreground p-1 rounded-md hover:bg-background-muted transition-colors disabled:opacity-50"
+            >
+              <X size={16} />
+            </button>
+
+            <div className="flex items-start gap-3 mb-4">
+              <div className="w-10 h-10 rounded-xl bg-red-50 flex items-center justify-center shrink-0">
+                <AlertTriangle size={20} className="text-danger" />
+              </div>
+              <div>
+                <h2 id="bots-confirm-title" className="text-lg font-bold tracking-tight">
+                  {pendingAction.kind === "delete-bot" && "Delete bot?"}
+                  {pendingAction.kind === "stop-bot" && "Stop bot?"}
+                  {pendingAction.kind === "delete-all" &&
+                    `Delete all ${pendingAction.count} bots?`}
+                  {pendingAction.kind === "restart-all" &&
+                    `Restart ${pendingAction.count} stopped bots?`}
+                  {pendingAction.kind === "smart-deploy" &&
+                    "Deploy top research combos?"}
+                </h2>
+              </div>
+            </div>
+
+            <div className="text-sm text-foreground space-y-2 mb-5">
+              {pendingAction.kind === "delete-bot" && (
+                <>
+                  <p>
+                    Removes <strong>{pendingAction.label}</strong> and{" "}
+                    <strong>all of its trade history</strong>. This cannot be
+                    undone.
+                  </p>
+                  <p className="text-xs text-foreground-muted">
+                    If you only want to halt signal evaluation without losing
+                    the history, use Stop instead.
+                  </p>
+                </>
+              )}
+              {pendingAction.kind === "stop-bot" && (
+                <>
+                  <p>
+                    Stops <strong>{pendingAction.label}</strong>. Signal
+                    evaluation halts and any open position is left under its
+                    own stop / target rules.
+                  </p>
+                  <p className="text-xs text-foreground-muted">
+                    Reversible — use Restart to put the bot back into
+                    monitoring mode.
+                  </p>
+                </>
+              )}
+              {pendingAction.kind === "delete-all" && (
+                <>
+                  <p>
+                    Removes every bot in the current evaluation phase along
+                    with <strong>{pendingAction.trades.toLocaleString()}</strong>{" "}
+                    trade record{pendingAction.trades === 1 ? "" : "s"}. This
+                    cannot be undone.
+                  </p>
+                  <p className="text-xs text-foreground-muted">
+                    Archived phase trade history (if any) is unaffected.
+                  </p>
+                </>
+              )}
+              {pendingAction.kind === "restart-all" && (
+                <p>
+                  Puts every stopped bot back into{" "}
+                  <strong>monitoring</strong> state. Each bot resumes signal
+                  evaluation on the next closed candle.
+                </p>
+              )}
+              {pendingAction.kind === "smart-deploy" && (
+                <>
+                  <p>
+                    Creates up to <strong>5 bots</strong> from your top research
+                    results (composite score ≥ 0.30). Combos that already have
+                    bots are skipped.
+                  </p>
+                  <p className="text-xs text-foreground-muted">
+                    New bots start in <strong>monitoring</strong> state with
+                    default risk settings. You can edit risk per bot from the
+                    detail page afterwards.
+                  </p>
+                </>
+              )}
+            </div>
+
+            <div className="flex items-center justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setPendingAction(null)}
+                disabled={confirmBusy}
+                className="btn btn-secondary text-sm disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={confirmPendingAction}
+                disabled={confirmBusy}
+                className={`text-sm px-4 py-2 rounded-lg font-medium transition-colors disabled:opacity-50 ${
+                  pendingAction.kind === "restart-all" ||
+                  pendingAction.kind === "smart-deploy"
+                    ? "bg-primary text-white hover:bg-primary/90"
+                    : "bg-red-600 text-white hover:bg-red-700"
+                }`}
+              >
+                {confirmBusy
+                  ? "Working..."
+                  : pendingAction.kind === "delete-bot"
+                    ? "Delete bot"
+                    : pendingAction.kind === "stop-bot"
+                      ? "Stop bot"
+                      : pendingAction.kind === "delete-all"
+                        ? `Delete ${pendingAction.count} bots`
+                        : pendingAction.kind === "restart-all"
+                          ? `Restart ${pendingAction.count}`
+                          : "Deploy"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
