@@ -230,3 +230,19 @@ Branch `wave0-2-hardening`; `main` untouched.
 Completes the visible chain for the Gold trade: once IG creds are on the service
 running `reconcile-trades`, "Sync from IG" imports `SBQLDCAC` and it appears under
 the IG Demo tab with its £554 broker PnL. Branch `wave0-2-hardening`.
+
+
+## 2026-06-19 — Wave 6 (short PnL colour) + Wave 2 (recent execution)
+
+**Wave 6 — short/sell PnL display.** Direction is no longer coloured as if it
+were profit/loss:
+- `trades/page.tsx`: direction badge LONG→info / SHORT→neutral (was SHORT→error/red).
+- `trades/[id]/page.tsx`: Direction field no longer red for SHORT; PnL field keeps
+  the outcome colour.
+- Telegram `send_trade_closed` already used `✅ if pnl>0 else ❌` (PnL-based) — left as is.
+
+**Wave 2 — recent execution.** Dashboard now has a **Recent Execution** panel
+(last 6 trades: date, instrument, direction, strategy, PnL coloured by PnL), each
+row links to the trade detail; "Trade history" link to `/trades`. 30s refresh.
+
+Verified: `tsc --noEmit` clean for all changed files. Branch `wave0-2-hardening`.

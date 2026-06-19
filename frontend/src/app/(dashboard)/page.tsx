@@ -253,6 +253,12 @@ export default function DashboardPage() {
     () => api.igHealth(),
     { refreshInterval: 60000 }
   );
+  const { data: recentTradesData } = useSWR(
+    "/trades?recent-execution",
+    () => api.listTrades("page=1&size=6"),
+    { refreshInterval: 30000 },
+  );
+  const recentTrades = recentTradesData?.items ?? [];
 
   // ─── Derived values ────────────────────────────────────────
   const balance = account?.balance ?? 0;
@@ -553,6 +559,45 @@ export default function DashboardPage() {
           <div className="mt-3 flex items-center gap-2 text-xs text-amber-700 bg-amber-50 rounded-lg px-3 py-2">
             <AlertTriangle size={13} />
             {staleBots} bot{staleBots !== 1 ? "s" : ""} with stale data — check <Link href="/bots" className="underline font-medium">Bots</Link>
+          </div>
+        )}
+      </div>
+
+      {/* ─── Recent Execution ─────────────────────────────── */}
+      <div className="card-elevated mb-6" data-testid="recent-execution">
+        <div className="flex items-center justify-between mb-3">
+          <p className="section-label !mb-0">Recent Execution</p>
+          <Link href="/trades" className="text-xs text-primary hover:underline flex items-center gap-1">
+            Trade history <ArrowRight size={10} />
+          </Link>
+        </div>
+        {recentTrades.length === 0 ? (
+          <p className="text-xs text-foreground-muted py-2">No trades yet this session.</p>
+        ) : (
+          <div className="divide-y divide-gray-100">
+            {recentTrades.map((t) => (
+              <Link
+                key={t.id}
+                href={`/trades/${t.id}`}
+                className="flex items-center justify-between py-2 text-sm hover:bg-gray-50 -mx-2 px-2 rounded"
+              >
+                <span className="flex items-center gap-2 min-w-0">
+                  <span className="text-xs text-foreground-muted tabular-nums w-16 shrink-0">
+                    {t.exit_time
+                      ? new Date(t.exit_time).toLocaleDateString()
+                      : t.entry_time
+                        ? new Date(t.entry_time).toLocaleDateString()
+                        : "—"}
+                  </span>
+                  <span className="font-medium">{t.instrument}</span>
+                  <span className="text-xs text-foreground-muted">{t.direction}</span>
+                  <span className="text-xs text-foreground-muted truncate">{t.strategy_id}</span>
+                </span>
+                <span className={`tabular-nums font-medium ${t.pnl >= 0 ? "text-primary" : "text-danger"}`}>
+                  {formatPnl(t.pnl, currency)}
+                </span>
+              </Link>
+            ))}
           </div>
         )}
       </div>
