@@ -83,3 +83,36 @@ BASE_URL=https://fiboki.uk npx playwright test --project=screenshots --reporter=
 
 **Viewport:** 1440x900 (desktop)
 **Target:** https://fiboki.uk → https://api.fiboki.uk
+
+
+## 2026-06-19 — Wave 0 trust reset + Wave 2 registry-health
+
+**Verification baseline (Python 3.11.15, fresh .venv):**
+- `ruff check src/` clean.
+- Core offline subset: 104 passed (indicators, metrics, execution router/signals, fleet/risk).
+- Full suite hangs offline on network-coupled (yfinance/IG) + heavy-compute tests
+  lacking markers/mocks/timeout → triaged as environment, not code. See
+  `docs/TEST_HEALTH_2026-06-19.md`.
+
+**Wave 0 — test hygiene (makes suite completable):**
+- `pyproject.toml`: added `pytest-timeout` dev dep; pytest `addopts =
+  "--timeout=120 --timeout-method=signal"`; registered `network` / `slow` markers.
+  Infinite network hangs now fail fast instead of stalling the whole run.
+
+**Wave 2 — strategy registry truth (productised):**
+- `strategies/registry.py`: added `CANONICAL_STRATEGY_IDS` (12), `classify_strategy()`,
+  `registry_health()`; `list_available()` now carries a `tier` field.
+- `api/routes/strategies.py`: `GET /strategies/registry-health` (placed before the
+  `{strategy_id}` route); `tier` added to list + detail responses.
+- `tests/test_registry_health.py`: locks 12 canonical, ≥12 registered, registry/disk
+  parity, tier classification, `tier` present in list. 9 passed (with API tests).
+
+**Evidence docs added:** CURRENT_STATUS.md, TEST_HEALTH_2026-06-19.md,
+STRATEGY_REGISTRY_AUDIT.md, IG_GATE_STATUS.md, NEXT_PHASES.md.
+
+**Still blocked (not done):** IG demo rejection root-cause (Wave 1) needs the live
+`error_code` from Railway (`GET /execution/audit?execution_mode=ig_demo` or worker
+logs); frontend `npm run build` + screenshots; full-suite green number after the
+network tests are marked/mocked.
+
+**Committed to branch `wave0-2-hardening` (NOT main) — pending operator review/push.**
