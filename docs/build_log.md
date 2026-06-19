@@ -146,3 +146,34 @@ builds with the new router).
 Railway); Wave 5 Strategy Lab + Wave 6 bot factory (large multi-session builds, to be
 delivered on top of this ledger); Waves 7–8 demo/live fleets (require running system,
 market hours, and human sign-off per the safety doctrine).
+
+
+## 2026-06-19 — Post IG-demo proof: fleet recovery, skills, build-stream plan
+
+**Confirmed via live API (Chrome):** IG demo is executing — Gold fill `dealId=
+DIAAAAXSBQD3EAQ` (audit row 359). FX/indices were rejecting with `REJECTED:
+UNKNOWN`; root cause = IG returns `reason:"UNKNOWN"` and the adapter discarded the
+full confirmation. **Fixed** (prior commit): adapter now logs + persists the full
+IG confirmation and surfaces the real reason/error_code.
+
+**Shipped this session (branch `wave0-2-hardening`):**
+- `fix(phases)`: phase transition zeroes daily/weekly PnL + worker reloads account
+  on phase change (was carrying −£193.46 into Phase C). `tests/test_worker_phase_reset.py`.
+- `feat(fleet)`: `POST /paper/bots/restore-stale` — restores errored bots
+  (state→monitoring, clears error) and classifies monitoring-but-stale bots under
+  `needs_attention`. `tests/test_restore_stale_bots.py` (ruff clean, 4 passed).
+- `feat(skills)`: 4 priority Claude Code skills as real files under
+  `.claude/skills/`: `fiboki_repo_guardian`, `fiboki_ig_execution_debugger`,
+  `fiboki_worker_observer`, `fiboki_docs_scribe`.
+- `docs`: `IG_RECONCILIATION_PLAN.md` (captures the `SBQLDCAC` dealReference vs
+  `dealId` nuance + exact prod check), `OPERATING_PHASES.md`,
+  `NEXT_BUILD_STREAMS.md` (8 waves + shortlist-dedup/factory answers),
+  `FRIEND_DEMO_READINESS.md`.
+
+**Not built this pass (continuation, by design — preserve working execution):**
+Wave 1 reconciliation importer (needs IG `/history/transactions` on worker),
+Wave 2 recent-execution panel + clickable cards, Wave 4 chart overlays, Wave 6
+short-PnL UI/Telegram audit, Wave 7 research/job UX, worker-side stale auto-heal,
+promotion dedupe via ledger. All specced in `NEXT_BUILD_STREAMS.md`.
+
+**Branch only — `main` untouched, nothing pushed/deployed.**
