@@ -33,6 +33,7 @@ dependencies = [
 dev = [
     "pytest>=7.0",
     "pytest-cov",
+    "pytest-timeout",
     "ruff",
     "mypy",
     "httpx",
@@ -46,6 +47,16 @@ packages = ["src/fibokei"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+# Safety net: convert infinite hangs (real network sockets in yfinance/IG
+# tests) into a clear per-test failure instead of stalling the whole suite.
+# 120s is generous enough not to trip legitimate heavy-compute tests
+# (research matrix, walk-forward, Monte Carlo). signal method is required to
+# interrupt C-level curl_cffi calls (thread method cannot).
+addopts = "--timeout=120 --timeout-method=signal"
+markers = [
+    "network: test makes real network calls (yfinance/IG REST). Run offline with -m 'not network'.",
+    "slow: long-running compute (research matrix, walk-forward, Monte Carlo).",
+]
 
 [tool.ruff]
 line-length = 100
