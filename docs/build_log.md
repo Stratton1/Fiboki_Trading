@@ -278,3 +278,22 @@ Verified: ruff clean; 37 passed across the new/related suites. Branch
 exists for Z5ZAV. If the demo account can't price standard FX CFDs, the markets
 must be enabled on IG or the catalogue repointed to supported epics (verify via
 an IG markets search on the worker — `fiboki ig-universe` planned).
+
+
+## 2026-06-19 — IG epic audit (map instruments → priceable epics) + data/broker doc
+
+- `execution/ig_epic_audit.py`: `audit_instrument_epics(client, symbols?)` checks
+  each catalogue epic against the live account (priceable? tradeable?), searches a
+  tradeable alternative when not, returns ok/remapped/unavailable + resolved epic;
+  `summarize_audit()` yields `epic_overrides` + `tradable_symbols`. Read-only.
+- `api/routes/execution.py`: `POST /execution/ig-epic-audit?symbols=` (typed,
+  never raises; needs IG creds).
+- Tests: `test_ig_epic_audit.py` (Gold ok, GBPUSD remapped→MINI, HK50 unavailable).
+- `docs/DATA_AND_BROKERS.md`: how to map epics, make IG the test universe (+ the
+  data-history caveat), free backtest data sources (yfinance/HistData/Dukascopy),
+  `.cfp` instruments, broker comparison (IG vs OANDA/Tradovate/IBKR), and the
+  already-shipped allow_duplicate clone path.
+- ruff clean; 6 passed (audit + full-app build). Branch `wave0-2-hardening`.
+
+This makes IG the source of truth for what's tradable: run the audit → bake
+verified epics into `core/instruments.py` → gate research/paper to tradable_symbols.

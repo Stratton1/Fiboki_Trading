@@ -1079,3 +1079,70 @@ def reconcile_broker_trades(
         return ReconcileTradesResponse(
             configured=True, reachable=False, error=f"Unexpected error: {e}"
         )
+
+
+# ── IG epic audit: map Fiboki instruments → verified priceable epics ────────
+
+
+class IGEpicAuditResponse(BaseModel):
+    configured: bool
+    reachable: bool
+    total: int = 0
+    ok: int = 0
+    remapped: int = 0
+    unavailable: int = 0
+    epic_overrides: dict = {}
+    tradable_symbols: list[str] = []
+    results: list[dict] = []
+    error: str | None = None
+
+
+@router.post("/execution/ig-epic-audit", response_model=IGEpicAuditResponse)
+def run_ig_epic_audit(
+    symbols: str | None = None,
+    user: TokenData = Depends(get_current_user),
+):
+    """Audit each instrument's IG epic against the live account.
+
+    Reports which epics are priceable, which need remapping (with the resolved
+    epic), and which are unavailable — so the catalogue can be repointed to the
+    account's supported epics and IG's tradable set can define the research
+    universe. Read-only; never places orders. ``symbols`` = optional CSV filter.
+    Requires IG credentials on this service.
+    """
+    import os
+
+    from fibokei.execution.ig_client import IGClientError
+    from fibokei.execution.ig_epic_audit import (
+        audit_instrument_epics,
+        summarize_audit,
+    )
+
+    configured = bool(
+        os.environ.get("FIBOKEI_IG_API_KEY")
+        and os.environ.get("FIBOKEI_IG_USERNAME")
+        and os.environ.get("FIBOKEI_IG_PASSWORD")
+    )
+    if not configured:
+        return IGEpicAuditResponse(
+            configured=False, reachable=False,
+            error="IG credentials not configured (run on the worker service).",
+        )
+
+    sym_list = [s.strip() for s in symbols.split(",")] if symbols else None
+    try:
+        client = _get_ig_health_client()
+        client.ensure_session()
+        results = audit_instrument_epics(client, symbols=sym_list)
+        summary = summarize_audit(results)
+        return IGEpicAuditResponse(
+            configured=True, reachable=True, results=results, **summary
+        )
+    except IGClientError as e:
+        global _ig_health_client
+        _ig_health_client = None
+        return IGEpicAuditResponse(configured=True, reachable=False, error=str(e))
+    except Exception as e:
+        return IGEpicAuditResponse(
+            configured=True, reachable=False, error=f"Unexpected error: {e}"
+        )
