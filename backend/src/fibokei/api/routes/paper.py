@@ -904,18 +904,21 @@ def perform_phase_transition(
     except ValueError as e:
         raise HTTPException(status_code=409, detail=str(e))
 
-    # 3. Optionally reset paper account to new initial balance
+    # 3. A new phase always zeroes the period PnL counters (daily/weekly) so
+    # the new evaluation starts clean; the worker reloads these on the next
+    # cycle via phase-change detection. Rebasing the balance is separate and
+    # only happens when the operator asks to reset the account.
+    acct = get_or_create_paper_account(db)
+    acct.daily_pnl = 0.0
+    acct.weekly_pnl = 0.0
     if req.reset_account:
-        acct = get_or_create_paper_account(db)
         acct.initial_balance = req.new_initial_balance
         acct.balance = req.new_initial_balance
         acct.equity = req.new_initial_balance
-        acct.daily_pnl = 0.0
-        acct.weekly_pnl = 0.0
-        db.commit()
         logger.info(
             "Phase transition: paper account reset to £%.2f", req.new_initial_balance
         )
+    db.commit()
 
     logger.info(
         "Phase transition complete: archived='%s' (id=%d), new='%s' (id=%d)",

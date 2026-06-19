@@ -135,6 +135,11 @@ class PaperWorker:
         self.notifier = TelegramNotifier()
         self._last_daily_summary: datetime | None = None
         self._trades_today = 0
+        # Active evaluation phase id — when this changes (operator started a
+        # new phase), the worker reloads the paper account from the DB so the
+        # phase reset of daily/weekly PnL + balance is not clobbered by the
+        # worker's in-memory copy on the next persist.
+        self._active_phase_id: int | None = None
         # Build the multi-broker execution router with a kill-switch hook.
         # session_factory is passed so Phase 2 ``db_targets`` mode can read
         # ``execution_accounts`` and ``bot_execution_targets`` per signal.
@@ -254,11 +259,55 @@ class PaperWorker:
                             "Bot %s: unknown state from DB: %s", bot_id, db_bot.state
                         )
 
+    def _reload_account_if_phase_changed(self) -> None:
+        """Reload the paper account from DB when the active phase changes.
+
+        The phase-transition endpoint zeroes daily/weekly PnL (and optionally
+        rebases balance) in the DB, but the worker keeps the account in memory
+        and re-persists it every cycle. Without this, the worker would
+        overwrite the reset with the previous phase's PnL. On the first call we
+        simply cache the current phase id; thereafter a change triggers a
+        reload of balance/equity/daily_pnl/weekly_pnl/initial_balance.
+        """
+        try:
+            from fibokei.db.repository import (
+                get_active_phase,
+                get_or_create_paper_account,
+            )
+
+            with self.session_factory() as session:
+                phase = get_active_phase(session)
+                phase_id = phase.id if phase else None
+                if self._active_phase_id is None:
+                    self._active_phase_id = phase_id
+                    return
+                if phase_id == self._active_phase_id:
+                    return
+                acct = get_or_create_paper_account(session)
+                self.account.initial_balance = acct.initial_balance
+                self.account.balance = acct.balance
+                self.account.equity = acct.equity
+                self.account.daily_pnl = acct.daily_pnl
+                self.account.weekly_pnl = acct.weekly_pnl
+                logger.info(
+                    "Phase changed %s→%s: reloaded paper account "
+                    "(balance=%.2f, daily_pnl=%.2f, weekly_pnl=%.2f)",
+                    self._active_phase_id, phase_id,
+                    acct.balance, acct.daily_pnl, acct.weekly_pnl,
+                )
+                self._active_phase_id = phase_id
+        except Exception:
+            logger.exception("Phase-change account reload failed")
+
     def evaluate_once(self) -> dict:
         """Run one evaluation cycle. Returns summary of events."""
         # Sync API-controlled state changes every cycle so stop/pause/resume
         # are respected before candle processing and state persist.
         self._sync_states_from_db()
+        # Detect operator-triggered phase transitions and reload the account
+        # so a phase reset (daily/weekly PnL → 0, balance rebase) actually
+        # sticks instead of being overwritten by stale in-memory values.
+        self._reload_account_if_phase_changed()
 
         instruments = self._get_instruments_to_poll()
         if not instruments:
