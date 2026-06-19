@@ -116,3 +116,33 @@ logs); frontend `npm run build` + screenshots; full-suite green number after the
 network tests are marked/mocked.
 
 **Committed to branch `wave0-2-hardening` (NOT main) — pending operator review/push.**
+
+
+## 2026-06-19 — Wave 3 (lifecycle ledger) + Wave 4 (agent skills spec)
+
+**Wave 3 — append-only agent/lifecycle/lineage ledger (the agent-autonomy foundation):**
+- `db/models.py`: `AgentRunModel`, `BotLifecycleEventModel`, `StrategyLineageModel`
+  (write-once; full provenance: prompt/code-diff hashes, dataset version, result IDs,
+  actor, approval status, reason).
+- `db/ledger_repository.py`: create + read functions only — **no update/delete by
+  design**. Validates lifecycle event vocabulary (19 types), agent lanes, actors.
+- `api/routes/agent_ledger.py`: `GET/POST /agent-runs`, `/bot-lifecycle`,
+  `/strategy-lineage` (append-only; wired into `app.py`). Tables auto-created via
+  `Base.metadata.create_all` on startup (Alembic migration recommended as follow-up
+  for prod history).
+- `tests/test_agent_ledger.py`: round-trip + provenance + vocabulary validation +
+  **immutability assertion** (repo exposes no update/delete) + accumulate-not-overwrite.
+
+**Wave 4 — agent skills + MCP setup:** `docs/AGENT_SKILLS_SPEC.md` — 8 bounded skills
+across 4 lanes (Builder / Quant Auditor / Operator / Safety Governor) with
+allowed/forbidden actions, required reads, verification commands, stop conditions;
+plus MCP connector plan and non-negotiable permission boundaries.
+
+**Verification:** `ruff check src/` clean; `pytest tests/test_agent_ledger.py
+tests/test_registry_health.py tests/test_api_strategies.py` → 16 passed (full app
+builds with the new router).
+
+**Gated / not done (honest):** Wave 1 IG rejection fix (needs the live error_code from
+Railway); Wave 5 Strategy Lab + Wave 6 bot factory (large multi-session builds, to be
+delivered on top of this ledger); Waves 7–8 demo/live fleets (require running system,
+market hours, and human sign-off per the safety doctrine).
