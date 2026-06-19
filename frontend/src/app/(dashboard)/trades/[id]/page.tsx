@@ -101,9 +101,10 @@ export default function TradeDetailPage({ params }: { params: Promise<{ id: stri
     { label: "Strategy", value: trade.strategy_id },
     { label: "Instrument", value: trade.instrument },
     {
+      // Direction is not profit/loss — never colour SHORT red. Outcome colour
+      // lives on the PnL field below.
       label: "Direction",
       value: trade.direction,
-      color: trade.direction === "LONG" ? "text-primary" : "text-danger",
     },
     { label: "Entry Time", value: trade.entry_time ?? "-" },
     { label: "Entry Price", value: trade.entry_price.toFixed(5) },

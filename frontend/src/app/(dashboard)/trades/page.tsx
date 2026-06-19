@@ -236,7 +236,7 @@ export default function TradesPage() {
                   <td title={strategyShortName(t.strategy_id)}>{t.strategy_id}</td>
                   <td>{t.instrument}</td>
                   <td>
-                    <StatusBadge variant={t.direction === "LONG" ? "ok" : "error"}>
+                    <StatusBadge variant={t.direction === "LONG" ? "info" : "neutral"}>
                       {t.direction}
                     </StatusBadge>
                   </td>
