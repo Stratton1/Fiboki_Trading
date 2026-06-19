@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 
 from fibokei.api.auth import TokenData, get_current_user
-from fibokei.strategies.registry import strategy_registry
+from fibokei.strategies.registry import classify_strategy, strategy_registry
 
 router = APIRouter(tags=["strategies"])
 
@@ -14,6 +14,7 @@ class StrategyResponse(BaseModel):
     name: str
     family: str
     complexity: str
+    tier: str
     supports_long: bool
     supports_short: bool
     requires_fibonacci: bool
@@ -35,12 +36,35 @@ def list_strategies(user: TokenData = Depends(get_current_user)):
             "name": info["name"],
             "family": info["family"],
             "complexity": info["complexity"],
+            "tier": info["tier"],
             "supports_long": strategy.supports_long,
             "supports_short": strategy.supports_short,
             "requires_fibonacci": strategy.requires_fibonacci,
             "requires_mtfa": strategy.requires_mtfa,
         })
     return result
+
+
+class RegistryHealthResponse(BaseModel):
+    registered_count: int
+    file_count: int
+    canonical_count: int
+    experimental_count: int
+    expected_min: int
+    by_tier: dict[str, list[str]]
+    unregistered_files: list[str]
+    healthy: bool
+
+
+@router.get("/strategies/registry-health", response_model=RegistryHealthResponse)
+def get_registry_health(user: TokenData = Depends(get_current_user)):
+    """Operator truth about the strategy registry: registered vs files on disk,
+    canonical vs experimental tiers, and any unregistered strategy files.
+
+    Defined before ``/strategies/{strategy_id}`` so the literal path is not
+    captured by the dynamic id route.
+    """
+    return strategy_registry.registry_health()
 
 
 @router.get("/strategies/{strategy_id}", response_model=StrategyDetailResponse)
@@ -54,6 +78,7 @@ def get_strategy(strategy_id: str, user: TokenData = Depends(get_current_user)):
         "name": strategy.strategy_name,
         "family": strategy.strategy_family,
         "complexity": strategy.complexity_level,
+        "tier": classify_strategy(strategy.strategy_id),
         "supports_long": strategy.supports_long,
         "supports_short": strategy.supports_short,
         "requires_fibonacci": strategy.requires_fibonacci,

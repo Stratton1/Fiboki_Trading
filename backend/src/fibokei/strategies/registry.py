@@ -31,6 +31,33 @@ from fibokei.strategies.bot22_fib_volume_confluence import FibVolumeConfluence
 # the dashboard hardcoding a magic number against a growing registry.
 EXPECTED_MIN_STRATEGIES = 12
 
+# The 12 hand-coded blueprint strategies. Everything else registered is an
+# extended/experimental strategy. Tier is declared explicitly here rather than
+# inferred from filenames so the classification never drifts silently.
+CANONICAL_STRATEGY_IDS = frozenset({
+    "bot01_sanyaku",
+    "bot02_kijun_pullback",
+    "bot03_flat_senkou_b",
+    "bot04_chikou_momentum",
+    "bot05_mtfa_sanyaku",
+    "bot06_nwave",
+    "bot07_kumo_twist",
+    "bot08_kihon_suchi",
+    "bot09_golden_cloud",
+    "bot10_kijun_fib",
+    "bot11_sanyaku_fib_ext",
+    "bot12_kumo_fib_tz",
+})
+
+
+def classify_strategy(strategy_id: str) -> str:
+    """Return the tier for a strategy id: 'canonical' or 'experimental'.
+
+    Future tiers ('factory_generated', 'disabled') will be added when the
+    Autonomous Strategy Lab and a disable flag exist.
+    """
+    return "canonical" if strategy_id in CANONICAL_STRATEGY_IDS else "experimental"
+
 
 class StrategyRegistry:
     """Registry for strategy classes."""
@@ -76,8 +103,48 @@ class StrategyRegistry:
                 "name": inst.strategy_name,
                 "family": inst.strategy_family,
                 "complexity": inst.complexity_level,
+                "tier": classify_strategy(inst.strategy_id),
             })
         return result
+
+    def registry_health(self) -> dict:
+        """Operator-facing truth about the strategy registry.
+
+        Compares strategies registered in-process against the strategy files
+        on disk so the count can never drift silently again. ``unregistered_files``
+        lists ``botNN`` prefixes present on disk but missing from the registry.
+        """
+        import os as _os
+
+        registered_ids = sorted(self._strategies.keys())
+        registered_prefixes = {sid.split("_", 1)[0] for sid in registered_ids}
+
+        strat_dir = _os.path.dirname(__file__)
+        file_prefixes: set[str] = set()
+        try:
+            for fn in _os.listdir(strat_dir):
+                if fn.startswith("bot") and fn.endswith(".py"):
+                    file_prefixes.add(fn.split("_", 1)[0])
+        except OSError:
+            file_prefixes = set()
+
+        canonical = [s for s in registered_ids if classify_strategy(s) == "canonical"]
+        experimental = [s for s in registered_ids if classify_strategy(s) == "experimental"]
+        unregistered = sorted(file_prefixes - registered_prefixes)
+
+        return {
+            "registered_count": len(registered_ids),
+            "file_count": len(file_prefixes),
+            "canonical_count": len(canonical),
+            "experimental_count": len(experimental),
+            "expected_min": EXPECTED_MIN_STRATEGIES,
+            "by_tier": {"canonical": canonical, "experimental": experimental},
+            "unregistered_files": unregistered,
+            "healthy": (
+                len(registered_ids) >= EXPECTED_MIN_STRATEGIES
+                and not unregistered
+            ),
+        }
 
 
 # Global registry — strategies register themselves on import
