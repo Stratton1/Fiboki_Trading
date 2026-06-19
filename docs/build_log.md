@@ -212,3 +212,21 @@ Backtest) reading `/execution/broker-trades`; match broker trades to bot signals
 (deal_id/time/instrument) to fill bot_id/strategy_id; instrument name→symbol map.
 
 Branch `wave0-2-hardening`; `main` untouched.
+
+
+## 2026-06-19 — Wave 1 UI: Trade History IG-demo tab
+
+- `frontend/src/lib/api.ts`: `brokerTrades(params)` → `GET /execution/broker-trades`;
+  `reconcileTrades(fromDate?)` → `POST /execution/reconcile-trades`.
+- `frontend/src/app/(dashboard)/trades/page.tsx`: source tabs **Paper / Backtest**
+  vs **IG Demo**. IG Demo tab shows broker-executed trades (closed time,
+  instrument, direction, size, open/close level, **broker PnL**, IG reference)
+  with a **Sync from IG** button (calls reconcile, shows imported/updated/skipped).
+  Direction rendered neutrally; PnL carries the colour (not direction) — aligns
+  with the Wave 6 short/sell-PnL concern in the new surface.
+- Verified: `tsc --noEmit` clean for changed files (only pre-existing unrelated
+  error in `ichimoku-store.test.mts`).
+
+Completes the visible chain for the Gold trade: once IG creds are on the service
+running `reconcile-trades`, "Sync from IG" imports `SBQLDCAC` and it appears under
+the IG Demo tab with its £554 broker PnL. Branch `wave0-2-hardening`.

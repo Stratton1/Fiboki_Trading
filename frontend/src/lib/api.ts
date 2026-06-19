@@ -497,6 +497,25 @@ export const api = {
       error: string | null;
     }>("/execution/ig-health"),
 
+  // Broker trade ledger (IG-executed trades, reconciled from IG history)
+  brokerTrades: (params?: string) =>
+    apiFetch<Array<{
+      id: number; source: string; reference: string; deal_id: string | null;
+      instrument_name: string | null; instrument: string | null;
+      direction: string | null; size: number | null;
+      open_level: number | null; close_level: number | null;
+      pnl: number | null; currency: string | null; closed_at: string | null;
+      bot_id: string | null; strategy_id: string | null;
+    }>>(`/execution/broker-trades${params ? `?${params}` : ""}`),
+  reconcileTrades: (fromDate?: string) =>
+    apiFetch<{
+      configured: boolean; reachable: boolean; total: number;
+      imported: number; updated: number; skipped: number; error: string | null;
+    }>(
+      `/execution/reconcile-trades${fromDate ? `?from_date=${fromDate}` : ""}`,
+      { method: "POST" }
+    ),
+
   // Execution
   executionMode: () =>
     apiFetch<{

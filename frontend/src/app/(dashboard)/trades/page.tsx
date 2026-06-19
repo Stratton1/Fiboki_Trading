@@ -8,7 +8,7 @@ import { formatPnl } from "@/lib/format-currency";
 import { PageHeader } from "@/components/PageHeader";
 import { EmptyState } from "@/components/EmptyState";
 import { StatusBadge } from "@/components/StatusBadge";
-import { History, Loader2, ChevronLeft, ChevronRight, Tag } from "lucide-react";
+import { History, Loader2, ChevronLeft, ChevronRight, Tag, Zap } from "lucide-react";
 import { useBookmarks } from "@/lib/hooks/use-bookmarks";
 import { BookmarkButton } from "@/components/BookmarkButton";
 import { InfoTip } from "@/components/InfoTip";
@@ -42,6 +42,37 @@ export default function TradesPage() {
     `/trades?${queryParams}`,
     () => api.listTrades(queryParams),
   );
+
+  // Source view: internal (paper/backtest) vs IG demo (broker-executed).
+  const [view, setView] = useState<"internal" | "ig_demo">("internal");
+  const [syncing, setSyncing] = useState(false);
+  const [syncMsg, setSyncMsg] = useState<string | null>(null);
+  const {
+    data: brokerTrades,
+    isLoading: brokerLoading,
+    mutate: mutateBroker,
+  } = useSWR(
+    view === "ig_demo" ? "/execution/broker-trades?source=ig_demo" : null,
+    () => api.brokerTrades("source=ig_demo"),
+  );
+
+  async function handleSyncIg() {
+    setSyncing(true);
+    setSyncMsg(null);
+    try {
+      const r = await api.reconcileTrades();
+      setSyncMsg(
+        r.reachable
+          ? `Synced: ${r.imported} new, ${r.updated} updated, ${r.skipped} skipped.`
+          : `Could not sync: ${r.error ?? "IG unreachable"}`,
+      );
+      await mutateBroker();
+    } catch (e) {
+      setSyncMsg(`Sync failed: ${e instanceof Error ? e.message : String(e)}`);
+    } finally {
+      setSyncing(false);
+    }
+  }
 
   const trades = data?.items ?? [];
   const totalTrades = data?.total ?? 0;
@@ -78,6 +109,34 @@ export default function TradesPage() {
         subtitle="Review completed trades across all strategies"
       />
 
+      {/* Source tabs: internal vs broker-executed */}
+      <div className="flex items-center gap-2 mb-4">
+        <button
+          onClick={() => setView("internal")}
+          className={`text-xs px-3 py-1.5 rounded border ${view === "internal" ? "bg-primary/10 border-primary/30 text-primary" : "border-gray-200"}`}
+        >
+          Paper / Backtest
+        </button>
+        <button
+          onClick={() => setView("ig_demo")}
+          className={`text-xs px-3 py-1.5 rounded border flex items-center gap-1 ${view === "ig_demo" ? "bg-primary/10 border-primary/30 text-primary" : "border-gray-200"}`}
+        >
+          <Zap size={11} /> IG Demo
+        </button>
+        {view === "ig_demo" && (
+          <button
+            onClick={handleSyncIg}
+            disabled={syncing}
+            className="text-xs px-3 py-1.5 rounded border border-gray-200 ml-auto flex items-center gap-1 disabled:opacity-50"
+          >
+            {syncing && <Loader2 size={11} className="animate-spin" />}
+            {syncing ? "Syncing…" : "Sync from IG"}
+          </button>
+        )}
+      </div>
+      {syncMsg && <p className="text-xs text-foreground-muted mb-3">{syncMsg}</p>}
+
+      {view === "internal" && (<>
       {/* Filters */}
       <div className="flex flex-wrap items-center gap-3 mb-5">
         <select value={filterStrategy} onChange={handleFilterChange(setFilterStrategy)} className="input">
@@ -264,6 +323,59 @@ export default function TradesPage() {
           </div>
         )}
       </div>
+      </>)}
+
+      {view === "ig_demo" && (
+        <div className="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th className="text-left">Closed</th>
+                <th className="text-left">Instrument</th>
+                <th className="text-left">Direction</th>
+                <th className="text-right">Size</th>
+                <th className="text-right">Open</th>
+                <th className="text-right">Close</th>
+                <th className="text-right">Broker PnL<InfoTip text="Profit/Loss as reported by IG. Green = profit, red = loss — based on actual PnL, not trade direction." /></th>
+                <th className="text-left">IG Ref</th>
+              </tr>
+            </thead>
+            <tbody>
+              {brokerLoading && (
+                <tr><td colSpan={8}>
+                  <div className="flex items-center justify-center gap-2 py-8 text-foreground-muted">
+                    <Loader2 size={16} className="animate-spin" />
+                    <span className="text-sm">Loading IG trades…</span>
+                  </div>
+                </td></tr>
+              )}
+              {!brokerLoading && (brokerTrades?.length ?? 0) === 0 && (
+                <tr><td colSpan={8}>
+                  <EmptyState
+                    icon={<Zap size={36} strokeWidth={1.5} />}
+                    title="No IG demo trades yet"
+                    description="Click 'Sync from IG' to import executed demo trades from IG transaction history."
+                  />
+                </td></tr>
+              )}
+              {(brokerTrades ?? []).map((b) => (
+                <tr key={b.id}>
+                  <td>{b.closed_at ? new Date(b.closed_at).toLocaleString() : "—"}</td>
+                  <td>{b.instrument || b.instrument_name || "—"}</td>
+                  <td>{b.direction ?? "—"}</td>
+                  <td className="text-right tabular-nums">{b.size ?? "—"}</td>
+                  <td className="text-right tabular-nums">{b.open_level ?? "—"}</td>
+                  <td className="text-right tabular-nums">{b.close_level ?? "—"}</td>
+                  <td className={`text-right tabular-nums font-medium ${(b.pnl ?? 0) >= 0 ? "text-primary" : "text-danger"}`}>
+                    {b.pnl != null ? formatPnl(b.pnl) : "—"}
+                  </td>
+                  <td className="font-mono text-xs">{b.reference}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   );
 }
