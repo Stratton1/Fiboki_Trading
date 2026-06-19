@@ -304,6 +304,67 @@ def restart_all_stopped_bots(
     return {"restarted": restarted, "count": len(restarted)}
 
 
+class RestoreStaleResponse(BaseModel):
+    restored: list[dict]
+    needs_attention: list[dict]
+    count: int
+
+
+@router.post("/paper/bots/restore-stale", response_model=RestoreStaleResponse)
+def restore_stale_bots(
+    user: TokenData = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Recover stale bots in bulk and classify why each is stale.
+
+    - Bots carrying an ``error_message`` (a strategy/adapter exception broke
+      them) are *restored*: state→monitoring and the error is cleared, so the
+      worker resumes them on its next sync.
+    - Bots that are merely *monitoring-but-stale* (no new bar within the
+      per-timeframe threshold — typically a data/worker gap) are reported under
+      ``needs_attention`` with a reason. They are NOT force-restarted here
+      because a running worker holds the bot in memory; the proper fix is the
+      worker-side auto-heal (see docs/NEXT_BUILD_STREAMS.md). Cleanly stopped
+      bots are left alone (operator intent) — use restart-all for those.
+    """
+    all_bots = get_paper_bots(db)
+    now = datetime.now(timezone.utc)
+    restored: list[dict] = []
+    needs_attention: list[dict] = []
+
+    for bot in all_bots:
+        is_active = bot.state in ("monitoring", "position_open")
+        seconds_since = None
+        is_stale = False
+        if bot.last_evaluated_bar and is_active:
+            last_eval = bot.last_evaluated_bar
+            if last_eval.tzinfo is None:
+                last_eval = last_eval.replace(tzinfo=timezone.utc)
+            seconds_since = (now - last_eval).total_seconds()
+            threshold = STALE_THRESHOLDS.get(bot.timeframe.upper(), 7200)
+            is_stale = seconds_since > threshold
+
+        if bot.error_message:
+            prev_state = bot.state
+            update_paper_bot_state(db, bot.bot_id, "monitoring", error_message="")
+            restored.append({
+                "bot_id": bot.bot_id, "instrument": bot.instrument,
+                "timeframe": bot.timeframe, "prev_state": prev_state,
+                "reason": f"error_cleared: {bot.error_message[:120]}",
+            })
+        elif is_stale:
+            needs_attention.append({
+                "bot_id": bot.bot_id, "instrument": bot.instrument,
+                "timeframe": bot.timeframe, "reason": "data_or_worker_gap",
+                "seconds_since_eval": seconds_since,
+                "note": "worker auto-heal required",
+            })
+
+    return RestoreStaleResponse(
+        restored=restored, needs_attention=needs_attention, count=len(restored)
+    )
+
+
 @router.post("/paper/bots/{bot_id}/restart")
 def restart_bot(
     bot_id: str,
