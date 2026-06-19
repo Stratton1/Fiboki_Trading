@@ -74,6 +74,9 @@ class CreateBotRequest(BaseModel):
     instrument: str
     timeframe: str
     risk_pct: float = 1.0
+    # Promotion dedupe: by default refuse to create a second active bot for the
+    # same strategy+instrument+timeframe. Set true to deliberately clone.
+    allow_duplicate: bool = False
     source_type: str | None = None  # "research" | "backtest" | "manual"
     source_id: str | None = None  # research run_id or backtest id
     # Phase 2: optional explicit execution targets. Empty / omitted →
@@ -152,18 +155,59 @@ def create_bot(
     except KeyError:
         raise HTTPException(status_code=400, detail=f"Unknown strategy: {req.strategy_id}")
 
+    tf = req.timeframe.upper()
+
+    # Promotion dedupe — refuse a duplicate active bot for the same combo unless
+    # explicitly cloning. Stops the fleet silently filling with duplicates.
+    if not req.allow_duplicate:
+        dupes = [
+            b for b in get_paper_bots(db)
+            if b.strategy_id == req.strategy_id
+            and b.instrument == req.instrument
+            and b.timeframe.upper() == tf
+            and b.state in ("monitoring", "position_open", "paused")
+        ]
+        if dupes:
+            raise HTTPException(
+                status_code=409,
+                detail={
+                    "error": "already_promoted",
+                    "message": (
+                        f"{req.strategy_id} / {req.instrument} / {tf} already has "
+                        f"{len(dupes)} active bot(s). Pass allow_duplicate=true to clone."
+                    ),
+                    "existing_bot_ids": [b.bot_id for b in dupes],
+                },
+            )
+
     bot_id = str(uuid.uuid4())[:8]
     source_type = req.source_type or "manual"
     bot_model = save_paper_bot(db, {
         "bot_id": bot_id,
         "strategy_id": req.strategy_id,
         "instrument": req.instrument,
-        "timeframe": req.timeframe.upper(),
+        "timeframe": tf,
         "risk_pct": req.risk_pct,
         "source_type": source_type,
         "source_id": req.source_id,
         "state": "monitoring",
     })
+
+    # Append a promotion event to the append-only ledger (best-effort).
+    try:
+        from fibokei.db.ledger_repository import create_lifecycle_event
+        create_lifecycle_event(db, {
+            "event_type": "promoted_to_paper",
+            "actor": "human",
+            "bot_id": bot_id,
+            "strategy_id": req.strategy_id,
+            "instrument": req.instrument,
+            "timeframe": tf,
+            "approval_status": "approved",
+            "reason": f"source={source_type} id={req.source_id}",
+        })
+    except Exception:  # noqa: BLE001 — ledger must never block bot creation
+        pass
 
     # Phase 2: attach explicit execution targets if supplied.
     target_summaries: list[dict] = []
@@ -230,6 +274,41 @@ def list_bots(
     """List all paper trading bots."""
     bots = get_paper_bots(db, state=state)
     return [_bot_to_response(b) for b in bots]
+
+
+class PromotionStatusResponse(BaseModel):
+    already_promoted: bool
+    count: int
+    bot_ids: list[str]
+
+
+@router.get("/paper/bots/promotion-status", response_model=PromotionStatusResponse)
+def promotion_status(
+    strategy_id: str,
+    instrument: str,
+    timeframe: str,
+    user: TokenData = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Whether a strategy+instrument+timeframe already has active paper bot(s).
+
+    Lets the UI show 'already promoted ✓ / N copies' and avoid duplicate
+    promotions. Defined before the ``{bot_id}`` route so the literal path is
+    not captured by the dynamic id matcher.
+    """
+    tf = timeframe.upper()
+    active = [
+        b for b in get_paper_bots(db)
+        if b.strategy_id == strategy_id
+        and b.instrument == instrument
+        and b.timeframe.upper() == tf
+        and b.state in ("monitoring", "position_open", "paused")
+    ]
+    return PromotionStatusResponse(
+        already_promoted=bool(active),
+        count=len(active),
+        bot_ids=[b.bot_id for b in active],
+    )
 
 
 @router.get("/paper/bots/{bot_id}", response_model=BotStatusResponse)
