@@ -246,3 +246,35 @@ were profit/loss:
 row links to the trade detail; "Trade history" link to `/trades`. 30s refresh.
 
 Verified: `tsc --noEmit` clean for all changed files. Branch `wave0-2-hardening`.
+
+
+## 2026-06-19 — IG reject ROOT CAUSE fix + promotion dedupe + stale auto-heal
+
+**IG rejections — root cause from real activity history (Z5ZAV CSV):** every
+FX/index order rejected `Failed to retrieve price information for this currency`;
+Gold (`CS.D.CFPGOLD.CFP.IP`) filled. Same class as the old metals 403 — the
+FX/index `.CFD.IP`/`.IFD.IP` epics aren't priceable on this account. See
+`docs/IG_REJECTION_DIAGNOSIS_2026-06-19.md`.
+- `fix(ig)`: `_is_epic_resolution_reject()` + generalised the runtime epic
+  re-resolution retry to fire on price/market/currency/UNKNOWN rejects (not just
+  403). Duplicate-safe (no deal opened). Tested vs the exact Z5ZAV reason.
+
+**Promotion dedupe (answers "is it already promoted?"):**
+- `create_bot` refuses a 2nd active bot for the same strategy+instrument+TF
+  (409 `already_promoted` with existing bot ids) unless `allow_duplicate=true`;
+  writes a `promoted_to_paper` ledger event.
+- `GET /paper/bots/promotion-status` → already_promoted / count / bot_ids.
+- Tests: `test_promotion_dedupe.py`.
+
+**Stale auto-heal (Wave 5 deeper):**
+- Worker `_auto_heal_stale_bots()` re-warms monitoring bots stale beyond a
+  generous per-TF window (skips open positions); runs each cycle.
+- Tests: `test_ig_epic_and_heal.py`.
+
+Verified: ruff clean; 37 passed across the new/related suites. Branch
+`wave0-2-hardening`.
+
+**Operator caveat:** the epic retry only succeeds if a priceable FX/index epic
+exists for Z5ZAV. If the demo account can't price standard FX CFDs, the markets
+must be enabled on IG or the catalogue repointed to supported epics (verify via
+an IG markets search on the worker — `fiboki ig-universe` planned).

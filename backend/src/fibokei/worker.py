@@ -299,6 +299,41 @@ class PaperWorker:
         except Exception:
             logger.exception("Phase-change account reload failed")
 
+    # Generous per-timeframe staleness windows for auto-heal (seconds). Mirror
+    # the API's STALE_THRESHOLDS so the worker and UI agree on "stale".
+    _STALE_HEAL_SECONDS = {
+        "M1": 900, "M5": 3600, "M15": 10800, "M30": 21600,
+        "H1": 93600, "H4": 345600, "D": 1209600,
+    }
+
+    def _auto_heal_stale_bots(self) -> None:
+        """Force a fresh re-warm of monitoring bots that have gone stale.
+
+        A bot is stale when its last evaluated bar is older than a generous
+        per-timeframe window (covers weekends/holidays). Clearing the in-memory
+        ``_last_evaluated_bar`` makes the next cycle re-fetch + re-warm, which
+        recovers data/feed gaps without operator action. Bots holding an open
+        position are skipped so healing never disturbs a live trade.
+        """
+        now = datetime.now(timezone.utc)
+        for bot in self.bots.values():
+            if bot.state != BotState.MONITORING:
+                continue
+            le = getattr(bot, "_last_evaluated_bar", None)
+            if le is None:
+                continue
+            if hasattr(le, "tzinfo") and le.tzinfo is None:
+                le = le.replace(tzinfo=timezone.utc)
+            threshold = self._STALE_HEAL_SECONDS.get(bot.timeframe.value.upper(), 7200)
+            if (now - le).total_seconds() > threshold:
+                logger.warning(
+                    "Auto-heal: bot %s (%s/%s) stale (%.0fs) — forcing re-warm",
+                    bot.bot_id, bot.instrument, bot.timeframe.value,
+                    (now - le).total_seconds(),
+                )
+                bot._last_evaluated_bar = None
+                bot.bars_seen = 0
+
     def evaluate_once(self) -> dict:
         """Run one evaluation cycle. Returns summary of events."""
         # Sync API-controlled state changes every cycle so stop/pause/resume
@@ -308,6 +343,9 @@ class PaperWorker:
         # so a phase reset (daily/weekly PnL → 0, balance rebase) actually
         # sticks instead of being overwritten by stale in-memory values.
         self._reload_account_if_phase_changed()
+        # Auto-heal monitoring bots that have gone stale (data/feed gap) by
+        # forcing a fresh re-warm on the next cycle.
+        self._auto_heal_stale_bots()
 
         instruments = self._get_instruments_to_poll()
         if not instruments:

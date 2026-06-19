@@ -28,6 +28,29 @@ _BALANCE_CACHE_TTL = 300   # 5 minutes — balance updates after fills
 
 logger = logging.getLogger(__name__)
 
+# Reject reasons that indicate the static epic isn't priceable/tradeable on
+# THIS account (so a runtime epic re-resolution + retry is worth attempting) —
+# rather than a genuine order problem (size, funds, stop). Observed on IG demo
+# Z5ZAV 2026-06-19: every FX/index order rejected with "Failed to retrieve
+# price information for this currency" while remapped metals epics filled.
+_EPIC_RESOLUTION_REJECT_HINTS = (
+    "price", "retrieve", "currency", "not found", "unavailable",
+    "no access", "epic", "market",
+)
+
+
+def _is_epic_resolution_reject(reason: str | None) -> bool:
+    """True if a reject reason suggests an epic/price-availability problem.
+
+    Empty or 'UNKNOWN' reasons also qualify: IG's deal-confirmation often
+    returns 'UNKNOWN' even when the activity log shows a price-retrieval
+    failure, so we retry-with-remap rather than swallow it.
+    """
+    r = str(reason or "").strip().lower()
+    if r in ("", "unknown"):
+        return True
+    return any(h in r for h in _EPIC_RESOLUTION_REJECT_HINTS)
+
 
 class IGExecutionAdapter(ExecutionAdapter):
     """IG broker adapter — demo account execution."""
@@ -453,6 +476,20 @@ class IGExecutionAdapter(ExecutionAdapter):
                         params.get("currencyCode"), params.get("stopDistance"),
                         params.get("limitDistance"), confirmation,
                     )
+                    # Same class of failure the metals epics hit: the static
+                    # epic isn't priceable on this account. Resolve a tradeable
+                    # epic for the account and retry ONCE — generalises the
+                    # 403-only remap (except branch below) to price/market
+                    # reject reasons. Duplicate-safe: no deal was opened.
+                    if not order.get("_epic_retry") and _is_epic_resolution_reject(ig_reason):
+                        resolved = self._resolve_epic_for_account(symbol, epic)
+                        if resolved and resolved != epic:
+                            logger.info(
+                                "Retrying IG order for %s on resolved epic %s "
+                                "after reject '%s'",
+                                symbol, resolved, ig_reason or "(empty)",
+                            )
+                            return self.place_order({**order, "_epic_retry": True})
                 return {
                     "status": deal_status,
                     "deal_id": confirmation.get("dealId", ""),
