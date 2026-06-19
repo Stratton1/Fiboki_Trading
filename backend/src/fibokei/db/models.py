@@ -666,3 +666,87 @@ class WorkerHeartbeatModel(Base):
     bots_active: Mapped[int] = mapped_column(Integer, default=0)
     loops_completed: Mapped[int] = mapped_column(Integer, default=0)
     last_error: Mapped[str | None] = mapped_column(Text)
+
+
+# ─────────────────────────────────────────────────────────────────────────
+# Wave 3 — Append-only agent / bot-lifecycle / strategy-lineage ledger.
+#
+# These three tables form the immutable audit trail required before any
+# autonomous strategy generation. They are WRITE-ONCE: the ledger repository
+# (db/ledger_repository.py) exposes only create + read functions — there are
+# deliberately NO update/delete paths. Every agent or human action that
+# creates, mutates, promotes, demotes or vetoes a bot/strategy must append a
+# row here with full provenance so any decision can be reconstructed later.
+# ─────────────────────────────────────────────────────────────────────────
+
+
+class AgentRunModel(Base):
+    """One bounded agent execution (a single lane doing a single job)."""
+
+    __tablename__ = "agent_runs"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    run_id: Mapped[str] = mapped_column(String(64), nullable=False, unique=True, index=True)
+    lane: Mapped[str] = mapped_column(String(40), nullable=False, index=True)  # builder/quant_auditor/operator/safety_governor
+    agent_type: Mapped[str | None] = mapped_column(String(60))  # e.g. fiboki_strategy_author
+    actor: Mapped[str] = mapped_column(String(20), nullable=False, default="agent")  # human/agent/system
+    status: Mapped[str] = mapped_column(String(20), nullable=False, default="started")  # started/succeeded/failed/vetoed
+    prompt_hash: Mapped[str | None] = mapped_column(String(64))
+    code_diff_hash: Mapped[str | None] = mapped_column(String(64))
+    dataset_version: Mapped[str | None] = mapped_column(String(64))
+    summary: Mapped[str | None] = mapped_column(Text)
+    detail_json: Mapped[dict | None] = mapped_column(JSON)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, default=lambda: datetime.now(timezone.utc), index=True
+    )
+
+
+class BotLifecycleEventModel(Base):
+    """Append-only record of every bot/strategy lifecycle transition."""
+
+    __tablename__ = "bot_lifecycle_events"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    event_id: Mapped[str] = mapped_column(String(64), nullable=False, unique=True, index=True)
+    event_type: Mapped[str] = mapped_column(String(40), nullable=False, index=True)
+    actor: Mapped[str] = mapped_column(String(20), nullable=False, default="agent")  # human/agent/system
+    bot_id: Mapped[str | None] = mapped_column(String(40), index=True)
+    strategy_id: Mapped[str | None] = mapped_column(String(60), index=True)
+    variant_id: Mapped[str | None] = mapped_column(String(64))
+    source_strategy_id: Mapped[str | None] = mapped_column(String(60))
+    instrument: Mapped[str | None] = mapped_column(String(20))
+    timeframe: Mapped[str | None] = mapped_column(String(10))
+    agent_run_id: Mapped[str | None] = mapped_column(String(64), index=True)
+    backtest_result_id: Mapped[str | None] = mapped_column(String(64))
+    research_run_id: Mapped[str | None] = mapped_column(String(64))
+    oos_result_id: Mapped[str | None] = mapped_column(String(64))
+    monte_carlo_result_id: Mapped[str | None] = mapped_column(String(64))
+    dataset_version: Mapped[str | None] = mapped_column(String(64))
+    risk_decision: Mapped[str | None] = mapped_column(String(40))
+    approval_status: Mapped[str | None] = mapped_column(String(20))  # pending/approved/rejected/n_a
+    reason: Mapped[str | None] = mapped_column(Text)
+    stats_json: Mapped[dict | None] = mapped_column(JSON)  # paper/demo snapshots etc.
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, default=lambda: datetime.now(timezone.utc), index=True
+    )
+
+
+class StrategyLineageModel(Base):
+    """Parent→child provenance for cloned / mutated / generated strategies."""
+
+    __tablename__ = "strategy_lineage"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    lineage_id: Mapped[str] = mapped_column(String(64), nullable=False, unique=True, index=True)
+    strategy_id: Mapped[str] = mapped_column(String(60), nullable=False, index=True)
+    parent_strategy_id: Mapped[str | None] = mapped_column(String(60), index=True)
+    variant_id: Mapped[str | None] = mapped_column(String(64))
+    origin: Mapped[str] = mapped_column(String(20), nullable=False, default="hand_coded")  # hand_coded/cloned/mutated/generated
+    actor: Mapped[str] = mapped_column(String(20), nullable=False, default="system")
+    agent_run_id: Mapped[str | None] = mapped_column(String(64), index=True)
+    code_diff_hash: Mapped[str | None] = mapped_column(String(64))
+    params_json: Mapped[dict | None] = mapped_column(JSON)
+    reason: Mapped[str | None] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, default=lambda: datetime.now(timezone.utc), index=True
+    )

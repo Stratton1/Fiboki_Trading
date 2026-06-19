@@ -468,6 +468,8 @@ def create_app() -> FastAPI:
     application.include_router(watchlists_router, prefix="/api/v1")
     from fibokei.api.routes.variations import router as variations_router
     application.include_router(variations_router, prefix="/api/v1")
+    from fibokei.api.routes.agent_ledger import router as agent_ledger_router
+    application.include_router(agent_ledger_router, prefix="/api/v1")
 
     # DEV-ONLY seed routes — gated behind FIBOKEI_DEV_SEED=1
     if os.environ.get("FIBOKEI_DEV_SEED"):
