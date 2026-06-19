@@ -13,6 +13,7 @@ and lets IG's tradable set define the research/test universe.
 from __future__ import annotations
 
 import logging
+import time
 
 logger = logging.getLogger(__name__)
 
@@ -54,12 +55,18 @@ def _search_tradeable(client, inst, bad_epic: str) -> tuple[str | None, str | No
     return None, None
 
 
-def audit_instrument_epics(client, symbols: list[str] | None = None) -> list[dict]:
+def audit_instrument_epics(
+    client, symbols: list[str] | None = None, delay: float = 0.3
+) -> list[dict]:
     """Audit each IG-mapped instrument's epic against the live account.
 
     Returns one dict per instrument:
       symbol, name, static_epic, status (ok|remapped|unavailable),
       resolved_epic, market_status, detail.
+
+    ``delay`` throttles between instruments so a bulk probe doesn't trip IG's
+    market-data rate limit (which otherwise turns priceable epics into false
+    'unavailable' results).
     """
     from fibokei.core.instruments import get_ig_supported_instruments
 
@@ -69,7 +76,9 @@ def audit_instrument_epics(client, symbols: list[str] | None = None) -> list[dic
         insts = [i for i in insts if i.symbol.upper() in wanted]
 
     results: list[dict] = []
-    for inst in insts:
+    for idx, inst in enumerate(insts):
+        if idx > 0 and delay > 0:
+            time.sleep(delay)
         static_epic = inst.ig_epic
         entry = {
             "symbol": inst.symbol,

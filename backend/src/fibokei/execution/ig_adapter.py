@@ -52,6 +52,25 @@ def _is_epic_resolution_reject(reason: str | None) -> bool:
     return any(h in r for h in _EPIC_RESOLUTION_REJECT_HINTS)
 
 
+def _pick_dealing_currency(currencies) -> str | None:
+    """Pick the market's dealing currency code from IG's ``currencies`` list.
+
+    IG rejected FX orders with "Failed to retrieve price information for this
+    currency" because we sent a hardcoded GBP the market doesn't deal in (the
+    activity log showed currency '#.'). Use the market's own default (or first)
+    currency instead. Returns None if the list is missing/empty.
+    """
+    if not isinstance(currencies, (list, tuple)) or not currencies:
+        return None
+    for c in currencies:
+        if isinstance(c, dict) and c.get("isDefault") and c.get("code"):
+            return str(c["code"])
+    first = currencies[0]
+    if isinstance(first, dict) and first.get("code"):
+        return str(first["code"])
+    return None
+
+
 class IGExecutionAdapter(ExecutionAdapter):
     """IG broker adapter — demo account execution."""
 
@@ -142,7 +161,8 @@ class IGExecutionAdapter(ExecutionAdapter):
 
         defaults = {
             "value_per_pip": 1.0, "one_pip_means": 1.0, "min_deal_size": 1.0,
-            "min_stop_distance": 0.0, "is_default": True, "_at": time.time(),
+            "min_stop_distance": 0.0, "dealing_currency": None,
+            "is_default": True, "_at": time.time(),
         }
 
         def _num(value, fallback: float) -> float:
@@ -178,6 +198,10 @@ class IGExecutionAdapter(ExecutionAdapter):
                 "snapshot_bid": float(
                     (data.get("snapshot", {}) or {}).get("bid") or 0.0
                 ),
+                # Market's own dealing currency — used as the order currencyCode
+                # so IG can price the trade (fixes "Failed to retrieve price
+                # information for this currency").
+                "dealing_currency": _pick_dealing_currency(instr.get("currencies")),
                 "is_default": False,
                 "_at": time.time(),
             }
@@ -376,7 +400,11 @@ class IGExecutionAdapter(ExecutionAdapter):
             "orderType": "MARKET",
             "expiry": "-",       # required by IG for rolling CFDs (.IP instruments);
                                  # "-" = no fixed expiry (daily rolling contract)
-            "currencyCode": order.get("currency", "GBP"),
+            "currencyCode": (
+                market_spec.get("dealing_currency")
+                or order.get("currency")
+                or "GBP"
+            ),
             "guaranteedStop": False,
             "forceOpen": True,
         }

@@ -4,10 +4,22 @@ Fake IG client so the audit runs offline: Gold's CFP epic is priceable;
 GBPUSD's CFD epic is not but a MINI epic is found; HK50 has no tradeable epic.
 """
 
+from fibokei.execution.ig_adapter import _pick_dealing_currency
 from fibokei.execution.ig_epic_audit import (
     audit_instrument_epics,
     summarize_audit,
 )
+
+
+def test_pick_dealing_currency():
+    # Default flagged → use it.
+    assert _pick_dealing_currency(
+        [{"code": "GBP", "isDefault": False}, {"code": "USD", "isDefault": True}]
+    ) == "USD"
+    # No default → first.
+    assert _pick_dealing_currency([{"code": "EUR"}, {"code": "USD"}]) == "EUR"
+    assert _pick_dealing_currency([]) is None
+    assert _pick_dealing_currency(None) is None
 
 
 class FakeIGClient:
@@ -26,7 +38,7 @@ class FakeIGClient:
 
 def test_audit_classifies_ok_remapped_unavailable():
     client = FakeIGClient()
-    results = audit_instrument_epics(client, symbols=["XAUUSD", "GBPUSD", "HK50"])
+    results = audit_instrument_epics(client, symbols=["XAUUSD", "GBPUSD", "HK50"], delay=0)
     by_symbol = {r["symbol"]: r for r in results}
 
     assert by_symbol["XAUUSD"]["status"] == "ok"
@@ -41,7 +53,7 @@ def test_audit_classifies_ok_remapped_unavailable():
 
 def test_summarize_audit_overrides_and_universe():
     client = FakeIGClient()
-    results = audit_instrument_epics(client, symbols=["XAUUSD", "GBPUSD", "HK50"])
+    results = audit_instrument_epics(client, symbols=["XAUUSD", "GBPUSD", "HK50"], delay=0)
     summary = summarize_audit(results)
 
     assert summary["ok"] == 1

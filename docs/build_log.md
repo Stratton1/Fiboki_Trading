@@ -297,3 +297,22 @@ an IG markets search on the worker — `fiboki ig-universe` planned).
 
 This makes IG the source of truth for what's tradable: run the audit → bake
 verified epics into `core/instruments.py` → gate research/paper to tradable_symbols.
+
+
+## 2026-06-19 — REAL FX reject fix: order currencyCode from market (live audit)
+
+Live `ig-epic-audit` (Z5ZAV) showed FX majors report epic **ok** — so the
+"Failed to retrieve price information for this currency" rejection was NOT an
+epic problem for FX. The activity log's Currency `#.` was the tell: orders sent a
+hardcoded `GBP` the market doesn't deal in.
+- `ig_adapter.py`: `_pick_dealing_currency()` reads the market's own currencies;
+  `_get_market_details` now returns `dealing_currency`; `place_order` sets
+  `currencyCode` from it (fallback order currency → GBP). This is the real FX fix.
+- `ig_epic_audit.py`: added `delay` throttle between probes — the first live bulk
+  audit got rate-limited (XAUUSD showed 'unavailable' despite trading). Re-run
+  throttled for accurate results.
+- Tests: `_pick_dealing_currency` + audit (delay=0). ruff clean; 35 passed.
+
+Live audit snapshot (rate-limited, indicative): 29 ok (FX majors+crosses),
+36 unavailable (metals/energy/indices/crypto/exotic FX — partly false negatives
+from rate limiting; re-run throttled to confirm which truly need epic work).
