@@ -1773,3 +1773,65 @@ def get_worker_heartbeats(session: Session) -> list:
             select(WorkerHeartbeatModel).order_by(WorkerHeartbeatModel.last_beat_at.desc())
         )
     )
+
+
+# ── Wave 1: broker trade ledger ─────────────────────────────────────────────
+
+
+def upsert_broker_trade(session: Session, data: dict) -> tuple:
+    """Insert or update a broker trade, keyed on (source, reference).
+
+    Returns (row, created: bool). Idempotent — re-importing the same IG
+    transaction updates the existing row instead of duplicating it.
+    """
+    from fibokei.db.models import BrokerTradeModel
+
+    existing = session.scalars(
+        select(BrokerTradeModel).where(
+            BrokerTradeModel.source == data["source"],
+            BrokerTradeModel.reference == data["reference"],
+        )
+    ).first()
+
+    mutable = (
+        "deal_id", "broker_transaction_id", "instrument_name", "instrument",
+        "epic", "direction", "size", "open_level", "close_level", "pnl",
+        "currency", "transaction_type", "opened_at", "closed_at",
+        "bot_id", "strategy_id", "research_run_id", "raw_json",
+    )
+    if existing is not None:
+        for k in mutable:
+            if k in data and data[k] is not None:
+                setattr(existing, k, data[k])
+        session.commit()
+        return existing, False
+
+    row = BrokerTradeModel(**{k: v for k, v in data.items()})
+    session.add(row)
+    session.commit()
+    session.refresh(row)
+    return row, True
+
+
+def list_broker_trades(
+    session: Session,
+    source: str | None = None,
+    bot_id: str | None = None,
+    strategy_id: str | None = None,
+    instrument: str | None = None,
+    limit: int = 200,
+) -> list:
+    """List broker trades, newest first, with optional filters."""
+    from fibokei.db.models import BrokerTradeModel
+
+    stmt = select(BrokerTradeModel)
+    if source:
+        stmt = stmt.where(BrokerTradeModel.source == source)
+    if bot_id:
+        stmt = stmt.where(BrokerTradeModel.bot_id == bot_id)
+    if strategy_id:
+        stmt = stmt.where(BrokerTradeModel.strategy_id == strategy_id)
+    if instrument:
+        stmt = stmt.where(BrokerTradeModel.instrument == instrument)
+    stmt = stmt.order_by(BrokerTradeModel.closed_at.desc().nullslast()).limit(limit)
+    return list(session.scalars(stmt))

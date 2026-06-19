@@ -287,6 +287,23 @@ class IGClient:
         data = self._request("GET", "/positions", version="2")
         return data.get("positions", [])
 
+    def get_transactions(
+        self, from_date: str, to_date: str | None = None, page_size: int = 500
+    ) -> list[dict]:
+        """Get account transaction history (closed deals, fees, financing).
+
+        ``from_date``/``to_date`` are ISO dates ('YYYY-MM-DD'). Uses IG's v2
+        ``/history/transactions`` endpoint, which returns the operator-facing
+        ``reference`` (e.g. 'SBQLDCAC') and ``profitAndLoss`` per transaction —
+        the broker source of truth for closed-trade PnL.
+        """
+        path = f"/history/transactions?from={from_date}"
+        if to_date:
+            path += f"&to={to_date}"
+        path += f"&pageSize={page_size}"
+        data = self._request("GET", path, version="2")
+        return data.get("transactions", [])
+
     def open_position(self, params: dict) -> dict:
         """Open a new position (OTC deal).
 

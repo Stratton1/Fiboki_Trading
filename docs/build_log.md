@@ -177,3 +177,38 @@ short-PnL UI/Telegram audit, Wave 7 research/job UX, worker-side stale auto-heal
 promotion dedupe via ledger. All specced in `NEXT_BUILD_STREAMS.md`.
 
 **Branch only — `main` untouched, nothing pushed/deployed.**
+
+
+## 2026-06-19 — Wave 1: broker trade ledger (backend foundation)
+
+Makes broker-executed IG trades importable + visible (rule: if IG records a
+trade, Fiboki must show it).
+
+- `db/models.py`: `BrokerTradeModel` (`broker_trades`), unique (source, reference)
+  for idempotent import; stores IG `reference` (e.g. SBQLDCAC) AND `deal_id`,
+  direction/size/levels, broker `pnl`, currency, timestamps, bot/strategy, raw.
+- `execution/ig_client.py`: `get_transactions(from, to)` → IG v2
+  `/history/transactions` (operator-facing reference + profitAndLoss).
+- `execution/broker_ledger.py`: `parse_ig_pnl` (handles £/GBP/()/commas),
+  `normalize_ig_transaction` (skips cash/no-ref; direction from size sign),
+  `import_ig_transactions` (idempotent upsert, returns counts).
+- `db/repository.py`: `upsert_broker_trade` (keyed source+reference),
+  `list_broker_trades` (filters: source/bot/strategy/instrument).
+- `api/routes/execution.py`: `GET /execution/broker-trades` (filterable),
+  `POST /execution/reconcile-trades` (pulls IG history, typed status, never
+  raises; defaults from_date = 30d ago).
+- Tests: `tests/test_broker_ledger.py` — PnL parsing, SBQLDCAC import, skip
+  cash/no-ref, idempotent re-import (no dupes). ruff clean; 7 passed (incl.
+  full-app build via api_strategies).
+
+**Operator note / deploy:** `POST /execution/reconcile-trades` needs IG creds on
+the service that runs it. Per `render.yaml` only the **worker** has IG creds, so
+either (a) add IG **read** creds to the API service (history pull is read-only,
+no execution), or (b) call the importer from the worker on a schedule. New
+`broker_trades` table auto-creates via `create_all` on deploy.
+
+**Continuation (Wave 1 UI):** Trade-History tabs/filters (All / IG demo / Paper /
+Backtest) reading `/execution/broker-trades`; match broker trades to bot signals
+(deal_id/time/instrument) to fill bot_id/strategy_id; instrument name→symbol map.
+
+Branch `wave0-2-hardening`; `main` untouched.

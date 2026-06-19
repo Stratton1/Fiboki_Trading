@@ -966,3 +966,116 @@ def get_router_state(
         targets=[RouterTargetView(**t) for t in summary["targets"]],
         warning=warning,
     )
+
+
+# ── Wave 1: broker trade ledger (IG transaction reconciliation) ─────────────
+
+
+class BrokerTradeView(BaseModel):
+    id: int
+    source: str
+    reference: str
+    deal_id: str | None = None
+    instrument_name: str | None = None
+    instrument: str | None = None
+    direction: str | None = None
+    size: float | None = None
+    open_level: float | None = None
+    close_level: float | None = None
+    pnl: float | None = None
+    currency: str | None = None
+    closed_at: str | None = None
+    bot_id: str | None = None
+    strategy_id: str | None = None
+
+
+@router.get("/execution/broker-trades", response_model=list[BrokerTradeView])
+def list_broker_trades_endpoint(
+    source: str | None = None,
+    bot_id: str | None = None,
+    strategy_id: str | None = None,
+    instrument: str | None = None,
+    limit: int = 200,
+    user: TokenData = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Broker-executed trades imported from IG (separate from paper trades).
+
+    Filter by source (ig_demo/ig_live/paper/backtest), bot, strategy, instrument.
+    """
+    from fibokei.db.repository import list_broker_trades
+
+    rows = list_broker_trades(
+        db, source=source, bot_id=bot_id, strategy_id=strategy_id,
+        instrument=instrument, limit=limit,
+    )
+    return [
+        BrokerTradeView(
+            id=r.id, source=r.source, reference=r.reference, deal_id=r.deal_id,
+            instrument_name=r.instrument_name, instrument=r.instrument,
+            direction=r.direction, size=r.size, open_level=r.open_level,
+            close_level=r.close_level, pnl=r.pnl, currency=r.currency,
+            closed_at=r.closed_at.isoformat() if r.closed_at else None,
+            bot_id=r.bot_id, strategy_id=r.strategy_id,
+        )
+        for r in rows
+    ]
+
+
+class ReconcileTradesResponse(BaseModel):
+    configured: bool
+    reachable: bool
+    total: int = 0
+    imported: int = 0
+    updated: int = 0
+    skipped: int = 0
+    error: str | None = None
+
+
+@router.post("/execution/reconcile-trades", response_model=ReconcileTradesResponse)
+def reconcile_broker_trades(
+    from_date: str | None = None,
+    user: TokenData = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Pull IG demo transaction history and upsert it into the broker ledger.
+
+    Idempotent. Requires IG credentials (worker/prod env). Never raises —
+    credential/network problems return a typed status so the operator sees
+    exactly what to fix. ``from_date`` defaults to 30 days ago (YYYY-MM-DD).
+    """
+    import os
+    from datetime import datetime, timedelta, timezone
+
+    from fibokei.execution.broker_ledger import import_ig_transactions
+    from fibokei.execution.ig_client import IGClientError
+
+    configured = bool(
+        os.environ.get("FIBOKEI_IG_API_KEY")
+        and os.environ.get("FIBOKEI_IG_USERNAME")
+        and os.environ.get("FIBOKEI_IG_PASSWORD")
+    )
+    if not configured:
+        return ReconcileTradesResponse(
+            configured=False, reachable=False,
+            error="IG credentials not configured (expected on the worker service).",
+        )
+
+    if not from_date:
+        from_date = (datetime.now(timezone.utc) - timedelta(days=30)).strftime("%Y-%m-%d")
+
+    try:
+        client = _get_ig_health_client()
+        client.ensure_session()
+        counts = import_ig_transactions(db, client, from_date, source="ig_demo")
+        return ReconcileTradesResponse(
+            configured=True, reachable=True, **counts
+        )
+    except IGClientError as e:
+        global _ig_health_client
+        _ig_health_client = None
+        return ReconcileTradesResponse(configured=True, reachable=False, error=str(e))
+    except Exception as e:
+        return ReconcileTradesResponse(
+            configured=True, reachable=False, error=f"Unexpected error: {e}"
+        )

@@ -750,3 +750,49 @@ class StrategyLineageModel(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime, default=lambda: datetime.now(timezone.utc), index=True
     )
+
+
+# ─────────────────────────────────────────────────────────────────────────
+# Wave 1 — Broker trade ledger.
+#
+# Closed-trade / transaction records imported FROM the broker (IG) so Fiboki
+# can show broker-executed trades with the real broker reference and PnL —
+# distinct from internal paper trades. Rule: if IG records a trade, Fiboki
+# must show it. Keyed (source, reference) for idempotent re-import.
+# ─────────────────────────────────────────────────────────────────────────
+
+
+class BrokerTradeModel(Base):
+    __tablename__ = "broker_trades"
+    __table_args__ = (
+        UniqueConstraint("source", "reference", name="uq_broker_trade_source_ref"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    source: Mapped[str] = mapped_column(String(20), nullable=False, index=True)  # ig_demo/ig_live/paper/backtest
+    broker: Mapped[str] = mapped_column(String(20), nullable=False, default="ig")
+    environment: Mapped[str] = mapped_column(String(20), nullable=False, default="demo")
+    # IG dealReference (e.g. "SBQLDCAC") — what the operator sees in the IG UI.
+    reference: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    deal_id: Mapped[str | None] = mapped_column(String(64), index=True)  # IG internal dealId
+    broker_transaction_id: Mapped[str | None] = mapped_column(String(64))
+    instrument_name: Mapped[str | None] = mapped_column(String(120))  # raw broker name
+    instrument: Mapped[str | None] = mapped_column(String(20), index=True)  # mapped Fiboki symbol
+    epic: Mapped[str | None] = mapped_column(String(64))
+    direction: Mapped[str | None] = mapped_column(String(10))  # BUY/SELL
+    size: Mapped[float | None] = mapped_column(Float)
+    open_level: Mapped[float | None] = mapped_column(Float)
+    close_level: Mapped[float | None] = mapped_column(Float)
+    pnl: Mapped[float | None] = mapped_column(Float)  # broker profitAndLoss (parsed)
+    currency: Mapped[str | None] = mapped_column(String(8))
+    transaction_type: Mapped[str | None] = mapped_column(String(40))
+    opened_at: Mapped[datetime | None] = mapped_column(DateTime)
+    closed_at: Mapped[datetime | None] = mapped_column(DateTime, index=True)
+    bot_id: Mapped[str | None] = mapped_column(String(40), index=True)
+    strategy_id: Mapped[str | None] = mapped_column(String(60), index=True)
+    research_run_id: Mapped[str | None] = mapped_column(String(64))
+    reconciled: Mapped[bool] = mapped_column(Boolean, default=False)
+    raw_json: Mapped[dict | None] = mapped_column(JSON)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, default=lambda: datetime.now(timezone.utc)
+    )
