@@ -434,19 +434,45 @@ class IGExecutionAdapter(ExecutionAdapter):
                     # difference to IG pips/points via onePipMeans.
                     opm_s = float(market_spec.get("one_pip_means") or 1.0) or 1.0
                     slippage_pips = round(abs(filled_price - requested_price) / opm_s, 2)
+                deal_status = confirmation.get("dealStatus", "UNKNOWN")
+                ig_reason = confirmation.get("reason", "")
+                accepted = str(deal_status).upper() == "ACCEPTED"
+                reject_code = None if accepted else (ig_reason or deal_status)
+                # When IG does not ACCEPT, the granular cause often lives in the
+                # full confirmation (reason, affectedDeals, errorCode) rather
+                # than the top-level reason — which can be the unhelpful
+                # "UNKNOWN". Log the entire payload at WARNING and pass it back
+                # so the execution audit persists it (detail_json) instead of
+                # swallowing the real reason.
+                if not accepted:
+                    logger.warning(
+                        "IG deal NOT accepted: symbol=%s epic=%s dealStatus=%s "
+                        "reason=%s size=%.4f currency=%s stop=%s limit=%s "
+                        "full_confirmation=%s",
+                        symbol, epic, deal_status, ig_reason or "(empty)", size,
+                        params.get("currencyCode"), params.get("stopDistance"),
+                        params.get("limitDistance"), confirmation,
+                    )
                 return {
-                    "status": confirmation.get("dealStatus", "UNKNOWN"),
+                    "status": deal_status,
                     "deal_id": confirmation.get("dealId", ""),
                     "deal_reference": deal_ref,
                     "direction": direction,
                     "size": size,
                     "epic": epic,
                     "level": filled_price,
-                    "reason": confirmation.get("reason", ""),
+                    "reason": ig_reason,
+                    # error_code surfaces IG's reason verbatim (e.g. UNKNOWN,
+                    # MARKET_CLOSED, INSUFFICIENT_FUNDS) so the audit row's
+                    # error_code column is diagnostic, not a generic "REJECTED".
+                    "error_code": reject_code,
                     "requested_price": requested_price,
                     "filled_price": filled_price,
                     "slippage_pips": slippage_pips,
                     "fill_latency_ms": fill_latency_ms,
+                    # Full IG confirmation for audit detail_json — the granular
+                    # reject cause (affectedDeals/errorCode) lives here.
+                    "raw": confirmation,
                 }
             return {"status": "UNKNOWN", "deal_reference": deal_ref, "raw": result}
         except IGClientError as e:
