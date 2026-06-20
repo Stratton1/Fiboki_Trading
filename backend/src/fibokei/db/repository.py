@@ -1835,3 +1835,24 @@ def list_broker_trades(
         stmt = stmt.where(BrokerTradeModel.instrument == instrument)
     stmt = stmt.order_by(BrokerTradeModel.closed_at.desc().nullslast()).limit(limit)
     return list(session.scalars(stmt))
+
+
+# ── Bulk bot reset (clean-slate for a new phase) ────────────────────────────
+
+
+def reset_all_bots(session: Session) -> int:
+    """Reset every bot to a clean monitoring state: no open position, fresh
+    warmup, no error. Used when starting a clean phase so the fleet lines up
+    with a freshly reset paper account (and an empty broker). Returns count.
+    """
+    from fibokei.db.models import PaperBotModel
+
+    bots = list(session.scalars(select(PaperBotModel)))
+    for bot in bots:
+        bot.state = "monitoring"
+        bot.position_json = None
+        bot.last_evaluated_bar = None
+        bot.bars_seen = 0
+        bot.error_message = ""
+    session.commit()
+    return len(bots)

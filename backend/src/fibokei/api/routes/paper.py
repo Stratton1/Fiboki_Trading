@@ -383,6 +383,20 @@ def restart_all_stopped_bots(
     return {"restarted": restarted, "count": len(restarted)}
 
 
+@router.post("/paper/bots/reset-all")
+def reset_all_bots_endpoint(
+    user: TokenData = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Reset every bot to a clean monitoring state (no open position, fresh
+    warmup). Lines the fleet up with a freshly reset paper account and an empty
+    broker. The worker drops in-memory positions on its next sync."""
+    from fibokei.db.repository import reset_all_bots
+
+    n = reset_all_bots(db)
+    return {"reset": n}
+
+
 class RestoreStaleResponse(BaseModel):
     restored: list[dict]
     needs_attention: list[dict]
@@ -1059,6 +1073,14 @@ def perform_phase_transition(
             "Phase transition: paper account reset to £%.2f", req.new_initial_balance
         )
     db.commit()
+
+    # A reset phase also cleans the fleet so bot state lines up with the fresh
+    # account (no carried-over open positions). The worker drops in-memory
+    # positions on its next sync.
+    if req.reset_account:
+        from fibokei.db.repository import reset_all_bots
+        n = reset_all_bots(db)
+        logger.info("Phase transition: reset %d bots to clean monitoring", n)
 
     logger.info(
         "Phase transition complete: archived='%s' (id=%d), new='%s' (id=%d)",

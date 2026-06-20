@@ -258,6 +258,15 @@ class PaperWorker:
                         logger.warning(
                             "Bot %s: unknown state from DB: %s", bot_id, db_bot.state
                         )
+                # Reset propagation: a cleared DB position (bulk reset / new
+                # phase) drops the in-memory position and forces a clean re-warm
+                # so the fleet lines up with the reset account and empty broker.
+                if db_bot.position_json is None and bot.position is not None:
+                    bot.position = None
+                    bot._last_evaluated_bar = None
+                    bot.bars_seen = 0
+                    bot.state = BotState.MONITORING
+                    logger.info("Bot %s: cleared in-memory position (reset)", bot_id)
 
     def _reload_account_if_phase_changed(self) -> None:
         """Reload the paper account from DB when the active phase changes.
