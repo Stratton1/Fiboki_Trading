@@ -19,6 +19,13 @@ import {
   AlertTriangle,
 } from "lucide-react";
 import { formatCurrency, formatPnl } from "@/lib/format-currency";
+import dynamic from "next/dynamic";
+import { useMarketData } from "@/lib/hooks/use-market-data";
+
+const TradeMarkerChart = dynamic(
+  () => import("@/components/charts/core/TradeMarkerChart"),
+  { ssr: false },
+);
 
 const STATE_VARIANT: Record<string, "ok" | "warn" | "neutral"> = {
   monitoring: "ok",
@@ -46,6 +53,15 @@ export default function BotDetailPage({ params }: { params: Promise<{ id: string
     () => api.botTrades(id, liveOnly),
     { refreshInterval: 10000 }
   );
+
+  // Price chart for THIS bot's instrument + timeframe (markers from its trades).
+  const bInstrument = (bot as Record<string, unknown> | undefined)?.instrument as
+    | string
+    | undefined;
+  const bTimeframe = (bot as Record<string, unknown> | undefined)?.timeframe as
+    | string
+    | undefined;
+  const { data: marketData } = useMarketData(bInstrument ?? null, bTimeframe ?? null);
 
   async function handleAction(fn: () => Promise<unknown>) {
     setActingBotId(id);
@@ -231,6 +247,28 @@ export default function BotDetailPage({ params }: { params: Promise<{ id: string
                 <p className="font-medium">{position.bars_in_trade as number}</p>
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Price chart for this bot's instrument/timeframe with its trade markers */}
+      {marketData && (
+        <div className="card mb-6">
+          <div className="flex items-center justify-between mb-3">
+            <p className="section-label !mb-0">
+              Price Chart — {bInstrument} · {bTimeframe}
+            </p>
+            <span className="text-xs text-foreground-muted">
+              {trades.length} trade{trades.length === 1 ? "" : "s"}
+            </span>
+          </div>
+          <div className="h-[420px]">
+            <TradeMarkerChart
+              data={marketData}
+              trades={trades as unknown as import("@/types/contracts/trades").Trade[]}
+              showEntries
+              showExits
+            />
           </div>
         </div>
       )}

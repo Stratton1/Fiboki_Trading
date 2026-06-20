@@ -282,9 +282,6 @@ export default function DashboardPage() {
   const fleetPnl = fleet?.aggregate_pnl ?? 0;
   const fleetTrades = fleet?.aggregate_trades ?? 0;
   const fleetOpenPositions = fleet?.open_positions ?? 0;
-  // Active = running and *not* stale. Operators care about bots that are
-  // both alive and producing fresh data.
-  const activeBots = Math.max(0, runningBots - staleBots);
   const topShortlist = ((shortlist ?? []) as ShortlistEntry[]).slice(0, 5);
 
   const executionMode = execMode?.mode ?? systemStatus?.execution_mode ?? "paper";
@@ -472,12 +469,12 @@ export default function DashboardPage() {
         />
         <StatCard
           icon={Bot}
-          label="Active Bots"
-          value={`${activeBots}/${totalBots}`}
-          tip="Bots running and producing fresh data. Excludes stale bots; running but stale bots are flagged below."
+          label="Running Bots"
+          value={`${runningBots}/${totalBots}`}
+          tip="Bots in a running state (monitoring or in position). 'Awaiting data' = running but no fresh candle yet (e.g. market closed / data gap) — not an error. Matches Running in Fleet Overview."
           sub={
             staleBots > 0
-              ? `${staleBots} stale`
+              ? `${staleBots} awaiting data`
               : pausedBots > 0
                 ? `${pausedBots} paused`
                 : totalBots === 0
@@ -558,7 +555,7 @@ export default function DashboardPage() {
         {staleBots > 0 && (
           <div className="mt-3 flex items-center gap-2 text-xs text-amber-700 bg-amber-50 rounded-lg px-3 py-2">
             <AlertTriangle size={13} />
-            {staleBots} bot{staleBots !== 1 ? "s" : ""} with stale data — check <Link href="/bots" className="underline font-medium">Bots</Link>
+            {staleBots} bot{staleBots !== 1 ? "s" : ""} awaiting fresh data (market closed or data gap) — these are still running. <Link href="/bots" className="underline font-medium">View Bots</Link>
           </div>
         )}
       </div>
