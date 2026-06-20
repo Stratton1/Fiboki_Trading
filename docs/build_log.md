@@ -316,3 +316,8 @@ hardcoded `GBP` the market doesn't deal in.
 Live audit snapshot (rate-limited, indicative): 29 ok (FX majors+crosses),
 36 unavailable (metals/energy/indices/crypto/exotic FX — partly false negatives
 from rate limiting; re-run throttled to confirm which truly need epic work).
+
+## 2026-06-20 — Strategy Factory Gen-1: Phase 1 audit
+- Found the existing declarative factory (strategies/factory: spec/primitives/compiler) — the 25 families will be specs, not hand-coded files.
+- docs/STRATEGY_FACTORY_GEN1_AUDIT.md: existing indicators/primitives/strategies, 25-family coverage map (~6 buildable now, ~13 indicators + ~19 primitives missing), volume caveat, build plan, first-run recommendation.
+- Also: crypto hidden from the platform listing (FCA/no venue) + tests updated.
