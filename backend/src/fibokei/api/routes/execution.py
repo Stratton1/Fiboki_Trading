@@ -1146,3 +1146,65 @@ def run_ig_epic_audit(
         return IGEpicAuditResponse(
             configured=True, reachable=False, error=f"Unexpected error: {e}"
         )
+
+
+# ── IG open positions (read-only) — reconcile against Fiboki fleet ──────────
+
+
+class IGPositionsResponse(BaseModel):
+    configured: bool
+    reachable: bool
+    count: int = 0
+    positions: list[dict] = []
+    error: str | None = None
+
+
+@router.get("/execution/ig-positions", response_model=IGPositionsResponse)
+def get_ig_positions(user: TokenData = Depends(get_current_user)):
+    """Return the IG account's current open positions (read-only).
+
+    Lets the operator confirm Fiboki's tracked open positions match what IG
+    actually holds. Never raises; needs IG credentials.
+    """
+    import os
+
+    from fibokei.execution.ig_client import IGClientError
+
+    configured = bool(
+        os.environ.get("FIBOKEI_IG_API_KEY")
+        and os.environ.get("FIBOKEI_IG_USERNAME")
+        and os.environ.get("FIBOKEI_IG_PASSWORD")
+    )
+    if not configured:
+        return IGPositionsResponse(
+            configured=False, reachable=False,
+            error="IG credentials not configured.",
+        )
+    try:
+        client = _get_ig_health_client()
+        client.ensure_session()
+        raw = client.get_positions()
+        positions = []
+        for p in raw:
+            mkt = p.get("market", {}) or {}
+            pos = p.get("position", {}) or {}
+            positions.append({
+                "epic": mkt.get("epic"),
+                "instrument": mkt.get("instrumentName"),
+                "direction": pos.get("direction"),
+                "size": pos.get("size") or pos.get("dealSize"),
+                "level": pos.get("level") or pos.get("openLevel"),
+                "deal_id": pos.get("dealId"),
+                "currency": pos.get("currency"),
+            })
+        return IGPositionsResponse(
+            configured=True, reachable=True, count=len(positions), positions=positions
+        )
+    except IGClientError as e:
+        global _ig_health_client
+        _ig_health_client = None
+        return IGPositionsResponse(configured=True, reachable=False, error=str(e))
+    except Exception as e:
+        return IGPositionsResponse(
+            configured=True, reachable=False, error=f"Unexpected error: {e}"
+        )
