@@ -454,6 +454,25 @@ export const api = {
       Array<{ symbol: string; name: string; asset_class: string; has_canonical_data: boolean }>
     >("/instruments"),
   strategies: () => apiFetch<Array<Record<string, unknown>>>("/strategies"),
+  strategiesGrouped: () =>
+    apiFetch<
+      Array<{
+        tier: string;
+        label: string;
+        badge: string;
+        description: string;
+        count: number;
+        strategies: Array<{
+          id: string;
+          name: string;
+          family: string;
+          complexity: string;
+          tier: string;
+          supports_long: boolean;
+          supports_short: boolean;
+        }>;
+      }>
+    >("/strategies/grouped"),
 
   // System
   systemHealth: () => apiFetch<{ status: string; version: string }>("/system/health"),

@@ -62,6 +62,7 @@ export default function ResearchPage() {
   const isAllRunsMode = runScope === "all";
   const { data: rankings, mutate, isLoading } = useRankings(effectiveRunId, isAllRunsMode);
   const { data: strategies } = useSWR("strategies", () => api.strategies());
+  const { data: strategyGroups } = useSWR("strategies-grouped", () => api.strategiesGrouped());
   const { data: instruments } = useSWR("instruments", () => api.instruments());
   const { filterSet } = useWatchlists();
 
@@ -174,6 +175,14 @@ export default function ResearchPage() {
   function selectAllStrategies() {
     if (!strategies) return;
     setSelectedStrategies(strategies.map((s: any) => s.id));
+  }
+
+  function selectTier(ids: string[]) {
+    setSelectedStrategies((prev) => Array.from(new Set([...prev, ...ids])));
+  }
+
+  function clearTier(ids: string[]) {
+    setSelectedStrategies((prev) => prev.filter((s) => !ids.includes(s)));
   }
 
   function toggleTimeframe(tf: string) {
@@ -716,22 +725,67 @@ export default function ResearchPage() {
               Clear
             </button>
           </div>
-          <div className="flex flex-wrap gap-2">
-            {strategies?.map((s: any) => (
-              <button
-                key={s.id}
-                type="button"
-                onClick={() => toggleStrategy(s.id)}
-                className={`px-2 py-1 rounded text-xs border ${
-                  selectedStrategies.includes(s.id)
-                    ? "bg-primary text-white border-primary"
-                    : "bg-background border-gray-300 text-foreground"
-                }`}
-              >
-                {s.name || s.id}
-              </button>
-            ))}
-          </div>
+          {strategyGroups ? (
+            <div className="flex flex-col gap-3">
+              {strategyGroups.map((g) => {
+                const tierIds = g.strategies.map((s) => s.id);
+                const selectedInTier = tierIds.filter((id) => selectedStrategies.includes(id)).length;
+                return (
+                  <div key={g.tier}>
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="text-xs font-medium text-foreground">{g.label}</span>
+                      <span className="px-1.5 py-0.5 rounded text-[10px] bg-background-subtle border border-gray-300 text-foreground-muted">
+                        {g.badge}
+                      </span>
+                      <span className="text-[10px] text-foreground-muted">
+                        {selectedInTier}/{g.count}
+                      </span>
+                      <button type="button" onClick={() => selectTier(tierIds)} className="text-[10px] text-primary hover:underline">
+                        all
+                      </button>
+                      <button type="button" onClick={() => clearTier(tierIds)} className="text-[10px] text-foreground-muted hover:underline">
+                        none
+                      </button>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      {g.strategies.map((s) => (
+                        <button
+                          key={s.id}
+                          type="button"
+                          title={`${s.id} · ${g.label}`}
+                          onClick={() => toggleStrategy(s.id)}
+                          className={`px-2 py-1 rounded text-xs border ${
+                            selectedStrategies.includes(s.id)
+                              ? "bg-primary text-white border-primary"
+                              : "bg-background border-gray-300 text-foreground"
+                          }`}
+                        >
+                          {s.name || s.id}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="flex flex-wrap gap-2">
+              {strategies?.map((s: any) => (
+                <button
+                  key={s.id}
+                  type="button"
+                  onClick={() => toggleStrategy(s.id)}
+                  className={`px-2 py-1 rounded text-xs border ${
+                    selectedStrategies.includes(s.id)
+                      ? "bg-primary text-white border-primary"
+                      : "bg-background border-gray-300 text-foreground"
+                  }`}
+                >
+                  {s.name || s.id}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Instrument + Timeframe + Min Trades */}
