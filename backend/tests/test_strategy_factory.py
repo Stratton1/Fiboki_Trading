@@ -320,9 +320,9 @@ class TestRegistryIsolation:
             assert sid.startswith("factory_"), (
                 f"CompiledStrategy {sid} registered without a factory id"
             )
-            assert classify_strategy(sid) in ("traditional_gen1", "hybrid_gen1"), (
-                f"Factory strategy {sid} leaked in untiered/unclassified"
-            )
+            assert classify_strategy(sid) in (
+                "traditional_gen1", "hybrid_gen1", "triple_hybrid_gen1"
+            ), f"Factory strategy {sid} leaked in untiered/unclassified"
 
     def test_ad_hoc_compiled_spec_is_not_auto_registered(self):
         """Compiling a one-off spec must not register it globally."""

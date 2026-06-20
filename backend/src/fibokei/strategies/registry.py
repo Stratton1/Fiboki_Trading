@@ -55,12 +55,14 @@ CANONICAL_STRATEGY_IDS = frozenset({
 TIER_CANONICAL = "canonical"
 TIER_TRADITIONAL_GEN1 = "traditional_gen1"
 TIER_HYBRID_GEN1 = "hybrid_gen1"
+TIER_TRIPLE_HYBRID_GEN1 = "triple_hybrid_gen1"
 TIER_EXPERIMENTAL = "experimental"
 
 # All non-canonical tiers a strategy can fall into, in display order.
 NON_CANONICAL_TIERS = (
     TIER_TRADITIONAL_GEN1,
     TIER_HYBRID_GEN1,
+    TIER_TRIPLE_HYBRID_GEN1,
     TIER_EXPERIMENTAL,
 )
 
@@ -87,11 +89,17 @@ TIER_METADATA: dict[str, dict] = {
         "description": "Two-indicator combinations (primary + confirm) — research-tier.",
         "order": 2,
     },
+    TIER_TRIPLE_HYBRID_GEN1: {
+        "label": "Triple Hybrid (Gen-1)",
+        "badge": "Research",
+        "description": "Three-indicator combinations (primary + 2 confirm/filter) — research-tier.",
+        "order": 3,
+    },
     TIER_EXPERIMENTAL: {
         "label": "Extended / experimental",
         "badge": "Experimental",
         "description": "Extended bots and anything not yet promoted to a tier.",
-        "order": 3,
+        "order": 4,
     },
 }
 
@@ -112,6 +120,8 @@ def classify_strategy(strategy_id: str) -> str:
         return TIER_CANONICAL
     if strategy_id.startswith("factory_trad_"):
         return TIER_TRADITIONAL_GEN1
+    if strategy_id.startswith("factory_tri_"):
+        return TIER_TRIPLE_HYBRID_GEN1
     if strategy_id.startswith("factory_hyb_"):
         return TIER_HYBRID_GEN1
     return TIER_EXPERIMENTAL
@@ -273,7 +283,9 @@ strategy_registry.register(FibVolumeConfluence)
 from fibokei.strategies.traditional import (  # noqa: E402
     register_gen1,
     register_hybrid_gen1,
+    register_triple_hybrid_gen1,
 )
 
 register_gen1(strategy_registry)
 register_hybrid_gen1(strategy_registry)
+register_triple_hybrid_gen1(strategy_registry)

@@ -68,11 +68,13 @@ def test_classify_strategy_tiers():
     # Strategy Factory tiers are identified by compiled-id prefix.
     assert classify_strategy("factory_trad_ema_crossover_v1") == "traditional_gen1"
     assert classify_strategy("factory_hyb_anything_v1") == "hybrid_gen1"
+    assert classify_strategy("factory_tri_anything_v1") == "triple_hybrid_gen1"
 
 
 def test_list_available_includes_tier():
     items = strategy_registry.list_available()
     assert items, "registry should not be empty"
     assert all("tier" in i for i in items)
-    valid = {"canonical", "experimental", "traditional_gen1", "hybrid_gen1"}
+    valid = {"canonical", "experimental", "traditional_gen1", "hybrid_gen1",
+             "triple_hybrid_gen1"}
     assert all(i["tier"] in valid for i in items)
