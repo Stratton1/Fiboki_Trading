@@ -1284,14 +1284,11 @@ def get_ig_market_nav(
 # returns up to ~50 hits per term; sweeping these + de-duping gives a wide
 # picture of what's tradeable on the account without the (404-ing) tree API.
 _IG_DISCOVERY_TERMS = [
-    # FX by currency
-    "USD", "EUR", "GBP", "JPY", "AUD", "NZD", "CAD", "CHF",
-    "NOK", "SEK", "SGD", "HKD", "TRY", "MXN", "ZAR", "PLN",
-    # Indices
-    "Wall Street", "US 500", "US Tech", "Germany 40", "FTSE", "France 40",
-    "Japan 225", "Australia 200", "Hong Kong", "Netherlands 25", "Spain 35",
-    # Commodities
-    "Gold", "Silver", "Oil", "Natural Gas", "Copper", "Platinum",
+    # Kept short so the synchronous sweep completes inside the gateway timeout.
+    # A fuller sweep belongs in a background discovery job.
+    "USD", "EUR", "GBP", "JPY", "AUD",
+    "Wall Street", "Germany 40", "FTSE", "Japan 225",
+    "Gold", "Silver", "Oil",
 ]
 
 
@@ -1332,7 +1329,7 @@ def ig_discover(
         seen: dict[str, dict] = {}
         for i, term in enumerate(_IG_DISCOVERY_TERMS):
             if i > 0:
-                time.sleep(0.25)
+                time.sleep(0.12)
             try:
                 hits = client.search_markets(term)
             except IGClientError:
