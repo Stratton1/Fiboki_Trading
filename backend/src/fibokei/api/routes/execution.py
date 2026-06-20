@@ -1276,3 +1276,93 @@ def get_ig_market_nav(
         return IGMarketNavResponse(
             configured=True, reachable=False, error=f"Unexpected error: {e}"
         )
+
+
+# ── IG market discovery (enumerate the account's tradable universe) ──────────
+
+# Broad search terms covering IG's main retail categories. search_markets
+# returns up to ~50 hits per term; sweeping these + de-duping gives a wide
+# picture of what's tradeable on the account without the (404-ing) tree API.
+_IG_DISCOVERY_TERMS = [
+    # FX by currency
+    "USD", "EUR", "GBP", "JPY", "AUD", "NZD", "CAD", "CHF",
+    "NOK", "SEK", "SGD", "HKD", "TRY", "MXN", "ZAR", "PLN",
+    # Indices
+    "Wall Street", "US 500", "US Tech", "Germany 40", "FTSE", "France 40",
+    "Japan 225", "Australia 200", "Hong Kong", "Netherlands 25", "Spain 35",
+    # Commodities
+    "Gold", "Silver", "Oil", "Natural Gas", "Copper", "Platinum",
+]
+
+
+class IGDiscoverResponse(BaseModel):
+    configured: bool
+    reachable: bool
+    total: int = 0
+    by_type: dict = {}          # instrumentType -> count
+    markets: list[dict] = []    # {epic, name, type, expiry, status}
+    error: str | None = None
+
+
+@router.post("/execution/ig-discover", response_model=IGDiscoverResponse)
+def ig_discover(
+    user: TokenData = Depends(get_current_user),
+):
+    """Sweep IG by category and return every tradeable market on this account,
+    de-duplicated and grouped by instrument type. Read-only; needs IG creds.
+    Throttled to avoid IG's market-data rate limit.
+    """
+    import os
+    import time
+
+    from fibokei.execution.ig_client import IGClientError
+
+    configured = bool(
+        os.environ.get("FIBOKEI_IG_API_KEY")
+        and os.environ.get("FIBOKEI_IG_USERNAME")
+        and os.environ.get("FIBOKEI_IG_PASSWORD")
+    )
+    if not configured:
+        return IGDiscoverResponse(
+            configured=False, reachable=False, error="IG credentials not configured."
+        )
+    try:
+        client = _get_ig_health_client()
+        client.ensure_session()
+        seen: dict[str, dict] = {}
+        for i, term in enumerate(_IG_DISCOVERY_TERMS):
+            if i > 0:
+                time.sleep(0.25)
+            try:
+                hits = client.search_markets(term)
+            except IGClientError:
+                continue
+            for m in hits:
+                epic = m.get("epic")
+                status = m.get("marketStatus")
+                if not epic or status not in (None, "TRADEABLE", "EDITS_ONLY"):
+                    continue
+                seen[epic] = {
+                    "epic": epic,
+                    "name": m.get("instrumentName"),
+                    "type": m.get("instrumentType"),
+                    "expiry": m.get("expiry"),
+                    "status": status,
+                }
+        markets = sorted(seen.values(), key=lambda x: (x["type"] or "", x["name"] or ""))
+        by_type: dict[str, int] = {}
+        for m in markets:
+            t = m["type"] or "OTHER"
+            by_type[t] = by_type.get(t, 0) + 1
+        return IGDiscoverResponse(
+            configured=True, reachable=True, total=len(markets),
+            by_type=by_type, markets=markets,
+        )
+    except IGClientError as e:
+        global _ig_health_client
+        _ig_health_client = None
+        return IGDiscoverResponse(configured=True, reachable=False, error=str(e))
+    except Exception as e:
+        return IGDiscoverResponse(
+            configured=True, reachable=False, error=f"Unexpected error: {e}"
+        )
