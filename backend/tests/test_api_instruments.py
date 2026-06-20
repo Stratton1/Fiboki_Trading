@@ -8,11 +8,12 @@ class TestInstrumentsList:
         response = api_client.get("/api/v1/instruments", headers=auth_headers)
         assert response.status_code == 200
         data = response.json()
-        assert len(data) == 67
+        # Crypto is hidden from the platform (IG can't trade it / no venue wired).
+        assert len(data) == 62  # 67 instruments minus 5 crypto
         symbols = [i["symbol"] for i in data]
         assert "EURUSD" in symbols
         assert "XAUUSD" in symbols
-        assert "BTCUSD" in symbols
+        assert "BTCUSD" not in symbols
 
     def test_instrument_has_fields(self, api_client, auth_headers):
         response = api_client.get("/api/v1/instruments", headers=auth_headers)
@@ -28,7 +29,6 @@ class TestInstrumentsList:
         data = response.json()
         by_symbol = {i["symbol"]: i for i in data}
         assert by_symbol["EURUSD"]["has_canonical_data"] is True
-        assert by_symbol["BTCUSD"]["has_canonical_data"] is False
 
     def test_filter_by_asset_class_forex_major(self, api_client, auth_headers):
         response = api_client.get(
@@ -39,14 +39,13 @@ class TestInstrumentsList:
         assert len(data) == 7
         assert all(i["asset_class"] == "forex_major" for i in data)
 
-    def test_filter_by_asset_class_crypto(self, api_client, auth_headers):
+    def test_crypto_hidden_from_site(self, api_client, auth_headers):
+        # Crypto is filtered out of the instruments listing platform-wide.
         response = api_client.get(
             "/api/v1/instruments?asset_class=crypto", headers=auth_headers
         )
         assert response.status_code == 200
-        data = response.json()
-        assert len(data) == 5
-        assert all(i["asset_class"] == "crypto" for i in data)
+        assert response.json() == []
 
     def test_filter_by_invalid_asset_class(self, api_client, auth_headers):
         response = api_client.get(

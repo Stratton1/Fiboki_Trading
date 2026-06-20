@@ -43,8 +43,12 @@ def list_instruments(
     user: TokenData = Depends(get_current_user),
     asset_class: str | None = Query(None, description="Filter by asset class"),
 ):
+    from fibokei.core.models import AssetClass
+
     symbols_with_data = _symbols_with_data()
-    results = INSTRUMENTS
+    # Crypto is hidden from the platform for now: IG can't trade it (FCA ban)
+    # and there's no execution venue wired up yet.
+    results = [i for i in INSTRUMENTS if i.asset_class != AssetClass.CRYPTO]
     if asset_class is not None:
         results = [i for i in results if i.asset_class.value == asset_class]
     return [_inst_to_dict(i, symbols_with_data) for i in results]
