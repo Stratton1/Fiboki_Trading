@@ -99,13 +99,16 @@ INSTRUMENTS: list[Instrument] = [
         asset_class=_IDX, has_canonical_data=False, ig_epic="IX.D.DOW.IFD.IP",
     ),
     # ── Crypto (5 — alternate provider only) ─────────────────────────
+    # No IG epics: IG cannot offer crypto CFDs to UK retail (FCA ban), so these
+    # are research/paper-only and must NOT be routed to IG (avoids guaranteed
+    # rejects). Re-add an epic only if traded via a crypto-exchange adapter.
     Instrument(
         symbol="BTCUSD", name="Bitcoin / US Dollar",
-        asset_class=_CRY, has_canonical_data=False, ig_epic="CS.D.BITCOIN.CFD.IP",
+        asset_class=_CRY, has_canonical_data=False,
     ),
     Instrument(
         symbol="ETHUSD", name="Ethereum / US Dollar",
-        asset_class=_CRY, has_canonical_data=False, ig_epic="CS.D.ETHUSD.CFD.IP",
+        asset_class=_CRY, has_canonical_data=False,
     ),
     Instrument(
         symbol="SOLUSD", name="Solana / US Dollar",
@@ -113,7 +116,7 @@ INSTRUMENTS: list[Instrument] = [
     ),
     Instrument(
         symbol="LTCUSD", name="Litecoin / US Dollar",
-        asset_class=_CRY, has_canonical_data=False, ig_epic="CS.D.LTCUSD.CFD.IP",
+        asset_class=_CRY, has_canonical_data=False,
     ),
     Instrument(
         symbol="XRPUSD", name="Ripple / US Dollar",
