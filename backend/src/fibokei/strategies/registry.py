@@ -206,6 +206,10 @@ strategy_registry.register(FibVolumeConfluence)
 # into the common Strategy interface). Research-tier: registered + backtestable,
 # never auto-promoted. Imported here (not at top) to avoid a circular import
 # (traditional.gen1 imports the factory compiler, which imports strategies.base).
-from fibokei.strategies.traditional import register_gen1  # noqa: E402
+from fibokei.strategies.traditional import (  # noqa: E402
+    register_gen1,
+    register_hybrid_gen1,
+)
 
 register_gen1(strategy_registry)
+register_hybrid_gen1(strategy_registry)
