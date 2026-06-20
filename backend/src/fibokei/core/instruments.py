@@ -78,8 +78,11 @@ INSTRUMENTS: list[Instrument] = [
     Instrument(symbol="XAUUSD", name="Gold / US Dollar", asset_class=_MTL, ig_epic="CS.D.CFPGOLD.CFP.IP"),
     Instrument(symbol="XAGUSD", name="Silver / US Dollar", asset_class=_MTL, ig_epic="CS.D.CFDSILVER.CFM.IP"),
     # ── Commodity Energy (2 HistData + 1 alternate) ──────────────────────
-    Instrument(symbol="BCOUSD", name="Brent Crude Oil", asset_class=_NRG, ig_epic="EN.D.LCO.Month2.IP"),
-    Instrument(symbol="WTIUSD", name="WTI Crude Oil", asset_class=_NRG, ig_epic="EN.D.CL.Month1.IP"),
+    # Energy epics verified against demo CFD account Z5ZAV via ig-epic-audit
+    # 2026-06-19 (the old EN.D.*.Month*.IP epics were not priceable on this
+    # account; CC.D.*.UNC.IP are the account-supported continuous contracts).
+    Instrument(symbol="BCOUSD", name="Brent Crude Oil", asset_class=_NRG, ig_epic="CC.D.LCO.UNC.IP"),
+    Instrument(symbol="WTIUSD", name="WTI Crude Oil", asset_class=_NRG, ig_epic="CC.D.CL.UNC.IP"),
     Instrument(symbol="NATGAS", name="Natural Gas", asset_class=_NRG, has_canonical_data=False, ig_epic="EN.D.NG.Month1.IP"),
     # ── Index (9 HistData + 1 alternate) ─────────────────────────────────
     Instrument(symbol="US500", name="S&P 500", asset_class=_IDX, ig_epic="IX.D.SPTRD.IFD.IP"),
