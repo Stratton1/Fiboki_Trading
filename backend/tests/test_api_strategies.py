@@ -1,7 +1,5 @@
 """Tests for strategies API endpoints."""
 
-import pytest
-
 
 class TestStrategiesList:
     def test_list_strategies(self, api_client, auth_headers):
@@ -31,6 +29,53 @@ class TestStrategiesList:
         assert "complexity" in s
         assert "supports_long" in s
         assert "supports_short" in s
+
+
+class TestStrategiesGrouped:
+    def test_grouped_returns_tiers_in_order(self, api_client, auth_headers):
+        response = api_client.get(
+            "/api/v1/strategies/grouped", headers=auth_headers
+        )
+        assert response.status_code == 200
+        groups = response.json()
+        assert groups, "expected at least one tier group"
+        # Canonical tier first; experimental last if present.
+        tiers = [g["tier"] for g in groups]
+        assert tiers[0] == "canonical"
+        # Each group carries display metadata + a non-empty strategy list.
+        for g in groups:
+            assert g["label"] and g["badge"] and g["description"]
+            assert g["count"] == len(g["strategies"]) > 0
+            assert all(s["tier"] == g["tier"] for s in g["strategies"])
+
+    def test_grouped_total_matches_flat_list(self, api_client, auth_headers):
+        flat = api_client.get("/api/v1/strategies", headers=auth_headers).json()
+        groups = api_client.get(
+            "/api/v1/strategies/grouped", headers=auth_headers
+        ).json()
+        grouped_total = sum(g["count"] for g in groups)
+        assert grouped_total == len(flat)
+
+    def test_grouped_includes_factory_tiers(self, api_client, auth_headers):
+        groups = api_client.get(
+            "/api/v1/strategies/grouped", headers=auth_headers
+        ).json()
+        by_tier = {g["tier"]: g for g in groups}
+        assert by_tier["traditional_gen1"]["count"] == 25
+        assert by_tier["hybrid_gen1"]["count"] == 10
+
+
+class TestRegistryHealthEndpoint:
+    def test_health_exposes_tier_counts(self, api_client, auth_headers):
+        response = api_client.get(
+            "/api/v1/strategies/registry-health", headers=auth_headers
+        )
+        assert response.status_code == 200
+        h = response.json()
+        assert h["canonical_count"] == 12
+        assert h["traditional_gen1_count"] == 25
+        assert h["hybrid_gen1_count"] == 10
+        assert h["registered_count"] == sum(h["tier_counts"].values())
 
 
 class TestStrategyDetail:

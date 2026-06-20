@@ -64,6 +64,42 @@ NON_CANONICAL_TIERS = (
     TIER_EXPERIMENTAL,
 )
 
+# Single source of truth for how each tier is presented in the UI — label,
+# short badge, one-line description and display order. The frontend renders
+# from this (via /strategies/grouped) so tier semantics never drift between
+# backend classification and UI grouping/badges.
+TIER_METADATA: dict[str, dict] = {
+    TIER_CANONICAL: {
+        "label": "Canonical (blueprint)",
+        "badge": "Core",
+        "description": "The 12 hand-coded Ichimoku/Fibonacci blueprint bots.",
+        "order": 0,
+    },
+    TIER_TRADITIONAL_GEN1: {
+        "label": "Traditional (Gen-1)",
+        "badge": "Research",
+        "description": "Classic single-indicator factory families — research-tier.",
+        "order": 1,
+    },
+    TIER_HYBRID_GEN1: {
+        "label": "Hybrid (Gen-1)",
+        "badge": "Research",
+        "description": "Two-indicator combinations (primary + confirm) — research-tier.",
+        "order": 2,
+    },
+    TIER_EXPERIMENTAL: {
+        "label": "Extended / experimental",
+        "badge": "Experimental",
+        "description": "Extended bots and anything not yet promoted to a tier.",
+        "order": 3,
+    },
+}
+
+# Tiers in canonical display order (canonical first, experimental last).
+TIER_ORDER = tuple(
+    t for t, _ in sorted(TIER_METADATA.items(), key=lambda kv: kv[1]["order"])
+)
+
 
 def classify_strategy(strategy_id: str) -> str:
     """Return the tier for a strategy id.
@@ -128,6 +164,34 @@ class StrategyRegistry:
                 "tier": classify_strategy(inst.strategy_id),
             })
         return result
+
+    def list_grouped(self) -> list[dict]:
+        """Strategies grouped by tier in display order, for grouped UI.
+
+        Returns one entry per non-empty tier (canonical first), each with its
+        display metadata and the strategies it contains. Honours the same
+        FIBOKEI_VISIBLE_STRATEGIES filter as :meth:`list_available`.
+        """
+        items = self.list_available()
+        groups: dict[str, list[dict]] = {}
+        for item in items:
+            groups.setdefault(item["tier"], []).append(item)
+
+        ordered: list[dict] = []
+        for tier in TIER_ORDER:
+            members = groups.get(tier, [])
+            if not members:
+                continue
+            meta = TIER_METADATA[tier]
+            ordered.append({
+                "tier": tier,
+                "label": meta["label"],
+                "badge": meta["badge"],
+                "description": meta["description"],
+                "count": len(members),
+                "strategies": members,
+            })
+        return ordered
 
     def registry_health(self) -> dict:
         """Operator-facing truth about the strategy registry.

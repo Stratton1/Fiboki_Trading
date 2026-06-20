@@ -50,6 +50,9 @@ class RegistryHealthResponse(BaseModel):
     file_count: int
     canonical_count: int
     experimental_count: int
+    traditional_gen1_count: int
+    hybrid_gen1_count: int
+    tier_counts: dict[str, int]
     expected_min: int
     by_tier: dict[str, list[str]]
     unregistered_files: list[str]
@@ -59,12 +62,49 @@ class RegistryHealthResponse(BaseModel):
 @router.get("/strategies/registry-health", response_model=RegistryHealthResponse)
 def get_registry_health(user: TokenData = Depends(get_current_user)):
     """Operator truth about the strategy registry: registered vs files on disk,
-    canonical vs experimental tiers, and any unregistered strategy files.
+    per-tier counts, and any unregistered strategy files.
 
     Defined before ``/strategies/{strategy_id}`` so the literal path is not
     captured by the dynamic id route.
     """
     return strategy_registry.registry_health()
+
+
+class StrategyGroupResponse(BaseModel):
+    tier: str
+    label: str
+    badge: str
+    description: str
+    count: int
+    strategies: list[StrategyResponse]
+
+
+@router.get("/strategies/grouped", response_model=list[StrategyGroupResponse])
+def list_strategies_grouped(user: TokenData = Depends(get_current_user)):
+    """Strategies grouped by tier (canonical → research → experimental) with
+    display metadata, for a grouped/searchable strategy picker.
+
+    Defined before ``/strategies/{strategy_id}`` so the literal path is not
+    captured by the dynamic id route.
+    """
+    groups = []
+    for group in strategy_registry.list_grouped():
+        enriched = []
+        for info in group["strategies"]:
+            strategy = strategy_registry.get(info["id"])
+            enriched.append({
+                "id": info["id"],
+                "name": info["name"],
+                "family": info["family"],
+                "complexity": info["complexity"],
+                "tier": info["tier"],
+                "supports_long": strategy.supports_long,
+                "supports_short": strategy.supports_short,
+                "requires_fibonacci": strategy.requires_fibonacci,
+                "requires_mtfa": strategy.requires_mtfa,
+            })
+        groups.append({**group, "strategies": enriched})
+    return groups
 
 
 @router.get("/strategies/{strategy_id}", response_model=StrategyDetailResponse)

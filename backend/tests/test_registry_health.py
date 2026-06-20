@@ -8,9 +8,34 @@ repeated count-assertion churn). Pure/offline — no network, no DB.
 from fibokei.strategies.registry import (
     CANONICAL_STRATEGY_IDS,
     EXPECTED_MIN_STRATEGIES,
+    TIER_METADATA,
+    TIER_ORDER,
     classify_strategy,
     strategy_registry,
 )
+
+
+def test_every_tier_has_display_metadata():
+    # Every tier classify_strategy can return must have UI metadata, so the
+    # grouped picker never shows a bare/unknown tier.
+    tiers = {classify_strategy(sid) for sid in strategy_registry._strategies}
+    for tier in tiers:
+        assert tier in TIER_METADATA, f"tier {tier} missing display metadata"
+        meta = TIER_METADATA[tier]
+        assert meta["label"] and meta["badge"] and meta["description"]
+
+
+def test_list_grouped_is_ordered_and_complete():
+    groups = strategy_registry.list_grouped()
+    tiers = [g["tier"] for g in groups]
+    # Groups appear in the declared display order (canonical first).
+    assert tiers == [t for t in TIER_ORDER if t in tiers]
+    assert tiers[0] == "canonical"
+    # No strategy lost: grouped members sum to the flat list.
+    total = sum(g["count"] for g in groups)
+    assert total == len(strategy_registry.list_available())
+    for g in groups:
+        assert g["count"] == len(g["strategies"]) > 0
 
 
 def test_canonical_set_is_twelve():
