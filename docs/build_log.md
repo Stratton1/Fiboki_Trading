@@ -321,3 +321,9 @@ from rate limiting; re-run throttled to confirm which truly need epic work).
 - Found the existing declarative factory (strategies/factory: spec/primitives/compiler) — the 25 families will be specs, not hand-coded files.
 - docs/STRATEGY_FACTORY_GEN1_AUDIT.md: existing indicators/primitives/strategies, 25-family coverage map (~6 buildable now, ~13 indicators + ~19 primitives missing), volume caveat, build plan, first-run recommendation.
 - Also: crypto hidden from the platform listing (FCA/no venue) + tests updated.
+
+## 2026-06-20 — Strategy Factory Phase 2: indicator foundation
+- Added 13 centralised indicators (closed-candle, no look-ahead): MACD, Stochastic, CCI, ROC (oscillators.py); Bollinger, Donchian, Keltner (channels.py); ADX, ParabolicSAR (trend.py); VWAP, VolumeMA, OBV (volume.py, volume-degrading); PivotPoints (pivots.py).
+- Registered SMA/EMA/RSI + all 13 in the indicator registry (now 25 indicators).
+- tests/test_factory_indicators.py: column/range/ordering sanity, registry presence, VWAP graceful degradation without volume, and a no-look-ahead parametrized test (MACD/Bollinger/PSAR/ADX). 15 passed; ruff clean.
+- Volume caveat: VWAP/OBV/VolumeMA degrade gracefully on FX (no true volume) and feed research_limited strategies only.

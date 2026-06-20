@@ -3,15 +3,25 @@
 from fibokei.indicators.atr import ATR
 from fibokei.indicators.base import Indicator
 from fibokei.indicators.candles import CandlestickPatterns
+from fibokei.indicators.channels import (
+    BollingerBands,
+    DonchianChannels,
+    KeltnerChannels,
+)
 from fibokei.indicators.fibonacci import (
     FibonacciExtension,
     FibonacciRetracement,
     FibonacciTimeZones,
 )
 from fibokei.indicators.ichimoku import IchimokuCloud
+from fibokei.indicators.moving_averages import EMA, RSI, SMA
+from fibokei.indicators.oscillators import CCI, MACD, ROC, Stochastic
+from fibokei.indicators.pivots import PivotPoints
 from fibokei.indicators.regime import MarketRegime
 from fibokei.indicators.swing import SwingDetector
+from fibokei.indicators.trend import ADX, ParabolicSAR
 from fibokei.indicators.volatility import RollingVolatility
+from fibokei.indicators.volume import OBV, VWAP, VolumeMA
 
 
 class IndicatorRegistry:
@@ -47,3 +57,25 @@ registry.register(FibonacciRetracement)
 registry.register(FibonacciExtension)
 registry.register(FibonacciTimeZones)
 registry.register(RollingVolatility)
+# Moving averages (Strategy Factory Gen-1 foundation)
+registry.register(SMA)
+registry.register(EMA)
+registry.register(RSI)
+# Oscillators
+registry.register(MACD)
+registry.register(Stochastic)
+registry.register(CCI)
+registry.register(ROC)
+# Channels / bands
+registry.register(BollingerBands)
+registry.register(DonchianChannels)
+registry.register(KeltnerChannels)
+# Trend
+registry.register(ADX)
+registry.register(ParabolicSAR)
+# Volume
+registry.register(VWAP)
+registry.register(VolumeMA)
+registry.register(OBV)
+# Pivots
+registry.register(PivotPoints)
