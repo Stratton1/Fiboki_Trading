@@ -327,3 +327,7 @@ from rate limiting; re-run throttled to confirm which truly need epic work).
 - Registered SMA/EMA/RSI + all 13 in the indicator registry (now 25 indicators).
 - tests/test_factory_indicators.py: column/range/ordering sanity, registry presence, VWAP graceful degradation without volume, and a no-look-ahead parametrized test (MACD/Bollinger/PSAR/ADX). 15 passed; ruff clean.
 - Volume caveat: VWAP/OBV/VolumeMA degrade gracefully on FX (no true volume) and feed research_limited strategies only.
+
+## 2026-06-20 — Strategy Factory Phase 3: primitives
+- Added 19 composable rule primitives (closed-candle, no look-ahead, each declaring its indicator factory): sma_cross, price_vs_sma, macd_cross, macd_zero, stoch_threshold, bb_revert, bb_breakout, atr_breakout, adx_filter, donchian_breakout, keltner_breakout, psar_flip, cci_threshold, roc_threshold, pivot_bounce, sr_breakout, sr_bounce, vwap_bias, obv_confirm. PRIMITIVES now 29.
+- tests/test_factory_primitives.py: every primitive builds its indicators + returns bool both directions; new primitives look-ahead safe; count/coverage check. 58 passed (with existing factory tests); ruff clean.

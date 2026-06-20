@@ -164,6 +164,187 @@ def session_window(df, idx, params, direction) -> bool:
     return hour >= start or hour < end  # overnight window
 
 
+# ── Strategy Factory Gen-1 primitives ─────────────────────────────
+
+
+def sma_cross(df, idx, params, direction) -> bool:
+    fast, slow = int(params.get("fast", 10)), int(params.get("slow", 30))
+    if idx < 1:
+        return False
+    f0, s0 = _col(df, f"sma_{fast}", idx - 1), _col(df, f"sma_{slow}", idx - 1)
+    f1, s1 = _col(df, f"sma_{fast}", idx), _col(df, f"sma_{slow}", idx)
+    if any(pd.isna(v) for v in (f0, s0, f1, s1)):
+        return False
+    return (f0 <= s0 and f1 > s1) if direction == "long" else (f0 >= s0 and f1 < s1)
+
+
+def price_vs_sma(df, idx, params, direction) -> bool:
+    val = _col(df, f"sma_{int(params.get('period', 50))}", idx)
+    if pd.isna(val):
+        return False
+    close = _col(df, "close", idx)
+    return close > val if direction == "long" else close < val
+
+
+def macd_cross(df, idx, params, direction) -> bool:
+    if idx < 1:
+        return False
+    m0, s0 = _col(df, "macd_line", idx - 1), _col(df, "macd_signal", idx - 1)
+    m1, s1 = _col(df, "macd_line", idx), _col(df, "macd_signal", idx)
+    if any(pd.isna(v) for v in (m0, s0, m1, s1)):
+        return False
+    return (m0 <= s0 and m1 > s1) if direction == "long" else (m0 >= s0 and m1 < s1)
+
+
+def macd_zero(df, idx, params, direction) -> bool:
+    val = _col(df, "macd_line", idx)
+    if pd.isna(val):
+        return False
+    return val > 0 if direction == "long" else val < 0
+
+
+def stoch_threshold(df, idx, params, direction) -> bool:
+    k = _col(df, "stoch_k", idx)
+    if pd.isna(k):
+        return False
+    oversold = float(params.get("oversold", 20.0))
+    overbought = float(params.get("overbought", 80.0))
+    return k <= oversold if direction == "long" else k >= overbought
+
+
+def bb_revert(df, idx, params, direction) -> bool:
+    close = _col(df, "close", idx)
+    lower, upper = _col(df, "bb_lower", idx), _col(df, "bb_upper", idx)
+    if any(pd.isna(v) for v in (close, lower, upper)):
+        return False
+    return close <= lower if direction == "long" else close >= upper
+
+
+def bb_breakout(df, idx, params, direction) -> bool:
+    close = _col(df, "close", idx)
+    upper, lower = _col(df, "bb_upper", idx), _col(df, "bb_lower", idx)
+    if any(pd.isna(v) for v in (close, upper, lower)):
+        return False
+    return close > upper if direction == "long" else close < lower
+
+
+def atr_breakout(df, idx, params, direction) -> bool:
+    if idx < 1:
+        return False
+    atr, close, prev = _col(df, "atr", idx), _col(df, "close", idx), _col(df, "close", idx - 1)
+    if any(pd.isna(v) for v in (atr, close, prev)):
+        return False
+    mult = float(params.get("mult", 1.0))
+    return close > prev + mult * atr if direction == "long" else close < prev - mult * atr
+
+
+def adx_filter(df, idx, params, direction) -> bool:
+    period = int(params.get("period", 14))
+    adx = _col(df, f"adx_{period}", idx)
+    pdi, mdi = _col(df, "plus_di", idx), _col(df, "minus_di", idx)
+    if any(pd.isna(v) for v in (adx, pdi, mdi)):
+        return False
+    if adx < float(params.get("threshold", 25.0)):
+        return False
+    return pdi > mdi if direction == "long" else mdi > pdi
+
+
+def donchian_breakout(df, idx, params, direction) -> bool:
+    if idx < 1:
+        return False
+    close = _col(df, "close", idx)
+    up, lo = _col(df, "donchian_upper", idx - 1), _col(df, "donchian_lower", idx - 1)
+    if any(pd.isna(v) for v in (close, up, lo)):
+        return False
+    return close > up if direction == "long" else close < lo
+
+
+def keltner_breakout(df, idx, params, direction) -> bool:
+    close, up, lo = _col(df, "close", idx), _col(df, "kc_upper", idx), _col(df, "kc_lower", idx)
+    if any(pd.isna(v) for v in (close, up, lo)):
+        return False
+    return close > up if direction == "long" else close < lo
+
+
+def psar_flip(df, idx, params, direction) -> bool:
+    if idx < 1:
+        return False
+    t0, t1 = _col(df, "psar_trend", idx - 1), _col(df, "psar_trend", idx)
+    if any(pd.isna(v) for v in (t0, t1)):
+        return False
+    return (t0 <= 0 and t1 > 0) if direction == "long" else (t0 >= 0 and t1 < 0)
+
+
+def cci_threshold(df, idx, params, direction) -> bool:
+    val = _col(df, f"cci_{int(params.get('period', 20))}", idx)
+    if pd.isna(val):
+        return False
+    level = float(params.get("level", 100.0))
+    return val <= -level if direction == "long" else val >= level
+
+
+def roc_threshold(df, idx, params, direction) -> bool:
+    val = _col(df, f"roc_{int(params.get('period', 10))}", idx)
+    if pd.isna(val):
+        return False
+    level = float(params.get("level", 0.0))
+    return val >= level if direction == "long" else val <= -level
+
+
+def pivot_bounce(df, idx, params, direction) -> bool:
+    close, s1, r1 = _col(df, "close", idx), _col(df, "pivot_s1", idx), _col(df, "pivot_r1", idx)
+    low, high = _col(df, "low", idx), _col(df, "high", idx)
+    if any(pd.isna(v) for v in (close, s1, r1, low, high)):
+        return False
+    tol = float(params.get("tol", 0.001))
+    if direction == "long":
+        return low <= s1 * (1 + tol) and close > s1
+    return high >= r1 * (1 - tol) and close < r1
+
+
+def sr_breakout(df, idx, params, direction) -> bool:
+    """Break of recent N-bar high/low (S/R via rolling extremes)."""
+    if idx < 1:
+        return False
+    close = _col(df, "close", idx)
+    up, lo = _col(df, "donchian_upper", idx - 1), _col(df, "donchian_lower", idx - 1)
+    if any(pd.isna(v) for v in (close, up, lo)):
+        return False
+    return close > up if direction == "long" else close < lo
+
+
+def sr_bounce(df, idx, params, direction) -> bool:
+    """Bounce off recent support (long) / resistance (short)."""
+    if idx < 1:
+        return False
+    close, low, high = _col(df, "close", idx), _col(df, "low", idx), _col(df, "high", idx)
+    lo, up = _col(df, "donchian_lower", idx - 1), _col(df, "donchian_upper", idx - 1)
+    if any(pd.isna(v) for v in (close, low, high, lo, up)):
+        return False
+    tol = float(params.get("tol", 0.001))
+    if direction == "long":
+        return low <= lo * (1 + tol) and close > lo
+    return high >= up * (1 - tol) and close < up
+
+
+def vwap_bias(df, idx, params, direction) -> bool:
+    val = _col(df, f"vwap_{int(params.get('period', 20))}", idx)
+    if pd.isna(val):
+        return False
+    close = _col(df, "close", idx)
+    return close > val if direction == "long" else close < val
+
+
+def obv_confirm(df, idx, params, direction) -> bool:
+    n = int(params.get("lookback", 5))
+    if idx < n:
+        return False
+    cur, past = _col(df, "obv", idx), _col(df, "obv", idx - n)
+    if any(pd.isna(v) for v in (cur, past)):
+        return False
+    return cur > past if direction == "long" else cur < past
+
+
 # ── Registry ──────────────────────────────────────────────────────
 
 
@@ -197,6 +378,92 @@ def _rsi_req(params: dict):
     return RSI(period=int(params.get("period", 14)))
 
 
+def _sma_req_fast(params: dict):
+    from fibokei.indicators.moving_averages import SMA
+    return SMA(period=int(params.get("fast", 10)))
+
+
+def _sma_req_slow(params: dict):
+    from fibokei.indicators.moving_averages import SMA
+    return SMA(period=int(params.get("slow", 30)))
+
+
+def _sma_req_single(params: dict):
+    from fibokei.indicators.moving_averages import SMA
+    return SMA(period=int(params.get("period", 50)))
+
+
+def _macd_req(params: dict):
+    from fibokei.indicators.oscillators import MACD
+    return MACD(
+        fast=int(params.get("fast", 12)),
+        slow=int(params.get("slow", 26)),
+        signal=int(params.get("signal", 9)),
+    )
+
+
+def _stoch_req(params: dict):
+    from fibokei.indicators.oscillators import Stochastic
+    return Stochastic(
+        k_period=int(params.get("k_period", 14)),
+        smooth=int(params.get("smooth", 3)),
+        d_period=int(params.get("d_period", 3)),
+    )
+
+
+def _bb_req(params: dict):
+    from fibokei.indicators.channels import BollingerBands
+    return BollingerBands(
+        period=int(params.get("period", 20)),
+        num_std=float(params.get("num_std", 2.0)),
+    )
+
+
+def _adx_req(params: dict):
+    from fibokei.indicators.trend import ADX
+    return ADX(period=int(params.get("period", 14)))
+
+
+def _donchian_req(params: dict):
+    from fibokei.indicators.channels import DonchianChannels
+    return DonchianChannels(period=int(params.get("period", 20)))
+
+
+def _keltner_req(params: dict):
+    from fibokei.indicators.channels import KeltnerChannels
+    return KeltnerChannels()
+
+
+def _psar_req(params: dict):
+    from fibokei.indicators.trend import ParabolicSAR
+    return ParabolicSAR()
+
+
+def _cci_req(params: dict):
+    from fibokei.indicators.oscillators import CCI
+    return CCI(period=int(params.get("period", 20)))
+
+
+def _roc_req(params: dict):
+    from fibokei.indicators.oscillators import ROC
+    return ROC(period=int(params.get("period", 10)))
+
+
+def _pivot_req(params: dict):
+    from fibokei.indicators.pivots import PivotPoints
+    return PivotPoints()
+
+
+def _vwap_req(params: dict):
+    from fibokei.indicators.volume import VWAP
+    return VWAP(period=int(params.get("period", 20)))
+
+
+def _obv_req(params: dict):
+    from fibokei.indicators.volume import OBV
+    return OBV()
+
+
 PRIMITIVES: dict[str, Primitive] = {
     p.name: p
     for p in [
@@ -225,6 +492,47 @@ PRIMITIVES: dict[str, Primitive] = {
                   "N consecutive directional closes"),
         Primitive("session_window", session_window,
                   "UTC trading-session window"),
+        # ── Gen-1 traditional primitives ──
+        Primitive("sma_cross", sma_cross, "Fast SMA crossed slow SMA",
+                  requires=(_sma_req_fast, _sma_req_slow)),
+        Primitive("price_vs_sma", price_vs_sma, "Close above/below an SMA",
+                  requires=(_sma_req_single,)),
+        Primitive("macd_cross", macd_cross, "MACD line crossed signal",
+                  requires=(_macd_req,)),
+        Primitive("macd_zero", macd_zero, "MACD line above/below zero",
+                  requires=(_macd_req,)),
+        Primitive("stoch_threshold", stoch_threshold,
+                  "Stochastic oversold/overbought", requires=(_stoch_req,)),
+        Primitive("bb_revert", bb_revert, "Bollinger mean-reversion",
+                  requires=(_bb_req,)),
+        Primitive("bb_breakout", bb_breakout, "Bollinger band breakout",
+                  requires=(_bb_req,)),
+        Primitive("atr_breakout", atr_breakout, "ATR volatility breakout",
+                  requires=(_atr_req,)),
+        Primitive("adx_filter", adx_filter, "ADX trend strength + direction",
+                  requires=(_adx_req,)),
+        Primitive("donchian_breakout", donchian_breakout,
+                  "Donchian channel breakout", requires=(_donchian_req,)),
+        Primitive("keltner_breakout", keltner_breakout,
+                  "Keltner channel breakout", requires=(_keltner_req,)),
+        Primitive("psar_flip", psar_flip, "Parabolic SAR trend flip",
+                  requires=(_psar_req,)),
+        Primitive("cci_threshold", cci_threshold,
+                  "CCI mean-reversion threshold", requires=(_cci_req,)),
+        Primitive("roc_threshold", roc_threshold, "ROC momentum threshold",
+                  requires=(_roc_req,)),
+        Primitive("pivot_bounce", pivot_bounce, "Pivot S1/R1 bounce",
+                  requires=(_pivot_req,)),
+        Primitive("sr_breakout", sr_breakout,
+                  "Support/resistance breakout (rolling extremes)",
+                  requires=(_donchian_req,)),
+        Primitive("sr_bounce", sr_bounce,
+                  "Support/resistance bounce (rolling extremes)",
+                  requires=(_donchian_req,)),
+        Primitive("vwap_bias", vwap_bias, "Close vs VWAP bias",
+                  requires=(_vwap_req,)),
+        Primitive("obv_confirm", obv_confirm, "OBV slope confirmation",
+                  requires=(_obv_req,)),
     ]
 }
 
