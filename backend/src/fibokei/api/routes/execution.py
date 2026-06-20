@@ -1208,3 +1208,71 @@ def get_ig_positions(user: TokenData = Depends(get_current_user)):
         return IGPositionsResponse(
             configured=True, reachable=False, error=f"Unexpected error: {e}"
         )
+
+
+# ── IG market navigation (discover the full tradable universe) ──────────────
+
+
+class IGMarketNavResponse(BaseModel):
+    configured: bool
+    reachable: bool
+    node: str | None = None
+    nodes: list[dict] = []      # child categories: {id, name}
+    markets: list[dict] = []    # tradable markets: {epic, name, type, expiry, status}
+    error: str | None = None
+
+
+@router.get("/execution/ig-market-nav", response_model=IGMarketNavResponse)
+def get_ig_market_nav(
+    node: str | None = None,
+    user: TokenData = Depends(get_current_user),
+):
+    """Browse IG's market hierarchy for this account (read-only).
+
+    Without ``node`` returns top-level categories; with a node id returns its
+    child categories and/or markets. Lets us discover every instrument IG
+    actually offers on this account so the catalogue can be expanded
+    deliberately. Needs IG credentials.
+    """
+    import os
+
+    from fibokei.execution.ig_client import IGClientError
+
+    configured = bool(
+        os.environ.get("FIBOKEI_IG_API_KEY")
+        and os.environ.get("FIBOKEI_IG_USERNAME")
+        and os.environ.get("FIBOKEI_IG_PASSWORD")
+    )
+    if not configured:
+        return IGMarketNavResponse(
+            configured=False, reachable=False, error="IG credentials not configured."
+        )
+    try:
+        client = _get_ig_health_client()
+        client.ensure_session()
+        data = client.get_market_navigation(node)
+        nodes = [
+            {"id": n.get("id"), "name": n.get("name")}
+            for n in (data.get("nodes") or [])
+        ]
+        markets = [
+            {
+                "epic": m.get("epic"),
+                "name": m.get("instrumentName"),
+                "type": m.get("instrumentType"),
+                "expiry": m.get("expiry"),
+                "status": m.get("marketStatus"),
+            }
+            for m in (data.get("markets") or [])
+        ]
+        return IGMarketNavResponse(
+            configured=True, reachable=True, node=node, nodes=nodes, markets=markets
+        )
+    except IGClientError as e:
+        global _ig_health_client
+        _ig_health_client = None
+        return IGMarketNavResponse(configured=True, reachable=False, error=str(e))
+    except Exception as e:
+        return IGMarketNavResponse(
+            configured=True, reachable=False, error=f"Unexpected error: {e}"
+        )

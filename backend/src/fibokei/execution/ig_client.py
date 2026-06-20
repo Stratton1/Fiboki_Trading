@@ -417,6 +417,17 @@ class IGClient:
         )
         return result.get("markets", []) or []
 
+    def get_market_navigation(self, node_id: str | None = None) -> dict:
+        """Browse IG's market hierarchy for this account.
+
+        Without ``node_id`` returns top-level categories. With a node id,
+        returns that node's child nodes and/or its markets (epic,
+        instrumentName, instrumentType, expiry, marketStatus). Used to
+        discover the full tradable universe available to this account.
+        """
+        path = "/marketnavigation" if node_id is None else f"/marketnavigation/{node_id}"
+        return self._request("GET", path, version="1")
+
     def close(self) -> None:
         """Close the HTTP client."""
         self._http.close()
