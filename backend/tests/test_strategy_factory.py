@@ -302,19 +302,40 @@ class TestIndicatorCoverage:
 
 
 class TestRegistryIsolation:
-    """Factory strategies must not silently leak into the production
-    registry — only the 21 hand-coded bots should be there."""
+    """Factory strategies in the global registry must be *deliberate and
+    tiered* — only the curated traditional_gen1/hybrid_gen1 families (Phase 4+),
+    never an untiered or ad-hoc compiled spec leaking in unclassified."""
 
-    def test_factory_strategy_not_in_global_registry(self):
+    def test_registered_factory_strategies_are_tiered(self):
+        from fibokei.strategies.registry import (
+            classify_strategy,
+            strategy_registry,
+        )
+
+        for sid, cls in strategy_registry._strategies.items():
+            if not issubclass(cls, CompiledStrategy):
+                continue
+            # Every registered factory strategy must use a factory id and a
+            # curated tier — never 'experimental' (that would be a silent leak).
+            assert sid.startswith("factory_"), (
+                f"CompiledStrategy {sid} registered without a factory id"
+            )
+            assert classify_strategy(sid) in ("traditional_gen1", "hybrid_gen1"), (
+                f"Factory strategy {sid} leaked in untiered/unclassified"
+            )
+
+    def test_ad_hoc_compiled_spec_is_not_auto_registered(self):
+        """Compiling a one-off spec must not register it globally."""
+        from fibokei.strategies.factory.spec import RuleSpec, StrategySpec
         from fibokei.strategies.registry import strategy_registry
 
-        # No CompiledStrategy class should be registered.
-        for sid, cls in strategy_registry._strategies.items():
-            assert not issubclass(cls, CompiledStrategy), (
-                f"Factory strategy {sid} leaked into global registry"
-            )
-        # And no factory_ prefix should appear.
-        assert not any(sid.startswith("factory_") for sid in strategy_registry._strategies)
+        spec = StrategySpec(
+            spec_id="adhoc_isolation_probe",
+            name="Ad-hoc Probe",
+            entry_rules=[RuleSpec(primitive="price_vs_ema", params={"period": 50})],
+        )
+        strat = compile_spec(spec)
+        assert strat.strategy_id not in strategy_registry._strategies
 
 
 class TestIndicatorKnownValues:

@@ -50,13 +50,35 @@ CANONICAL_STRATEGY_IDS = frozenset({
 })
 
 
-def classify_strategy(strategy_id: str) -> str:
-    """Return the tier for a strategy id: 'canonical' or 'experimental'.
+# Strategy Factory tiers are identified by the compiled id prefix
+# (``factory_{spec_id}_v{n}``) so classification never drifts from the spec.
+TIER_CANONICAL = "canonical"
+TIER_TRADITIONAL_GEN1 = "traditional_gen1"
+TIER_HYBRID_GEN1 = "hybrid_gen1"
+TIER_EXPERIMENTAL = "experimental"
 
-    Future tiers ('factory_generated', 'disabled') will be added when the
-    Autonomous Strategy Lab and a disable flag exist.
+# All non-canonical tiers a strategy can fall into, in display order.
+NON_CANONICAL_TIERS = (
+    TIER_TRADITIONAL_GEN1,
+    TIER_HYBRID_GEN1,
+    TIER_EXPERIMENTAL,
+)
+
+
+def classify_strategy(strategy_id: str) -> str:
+    """Return the tier for a strategy id.
+
+    Tiers: 'canonical' (the 12 hand-coded blueprints), 'traditional_gen1' and
+    'hybrid_gen1' (Strategy Factory specs, identified by id prefix), and
+    'experimental' (everything else, e.g. the extended bot13/15-22 set).
     """
-    return "canonical" if strategy_id in CANONICAL_STRATEGY_IDS else "experimental"
+    if strategy_id in CANONICAL_STRATEGY_IDS:
+        return TIER_CANONICAL
+    if strategy_id.startswith("factory_trad_"):
+        return TIER_TRADITIONAL_GEN1
+    if strategy_id.startswith("factory_hyb_"):
+        return TIER_HYBRID_GEN1
+    return TIER_EXPERIMENTAL
 
 
 class StrategyRegistry:
@@ -128,8 +150,14 @@ class StrategyRegistry:
         except OSError:
             file_prefixes = set()
 
-        canonical = [s for s in registered_ids if classify_strategy(s) == "canonical"]
-        experimental = [s for s in registered_ids if classify_strategy(s) == "experimental"]
+        by_tier: dict[str, list[str]] = {TIER_CANONICAL: [], TIER_EXPERIMENTAL: []}
+        for tier in NON_CANONICAL_TIERS:
+            by_tier.setdefault(tier, [])
+        for sid in registered_ids:
+            by_tier.setdefault(classify_strategy(sid), []).append(sid)
+
+        canonical = by_tier[TIER_CANONICAL]
+        experimental = by_tier[TIER_EXPERIMENTAL]
         unregistered = sorted(file_prefixes - registered_prefixes)
 
         return {
@@ -137,8 +165,11 @@ class StrategyRegistry:
             "file_count": len(file_prefixes),
             "canonical_count": len(canonical),
             "experimental_count": len(experimental),
+            "traditional_gen1_count": len(by_tier[TIER_TRADITIONAL_GEN1]),
+            "hybrid_gen1_count": len(by_tier[TIER_HYBRID_GEN1]),
+            "tier_counts": {t: len(ids) for t, ids in by_tier.items()},
             "expected_min": EXPECTED_MIN_STRATEGIES,
-            "by_tier": {"canonical": canonical, "experimental": experimental},
+            "by_tier": by_tier,
             "unregistered_files": unregistered,
             "healthy": (
                 len(registered_ids) >= EXPECTED_MIN_STRATEGIES
@@ -170,3 +201,11 @@ strategy_registry.register(FibBBExhaustion)
 strategy_registry.register(GoldenPocketDivergence)
 strategy_registry.register(FibArcBreakout)
 strategy_registry.register(FibVolumeConfluence)
+
+# Strategy Factory — traditional Gen-1 families (25 declarative specs compiled
+# into the common Strategy interface). Research-tier: registered + backtestable,
+# never auto-promoted. Imported here (not at top) to avoid a circular import
+# (traditional.gen1 imports the factory compiler, which imports strategies.base).
+from fibokei.strategies.traditional import register_gen1  # noqa: E402
+
+register_gen1(strategy_registry)
