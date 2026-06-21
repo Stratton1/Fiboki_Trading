@@ -69,6 +69,18 @@ class ComboResult:
     status: str = "ok"
     entries: list[str] = field(default_factory=list)
 
+    def to_stats(self) -> dict:
+        """Full stat set persisted to the ledger (stats_json) for review."""
+        return {
+            "trades": self.trades, "composite": self.composite,
+            "sharpe": self.sharpe, "profit_factor": self.profit_factor,
+            "max_dd": self.max_dd, "net_profit": self.net_profit,
+            "wf_test_score": self.wf_test_score, "oos_score": self.oos_score,
+            "oos_robust": self.oos_robust, "mc_profit_prob": self.mc_profit_prob,
+            "mc_ruin_prob": self.mc_ruin_prob, "sens_stable": self.sens_stable,
+            "cost_net": self.cost_net, "rung_failed": self.rung_failed,
+        }
+
 
 def _bt(strategy_id, df, instrument, tf, config, scoring):
     strat = strategy_registry.get(strategy_id)

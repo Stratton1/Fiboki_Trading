@@ -283,9 +283,13 @@ def main() -> None:
                 "instrument": c.instrument, "timeframe": c.timeframe,
                 "research_run_id": run_id, "approval_status": "pending",
                 "reason": c.rung_failed or "passed all robustness rungs",
-                "stats_json": {"composite": c.composite, "sharpe": c.sharpe,
-                               "oos_score": c.oos_score, "wf": c.wf_test_score,
-                               "mc_profit_prob": c.mc_profit_prob}})
+                "stats_json": {
+                    "composite": c.composite, "sharpe": c.sharpe,
+                    "profit_factor": c.profit_factor, "max_dd": c.max_dd,
+                    "net_profit": c.net_profit, "trades": c.trades,
+                    "wf_test_score": c.wf_test_score, "oos_score": c.oos_score,
+                    "oos_robust": c.oos_robust, "mc_profit_prob": c.mc_profit_prob,
+                    "mc_ruin_prob": c.mc_ruin_prob, "cost_net": c.cost_net}})
         if c.rung_failed:
             rung_counts[c.rung_failed] = rung_counts.get(c.rung_failed, 0) + 1
         else:

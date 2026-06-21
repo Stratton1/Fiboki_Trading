@@ -164,7 +164,7 @@ def main() -> None:
                         "approval_status": "pending",
                         "risk_decision": c.recommended_state,
                         "reason": c.rung_failed or "passed all robustness rungs",
-                        "stats_json": {"composite": c.composite, "sharpe": c.sharpe}})
+                        "stats_json": c.to_stats()})
             append_checkpoint(ckpt, c)
     print(f"Phase 2 candidate done: survivors={survivors}", flush=True)
 

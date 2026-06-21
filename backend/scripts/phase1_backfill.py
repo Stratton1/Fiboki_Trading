@@ -143,9 +143,7 @@ def main() -> None:
                     "approval_status": "pending",
                     "risk_decision": c.recommended_state,
                     "reason": c.rung_failed or "passed all robustness rungs",
-                    "stats_json": {"composite": c.composite, "sharpe": c.sharpe,
-                                   "oos_score": c.oos_score,
-                                   "mc_profit_prob": c.mc_profit_prob}})
+                    "stats_json": c.to_stats()})
         append_checkpoint(ckpt, c)
         processed += 1
         if processed % 25 == 0:

@@ -59,6 +59,38 @@ def test_funnel_counts(api_client, auth_headers):
     assert f["total_ledgered"] >= f["validated"]
 
 
+def test_demo_ready_flag(api_client, auth_headers):
+    # A strong paper_candidate that clears the demo bar.
+    _mk(api_client, auth_headers, instrument="USDCHF",
+        stats_json={"sharpe": 1.6, "composite": 0.6, "oos_score": 0.45,
+                    "oos_robust": True, "profit_factor": 1.4, "max_dd": 8.0,
+                    "mc_profit_prob": 0.85, "mc_ruin_prob": 0.0, "trades": 120})
+    # A weak one (low PF, high DD) — passed ladder but not demo-ready.
+    _mk(api_client, auth_headers, instrument="GBPUSD",
+        stats_json={"sharpe": 1.1, "composite": 0.4, "oos_score": 0.3,
+                    "oos_robust": True, "profit_factor": 1.05, "max_dd": 28.0,
+                    "mc_profit_prob": 0.72, "mc_ruin_prob": 0.0, "trades": 90})
+    data = api_client.get(f"{API}/research/candidates", headers=auth_headers).json()
+    by_inst = {c["instrument"]: c for c in data}
+    assert by_inst["USDCHF"]["demo_ready"] is True
+    assert by_inst["GBPUSD"]["demo_ready"] is False
+    assert by_inst["USDCHF"]["profit_factor"] == 1.4
+
+
+def test_by_strategy_rollup(api_client, auth_headers):
+    _mk(api_client, auth_headers, strategy_id="factory_trad_macd_cross_v1",
+        instrument="EURUSD", stats_json={"sharpe": 1.2, "composite": 0.5})
+    _mk(api_client, auth_headers, strategy_id="factory_trad_macd_cross_v1",
+        instrument="USDJPY", stats_json={"sharpe": 2.1, "composite": 0.6})
+    r = api_client.get(f"{API}/research/candidates/by-strategy", headers=auth_headers)
+    assert r.status_code == 200
+    roll = {s["strategy_id"]: s for s in r.json()}
+    macd = roll["factory_trad_macd_cross_v1"]
+    assert macd["combos"] >= 2
+    assert macd["best_combo"]["instrument"] == "USDJPY"  # higher Sharpe wins
+    assert macd["best_sharpe"] == 2.1
+
+
 def test_approve_is_gated_403(api_client, auth_headers):
     c = _mk(api_client, auth_headers)
     r = api_client.post(f"{API}/research/candidates/{c['event_id']}/approve",

@@ -1114,11 +1114,39 @@ class CandidateResponse(_BaseModel):
     recommended_state: str | None   # paper_candidate | research_watchlist
     composite: float | None
     sharpe: float | None
+    profit_factor: float | None
+    max_dd: float | None
+    net_profit: float | None
+    trades: int | None
+    wf_test_score: float | None
     oos_score: float | None
+    oos_robust: bool | None
     mc_profit_prob: float | None
+    mc_ruin_prob: float | None
+    cost_net: float | None
+    demo_ready: bool
     research_run_id: str | None
     approval_status: str | None
     created_at: str
+
+
+# Stronger bar than "passed the ladder" — a clear promote-to-demo signal.
+def _is_demo_ready(stats: dict, recommended_state: str | None) -> bool:
+    if recommended_state != "paper_candidate":
+        return False
+    pf = stats.get("profit_factor")
+    dd = stats.get("max_dd")
+    sh = stats.get("sharpe")
+    ruin = stats.get("mc_ruin_prob")
+    tr = stats.get("trades")
+    return bool(
+        (tr is None or tr >= 80)
+        and stats.get("oos_robust", False)
+        and (pf is not None and pf >= 1.2)
+        and (dd is not None and dd <= 20.0)
+        and (sh is not None and sh >= 1.0)
+        and (ruin is None or ruin <= 0.05)
+    )
 
 
 class FunnelResponse(_BaseModel):
@@ -1163,8 +1191,15 @@ def list_candidates(
             instrument=r.instrument, timeframe=r.timeframe,
             recommended_state=r.risk_decision,
             composite=_stat(stats, "composite"), sharpe=_stat(stats, "sharpe"),
+            profit_factor=_stat(stats, "profit_factor"), max_dd=_stat(stats, "max_dd"),
+            net_profit=_stat(stats, "net_profit"),
+            trades=int(stats["trades"]) if stats.get("trades") is not None else None,
+            wf_test_score=_stat(stats, "wf_test_score"),
             oos_score=_stat(stats, "oos_score"),
+            oos_robust=bool(stats["oos_robust"]) if "oos_robust" in stats else None,
             mc_profit_prob=_stat(stats, "mc_profit_prob"),
+            mc_ruin_prob=_stat(stats, "mc_ruin_prob"), cost_net=_stat(stats, "cost_net"),
+            demo_ready=_is_demo_ready(stats, r.risk_decision),
             research_run_id=r.research_run_id, approval_status=r.approval_status,
             created_at=r.created_at.isoformat(),
         )
@@ -1178,6 +1213,73 @@ def list_candidates(
             continue
         out.append(rec)
     out.sort(key=lambda c: (c.sharpe if c.sharpe is not None else -999), reverse=True)
+    return out
+
+
+class StrategyComboStat(_BaseModel):
+    instrument: str | None
+    timeframe: str | None
+    sharpe: float | None
+    composite: float | None
+    max_dd: float | None
+    profit_factor: float | None
+    recommended_state: str | None
+    demo_ready: bool
+
+
+class StrategyRollupResponse(_BaseModel):
+    strategy_id: str
+    tier: str
+    combos: int                # how many combos of this strategy passed the ladder
+    demo_ready_combos: int
+    best_sharpe: float | None
+    best_combo: StrategyComboStat | None
+    all_combos: list[StrategyComboStat]
+
+
+@router.get("/research/candidates/by-strategy",
+            response_model=list[StrategyRollupResponse])
+def candidates_by_strategy(
+    limit: int = Query(2000, ge=1, le=20000),
+    db: Session = Depends(get_db),
+    user: TokenData = Depends(get_current_user),
+):
+    """Per-strategy roll-up: for each bot, its best combo + how it did across the
+    instrument/timeframe grid. Answers 'which combo did each bot perform best on'."""
+    import json as _json
+
+    from fibokei.db import ledger_repository as _ledger
+    from fibokei.strategies.registry import classify_strategy
+
+    rows = _ledger.list_lifecycle_events(db, event_type="validated", limit=limit)
+    grouped: dict[str, list[StrategyComboStat]] = {}
+    for r in rows:
+        if not r.strategy_id:
+            continue
+        stats = {}
+        if r.stats_json:
+            stats = r.stats_json if isinstance(r.stats_json, dict) else _json.loads(r.stats_json)
+        grouped.setdefault(r.strategy_id, []).append(StrategyComboStat(
+            instrument=r.instrument, timeframe=r.timeframe,
+            sharpe=_stat(stats, "sharpe"), composite=_stat(stats, "composite"),
+            max_dd=_stat(stats, "max_dd"), profit_factor=_stat(stats, "profit_factor"),
+            recommended_state=r.risk_decision,
+            demo_ready=_is_demo_ready(stats, r.risk_decision),
+        ))
+
+    out: list[StrategyRollupResponse] = []
+    for sid, combos in grouped.items():
+        combos.sort(key=lambda c: (c.sharpe if c.sharpe is not None else -999),
+                    reverse=True)
+        best = combos[0] if combos else None
+        out.append(StrategyRollupResponse(
+            strategy_id=sid, tier=classify_strategy(sid), combos=len(combos),
+            demo_ready_combos=sum(1 for c in combos if c.demo_ready),
+            best_sharpe=best.sharpe if best else None, best_combo=best,
+            all_combos=combos,
+        ))
+    out.sort(key=lambda s: (s.best_sharpe if s.best_sharpe is not None else -999),
+             reverse=True)
     return out
 
 
