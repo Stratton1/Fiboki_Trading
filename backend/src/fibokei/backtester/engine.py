@@ -37,10 +37,14 @@ class Backtester:
         trades: list[TradeResult] = []
         equity_curve: list[float] = []
 
-        # Apply default spread if none configured
+        # Apply default spread if none configured. The realistic per-instrument
+        # default can be stress-scaled via spread_multiplier (e.g. 2.0 = double
+        # the normal spread) for cost-stress testing.
         effective_spread = self.config.spread_points
         if effective_spread == 0.0:
-            effective_spread = get_default_spread(instrument)
+            effective_spread = (
+                get_default_spread(instrument) * self.config.spread_multiplier
+            )
 
         # Determine warmup (skip indicator warmup bars)
         warmup = max(

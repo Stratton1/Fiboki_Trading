@@ -198,9 +198,9 @@ def process_combo(strategy_id, instrument, timeframe, *, config, cost_config,
         c.rung_failed = "oos"
         return c
 
-    # Rung 3: Monte Carlo
+    # Rung 3: Monte Carlo (moving-block bootstrap preserves autocorrelation)
     mc = run_monte_carlo(pnls, strategy_id, instrument, timeframe,
-                         initial_capital=config.initial_capital)
+                         initial_capital=config.initial_capital, block_size=5)
     c.mc_profit_prob = mc.profit_probability
     c.mc_ruin_prob = mc.ruin_probability
     if not (mc.robust and mc.ruin_probability <= 0.05):
@@ -281,9 +281,11 @@ def append_checkpoint(path: Path, c: ComboResult) -> None:
 
 
 def default_configs():
+    # Normal run uses realistic per-instrument default spreads (spread_points=0).
     config = BacktestConfig(initial_capital=10000.0)
-    cost_config = BacktestConfig(initial_capital=10000.0, spread_points=2.0,
-                                 slippage_points=1.0)
+    # Cost stress = 2x the realistic per-instrument spread (per asset class),
+    # NOT a flat absolute spread (which was meaningless across instruments).
+    cost_config = BacktestConfig(initial_capital=10000.0, spread_multiplier=2.0)
     return config, cost_config, ScoringConfig()
 
 

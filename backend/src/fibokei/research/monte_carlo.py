@@ -33,6 +33,23 @@ class MonteCarloResult:
     status: str = "ok"
 
 
+def _resample(rng, pnls, n: int, block_size: int):
+    """Bootstrap resample of length ``n``.
+
+    block_size == 1 → ordinary i.i.d. resampling. block_size > 1 → moving-block
+    bootstrap: contiguous blocks of trades are drawn, preserving short-run
+    autocorrelation (streaks/clusters) that single-trade resampling destroys —
+    i.i.d. resampling otherwise overstates robustness for serially-correlated
+    strategies.
+    """
+    if block_size <= 1 or len(pnls) <= block_size:
+        return rng.choice(pnls, size=n, replace=True)
+    n_blocks = int(np.ceil(n / block_size))
+    starts = rng.integers(0, len(pnls) - block_size + 1, size=n_blocks)
+    out = np.concatenate([pnls[s:s + block_size] for s in starts])
+    return out[:n]
+
+
 def run_monte_carlo(
     trade_pnls: list[float],
     strategy_id: str,
@@ -41,11 +58,13 @@ def run_monte_carlo(
     initial_capital: float = 10000.0,
     num_simulations: int = 1000,
     seed: int | None = 42,
+    block_size: int = 1,
 ) -> MonteCarloResult:
     """Run Monte Carlo analysis by bootstrap-resampling trade P&L sequences.
 
     For each simulation:
-    1. Resample trades with replacement (same count as original)
+    1. Resample trades (moving-block bootstrap when block_size > 1, preserving
+       autocorrelation; i.i.d. when block_size == 1)
     2. Compute cumulative equity curve
     3. Compute net profit and max drawdown
 
@@ -81,8 +100,8 @@ def run_monte_carlo(
     sim_drawdowns = np.empty(num_simulations)
 
     for i in range(num_simulations):
-        # Resample trades with replacement
-        sampled = rng.choice(pnls, size=n_trades, replace=True)
+        # Resample trades (block bootstrap preserves autocorrelation)
+        sampled = _resample(rng, pnls, n_trades, block_size)
         equity = initial_capital + np.cumsum(sampled)
         peak = np.maximum.accumulate(equity)
         dd_pct = (peak - equity) / peak * 100
