@@ -124,12 +124,17 @@ def _param_sensitivity(strategy_id, df, instrument, tf, config, scoring,
 
 def process_combo(strategy_id, instrument, timeframe, *, config, cost_config,
                   scoring, min_trades, specs,
-                  ladder_min_composite: float = 0.30) -> ComboResult:
-    """Sweep + full robustness ladder for one combo. Pure; writes nothing.
+                  ladder_min_composite: float = 0.30,
+                  run_ladder: bool = True) -> ComboResult:
+    """Sweep + (optionally) full robustness ladder for one combo. Writes nothing.
 
     Combos below ``ladder_min_composite`` are screened out cheaply *before* the
     expensive ladder (walk-forward etc.) so a full-grid backfill stays tractable
     — the ladder only ever runs on combos with a real in-sample edge.
+
+    ``run_ladder=False`` → ranking-only mode: sweep + score + record, no ladder.
+    Used for sub-hourly timeframes where the ladder (walk-forward over 25y of M1)
+    is computationally prohibitive; those are ranked for the record, not gated.
     """
     tier = classify_strategy(strategy_id)
     c = ComboResult(strategy_id=strategy_id, tier=tier, instrument=instrument,
@@ -160,6 +165,11 @@ def process_combo(strategy_id, instrument, timeframe, *, config, cost_config,
 
     if c.trades < min_trades:
         c.rung_failed = "min_trades"
+        return c
+
+    # Ranking-only mode (sub-hourly): recorded + ranked, never laddered/gated.
+    if not run_ladder:
+        c.rung_failed = "ranking_only"
         return c
 
     # Cheap pre-screen: don't ladder combos with no in-sample edge.

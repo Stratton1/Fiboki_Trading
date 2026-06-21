@@ -39,6 +39,9 @@ def main() -> None:
     ap.add_argument("--strategies", default="all")
     ap.add_argument("--instruments", default="all")
     ap.add_argument("--timeframes", default="H4,H1")
+    ap.add_argument("--ladder-timeframes", default="H1,H4",
+                    help="timeframes that get the full ladder; others are "
+                         "ranking-only (sub-hourly is too slow to ladder)")
     ap.add_argument("--min-trades", type=int, default=80)
     ap.add_argument("--batch-size", type=int, default=300,
                     help="max combos to process this invocation (0 = unlimited)")
@@ -61,6 +64,7 @@ def main() -> None:
                    if args.instruments == "all" and canon.exists()
                    else [s.strip().upper() for s in args.instruments.split(",")])
     timeframes = [t.strip() for t in args.timeframes.split(",")]
+    ladder_tfs = {t.strip() for t in args.ladder_timeframes.split(",")}
 
     # Full grid, deterministic order
     grid = [(s, i, tf) for s in strategies for i in instruments for tf in timeframes]
@@ -92,8 +96,10 @@ def main() -> None:
     limit = args.batch_size if args.batch_size > 0 else len(todo)
     processed = survivors = 0
     for (sid, inst, tf) in todo[:limit]:
+        run_ladder = tf in ladder_tfs
         c = process_combo(sid, inst, tf, config=config, cost_config=cost_config,
-                          scoring=scoring, min_trades=args.min_trades, specs=specs)
+                          scoring=scoring, min_trades=args.min_trades, specs=specs,
+                          run_ladder=run_ladder)
         if not c.rung_failed:  # passed all rungs → promotion gate
             d = evaluate_promotion(
                 strategy_id=sid, instrument=inst, timeframe=tf,
@@ -104,11 +110,18 @@ def main() -> None:
                 mc_ruin_probability=c.mc_ruin_prob)
             c.recommended_state = d.recommended_state
             survivors += 1
-        # Ledger (qualified combos only, to keep the ledger meaningful)
+        # Ledger qualified combos. Ranking-only (sub-hourly) → 'backtested';
+        # laddered → 'validated' (passed all rungs) or 'rejected'.
         if c.status == "ok" and c.rung_failed != "min_trades":
+            if c.rung_failed == "ranking_only":
+                event_type = "backtested"
+            elif not c.rung_failed:
+                event_type = "validated"
+            else:
+                event_type = "rejected"
             with Session() as s:
                 create_lifecycle_event(s, {
-                    "event_type": "validated" if not c.rung_failed else "rejected",
+                    "event_type": event_type,
                     "actor": "agent", "strategy_id": sid, "instrument": inst,
                     "timeframe": tf, "research_run_id": run_id,
                     "approval_status": "pending",
