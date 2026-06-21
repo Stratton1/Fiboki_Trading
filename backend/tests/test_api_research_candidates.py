@@ -91,12 +91,53 @@ def test_by_strategy_rollup(api_client, auth_headers):
     assert macd["best_sharpe"] == 2.1
 
 
-def test_approve_is_gated_403(api_client, auth_headers):
-    c = _mk(api_client, auth_headers)
+def test_approve_creates_paper_bot(api_client, auth_headers):
+    c = _mk(api_client, auth_headers, instrument="EURUSD",
+            stats_json={"sharpe": 1.5, "profit_factor": 1.4, "max_dd": 8.0,
+                        "oos_robust": True, "trades": 120})
     r = api_client.post(f"{API}/research/candidates/{c['event_id']}/approve",
                         headers=auth_headers)
-    assert r.status_code == 403
-    assert "not yet enabled" in r.json()["detail"].lower()
+    assert r.status_code == 200, r.text
+    body = r.json()
+    assert body["state"] == "monitoring"
+    assert body["strategy_id"] == "factory_trad_macd_cross_v1"
+    assert "no live" in body["message"].lower()
+    # It shows up as a candidate-sourced paper bot.
+    bots = api_client.get(f"{API}/paper/bots", headers=auth_headers).json()
+    assert any(b["bot_id"] == body["bot_id"] for b in bots)
+    # A promoted_to_paper event was ledgered.
+    ev = api_client.get(f"{API}/bot-lifecycle?event_type=promoted_to_paper",
+                        headers=auth_headers).json()
+    assert any(e["bot_id"] == body["bot_id"] for e in ev)
+
+
+def test_approve_rejects_watchlist(api_client, auth_headers):
+    c = _mk(api_client, auth_headers, risk_decision="research_watchlist")
+    r = api_client.post(f"{API}/research/candidates/{c['event_id']}/approve",
+                        headers=auth_headers)
+    assert r.status_code == 409
+
+
+def test_approve_unknown_404(api_client, auth_headers):
+    r = api_client.post(f"{API}/research/candidates/nope-xyz/approve",
+                        headers=auth_headers)
+    assert r.status_code == 404
+
+
+def test_paper_monitor_lists_promoted_bot(api_client, auth_headers):
+    c = _mk(api_client, auth_headers, instrument="USDCHF",
+            stats_json={"sharpe": 1.6, "profit_factor": 1.4, "max_dd": 8.0,
+                        "oos_robust": True, "trades": 120})
+    api_client.post(f"{API}/research/candidates/{c['event_id']}/approve",
+                    headers=auth_headers)
+    r = api_client.get(f"{API}/research/paper-monitor", headers=auth_headers)
+    assert r.status_code == 200
+    mon = r.json()
+    assert len(mon) >= 1
+    m = mon[0]
+    # No live trades yet → still in monitoring verdict, expected metrics carried.
+    assert m["verdict"] == "monitoring"
+    assert m["expected_profit_factor"] == 1.4
 
 
 def test_candidates_requires_auth(api_client):

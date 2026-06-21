@@ -1312,20 +1312,114 @@ def research_funnel(
     )
 
 
-@router.post("/research/candidates/{event_id}/approve")
+class ApproveResponse(_BaseModel):
+    bot_id: str
+    strategy_id: str | None
+    instrument: str | None
+    timeframe: str | None
+    state: str
+    message: str
+
+
+@router.post("/research/candidates/{event_id}/approve", response_model=ApproveResponse)
 def approve_candidate(
     event_id: str,
+    risk_pct: float = Query(1.0, ge=0.1, le=2.0),
     db: Session = Depends(get_db),
     user: TokenData = Depends(get_current_user),
 ):
-    """GATED stub: approve-to-paper is not yet enabled.
+    """HUMAN-GATED: promote a reviewed candidate to a PAPER bot.
 
-    Returns 403 and performs no action — no bot created, no flag flipped. The
-    operator-gated paper-promotion path is a separate, deliberate build; this
-    keeps the UI honest about what is and isn't wired.
+    The only path from research to execution, and it is paper-only:
+    - Triggered solely by an authenticated operator clicking Approve. No agent or
+      scheduled task calls it (the loops only write candidates) — no agent path
+      to execution in either direction.
+    - Creates a PAPER bot (state 'monitoring'); never touches a broker, enables
+      live mode, or flips the kill switch. Live execution stays blocked.
+
+    The candidate's backtest expectation (stats_json) is copied into the
+    'promoted_to_paper' ledger event so the monitor can compare live-vs-backtest.
     """
-    raise HTTPException(
-        status_code=403,
-        detail=("Approve-to-paper is not yet enabled. Candidates are review-only; "
-                "the operator-gated paper-promotion path is a separate build."),
-    )
+    import json as _json
+    import uuid as _uuid
+
+    from sqlalchemy import select as _select
+
+    from fibokei.db import ledger_repository as _ledger
+    from fibokei.db.models import BotLifecycleEventModel
+    from fibokei.db.repository import get_paper_bots, save_paper_bot
+
+    ev = db.scalar(
+        _select(BotLifecycleEventModel).where(
+            BotLifecycleEventModel.event_id == event_id))
+    if ev is None or ev.event_type != "validated":
+        raise HTTPException(status_code=404, detail="Candidate not found")
+    if ev.risk_decision != "paper_candidate":
+        raise HTTPException(
+            status_code=409,
+            detail=(f"Candidate is '{ev.risk_decision}', not a paper_candidate — "
+                    "only paper candidates can be promoted to paper."))
+
+    active = {(b.strategy_id, b.instrument, b.timeframe) for b in get_paper_bots(db)
+              if b.state in ("monitoring", "position_open", "paused")}
+    if (ev.strategy_id, ev.instrument, ev.timeframe) in active:
+        raise HTTPException(
+            status_code=409,
+            detail="An active paper bot already exists for this combo.")
+
+    bot_id = str(_uuid.uuid4())[:8]
+    save_paper_bot(db, {
+        "bot_id": bot_id, "strategy_id": ev.strategy_id, "instrument": ev.instrument,
+        "timeframe": ev.timeframe, "risk_pct": risk_pct,
+        "source_type": "candidate", "source_id": ev.research_run_id,
+        "state": "monitoring",
+    })
+
+    expected = {}
+    if ev.stats_json:
+        expected = ev.stats_json if isinstance(ev.stats_json, dict) else _json.loads(ev.stats_json)
+    _ledger.create_lifecycle_event(db, {
+        "event_type": "promoted_to_paper", "actor": "human", "bot_id": bot_id,
+        "strategy_id": ev.strategy_id, "instrument": ev.instrument,
+        "timeframe": ev.timeframe, "research_run_id": ev.research_run_id,
+        "approval_status": "approved",
+        "reason": f"operator approved candidate {event_id} -> paper (paper-only)",
+        "stats_json": {"expected": expected},
+    })
+    return ApproveResponse(
+        bot_id=bot_id, strategy_id=ev.strategy_id, instrument=ev.instrument,
+        timeframe=ev.timeframe, state="monitoring",
+        message="Paper bot created (paper-only, monitoring). No live execution.")
+
+
+class PaperMonitorResponse(_BaseModel):
+    bot_id: str
+    strategy_id: str | None
+    instrument: str | None
+    timeframe: str | None
+    state: str
+    live_trades: int
+    live_net_pnl: float
+    live_win_rate: float
+    live_profit_factor: float | None
+    live_max_dd_pct: float
+    expected_sharpe: float | None
+    expected_profit_factor: float | None
+    expected_max_dd: float | None
+    verdict: str
+    reason: str
+
+
+@router.get("/research/paper-monitor", response_model=list[PaperMonitorResponse])
+def paper_monitor(
+    db: Session = Depends(get_db),
+    user: TokenData = Depends(get_current_user),
+):
+    """Live-vs-backtest monitoring for paper bots promoted from candidates."""
+    from dataclasses import asdict
+
+    from fibokei.db.repository import get_paper_bots
+    from fibokei.paper.monitoring import compute_bot_monitor
+
+    bots = [b for b in get_paper_bots(db) if b.source_type == "candidate"]
+    return [PaperMonitorResponse(**asdict(compute_bot_monitor(db, b))) for b in bots]
