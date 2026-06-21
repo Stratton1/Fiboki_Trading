@@ -21,7 +21,12 @@ from pathlib import Path
 
 from fibokei.core.models import Timeframe
 from fibokei.data.providers.registry import load_canonical
-from fibokei.db.database import get_engine, get_session_factory, init_db
+from fibokei.db.database import (
+    get_engine,
+    get_session_factory,
+    init_db,
+    resolve_app_db_url,
+)
 from fibokei.db.ledger_repository import (
     create_agent_run,
     create_lifecycle_event,
@@ -39,6 +44,14 @@ from fibokei.research.promotion import evaluate_promotion
 from fibokei.strategies.factory.compiler import CompiledStrategy
 from fibokei.strategies.registry import strategy_registry
 from fibokei.strategies.traditional import TRADITIONAL_GEN1_SPECS
+
+
+def _resolve_ledger_url(spec: str) -> str:
+    if spec == "app":
+        return resolve_app_db_url()
+    if "://" in spec:
+        return spec
+    return f"sqlite:///{spec}"
 
 
 def _pick_champion_seed():
@@ -59,7 +72,8 @@ def main() -> None:
     ap.add_argument("--evolve-timeframe", default="H4")
     ap.add_argument("--phase1-marker", default="results/phase1/phase1_complete.json")
     ap.add_argument("--out-dir", default="results/phase2")
-    ap.add_argument("--ledger-db", default="results/pipeline/ledger.db")
+    ap.add_argument("--ledger-db", default="app",
+                    help="'app' = application DB, a sqlite path, or a URL")
     args = ap.parse_args()
 
     if not Path(args.phase1_marker).exists():
@@ -97,7 +111,7 @@ def main() -> None:
             super().__init__(best)
     strategy_registry.register(_Cand)
 
-    engine = get_engine(f"sqlite:///{args.ledger_db}")
+    engine = get_engine(_resolve_ledger_url(args.ledger_db))
     init_db(engine)
     Session = get_session_factory(engine)
     run_id = f"phase2_{datetime.now(timezone.utc):%Y%m%dT%H%M%S}"

@@ -9,6 +9,23 @@ from fibokei.db.models import Base
 DEFAULT_URL = "sqlite:///fibokei.db"
 
 
+def resolve_app_db_url() -> str:
+    """Return the same database URL the API uses.
+
+    Mirrors api/app.py resolution so research scripts write the lifecycle ledger
+    into the *app* database (where the /research/candidates endpoint reads it),
+    rather than a standalone file. Honours FIBOKEI_DATABASE_URL / DATABASE_URL
+    (normalising the postgres:// → postgresql:// scheme), else local sqlite.
+    """
+    import os
+    raw = os.environ.get("FIBOKEI_DATABASE_URL") or os.environ.get("DATABASE_URL")
+    if not raw:
+        return DEFAULT_URL
+    if raw.startswith("postgres://"):
+        return raw.replace("postgres://", "postgresql://", 1)
+    return raw
+
+
 def get_engine(url: str = DEFAULT_URL, **kwargs) -> Engine:
     """Create a SQLAlchemy engine."""
     return create_engine(url, **kwargs)

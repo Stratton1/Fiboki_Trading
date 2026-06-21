@@ -32,13 +32,26 @@ from fibokei.backtester.engine import Backtester
 from fibokei.backtester.metrics import compute_metrics
 from fibokei.core.models import Timeframe
 from fibokei.data.providers.registry import load_canonical
-from fibokei.db.database import get_engine, get_session_factory, init_db
+from fibokei.db.database import (
+    get_engine,
+    get_session_factory,
+    init_db,
+    resolve_app_db_url,
+)
 from fibokei.db.ledger_repository import create_agent_run, create_lifecycle_event
 from fibokei.research.monte_carlo import run_monte_carlo
 from fibokei.research.oos import run_oos_test
 from fibokei.research.scorer import ScoringConfig, compute_composite_score
 from fibokei.research.walk_forward import run_walk_forward
 from fibokei.strategies.registry import classify_strategy, strategy_registry
+
+
+def _resolve_ledger_url(spec: str) -> str:
+    if spec == "app":
+        return resolve_app_db_url()
+    if "://" in spec:
+        return spec
+    return f"sqlite:///{spec}"
 
 
 @dataclass
@@ -237,7 +250,7 @@ def main() -> None:
 
     # Ledger
     Path(args.ledger_db).parent.mkdir(parents=True, exist_ok=True)
-    engine = get_engine(f"sqlite:///{args.ledger_db}")
+    engine = get_engine(_resolve_ledger_url(args.ledger_db))
     init_db(engine)
     Session = get_session_factory(engine)
     run_id = f"pipeline_{datetime.now(timezone.utc):%Y%m%dT%H%M%S}"

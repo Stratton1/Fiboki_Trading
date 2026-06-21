@@ -1095,3 +1095,135 @@ def run_scenario_endpoint(
         label=info.label,
         state=info.state.value,
     )
+
+
+# ---------- Candidate review surface (robustness-ladder output) ----------
+#
+# Read-only operator surface over the append-only lifecycle ledger
+# (bot_lifecycle_events). Candidates are combos that passed the full robustness
+# ladder ('validated' events) written by the research pipeline. NO execution
+# happens here — the approve endpoint is a deliberate gate.
+
+
+class CandidateResponse(_BaseModel):
+    event_id: str
+    strategy_id: str | None
+    tier: str
+    instrument: str | None
+    timeframe: str | None
+    recommended_state: str | None   # paper_candidate | research_watchlist
+    composite: float | None
+    sharpe: float | None
+    oos_score: float | None
+    mc_profit_prob: float | None
+    research_run_id: str | None
+    approval_status: str | None
+    created_at: str
+
+
+class FunnelResponse(_BaseModel):
+    validated: int
+    paper_candidate: int
+    research_watchlist: int
+    ranking_only: int
+    rejections: dict[str, int]
+    total_ledgered: int
+
+
+def _stat(stats: dict, key: str):
+    v = stats.get(key)
+    return float(v) if isinstance(v, (int, float)) else None
+
+
+@router.get("/research/candidates", response_model=list[CandidateResponse])
+def list_candidates(
+    state: str | None = Query(None, description="paper_candidate | research_watchlist"),
+    tier: str | None = Query(None, description="strategy tier filter"),
+    instrument: str | None = None,
+    timeframe: str | None = None,
+    limit: int = Query(500, ge=1, le=2000),
+    db: Session = Depends(get_db),
+    user: TokenData = Depends(get_current_user),
+):
+    """Candidates that survived the full robustness ladder, ranked by Sharpe."""
+    import json as _json
+
+    from fibokei.db import ledger_repository as _ledger
+    from fibokei.strategies.registry import classify_strategy
+
+    rows = _ledger.list_lifecycle_events(db, event_type="validated", limit=limit)
+    out: list[CandidateResponse] = []
+    for r in rows:
+        stats = {}
+        if r.stats_json:
+            stats = r.stats_json if isinstance(r.stats_json, dict) else _json.loads(r.stats_json)
+        rec = CandidateResponse(
+            event_id=r.event_id, strategy_id=r.strategy_id,
+            tier=classify_strategy(r.strategy_id) if r.strategy_id else "unknown",
+            instrument=r.instrument, timeframe=r.timeframe,
+            recommended_state=r.risk_decision,
+            composite=_stat(stats, "composite"), sharpe=_stat(stats, "sharpe"),
+            oos_score=_stat(stats, "oos_score"),
+            mc_profit_prob=_stat(stats, "mc_profit_prob"),
+            research_run_id=r.research_run_id, approval_status=r.approval_status,
+            created_at=r.created_at.isoformat(),
+        )
+        if state and rec.recommended_state != state:
+            continue
+        if tier and rec.tier != tier:
+            continue
+        if instrument and rec.instrument != instrument:
+            continue
+        if timeframe and rec.timeframe != timeframe:
+            continue
+        out.append(rec)
+    out.sort(key=lambda c: (c.sharpe if c.sharpe is not None else -999), reverse=True)
+    return out
+
+
+@router.get("/research/funnel", response_model=FunnelResponse)
+def research_funnel(
+    limit: int = Query(5000, ge=1, le=50000),
+    db: Session = Depends(get_db),
+    user: TokenData = Depends(get_current_user),
+):
+    """Validation funnel: how combos progressed through / fell out of the ladder."""
+    from fibokei.db import ledger_repository as _ledger
+
+    validated = _ledger.list_lifecycle_events(db, event_type="validated", limit=limit)
+    rejected = _ledger.list_lifecycle_events(db, event_type="rejected", limit=limit)
+    backtested = _ledger.list_lifecycle_events(db, event_type="backtested", limit=limit)
+
+    rejections: dict[str, int] = {}
+    for r in rejected:
+        key = (r.reason or "unknown").strip()
+        rejections[key] = rejections.get(key, 0) + 1
+
+    return FunnelResponse(
+        validated=len(validated),
+        paper_candidate=sum(1 for r in validated if r.risk_decision == "paper_candidate"),
+        research_watchlist=sum(
+            1 for r in validated if r.risk_decision == "research_watchlist"),
+        ranking_only=len(backtested),
+        rejections=rejections,
+        total_ledgered=len(validated) + len(rejected) + len(backtested),
+    )
+
+
+@router.post("/research/candidates/{event_id}/approve")
+def approve_candidate(
+    event_id: str,
+    db: Session = Depends(get_db),
+    user: TokenData = Depends(get_current_user),
+):
+    """GATED stub: approve-to-paper is not yet enabled.
+
+    Returns 403 and performs no action — no bot created, no flag flipped. The
+    operator-gated paper-promotion path is a separate, deliberate build; this
+    keeps the UI honest about what is and isn't wired.
+    """
+    raise HTTPException(
+        status_code=403,
+        detail=("Approve-to-paper is not yet enabled. Candidates are review-only; "
+                "the operator-gated paper-promotion path is a separate build."),
+    )
