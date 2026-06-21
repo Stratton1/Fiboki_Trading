@@ -27,7 +27,14 @@ def resolve_app_db_url() -> str:
 
 
 def get_engine(url: str = DEFAULT_URL, **kwargs) -> Engine:
-    """Create a SQLAlchemy engine."""
+    """Create a SQLAlchemy engine.
+
+    For SQLite, set a busy timeout so concurrent writers (the parallel research
+    loops + the decay monitor all appending to the same ledger) wait for the lock
+    instead of erroring with 'database is locked'.
+    """
+    if url.startswith("sqlite") and "connect_args" not in kwargs:
+        kwargs["connect_args"] = {"timeout": 30}
     return create_engine(url, **kwargs)
 
 

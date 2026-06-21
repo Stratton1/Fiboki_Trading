@@ -74,12 +74,16 @@ def main() -> None:
     ap.add_argument("--out-dir", default="results/phase2")
     ap.add_argument("--ledger-db", default="app",
                     help="'app' = application DB, a sqlite path, or a URL")
+    ap.add_argument("--force", action="store_true",
+                    help="run even if Phase 1 backfill is not yet complete "
+                         "(operator override — start evolving before full baseline)")
     args = ap.parse_args()
 
-    if not Path(args.phase1_marker).exists():
+    if not args.force and not Path(args.phase1_marker).exists():
         raise SystemExit(
             f"Phase 1 not complete ({args.phase1_marker} missing). "
-            "Phase 2 must not start until the baseline backfill is ledgered.")
+            "Phase 2 must not start until the baseline backfill is ledgered "
+            "(use --force to override).")
 
     out = Path(args.out_dir)
     out.mkdir(parents=True, exist_ok=True)
