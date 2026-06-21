@@ -54,6 +54,8 @@ def main() -> None:
     strategies = ([s["id"] for s in strategy_registry.list_available()]
                   if args.strategies == "all"
                   else [s.strip() for s in args.strategies.split(",")])
+    # Factory families first (fast + the focus); slow legacy bots last.
+    strategies.sort(key=lambda s: (0, s) if s.startswith("factory_") else (1, s))
     canon = Path("../data/canonical/histdata")
     instruments = (sorted(d.upper() for d in os.listdir(canon))
                    if args.instruments == "all" and canon.exists()

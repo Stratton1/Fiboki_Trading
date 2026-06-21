@@ -123,8 +123,14 @@ def _param_sensitivity(strategy_id, df, instrument, tf, config, scoring,
 
 
 def process_combo(strategy_id, instrument, timeframe, *, config, cost_config,
-                  scoring, min_trades, specs) -> ComboResult:
-    """Sweep + full robustness ladder for one combo. Pure; writes nothing."""
+                  scoring, min_trades, specs,
+                  ladder_min_composite: float = 0.30) -> ComboResult:
+    """Sweep + full robustness ladder for one combo. Pure; writes nothing.
+
+    Combos below ``ladder_min_composite`` are screened out cheaply *before* the
+    expensive ladder (walk-forward etc.) so a full-grid backfill stays tractable
+    — the ladder only ever runs on combos with a real in-sample edge.
+    """
     tier = classify_strategy(strategy_id)
     c = ComboResult(strategy_id=strategy_id, tier=tier, instrument=instrument,
                     timeframe=timeframe, content_hash=_content_hash(strategy_id, specs))
@@ -156,10 +162,15 @@ def process_combo(strategy_id, instrument, timeframe, *, config, cost_config,
         c.rung_failed = "min_trades"
         return c
 
-    # Rung 1: walk-forward (windows scaled to data depth)
+    # Cheap pre-screen: don't ladder combos with no in-sample edge.
+    if c.composite < ladder_min_composite:
+        c.rung_failed = "below_screen"
+        return c
+
+    # Rung 1: walk-forward (coarse windows — keep the full-grid backfill tractable)
     n = len(df)
-    train = max(2000, n // 12)
-    test = max(500, train // 4)
+    train = max(3000, n // 6)
+    test = max(750, train // 3)
     wf = run_walk_forward(df, strategy_id, instrument, tf, train_window_bars=train,
                           test_window_bars=test, step_bars=test, config=config,
                           scoring_config=scoring)
