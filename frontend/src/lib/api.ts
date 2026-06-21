@@ -454,6 +454,37 @@ export const api = {
       Array<{ symbol: string; name: string; asset_class: string; has_canonical_data: boolean }>
     >("/instruments"),
   strategies: () => apiFetch<Array<Record<string, unknown>>>("/strategies"),
+  researchCandidates: (qs = "") =>
+    apiFetch<
+      Array<{
+        event_id: string;
+        strategy_id: string | null;
+        tier: string;
+        instrument: string | null;
+        timeframe: string | null;
+        recommended_state: string | null;
+        composite: number | null;
+        sharpe: number | null;
+        oos_score: number | null;
+        mc_profit_prob: number | null;
+        research_run_id: string | null;
+        approval_status: string | null;
+        created_at: string;
+      }>
+    >(`/research/candidates${qs ? `?${qs}` : ""}`),
+  researchFunnel: () =>
+    apiFetch<{
+      validated: number;
+      paper_candidate: number;
+      research_watchlist: number;
+      ranking_only: number;
+      rejections: Record<string, number>;
+      total_ledgered: number;
+    }>("/research/funnel"),
+  approveCandidate: (eventId: string) =>
+    apiFetch<{ detail: string }>(`/research/candidates/${eventId}/approve`, {
+      method: "POST",
+    }),
   strategiesGrouped: () =>
     apiFetch<
       Array<{
