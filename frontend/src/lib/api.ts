@@ -465,13 +465,52 @@ export const api = {
         recommended_state: string | null;
         composite: number | null;
         sharpe: number | null;
+        profit_factor: number | null;
+        max_dd: number | null;
+        net_profit: number | null;
+        trades: number | null;
+        wf_test_score: number | null;
         oos_score: number | null;
+        oos_robust: boolean | null;
         mc_profit_prob: number | null;
+        mc_ruin_prob: number | null;
+        cost_net: number | null;
+        demo_ready: boolean;
         research_run_id: string | null;
         approval_status: string | null;
         created_at: string;
       }>
     >(`/research/candidates${qs ? `?${qs}` : ""}`),
+  researchCandidatesByStrategy: () =>
+    apiFetch<
+      Array<{
+        strategy_id: string;
+        tier: string;
+        combos: number;
+        demo_ready_combos: number;
+        best_sharpe: number | null;
+        best_combo: {
+          instrument: string | null;
+          timeframe: string | null;
+          sharpe: number | null;
+          composite: number | null;
+          max_dd: number | null;
+          profit_factor: number | null;
+          recommended_state: string | null;
+          demo_ready: boolean;
+        } | null;
+        all_combos: Array<{
+          instrument: string | null;
+          timeframe: string | null;
+          sharpe: number | null;
+          composite: number | null;
+          max_dd: number | null;
+          profit_factor: number | null;
+          recommended_state: string | null;
+          demo_ready: boolean;
+        }>;
+      }>
+    >("/research/candidates/by-strategy"),
   researchFunnel: () =>
     apiFetch<{
       validated: number;
