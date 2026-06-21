@@ -22,6 +22,8 @@ export default function CandidatesPage() {
   const [tier, setTier] = useState("");
   const [demoOnly, setDemoOnly] = useState(false);
   const [expanded, setExpanded] = useState<string | null>(null);
+  const [busy, setBusy] = useState<string | null>(null);
+  const [msg, setMsg] = useState<string | null>(null);
 
   const qs = useMemo(() => {
     const p = new URLSearchParams();
@@ -30,13 +32,36 @@ export default function CandidatesPage() {
     return p.toString();
   }, [state, tier]);
 
-  const { data: candidates, isLoading } = useSWR(
+  const { data: candidates, isLoading, mutate: mutateCandidates } = useSWR(
     `candidates?${qs}`, () => api.researchCandidates(qs), { refreshInterval: 30000 });
   const { data: byStrategy } = useSWR(
     "candidates-by-strategy", () => api.researchCandidatesByStrategy(),
     { refreshInterval: 30000 });
   const { data: funnel } = useSWR("research-funnel", () => api.researchFunnel(),
     { refreshInterval: 30000 });
+  const { data: monitor, mutate: mutateMonitor } = useSWR(
+    "paper-monitor", () => api.researchPaperMonitor(), { refreshInterval: 30000 });
+
+  type Candidate = NonNullable<typeof candidates>[number];
+
+  async function handleApprove(c: Candidate) {
+    if (!window.confirm(
+      `Promote ${c.strategy_id} on ${c.instrument} ${c.timeframe} to a PAPER bot?\n\n` +
+      "Paper trading only — no live execution. You can pause it any time.")) return;
+    setBusy(c.event_id);
+    setMsg(null);
+    try {
+      const res = await api.approveCandidate(c.event_id);
+      setMsg(`✓ Paper bot ${res.bot_id} created for ${res.strategy_id} ` +
+        `${res.instrument} ${res.timeframe} (monitoring, paper-only).`);
+      mutateCandidates();
+      mutateMonitor();
+    } catch (e) {
+      setMsg(`Approve failed: ${e instanceof Error ? e.message : String(e)}`);
+    } finally {
+      setBusy(null);
+    }
+  }
 
   const rungOrder = ["min_trades", "below_screen", "walk_forward", "oos",
     "monte_carlo", "param_sensitivity", "cost_stress"];
@@ -52,6 +77,66 @@ export default function CandidatesPage() {
         title="Candidates"
         subtitle="Strategies that survived the full robustness ladder — review-only, for demo-promotion decisions."
       />
+
+      {msg && (
+        <div className="card mb-4 text-sm text-foreground border-l-4 border-primary">
+          {msg}
+        </div>
+      )}
+
+      {/* Paper bots promoted from candidates — live vs backtest */}
+      {monitor && monitor.length > 0 && (
+        <div className="card mb-6">
+          <div className="flex items-center gap-2 mb-3">
+            <h3 className="text-sm font-medium text-foreground">
+              Paper bots (live vs backtest)
+            </h3>
+            <InfoTip text="Paper bots you approved from candidates. 'Live' = forward paper performance since approval; 'expected' = the backtest figures captured at approval. The decay monitor auto-pauses a bot whose live profit factor collapses vs expectation. Paper-only — no live money." />
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-left text-xs text-foreground-muted border-b border-gray-300">
+                  <th className="px-2 py-2">Bot</th>
+                  <th className="px-2 py-2">Strategy</th>
+                  <th className="px-2 py-2">Combo</th>
+                  <th className="px-2 py-2">State</th>
+                  <th className="px-2 py-2 text-right">Live trades</th>
+                  <th className="px-2 py-2 text-right">Live PF</th>
+                  <th className="px-2 py-2 text-right">Exp. PF</th>
+                  <th className="px-2 py-2 text-right">Live net</th>
+                  <th className="px-2 py-2">Verdict</th>
+                </tr>
+              </thead>
+              <tbody>
+                {monitor.map((m) => (
+                  <tr key={m.bot_id} className="border-b border-gray-200">
+                    <td className="px-2 py-2 font-mono text-xs">{m.bot_id}</td>
+                    <td className="px-2 py-2 font-mono text-xs">{m.strategy_id}</td>
+                    <td className="px-2 py-2">{m.instrument} {m.timeframe}</td>
+                    <td className="px-2 py-2 text-xs">{m.state}</td>
+                    <td className="px-2 py-2 text-right">{m.live_trades}</td>
+                    <td className="px-2 py-2 text-right">{num(m.live_profit_factor, 2)}</td>
+                    <td className="px-2 py-2 text-right">{num(m.expected_profit_factor, 2)}</td>
+                    <td className="px-2 py-2 text-right">{num(m.live_net_pnl, 0)}</td>
+                    <td className="px-2 py-2">
+                      <span className={`px-1.5 py-0.5 rounded text-[10px] border ${
+                        m.verdict === "decayed"
+                          ? "bg-danger/15 border-danger text-danger"
+                          : m.verdict === "healthy"
+                            ? "bg-success/15 border-success text-success"
+                            : "bg-background-subtle border-gray-300 text-foreground-muted"}`}
+                        title={m.reason}>
+                        {m.verdict}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
 
       {/* Funnel */}
       <div className="card mb-6">
@@ -168,11 +253,18 @@ export default function CandidatesPage() {
                           ? <span className="px-1.5 py-0.5 rounded text-[10px] bg-success/15 border border-success text-success font-medium">READY</span>
                           : <span className="text-[10px] text-foreground-muted">—</span>}
                       </td>
-                      <td className="px-2 py-2">
-                        <button type="button" disabled
-                          title="Approve-to-paper is not yet enabled — review only."
-                          className="px-2 py-1 rounded text-xs border border-gray-300 text-foreground-muted opacity-60 cursor-not-allowed">
-                          Approve
+                      <td className="px-2 py-2" onClick={(e) => e.stopPropagation()}>
+                        <button type="button"
+                          disabled={c.recommended_state !== "paper_candidate" || busy === c.event_id}
+                          onClick={() => handleApprove(c)}
+                          title={c.recommended_state === "paper_candidate"
+                            ? "Promote to a PAPER bot (paper-only, human-gated)"
+                            : "Only paper_candidate combos can be promoted"}
+                          className={`px-2 py-1 rounded text-xs border ${
+                            c.recommended_state === "paper_candidate"
+                              ? "border-primary text-primary hover:bg-primary hover:text-white"
+                              : "border-gray-300 text-foreground-muted opacity-60 cursor-not-allowed"}`}>
+                          {busy === c.event_id ? "…" : "Approve → paper"}
                         </button>
                       </td>
                     </tr>

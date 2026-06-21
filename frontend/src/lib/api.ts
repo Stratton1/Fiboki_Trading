@@ -521,9 +521,34 @@ export const api = {
       total_ledgered: number;
     }>("/research/funnel"),
   approveCandidate: (eventId: string) =>
-    apiFetch<{ detail: string }>(`/research/candidates/${eventId}/approve`, {
-      method: "POST",
-    }),
+    apiFetch<{
+      bot_id: string;
+      strategy_id: string | null;
+      instrument: string | null;
+      timeframe: string | null;
+      state: string;
+      message: string;
+    }>(`/research/candidates/${eventId}/approve`, { method: "POST" }),
+  researchPaperMonitor: () =>
+    apiFetch<
+      Array<{
+        bot_id: string;
+        strategy_id: string | null;
+        instrument: string | null;
+        timeframe: string | null;
+        state: string;
+        live_trades: number;
+        live_net_pnl: number;
+        live_win_rate: number;
+        live_profit_factor: number | null;
+        live_max_dd_pct: number;
+        expected_sharpe: number | null;
+        expected_profit_factor: number | null;
+        expected_max_dd: number | null;
+        verdict: string;
+        reason: string;
+      }>
+    >("/research/paper-monitor"),
   strategiesGrouped: () =>
     apiFetch<
       Array<{
