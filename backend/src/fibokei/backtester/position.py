@@ -136,6 +136,23 @@ class Position:
         }
 
 
+def sanitize_take_profits(
+    targets: list[float] | None, entry: float, direction: Direction
+) -> list[float]:
+    """Drop any take-profit on the wrong side of entry for the direction.
+
+    A long's TP must be above entry; a short's below. A wrong-side TP (e.g. a
+    legacy strategy reusing the same target for both directions) otherwise gets
+    'hit' immediately and recorded as a take-profit *at a loss*. Stripping it
+    lets the position run to its stop / time exit and be labelled correctly.
+    """
+    if not targets:
+        return []
+    if direction == Direction.LONG:
+        return [t for t in targets if t > entry]
+    return [t for t in targets if t < entry]
+
+
 def calculate_position_size(
     capital: float,
     risk_pct: float,

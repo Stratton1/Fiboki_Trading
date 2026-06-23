@@ -3,7 +3,7 @@
 import pandas as pd
 
 from fibokei.backtester.config import BacktestConfig
-from fibokei.backtester.position import Position
+from fibokei.backtester.position import Position, sanitize_take_profits
 from fibokei.backtester.result import BacktestResult
 from fibokei.backtester.sizing import (
     calculate_position_size,
@@ -114,6 +114,11 @@ class Backtester:
                     plan = self.strategy.build_trade_plan(signal, context)
                     entry_price = self._apply_costs(
                         signal.proposed_entry, signal.direction, effective_spread
+                    )
+                    # Guard: drop any take-profit on the wrong side of entry so a
+                    # malformed TP can never be "hit" at a loss (see nwave short bug).
+                    plan.take_profit_targets = sanitize_take_profits(
+                        plan.take_profit_targets, entry_price, signal.direction
                     )
 
                     # Use 2×ATR as minimum stop distance floor to prevent

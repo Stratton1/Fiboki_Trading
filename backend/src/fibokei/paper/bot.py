@@ -8,7 +8,11 @@ from enum import Enum
 
 import pandas as pd
 
-from fibokei.backtester.position import Position, calculate_position_size
+from fibokei.backtester.position import (
+    Position,
+    calculate_position_size,
+    sanitize_take_profits,
+)
 from fibokei.core.models import Timeframe
 from fibokei.core.trades import ExitReason
 from fibokei.paper.account import PaperAccount
@@ -183,6 +187,11 @@ class PaperBot:
             if signal is not None:
                 plan = self.strategy.build_trade_plan(signal, context)
                 entry_price = signal.proposed_entry
+                # Guard: drop any take-profit on the wrong side of entry (a
+                # malformed TP must never be "hit" at a loss).
+                plan.take_profit_targets = sanitize_take_profits(
+                    plan.take_profit_targets, entry_price, signal.direction
+                )
                 pos_size = calculate_position_size(
                     self.account.equity, self.risk_pct, entry_price, plan.stop_loss
                 )
