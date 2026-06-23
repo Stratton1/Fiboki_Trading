@@ -450,11 +450,15 @@ export default function BotsPage() {
         </div>
         <div className="stat-card">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-medium uppercase tracking-wide text-foreground-muted">Fleet PnL<InfoTip text="Realised PnL from closed trades across all bots in the current evaluation phase. Open positions are not marked-to-market in this number." /></span>
+            <span className="text-xs font-medium uppercase tracking-wide text-foreground-muted">Fleet PnL<InfoTip text="Realised PnL from closed trades (current phase) + unrealised mark-to-market on open positions = live PnL." /></span>
             <BarChart3 size={14} className="text-foreground-muted" />
           </div>
-          <p className={`text-xl font-bold tracking-tight ${(fleet?.aggregate_pnl ?? 0) >= 0 ? "text-primary" : "text-danger"}`}>
-            {(fleet?.aggregate_pnl ?? 0) >= 0 ? "+" : ""}{sym}{(fleet?.aggregate_pnl ?? 0).toFixed(2)}
+          <p className={`text-xl font-bold tracking-tight ${((fleet?.aggregate_pnl ?? 0) + (fleet?.aggregate_unrealized ?? 0)) >= 0 ? "text-primary" : "text-danger"}`}>
+            {((fleet?.aggregate_pnl ?? 0) + (fleet?.aggregate_unrealized ?? 0)) >= 0 ? "+" : ""}{sym}{((fleet?.aggregate_pnl ?? 0) + (fleet?.aggregate_unrealized ?? 0)).toFixed(2)}
+            <span className="text-xs font-normal text-foreground-muted"> live</span>
+          </p>
+          <p className="text-[11px] text-foreground-muted mt-0.5">
+            realised {sym}{(fleet?.aggregate_pnl ?? 0).toFixed(2)} · unrealised {(fleet?.aggregate_unrealized ?? 0) >= 0 ? "+" : ""}{sym}{(fleet?.aggregate_unrealized ?? 0).toFixed(2)}
           </p>
         </div>
         <div className="stat-card">
@@ -939,8 +943,13 @@ export default function BotsPage() {
                     </td>
                     <td className="text-right tabular-nums text-foreground-muted">{fleetBot?.bars_seen ?? 0}</td>
                     <td className="text-right tabular-nums">{fleetBot?.total_trades ?? 0}</td>
-                    <td className={`text-right tabular-nums font-medium ${(fleetBot?.total_pnl ?? 0) >= 0 ? "text-primary" : "text-danger"}`}>
-                      {(fleetBot?.total_pnl ?? 0) >= 0 ? "+" : ""}{sym}{(fleetBot?.total_pnl ?? 0).toFixed(2)}
+                    <td className={`text-right tabular-nums font-medium ${(fleetBot?.live_pnl ?? fleetBot?.total_pnl ?? 0) >= 0 ? "text-primary" : "text-danger"}`}>
+                      {(fleetBot?.live_pnl ?? fleetBot?.total_pnl ?? 0) >= 0 ? "+" : ""}{sym}{(fleetBot?.live_pnl ?? fleetBot?.total_pnl ?? 0).toFixed(2)}
+                      {fleetBot?.has_position && (
+                        <span className="block text-[10px] text-foreground-muted">
+                          {fleetBot?.direction} open {(fleetBot?.unrealized_pnl ?? 0) >= 0 ? "+" : ""}{sym}{(fleetBot?.unrealized_pnl ?? 0).toFixed(2)}
+                        </span>
+                      )}
                     </td>
                     <td className="text-right">
                       <div className="flex items-center justify-end gap-2">
@@ -1072,8 +1081,13 @@ export default function BotsPage() {
                       </td>
                       <td className="text-right tabular-nums text-foreground-muted">{b.bars_seen}</td>
                       <td className="text-right tabular-nums">{b.total_trades}</td>
-                      <td className={`text-right tabular-nums font-medium ${b.total_pnl >= 0 ? "text-primary" : "text-danger"}`}>
-                        {b.total_pnl >= 0 ? "+" : ""}{sym}{b.total_pnl.toFixed(2)}
+                      <td className={`text-right tabular-nums font-medium ${(b.live_pnl ?? b.total_pnl) >= 0 ? "text-primary" : "text-danger"}`}>
+                        {(b.live_pnl ?? b.total_pnl) >= 0 ? "+" : ""}{sym}{(b.live_pnl ?? b.total_pnl).toFixed(2)}
+                        {b.has_position && (
+                          <span className="block text-[10px] text-foreground-muted">
+                            {b.direction} open {(b.unrealized_pnl ?? 0) >= 0 ? "+" : ""}{sym}{(b.unrealized_pnl ?? 0).toFixed(2)}
+                          </span>
+                        )}
                       </td>
                       <td className="text-right">
                         <div className="flex items-center justify-end gap-2">

@@ -280,6 +280,7 @@ export default function DashboardPage() {
   const staleBots = fleet?.stale ?? 0;
   const pausedBots = fleet?.paused ?? 0;
   const fleetPnl = fleet?.aggregate_pnl ?? 0;
+  const fleetUnrealized = fleet?.aggregate_unrealized ?? 0;
   const fleetTrades = fleet?.aggregate_trades ?? 0;
   const fleetOpenPositions = fleet?.open_positions ?? 0;
   const topShortlist = ((shortlist ?? []) as ShortlistEntry[]).slice(0, 5);
@@ -536,12 +537,17 @@ export default function DashboardPage() {
           </div>
           <div>
             <p className="text-xs text-foreground-muted inline-flex items-center">
-              Fleet PnL
-              <InfoTip text="Aggregate PnL across all bots, including stopped bots." />
+              Fleet PnL (live)
+              <InfoTip text="Realised PnL from closed trades + unrealised mark-to-market on open positions." />
             </p>
-            <p className={`text-lg font-bold tabular-nums ${fleetPnl >= 0 ? "text-primary" : "text-danger"}`}>
-              {formatPnl(fleetPnl, currency)}
+            <p className={`text-lg font-bold tabular-nums ${(fleetPnl + fleetUnrealized) >= 0 ? "text-primary" : "text-danger"}`}>
+              {formatPnl(fleetPnl + fleetUnrealized, currency)}
             </p>
+            {fleetUnrealized !== 0 && (
+              <p className="text-[10px] text-foreground-muted">
+                incl. {fleetUnrealized >= 0 ? "+" : ""}{formatPnl(fleetUnrealized, currency)} open
+              </p>
+            )}
           </div>
           <div>
             <p className="text-xs text-foreground-muted">Active Jobs</p>

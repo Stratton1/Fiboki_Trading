@@ -636,8 +636,12 @@ class BotFleetItem(BaseModel):
     state: str
     bars_seen: int
     total_trades: int
-    total_pnl: float
+    total_pnl: float            # realised P&L (closed trades, phase-scoped)
     has_position: bool
+    direction: str | None = None       # open position direction (LONG/SHORT)
+    entry_price: float | None = None   # open position entry
+    unrealized_pnl: float = 0.0        # mark-to-market on the open position
+    live_pnl: float = 0.0              # realised + unrealised
     source_type: str | None = None
     last_evaluated_bar: str | None = None
     is_stale: bool = False
@@ -650,10 +654,34 @@ class FleetOverviewResponse(BaseModel):
     stopped: int
     stale: int
     aggregate_pnl: float
+    aggregate_unrealized: float = 0.0
     aggregate_trades: int
     open_positions: int
     bots: list[BotFleetItem]
     strategy_groups: dict[str, dict]
+
+
+def _unrealized_pnl(position: dict, instrument: str, timeframe: str):
+    """Mark-to-market P&L on an open paper position using the latest close.
+
+    Returns (unrealized_pnl, direction, entry_price) or (0.0, None, None).
+    """
+    try:
+        from fibokei.backtester.sizing import pip_value_adjustment
+        from fibokei.data.providers.registry import load_canonical_cached
+        entry = float(position.get("entry_price"))
+        size = float(position.get("position_size") or 0.0)
+        direction = str(position.get("direction") or "").upper()
+        is_long = "LONG" in direction
+        df, _ = load_canonical_cached(instrument, timeframe)
+        if df is None or df.empty or size <= 0:
+            return 0.0, (direction or None), entry
+        last = float(df["close"].iloc[-1])
+        raw = (last - entry) * size if is_long else (entry - last) * size
+        adj = pip_value_adjustment(instrument, last)
+        return round(raw * adj, 2), ("LONG" if is_long else "SHORT"), entry
+    except Exception:
+        return 0.0, None, None
 
 
 @router.get("/paper/fleet")
@@ -672,6 +700,7 @@ def get_fleet_overview(
     items: list[BotFleetItem] = []
     strategy_groups: dict[str, dict] = {}
     total_pnl = 0.0
+    total_unrealized = 0.0
     total_trades_count = 0
     open_count = 0
 
@@ -690,8 +719,11 @@ def get_fleet_overview(
         total_pnl += bot_pnl
         total_trades_count += bot_trades
         has_position = bot.position_json is not None
+        unreal, pos_dir, pos_entry = 0.0, None, None
         if has_position:
             open_count += 1
+            unreal, pos_dir, pos_entry = _unrealized_pnl(
+                bot.position_json, bot.instrument, bot.timeframe)
 
         # Stale detection
         is_stale = False
@@ -711,14 +743,19 @@ def get_fleet_overview(
             state=bot.state,
             bars_seen=bot.bars_seen,
             total_trades=bot_trades,
-            total_pnl=bot_pnl,
+            total_pnl=round(bot_pnl, 2),
             has_position=has_position,
+            direction=pos_dir,
+            entry_price=pos_entry,
+            unrealized_pnl=unreal,
+            live_pnl=round(bot_pnl + unreal, 2),
             source_type=getattr(bot, "source_type", None),
             last_evaluated_bar=(
                 bot.last_evaluated_bar.isoformat() if bot.last_evaluated_bar else None
             ),
             is_stale=is_stale,
         ))
+        total_unrealized += unreal
 
         # Strategy grouping
         sid = bot.strategy_id
@@ -741,7 +778,8 @@ def get_fleet_overview(
         paused=paused_count,
         stopped=stopped_count,
         stale=stale_count,
-        aggregate_pnl=total_pnl,
+        aggregate_pnl=round(total_pnl, 2),
+        aggregate_unrealized=round(total_unrealized, 2),
         aggregate_trades=total_trades_count,
         open_positions=open_count,
         bots=items,

@@ -319,6 +319,7 @@ export const api = {
     stopped: number;
     stale: number;
     aggregate_pnl: number;
+    aggregate_unrealized: number;
     aggregate_trades: number;
     open_positions: number;
     bots: Array<{
@@ -331,6 +332,10 @@ export const api = {
       total_trades: number;
       total_pnl: number;
       has_position: boolean;
+      direction: string | null;
+      entry_price: number | null;
+      unrealized_pnl: number;
+      live_pnl: number;
       source_type: string | null;
       last_evaluated_bar: string | null;
       is_stale: boolean;
