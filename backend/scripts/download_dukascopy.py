@@ -65,6 +65,9 @@ DUKASCOPY_IDS: dict[str, str] = {
 def _download_one(dukas_id: str, tf: str, frm: str, to: str, out_dir: Path,
                   retries: int = 1) -> Path | None:
     out_dir.mkdir(parents=True, exist_ok=True)
+    # Clear stale CSVs for this id/tf so we never pick up a previous run's file.
+    for old in out_dir.glob(f"{dukas_id}-{tf}-*.csv"):
+        old.unlink(missing_ok=True)
     cmd = ["npx", "--yes", "dukascopy-node@latest", "-i", dukas_id,
            "-from", frm, "-to", to, "-t", tf, "-f", "csv", "-v", "true",
            "-dir", str(out_dir)]
