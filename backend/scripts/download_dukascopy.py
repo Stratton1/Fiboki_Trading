@@ -129,6 +129,16 @@ def main() -> None:
         if not dukas_id:
             print(f"{sym}: no dukascopy id, skip", flush=True)
             continue
+        # Resume: skip symbols already pulled (h1 parquet present with real depth).
+        existing = get_canonical_dir() / "dukascopy" / sym.lower() / f"{sym.lower()}_h1.parquet"
+        if existing.exists():
+            try:
+                if len(pd.read_parquet(existing, columns=["close"])) > 5000:
+                    print(f"{sym}: already pulled, skip", flush=True)
+                    ok_syms += 1
+                    continue
+            except Exception:
+                pass
         print(f"{sym} ({dukas_id}):", flush=True)
         sym_bars = 0
         # H1 (reliable) → write H1 + derive H4
