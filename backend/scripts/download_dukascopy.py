@@ -27,6 +27,7 @@ from pathlib import Path
 import pandas as pd
 
 from fibokei.data.paths import get_canonical_dir
+from fibokei.data.providers.resampler import resample_ohlcv
 
 # Fiboki symbol -> dukascopy-node instrument id. FX ids are the lowercase pair;
 # indices/commodities use Dukascopy's own ids (best-effort — unknowns skip).
@@ -61,34 +62,41 @@ DUKASCOPY_IDS: dict[str, str] = {
 }
 
 
-def _download_one(dukas_id: str, tf: str, frm: str, to: str, out_dir: Path) -> Path | None:
+def _download_one(dukas_id: str, tf: str, frm: str, to: str, out_dir: Path,
+                  retries: int = 1) -> Path | None:
     out_dir.mkdir(parents=True, exist_ok=True)
     cmd = ["npx", "--yes", "dukascopy-node@latest", "-i", dukas_id,
            "-from", frm, "-to", to, "-t", tf, "-f", "csv", "-v", "true",
            "-dir", str(out_dir)]
-    try:
-        subprocess.run(cmd, check=True, capture_output=True, text=True, timeout=1800)
-    except subprocess.CalledProcessError as e:
-        print(f"    ! {dukas_id} {tf}: download failed ({(e.stderr or '')[:120]})",
-              flush=True)
-        return None
-    except subprocess.TimeoutExpired:
-        print(f"    ! {dukas_id} {tf}: timed out", flush=True)
-        return None
-    files = sorted(out_dir.glob(f"{dukas_id}-{tf}-*.csv"))
-    return files[-1] if files else None
+    for attempt in range(retries + 1):
+        try:
+            subprocess.run(cmd, check=True, capture_output=True, text=True, timeout=600)
+            files = sorted(out_dir.glob(f"{dukas_id}-{tf}-*.csv"))
+            if files:
+                return files[-1]
+        except subprocess.CalledProcessError as e:
+            if attempt >= retries:
+                print(f"    ! {dukas_id} {tf}: failed ({(e.stderr or '')[:100]})",
+                      flush=True)
+        except subprocess.TimeoutExpired:
+            if attempt >= retries:
+                print(f"    ! {dukas_id} {tf}: timed out", flush=True)
+    return None
 
 
-def _to_canonical(csv_path: Path, symbol: str, tf: str) -> int:
+def _read_csv(csv_path: Path) -> pd.DataFrame | None:
     df = pd.read_csv(csv_path)
     if "timestamp" not in df.columns or df.empty:
-        return 0
+        return None
     df["timestamp"] = pd.to_datetime(df["timestamp"], unit="ms", utc=True)
     if "volume" not in df.columns:
         df["volume"] = 0.0
     df = df.set_index("timestamp").sort_index()
     df = df[["open", "high", "low", "close", "volume"]].dropna(subset=["open"])
-    df = df[~df.index.duplicated(keep="first")]
+    return df[~df.index.duplicated(keep="first")]
+
+
+def _write(df: pd.DataFrame, symbol: str, tf: str) -> int:
     out = get_canonical_dir() / "dukascopy" / symbol.lower()
     out.mkdir(parents=True, exist_ok=True)
     df.to_parquet(out / f"{symbol.lower()}_{tf}.parquet")
@@ -98,19 +106,20 @@ def _to_canonical(csv_path: Path, symbol: str, tf: str) -> int:
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--symbols", default="all")
-    ap.add_argument("--timeframes", default="h4,h1,m30")
-    ap.add_argument("--from", dest="frm", default="2003-01-01")
+    ap.add_argument("--from", dest="frm", default="2003-01-01",
+                    help="start for H1 (H4 is derived from H1)")
+    ap.add_argument("--m30-from", default="2015-01-01",
+                    help="start for M30 (shorter window — M30 over 20y times out)")
     ap.add_argument("--to", default=str(date.today()))
     ap.add_argument("--raw-dir", default="data/raw/dukascopy")
     args = ap.parse_args()
 
     symbols = (list(DUKASCOPY_IDS) if args.symbols == "all"
                else [s.strip().upper() for s in args.symbols.split(",")])
-    timeframes = [t.strip().lower() for t in args.timeframes.split(",")]
     raw = Path(args.raw_dir)
 
-    print(f"Dukascopy pull: {len(symbols)} symbols x {timeframes} "
-          f"from {args.frm} to {args.to}", flush=True)
+    print(f"Dukascopy pull: {len(symbols)} symbols | H1+H4(derived) from "
+          f"{args.frm}, M30 from {args.m30_from}", flush=True)
     ok_syms, total_bars = 0, 0
     for sym in symbols:
         dukas_id = DUKASCOPY_IDS.get(sym)
@@ -119,13 +128,23 @@ def main() -> None:
             continue
         print(f"{sym} ({dukas_id}):", flush=True)
         sym_bars = 0
-        for tf in timeframes:
-            csv_path = _download_one(dukas_id, tf, args.frm, args.to, raw / sym.lower())
-            if csv_path is None:
-                continue
-            n = _to_canonical(csv_path, sym, tf)
-            sym_bars += n
-            print(f"    {tf}: {n:,} bars", flush=True)
+        # H1 (reliable) → write H1 + derive H4
+        h1_csv = _download_one(dukas_id, "h1", args.frm, args.to, raw / sym.lower())
+        if h1_csv is not None:
+            h1 = _read_csv(h1_csv)
+            if h1 is not None and len(h1):
+                sym_bars += _write(h1, sym, "h1")
+                print(f"    h1: {len(h1):,} bars", flush=True)
+                h4 = resample_ohlcv(h1, "H4")
+                sym_bars += _write(h4, sym, "h4")
+                print(f"    h4: {len(h4):,} bars (derived)", flush=True)
+        # M30 (recent window only)
+        m30_csv = _download_one(dukas_id, "m30", args.m30_from, args.to, raw / sym.lower())
+        if m30_csv is not None:
+            m30 = _read_csv(m30_csv)
+            if m30 is not None and len(m30):
+                sym_bars += _write(m30, sym, "m30")
+                print(f"    m30: {len(m30):,} bars", flush=True)
         if sym_bars:
             ok_syms += 1
             total_bars += sym_bars
