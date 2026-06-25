@@ -661,12 +661,21 @@ class FleetOverviewResponse(BaseModel):
     strategy_groups: dict[str, dict]
 
 
-def _unrealized_pnl(position: dict, instrument: str, timeframe: str):
-    """Mark-to-market P&L on an open paper position using the latest close.
+def _unrealized_pnl(position: dict, instrument: str, timeframe: str, as_of=None):
+    """Mark-to-market P&L on an open paper position.
+
+    Marks against the close at the bot's CURRENT evaluation time (``as_of`` =
+    last_evaluated_bar), NOT the latest available candle — bots replaying history
+    sit in the past, so marking against today's price gives nonsense. Falls back
+    to the latest close only when as_of is unknown.
 
     Returns (unrealized_pnl, direction, entry_price) or (0.0, None, None).
     """
     try:
+        from datetime import timezone as _tz
+
+        import pandas as _pd
+
         from fibokei.backtester.sizing import pip_value_adjustment
         from fibokei.data.providers.registry import load_canonical_cached
         entry = float(position.get("entry_price"))
@@ -676,9 +685,20 @@ def _unrealized_pnl(position: dict, instrument: str, timeframe: str):
         df, _ = load_canonical_cached(instrument, timeframe)
         if df is None or df.empty or size <= 0:
             return 0.0, (direction or None), entry
-        last = float(df["close"].iloc[-1])
-        raw = (last - entry) * size if is_long else (entry - last) * size
-        adj = pip_value_adjustment(instrument, last)
+        mark = None
+        if as_of is not None:
+            ts = _pd.Timestamp(as_of)
+            if ts.tzinfo is None:
+                ts = ts.tz_localize(_tz.utc)
+            sub = df[df.index <= ts]
+            # Only mark if the bot's evaluation time is actually within the data
+            # range; otherwise the position is stale/replay and we skip it.
+            if len(sub):
+                mark = float(sub["close"].iloc[-1])
+        if mark is None:
+            return 0.0, ("LONG" if is_long else "SHORT"), entry
+        raw = (mark - entry) * size if is_long else (entry - mark) * size
+        adj = pip_value_adjustment(instrument, mark)
         return round(raw * adj, 2), ("LONG" if is_long else "SHORT"), entry
     except Exception:
         return 0.0, None, None
@@ -723,7 +743,8 @@ def get_fleet_overview(
         if has_position:
             open_count += 1
             unreal, pos_dir, pos_entry = _unrealized_pnl(
-                bot.position_json, bot.instrument, bot.timeframe)
+                bot.position_json, bot.instrument, bot.timeframe,
+                as_of=bot.last_evaluated_bar)
 
         # Stale detection
         is_stale = False
