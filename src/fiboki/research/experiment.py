@@ -1,0 +1,546 @@
+"""The experiment ledger: append-only, and structurally so.
+
+Every piece of research Fiboki does writes a row here -- who asked for it, why,
+what was tried, against which data, with which code, and what came back. The
+ledger is what makes the research process auditable rather than anecdotal, and
+what lets :mod:`fiboki.research.memory` answer "have we tried this already?"
+before work is done rather than after it is repeated.
+
+Append-only is enforced twice
+-----------------------------
+1. **At the API.** :class:`ExperimentLedger` exposes ``create``, ``get`` and
+   ``list``. There is no ``update`` and no ``delete``, so no caller can reach for
+   one.
+2. **At the database.** SQLite triggers raise on ``UPDATE`` and ``DELETE``
+   against the experiments table. A future maintainer who opens the file with
+   ``sqlite3`` and tries to tidy up an embarrassing result gets an error, not a
+   tidier history.
+
+The second one is the one that matters. An API without a ``delete`` method is a
+convention; a trigger is a property of the artefact. A research record that can
+be quietly amended after the fact is worth nothing, because the value of the
+ledger is precisely that it contains the results nobody liked.
+
+Amending a record
+-----------------
+You do not. You append a new experiment whose ``parent_experiment_id`` points at
+the one being corrected and whose ``reason`` says what was wrong with it. The
+history then shows both the error and the correction, which is the honest record.
+"""
+from __future__ import annotations
+
+import json
+import uuid
+from collections.abc import Mapping, Sequence
+from dataclasses import dataclass, field
+from datetime import UTC, datetime
+from enum import Enum
+from pathlib import Path
+from typing import Any
+
+from sqlalchemy import (
+    JSON,
+    DateTime,
+    String,
+    Text,
+    create_engine,
+    event,
+    select,
+    text,
+)
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, sessionmaker
+
+from fiboki.research.structure import structural_tokens, structure_hash
+from fiboki.validation.report import ValidationReport, code_version
+
+__all__ = [
+    "APPEND_ONLY_MESSAGE",
+    "ActorKind",
+    "Experiment",
+    "ExperimentDraft",
+    "ExperimentLedger",
+    "ExperimentNotFound",
+    "LedgerError",
+    "Outcome",
+    "is_append_only_violation",
+]
+
+
+class LedgerError(RuntimeError):
+    """Base class for ledger misuse."""
+
+
+class ExperimentNotFound(LedgerError):
+    def __init__(self, experiment_id: str) -> None:
+        super().__init__(f"no experiment {experiment_id!r} in this ledger")
+        self.experiment_id = experiment_id
+
+
+class ActorKind(str, Enum):
+    """Who initiated the work. Agents and humans are told apart on purpose."""
+
+    HUMAN = "human"
+    AGENT = "agent"
+    SCHEDULE = "schedule"
+
+
+class Outcome(str, Enum):
+    PENDING = "pending"
+    PROMOTED = "promoted"
+    REJECTED = "rejected"
+    INCONCLUSIVE = "inconclusive"
+    ABANDONED = "abandoned"
+    ERROR = "error"
+
+
+class Base(DeclarativeBase):
+    pass
+
+
+class ExperimentRow(Base):
+    __tablename__ = "experiment"
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
+    parent_experiment_id: Mapped[str] = mapped_column(String(64), default="", index=True)
+
+    actor_kind: Mapped[str] = mapped_column(String(16), index=True)
+    actor_name: Mapped[str] = mapped_column(String(128), index=True)
+    reason: Mapped[str] = mapped_column(Text, default="")
+    hypothesis_id: Mapped[str] = mapped_column(String(128), default="", index=True)
+
+    strategy_id: Mapped[str] = mapped_column(String(128), default="", index=True)
+    strategy_content_hash: Mapped[str] = mapped_column(String(64), default="", index=True)
+    strategy_version: Mapped[str] = mapped_column(String(32), default="")
+    structure_hash: Mapped[str] = mapped_column(String(64), default="", index=True)
+    structure_tokens_json: Mapped[list] = mapped_column(JSON, default=list)
+    strategy_document_json: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+
+    code_version: Mapped[str] = mapped_column(String(64), default="")
+    dataset_version_id: Mapped[str] = mapped_column(String(128), default="", index=True)
+    parameters_json: Mapped[dict] = mapped_column(JSON, default=dict)
+    engine_config_json: Mapped[dict] = mapped_column(JSON, default=dict)
+
+    outputs_json: Mapped[dict] = mapped_column(JSON, default=dict)
+    validation_report_json: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    validation_report_hash: Mapped[str] = mapped_column(String(64), default="", index=True)
+
+    outcome: Mapped[str] = mapped_column(String(24), default=Outcome.PENDING.value, index=True)
+    conclusion: Mapped[str] = mapped_column(Text, default="")
+    rejection_reason: Mapped[str] = mapped_column(Text, default="")
+    rejected_at_rung: Mapped[str] = mapped_column(String(64), default="")
+    tags_json: Mapped[list] = mapped_column(JSON, default=list)
+
+
+#: Raised by the triggers below. The message is the first thing a confused
+#: maintainer will read, so it explains the rule rather than just refusing.
+APPEND_ONLY_MESSAGE = (
+    "fiboki experiment ledger is append-only: append a correcting experiment "
+    "whose parent_experiment_id points at this one"
+)
+
+
+def is_append_only_violation(exc: BaseException) -> bool:
+    """True when a database error came from the append-only triggers.
+
+    The guarantee lives in the database, so the error that enforces it is a
+    driver error rather than one of ours. This is how a caller -- or a test --
+    tells that specific refusal apart from an unrelated SQL failure.
+    """
+    seen: set[int] = set()
+    current: BaseException | None = exc
+    while current is not None and id(current) not in seen:
+        seen.add(id(current))
+        if APPEND_ONLY_MESSAGE in str(current):
+            return True
+        current = current.__cause__ or current.__context__
+    return False
+
+_TRIGGERS = (
+    f"""
+    CREATE TRIGGER IF NOT EXISTS experiment_no_update
+    BEFORE UPDATE ON experiment
+    BEGIN
+        SELECT RAISE(ABORT, '{APPEND_ONLY_MESSAGE}');
+    END;
+    """,
+    f"""
+    CREATE TRIGGER IF NOT EXISTS experiment_no_delete
+    BEFORE DELETE ON experiment
+    BEGIN
+        SELECT RAISE(ABORT, '{APPEND_ONLY_MESSAGE}');
+    END;
+    """,
+)
+
+
+# --------------------------------------------------------------------------
+# Domain objects
+# --------------------------------------------------------------------------
+
+
+@dataclass(frozen=True, slots=True)
+class ExperimentDraft:
+    """What a caller supplies. The ledger fills in the rest."""
+
+    actor_kind: ActorKind
+    actor_name: str
+    reason: str
+    """WHY this was run, in the initiator's own words. A prompt, a ticket, a
+    hypothesis restated. An experiment with no reason cannot be learned from."""
+
+    hypothesis_id: str = ""
+    parent_experiment_id: str = ""
+    strategy_id: str = ""
+    strategy_content_hash: str = ""
+    strategy_version: str = ""
+    strategy_document: Any = field(default=None, repr=False)
+    dataset_version_id: str = ""
+    code_version: str = ""
+    parameters: Mapping[str, Any] = field(default_factory=dict)
+    engine_config: Mapping[str, Any] = field(default_factory=dict)
+    outputs: Mapping[str, Any] = field(default_factory=dict)
+    validation_report: ValidationReport | None = field(default=None, repr=False)
+    outcome: Outcome = Outcome.PENDING
+    conclusion: str = ""
+    rejection_reason: str = ""
+    tags: Sequence[str] = ()
+
+    def __post_init__(self) -> None:
+        if not str(self.actor_name).strip():
+            raise ValueError(
+                "actor_name is mandatory: an experiment nobody is named for "
+                "cannot be followed up, and 'the pipeline' is not an actor"
+            )
+        if not str(self.reason).strip():
+            raise ValueError(
+                "reason is mandatory: the ledger exists so a later reader can "
+                "tell WHY this was tried, not merely that it was"
+            )
+
+
+@dataclass(frozen=True, slots=True)
+class Experiment:
+    """A written, immutable research record."""
+
+    id: str
+    created_at: datetime
+    actor_kind: ActorKind
+    actor_name: str
+    reason: str
+    parent_experiment_id: str = ""
+    hypothesis_id: str = ""
+    strategy_id: str = ""
+    strategy_content_hash: str = ""
+    strategy_version: str = ""
+    structure_hash: str = ""
+    structure_tokens: tuple[str, ...] = ()
+    strategy_document: dict[str, Any] | None = field(default=None, repr=False)
+    code_version: str = ""
+    dataset_version_id: str = ""
+    parameters: dict[str, Any] = field(default_factory=dict)
+    engine_config: dict[str, Any] = field(default_factory=dict)
+    outputs: dict[str, Any] = field(default_factory=dict)
+    validation_report_json: dict[str, Any] | None = field(default=None, repr=False)
+    validation_report_hash: str = ""
+    outcome: Outcome = Outcome.PENDING
+    conclusion: str = ""
+    rejection_reason: str = ""
+    rejected_at_rung: str = ""
+    tags: tuple[str, ...] = ()
+
+    @property
+    def validation_report(self) -> ValidationReport | None:
+        if self.validation_report_json is None:
+            return None
+        return ValidationReport.from_dict(self.validation_report_json)
+
+    @property
+    def short_id(self) -> str:
+        return self.id[:12]
+
+    def describe(self) -> str:
+        """One line an operator can read in a list."""
+        where = f" at {self.rejected_at_rung}" if self.rejected_at_rung else ""
+        tail = self.rejection_reason or self.conclusion
+        return (
+            f"{self.short_id} {self.created_at.date()} "
+            f"{self.actor_kind.value}:{self.actor_name} "
+            f"{self.strategy_id or '-'} -> {self.outcome.value}{where}"
+            + (f" -- {tail}" if tail else "")
+        )
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "id": self.id,
+            "created_at": self.created_at.isoformat(),
+            "parent_experiment_id": self.parent_experiment_id,
+            "actor_kind": self.actor_kind.value,
+            "actor_name": self.actor_name,
+            "reason": self.reason,
+            "hypothesis_id": self.hypothesis_id,
+            "strategy_id": self.strategy_id,
+            "strategy_content_hash": self.strategy_content_hash,
+            "strategy_version": self.strategy_version,
+            "structure_hash": self.structure_hash,
+            "structure_tokens": list(self.structure_tokens),
+            "code_version": self.code_version,
+            "dataset_version_id": self.dataset_version_id,
+            "parameters": dict(self.parameters),
+            "engine_config": dict(self.engine_config),
+            "outputs": dict(self.outputs),
+            "validation_report_hash": self.validation_report_hash,
+            "outcome": self.outcome.value,
+            "conclusion": self.conclusion,
+            "rejection_reason": self.rejection_reason,
+            "rejected_at_rung": self.rejected_at_rung,
+            "tags": list(self.tags),
+        }
+
+
+# --------------------------------------------------------------------------
+# Repository
+# --------------------------------------------------------------------------
+
+
+class ExperimentLedger:
+    """Append-only SQLite repository of experiments.
+
+    ``create`` / ``get`` / ``list`` and nothing else. See the module docstring
+    for why there is no ``update``.
+    """
+
+    def __init__(self, db_path: str | Path = ":memory:", *, echo: bool = False) -> None:
+        self.db_path = Path(db_path) if str(db_path) != ":memory:" else None
+        if self.db_path is None:
+            url = "sqlite+pysqlite:///:memory:"
+        else:
+            self.db_path.parent.mkdir(parents=True, exist_ok=True)
+            url = f"sqlite+pysqlite:///{self.db_path}"
+        self._engine = create_engine(url, echo=echo, future=True)
+
+        @event.listens_for(self._engine, "connect")
+        def _enforce_foreign_keys(dbapi_conn, _record):  # pragma: no cover - trivial
+            cur = dbapi_conn.cursor()
+            cur.execute("PRAGMA foreign_keys=ON")
+            cur.close()
+
+        Base.metadata.create_all(self._engine)
+        with self._engine.begin() as conn:
+            for ddl in _TRIGGERS:
+                conn.execute(text(ddl))
+        self._session_factory = sessionmaker(bind=self._engine, future=True)
+
+    # ------------------------------------------------------------ lifecycle
+
+    def close(self) -> None:
+        self._engine.dispose()
+
+    def __enter__(self) -> ExperimentLedger:
+        return self
+
+    def __exit__(self, *exc: object) -> None:
+        self.close()
+
+    @classmethod
+    def in_memory(cls) -> ExperimentLedger:
+        return cls(":memory:")
+
+    @property
+    def engine(self):  # pragma: no cover - accessor used by lineage / tests
+        return self._engine
+
+    # --------------------------------------------------------------- write
+
+    def create(self, draft: ExperimentDraft) -> Experiment:
+        """Append one experiment. The only write this class performs."""
+        doc = draft.strategy_document
+        tokens = tuple(structural_tokens(doc)) if doc is not None else ()
+        s_hash = structure_hash(doc) if doc is not None else ""
+        content_hash = draft.strategy_content_hash
+        if not content_hash and doc is not None and hasattr(doc, "content_hash"):
+            content_hash = str(doc.content_hash())
+        strategy_id = draft.strategy_id or (
+            str(getattr(doc, "strategy_id", "")) if doc is not None else ""
+        )
+
+        report = draft.validation_report
+        report_json = report.to_dict() if report is not None else None
+        report_hash = report.content_hash() if report is not None else ""
+        outcome = draft.outcome
+        rejection = draft.rejection_reason
+        rung = ""
+        if report is not None:
+            if outcome is Outcome.PENDING:
+                outcome = (
+                    Outcome.PROMOTED
+                    if report.verdict.promotable
+                    else (
+                        Outcome.INCONCLUSIVE
+                        if report.verdict.value == "incomplete"
+                        else Outcome.REJECTED
+                    )
+                )
+            if not rejection and not report.verdict.promotable:
+                rejection = report.binding_constraint.describe()
+            failing = report.first_failing_rung()
+            rung = failing.label if failing is not None else ""
+
+        row_id = f"exp_{uuid.uuid4().hex}"
+        created = datetime.now(tz=UTC)
+        with self._session_factory() as session:
+            if draft.parent_experiment_id:
+                parent = session.get(ExperimentRow, draft.parent_experiment_id)
+                if parent is None:
+                    raise ExperimentNotFound(draft.parent_experiment_id)
+            session.add(
+                ExperimentRow(
+                    id=row_id,
+                    created_at=created,
+                    parent_experiment_id=draft.parent_experiment_id,
+                    actor_kind=draft.actor_kind.value,
+                    actor_name=draft.actor_name,
+                    reason=draft.reason,
+                    hypothesis_id=draft.hypothesis_id,
+                    strategy_id=strategy_id,
+                    strategy_content_hash=content_hash,
+                    strategy_version=draft.strategy_version,
+                    structure_hash=s_hash,
+                    structure_tokens_json=list(tokens),
+                    strategy_document_json=_document_json(doc),
+                    code_version=draft.code_version or code_version(),
+                    dataset_version_id=draft.dataset_version_id,
+                    parameters_json=_jsonable(draft.parameters),
+                    engine_config_json=_jsonable(draft.engine_config),
+                    outputs_json=_jsonable(draft.outputs),
+                    validation_report_json=report_json,
+                    validation_report_hash=report_hash,
+                    outcome=outcome.value,
+                    conclusion=draft.conclusion,
+                    rejection_reason=rejection,
+                    rejected_at_rung=rung,
+                    tags_json=list(draft.tags),
+                )
+            )
+            session.commit()
+        return self.get(row_id)
+
+    # ---------------------------------------------------------------- read
+
+    def get(self, experiment_id: str) -> Experiment:
+        with self._session_factory() as session:
+            row = session.get(ExperimentRow, str(experiment_id))
+            if row is None:
+                raise ExperimentNotFound(str(experiment_id))
+            return _from_row(row)
+
+    def list(
+        self,
+        *,
+        strategy_content_hash: str | None = None,
+        structure_hash: str | None = None,
+        strategy_id: str | None = None,
+        hypothesis_id: str | None = None,
+        dataset_version_id: str | None = None,
+        actor_name: str | None = None,
+        outcome: Outcome | None = None,
+        parent_experiment_id: str | None = None,
+        limit: int | None = None,
+    ) -> list[Experiment]:
+        """Every experiment matching the filters, oldest first.
+
+        Oldest first because the ledger is read as a history: "what did we try,
+        and what happened next" only makes sense in order.
+        """
+        with self._session_factory() as session:
+            stmt = select(ExperimentRow).order_by(
+                ExperimentRow.created_at, ExperimentRow.id
+            )
+            if strategy_content_hash is not None:
+                stmt = stmt.where(
+                    ExperimentRow.strategy_content_hash == str(strategy_content_hash)
+                )
+            if structure_hash is not None:
+                stmt = stmt.where(ExperimentRow.structure_hash == str(structure_hash))
+            if strategy_id is not None:
+                stmt = stmt.where(ExperimentRow.strategy_id == str(strategy_id))
+            if hypothesis_id is not None:
+                stmt = stmt.where(ExperimentRow.hypothesis_id == str(hypothesis_id))
+            if dataset_version_id is not None:
+                stmt = stmt.where(
+                    ExperimentRow.dataset_version_id == str(dataset_version_id)
+                )
+            if actor_name is not None:
+                stmt = stmt.where(ExperimentRow.actor_name == str(actor_name))
+            if outcome is not None:
+                stmt = stmt.where(ExperimentRow.outcome == outcome.value)
+            if parent_experiment_id is not None:
+                stmt = stmt.where(
+                    ExperimentRow.parent_experiment_id == str(parent_experiment_id)
+                )
+            if limit is not None:
+                stmt = stmt.limit(int(limit))
+            return [_from_row(r) for r in session.scalars(stmt).all()]
+
+    def children(self, experiment_id: str) -> list[Experiment]:
+        return self.list(parent_experiment_id=str(experiment_id))
+
+    def count(self) -> int:
+        with self._session_factory() as session:
+            return len(session.scalars(select(ExperimentRow.id)).all())
+
+    def __len__(self) -> int:
+        return self.count()
+
+
+def _document_json(doc: Any) -> dict[str, Any] | None:
+    if doc is None:
+        return None
+    if hasattr(doc, "model_dump"):
+        return doc.model_dump(mode="json")
+    if isinstance(doc, Mapping):
+        return dict(doc)
+    return None
+
+
+def _jsonable(payload: Mapping[str, Any] | None) -> dict[str, Any]:
+    if not payload:
+        return {}
+    return json.loads(json.dumps(dict(payload), default=str, sort_keys=True))
+
+
+def _from_row(row: ExperimentRow) -> Experiment:
+    created = row.created_at
+    if created.tzinfo is None:
+        created = created.replace(tzinfo=UTC)
+    return Experiment(
+        id=row.id,
+        created_at=created,
+        actor_kind=ActorKind(row.actor_kind),
+        actor_name=row.actor_name,
+        reason=row.reason or "",
+        parent_experiment_id=row.parent_experiment_id or "",
+        hypothesis_id=row.hypothesis_id or "",
+        strategy_id=row.strategy_id or "",
+        strategy_content_hash=row.strategy_content_hash or "",
+        strategy_version=row.strategy_version or "",
+        structure_hash=row.structure_hash or "",
+        structure_tokens=tuple(row.structure_tokens_json or ()),
+        strategy_document=dict(row.strategy_document_json)
+        if row.strategy_document_json
+        else None,
+        code_version=row.code_version or "",
+        dataset_version_id=row.dataset_version_id or "",
+        parameters=dict(row.parameters_json or {}),
+        engine_config=dict(row.engine_config_json or {}),
+        outputs=dict(row.outputs_json or {}),
+        validation_report_json=dict(row.validation_report_json)
+        if row.validation_report_json
+        else None,
+        validation_report_hash=row.validation_report_hash or "",
+        outcome=Outcome(row.outcome),
+        conclusion=row.conclusion or "",
+        rejection_reason=row.rejection_reason or "",
+        rejected_at_rung=row.rejected_at_rung or "",
+        tags=tuple(row.tags_json or ()),
+    )
