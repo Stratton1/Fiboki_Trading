@@ -87,6 +87,7 @@ class Platform:
 
         self._experiment_db: Path | None = settings.experiment_db
         self._sources: dict[str, SourceStatus] = {}
+        self._lifecycle: Any | None = None
 
         # ---- fixtures, labelled --------------------------------------
         self.clock = SeedClock.fixed()
@@ -108,6 +109,67 @@ class Platform:
             self._strategy_registry = None
             self._strategy_error = f"{type(exc).__name__}: {exc}"
             log.warning("strategy_registry_unavailable", extra={"error": self._strategy_error})
+
+    # -------------------------------------------------------- lifecycle
+
+    @property
+    def lifecycle(self) -> Any:
+        """The promotion/degradation service, backed by files under the state dir.
+
+        Read-only from the API's point of view: the routes serve
+        :meth:`LifecycleService.status` and the last
+        :class:`LifecycleEvaluation`, and nothing in the HTTP surface evaluates,
+        promotes or demotes. The evaluation happens on the live worker's timer,
+        in a worker process, which is the only place it can happen honestly --
+        V1 computed heartbeat freshness when a human loaded a page.
+
+        The stores are the same file-backed ones the worker writes, so an API
+        process and a worker process on one box read one history. On separate
+        boxes they do NOT, and that is a deployment fact rather than a code
+        defect: ``lifecycle_source`` reports the path it read.
+        """
+        if self._lifecycle is None:
+            from fiboki.lifecycle.service import LifecycleService
+            from fiboki.lifecycle.state import FileTransitionLog, LifecycleStateMachine
+            from fiboki.lifecycle.stopping_rules import (
+                FileHaltJournal,
+                FilePreRegistrationStore,
+                HaltRegistry,
+            )
+
+            root = self.settings.state_dir / "lifecycle"
+            self._lifecycle = LifecycleService(
+                machine=LifecycleStateMachine(log=FileTransitionLog(root / "transitions.jsonl")),
+                registrations=FilePreRegistrationStore(root / "registrations.jsonl"),
+                halts=HaltRegistry(FileHaltJournal(root / "halts.jsonl")),
+            )
+        return self._lifecycle
+
+    def lifecycle_source(self) -> SourceStatus:
+        """What the lifecycle routes are actually reading.
+
+        An empty store is reported as ``live`` with a count of zero, not as
+        ``absent``: the difference between "no strategy has been registered" and
+        "we cannot see the lifecycle store" is exactly the difference an
+        operator needs, and collapsing them is how V1's dashboard drew a healthy
+        idle fleet during a total outage.
+        """
+        root = self.settings.state_dir / "lifecycle"
+        try:
+            statuses = self.lifecycle.statuses()
+        except Exception as exc:
+            return SourceStatus(
+                "lifecycle",
+                "absent",
+                f"lifecycle store unreadable at {root}: {type(exc).__name__}: {exc}",
+                healthy=False,
+            )
+        return SourceStatus(
+            "lifecycle",
+            "live",
+            f"{len(statuses)} registered strateg(ies) at {root}",
+            healthy=True,
+        )
 
     # ------------------------------------------------------- strategies
 
@@ -255,6 +317,7 @@ class Platform:
                 SourceStatus("market_data_store", "live", str(root), healthy=True)
             )
 
+        sources.append(self.lifecycle_source())
         sources.append(
             SourceStatus(
                 "strategy_registry",

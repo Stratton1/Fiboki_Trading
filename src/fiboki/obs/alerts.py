@@ -114,6 +114,16 @@ class AlertEvent(str, Enum):
     KILL_SWITCH_DEACTIVATED = "kill_switch_deactivated"
     ORDER_REJECTED_REPEATEDLY = "order_rejected_repeatedly"
     STRATEGY_DEGRADED = "strategy_degraded"
+    #: A pre-registered stopping rule FIRED. The halt is latched and only a
+    #: named operator can release it. Distinct from DEGRADED because a
+    #: degradation is a score drifting and a halt is a rule that has already
+    #: taken the strategy out of service -- routing both to one event made an
+    #: alert channel unable to tell "watch this" from "this has stopped".
+    STRATEGY_HALTED = "strategy_halted"
+    #: A strategy was demoted into QUARANTINED. It cannot trade in any mode
+    #: until a human puts it back, which is a different message from a demotion
+    #: to WATCH or DEGRADED.
+    STRATEGY_QUARANTINED = "strategy_quarantined"
     QUEUE_BACKED_UP = "queue_backed_up"
     JOB_DEAD_LETTERED = "job_dead_lettered"
     SWEEP_NO_DATA_EXCEEDED = "sweep_no_data_exceeded"
@@ -148,6 +158,8 @@ _DEFAULT_SEVERITY: dict[AlertEvent, Severity] = {
     AlertEvent.KILL_SWITCH_DEACTIVATED: Severity.WARNING,
     AlertEvent.ORDER_REJECTED_REPEATEDLY: Severity.ERROR,
     AlertEvent.STRATEGY_DEGRADED: Severity.WARNING,
+    AlertEvent.STRATEGY_HALTED: Severity.CRITICAL,
+    AlertEvent.STRATEGY_QUARANTINED: Severity.ERROR,
     AlertEvent.QUEUE_BACKED_UP: Severity.WARNING,
     AlertEvent.JOB_DEAD_LETTERED: Severity.ERROR,
     AlertEvent.SWEEP_NO_DATA_EXCEEDED: Severity.ERROR,

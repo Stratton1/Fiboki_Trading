@@ -29,15 +29,23 @@ What this service deliberately does NOT do
   process is how V1 ended up with heartbeat freshness computed when a human
   loaded a page. The worker owns the timer; this owns the evaluation.
 
-Known gap, recorded rather than worked around
-----------------------------------------------
-:class:`fiboki.obs.alerts.AlertEvent` has ``STRATEGY_DEGRADED`` and nothing for a
-halt or a quarantine. Every alert raised here therefore uses
-``STRATEGY_DEGRADED``, with the severity carrying the difference: ``WARNING`` for
-a divergence, ``ERROR`` for an automatic demotion and ``CRITICAL`` for a fired
-stopping rule. That is a taxonomy gap in ``obs/``, not in this package, and
-adding ``STRATEGY_HALTED`` and ``STRATEGY_QUARANTINED`` to that enum is the
-correct fix -- made there, by whoever owns it, with the routing updated to match.
+Three alert events, not one severity dial
+-----------------------------------------
+:class:`fiboki.obs.alerts.AlertEvent` used to carry only ``STRATEGY_DEGRADED``,
+so every alert raised here was that event with the severity carrying the whole
+difference. A channel filtering on the event could not tell "this is drifting"
+from "a pre-registered rule has taken it out of service". ``obs/alerts.py`` now
+has ``STRATEGY_HALTED`` and ``STRATEGY_QUARANTINED`` as well, and this service
+routes to them:
+
+============================  ==========================  =========
+Occasion                      Event                       Severity
+============================  ==========================  =========
+divergence, no demotion       ``STRATEGY_DEGRADED``       WARNING
+automatic demotion            ``STRATEGY_DEGRADED``       ERROR
+demotion to QUARANTINED       ``STRATEGY_QUARANTINED``    ERROR
+a stopping rule fired         ``STRATEGY_HALTED``         CRITICAL
+============================  ==========================  =========
 """
 from __future__ import annotations
 
@@ -433,6 +441,7 @@ class LifecycleService:
             if event is not None:
                 alerts.append(
                     self._alert(
+                        AlertEvent.STRATEGY_HALTED,
                         Severity.CRITICAL,
                         f"stopping rule {evaluation.kind.value} fired for "
                         f"{strategy_content_hash[:12]}: {evaluation.describe()}",
@@ -467,6 +476,11 @@ class LifecycleService:
                     state_after = target
                     alerts.append(
                         self._alert(
+                            (
+                                AlertEvent.STRATEGY_QUARANTINED
+                                if target is StrategyLifecycle.QUARANTINED
+                                else AlertEvent.STRATEGY_DEGRADED
+                            ),
                             Severity.ERROR,
                             f"{strategy_content_hash[:12]} demoted "
                             f"{state_before.value} -> {target.value}: {verdict.reason}",
@@ -487,6 +501,7 @@ class LifecycleService:
         elif report is not None and report.n_flagged and not verdict.changed:
             alerts.append(
                 self._alert(
+                    AlertEvent.STRATEGY_DEGRADED,
                     Severity.WARNING,
                     f"{strategy_content_hash[:12]} diverging: {report.summary()}",
                     strategy_content_hash=strategy_content_hash,
@@ -665,11 +680,11 @@ class LifecycleService:
         return updated.history[-1]
 
     def _alert(
-        self, severity: Severity, message: str, **context: Any
+        self, event: AlertEvent, severity: Severity, message: str, **context: Any
     ) -> Alert | None:
         if self.dispatcher is None:
             return Alert(
-                event=AlertEvent.STRATEGY_DEGRADED,
+                event=event,
                 message=message,
                 severity=severity,
                 at=self.clock(),
@@ -677,10 +692,17 @@ class LifecycleService:
                 context=dict(context),
             )
         return self.dispatcher.fire(
-            AlertEvent.STRATEGY_DEGRADED,
+            event,
             message,
             severity=severity,
             source="lifecycle",
-            dedupe_key=f"lifecycle:{context.get('strategy_content_hash', '')}:{severity.value}",
+            # The event is part of the key: a halt and a demotion on the same
+            # strategy in the same tick are two facts, and suppressing the
+            # second because the first looked similar is how an operator learns
+            # about a quarantine from a dashboard instead of an alert.
+            dedupe_key=(
+                f"lifecycle:{context.get('strategy_content_hash', '')}"
+                f":{event.value}:{severity.value}"
+            ),
             **context,
         )

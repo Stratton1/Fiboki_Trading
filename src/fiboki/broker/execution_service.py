@@ -445,9 +445,15 @@ class ExecutionService:
             mode=self.mode,
             client_ref=client_ref,
             stop_loss=plan.signal.stop_price,
+            # ONE target for the venue -- that is all a venue can hold -- plus
+            # the whole ladder for the position manager behind it. Truncating to
+            # the first leg here is what made a paper run of a scale-out
+            # document a run of a different document.
             take_profit=(
                 plan.signal.take_profit_prices[0] if plan.signal.take_profit_prices else None
             ),
+            take_profit_prices=tuple(plan.signal.take_profit_prices),
+            take_profit_allocations=tuple(plan.signal.take_profit_allocations),
             created_at=now,
         )
 

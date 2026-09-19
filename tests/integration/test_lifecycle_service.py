@@ -166,7 +166,22 @@ def test_a_strategy_whose_live_sharpe_is_half_its_backtest_is_demoted():
 
     severities = {a.severity for a in channel.sent}
     assert Severity.CRITICAL in severities
-    assert all(a.event is AlertEvent.STRATEGY_DEGRADED for a in channel.sent)
+    # The taxonomy gap this package used to record is closed: a fired stopping
+    # rule and a demotion into QUARANTINED are separate events, so a channel can
+    # filter on "this has stopped" without reading the severity.
+    events = {a.event for a in channel.sent}
+    assert AlertEvent.STRATEGY_HALTED in events, "the fired rule did not alert as a halt"
+    assert AlertEvent.STRATEGY_QUARANTINED in events, (
+        "the demotion into QUARANTINED alerted as something else"
+    )
+    assert events <= {
+        AlertEvent.STRATEGY_HALTED,
+        AlertEvent.STRATEGY_QUARANTINED,
+        AlertEvent.STRATEGY_DEGRADED,
+    }
+    halted = next(a for a in channel.sent if a.event is AlertEvent.STRATEGY_HALTED)
+    assert halted.severity is Severity.CRITICAL
+    assert halted.context["requires_operator_release"] is True
     assert service.machine.verify().ok
 
 

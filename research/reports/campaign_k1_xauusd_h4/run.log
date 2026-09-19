@@ -1,0 +1,142 @@
+backfilled 16 prior experiment(s) from research/reports/xauusd_h4
+gate set: v2.0.0-audit (min_trades=400)
+seeds: ['donchian_breakout_atr', 'fib_golden_pocket_pullback', 'ichimoku_kumo_trend', 'macd_ema_trend_hybrid', 'rsi_band_mean_reversion']
+hypotheses: ['gold_range_breakout_persists', 'golden_pocket_pullback_holds', 'kumo_state_conditions_trend', 'macd_confirms_ema_trend', 'rsi_band_reversion_in_range']
+
+30 cells queued, 35 skipped, 15 mutations refused
+planned trials 166 + prior 160 = TRUE TRIAL COUNT 326
+  donchian_breakout_atr_m3ecf77ae [3ecf77ae20e8] on XAUUSD H4 via add_filter (8 trials)
+  donchian_breakout_atr_mbdfe4742 [bdfe47424c0b] on XAUUSD H4 via alter_stop_model (4 trials)
+  donchian_breakout_atr_m3c934a3b [3c934a3b5ca8] on XAUUSD H4 via alter_target_model (8 trials)
+  donchian_breakout_atr_m76dbb4f7 [76dbb4f768c4] on XAUUSD H4 via change_regime_gate (8 trials)
+  donchian_breakout_atr_m427fba0e [427fba0e1791] on XAUUSD H4 via change_session_restriction (8 trials)
+  donchian_breakout_atr_m79f18824 [79f1882459a3] on XAUUSD H4 via change_confirmation_rule (8 trials)
+  donchian_breakout_atr_mf2553d34 [f2553d34ba65] on XAUUSD H4 via simplify (8 trials)
+  donchian_breakout_atr_m30945c80 [30945c80cae0] on XAUUSD H4 via combine (2 trials)
+  donchian_breakout_atr_m217dad55 [217dad5510d3] on XAUUSD H4 via combine (2 trials)
+  fib_golden_pocket_pullback_ma8f9f32b [a8f9f32b44d9] on XAUUSD H4 via add_filter (4 trials)
+  fib_golden_pocket_pullback_md15c64ac [d15c64ac47e5] on XAUUSD H4 via alter_stop_model (2 trials)
+  fib_golden_pocket_pullback_mb82cde01 [b82cde013025] on XAUUSD H4 via alter_target_model (4 trials)
+  fib_golden_pocket_pullback_mdd2357fa [dd2357faad3b] on XAUUSD H4 via change_regime_gate (4 trials)
+  fib_golden_pocket_pullback_md3507b8f [d3507b8f957a] on XAUUSD H4 via change_session_restriction (4 trials)
+  fib_golden_pocket_pullback_m88fd2d1c [88fd2d1c23c2] on XAUUSD H4 via change_confirmation_rule (4 trials)
+  fib_golden_pocket_pullback_me01e2d1a [e01e2d1a571a] on XAUUSD H4 via simplify (4 trials)
+  fib_golden_pocket_pullback_m76354e7e [76354e7e9dd7] on XAUUSD H4 via combine (2 trials)
+  fib_golden_pocket_pullback_mb73e28fd [b73e28fd6b3b] on XAUUSD H4 via combine (2 trials)
+  ichimoku_kumo_trend_m689694c1 [689694c14345] on XAUUSD H4 via add_filter (8 trials)
+  ichimoku_kumo_trend_m4195c8bf [4195c8bf41a4] on XAUUSD H4 via alter_stop_model (4 trials)
+  ichimoku_kumo_trend_m8fbcd36c [8fbcd36c228c] on XAUUSD H4 via alter_target_model (8 trials)
+  ichimoku_kumo_trend_me73acb6c [e73acb6c0b69] on XAUUSD H4 via change_confirmation_rule (8 trials)
+  ichimoku_kumo_trend_mca231a0f [ca231a0fc85b] on XAUUSD H4 via simplify (8 trials)
+  ichimoku_kumo_trend_m0bd80cab [0bd80cabb75f] on XAUUSD H4 via combine (4 trials)
+  macd_ema_trend_hybrid_ma2bc336b [a2bc336b2303] on XAUUSD H4 via add_filter (8 trials)
+  macd_ema_trend_hybrid_m03d3ee23 [03d3ee238d51] on XAUUSD H4 via alter_stop_model (4 trials)
+  macd_ema_trend_hybrid_m4b9a1dcd [4b9a1dcd7537] on XAUUSD H4 via change_regime_gate (8 trials)
+  macd_ema_trend_hybrid_mb7889927 [b7889927c61c] on XAUUSD H4 via change_confirmation_rule (8 trials)
+  macd_ema_trend_hybrid_mc45594a0 [c45594a07ef5] on XAUUSD H4 via simplify (8 trials)
+  macd_ema_trend_hybrid_m270351c7 [270351c713e3] on XAUUSD H4 via combine (4 trials)
+
+  SKIP donchian_breakout_atr: mutation_rejected -- the parent declares no filters, so none can be removed
+  SKIP donchian_breakout_atr: mutation_rejected -- incompatible parents: both declare a parameter 'stop_atr_multiple' with different domains, so one document cannot hold both meanings
+  SKIP fib_golden_pocket_pullback: mutation_rejected -- the parent declares no filters, so none can be removed
+  SKIP fib_golden_pocket_pullback: mutation_rejected -- incompatible parents: both declare a parameter 'adx_floor' with different domains, so one document cannot hold both meanings
+  SKIP fib_golden_pocket_pullback: mutation_rejected -- incompatible parents: both declare a parameter 'rsi_ceiling' with different domains, so one document cannot hold both meanings
+  SKIP ichimoku_kumo_trend: mutation_rejected -- the parent declares no filters, so none can be removed
+  SKIP ichimoku_kumo_trend: mutation_rejected -- the regime gate's bounds are parameter REFERENCES, not literals, so there is no width to scale here -- the width is already part of the declared sweep and mov
+  SKIP ichimoku_kumo_trend: mutation_rejected -- incompatible parents: both declare a parameter 'adx_floor' with different domains, so one document cannot hold both meanings
+  SKIP ichimoku_kumo_trend: mutation_rejected -- incompatible parents: both declare a parameter 'adx_floor' with different domains, so one document cannot hold both meanings
+  SKIP macd_ema_trend_hybrid: mutation_rejected -- the parent declares no filters, so none can be removed
+  SKIP macd_ema_trend_hybrid: mutation_rejected -- incompatible parents: both declare a parameter 'stop_atr_multiple' with different domains, so one document cannot hold both meanings
+  SKIP macd_ema_trend_hybrid: mutation_rejected -- incompatible parents: both declare a parameter 'adx_floor' with different domains, so one document cannot hold both meanings
+  SKIP rsi_band_mean_reversion: mutation_rejected -- the parent declares no filters, so none can be removed
+  SKIP rsi_band_mean_reversion: mutation_rejected -- the regime gate's bounds are parameter REFERENCES, not literals, so there is no width to scale here -- the width is already part of the declared sweep and
+  SKIP rsi_band_mean_reversion: mutation_rejected -- incompatible parents: both declare a parameter 'rsi_floor' with different domains, so one document cannot hold both meanings
+  SKIP donchian_breakout_atr on XAUUSD H4: non_novel -- seed strategy donchian_breakout_atr was tested in exp_dfa627dd, exp_e8cee19f, exp_f731bce7 and exp_5f6cb9f5; min_trades: observed 6, required gte 400, 
+  SKIP fib_golden_pocket_pullback on XAUUSD H4: non_novel -- seed strategy fib_golden_pocket_pullback was tested in exp_77dedeb1, exp_cf5888f0, exp_850708a5 and exp_b6af8e36; min_trades: observed 283, requir
+  SKIP ichimoku_kumo_trend on XAUUSD H4: non_novel -- seed strategy ichimoku_kumo_trend was tested in exp_8abd52f1, exp_640d53ee, exp_2261be34 and exp_bea9b4c9; min_trades: observed 71, required gte 400, sho
+  SKIP macd_ema_trend_hybrid on XAUUSD H4: non_novel -- seed strategy macd_ema_trend_hybrid was tested in exp_4e9ec625, exp_35aab4e7, exp_530278cb and exp_a314ffb3; min_trades: observed 72, required gte 400,
+  SKIP rsi_band_mean_reversion on XAUUSD H4: out_of_universe -- rsi_band_mean_reversion declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP', 'AUDNZD', 'EURCHF'] 
+  SKIP donchian_breakout_atr_m4d42994e on XAUUSD H4: out_of_universe -- donchian_breakout_atr_m4d42994e declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD'] and timeframes
+  SKIP ichimoku_kumo_trend_ma4c92c38 on XAUUSD H4: non_novel -- restrict dealing to new_york: the US session carries the macro releases this family reacts to was tested in exp_8abd52f1, exp_640d53ee, exp_226
+  SKIP ichimoku_kumo_trend_m67c7da5a on XAUUSD H4: out_of_universe -- ichimoku_kumo_trend_m67c7da5a declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD'] and timeframes ['H
+  SKIP macd_ema_trend_hybrid_m3728054d on XAUUSD H4: non_novel -- alter targets to scale_1r_3r: bank half at 1R to raise the hit rate, let half run to 3R was tested in exp_4e9ec625, exp_35aab4e7, exp_530278c
+  SKIP macd_ema_trend_hybrid_m03f1d536 on XAUUSD H4: non_novel -- restrict dealing to overlap: the London/New York overlap is the tightest-spread window of the day was tested in exp_4e9ec625, exp_35aab4e7, e
+  SKIP macd_ema_trend_hybrid_mbd5c916c on XAUUSD H4: out_of_universe -- macd_ema_trend_hybrid_mbd5c916c declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD'] and timeframes
+  SKIP rsi_band_mean_reversion_md48b52cb on XAUUSD H4: out_of_universe -- rsi_band_mean_reversion_md48b52cb declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP', 
+  SKIP rsi_band_mean_reversion_mdbb3266a on XAUUSD H4: out_of_universe -- rsi_band_mean_reversion_mdbb3266a declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP', 
+  SKIP rsi_band_mean_reversion_m6e0465f0 on XAUUSD H4: out_of_universe -- rsi_band_mean_reversion_m6e0465f0 declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP', 
+  SKIP rsi_band_mean_reversion_me1d6d436 on XAUUSD H4: out_of_universe -- rsi_band_mean_reversion_me1d6d436 declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP', 
+  SKIP rsi_band_mean_reversion_m42a36d28 on XAUUSD H4: out_of_universe -- rsi_band_mean_reversion_m42a36d28 declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP', 
+  SKIP rsi_band_mean_reversion_m7c32d514 on XAUUSD H4: out_of_universe -- rsi_band_mean_reversion_m7c32d514 declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP', 
+  SKIP rsi_band_mean_reversion_m6113daf1 on XAUUSD H4: out_of_universe -- rsi_band_mean_reversion_m6113daf1 declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD'] and timefr
+  SKIP rsi_band_mean_reversion_md0807760 on XAUUSD H4: out_of_universe -- rsi_band_mean_reversion_md0807760 declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD'] and timefr
+  SKIP rsi_band_mean_reversion_m29180d06 on XAUUSD H4: out_of_universe -- rsi_band_mean_reversion_m29180d06 declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD'] and timefr
+
+TRUE TRIAL COUNT 326 (planned 166 + prior 160)
+
+campaign k1_xauusd_h4: 30 evaluated, 35 skipped, 0 survived, true trial count 326
+
+  donchian_breakout_atr_m3ecf77ae on XAUUSD H4: REJECT at RUNG 2 WALK_FORWARD -- walk_forward_efficiency: observed 39.03, required gte 50, short by 10.97
+  donchian_breakout_atr_mbdfe4742 on XAUUSD H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -1.36071 at declared defaults is not positive; there is no edge to validate.
+  donchian_breakout_atr_m3c934a3b on XAUUSD H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -3.93769 at declared defaults is not positive; there is no edge to validate.
+  donchian_breakout_atr_m76dbb4f7 on XAUUSD H4: REJECT at RUNG 2 WALK_FORWARD -- oos_window_hit_rate: observed 0.5, required gte 0.6, short by 0.1
+  donchian_breakout_atr_m427fba0e on XAUUSD H4: REJECT at RUNG 2 WALK_FORWARD -- walk_forward_efficiency: observed 13.73, required gte 50, short by 36.27
+  donchian_breakout_atr_m79f18824 on XAUUSD H4: REJECT at RUNG 2 WALK_FORWARD -- oos_window_hit_rate: observed 0.5, required gte 0.6, short by 0.1
+  donchian_breakout_atr_mf2553d34 on XAUUSD H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -0.892528 at declared defaults is not positive; there is no edge to validate.
+  donchian_breakout_atr_m30945c80 on XAUUSD H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -9.83642 at declared defaults is not positive; there is no edge to validate.
+  donchian_breakout_atr_m217dad55 on XAUUSD H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -2.93725 at declared defaults is not positive; there is no edge to validate.
+  fib_golden_pocket_pullback_ma8f9f32b on XAUUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 231, required gte 400, short by 169
+  fib_golden_pocket_pullback_md15c64ac on XAUUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 213, required gte 400, short by 187
+  fib_golden_pocket_pullback_mb82cde01 on XAUUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 218, required gte 400, short by 182
+  fib_golden_pocket_pullback_mdd2357fa on XAUUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 308, required gte 400, short by 92
+  fib_golden_pocket_pullback_md3507b8f on XAUUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 375, required gte 400, short by 25
+  fib_golden_pocket_pullback_m88fd2d1c on XAUUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 49, required gte 400, short by 351
+  fib_golden_pocket_pullback_me01e2d1a on XAUUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 231, required gte 400, short by 169
+  fib_golden_pocket_pullback_m76354e7e on XAUUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 216, required gte 400, short by 184
+  fib_golden_pocket_pullback_mb73e28fd on XAUUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 202, required gte 400, short by 198
+  ichimoku_kumo_trend_m689694c1 on XAUUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 49, required gte 400, short by 351
+  ichimoku_kumo_trend_m4195c8bf on XAUUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 48, required gte 400, short by 352
+  ichimoku_kumo_trend_m8fbcd36c on XAUUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 49, required gte 400, short by 351
+  ichimoku_kumo_trend_me73acb6c on XAUUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 60, required gte 400, short by 340
+  ichimoku_kumo_trend_mca231a0f on XAUUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 49, required gte 400, short by 351
+  ichimoku_kumo_trend_m0bd80cab on XAUUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 49, required gte 400, short by 351
+  macd_ema_trend_hybrid_ma2bc336b on XAUUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 41, required gte 400, short by 359
+  macd_ema_trend_hybrid_m03d3ee23 on XAUUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 42, required gte 400, short by 358
+  macd_ema_trend_hybrid_m4b9a1dcd on XAUUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 32, required gte 400, short by 368
+  macd_ema_trend_hybrid_mb7889927 on XAUUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 41, required gte 400, short by 359
+  macd_ema_trend_hybrid_mc45594a0 on XAUUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 120, required gte 400, short by 280
+  macd_ema_trend_hybrid_m270351c7 on XAUUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 37, required gte 400, short by 363
+
+{
+  "campaign_id": "k1_xauusd_h4",
+  "gate_set": "v2.0.0-audit",
+  "datasets": {
+    "XAUUSD_H4": "ds_3c1473cbf51e5a641ef41cbf"
+  },
+  "planned_trials": 166,
+  "prior_trials": 160,
+  "true_trial_count": 326,
+  "ladder_evaluations": 222,
+  "engine_backtests_run": 0,
+  "cells_attempted": 30,
+  "cells_skipped": 35,
+  "skips_by_kind": {
+    "mutation_rejected": 15,
+    "non_novel": 7,
+    "out_of_universe": 13
+  },
+  "rejections_by_rung": {
+    "RUNG 0 SANITY": 26,
+    "RUNG 2 WALK_FORWARD": 4
+  },
+  "mutations_refused": 15,
+  "survivors": [],
+  "campaign_deflation_threshold": 0.021830309476885974,
+  "deflation_variance_used": 5.583367467763483e-05,
+  "holdout_unconsumed": true,
+  "wall_clock_seconds": 12.9
+}
+
+This campaign carried 30 candidate cell(s) through the validation ladder over 1 instrument(s) (XAUUSD) on 1 timeframe(s) (H4), against gate set v2.0.0-audit. The true trial count for the whole search is 326 (166 planned in this campaign plus 160 already in the ledger for the same dataset version(s)), and that is the number the deflation used -- not the size of any one strategy's own parameter sweep. NOTHING SURVIVED. That is the expected outcome and it is a real result: it says these rule families, on this data, under these costs, do not clear a bar set for a search of this size. It does NOT say the underlying effects do not exist, that another instrument would behave the same way, or that a different cost model would give the same answer.
+
+  -> /tmp/claude-0/campaign_k1/campaign_k1_xauusd_h4.json

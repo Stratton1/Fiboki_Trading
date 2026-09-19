@@ -1,0 +1,50 @@
+{
+  "hypothesis_id": "macd_confirms_ema_trend",
+  "title": "MACD turns confirm EMA-defined trend entries without arriving too late",
+  "economic_rationale": "An EMA pair states the direction of the trend; a MACD histogram turn states that momentum within that trend has just re-accelerated. If the flow argument for trend persistence is right, the re-acceleration is the observable part of a new tranche of flow entering, and entering with it should be better than entering at an arbitrary point in the trend. The competing effect is that a confirmation always arrives late, so the entry is worse by the amount the price has already moved.",
+  "prediction": "On XAUUSD H4, EMA-trend entries confirmed by a MACD histogram turn have a walk-forward efficiency above 50 per cent -- that is, the MACD parameters selected on a train window keep more than half their in-sample profit rate on the following test window.",
+  "refutation": "Refuted, for this instrument and timeframe, if a candidate expressing it fails the production gate set: fewer than 400 trades at its declared defaults, or a walk-forward efficiency below 50 per cent, or a deflated Sharpe below 0.95 once the WHOLE campaign's trial count is priced in. Any one of those is an observation that counts against the claim on this cell; none of them refutes the mechanism in general.",
+  "instruments": [
+    "XAUUSD"
+  ],
+  "timeframes": [
+    "H4"
+  ],
+  "regimes": [
+    "ADX above its floor",
+    "fast EMA on the correct side of the slow EMA"
+  ],
+  "evidence": [
+    {
+      "direction": "for",
+      "claim": "Momentum confirmation raises the hit rate of trend entries in most published rule surveys, at the cost of a worse average entry price.",
+      "source": "",
+      "strength": "weak"
+    },
+    {
+      "direction": "against",
+      "claim": "Coakley, Marzano and Nankervis (2016) find that technical trading rules on currencies do not survive Step-SPA once the full universe of rules considered is priced in. The same correction is applied here, and the prior expectation is therefore that this fails.",
+      "source": "Journal of Banking and Finance 70, 'Estimating the economic value of technical trading rules'",
+      "strength": "strong"
+    },
+    {
+      "direction": "against",
+      "claim": "The 2009-2025 XAUUSD H4 run of this seed produced 41 trades and a walk-forward efficiency of 5.6 per cent against a 50 per cent bar, which is the signature of a selection step fitting noise rather than finding a stable optimum.",
+      "source": "research/reports/xauusd_h4/README.md",
+      "strength": "strong"
+    }
+  ],
+  "status": "proposed",
+  "status_reason": "",
+  "seed_strategy_ids": [
+    "macd_ema_trend_hybrid"
+  ],
+  "author": "phase-k",
+  "tags": [
+    "trend",
+    "momentum",
+    "xauusd"
+  ],
+  "supersedes": "",
+  "created_at": "2026-09-19T08:46:13.078655Z"
+}

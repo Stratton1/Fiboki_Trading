@@ -1,0 +1,56 @@
+{
+  "hypothesis_id": "kumo_state_conditions_trend",
+  "title": "Ichimoku cloud state marks the regime in which gold trends pay",
+  "economic_rationale": "The Ichimoku cloud is a smoothed, forward-projected band of the midpoints of two lookbacks. Its economic content is not the geometry but the conditioning: price above a rising cloud is a compressed statement that several horizons of the midpoint agree on direction, which is the state in which the slow-diffusion argument for trend following is supposed to apply. The claim is therefore about the GATE, not the signal: trend entries conditioned on cloud state should do better than the same entries taken unconditionally.",
+  "prediction": "Tenkan/Kijun entries on XAUUSD H4, gated on price being on the correct side of the Kumo and on an ADX floor, have positive expectancy net of costs and transfer across walk-forward folds better than the same entries with the cloud gate removed.",
+  "refutation": "Refuted, for this instrument and timeframe, if a candidate expressing it fails the production gate set: fewer than 400 trades at its declared defaults, or a walk-forward efficiency below 50 per cent, or a deflated Sharpe below 0.95 once the WHOLE campaign's trial count is priced in. Any one of those is an observation that counts against the claim on this cell; none of them refutes the mechanism in general.",
+  "instruments": [
+    "XAUUSD"
+  ],
+  "timeframes": [
+    "H4"
+  ],
+  "regimes": [
+    "price outside the Kumo",
+    "ADX above its floor"
+  ],
+  "evidence": [
+    {
+      "direction": "for",
+      "claim": "Conditioning trend entries on a slower trend state is the standard construction in the managed-futures literature, and is where most of the reported improvement over naive crossovers comes from.",
+      "source": "",
+      "strength": "weak"
+    },
+    {
+      "direction": "against",
+      "claim": "Coakley, Marzano and Nankervis (2016) find that technical trading rules on currencies do not survive Step-SPA once the full universe of rules considered is priced in. The same correction is applied here, and the prior expectation is therefore that this fails.",
+      "source": "Journal of Banking and Finance 70, 'Estimating the economic value of technical trading rules'",
+      "strength": "strong"
+    },
+    {
+      "direction": "against",
+      "claim": "Ichimoku has no derivation and a large number of conventional constants (9, 26, 52, 26-shift) that were chosen for a six-day trading week in the 1960s. There is no reason those constants should matter on a 24-hour H4 gold clock, and a result that depends on them is a fit to the sample.",
+      "source": "",
+      "strength": "strong"
+    },
+    {
+      "direction": "against",
+      "claim": "The 2009-2025 XAUUSD H4 run of this seed produced 49 trades and a NEGATIVE expectancy of -1.05 USD at its declared defaults once the engine honoured its own rollover-hour restriction.",
+      "source": "research/reports/xauusd_h4/README.md",
+      "strength": "strong"
+    }
+  ],
+  "status": "proposed",
+  "status_reason": "",
+  "seed_strategy_ids": [
+    "ichimoku_kumo_trend"
+  ],
+  "author": "phase-k",
+  "tags": [
+    "ichimoku",
+    "regime",
+    "xauusd"
+  ],
+  "supersedes": "",
+  "created_at": "2026-09-19T08:46:13.078632Z"
+}

@@ -78,6 +78,10 @@ RANKS: dict[str, int] = {
     # Promotion, degradation and stopping rules: reads a ValidationReport and a
     # live divergence monitor, so it sits above validation and obs.
     "lifecycle": 96,
+    # Automated strategy discovery: proposes candidates from the DSL, consults
+    # the research ledger for novelty, and drives the validation ladder. It sits
+    # above all three and is imported by none of them.
+    "discovery": 97,
     # The LLM research fleet. Above everything, and reaches NONE of the
     # execution stack -- see FORBIDDEN_EDGES.
     "agents": 100,

@@ -1,0 +1,50 @@
+{
+  "hypothesis_id": "rsi_band_reversion_in_range",
+  "title": "RSI band extremes revert while gold is ranging, not trending",
+  "economic_rationale": "In the absence of new information, an inventory imbalance at a market maker pushes price away from the clearing level and is then worked back. That is a real, short-horizon mean-reversion mechanism, and it is the opposite of the trend mechanism -- so it should appear in the regimes where the trend mechanism does not, namely low ADX.",
+  "prediction": "Entries against an RSI band extreme, gated on ADX below a ceiling and vetoed by a recent range breakout, have positive expectancy net of costs on instruments where the strategy declares a universe.",
+  "refutation": "Refuted, for this instrument and timeframe, if a candidate expressing it fails the production gate set: fewer than 400 trades at its declared defaults, or a walk-forward efficiency below 50 per cent, or a deflated Sharpe below 0.95 once the WHOLE campaign's trial count is priced in. Any one of those is an observation that counts against the claim on this cell; none of them refutes the mechanism in general. It is additionally NOT TESTED on XAUUSD at all: the seed document does not declare gold in its universe, and running it there would be validating a strategy nobody wrote.",
+  "instruments": [
+    "EURUSD"
+  ],
+  "timeframes": [
+    "H1",
+    "H4"
+  ],
+  "regimes": [
+    "ADX below its ceiling",
+    "no recent range breakout"
+  ],
+  "evidence": [
+    {
+      "direction": "for",
+      "claim": "Short-horizon reversal is one of the few effects with a market-microstructure derivation rather than a behavioural story, and it is documented in FX at intraday horizons.",
+      "source": "",
+      "strength": "moderate"
+    },
+    {
+      "direction": "against",
+      "claim": "Coakley, Marzano and Nankervis (2016) find that technical trading rules on currencies do not survive Step-SPA once the full universe of rules considered is priced in. The same correction is applied here, and the prior expectation is therefore that this fails.",
+      "source": "Journal of Banking and Finance 70, 'Estimating the economic value of technical trading rules'",
+      "strength": "strong"
+    },
+    {
+      "direction": "against",
+      "claim": "Reversion strategies have a short left tail: they are right most of the time and catastrophically wrong when the range breaks, which makes an in-sample expectancy an especially bad estimator of forward performance.",
+      "source": "",
+      "strength": "strong"
+    }
+  ],
+  "status": "proposed",
+  "status_reason": "",
+  "seed_strategy_ids": [
+    "rsi_band_mean_reversion"
+  ],
+  "author": "phase-k",
+  "tags": [
+    "mean_reversion",
+    "rsi"
+  ],
+  "supersedes": "",
+  "created_at": "2026-09-19T08:46:13.078722Z"
+}

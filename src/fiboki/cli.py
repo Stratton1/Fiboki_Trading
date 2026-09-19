@@ -526,6 +526,54 @@ def research_sweep(
     )
 
 
+@research_app.command("sweep-superseded")
+def research_sweep_superseded(
+    store_dir: Path = typer.Option(
+        ..., "--store", help="Research store directory (holds research.sqlite)."
+    ),
+    dry_run: bool = typer.Option(
+        False, "--dry-run", help="Report what would be marked; write nothing."
+    ),
+    as_json: bool = typer.Option(False, "--json"),
+) -> None:
+    """Mark stored backtests produced by an older engine generation.
+
+    Nothing is deleted. The research store is append-only by SQLite trigger, so
+    a superseded record stays readable beside the note saying why it must not be
+    quoted -- which is what you need when a decision was taken on it.
+    """
+    from fiboki.backtest.version import ENGINE_VERSION
+    from fiboki.research.artefacts import ResearchStore
+
+    if not store_dir.exists():
+        _fail(f"no research store at {store_dir}", EXIT_MISUSE)
+    with ResearchStore(store_dir) as store:
+        notes = store.sweep_superseded_backtests(dry_run=dry_run)
+        payload = {
+            "engine_version": ENGINE_VERSION,
+            "dry_run": dry_run,
+            "superseded": [
+                {
+                    "backtest_id": n.links["backtest_id"],
+                    "strategy_id": n.links["strategy_id"],
+                    "engine_version_found": n.links["engine_version_found"],
+                }
+                for n in notes
+            ],
+            "count": len(notes),
+        }
+    if as_json:
+        typer.echo(json.dumps(payload, indent=2))
+        return
+    verb = "would mark" if dry_run else "marked"
+    typer.echo(f"engine {ENGINE_VERSION}: {verb} {len(notes)} stale backtest record(s)")
+    for item in payload["superseded"]:
+        typer.echo(
+            f"  {item['backtest_id']}  {item['strategy_id']:32s} "
+            f"from {item['engine_version_found']}"
+        )
+
+
 @research_app.command("validate")
 def research_validate(
     ledger: Path = typer.Option(..., "--ledger", help="Experiment ledger database."),

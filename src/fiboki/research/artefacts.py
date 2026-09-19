@@ -163,6 +163,17 @@ class BacktestRecord(_Record):
     config_fingerprint: dict[str, Any] = Field(default_factory=dict)
     data_fingerprint: dict[str, Any] = Field(default_factory=dict)
     ledger_sha256: str = ""
+    #: Which generation of ``backtest/engine.py`` produced these numbers.
+    #: EMPTY means the record predates the stamp, which places it before the
+    #: exit-vocabulary change by construction -- nothing could have written an
+    #: empty stamp afterwards. :meth:`ResearchStore.add_backtest` fills it in on
+    #: the way in, so a caller cannot forget; see ``fiboki.backtest.version``.
+    engine_version: str = ""
+    #: The exit policy the run was executed under, as
+    #: :meth:`fiboki.backtest.exits.ExitPolicy.fingerprint` renders it. Two runs
+    #: with the same engine version and different policies are still different
+    #: strategies, and the fingerprint is how a reader sees that.
+    exit_policy_fingerprint: dict[str, Any] = Field(default_factory=dict)
     metrics: dict[str, Any] = Field(default_factory=dict)
     trades: tuple[dict[str, Any], ...] = ()
     equity_curve: tuple[dict[str, Any], ...] = ()
@@ -386,7 +397,90 @@ class ResearchStore:
         return self._add("experiments", record)  # type: ignore[return-value]
 
     def add_backtest(self, record: BacktestRecord) -> BacktestRecord:
+        """File a backtest, stamping the engine generation that produced it.
+
+        Stamped HERE rather than at every call site: a caller who forgets writes
+        a record that later looks pre-change, and a result quietly mislabelled
+        as stale is as bad as one quietly mislabelled as current.
+        """
+        from fiboki.backtest.version import ENGINE_VERSION
+
+        if not record.engine_version:
+            record = record.model_copy(update={"engine_version": ENGINE_VERSION})
         return self._add("backtests", record)  # type: ignore[return-value]
+
+    # -- supersession -----------------------------------------------------
+
+    #: The tag every supersession note carries, so the sweep can find its own
+    #: earlier work and stay idempotent.
+    SUPERSEDED_TAG = "superseded_by_engine_version"
+
+    def superseded_backtest_ids(self) -> frozenset[str]:
+        """Backtest ids that a supersession note points at."""
+        return frozenset(
+            str(note.supersedes)
+            for note in self.list("notes")
+            if isinstance(note, ResearchNote)
+            and note.supersedes
+            and self.SUPERSEDED_TAG in note.tags
+        )
+
+    def sweep_superseded_backtests(
+        self,
+        *,
+        engine_version: str | None = None,
+        swept_by: str = "engine_version_sweep",
+        dry_run: bool = False,
+    ) -> tuple[ResearchNote, ...]:
+        """Mark every stored backtest from an older engine generation.
+
+        **Nothing is deleted and nothing is rewritten.** The store is append-only
+        by SQLite trigger, not by convention, so a sweep that "invalidated" a
+        record by editing it could not run at all -- and should not: a result
+        that was quoted in a decision has to remain readable alongside the reason
+        it should not have been. The sweep appends one :class:`ResearchNote` per
+        stale record, with ``supersedes`` pointing at it and the reason spelled
+        out, which is exactly the mechanism this package already uses for a
+        revised hypothesis.
+
+        Idempotent: a record that already carries a supersession note is skipped,
+        so the sweep can run on every deploy.
+
+        ``dry_run`` returns the notes it WOULD write without writing them, for an
+        operator who wants to see the blast radius before it lands.
+        """
+        from fiboki.backtest.version import ENGINE_VERSION, supersession_reason
+
+        current = engine_version or ENGINE_VERSION
+        already = self.superseded_backtest_ids()
+        written: list[ResearchNote] = []
+        for record in self.list("backtests"):
+            if not isinstance(record, BacktestRecord):  # pragma: no cover - typed
+                continue
+            if record.engine_version == current:
+                continue
+            if record.backtest_id in already:
+                continue
+            note = ResearchNote(
+                title=f"Superseded backtest {record.backtest_id}",
+                body=(
+                    f"{record.strategy_id}: {supersession_reason(record.engine_version)}"
+                ),
+                tags=(self.SUPERSEDED_TAG, record.strategy_id),
+                links={
+                    "backtest_id": record.backtest_id,
+                    "strategy_id": record.strategy_id,
+                    "engine_version_found": record.engine_version or "(unstamped)",
+                    "engine_version_required": current,
+                },
+                supersedes=record.backtest_id,
+                created_by=swept_by,
+                role="maintenance",
+            )
+            if not dry_run:
+                self.add_note(note)
+            written.append(note)
+        return tuple(written)
 
     def add_validation_report(self, record: ValidationReportRecord) -> ValidationReportRecord:
         return self._add("validation_reports", record)  # type: ignore[return-value]
@@ -449,15 +543,32 @@ class ResearchStore:
         # same microsecond must not swap between reads.
         return tuple(sorted(records, key=lambda r: (_created(r), repr(r))))
 
-    def backtests_for(self, strategy_id: str) -> tuple[BacktestRecord, ...]:
-        return tuple(
+    def backtests_for(
+        self, strategy_id: str, *, include_superseded: bool = True
+    ) -> tuple[BacktestRecord, ...]:
+        """Every backtest for this strategy, oldest first.
+
+        ``include_superseded`` defaults to True because the ledger's job is to
+        show what was run, including the runs whose numbers are no longer
+        comparable. Pass False when the answer will be QUOTED: a ranking, a
+        promotion decision, a report.
+        """
+        found = tuple(
             r
             for r in self.list("backtests")
             if isinstance(r, BacktestRecord) and r.strategy_id == strategy_id
         )
+        if include_superseded:
+            return found
+        stale = self.superseded_backtest_ids()
+        return tuple(r for r in found if r.backtest_id not in stale)
 
-    def latest_backtest_for(self, strategy_id: str) -> BacktestRecord | None:
-        found = self.backtests_for(strategy_id)
+    def latest_backtest_for(
+        self, strategy_id: str, *, include_superseded: bool = True
+    ) -> BacktestRecord | None:
+        found = self.backtests_for(
+            strategy_id, include_superseded=include_superseded
+        )
         return found[-1] if found else None
 
     def validation_reports_for(self, strategy_id: str) -> tuple[ValidationReportRecord, ...]:

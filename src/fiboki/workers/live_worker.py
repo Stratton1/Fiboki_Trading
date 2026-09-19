@@ -29,6 +29,17 @@ not evaluated.  A signal computed on a forming candle is a signal computed on
 information that will change, and a backtest cannot reproduce it, which breaks
 research/paper parity at the only point where it is expensive.
 
+The lifecycle timer
+-------------------
+``lifecycle/service.py`` says, in its own docstring, "It does not start a
+thread. The worker owns the timer; this owns the evaluation."  Nothing owned the
+timer, so the monitors never ran: no divergence was compared, no pre-registered
+stopping rule was evaluated against forward data, and no strategy was ever
+demoted automatically.  :attr:`LiveWorker.lifecycle` is that timer.  It runs on
+its own cycle count, AFTER reconciliation and BEFORE any plan is submitted, so a
+strategy demoted by this tick is already demoted when the gateway reads its
+``StrategyView`` in the same cycle.
+
 Kill switch
 -----------
 Checked before every evaluation pass.  When it blocks new risk, the worker
@@ -52,6 +63,7 @@ __all__ = [
     "BarBatch",
     "BarFeed",
     "ContextBuilder",
+    "LifecycleTicker",
     "LiveWorker",
     "LiveWorkerConfig",
     "MarketStateUpdater",
@@ -125,6 +137,19 @@ class KillSwitchView(Protocol):
     def blocks_new_risk(self) -> bool: ...
 
 
+@runtime_checkable
+class LifecycleTicker(Protocol):
+    """One monitoring pass over every RUNNING strategy.
+
+    Returns whatever the lifecycle service returns; the worker reads only
+    ``demoted``, ``state_after`` and ``summary()`` off each item, and never
+    decides a demotion itself.  Promotion is a named human's act and no worker
+    has a route to it.
+    """
+
+    def tick(self) -> Sequence[Any]: ...
+
+
 @dataclass(frozen=True, slots=True)
 class SubmissionRecord:
     plan_id: str
@@ -151,6 +176,10 @@ class LiveWorkerConfig(WorkerConfig):
     data_stale_after_seconds: float = 900.0
     #: Consecutive rejections of the same instrument before alerting.
     reject_alert_threshold: int = 3
+    #: Run the lifecycle monitors every N cycles. Never zero for the same reason
+    #: reconciliation is never zero: a monitor that only runs on demand is a
+    #: monitor nobody runs.
+    lifecycle_every_cycles: int = 12
     #: Refuse to start unless the execution service's mode is one of these.
     #: Defaults to paper only: live execution is opt-in, at the config, every
     #: time.
@@ -176,6 +205,7 @@ class LiveWorker(Worker):
         store: WorkerStore,
         market_state: MarketStateUpdater | None = None,
         kill_switch: KillSwitchView | None = None,
+        lifecycle: LifecycleTicker | None = None,
         config: LiveWorkerConfig | None = None,
         **kwargs: Any,
     ) -> None:
@@ -186,9 +216,12 @@ class LiveWorker(Worker):
         self.context_builder = context_builder
         self.market_state = market_state
         self.kill_switch = kill_switch
+        self.lifecycle = lifecycle
         self.submissions: list[SubmissionRecord] = []
+        self.demotions: list[str] = []
         self._rejections: dict[str, int] = {}
         self._cycles = 0
+        self._lifecycle_ticks = 0
 
     @property
     def lconfig(self) -> LiveWorkerConfig:
@@ -267,6 +300,14 @@ class LiveWorker(Worker):
 
             if self._cycles % max(1, self.lconfig.reconcile_every_cycles) == 0:
                 self._reconcile(reason="periodic")
+
+            # BEFORE evaluation, so a strategy this tick demotes is already
+            # demoted when the gateway reads its lifecycle later in this cycle.
+            if (
+                self.lifecycle is not None
+                and self._cycles % max(1, self.lconfig.lifecycle_every_cycles) == 0
+            ):
+                self._tick_lifecycle()
 
             instruments = sorted(batch.closed_instruments)
             if not instruments:
@@ -368,6 +409,43 @@ class LiveWorker(Worker):
             )
         return False
 
+    # -- the lifecycle timer ---------------------------------------------
+
+    def _tick_lifecycle(self) -> None:
+        """Run the monitors. A failure here is reported, never swallowed.
+
+        The service raises its own alerts through its own dispatcher, so this
+        does not re-fire them -- two alerts for one demotion trains an operator
+        to skim. What it does do is record the demotions on the worker and shout
+        if the monitor itself could not run, because a monitor that silently
+        stopped running looks exactly like a fleet with nothing wrong.
+        """
+        try:
+            results = self.lifecycle.tick()  # type: ignore[union-attr]
+        except Exception as exc:
+            _log.error(
+                "lifecycle evaluation failed",
+                extra={"error": f"{type(exc).__name__}: {exc}"},
+            )
+            self._alert(
+                AlertEvent.STRATEGY_DEGRADED,
+                (
+                    "the lifecycle monitors could not run: "
+                    f"{type(exc).__name__}: {exc}. No strategy was evaluated this "
+                    "tick, which is not the same as every strategy being healthy."
+                ),
+                dedupe_key="lifecycle_tick_error",
+                severity=Severity.ERROR,
+            )
+            return
+        self._lifecycle_ticks += 1
+        for result in results or ():
+            if not getattr(result, "demoted", False):
+                continue
+            summary = getattr(result, "summary", lambda: "")()
+            self.demotions.append(summary)
+            _log.warning("strategy demoted by the lifecycle monitors", extra={"summary": summary})
+
     # -- reconciliation and freshness ------------------------------------
 
     def _reconcile(self, *, reason: str) -> Any:
@@ -441,4 +519,6 @@ class LiveWorker(Worker):
             "accepted": accepted,
             "blocked_by_risk": sum(1 for s in self.submissions if s.blocked_by_risk),
             "repeat_rejections": dict(self._rejections),
+            "lifecycle_ticks": self._lifecycle_ticks,
+            "demotions": list(self.demotions),
         }

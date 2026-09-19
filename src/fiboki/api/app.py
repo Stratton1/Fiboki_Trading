@@ -27,6 +27,7 @@ from fiboki.api.logging import (
 from fiboki.api.platform import build_platform
 from fiboki.api.routers import auth as auth_router
 from fiboki.api.routers import intelligence as intelligence_router
+from fiboki.api.routers import lifecycle as lifecycle_router
 from fiboki.api.routers import markets as markets_router
 from fiboki.api.routers import research as research_router
 from fiboki.api.routers import system as system_router
@@ -155,6 +156,7 @@ def create_app(settings: Settings | None = None, *, configure_logs: bool = True)
         auth_router,
         system_router,
         trading_router,
+        lifecycle_router,
         research_router,
         markets_router,
         intelligence_router,

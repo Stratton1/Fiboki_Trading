@@ -166,7 +166,21 @@ class Order:
     client_ref: str
     limit_price: float | None = None
     stop_loss: float | None = None
+    #: The ONE limit a venue can hold against this position. A real broker
+    #: accepts one stop and one target, so this is the first (nearest) leg and
+    #: nothing more.
     take_profit: float | None = None
+    #: The FULL take-profit ladder the strategy declared, and the fraction of
+    #: the position each leg closes, aligned 1:1 with it. A venue cannot hold
+    #: more than one target, so a multi-leg scale-out is managed client-side by
+    #: whoever holds the position — which means it depends on that process being
+    #: alive. These two fields exist so the ladder survives the trip from the
+    #: sized plan to the position manager without a second source of truth; an
+    #: adapter that can only attach one target reads ``take_profit`` and ignores
+    #: them. Empty means "one full-size target", which is what every order built
+    #: before the exit vocabulary existed meant.
+    take_profit_prices: tuple[float, ...] = ()
+    take_profit_allocations: tuple[float, ...] = ()
     created_at: pd.Timestamp | None = None
     order_id: str = field(default_factory=lambda: _uid("ord"))
 
@@ -175,6 +189,15 @@ class Order:
             raise ValueError(
                 "Order.client_ref is mandatory. Without a client-generated "
                 "idempotency key a retry can double a position."
+            )
+        if self.take_profit_allocations and len(self.take_profit_allocations) != len(
+            self.take_profit_prices
+        ):
+            raise ValueError(
+                f"Order carries {len(self.take_profit_allocations)} take-profit "
+                f"allocation(s) for {len(self.take_profit_prices)} price(s). A leg "
+                "whose allocation cannot be named is a leg the position manager "
+                "would have to guess a size for."
             )
 
 
