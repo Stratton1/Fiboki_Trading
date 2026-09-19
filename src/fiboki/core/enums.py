@@ -13,7 +13,7 @@ class Direction(str, Enum):
         return 1 if self is Direction.LONG else -1
 
     @property
-    def opposite(self) -> "Direction":
+    def opposite(self) -> Direction:
         return Direction.SHORT if self is Direction.LONG else Direction.LONG
 
 

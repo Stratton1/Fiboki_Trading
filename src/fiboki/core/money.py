@@ -11,7 +11,7 @@ observation for the required time raises rather than silently returning 1.0.
 """
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Protocol
 
 import numpy as np
@@ -59,7 +59,7 @@ class SeriesFxSource:
     """
 
     series: dict[str, pd.Series]
-    max_staleness: pd.Timedelta = pd.Timedelta(days=7)
+    max_staleness: pd.Timedelta = field(default_factory=lambda: pd.Timedelta(days=7))
 
     def rate(self, from_ccy: str, to_ccy: str, when: pd.Timestamp) -> float:
         f, t = from_ccy.upper(), to_ccy.upper()

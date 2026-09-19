@@ -119,11 +119,11 @@ class RiskDecision:
     decided_at: pd.Timestamp | None = None
 
     @staticmethod
-    def allow(checks: tuple[str, ...]) -> "RiskDecision":
+    def allow(checks: tuple[str, ...]) -> RiskDecision:
         return RiskDecision(True, (), None, checks)
 
     @staticmethod
-    def block(reason: str, checks: tuple[str, ...] = ()) -> "RiskDecision":
+    def block(reason: str, checks: tuple[str, ...] = ()) -> RiskDecision:
         return RiskDecision(False, (reason,), None, checks)
 
 
