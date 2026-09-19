@@ -1,0 +1,16 @@
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+*.egg-info/
+data/raw/
+data/canonical/
+data/live/
+data/features/
+research/experiments/*.db
+node_modules/
+.next/
+_*.db*
+*.db-journal

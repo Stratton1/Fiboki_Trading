@@ -1,0 +1,62 @@
+[build-system]
+requires = ["hatchling==1.27.0"]
+build-backend = "hatchling.build"
+
+[project]
+name = "fiboki"
+version = "2.0.0"
+description = "Fiboki V2 — quantitative research laboratory and trading operating system"
+requires-python = ">=3.11,<3.13"
+
+# EXACT PINS. Anything that can change a numerical result is pinned to a single
+# version. See docs/v2/QUANT_RESEARCH_STANDARD.md §Reproducibility. Do not widen
+# these without re-running the golden tests and re-stamping stored results.
+dependencies = [
+  "numpy==2.2.6",
+  "pandas==2.2.3",
+  "scipy==1.14.1",
+  "pyarrow==18.1.0",
+  "pydantic==2.10.4",
+  "sqlalchemy==2.0.36",
+  "alembic==1.14.0",
+  "fastapi==0.115.6",
+  "uvicorn==0.34.0",
+  "httpx==0.28.1",
+  "python-dateutil==2.9.0.post0",
+  "orjson==3.10.13",
+  "typer==0.15.1",
+  "rich==13.9.4",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest==8.3.4",
+  "pytest-timeout==2.3.1",
+  "pytest-cov==6.0.0",
+  "hypothesis==6.122.3",
+  "ruff==0.8.4",
+  "mypy==1.14.0",
+]
+
+[project.scripts]
+fiboki = "fiboki.cli:app"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/fiboki"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "--timeout=120 --strict-markers -p no:cacheprovider"
+markers = [
+  "golden: hand-calculated financial correctness tests. Never weaken to make them pass.",
+  "slow: >10s",
+  "external: requires a live external dependency. Excluded by default.",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E","F","W","I","UP","B","SIM","RUF"]
+ignore = ["E501"]
