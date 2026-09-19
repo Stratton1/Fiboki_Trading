@@ -175,7 +175,6 @@ Named somewhere in the source or in the standards; no implementation.
 
 | Item | Where it is named | Note |
 |---|---|---|
-| **Import-direction layering test** | `core/contracts.py` cites `tests/unit/test_layering.py` | **the file does not exist.** Nothing mechanically stops `data/` importing `broker/`. See §5 |
 | **Adapter-prohibition test file** | `broker/base.py` cites `tests/unit/test_adapter_prohibitions.py` | **the file does not exist**, but the enforcement is real — it lives in `test_no_gateway_bypass.py`. A stale citation, not a missing control |
 | **Backtest regression pins** | `QUANT_RESEARCH_STANDARD.md` §3 | no committed ledger hash for a named strategy on a named dataset version. The golden tests pin the arithmetic; nothing pins a realistic run |
 | **Demotion and stopping rules** | `VALIDATION_STANDARD.md` §7 | PSR-below-0.50 halt, bootstrap-95th-percentile drawdown halt, and a CUSUM on excess return. The primitives exist; the monitors do not |
@@ -202,15 +201,18 @@ Named somewhere in the source or in the standards; no implementation.
 | **`pip-audit` in CI** | network on the runner | the job exists; `make audit` says so when offline |
 | **Dockerfile base digest** | `docker buildx imagetools inspect` against a registry | the placeholder digest must be replaced before the image builds |
 | **Any claim about live behaviour** | Gates A–D in `DEPLOYMENT.md` §10 | nothing here has ever placed an order |
+| **`EventRestriction` blackouts in the backtest engine** | a dated economic-calendar feed | the wiring is DONE: every seed document's `EventRestriction` is now compiled into an `ExitPolicy` and the engine declines an entry whose bar is in blackout. But `marketstate/calendar.py` ships NO dated events, so **every blackout query returns False and every backtest and paper bot trades straight through FOMC and NFP.** The two restrictions that need no feed — `avoid_rollover_hour` and `avoid_month_end` — are live and do bite. **USER ACTION REQUIRED:** load a real feed as `fiboki.marketstate.calendar.USER_ACTION_NOTE` sets out, and pass the resulting calendar to `EngineEvaluator(blackout=...)` or `run_backtest(blackout=...)`. Asserted, not assumed, by `tests/unit/test_engine_exits.py::test_with_no_calendar_the_blackout_is_inert` |
 
 ## 5. Contradictions between the source and itself
 
 Recorded rather than smoothed over, because a stale citation is how V1's documentation drifted.
 
-1. **`core/contracts.py` cites `tests/unit/test_layering.py`, which does not exist.** The
-   ALPHA→PORTFOLIO→RISK→EXECUTION layering is enforced for the *execution* boundary (single
-   `Order` site, gateway-first, adapters cannot size) but the *package import direction* is
-   convention only.
+1. ~~**`core/contracts.py` cites `tests/unit/test_layering.py`, which does not exist.**~~
+   RESOLVED. The file was written, with the package ranks from `ARCHITECTURE.md` §2 as explicit
+   data, an AST walk that also catches imports deferred inside functions, and an empty
+   exceptions list. Run against the tree it found **no violations** — the import direction had
+   been held by review after all, which is the good outcome and not an argument for leaving it
+   unenforced.
 2. **`broker/base.py` cites `tests/unit/test_adapter_prohibitions.py`, which does not exist.**
    The prohibitions are enforced in `tests/unit/test_no_gateway_bypass.py`.
 3. **`ruff check src tests scripts` is not clean**, and it is a **gate** in both the Makefile

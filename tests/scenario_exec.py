@@ -161,3 +161,96 @@ def run_tight_scenario(config: BacktestConfig | None = None, data: dict | None =
         sizer=FixedFractionalSizer(risk_fraction=0.01),
         fx=ConstantUsdGbp(),
     )
+
+
+# ==========================================================================
+# The exit-vocabulary scenario
+# ==========================================================================
+#
+# The scenario above predates the engine's ability to honour anything but a
+# stop and a first target, so it exercises none of the exit vocabulary. This
+# one does, deliberately all at once, because the determinism risks live in the
+# interactions: a trail reading an auxiliary series, a position closing in
+# pieces, a time stop firing on a bar that also touched a level, a cooldown
+# keyed on a bar index, and a reversal that closes one position and opens
+# another inside the same bar.
+
+
+class ScaleOutBreakout(BreakoutStrategy):
+    """The breakout, but asking for the whole exit vocabulary.
+
+    Two take-profit legs at 1R and 2.5R closing 40% and 30%, with 30% left to
+    ride into the trail, the time stop or the end of the data — the shape
+    ``macd_ema_trend_hybrid`` declares and that nothing has ever executed.
+    """
+
+    def on_bar(self, ctx):
+        out = []
+        for signal in super().on_bar(ctx):
+            risk = signal.stop_distance
+            sign = 1 if signal.direction is Direction.LONG else -1
+            out.append(
+                Signal(
+                    strategy_id=signal.strategy_id,
+                    instrument=signal.instrument,
+                    timeframe=signal.timeframe,
+                    direction=signal.direction,
+                    bar_time=signal.bar_time,
+                    reference_price=signal.reference_price,
+                    stop_price=signal.stop_price,
+                    take_profit_prices=(
+                        signal.reference_price + sign * 1.0 * risk,
+                        signal.reference_price + sign * 2.5 * risk,
+                    ),
+                    take_profit_allocations=(0.4, 0.3),
+                )
+            )
+        return out
+
+
+def exit_vocabulary_policy():
+    """Trail, breakeven, time stop, cooldown and reversal, all live at once."""
+    from fiboki.backtest.exits import ExitPolicy, ReversalMode, TrailKind, TrailSpec
+
+    return ExitPolicy(
+        trailing=TrailSpec(
+            kind=TrailKind.ATR_CHANDELIER,
+            value=3.0,
+            activate_after_r=1.0,
+            atr_column="atr_14",
+        ),
+        breakeven_at_r=1.0,
+        max_bars_in_trade=40,
+        cooldown_bars_after_exit=2,
+        reversal=ReversalMode.REVERSE,
+    )
+
+
+def exit_series_for(data: dict[str, pd.DataFrame]) -> dict[str, pd.DataFrame]:
+    """A real Wilder ATR per instrument, indexed identically to its bars."""
+    from fiboki.indicators.volatility import ATR
+
+    atr = ATR(14)
+    return {sym: atr.compute(frame)[[atr.name]] for sym, frame in data.items()}
+
+
+def run_exit_vocabulary_scenario(
+    config: BacktestConfig | None = None, data: dict | None = None
+):
+    from fiboki.backtest.engine import run_backtest
+
+    bars = data if data is not None else synthetic_data()
+    return run_backtest(
+        data=bars,
+        config=config or build_config(),
+        # A SHORT lookback on purpose: the 20-bar breakout almost never reverses
+        # while a position is open, so the reversal path would go untested and
+        # the scenario would quietly cover four of the five exit reasons. At 6
+        # bars the ledger contains stop, trailing, time, opposite-signal and
+        # end-of-data exits, plus cooldown rejections.
+        strategy=ScaleOutBreakout(lookback=6, stop_fraction=0.4, rr=1.0),
+        sizer=FixedFractionalSizer(risk_fraction=0.01),
+        fx=ConstantUsdGbp(),
+        exit_policy=exit_vocabulary_policy(),
+        exit_series=exit_series_for(bars),
+    )

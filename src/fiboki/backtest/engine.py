@@ -34,17 +34,53 @@ stored separately because storing both invites the two to drift apart. Charging
 the spread as an explicit cost on BOTH legs is arithmetically identical to
 dealing at bid/ask on both legs — and unlike V1, it cannot be half-applied
 without the identity above failing.
+
+Scaled-out positions: ONE Trade row, N exit legs
+------------------------------------------------
+A position with several take-profit legs closes in pieces, and each piece is a
+real fill with its own price, its own costs and its own moment. Two
+representations were available and they are not equivalent:
+
+* one ``Trade`` per *fill*, which is the finer ledger but makes ``len(trades)``
+  count exit events rather than positions — and ``min_trades`` is a promotion
+  gate, so a strategy that scales out three times would have cleared a
+  400-trade bar on 134 positions. That is exactly the class of flattering
+  arithmetic this project exists to prevent;
+* one ``Trade`` per *position*, which keeps every count and every per-trade
+  statistic meaning what it has always meant.
+
+V2 emits one ``Trade`` per position and keeps the per-fill detail beside it in
+:attr:`BacktestResult.exit_legs`. The two reconcile exactly:
+``sum(leg.net_pnl) == sum(trade.net_pnl)``, asserted by
+``tests/unit/test_engine_exits.py``. On a scaled-out row ``size`` is the whole
+position, ``exit_reason`` is the reason the LAST piece left, ``exit_time`` is
+when the last piece left, and ``exit_price`` is the size-weighted mean of the
+leg mids — which reproduces ``gross_pnl`` exactly whenever the FX rate did not
+move between legs, and is within the rate's drift when it did. A position that
+closed in one piece stores that piece's mid verbatim, so nothing about the
+single-leg case changes by so much as an ULP.
+
+The rest of the exit vocabulary — trailing stops, breakeven, time stops,
+cooldown, reversal, event blackouts — lives in
+:mod:`fiboki.backtest.exits` as an :class:`~fiboki.backtest.exits.ExitPolicy`
+and is documented there.
 """
 from __future__ import annotations
 
 import hashlib
 from collections.abc import Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Protocol
 
 import numpy as np
 import pandas as pd
 
+from fiboki.backtest.exits import (
+    DEFAULT_EXIT_POLICY,
+    BlackoutSource,
+    ExitPolicy,
+    ReversalMode,
+)
 from fiboki.core.contracts import (
     AccountState,
     Position,
@@ -72,6 +108,7 @@ __all__ = [
     "BacktestResult",
     "BarContext",
     "CostBreakdown",
+    "ExitLeg",
     "FixedFractionalSizer",
     "FixedSizeSizer",
     "PrecomputedSignals",
@@ -327,6 +364,34 @@ class CostBreakdown:
         }
 
 
+@dataclass(frozen=True, slots=True)
+class ExitLeg:
+    """One FILL that closed part (or all) of a position.
+
+    The audit trail behind a scaled-out :class:`~fiboki.core.contracts.Trade`.
+    Every monetary field is in the account currency and
+    ``net_pnl == gross_pnl - spread_cost - commission - slippage_cost -
+    financing_cost`` holds on each leg individually, so the aggregate row can be
+    reconstructed from these with a calculator.
+    """
+
+    position_seq: int
+    instrument: str
+    direction: str
+    ordinal: int
+    size: float
+    exit_price: float
+    exit_time: pd.Timestamp
+    exit_reason: str
+    gross_pnl: float
+    spread_cost: float
+    commission: float
+    slippage_cost: float
+    financing_cost: float
+    net_pnl: float
+    final: bool
+
+
 @dataclass(slots=True)
 class BacktestResult:
     trades: list[Trade]
@@ -338,6 +403,10 @@ class BacktestResult:
     bankrupt: bool = False
     signals_seen: int = 0
     orders_submitted: int = 0
+    #: One row per closing FILL, in chronological order. A position that scaled
+    #: out three times contributes three legs and one ``Trade``.
+    exit_legs: list[ExitLeg] = field(default_factory=list)
+    exit_policy_fingerprint: dict[str, object] = field(default_factory=dict)
 
     # Columns whose values define the ledger. UUIDs are excluded on purpose:
     # they are random by construction and would defeat the determinism test
@@ -426,6 +495,61 @@ class BacktestResult:
     def ledger_sha256(self) -> str:
         return hashlib.sha256(self.ledger_text().encode("utf-8")).hexdigest()
 
+    #: The per-FILL ledger. Separate from ``LEDGER_COLUMNS`` because it answers
+    #: a different question: the trade ledger says what each POSITION did, this
+    #: says what each closing fill did, and a scale-out only shows up here.
+    LEG_COLUMNS = (
+        "position_seq",
+        "instrument",
+        "direction",
+        "ordinal",
+        "size",
+        "exit_price",
+        "exit_time",
+        "exit_reason",
+        "gross_pnl",
+        "spread_cost",
+        "commission",
+        "slippage_cost",
+        "financing_cost",
+        "net_pnl",
+        "final",
+    )
+
+    def leg_ledger_text(self) -> str:
+        lines = ["\t".join(self.LEG_COLUMNS)]
+        for leg in self.exit_legs:
+            lines.append(
+                "\t".join(
+                    (
+                        repr(leg.position_seq),
+                        leg.instrument,
+                        leg.direction,
+                        repr(leg.ordinal),
+                        repr(leg.size),
+                        repr(leg.exit_price),
+                        leg.exit_time.isoformat(),
+                        leg.exit_reason,
+                        repr(leg.gross_pnl),
+                        repr(leg.spread_cost),
+                        repr(leg.commission),
+                        repr(leg.slippage_cost),
+                        repr(leg.financing_cost),
+                        repr(leg.net_pnl),
+                        repr(leg.final),
+                    )
+                )
+            )
+        return "\n".join(lines) + "\n"
+
+    def leg_ledger_sha256(self) -> str:
+        return hashlib.sha256(self.leg_ledger_text().encode("utf-8")).hexdigest()
+
+    @property
+    def partial_exits(self) -> int:
+        """Closing fills that did NOT empty their position: the scale-outs."""
+        return sum(1 for leg in self.exit_legs if not leg.final)
+
     @property
     def final_equity(self) -> float:
         if self.equity_curve.empty:
@@ -436,6 +560,14 @@ class BacktestResult:
 # --------------------------------------------------------------------------
 # Internal bookkeeping
 # --------------------------------------------------------------------------
+
+
+@dataclass(slots=True)
+class _TakeProfitLeg:
+    """One planned scale-out: a price and the size it is meant to close."""
+
+    price: float
+    size: float
 
 
 @dataclass(slots=True)
@@ -451,6 +583,51 @@ class _OpenPosition:
     last_financing_time: pd.Timestamp | None = None
     entry_fx: float = 1.0
 
+    # -- multi-leg / trailing state ---------------------------------------
+    #: Size dealt at entry. Never mutated, unlike ``position.size``, which is
+    #: the size still open. MAE/MFE are stated against this.
+    entry_size: float = 0.0
+    legs: list[_TakeProfitLeg] = field(default_factory=list)
+    next_leg: int = 0
+    #: ``|entry - initial stop|`` in price units: the denominator of every R.
+    risk_per_unit: float = 0.0
+    initial_stop: float = 0.0
+    #: Highest high (long) / lowest low (short) seen since entry, INCLUSIVE of
+    #: the entry bar. The chandelier's anchor. NaN until the first bar.
+    extreme: float = float("nan")
+    breakeven_done: bool = False
+    stop_trailed: bool = False
+    reversal_pending: bool = False
+    #: Accumulated across the closing fills, so the final ``Trade`` is the sum.
+    realised_gross: float = 0.0
+    realised_spread: float = 0.0
+    realised_commission: float = 0.0
+    realised_slippage: float = 0.0
+    realised_financing: float = 0.0
+    realised_net: float = 0.0
+    exit_value: float = 0.0  # Σ exit_mid * size, for the size-weighted mean
+    n_legs_closed: int = 0
+    single_leg_exit_mid: float = 0.0
+
+    def update_extreme(self, bar: Bar) -> None:
+        best = bar.high if self.position.direction.sign > 0 else bar.low
+        if not np.isfinite(self.extreme):
+            self.extreme = best
+        elif self.position.direction.sign > 0:
+            self.extreme = max(self.extreme, best)
+        else:
+            self.extreme = min(self.extreme, best)
+
+    def active_target(self) -> float | None:
+        if self.next_leg >= len(self.legs):
+            return None
+        return self.legs[self.next_leg].price
+
+    def r_multiple(self) -> float:
+        if self.risk_per_unit <= 0:
+            return 0.0
+        return self.position.max_favourable_excursion / self.risk_per_unit
+
 
 @dataclass(slots=True)
 class _PendingOrder:
@@ -459,6 +636,21 @@ class _PendingOrder:
     instrument: Instrument
     actionable_index: int
     created_index: int
+
+
+@dataclass(slots=True)
+class _PendingClose:
+    """A close scheduled by an opposite signal, actionable at a later bar's open.
+
+    The signal was produced on a CLOSED bar, so the engine may not act on it at
+    that bar's close — the same rule that makes an entry actionable no earlier
+    than the next bar's open applies to a reversal's exit leg.
+    """
+
+    seq: int
+    position_seq: int
+    instrument: str
+    actionable_index: int
 
 
 # --------------------------------------------------------------------------
@@ -478,6 +670,9 @@ class BacktestEngine:
         sizer: Sizer,
         fx: FxRateSource,
         calendar: SessionCalendar | None = None,
+        exit_policy: ExitPolicy | None = None,
+        exit_series: dict[str, pd.DataFrame] | None = None,
+        blackout: BlackoutSource | None = None,
     ) -> None:
         if fx is None:
             raise ValueError(
@@ -533,6 +728,38 @@ class BacktestEngine:
             sym: _median_interval(self.frames[sym].index) for sym in self.symbols
         }
 
+        self.exit_policy = exit_policy or DEFAULT_EXIT_POLICY
+        self.blackout = blackout
+        self._series: dict[str, dict[str, np.ndarray]] = {
+            sym: {} for sym in self.symbols
+        }
+        for sym, frame in (exit_series or {}).items():
+            if sym not in self.frames:
+                raise KeyError(
+                    f"exit_series names {sym!r}, which is not one of the instruments "
+                    f"{list(self.symbols)} this engine was given bars for"
+                )
+            if not frame.index.equals(self.frames[sym].index):
+                raise ValueError(
+                    f"exit_series[{sym!r}] is indexed differently from the OHLC "
+                    "frame. A trailing stop read off a misaligned series is a "
+                    "trailing stop computed from another bar's volatility."
+                )
+            for col in frame.columns:
+                self._series[sym][str(col)] = frame[col].to_numpy(dtype=np.float64)
+
+        needed = self.exit_policy.needs_series
+        if needed:
+            for sym in self.symbols:
+                missing = [c for c in needed if c not in self._series[sym]]
+                if missing:
+                    raise KeyError(
+                        f"{sym}: the exit policy trails on column(s) {missing}, which "
+                        "no exit_series provides. A trail with no series would never "
+                        "move, and a strategy that silently never trails is the exact "
+                        "defect this policy exists to fix."
+                    )
+
     # ------------------------------------------------------------------ run
 
     def run(self) -> BacktestResult:
@@ -543,9 +770,15 @@ class BacktestEngine:
 
         open_positions: list[_OpenPosition] = []
         pending: list[_PendingOrder] = []
+        pending_closes: list[_PendingClose] = []
         trades: list[Trade] = []
+        exit_legs: list[ExitLeg] = []
         costs = CostBreakdown()
         rejections: dict[str, int] = {}
+        policy = self.exit_policy
+        #: Bar index up to and including which this instrument refuses a new
+        #: fill, written when a position on it closes.
+        cooldown_until: dict[str, int] = {}
         seq_counter = 0
         signals_seen = 0
         orders_submitted = 0
@@ -587,6 +820,47 @@ class BacktestEngine:
                         op.position.financing_accrued += charge_acct
                         op.last_financing_time = ts
 
+            # -- 1b. reversals: close BEFORE the replacement order tries to fill,
+            #        or ``max_per_instrument`` would refuse the position that is
+            #        supposed to be taking this one's place.
+            if pending_closes:
+                still_closing: list[_PendingClose] = []
+                by_seq = {op.seq: op for op in open_positions}
+                for close_order in pending_closes:
+                    if close_order.actionable_index > i:
+                        still_closing.append(close_order)
+                        continue
+                    op = by_seq.get(close_order.position_seq)
+                    if op is None:  # already exited on its own terms
+                        continue
+                    sym = close_order.instrument
+                    if not self._has_bar(sym, i):
+                        still_closing.append(close_order)
+                        continue
+                    bar = self._bar(sym, i)
+                    exit_fill = self.sim.market_exit(
+                        instrument=op.instrument,
+                        direction=op.position.direction,
+                        size=op.position.size,
+                        bar=bar,
+                        bar_index=i,
+                        reason=ExitReason.OPPOSITE_SIGNAL,
+                        price=bar.open,
+                        sequence=op.seq,
+                        previous_time=self._previous_bar_time(sym, i),
+                        bar_interval=self._intervals[sym],
+                    )
+                    leg = self._close_fill(op, exit_fill, ts, costs, op.position.size, final=True)
+                    exit_legs.append(leg)
+                    balance += leg.net_pnl
+                    realised += leg.net_pnl
+                    trades.append(self._finalise(op, ts, ExitReason.OPPOSITE_SIGNAL))
+                    open_positions = [p for p in open_positions if p.seq != op.seq]
+                    # A reversal exit does NOT arm the cooldown: the cooldown
+                    # exists to stop a strategy re-entering the trade it just
+                    # left, and a reversal is by definition the other trade.
+                pending_closes = still_closing
+
             # -- 2. fill pending orders at this bar's open
             still_pending: list[_PendingOrder] = []
             for order in pending:
@@ -596,6 +870,13 @@ class BacktestEngine:
                 sym = order.instrument.symbol
                 if not self._has_bar(sym, i):
                     still_pending.append(order)  # instrument not trading: wait
+                    continue
+                if i <= cooldown_until.get(sym, -1):
+                    _bump(rejections, "cooldown")
+                    continue
+                blocked = self._event_block(sym, ts, policy)
+                if blocked is not None:
+                    _bump(rejections, blocked)
                     continue
                 if len(open_positions) >= cfg.max_concurrent:
                     _bump(rejections, "max_concurrent")
@@ -628,11 +909,13 @@ class BacktestEngine:
                 costs.slippage += entry_costs["slippage"]
                 costs.guaranteed_stop_premium += entry_costs["premium"]
 
-                tp = (
-                    order.plan.signal.take_profit_prices[0]
-                    if order.plan.signal.take_profit_prices
-                    else None
+                legs = _plan_legs(
+                    order.instrument,
+                    fill.filled_size,
+                    order.plan.signal.take_profit_prices,
+                    self._allocations_for(order.plan.signal),
                 )
+                tp = legs[0].price if legs else None
                 pos = Position(
                     instrument=sym,
                     direction=order.plan.direction,
@@ -640,7 +923,7 @@ class BacktestEngine:
                     entry_price=fill.mid_price,
                     entry_time=ts,
                     stop_loss=fill.effective_stop,
-                    take_profit_targets=[tp] if tp is not None else [],
+                    take_profit_targets=[leg.price for leg in legs],
                     strategy_id=order.plan.signal.strategy_id or cfg.strategy_id,
                 )
                 seq_counter += 1
@@ -655,6 +938,10 @@ class BacktestEngine:
                         entry_costs_account=entry_costs,
                         last_financing_time=ts,
                         entry_fx=fx_rate,
+                        entry_size=fill.filled_size,
+                        legs=legs,
+                        risk_per_unit=abs(fill.mid_price - fill.effective_stop),
+                        initial_stop=fill.effective_stop,
                     )
                 )
             pending = still_pending
@@ -668,29 +955,91 @@ class BacktestEngine:
                     continue
                 bar = self._bar(sym, i)
                 op.position.update_excursion(bar.high, bar.low)
+                op.update_extreme(bar)
                 if i > op.entry_bar_index:
                     op.position.bars_held += 1
 
-                exit_fill = self.sim.resolve_exit(
-                    instrument=op.instrument,
-                    direction=op.position.direction,
-                    size=op.position.size,
-                    bar=bar,
-                    bar_index=i,
-                    stop=op.position.stop_loss,
-                    take_profit=op.take_profit,
-                    sequence=op.seq,
-                    previous_time=self._previous_bar_time(sym, i),
-                    bar_interval=self._intervals[sym],
-                )
-                if not exit_fill.exited:
-                    survivors.append(op)
+                closed_reason: ExitReason | None = None
+                # A bar can take more than one take-profit leg. The loop is
+                # bounded by the number of legs plus the final close, so it
+                # cannot spin even if a degenerate level resolves repeatedly.
+                for _ in range(len(op.legs) + 1):
+                    decision = self.sim.resolve_exit(
+                        instrument=op.instrument,
+                        direction=op.position.direction,
+                        size=op.position.size,
+                        bar=bar,
+                        bar_index=i,
+                        stop=op.position.stop_loss,
+                        take_profit=op.active_target(),
+                        sequence=op.seq,
+                        previous_time=self._previous_bar_time(sym, i),
+                        bar_interval=self._intervals[sym],
+                    )
+                    if not decision.exited:
+                        break
+                    close_size, final = self._size_for_exit(op, decision)
+                    leg_fill = decision
+                    if not final:
+                        # Re-price the LEG so its costs are for the size that
+                        # actually left. ``rng_for`` is counter-based, so the
+                        # second call sees the same draws and the same decision.
+                        leg_fill = self.sim.resolve_exit(
+                            instrument=op.instrument,
+                            direction=op.position.direction,
+                            size=close_size,
+                            bar=bar,
+                            bar_index=i,
+                            stop=op.position.stop_loss,
+                            take_profit=op.active_target(),
+                            sequence=op.seq,
+                            previous_time=self._previous_bar_time(sym, i),
+                            bar_interval=self._intervals[sym],
+                        )
+                    reason = self._exit_reason(op, leg_fill)
+                    leg = self._close_fill(
+                        op, leg_fill, ts, costs, close_size, final=final
+                    )
+                    exit_legs.append(leg)
+                    balance += leg.net_pnl
+                    realised += leg.net_pnl
+                    if leg_fill.reason is ExitReason.TAKE_PROFIT:
+                        op.next_leg += 1
+                    if final:
+                        closed_reason = reason
+                        break
+
+                if closed_reason is None and self._time_stop_hit(op, policy):
+                    exit_fill = self.sim.market_exit(
+                        instrument=op.instrument,
+                        direction=op.position.direction,
+                        size=op.position.size,
+                        bar=bar,
+                        bar_index=i,
+                        reason=ExitReason.TIME_STOP,
+                        sequence=op.seq,
+                        previous_time=self._previous_bar_time(sym, i),
+                        bar_interval=self._intervals[sym],
+                    )
+                    leg = self._close_fill(
+                        op, exit_fill, ts, costs, op.position.size, final=True
+                    )
+                    exit_legs.append(leg)
+                    balance += leg.net_pnl
+                    realised += leg.net_pnl
+                    closed_reason = ExitReason.TIME_STOP
+
+                if closed_reason is not None:
+                    trades.append(self._finalise(op, ts, closed_reason))
+                    if policy.cooldown_bars_after_exit > 0:
+                        cooldown_until[sym] = i + policy.cooldown_bars_after_exit
                     continue
 
-                trade = self._close(op, exit_fill, ts, costs)
-                trades.append(trade)
-                realised += trade.net_pnl
-                balance += trade.net_pnl
+                # Still open. The protective stop is re-derived from the bar
+                # that has just CLOSED and takes effect from the next bar, which
+                # is what keeps a trailing stop free of look-ahead.
+                self._update_protective_stop(op, bar, i, sym, policy)
+                survivors.append(op)
             open_positions = survivors
 
             # -- 4. mark to market on the bar's close
@@ -730,11 +1079,15 @@ class BacktestEngine:
                         previous_time=self._previous_bar_time(op.position.instrument, i),
                         bar_interval=self._intervals[op.position.instrument],
                     )
-                    trade = self._close(op, exit_fill, ts, costs)
-                    trades.append(trade)
-                    balance += trade.net_pnl
+                    leg = self._close_fill(
+                        op, exit_fill, ts, costs, op.position.size, final=True
+                    )
+                    exit_legs.append(leg)
+                    balance += leg.net_pnl
+                    trades.append(self._finalise(op, ts, ExitReason.MARGIN_CALL))
                 open_positions = []
                 pending = []
+                pending_closes = []
                 break
 
             # -- 6. the strategy sees the CLOSED bar and may emit signals
@@ -767,6 +1120,33 @@ class BacktestEngine:
                 if signal.instrument not in self.instruments:
                     raise KeyError(f"Signal for unknown instrument {signal.instrument!r}")
                 instr = self.instruments[signal.instrument]
+
+                # Opposite-signal handling. Scheduled here, executed at the next
+                # bar's open, because the signal was produced on a closed bar.
+                wants_entry = True
+                if policy.reversal is not ReversalMode.IGNORE:
+                    for op in open_positions:
+                        if (
+                            op.position.instrument == signal.instrument
+                            and op.position.direction is not signal.direction
+                            and not op.reversal_pending
+                        ):
+                            op.reversal_pending = True
+                            seq_counter += 1
+                            pending_closes.append(
+                                _PendingClose(
+                                    seq=seq_counter,
+                                    position_seq=op.seq,
+                                    instrument=signal.instrument,
+                                    actionable_index=i + 1 + cfg.profile.latency_bars,
+                                )
+                            )
+                            if policy.reversal is ReversalMode.CLOSE_ONLY:
+                                wants_entry = False
+                if not wants_entry:
+                    _bump(rejections, "reversal_close_only")
+                    continue
+
                 rate = self._rate(instr.quote, ts)
                 size = self.sizer.size_for(signal, instr, account, rate)
                 if size <= 0:
@@ -809,9 +1189,10 @@ class BacktestEngine:
                     previous_time=self._previous_bar_time(op.position.instrument, last_i),
                     bar_interval=self._intervals[op.position.instrument],
                 )
-                trade = self._close(op, exit_fill, ts, costs)
-                trades.append(trade)
-                balance += trade.net_pnl
+                leg = self._close_fill(op, exit_fill, ts, costs, op.position.size, final=True)
+                exit_legs.append(leg)
+                balance += leg.net_pnl
+                trades.append(self._finalise(op, ts, ExitReason.END_OF_DATA))
             eq_balance[written - 1] = balance
             eq_equity[written - 1] = balance
             eq_unrealised[written - 1] = 0.0
@@ -847,18 +1228,157 @@ class BacktestEngine:
             bankrupt=bankrupt,
             signals_seen=signals_seen,
             orders_submitted=orders_submitted,
+            exit_legs=exit_legs,
+            exit_policy_fingerprint=self.exit_policy.fingerprint(),
         )
 
     # -------------------------------------------------------------- helpers
 
-    def _close(
+    def _allocations_for(self, signal: Signal) -> tuple[float, ...]:
+        """Per-leg allocations for this signal, or the policy's fallback.
+
+        The signal wins when it carries them, because only the compiler knows
+        which declared leg produced which price. A signal built by hand (a
+        golden test, a strategy that is not a compiled document) falls back to
+        the policy, and a policy that declares none falls back to the
+        pre-multi-leg behaviour: the first price is a full-size target.
+        """
+        if signal.take_profit_allocations:
+            return tuple(signal.take_profit_allocations)
+        allocations = self.exit_policy.allocations
+        if allocations and len(allocations) >= len(signal.take_profit_prices):
+            return tuple(allocations[: len(signal.take_profit_prices)])
+        return ()
+
+    @staticmethod
+    def _size_for_exit(op: _OpenPosition, fill) -> tuple[float, bool]:
+        """How much this fill closes, and whether that empties the position.
+
+        A take-profit leg closes its own allocated size. Anything else — a stop,
+        a time stop, a margin call — closes the lot. Two guards:
+
+        * a leg can never close more than is still open;
+        * if closing the leg would leave a residue below the instrument's
+          minimum dealable size, the residue goes with it. Leaving a stub
+          nobody could actually deal is not a smaller position, it is a
+          position the broker will not let you out of.
+        """
+        remaining = op.position.size
+        if fill.reason is not ExitReason.TAKE_PROFIT or op.next_leg >= len(op.legs):
+            return remaining, True
+        size = min(op.legs[op.next_leg].size, remaining)
+        residue = remaining - size
+        if residue > 0.0 and residue < op.instrument.min_size - 1e-12:
+            return remaining, True
+        if size <= 0.0:
+            return remaining, True
+        return size, residue <= 1e-12
+
+    def _exit_reason(self, op: _OpenPosition, fill) -> ExitReason:
+        """STOP_LOSS becomes TRAILING_STOP once the stop has actually moved.
+
+        Reported, not inferred: ``op.stop_trailed`` is set only when a trail or
+        a breakeven rule moved the level, so a strategy with a trail declared
+        but never activated still reports its stops as stops.
+        """
+        reason = fill.reason or ExitReason.END_OF_DATA
+        if reason is ExitReason.STOP_LOSS and op.stop_trailed:
+            return ExitReason.TRAILING_STOP
+        return reason
+
+    def _time_stop_hit(self, op: _OpenPosition, policy: ExitPolicy) -> bool:
+        limit = policy.max_bars_in_trade
+        return limit is not None and op.position.bars_held >= limit
+
+    def _event_block(
+        self, instrument: str, ts: pd.Timestamp, policy: ExitPolicy
+    ) -> str | None:
+        events = policy.events
+        if events is None:
+            return None
+        return events.blocks(
+            instrument,
+            ts,
+            rollover_hour=self.config.financing_rollover_hour_utc,
+            calendar=self.blackout,
+        )
+
+    def _series_value(self, sym: str, i: int, column: str | None) -> float:
+        if not column:
+            return float("nan")
+        arr = self._series[sym].get(column)
+        if arr is None:
+            return float("nan")
+        j = int(self._positions[sym][i])
+        if j < 0:
+            return float("nan")
+        return float(arr[j])
+
+    def _update_protective_stop(
+        self, op: _OpenPosition, bar: Bar, i: int, sym: str, policy: ExitPolicy
+    ) -> None:
+        """Move the stop, in the favourable direction ONLY, from a closed bar.
+
+        Three things are true of every candidate level computed here:
+
+        1. it is derived from bars up to and including the one that has just
+           closed, and takes effect from the NEXT bar, so a trailing stop can
+           never fill on the bar that created it;
+        2. it is applied only when it improves the stop for the position's
+           direction, so a trail cannot widen risk;
+        3. it is NOT clamped to the current price. A chandelier can legitimately
+           land above a long's close on a low-ATR bar, and the position is then
+           stopped out at the next bar's open. Clamping would be a silent
+           favour, and the whole point of this engine is not to grant those.
+        """
+        if op.risk_per_unit <= 0:
+            return
+        sign = op.position.direction.sign
+        current = op.position.stop_loss
+        proposed = current
+        r_now = op.r_multiple()
+
+        if (
+            policy.breakeven_at_r is not None
+            and not op.breakeven_done
+            and r_now >= policy.breakeven_at_r
+        ):
+            op.breakeven_done = True
+            if (op.entry_mid - proposed) * sign > 0:
+                proposed = op.entry_mid
+
+        trail = policy.trailing
+        if trail.active and r_now >= trail.activate_after_r:
+            candidate = trail.candidate(
+                sign=sign,
+                extreme=op.extreme,
+                close=bar.close,
+                atr=self._series_value(sym, i, trail.atr_column),
+                level=self._series_value(sym, i, trail.level_column),
+            )
+            if candidate is not None and (candidate - proposed) * sign > 0:
+                proposed = candidate
+
+        if (proposed - current) * sign > 0:
+            op.position.stop_loss = proposed
+            op.stop_trailed = True
+
+    def _close_fill(
         self,
         op: _OpenPosition,
         exit_fill,
         ts: pd.Timestamp,
         costs: CostBreakdown,
-    ) -> Trade:
-        cfg = self.config
+        size: float,
+        *,
+        final: bool,
+    ) -> ExitLeg:
+        """Realise ONE closing fill and fold it into the position's totals.
+
+        Entry costs and accrued financing are carried out of a shrinking pool
+        rather than recomputed, so the legs of a scaled-out position sum to
+        exactly one round trip's costs with no residue on the last one.
+        """
         instr = op.instrument
         exit_costs = self._costs_to_account(instr, exit_fill.costs, ts)
         costs.spread += exit_costs["spread"]
@@ -866,44 +1386,101 @@ class BacktestEngine:
         costs.commission += exit_costs["commission"]
         costs.slippage += exit_costs["slippage"]
         costs.guaranteed_stop_premium += exit_costs["premium"]
-        costs.financing += op.financing_account
+
+        share = 1.0 if final else (size / op.position.size if op.position.size > 0 else 1.0)
+        entry_spread = op.entry_costs_account["spread"] * share
+        entry_commission = op.entry_costs_account["commission"] * share
+        entry_slippage = op.entry_costs_account["slippage"] * share
+        entry_premium = op.entry_costs_account["premium"] * share
+        if final:
+            op.entry_costs_account = {"spread": 0.0, "commission": 0.0, "slippage": 0.0, "premium": 0.0}
+        else:
+            op.entry_costs_account = {
+                "spread": op.entry_costs_account["spread"] - entry_spread,
+                "commission": op.entry_costs_account["commission"] - entry_commission,
+                "slippage": op.entry_costs_account["slippage"] - entry_slippage,
+                "premium": op.entry_costs_account["premium"] - entry_premium,
+            }
+        financing = op.financing_account if final else op.financing_account * share
+        op.financing_account -= financing
+        costs.financing += financing
 
         fx_rate = self._rate(instr.quote, ts)
-        gross_quote = (
+        gross = (
             (exit_fill.mid_price - op.entry_mid)
             * op.position.direction.sign
-            * op.position.size
+            * size
             * instr.contract_size
-        )
-        gross = gross_quote * fx_rate
+        ) * fx_rate
 
-        spread_cost = op.entry_costs_account["spread"] + exit_costs["spread"]
-        commission = op.entry_costs_account["commission"] + exit_costs["commission"]
-        slippage_cost = op.entry_costs_account["slippage"] + exit_costs["slippage"]
-        premium = op.entry_costs_account["premium"] + exit_costs["premium"]
-        financing = op.financing_account
+        spread_cost = entry_spread + exit_costs["spread"]
+        commission = entry_commission + exit_costs["commission"]
+        slippage_cost = entry_slippage + exit_costs["slippage"]
         # The guaranteed-stop premium is a commission-like charge; folding it in
         # keeps `net = gross - the four named costs` exactly true.
-        commission += premium
-
+        commission += entry_premium + exit_costs["premium"]
         net = gross - spread_cost - commission - slippage_cost - financing
 
-        unit_to_account = op.position.size * instr.contract_size * fx_rate
-        return Trade(
+        reason = self._exit_reason(op, exit_fill)
+        op.realised_gross += gross
+        op.realised_spread += spread_cost
+        op.realised_commission += commission
+        op.realised_slippage += slippage_cost
+        op.realised_financing += financing
+        op.realised_net += net
+        op.exit_value += exit_fill.mid_price * size
+        op.n_legs_closed += 1
+        op.single_leg_exit_mid = exit_fill.mid_price
+        op.position.size = 0.0 if final else op.position.size - size
+
+        return ExitLeg(
+            position_seq=op.seq,
             instrument=op.position.instrument,
-            direction=op.position.direction,
-            size=op.position.size,
-            entry_price=op.entry_mid,
+            direction=op.position.direction.value,
+            ordinal=op.n_legs_closed - 1,
+            size=size,
             exit_price=exit_fill.mid_price,
-            entry_time=op.position.entry_time,
             exit_time=ts,
-            exit_reason=exit_fill.reason or ExitReason.END_OF_DATA,
+            exit_reason=reason.value,
             gross_pnl=gross,
             spread_cost=spread_cost,
             commission=commission,
             slippage_cost=slippage_cost,
             financing_cost=financing,
             net_pnl=net,
+            final=final,
+        )
+
+    def _finalise(
+        self, op: _OpenPosition, ts: pd.Timestamp, reason: ExitReason
+    ) -> Trade:
+        """The ONE ledger row for a position, assembled from its closing fills."""
+        cfg = self.config
+        instr = op.instrument
+        fx_rate = self._rate(instr.quote, ts)
+        if op.n_legs_closed == 1:
+            # Verbatim, so a single-leg position's row is bit-for-bit what it
+            # was before this engine could scale out.
+            exit_price = op.single_leg_exit_mid
+        else:
+            exit_price = op.exit_value / op.entry_size
+
+        unit_to_account = op.entry_size * instr.contract_size * fx_rate
+        return Trade(
+            instrument=op.position.instrument,
+            direction=op.position.direction,
+            size=op.entry_size,
+            entry_price=op.entry_mid,
+            exit_price=exit_price,
+            entry_time=op.position.entry_time,
+            exit_time=ts,
+            exit_reason=reason,
+            gross_pnl=op.realised_gross,
+            spread_cost=op.realised_spread,
+            commission=op.realised_commission,
+            slippage_cost=op.realised_slippage,
+            financing_cost=op.realised_financing,
+            net_pnl=op.realised_net,
             account_ccy=cfg.account_ccy,
             strategy_id=op.position.strategy_id or cfg.strategy_id,
             bars_held=op.position.bars_held,
@@ -963,12 +1540,26 @@ class BacktestEngine:
                 np.ascontiguousarray(arr).tobytes()
                 + self.frames[sym].index.asi8.tobytes()
             ).hexdigest()
-            out[sym] = {
+            entry: dict[str, object] = {
                 "bars": int(len(arr)),
                 "first": self.frames[sym].index[0].isoformat(),
                 "last": self.frames[sym].index[-1].isoformat(),
                 "sha256": digest,
             }
+            series = self._series.get(sym) or {}
+            if series:
+                # A trailing stop reads these, so a different ATR series is a
+                # different backtest. Fingerprinting only the OHLC would let two
+                # incomparable runs claim the same data provenance.
+                blob = b"".join(
+                    name.encode("utf-8") + np.ascontiguousarray(series[name]).tobytes()
+                    for name in sorted(series)
+                )
+                entry["exit_series"] = {
+                    "columns": sorted(series),
+                    "sha256": hashlib.sha256(blob).hexdigest(),
+                }
+            out[sym] = entry
         return out
 
 
@@ -979,6 +1570,59 @@ class BacktestEngine:
 
 def _bump(counter: dict[str, int], key: str) -> None:
     counter[key] = counter.get(key, 0) + 1
+
+
+def _plan_legs(
+    instrument: Instrument,
+    filled_size: float,
+    prices: Sequence[float],
+    allocations: Sequence[float],
+) -> list[_TakeProfitLeg]:
+    """Turn target prices plus allocation fractions into dealable leg sizes.
+
+    Rules, each of which exists because the alternative is a silent distortion:
+
+    * **No allocations** means the pre-multi-leg behaviour — the first price is
+      a full-size target and the rest are ignored. That is what every signal
+      built before this existed meant, and changing it silently would restate
+      every stored result without saying so.
+    * Each leg's size is floored to the instrument's size step, because a size
+      the venue cannot deal is not a size.
+    * When the allocations sum to 1.0 the LAST leg takes the exact remainder
+      rather than its own rounded share, so flooring cannot leave a dust
+      position that then has to be closed by some other rule.
+    * When they sum to LESS than 1.0 the shortfall is deliberate: the remainder
+      rides to the stop, the trail, the time stop or the end of data. That is
+      what ``macd_ema_trend_hybrid``'s 0.4 / 0.3 split means.
+    * A leg that floors to zero is dropped. It cannot be dealt, and pretending
+      otherwise would make the position close in more pieces than it has.
+    """
+    if not prices:
+        return []
+    if not allocations:
+        return [_TakeProfitLeg(float(prices[0]), filled_size)]
+
+    total = sum(allocations)
+    closes_everything = total >= 1.0 - 1e-9
+    legs: list[_TakeProfitLeg] = []
+    allocated = 0.0
+    last = len(prices) - 1
+    for k, (price, allocation) in enumerate(zip(prices, allocations, strict=True)):
+        if k == last and closes_everything:
+            size = filled_size - allocated
+        else:
+            size = round_size(
+                instrument,
+                _snap_to_step(filled_size * float(allocation), instrument.size_step),
+            )
+        size = min(size, filled_size - allocated)
+        if size <= 0:
+            continue
+        legs.append(_TakeProfitLeg(float(price), size))
+        allocated += size
+        if allocated >= filled_size - 1e-12:
+            break
+    return legs
 
 
 def _validate_frame(symbol: str, frame: pd.DataFrame) -> pd.DataFrame:
@@ -1041,7 +1685,18 @@ def run_backtest(
     sizer: Sizer,
     fx: FxRateSource,
     calendar: SessionCalendar | None = None,
+    exit_policy: ExitPolicy | None = None,
+    exit_series: dict[str, pd.DataFrame] | None = None,
+    blackout: BlackoutSource | None = None,
 ) -> BacktestResult:
     return BacktestEngine(
-        data=data, config=config, strategy=strategy, sizer=sizer, fx=fx, calendar=calendar
+        data=data,
+        config=config,
+        strategy=strategy,
+        sizer=sizer,
+        fx=fx,
+        calendar=calendar,
+        exit_policy=exit_policy,
+        exit_series=exit_series,
+        blackout=blackout,
     ).run()

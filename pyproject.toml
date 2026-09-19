@@ -25,6 +25,15 @@ dependencies = [
   "python-dateutil==2.9.0.post0",
   "orjson==3.10.13",
   "typer==0.15.1",
+  # NOT a direct dependency, pinned here anyway. typer 0.15.1 calls
+  # click.Parameter.make_metavar() with the pre-8.2 signature, so a clean
+  # resolve that picks up click 8.5.0 makes EVERY `fiboki --help` raise
+  # `TypeError: Parameter.make_metavar() missing 1 required positional
+  # argument`. deploy/constraints.txt already carried this pin, but constraints
+  # are opt-in: a plain `pip install -e .` never reads them, and that is the
+  # install an operator actually performs. A broken CLI is a broken operator
+  # tool, not a broken number, which is exactly why nothing else caught it.
+  "click==8.1.8",
   "rich==13.9.4",
 ]
 

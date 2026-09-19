@@ -116,12 +116,16 @@ Four mechanisms, all mechanical:
    `broker/oanda.py`, `broker/ig.py` and `broker/simulated_venue.py` and fails if any of them
    calls `size_trade`, `size_for` or constructs a `PortfolioSizer`.
 
-Two caveats, stated because the source claims otherwise. `core/contracts.py` cites
-`tests/unit/test_layering.py` and `broker/base.py` cites
-`tests/unit/test_adapter_prohibitions.py`. **Neither file exists.** The adapter prohibitions
-*are* enforced, in `test_no_gateway_bypass.py`; the import-direction layering between packages
-is **not** mechanically enforced anywhere at this snapshot. It is a convention held by review.
-That gap is recorded in `ROADMAP.md`.
+5. **Imports point downwards only.** `tests/unit/test_layering.py` — which `core/contracts.py`
+   cited for a long time before it existed — parses every module under `src/fiboki/`, including
+   imports deferred inside functions, and fails on any edge to a package of equal or higher
+   rank. The ranks are explicit data in that file, its list of documented exceptions is empty,
+   and it separately forbids `agents/ -> broker|risk|portfolio`, which rank alone would allow.
+   When it was first run it found **no violations**: the convention had in fact been held.
+
+One caveat remains, stated because the source claims otherwise. `broker/base.py` cites
+`tests/unit/test_adapter_prohibitions.py`, which **does not exist**. Those prohibitions *are*
+enforced, in `test_no_gateway_bypass.py`; the citation is stale, not the control.
 
 ## 4. Data flow: raw bytes to a validated candidate
 
@@ -343,8 +347,9 @@ Recorded here so the diagram above is not read as a description of a running sys
   research job handlers, so `fiboki worker run research` idles and says so. Nothing starts the
   heartbeat watchdog. Nothing schedules reconciliation. `fiboki worker run live` refuses by
   design until an entrypoint owns its risk wiring.
-- **No import-direction test**, as above. `core/contracts.py` cites
-  `tests/unit/test_layering.py`, which does not exist.
+- ~~**No import-direction test.**~~ Closed: `tests/unit/test_layering.py` now exists, parses
+  every module under `src/fiboki/` and enforces the declared rank order. It found no
+  violations on its first run.
 - **No Alembic migrations.** The health check reads `alembic_version` and reports the revision as
   unknown, which is a degradation rather than a failure — but it will stay unknown until a
   baseline is written.

@@ -47,6 +47,13 @@ class Signal:
     reference_price: float
     stop_price: float
     take_profit_prices: tuple[float, ...] = ()
+    #: Fraction of the position each take-profit leg closes, aligned 1:1 with
+    #: ``take_profit_prices``. Empty means "unallocated", which the engine reads
+    #: as the pre-multi-leg behaviour: the FIRST price is a full-size target and
+    #: the rest are ignored. Only the compiler can populate this, because only
+    #: the compiler knows which declared leg produced which price once the
+    #: prices have been sorted by distance and de-duplicated.
+    take_profit_allocations: tuple[float, ...] = ()
     confidence: float = 1.0
     rationale: str = ""
     features: dict[str, float] = field(default_factory=dict)
@@ -70,6 +77,22 @@ class Signal:
                 raise ValueError(f"LONG take-profit {tp} must be above entry")
             if self.direction is Direction.SHORT and tp >= self.reference_price:
                 raise ValueError(f"SHORT take-profit {tp} must be below entry")
+        if self.take_profit_allocations:
+            if len(self.take_profit_allocations) != len(self.take_profit_prices):
+                raise ValueError(
+                    f"take_profit_allocations has {len(self.take_profit_allocations)} "
+                    f"entries for {len(self.take_profit_prices)} prices. A leg whose "
+                    "allocation cannot be named is a leg the engine would have to "
+                    "guess a size for."
+                )
+            if any(a <= 0.0 or a > 1.0 for a in self.take_profit_allocations):
+                raise ValueError("each take-profit allocation must lie in (0, 1]")
+            total = sum(self.take_profit_allocations)
+            if total > 1.0 + 1e-9:
+                raise ValueError(
+                    f"take-profit allocations sum to {total:.6f} > 1.0; a position "
+                    "cannot be closed more than once"
+                )
         if self.bar_time.tzinfo is None:
             raise ValueError("Signal.bar_time must be timezone-aware UTC")
 

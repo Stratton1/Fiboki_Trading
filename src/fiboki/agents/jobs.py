@@ -45,6 +45,7 @@ from fiboki.backtest.engine import (
     FixedFractionalSizer,
     run_backtest,
 )
+from fiboki.backtest.exits import exit_policy_from_document
 from fiboki.backtest.metrics import compute_metrics
 from fiboki.core.contracts import Signal, Trade
 from fiboki.core.enums import Provenance, Timeframe
@@ -105,6 +106,15 @@ class CompiledStrategyRunner:
             self._prepared[symbol] = prepared
             self._index[symbol] = {ts: i for i, ts in enumerate(prepared.index)}
         self.signals_emitted = 0
+
+    def prepared(self, symbol: str) -> pd.DataFrame:
+        """The indicator-bearing frame for one symbol.
+
+        Exposed so a caller can hand the engine the SAME series the strategy
+        reads -- a trailing stop must trail on the ATR of the bar it is
+        trailing, not on one recomputed by a second code path that could drift.
+        """
+        return self._prepared[symbol]
 
     def on_bar(self, ctx: BarContext) -> Sequence[Signal]:
         out: list[Signal] = []
@@ -281,12 +291,24 @@ def _run_one(
         strategy_id=strategy_id_override or document.strategy_id,
         provenance=Provenance.BACKTEST,
     )
+    # The document's FULL exit vocabulary -- scale-out legs, trailing stops,
+    # breakeven, time stop, cooldown, reversal, event restrictions. Without this
+    # the agent-facing backtest would honour only the stop and the first target
+    # while `validation/engine_evaluator.py` honoured the whole document, and
+    # the two would report different numbers for the same strategy.
+    exit_policy = exit_policy_from_document(document)
+    exit_series = {
+        symbol: runner.prepared(symbol)[list(exit_policy.needs_series)]
+        for symbol in frames
+    } if exit_policy.needs_series else None
     result = run_backtest(
         data=frames,
         config=config,
         strategy=runner,
         sizer=FixedFractionalSizer(risk_fraction=float(risk_fraction)),
         fx=fx,
+        exit_policy=exit_policy,
+        exit_series=exit_series,
     )
     metrics = compute_metrics(
         trades=result.trades,

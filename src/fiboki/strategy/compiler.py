@@ -158,7 +158,7 @@ class CompiledStrategy:
             return None
 
         direction = Direction.LONG if side == "long" else Direction.SHORT
-        targets = self._take_profits(ctx, side, reference, stop, inst)
+        targets, allocations = self._take_profits(ctx, side, reference, stop, inst)
 
         try:
             return Signal(
@@ -170,6 +170,7 @@ class CompiledStrategy:
                 reference_price=reference,
                 stop_price=stop,
                 take_profit_prices=targets,
+                take_profit_allocations=allocations,
                 confidence=1.0,
                 rationale=f"{doc.strategy_id}:{side}",
                 features=self._features(ctx),
@@ -266,10 +267,30 @@ class CompiledStrategy:
         reference: float,
         stop: float,
         inst: Instrument,
-    ) -> tuple[float, ...]:
+    ) -> tuple[tuple[float, ...], tuple[float, ...]]:
+        """Target prices, nearest first, and the allocation each one closes.
+
+        The two tuples are aligned 1:1 and travel together on the Signal. Until
+        the engine could scale out, the allocations were computed by the DSL and
+        then thrown away here, which is why ``macd_ema_trend_hybrid``'s
+        ``0.4 / 0.3`` split (with 0.3 deliberately left to ride) has never once
+        been executed.
+
+        Two bookkeeping rules, both of which exist because the leg order the
+        author declared is NOT the order the levels are reached:
+
+        * legs are sorted by DISTANCE from entry, carrying their allocation with
+          them, so "close 40% at the nearer level" survives a document that
+          declares the far leg first;
+        * two legs that resolve to the same price (an ``r_multiple`` and an
+          ``indicator_level`` that happen to coincide) are merged and their
+          allocations ADDED, capped at the whole position. Dropping the second
+          silently, as this function used to, would quietly shrink the position
+          the document asked to close.
+        """
         sign = 1.0 if side == "long" else -1.0
         risk = abs(reference - stop)
-        prices: list[float] = []
+        legs: list[tuple[float, float]] = []
         for leg in self.document.take_profits:
             price = self._leg_price(ctx, leg, sign, reference, risk, inst)
             if price is None:
@@ -278,14 +299,33 @@ class CompiledStrategy:
             # rather than let Signal reject the whole opinion.
             if (price - reference) * sign <= 0:
                 continue
-            prices.append(price)
+            legs.append((price, float(leg.allocation)))
         # Nearest first, de-duplicated: the engine scales out in this order.
-        prices.sort(key=lambda p: (p - reference) * sign)
-        deduped: list[float] = []
-        for p in prices:
-            if not deduped or abs(p - deduped[-1]) > 1e-12:
-                deduped.append(p)
-        return tuple(deduped)
+        legs.sort(key=lambda pa: (pa[0] - reference) * sign)
+        prices: list[float] = []
+        allocations: list[float] = []
+        for price, allocation in legs:
+            if prices and abs(price - prices[-1]) <= 1e-12:
+                allocations[-1] = min(1.0, allocations[-1] + allocation)
+                continue
+            prices.append(price)
+            allocations.append(allocation)
+        # A dropped leg cannot make the surviving ones close more than the whole
+        # position, but a MERGE can push the running total over 1.0. Trim the
+        # tail rather than scaling everything, so the nearer legs keep exactly
+        # the allocation the document declared.
+        running = 0.0
+        trimmed: list[float] = []
+        for allocation in allocations:
+            room = max(0.0, 1.0 - running)
+            take = min(allocation, room)
+            trimmed.append(take)
+            running += take
+        keep = [i for i, a in enumerate(trimmed) if a > 0.0]
+        return (
+            tuple(prices[i] for i in keep),
+            tuple(trimmed[i] for i in keep),
+        )
 
     def _leg_price(
         self,

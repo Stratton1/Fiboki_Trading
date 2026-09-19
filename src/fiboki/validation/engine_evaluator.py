@@ -72,6 +72,7 @@ from fiboki.backtest.engine import (
     FixedFractionalSizer,
     run_backtest,
 )
+from fiboki.backtest.exits import BlackoutSource, ExitPolicy, exit_policy_from_document
 from fiboki.core.contracts import Signal, Trade
 from fiboki.core.enums import Direction, ExitReason, Provenance, Timeframe
 from fiboki.core.money import FxRateSource, IdentityFxSource
@@ -379,6 +380,12 @@ class EngineEvaluator:
     fx: FxRateSource = field(default_factory=IdentityFxSource)
     cache: EvaluationCache | None = None
     fx_label: str = "identity"
+    #: An economic calendar for ``EventRestriction``. ``None`` means no blackout
+    #: is applied at all — and note that a calendar with no dated events answers
+    #: "not in blackout" for every bar in history, so supplying an empty one is
+    #: the same as supplying none. See
+    #: ``fiboki.marketstate.calendar.USER_ACTION_NOTE``.
+    blackout: BlackoutSource | None = None
 
     _frame_digest: str = field(init=False, default="", repr=False)
     _bound: dict[str, StrategyDocument] = field(init=False, default_factory=dict, repr=False)
@@ -472,7 +479,13 @@ class EngineEvaluator:
         """
         bound = self.bind(params)
         payload = {
-            "schema": 1,
+            # schema 2: the engine gained the DSL's full exit vocabulary
+            # (multi-leg take profits, trailing stops, breakeven, time stops,
+            # cooldown, reversal, event blackouts). Every schema-1 entry was
+            # computed by an engine that could only honour the stop and the
+            # first target, so those answers are about a different strategy and
+            # must never be served for this question.
+            "schema": 2,
             "strategy_content_hash": bound.content_hash(),
             "dataset_version_id": self.dataset_version_id,
             "frame_digest": self._frame_digest,
@@ -537,12 +550,16 @@ class EngineEvaluator:
             compiled, symbol, fed, self.config.timeframe, window
         )
         config = self._base_config(bound.strategy_id)
+        policy = exit_policy_from_document(bound)
         result = run_backtest(
             data={symbol: fed[["open", "high", "low", "close"]]},
             config=config,
             strategy=runner,
             sizer=FixedFractionalSizer(risk_fraction=float(self.config.risk_fraction)),
             fx=self.fx,
+            exit_policy=policy,
+            exit_series=self._exit_series(symbol, runner, policy),
+            blackout=self.blackout,
         )
         self.n_engine_runs += 1
 
@@ -565,6 +582,10 @@ class EngineEvaluator:
             "rejections": dict(result.rejections),
             "bankrupt": bool(result.bankrupt),
             "ledger_sha256": result.ledger_sha256(),
+            "leg_ledger_sha256": result.leg_ledger_sha256(),
+            "partial_exits": int(result.partial_exits),
+            "exit_policy": result.exit_policy_fingerprint,
+            "blackout_source": type(self.blackout).__name__ if self.blackout else None,
             "cache_key": key,
             "costs": result.costs.as_dict(),
         }
@@ -581,6 +602,30 @@ class EngineEvaluator:
             notes=warmup_note,
             meta=meta,
         )
+
+    @staticmethod
+    def _exit_series(
+        symbol: str, runner: WindowedStrategyRunner, policy: ExitPolicy
+    ) -> dict[str, pd.DataFrame] | None:
+        """The indicator columns the exit policy trails on, already computed.
+
+        ``runner.prepared`` is the same frame the strategy reads, indexed
+        identically to the OHLC the engine is given, so a chandelier reads the
+        ATR of the bar it is trailing and not of some neighbouring bar. The
+        engine re-checks the index alignment and refuses a mismatch.
+        """
+        needed = policy.needs_series
+        if not needed:
+            return None
+        missing = [c for c in needed if c not in runner.prepared.columns]
+        if missing:
+            raise KeyError(
+                f"the exit policy trails on {missing}, which the compiled strategy "
+                "does not produce. The document declares a trailing operand whose "
+                "indicator is not required by any rule -- compile_strategy should "
+                "have built it."
+            )
+        return {symbol: runner.prepared[list(needed)]}
 
     def _period_returns(self, result: BacktestResult, window: DateWindow) -> np.ndarray:
         """Per-bar equity change over the WINDOW's bars, in the account currency.
