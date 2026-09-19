@@ -347,12 +347,18 @@ class WindowEvaluation:
     returns_basis: str = "trade"
     trades: tuple[Trade, ...] = field(default=(), repr=False)
     notes: str = ""
+    meta: dict[str, Any] = field(default_factory=dict, repr=False)
+    """Provenance of THIS evaluation: which dataset version, which engine
+    configuration, which binding. A real evaluator fills it; the ladder never
+    reads it, so it cannot change a verdict -- it exists so the report can say
+    what produced the numbers rather than asserting that something did."""
 
     def __post_init__(self) -> None:
         if self.returns_basis not in ("trade", "period"):
             raise ValueError("returns_basis must be 'trade' or 'period'")
         object.__setattr__(self, "returns", np.asarray(self.returns, dtype=float))
         object.__setattr__(self, "params", canonical_params(self.params))
+        object.__setattr__(self, "meta", dict(self.meta))
 
     # ------------------------------------------------------------ metrics
 
@@ -423,6 +429,9 @@ class WindowEvaluation:
             "returns_basis": self.returns_basis,
             "n_returns": int(self.returns.size),
             "degeneracies": list(self.degeneracies()),
+            "dataset_version_id": self.meta.get("dataset_version_id", ""),
+            "engine_config_hash": self.meta.get("engine_config_hash", ""),
+            "strategy_content_hash": self.meta.get("strategy_content_hash", ""),
         }
 
     # ------------------------------------------------------------ builders

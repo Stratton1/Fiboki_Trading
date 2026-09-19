@@ -1,0 +1,86 @@
+# systemd unit for the research worker on a Linux host.
+#
+# Install:
+#   sudo cp deploy/systemd/fiboki-research-worker.service /etc/systemd/system/
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable --now fiboki-research-worker
+#
+# Inspect:
+#   systemctl status fiboki-research-worker
+#   journalctl -u fiboki-research-worker -f | jq .     # logs are JSON
+#
+# The Mac (launchd) unit is the primary target; this is the server path.
+
+[Unit]
+Description=Fiboki research worker (its own process, not a thread in the API)
+Documentation=file:///opt/fiboki/deploy/README.md
+After=network-online.target postgresql.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=fiboki
+Group=fiboki
+WorkingDirectory=/opt/fiboki
+
+Environment=FIBOKI_HOME=/var/lib/fiboki
+Environment=FIBOKI_STATE_DB=/var/lib/fiboki/state.db
+Environment=FIBOKI_DATA_ROOT=/var/lib/fiboki/data
+Environment=FIBOKI_ALERT_LOG=/var/log/fiboki/alerts.jsonl
+Environment=FIBOKI_LOG_FORMAT=json
+Environment=FIBOKI_EXECUTION_MODE=paper
+# Names the workers that OUGHT to be running, so the watchdog can alert on one
+# that never started rather than only on one that went stale.
+Environment=FIBOKI_EXPECTED_WORKERS=research@%H
+# Secrets (broker credentials, Telegram token, webhook URL) come from a file
+# that is NOT in the repository:
+EnvironmentFile=-/etc/fiboki/worker.env
+# FIBOKI_LIVE_EXECUTION_ENABLED is deliberately not set here. CI fails the
+# build if a truthy literal for it appears in committed config.
+
+ExecStartPre=/opt/fiboki/.venv/bin/fiboki system doctor
+ExecStart=/opt/fiboki/.venv/bin/fiboki worker run research --nice 10
+
+# Graceful shutdown: SIGTERM sets the stop event, the worker finishes or
+# safely abandons its current cycle, releases the lease and exits 0.
+KillSignal=SIGTERM
+KillMode=mixed
+# Must exceed WorkerConfig.shutdown_grace_seconds (30s default), or systemd
+# SIGKILLs a worker that is shutting down correctly.
+TimeoutStopSec=45
+
+Restart=on-failure
+RestartSec=15
+# Exit 75 means another holder has the lease. Restarting into a held lease is
+# a loop with no end; treat it as a clean stop and let the operator look.
+SuccessExitStatus=75
+# Do not thrash on a poisoned state.
+StartLimitBurst=5
+StartLimitIntervalSec=300
+
+# Yield the machine.
+Nice=10
+IOSchedulingClass=idle
+CPUWeight=50
+MemoryHigh=4G
+MemoryMax=6G
+
+# Hardening.
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/fiboki /var/log/fiboki
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+RestrictRealtime=true
+LockPersonality=true
+SystemCallArchitectures=native
+
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

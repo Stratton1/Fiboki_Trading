@@ -43,6 +43,19 @@ SEED_PATHS = sorted(SEED_DIR.glob("*.json"))
 SEED_IDS = [p.stem for p in SEED_PATHS]
 
 
+def seed(path: Path) -> StrategyDocument:
+    """Load a seed document AT ITS DECLARED DEFAULTS.
+
+    The shipped documents are templates: they reference the parameters they
+    declare, and ``compile_strategy`` refuses a document that still holds an
+    unresolved reference. Causality is a property of the compiled strategy, so
+    it is tested on a binding -- the one the document itself declares. That the
+    template cannot be compiled at all is asserted separately, in
+    ``test_a_template_cannot_be_compiled``.
+    """
+    return StrategyDocument.from_json(path.read_text()).bind_defaults()
+
+
 @pytest.fixture(scope="module")
 def bars() -> pd.DataFrame:
     return synthetic_ohlcv(1200)
@@ -73,7 +86,7 @@ def _symbol(doc: StrategyDocument) -> str:
 
 @pytest.mark.parametrize("path", SEED_PATHS, ids=SEED_IDS)
 def test_signals_ignore_every_future_bar(path: Path, bars: pd.DataFrame) -> None:
-    doc = StrategyDocument.from_json(path.read_text())
+    doc = seed(path)
     strat = compile_strategy(doc)
     sym, tf = _symbol(doc), doc.timeframes[0]
 
@@ -91,7 +104,7 @@ def test_signals_ignore_every_future_bar(path: Path, bars: pd.DataFrame) -> None
 @pytest.mark.parametrize("path", SEED_PATHS, ids=SEED_IDS)
 def test_truncated_history_gives_the_same_signal(path: Path, bars: pd.DataFrame) -> None:
     """Backtest/paper parity: the last bar of a live frame behaves identically."""
-    doc = StrategyDocument.from_json(path.read_text())
+    doc = seed(path)
     strat = compile_strategy(doc)
     sym, tf = _symbol(doc), doc.timeframes[0]
     full = strat.prepare(bars)
@@ -105,7 +118,7 @@ def test_truncated_history_gives_the_same_signal(path: Path, bars: pd.DataFrame)
 
 @pytest.mark.parametrize("path", SEED_PATHS, ids=SEED_IDS)
 def test_repeated_evaluation_is_deterministic(path: Path, bars: pd.DataFrame) -> None:
-    doc = StrategyDocument.from_json(path.read_text())
+    doc = seed(path)
     strat = compile_strategy(doc)
     sym, tf = _symbol(doc), doc.timeframes[0]
     prepared = strat.prepare(bars)
@@ -120,7 +133,7 @@ def test_repeated_evaluation_is_deterministic(path: Path, bars: pd.DataFrame) ->
 
 @pytest.mark.parametrize("path", SEED_PATHS, ids=SEED_IDS)
 def test_warmup_is_derived_from_the_indicators(path: Path) -> None:
-    doc = StrategyDocument.from_json(path.read_text())
+    doc = seed(path)
     strat = compile_strategy(doc)
     expected_indicator = max(i.warmup_period for i in strat.indicators)
     expected_lookback = max(r.max_lookback() for r in doc.all_rules())
@@ -131,7 +144,7 @@ def test_warmup_is_derived_from_the_indicators(path: Path) -> None:
 def test_warmup_actually_varies_between_strategies() -> None:
     """V1 returned 98 for every bot. A derived warmup must differ per document."""
     warmups = {
-        p.stem: compile_strategy(StrategyDocument.from_json(p.read_text())).warmup_period
+        p.stem: compile_strategy(seed(p)).warmup_period
         for p in SEED_PATHS
     }
     assert len(set(warmups.values())) > 1, warmups
@@ -140,7 +153,7 @@ def test_warmup_actually_varies_between_strategies() -> None:
 
 @pytest.mark.parametrize("path", SEED_PATHS, ids=SEED_IDS)
 def test_no_signal_before_warmup(path: Path, bars: pd.DataFrame) -> None:
-    doc = StrategyDocument.from_json(path.read_text())
+    doc = seed(path)
     strat = compile_strategy(doc)
     prepared = strat.prepare(bars)
     sym, tf = _symbol(doc), doc.timeframes[0]
@@ -153,7 +166,7 @@ def test_no_signal_before_warmup(path: Path, bars: pd.DataFrame) -> None:
 
 @pytest.mark.parametrize("path", SEED_PATHS, ids=SEED_IDS)
 def test_every_emitted_signal_has_a_tradeable_stop(path: Path, bars: pd.DataFrame) -> None:
-    doc = StrategyDocument.from_json(path.read_text())
+    doc = seed(path)
     strat = compile_strategy(doc)
     prepared = strat.prepare(bars)
     sym, tf = _symbol(doc), doc.timeframes[0]
@@ -181,7 +194,7 @@ def test_every_emitted_signal_has_a_tradeable_stop(path: Path, bars: pd.DataFram
 
 @pytest.mark.parametrize("path", SEED_PATHS, ids=SEED_IDS)
 def test_instrument_and_timeframe_are_policed(path: Path, bars: pd.DataFrame) -> None:
-    doc = StrategyDocument.from_json(path.read_text())
+    doc = seed(path)
     strat = compile_strategy(doc)
     prepared = strat.prepare(bars)
     idx = strat.warmup_period + 5
@@ -193,7 +206,7 @@ def test_instrument_and_timeframe_are_policed(path: Path, bars: pd.DataFrame) ->
 
 
 def test_out_of_range_index_raises(bars: pd.DataFrame) -> None:
-    doc = StrategyDocument.from_json(SEED_PATHS[0].read_text())
+    doc = seed(SEED_PATHS[0])
     strat = compile_strategy(doc)
     with pytest.raises(IndexError):
         strat.generate_signal(bars, len(bars))
@@ -202,7 +215,7 @@ def test_out_of_range_index_raises(bars: pd.DataFrame) -> None:
 
 
 def test_naive_timestamps_are_refused(bars: pd.DataFrame) -> None:
-    doc = StrategyDocument.from_json(SEED_PATHS[0].read_text())
+    doc = seed(SEED_PATHS[0])
     strat = compile_strategy(doc)
     naive = bars.copy()
     naive.index = naive.index.tz_localize(None)
@@ -334,17 +347,36 @@ def test_contradictory_both_sided_document_emits_nothing(bars: pd.DataFrame) -> 
 def test_compiler_never_reads_the_chikou_display_series() -> None:
     """The V1 landmine cannot reach a compiled strategy: it is not a column."""
     for path in SEED_PATHS:
-        doc = StrategyDocument.from_json(path.read_text())
+        doc = seed(path)
         strat = compile_strategy(doc)
         assert not any("chikou_span" in c for c in strat.required_columns)
 
 
 def test_unprepared_frame_is_prepared_on_the_truncated_view(bars: pd.DataFrame) -> None:
     """The slow path must also see only history."""
-    doc = StrategyDocument.from_json(SEED_PATHS[0].read_text())
+    doc = seed(SEED_PATHS[0])
     strat = compile_strategy(doc)
     idx = strat.warmup_period + 40
     raw = _fingerprint(strat.generate_signal(bars, idx, _symbol(doc)))
     prepped = _fingerprint(strat.generate_signal(strat.prepare(bars), idx, _symbol(doc)))
     assert raw == prepped
     assert not np.isnan(bars["close"].iloc[idx])
+
+
+# ---------------------------------------------------- unresolved references
+
+
+@pytest.mark.parametrize("path", SEED_PATHS, ids=SEED_IDS)
+def test_a_template_cannot_be_compiled(path: Path) -> None:
+    """The shipped template refuses to compile. That is the point of binding.
+
+    A document holding ``{"$param": "rsi_period"}`` has no rsi period. The old
+    arrangement could not express the distinction at all -- the number was a
+    literal in the rule and the declared domain was decoration -- so a "sweep"
+    reported values it had never run.
+    """
+    template = StrategyDocument.from_json(path.read_text())
+    assert template.unbound_parameters(), f"{path.stem} references no parameters"
+    with pytest.raises(CompilationError, match="unresolved parameter reference"):
+        compile_strategy(template)
+    assert compile_strategy(template.bind_defaults()).warmup_period > 0

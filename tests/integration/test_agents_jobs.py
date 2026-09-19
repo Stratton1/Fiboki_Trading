@@ -13,10 +13,10 @@ from fiboki.agents.audit import AuditLedger
 from fiboki.agents.capabilities import Capability
 from fiboki.agents.jobs import CompiledStrategyRunner, register_research_handlers
 from fiboki.agents.orchestrator import JobSpec, JobStatus, JobType, Orchestrator
-from fiboki.agents.research_store import BacktestRecord
 from fiboki.agents.roles import AgentRole
 from fiboki.agents.session import open_session
 from fiboki.core.enums import Timeframe
+from fiboki.research.artefacts import BacktestRecord
 from fiboki.strategy.compiler import compile_strategy
 from fiboki.validation.gates import GATE_SET_V2
 from tests.agents_fixtures import Harness

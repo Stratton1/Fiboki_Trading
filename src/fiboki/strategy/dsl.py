@@ -26,8 +26,9 @@ from __future__ import annotations
 import hashlib
 import json
 import re
+from collections.abc import Mapping
 from enum import Enum
-from typing import Any, ClassVar, Literal
+from typing import Annotated, Any, ClassVar, Literal
 
 from pydantic import (
     BaseModel,
@@ -40,12 +41,43 @@ from pydantic import (
 
 from fiboki.core import instruments
 from fiboki.core.enums import Timeframe
-from fiboki.strategy.primitives import IndicatorOperand, Rule, collect_indicators, count_rules
+from fiboki.strategy.primitives import (
+    PARAM_REF_KEY,
+    IndicatorOperand,
+    ParamRef,
+    Rule,
+    UnboundParameterError,
+    collect_indicators,
+    count_rules,
+    is_ref,
+    resolve_refs,
+)
 
 SCHEMA_VERSION = "2.0.0"
 _ID_RE = re.compile(r"^[a-z][a-z0-9_]{2,63}$")
 #: Rule sets with no economic story are curve fits. Enforced, not suggested.
 MIN_HYPOTHESIS_CHARS = 120
+
+
+class BindingError(ValueError):
+    """A parameter binding that cannot be honoured."""
+
+
+class UnknownParameterError(BindingError):
+    """A value was supplied for something the document does not declare."""
+
+
+class OutOfDomainError(BindingError):
+    """A value outside the domain the document declared for that parameter."""
+
+
+class InfeasibleBindingError(BindingError):
+    """Every value is in its own domain, but the combination is not a strategy.
+
+    Two parameters whose declared ranges overlap (a ``fast`` that may exceed a
+    ``slow``) make some corner of the declared grid unrealisable. The document is
+    the thing at fault, not the caller, so the error names the whole binding.
+    """
 
 
 class StrategyFamily(str, Enum):
@@ -108,6 +140,40 @@ class ParameterSpec(BaseModel):
                 raise ValueError("bool parameter default must be a bool")
         return self
 
+    def assert_in_domain(self, name: str, value: Any) -> Any:
+        """Check and normalise one value against this declared domain.
+
+        Bounds, not grid membership: a ``step`` describes how a SWEEP enumerates
+        the domain, while the domain itself is the closed interval the author
+        declared. Refusing an off-grid value would make a document's own
+        ``min_value``/``max_value`` a lie.
+        """
+        if self.kind == "bool":
+            if not isinstance(value, bool):
+                raise OutOfDomainError(f"{name}: {value!r} is not a bool")
+            return value
+        if self.kind == "choice":
+            if value not in (self.choices or ()):
+                raise OutOfDomainError(
+                    f"{name}: {value!r} is not one of {list(self.choices or ())}"
+                )
+            return value
+        if isinstance(value, bool) or not isinstance(value, int | float):
+            raise OutOfDomainError(f"{name}: {value!r} is not a number")
+        numeric = float(value)
+        lo, hi = float(self.min_value), float(self.max_value)  # type: ignore[arg-type]
+        if not lo <= numeric <= hi:
+            raise OutOfDomainError(
+                f"{name}: {value!r} is outside the declared domain [{lo:g}, {hi:g}]. "
+                "Widen the domain in the document if the strategy really admits "
+                "this value -- do not sweep outside what the author claimed."
+            )
+        if self.kind == "int":
+            if numeric != int(numeric):
+                raise OutOfDomainError(f"{name}: {value!r} is not integral")
+            return int(numeric)
+        return numeric
+
     def domain(self) -> tuple[Any, ...]:
         """Enumerate the sweep domain. Floats without a step are not enumerable."""
         if self.kind == "bool":
@@ -139,15 +205,15 @@ class StopModel(BaseModel):
     kind: Literal[
         "atr_multiple", "fixed_pips", "percent", "swing_structure", "indicator_level"
     ]
-    value: float = Field(gt=0.0)
+    value: Annotated[float, Field(gt=0.0)] | ParamRef
     #: ATR spec used by atr_multiple, by swing_structure's buffer and by
     #: indicator_level's buffer.
     atr: IndicatorOperand | None = None
     #: Level source for indicator_level; swing source for swing_structure.
     level: IndicatorOperand | None = None
-    buffer_atr: float = Field(default=0.0, ge=0.0)
+    buffer_atr: Annotated[float, Field(ge=0.0)] | ParamRef = 0.0
     #: Hard floor so a structure stop cannot collapse to zero distance.
-    min_distance_atr: float = Field(default=0.1, ge=0.0)
+    min_distance_atr: Annotated[float, Field(ge=0.0)] | ParamRef = 0.1
 
     @model_validator(mode="after")
     def _sources_present(self) -> StopModel:
@@ -160,9 +226,16 @@ class StopModel(BaseModel):
                 "swing_structure stop needs a 'level' operand pointing at a "
                 "SwingDetector output (last_swing_low / last_swing_high)"
             )
-        if self.buffer_atr > 0 and self.atr is None:
+        # A reference is treated as POSSIBLY positive, so the atr operand is
+        # required. Refusing later, after binding, would let a document validate
+        # today and fail mid-sweep tomorrow.
+        if (is_ref(self.buffer_atr) or self.buffer_atr > 0) and self.atr is None:
             raise ValueError("buffer_atr > 0 needs an 'atr' operand")
-        if self.min_distance_atr > 0 and self.atr is None and self.kind != "atr_multiple":
+        if (
+            (is_ref(self.min_distance_atr) or self.min_distance_atr > 0)
+            and self.atr is None
+            and self.kind != "atr_multiple"
+        ):
             raise ValueError("min_distance_atr needs an 'atr' operand")
         return self
 
@@ -173,7 +246,7 @@ class TakeProfitLeg(BaseModel):
     model_config = ConfigDict(frozen=True, extra="forbid")
 
     kind: Literal["r_multiple", "atr_multiple", "fixed_pips", "percent", "indicator_level"]
-    value: float = Field(gt=0.0)
+    value: Annotated[float, Field(gt=0.0)] | ParamRef
     allocation: float = Field(gt=0.0, le=1.0)
     atr: IndicatorOperand | None = None
     level: IndicatorOperand | None = None
@@ -192,8 +265,8 @@ class TrailingModel(BaseModel):
     model_config = ConfigDict(frozen=True, extra="forbid")
 
     kind: Literal["none", "atr_chandelier", "indicator_line", "breakeven_after_r", "percent"]
-    value: float = Field(default=0.0, ge=0.0)
-    activate_after_r: float = Field(default=0.0, ge=0.0)
+    value: Annotated[float, Field(ge=0.0)] | ParamRef = 0.0
+    activate_after_r: Annotated[float, Field(ge=0.0)] | ParamRef = 0.0
     atr: IndicatorOperand | None = None
     level: IndicatorOperand | None = None
 
@@ -202,7 +275,7 @@ class TrailingModel(BaseModel):
         if self.kind == "atr_chandelier":
             if self.atr is None:
                 raise ValueError("atr_chandelier trailing needs an 'atr' operand")
-            if self.value <= 0:
+            if not is_ref(self.value) and self.value <= 0:
                 raise ValueError("atr_chandelier trailing needs value > 0")
         if self.kind == "indicator_line" and self.level is None:
             raise ValueError("indicator_line trailing needs a 'level' operand")
@@ -215,10 +288,10 @@ class PositionManagement(BaseModel):
     max_concurrent_positions: int = Field(default=1, ge=1, le=20)
     allow_pyramiding: bool = False
     max_pyramid_legs: int = Field(default=1, ge=1, le=10)
-    move_stop_to_breakeven_at_r: float | None = Field(default=None, ge=0.0)
+    move_stop_to_breakeven_at_r: Annotated[float, Field(ge=0.0)] | ParamRef | None = None
     allow_reversal_on_opposite_signal: bool = False
-    max_bars_in_trade: int | None = Field(default=None, ge=1)
-    cooldown_bars_after_exit: int = Field(default=0, ge=0)
+    max_bars_in_trade: Annotated[int, Field(ge=1)] | ParamRef | None = None
+    cooldown_bars_after_exit: Annotated[int, Field(ge=0)] | ParamRef = 0
 
     @model_validator(mode="after")
     def _pyramiding_consistent(self) -> PositionManagement:
@@ -315,6 +388,14 @@ class StrategyDocument(BaseModel):
     events: EventRestriction = Field(default_factory=EventRestriction)
 
     parameters: dict[str, ParameterSpec] = Field(default_factory=dict)
+    #: The parameter values this document was BOUND with, or ``None`` for an
+    #: unbound template. Semantic, and therefore part of the content hash: two
+    #: bindings of one template are two strategies, and the experiment ledger and
+    #: the holdout registry must treat them as such. Recording it here rather
+    #: than inferring it from the substituted literals also means a parameter
+    #: that happens not to be referenced still distinguishes its bindings, so a
+    #: report can never claim a sweep explored something it did not.
+    binding: dict[str, Any] | None = None
     parent_strategy_ids: tuple[str, ...] = ()
     mutation: MutationRecord | None = None
     notes: str = ""
@@ -377,6 +458,20 @@ class StrategyDocument(BaseModel):
         return tuple(dict.fromkeys(v))
 
     @model_validator(mode="after")
+    def _binding_is_coherent(self) -> StrategyDocument:
+        if self.binding is None:
+            return self
+        unknown = sorted(set(self.binding) - set(self.parameters))
+        if unknown:
+            raise ValueError(
+                f"binding names parameters {unknown} that this document does not "
+                "declare; a binding that refers to nothing is a typo, not a value"
+            )
+        for name, value in self.binding.items():
+            self.parameters[name].assert_in_domain(name, value)
+        return self
+
+    @model_validator(mode="after")
     def _coherent(self) -> StrategyDocument:
         want_long = self.direction in (TradeDirection.LONG, TradeDirection.BOTH)
         want_short = self.direction in (TradeDirection.SHORT, TradeDirection.BOTH)
@@ -396,6 +491,105 @@ class StrategyDocument(BaseModel):
                 "close more than the whole position"
             )
         return self
+
+    # ------------------------------------------------------- parameter binding
+
+    def unbound_parameters(self) -> tuple[str, ...]:
+        """Every parameter this document still REFERENCES but has not been given.
+
+        Empty means the document is fully bound and may be compiled. Non-empty
+        means it is a template: :func:`fiboki.strategy.compiler.compile_strategy`
+        refuses it, so there is no path by which a half-bound strategy reaches
+        the engine.
+        """
+        found: set[str] = set()
+        _collect_refs(self.model_dump(mode="json"), found)
+        return tuple(sorted(found))
+
+    def default_values(self) -> dict[str, Any]:
+        """The value each declared parameter takes when nothing overrides it."""
+        return {name: self.parameters[name].default for name in sorted(self.parameters)}
+
+    def bind(self, values: Mapping[str, Any]) -> StrategyDocument:
+        """Return a NEW document with every reference resolved to a concrete value.
+
+        Three refusals, all of them at bind time rather than at run time:
+
+        * a value for a parameter the document does not declare -- a typo in a
+          sweep definition would otherwise be swept silently and change nothing;
+        * a value outside the domain the document declared -- the domain is the
+          author's statement of what this strategy IS, and a sweep that leaves it
+          is testing a different strategy;
+        * a reference with no value supplied -- never defaulted, because a sweep
+          that silently ran the default while reporting a swept value is the
+          exact failure this whole mechanism exists to prevent.
+
+        Parameters that are declared but never referenced may be omitted; they
+        are recorded at their declared default so the binding is complete, and
+        they still change the content hash, because the ledger has to be able to
+        tell the two runs apart even when the engine cannot.
+        """
+        unknown = sorted(set(values) - set(self.parameters))
+        if unknown:
+            raise UnknownParameterError(
+                f"{self.strategy_id}: cannot bind {unknown}; this document declares "
+                f"{sorted(self.parameters)}"
+            )
+        referenced = set(self.unbound_parameters())
+        undeclared = sorted(referenced - set(self.parameters))
+        if undeclared:
+            raise UnboundParameterError(
+                f"{self.strategy_id}: references {undeclared}, which the document "
+                "does not declare as parameters. The reference is a bug in the "
+                "document, not something a caller can supply."
+            )
+        missing = sorted(referenced - set(values))
+        if missing:
+            raise UnboundParameterError(
+                f"{self.strategy_id}: no value supplied for referenced parameter(s) "
+                f"{missing}. They are NOT defaulted: a run that quietly used the "
+                "default while the report said otherwise is the failure this "
+                "mechanism exists to prevent. Pass document.default_values() | "
+                "overrides if the defaults are what you meant."
+            )
+
+        effective: dict[str, Any] = {}
+        for name in sorted(self.parameters):
+            spec = self.parameters[name]
+            raw = values.get(name, spec.default)
+            effective[name] = spec.assert_in_domain(name, raw)
+
+        payload = self.model_dump(mode="json")
+        payload.pop("complexity_score", None)
+        # ``parameters`` keeps its DOMAINS: the bound document must still be able
+        # to say what could have been swept. Only the references are replaced.
+        specs = payload.pop("parameters")
+        resolved = resolve_refs(payload, effective)
+        resolved["parameters"] = specs
+        resolved["binding"] = effective
+        try:
+            return type(self).model_validate(resolved)
+        except ValueError as exc:
+            # The document is valid and every value is inside its declared
+            # domain, and the result is STILL not a strategy. That means the
+            # domains are jointly incoherent -- classically a fast/slow pair
+            # whose ranges overlap, so some corner of the declared grid asks for
+            # fast >= slow. A campaign must be able to catch this per cell and
+            # record the cell as infeasible instead of dying; a bare pydantic
+            # error buried under a sweep is how a 2,000-cell run dies at 3am.
+            raise InfeasibleBindingError(
+                f"{self.strategy_id}: the binding "
+                + ", ".join(f"{k}={effective[k]!r}" for k in sorted(effective))
+                + " lies inside every declared domain but does not produce a valid "
+                f"document: {exc}"
+            ) from exc
+
+    def bind_defaults(self) -> StrategyDocument:
+        """Bind every declared parameter to the value the document itself declares."""
+        return self.bind(self.default_values())
+
+    def is_bound(self) -> bool:
+        return not self.unbound_parameters()
 
     # ------------------------------------------------------------ derived
 
@@ -487,6 +681,26 @@ class StrategyDocument(BaseModel):
         return cls.model_validate(json.loads(blob))
 
 
+def _collect_refs(node: Any, out: set[str]) -> None:
+    """Names referenced anywhere in a DUMPED document.
+
+    Walks the dumped form rather than the model tree so that a reference in any
+    position -- a rule threshold, a regime bound, a nested indicator parameter,
+    an exit multiple -- is found by one function that cannot fall behind the
+    schema when a field is added.
+    """
+    if isinstance(node, dict):
+        if is_ref(node):
+            out.add(str(node[PARAM_REF_KEY]))
+            return
+        for value in node.values():
+            _collect_refs(value, out)
+        return
+    if isinstance(node, list):
+        for value in node:
+            _collect_refs(value, out)
+
+
 _RULE_LIST_FIELDS = frozenset({"regime", "filters", "long", "short", "rules"})
 
 
@@ -514,8 +728,12 @@ def _canonicalise(node: Any, key: str | None = None) -> Any:
 __all__ = [
     "MIN_HYPOTHESIS_CHARS",
     "SCHEMA_VERSION",
+    "BindingError",
     "EventRestriction",
+    "InfeasibleBindingError",
     "MutationRecord",
+    "OutOfDomainError",
+    "ParamRef",
     "ParameterSpec",
     "PositionManagement",
     "RuleSet",
@@ -526,4 +744,6 @@ __all__ = [
     "TakeProfitLeg",
     "TradeDirection",
     "TrailingModel",
+    "UnboundParameterError",
+    "UnknownParameterError",
 ]

@@ -23,6 +23,7 @@ from fiboki.strategy.primitives import (
     IndicatorSpec,
     IndicatorVsIndicatorRule,
     IndicatorVsPriceRule,
+    ParamRef,
     PriceOperand,
     RegimeGateRule,
     ThresholdRule,
@@ -30,6 +31,17 @@ from fiboki.strategy.primitives import (
 
 OUT = Path("research/strategies")
 CLOSE = PriceOperand(field="close")
+
+
+def P(name: str) -> ParamRef:
+    """A reference to a declared parameter.
+
+    Every number a document declares as sweepable is written as ``P("name")``
+    rather than as a literal. That is the whole mechanism: the literal and the
+    declared domain cannot drift apart, because there is only one of them.
+    """
+    return ParamRef(param=name)
+
 
 FX_MAJORS = ("EURUSD", "GBPUSD", "USDJPY", "AUDUSD", "USDCAD", "USDCHF", "NZDUSD")
 TREND_UNIVERSE = (*FX_MAJORS, "EURJPY", "GBPJPY", "XAUUSD", "US500", "DE40")
@@ -51,7 +63,13 @@ ADX_OP = op(ADX14)
 
 # --------------------------------------------------------------- 1. Ichimoku
 
-ICHI = spec("ichimoku")
+ICHI = spec(
+    "ichimoku",
+    tenkan_period=P("tenkan_period"),
+    kijun_period=P("kijun_period"),
+    senkou_b_period=P("senkou_b_period"),
+    senkou_shift=P("senkou_shift"),
+)
 
 ichimoku_trend = StrategyDocument(
     strategy_id="ichimoku_kumo_trend",
@@ -83,7 +101,7 @@ ichimoku_trend = StrategyDocument(
     timeframes=(Timeframe.H4, Timeframe.D1),
     direction=TradeDirection.BOTH,
     regime=(
-        RegimeGateRule(metric=ADX_OP, min_value=20.0),
+        RegimeGateRule(metric=ADX_OP, min_value=P("adx_floor")),
     ),
     setup=RuleSet(
         long=(
@@ -114,7 +132,7 @@ ichimoku_trend = StrategyDocument(
         value=1.0,
         level=op(ICHI, "kijun"),
         atr=ATR_OP,
-        buffer_atr=0.5,
+        buffer_atr=P("stop_buffer_atr"),
         min_distance_atr=0.5,
     ),
     take_profits=(
@@ -152,8 +170,8 @@ ichimoku_trend = StrategyDocument(
 
 # -------------------------------------------------------------- 2. Donchian
 
-DON = spec("donchian", period=20)
-EMA100 = spec("ema", period=100)
+DON = spec("donchian", period=P("channel_period"))
+EMA100 = spec("ema", period=P("trend_ema"))
 RVOL = spec("realised_volatility", period=20)
 
 donchian_breakout = StrategyDocument(
@@ -198,9 +216,13 @@ donchian_breakout = StrategyDocument(
         long=(IndicatorVsPriceRule(indicator=op(DON, "upper_prior"), comparator="<", price=CLOSE),),
         short=(IndicatorVsPriceRule(indicator=op(DON, "lower_prior"), comparator=">", price=CLOSE),),
     ),
-    stop=StopModel(kind="atr_multiple", value=2.0, atr=ATR_OP, min_distance_atr=0.5),
+    stop=StopModel(
+        kind="atr_multiple", value=P("stop_atr_multiple"), atr=ATR_OP, min_distance_atr=0.5
+    ),
     take_profits=(),
-    trailing=TrailingModel(kind="atr_chandelier", value=3.0, activate_after_r=0.0, atr=ATR_OP),
+    trailing=TrailingModel(
+        kind="atr_chandelier", value=P("trail_atr_multiple"), activate_after_r=0.0, atr=ATR_OP
+    ),
     position_management=PositionManagement(
         max_concurrent_positions=1,
         allow_reversal_on_opposite_signal=True,
@@ -226,9 +248,9 @@ donchian_breakout = StrategyDocument(
 
 # ----------------------------------------------------------- 3. RSI reversion
 
-RSI14 = spec("rsi", period=14)
-BB20 = spec("bollinger", period=20, num_std=2.0)
-DON60 = spec("donchian", period=60)
+RSI14 = spec("rsi", period=P("rsi_period"))
+BB20 = spec("bollinger", period=20, num_std=P("bb_num_std"))
+DON60 = spec("donchian", period=P("breakout_veto_period"))
 
 rsi_reversion = StrategyDocument(
     strategy_id="rsi_band_mean_reversion",
@@ -263,7 +285,7 @@ rsi_reversion = StrategyDocument(
     timeframes=(Timeframe.H1, Timeframe.H4),
     direction=TradeDirection.BOTH,
     regime=(
-        RegimeGateRule(metric=ADX_OP, max_value=25.0),
+        RegimeGateRule(metric=ADX_OP, max_value=P("adx_ceiling")),
     ),
     setup=RuleSet(
         # The PREVIOUS bar closed outside the band: the imbalance exists.
@@ -288,8 +310,8 @@ rsi_reversion = StrategyDocument(
         short=(CrossoverRule(fast=CLOSE, slow=op(BB20, "upper"), direction="below"),),
     ),
     confirmation=RuleSet(
-        long=(ThresholdRule(operand=op(RSI14), comparator="<", value=40.0),),
-        short=(ThresholdRule(operand=op(RSI14), comparator=">", value=60.0),),
+        long=(ThresholdRule(operand=op(RSI14), comparator="<", value=P("rsi_ceiling")),),
+        short=(ThresholdRule(operand=op(RSI14), comparator=">", value=P("rsi_floor")),),
     ),
     invalidation=RuleSet(
         # A band break that is ALSO a fresh 60-bar extreme is a regime break, not
@@ -310,7 +332,7 @@ rsi_reversion = StrategyDocument(
     trailing=None,
     position_management=PositionManagement(
         max_concurrent_positions=2,
-        max_bars_in_trade=24,
+        max_bars_in_trade=P("time_stop_bars"),
         cooldown_bars_after_exit=6,
     ),
     sessions=SessionRestriction(windows=((6, 21),), weekdays=(0, 1, 2, 3, 4)),
@@ -321,7 +343,13 @@ rsi_reversion = StrategyDocument(
         "rsi_period": ParameterSpec(kind="int", default=14, min_value=7, max_value=21, step=1),
         "rsi_ceiling": ParameterSpec(kind="float", default=40.0, min_value=25.0, max_value=55.0,
                                      step=2.5,
-                                     description="Depressed-RSI confirmation (mirrored for shorts)"),
+                                     description="Depressed-RSI confirmation for longs"),
+        "rsi_floor": ParameterSpec(kind="float", default=60.0, min_value=45.0, max_value=75.0,
+                                   step=2.5,
+                                   description="Elevated-RSI confirmation for shorts. Declared "
+                                               "separately rather than mirrored: 100 - ceiling "
+                                               "was an assumption nothing enforced, and a "
+                                               "reference cannot express arithmetic."),
         "adx_ceiling": ParameterSpec(kind="float", default=25.0, min_value=12.0, max_value=35.0,
                                      step=2.0, description="Range-regime gate"),
         "bb_num_std": ParameterSpec(kind="float", default=2.0, min_value=1.5, max_value=3.0,
@@ -337,9 +365,9 @@ rsi_reversion = StrategyDocument(
 
 # ---------------------------------------------------------- 4. MACD/EMA trend
 
-MACD_STD = spec("macd", fast=12, slow=26, signal=9)
-EMA50 = spec("ema", period=50)
-EMA200 = spec("ema", period=200)
+MACD_STD = spec("macd", fast=P("macd_fast"), slow=P("macd_slow"), signal=P("macd_signal"))
+EMA50 = spec("ema", period=P("fast_ema"))
+EMA200 = spec("ema", period=P("slow_ema"))
 
 macd_ema_hybrid = StrategyDocument(
     strategy_id="macd_ema_trend_hybrid",
@@ -372,7 +400,7 @@ macd_ema_hybrid = StrategyDocument(
     timeframes=(Timeframe.H4, Timeframe.D1),
     direction=TradeDirection.BOTH,
     regime=(
-        RegimeGateRule(metric=ADX_OP, min_value=18.0),
+        RegimeGateRule(metric=ADX_OP, min_value=P("adx_floor")),
     ),
     setup=RuleSet(
         long=(
@@ -398,7 +426,9 @@ macd_ema_hybrid = StrategyDocument(
         long=(ThresholdRule(operand=op(MACD_STD, "line"), comparator="<", value=0.0),),
         short=(ThresholdRule(operand=op(MACD_STD, "line"), comparator=">", value=0.0),),
     ),
-    stop=StopModel(kind="atr_multiple", value=2.5, atr=ATR_OP, min_distance_atr=0.5),
+    stop=StopModel(
+        kind="atr_multiple", value=P("stop_atr_multiple"), atr=ATR_OP, min_distance_atr=0.5
+    ),
     take_profits=(
         TakeProfitLeg(kind="r_multiple", value=1.0, allocation=0.4, label="de_risk"),
         TakeProfitLeg(kind="r_multiple", value=2.5, allocation=0.3, label="core"),
@@ -414,14 +444,22 @@ macd_ema_hybrid = StrategyDocument(
     events=EventRestriction(block_minutes_before=30, block_minutes_after=30,
                             blocked_event_tags=("nfp", "cpi", "central_bank_rate")),
     parameters={
+        # The two ranges must not overlap. MACD requires fast < slow, so a
+        # declared domain that admits fast=20 alongside slow=18 contains cells
+        # that are not strategies at all -- and a sweep would have hit them.
+        # Disjoint ranges make the constraint structural instead of a comment.
         "macd_fast": ParameterSpec(kind="int", default=12, min_value=6, max_value=20, step=1),
-        "macd_slow": ParameterSpec(kind="int", default=26, min_value=18, max_value=40, step=2),
+        "macd_slow": ParameterSpec(kind="int", default=26, min_value=22, max_value=40, step=2),
         "macd_signal": ParameterSpec(kind="int", default=9, min_value=5, max_value=15, step=1),
+        # Same reasoning, plus a second failure mode: two EMAs of the SAME
+        # period write the same column, which the compiler refuses outright.
         "fast_ema": ParameterSpec(kind="int", default=50, min_value=20, max_value=100, step=10),
-        "slow_ema": ParameterSpec(kind="int", default=200, min_value=100, max_value=300,
+        "slow_ema": ParameterSpec(kind="int", default=200, min_value=125, max_value=300,
                                   step=25),
         "stop_atr_multiple": ParameterSpec(kind="float", default=2.5, min_value=1.0,
                                            max_value=4.0, step=0.5),
+        "adx_floor": ParameterSpec(kind="float", default=18.0, min_value=10.0, max_value=35.0,
+                                   step=2.0, description="Trend-regime gate"),
     },
     author="fiboki-v2-seed",
 )
@@ -429,7 +467,18 @@ macd_ema_hybrid = StrategyDocument(
 
 # ------------------------------------------------------------- 5. Fibonacci
 
-FIB = spec("fibonacci", swing_lookback=5,
+RSI14_FIB = spec("rsi", period=14)
+
+# ``pocket_near`` / ``pocket_far`` are NOT bound here and the reason is
+# structural, not an oversight: the Fibonacci indicator encodes each ratio in the
+# NAME of the column it writes (``ret_0618``), and the rules address those
+# columns by that name. Binding the ratio would rename the column out from under
+# the operand, and the compiler would refuse the bound document -- correctly.
+# Making those two sweepable needs the operand's ``output`` to be bindable too,
+# which is a separate change. They remain declared (so the falsification
+# experiment in the hypothesis is still specified) and are recorded in every
+# binding, but they do not yet move the strategy.
+FIB = spec("fibonacci", swing_lookback=P("swing_lookback"),
            retracements=(0.382, 0.5, 0.618, 0.786),
            extensions=(1.272, 1.618))
 
@@ -467,7 +516,7 @@ fib_pullback = StrategyDocument(
     timeframes=(Timeframe.H1, Timeframe.H4, Timeframe.D1),
     direction=TradeDirection.BOTH,
     regime=(
-        RegimeGateRule(metric=ADX_OP, min_value=18.0),
+        RegimeGateRule(metric=ADX_OP, min_value=P("adx_floor")),
     ),
     setup=RuleSet(
         long=(ThresholdRule(operand=op(FIB, "dir"), comparator=">", value=0.5),),
@@ -485,15 +534,15 @@ fib_pullback = StrategyDocument(
         ),
     ),
     confirmation=RuleSet(
-        long=(ThresholdRule(operand=op(RSI14), comparator=">", value=40.0),),
-        short=(ThresholdRule(operand=op(RSI14), comparator="<", value=60.0),),
+        long=(ThresholdRule(operand=op(RSI14_FIB), comparator=">", value=P("rsi_floor")),),
+        short=(ThresholdRule(operand=op(RSI14_FIB), comparator="<", value=P("rsi_ceiling")),),
     ),
     stop=StopModel(
         kind="swing_structure",
         value=1.0,
         level=op(FIB, "start"),
         atr=ATR_OP,
-        buffer_atr=0.25,
+        buffer_atr=P("stop_buffer_atr"),
         min_distance_atr=0.5,
     ),
     take_profits=(
@@ -519,7 +568,11 @@ fib_pullback = StrategyDocument(
         "pocket_far": ParameterSpec(kind="float", default=0.786, min_value=0.70, max_value=0.95,
                                     step=0.01, description="Deep edge of the entry zone"),
         "rsi_floor": ParameterSpec(kind="float", default=40.0, min_value=30.0, max_value=55.0,
-                                   step=2.5),
+                                   step=2.5, description="Momentum floor for longs"),
+        "rsi_ceiling": ParameterSpec(kind="float", default=60.0, min_value=45.0, max_value=70.0,
+                                     step=2.5, description="Momentum ceiling for shorts"),
+        "adx_floor": ParameterSpec(kind="float", default=18.0, min_value=10.0, max_value=35.0,
+                                   step=2.0, description="Trend-regime gate"),
         "stop_buffer_atr": ParameterSpec(kind="float", default=0.25, min_value=0.0,
                                          max_value=1.0, step=0.25),
     },
@@ -536,5 +589,11 @@ if __name__ == "__main__":
     for doc in DOCS:
         path = OUT / f"{doc.strategy_id}.json"
         path.write_text(doc.to_json() + "\n")
-        print(f"{doc.strategy_id:34s} hash={doc.short_hash} complexity={doc.complexity_score}")
+        bound = doc.bind_defaults()
+        print(
+            f"{doc.strategy_id:34s} hash={doc.short_hash} "
+            f"default_binding={bound.short_hash} "
+            f"refs={len(doc.unbound_parameters())}/{len(doc.parameters)} "
+            f"complexity={doc.complexity_score}"
+        )
     print(f"wrote {len(DOCS)} documents to {OUT}")

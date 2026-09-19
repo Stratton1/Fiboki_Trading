@@ -12,10 +12,10 @@ import pandas as pd
 
 from fiboki.agents.capabilities import CapabilityResolver
 from fiboki.agents.orchestrator import ManualClock, Orchestrator, submitter_for
-from fiboki.agents.research_store import ResearchStore
 from fiboki.agents.tools import InMemoryBarSource, ToolContext
 from fiboki.core.enums import Timeframe
 from fiboki.data.schema import PriceBasis, canonical_frame
+from fiboki.research.artefacts import ResearchStore
 from fiboki.strategy.dsl import StrategyDocument
 from fiboki.strategy.registry import StrategyRegistry
 

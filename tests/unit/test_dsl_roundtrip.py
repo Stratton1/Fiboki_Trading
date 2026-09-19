@@ -15,6 +15,7 @@ from pydantic import ValidationError
 
 from fiboki.core.enums import Timeframe
 from fiboki.strategy import (
+    CompilationError,
     IndicatorOperand,
     IndicatorSpec,
     IndicatorVsIndicatorRule,
@@ -85,7 +86,11 @@ def test_json_round_trip_is_exact() -> None:
 def test_seed_documents_round_trip_and_compile(path: Path) -> None:
     doc = StrategyDocument.from_json(path.read_text())
     assert StrategyDocument.from_json(doc.to_json()).content_hash() == doc.content_hash()
-    compiled = compile_strategy(doc)
+    # The shipped document is a TEMPLATE and does not compile; its declared
+    # default binding does. Both halves are asserted so neither can rot.
+    with pytest.raises(CompilationError, match="unresolved parameter reference"):
+        compile_strategy(doc)
+    compiled = compile_strategy(doc.bind_defaults())
     assert compiled.warmup_period > 0
     assert compiled.indicators
     # Every seed states its economic story AND the evidence against it.

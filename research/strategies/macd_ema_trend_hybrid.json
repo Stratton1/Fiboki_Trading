@@ -37,7 +37,9 @@
         "output": "",
         "offset": 0
       },
-      "min_value": 18.0,
+      "min_value": {
+        "$param": "adx_floor"
+      },
       "max_value": null,
       "invert": false
     }
@@ -51,7 +53,9 @@
           "spec": {
             "indicator": "ema",
             "params": {
-              "period": 50
+              "period": {
+                "$param": "fast_ema"
+              }
             }
           },
           "output": "",
@@ -62,7 +66,9 @@
           "spec": {
             "indicator": "ema",
             "params": {
-              "period": 200
+              "period": {
+                "$param": "slow_ema"
+              }
             }
           },
           "output": "",
@@ -77,7 +83,9 @@
           "spec": {
             "indicator": "ema",
             "params": {
-              "period": 50
+              "period": {
+                "$param": "fast_ema"
+              }
             }
           },
           "output": "",
@@ -99,7 +107,9 @@
           "spec": {
             "indicator": "ema",
             "params": {
-              "period": 50
+              "period": {
+                "$param": "fast_ema"
+              }
             }
           },
           "output": "",
@@ -110,7 +120,9 @@
           "spec": {
             "indicator": "ema",
             "params": {
-              "period": 200
+              "period": {
+                "$param": "slow_ema"
+              }
             }
           },
           "output": "",
@@ -125,7 +137,9 @@
           "spec": {
             "indicator": "ema",
             "params": {
-              "period": 50
+              "period": {
+                "$param": "fast_ema"
+              }
             }
           },
           "output": "",
@@ -149,9 +163,15 @@
           "spec": {
             "indicator": "macd",
             "params": {
-              "fast": 12,
-              "slow": 26,
-              "signal": 9
+              "fast": {
+                "$param": "macd_fast"
+              },
+              "slow": {
+                "$param": "macd_slow"
+              },
+              "signal": {
+                "$param": "macd_signal"
+              }
             }
           },
           "output": "line",
@@ -162,9 +182,15 @@
           "spec": {
             "indicator": "macd",
             "params": {
-              "fast": 12,
-              "slow": 26,
-              "signal": 9
+              "fast": {
+                "$param": "macd_fast"
+              },
+              "slow": {
+                "$param": "macd_slow"
+              },
+              "signal": {
+                "$param": "macd_signal"
+              }
             }
           },
           "output": "signal",
@@ -181,9 +207,15 @@
           "spec": {
             "indicator": "macd",
             "params": {
-              "fast": 12,
-              "slow": 26,
-              "signal": 9
+              "fast": {
+                "$param": "macd_fast"
+              },
+              "slow": {
+                "$param": "macd_slow"
+              },
+              "signal": {
+                "$param": "macd_signal"
+              }
             }
           },
           "output": "line",
@@ -194,9 +226,15 @@
           "spec": {
             "indicator": "macd",
             "params": {
-              "fast": 12,
-              "slow": 26,
-              "signal": 9
+              "fast": {
+                "$param": "macd_fast"
+              },
+              "slow": {
+                "$param": "macd_slow"
+              },
+              "signal": {
+                "$param": "macd_signal"
+              }
             }
           },
           "output": "signal",
@@ -215,9 +253,15 @@
           "spec": {
             "indicator": "macd",
             "params": {
-              "fast": 12,
-              "slow": 26,
-              "signal": 9
+              "fast": {
+                "$param": "macd_fast"
+              },
+              "slow": {
+                "$param": "macd_slow"
+              },
+              "signal": {
+                "$param": "macd_signal"
+              }
             }
           },
           "output": "line",
@@ -235,9 +279,15 @@
           "spec": {
             "indicator": "macd",
             "params": {
-              "fast": 12,
-              "slow": 26,
-              "signal": 9
+              "fast": {
+                "$param": "macd_fast"
+              },
+              "slow": {
+                "$param": "macd_slow"
+              },
+              "signal": {
+                "$param": "macd_signal"
+              }
             }
           },
           "output": "line",
@@ -255,7 +305,9 @@
   },
   "stop": {
     "kind": "atr_multiple",
-    "value": 2.5,
+    "value": {
+      "$param": "stop_atr_multiple"
+    },
     "atr": {
       "kind": "indicator",
       "spec": {
@@ -356,7 +408,7 @@
       "kind": "int",
       "default": 26,
       "description": "",
-      "min_value": 18.0,
+      "min_value": 22.0,
       "max_value": 40.0,
       "step": 2.0,
       "choices": null
@@ -383,7 +435,7 @@
       "kind": "int",
       "default": 200,
       "description": "",
-      "min_value": 100.0,
+      "min_value": 125.0,
       "max_value": 300.0,
       "step": 25.0,
       "choices": null
@@ -396,11 +448,21 @@
       "max_value": 4.0,
       "step": 0.5,
       "choices": null
+    },
+    "adx_floor": {
+      "kind": "float",
+      "default": 18.0,
+      "description": "Trend-regime gate",
+      "min_value": 10.0,
+      "max_value": 35.0,
+      "step": 2.0,
+      "choices": null
     }
   },
+  "binding": null,
   "parent_strategy_ids": [],
   "mutation": null,
   "notes": "",
   "author": "fiboki-v2-seed",
-  "complexity_score": 13.5
+  "complexity_score": 14.0
 }

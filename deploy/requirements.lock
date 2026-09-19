@@ -1,0 +1,55 @@
+# fiboki dependency lockfile -- GENERATED, do not hand-edit.
+# Regenerate with: python scripts/lockfile.py record
+# python: 3.11.15
+# platform: Linux-x86_64
+# recorded_at: 2026-09-19T04:52:18.096100+00:00
+# digest: c3977149c7e95de8b346c32daf685edef8895cead597bd67c91253a4dc85c235
+
+alembic==1.14.0
+annotated-types==0.8.0
+anyio==4.15.1
+attrs==26.1.0
+certifi==2026.7.22
+click==8.1.8
+coverage==7.16.1
+fastapi==0.115.6
+fiboki==2.0.0
+greenlet==3.5.6
+h11==0.16.0
+httpcore==1.0.9
+httpx==0.28.1
+hypothesis==6.122.3
+idna==3.20
+iniconfig==2.3.0
+mako==1.4.1
+markdown-it-py==4.2.0
+markupsafe==3.0.3
+mdurl==0.1.2
+mypy==1.14.0
+mypy-extensions==1.1.0
+numpy==2.2.6
+orjson==3.10.13
+packaging==26.3
+pandas==2.2.3
+pluggy==1.6.0
+pyarrow==18.1.0
+pydantic==2.10.4
+pydantic-core==2.27.2
+pygments==2.21.0
+pytest==8.3.4
+pytest-cov==6.0.0
+pytest-timeout==2.3.1
+python-dateutil==2.9.0.post0
+pytz==2026.3.post1
+rich==13.9.4
+ruff==0.8.4
+scipy==1.14.1
+shellingham==1.5.4
+six==1.17.0
+sortedcontainers==2.4.0
+sqlalchemy==2.0.36
+starlette==0.41.3
+typer==0.15.1
+typing-extensions==4.16.0
+tzdata==2026.4
+uvicorn==0.34.0

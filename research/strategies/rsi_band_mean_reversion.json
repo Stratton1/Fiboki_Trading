@@ -36,7 +36,9 @@
         "offset": 0
       },
       "min_value": null,
-      "max_value": 25.0,
+      "max_value": {
+        "$param": "adx_ceiling"
+      },
       "invert": false
     }
   ],
@@ -50,7 +52,9 @@
             "indicator": "bollinger",
             "params": {
               "period": 20,
-              "num_std": 2.0
+              "num_std": {
+                "$param": "bb_num_std"
+              }
             }
           },
           "output": "lower",
@@ -73,7 +77,9 @@
             "indicator": "bollinger",
             "params": {
               "period": 20,
-              "num_std": 2.0
+              "num_std": {
+                "$param": "bb_num_std"
+              }
             }
           },
           "output": "upper",
@@ -103,7 +109,9 @@
             "indicator": "bollinger",
             "params": {
               "period": 20,
-              "num_std": 2.0
+              "num_std": {
+                "$param": "bb_num_std"
+              }
             }
           },
           "output": "lower",
@@ -126,7 +134,9 @@
             "indicator": "bollinger",
             "params": {
               "period": 20,
-              "num_std": 2.0
+              "num_std": {
+                "$param": "bb_num_std"
+              }
             }
           },
           "output": "upper",
@@ -145,14 +155,18 @@
           "spec": {
             "indicator": "rsi",
             "params": {
-              "period": 14
+              "period": {
+                "$param": "rsi_period"
+              }
             }
           },
           "output": "",
           "offset": 0
         },
         "comparator": "<",
-        "value": 40.0
+        "value": {
+          "$param": "rsi_ceiling"
+        }
       }
     ],
     "short": [
@@ -163,14 +177,18 @@
           "spec": {
             "indicator": "rsi",
             "params": {
-              "period": 14
+              "period": {
+                "$param": "rsi_period"
+              }
             }
           },
           "output": "",
           "offset": 0
         },
         "comparator": ">",
-        "value": 60.0
+        "value": {
+          "$param": "rsi_floor"
+        }
       }
     ]
   },
@@ -184,7 +202,9 @@
           "spec": {
             "indicator": "donchian",
             "params": {
-              "period": 60
+              "period": {
+                "$param": "breakout_veto_period"
+              }
             }
           },
           "output": "lower_prior",
@@ -206,7 +226,9 @@
           "spec": {
             "indicator": "donchian",
             "params": {
-              "period": 60
+              "period": {
+                "$param": "breakout_veto_period"
+              }
             }
           },
           "output": "upper_prior",
@@ -259,7 +281,9 @@
           "indicator": "bollinger",
           "params": {
             "period": 20,
-            "num_std": 2.0
+            "num_std": {
+              "$param": "bb_num_std"
+            }
           }
         },
         "output": "mid",
@@ -275,7 +299,9 @@
     "max_pyramid_legs": 1,
     "move_stop_to_breakeven_at_r": null,
     "allow_reversal_on_opposite_signal": false,
-    "max_bars_in_trade": 24,
+    "max_bars_in_trade": {
+      "$param": "time_stop_bars"
+    },
     "cooldown_bars_after_exit": 6
   },
   "sessions": {
@@ -318,9 +344,18 @@
     "rsi_ceiling": {
       "kind": "float",
       "default": 40.0,
-      "description": "Depressed-RSI confirmation (mirrored for shorts)",
+      "description": "Depressed-RSI confirmation for longs",
       "min_value": 25.0,
       "max_value": 55.0,
+      "step": 2.5,
+      "choices": null
+    },
+    "rsi_floor": {
+      "kind": "float",
+      "default": 60.0,
+      "description": "Elevated-RSI confirmation for shorts. Declared separately rather than mirrored: 100 - ceiling was an assumption nothing enforced, and a reference cannot express arithmetic.",
+      "min_value": 45.0,
+      "max_value": 75.0,
       "step": 2.5,
       "choices": null
     },
@@ -361,9 +396,10 @@
       "choices": null
     }
   },
+  "binding": null,
   "parent_strategy_ids": [],
   "mutation": null,
   "notes": "",
   "author": "fiboki-v2-seed",
-  "complexity_score": 12.5
+  "complexity_score": 13.0
 }

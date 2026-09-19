@@ -49,7 +49,8 @@ Module map::
                     jobs, 2 external interfaces
     session         the single enforcement point for every tool call
     sandbox         the boundary between agent text and anything executable
-    research_store  the only domain an agent's writes can reach
+    (artefacts)     an agent's writes land in fiboki.research.artefacts,
+                    which is the PLATFORM ledger's database -- not a second store
     orchestrator    stateless named queues, idempotent keys, retries, events
     jobs            the deterministic worker that actually runs the engine
     providers       local-first LLM adapters plus an offline EchoProvider
@@ -91,7 +92,6 @@ from fiboki.agents.providers import (
     TaskClass,
     echo_router,
 )
-from fiboki.agents.research_store import ResearchStore
 from fiboki.agents.roles import ROLES, AgentRole, RoleSpec, get_role
 from fiboki.agents.sandbox import (
     SandboxRejection,
@@ -112,6 +112,7 @@ from fiboki.agents.workflows import (
     offline_research_script,
     run_research_cycle,
 )
+from fiboki.research.artefacts import ResearchStore
 
 __all__ = [
     "REGISTRY",

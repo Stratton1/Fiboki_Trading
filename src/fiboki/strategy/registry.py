@@ -132,7 +132,16 @@ class StrategyRegistry:
         return [self._by_id[k] for k in self.ids()]
 
     def compiled(self) -> list[CompiledStrategy]:
-        return [compile_strategy(d) for d in self.documents()]
+        """One compiled strategy per registered document.
+
+        A registered document is usually a TEMPLATE: it declares parameters and
+        references them, and the compiler refuses such a document outright. The
+        registry answers the question "can each of these be realised at all?",
+        and realising one requires choosing a binding, so it uses the binding the
+        document itself declares. That choice is explicit here and recorded on
+        every compiled document's ``binding`` -- it is never inferred downstream.
+        """
+        return [compile_strategy(d.bind_defaults()) for d in self.documents()]
 
     def __len__(self) -> int:
         return len(self._by_id)
@@ -162,7 +171,10 @@ class StrategyRegistry:
             seen_hashes.setdefault(digest, sid)
 
             try:
-                compiled = compile_strategy(doc)
+                # Same reasoning as `compiled()`: a template is checked at its
+                # own declared defaults, which is the one binding the document
+                # can be held to without a caller supplying anything.
+                compiled = compile_strategy(doc.bind_defaults())
             except (CompilationError, ValueError) as exc:
                 issues.append(
                     HealthIssue(sid, "error", "does_not_compile", str(exc))

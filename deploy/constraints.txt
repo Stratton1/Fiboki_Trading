@@ -1,0 +1,13 @@
+# Transitive pins that pyproject.toml cannot express.
+#
+# pyproject.toml pins every DIRECT dependency that can change a number. These
+# are the transitive ones that have bitten us:
+#
+#   click -- typer 0.15.1 calls Parameter.make_metavar() with the pre-8.2
+#            signature. With click >= 8.2 every `--help` in the CLI raises
+#            TypeError, which is a broken operator tool rather than a broken
+#            number, but it is broken the moment a fresh `pip install` resolves
+#            a newer click. Found exactly this way on a clean environment.
+#
+# Install with:  pip install -c deploy/constraints.txt -e '.[dev]'
+click==8.1.8

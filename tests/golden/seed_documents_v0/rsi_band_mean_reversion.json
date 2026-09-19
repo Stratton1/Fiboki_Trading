@@ -1,0 +1,369 @@
+{
+  "schema_version": "2.0.0",
+  "strategy_id": "rsi_band_mean_reversion",
+  "name": "RSI Band Mean Reversion",
+  "hypothesis": "ECONOMIC STORY. Short-horizon reversal is one of the better-evidenced anomalies, and it has a mechanism rather than just a backtest: liquidity provision. Nagel (2012) shows that returns to short-term reversal strategies are compensation for supplying liquidity when it is scarce, and that those returns scale with measures of funding stress. The trade is therefore specified as a RE-ENTRY, not a touch: price must close back INSIDE the lower Bollinger band having closed outside it, with RSI still depressed. Waiting for the re-cross matters a great deal in practice -- at the moment of the band break RSI is still falling and the imbalance is still being created, so entering there is buying into the flow rather than supplying liquidity to it. The ADX ceiling is the load-bearing condition: mean reversion applied during a trend is just a slow way to lose money. The time stop caps the cost of being wrong about which regime we are in.\n\nEVIDENCE AGAINST, STATED PLAINLY. Nagel's premium is measured on US equities at daily frequency with essentially zero spread; the FX and CFD version pays a spread on every leg and the effect must clear it. RSI-threshold rules specifically belong to the oscillator family that Coakley, Marzano and Nankervis (2016) found does not survive Step-SPA correction on currencies. The strategy also carries a structural negative skew: many small wins into the band midline, occasional large losses when the regime classifier is wrong, which flatters Sharpe and hides tail risk. Rank this one on tail-aware statistics, not Sharpe, and treat anything below a 1.4 profit factor as noise.",
+  "family": "mean_reversion",
+  "universe": [
+    "EURUSD",
+    "GBPUSD",
+    "USDJPY",
+    "AUDUSD",
+    "USDCAD",
+    "USDCHF",
+    "NZDUSD",
+    "EURGBP",
+    "AUDNZD",
+    "EURCHF"
+  ],
+  "timeframes": [
+    "H1",
+    "H4"
+  ],
+  "direction": "both",
+  "regime": [
+    {
+      "op": "regime_gate",
+      "metric": {
+        "kind": "indicator",
+        "spec": {
+          "indicator": "adx",
+          "params": {
+            "period": 14
+          }
+        },
+        "output": "",
+        "offset": 0
+      },
+      "min_value": null,
+      "max_value": 25.0,
+      "invert": false
+    }
+  ],
+  "setup": {
+    "long": [
+      {
+        "op": "indicator_vs_price",
+        "indicator": {
+          "kind": "indicator",
+          "spec": {
+            "indicator": "bollinger",
+            "params": {
+              "period": 20,
+              "num_std": 2.0
+            }
+          },
+          "output": "lower",
+          "offset": 1
+        },
+        "price": {
+          "kind": "price",
+          "field": "close",
+          "offset": 1
+        },
+        "comparator": ">"
+      }
+    ],
+    "short": [
+      {
+        "op": "indicator_vs_price",
+        "indicator": {
+          "kind": "indicator",
+          "spec": {
+            "indicator": "bollinger",
+            "params": {
+              "period": 20,
+              "num_std": 2.0
+            }
+          },
+          "output": "upper",
+          "offset": 1
+        },
+        "price": {
+          "kind": "price",
+          "field": "close",
+          "offset": 1
+        },
+        "comparator": "<"
+      }
+    ]
+  },
+  "entry": {
+    "long": [
+      {
+        "op": "crossover",
+        "fast": {
+          "kind": "price",
+          "field": "close",
+          "offset": 0
+        },
+        "slow": {
+          "kind": "indicator",
+          "spec": {
+            "indicator": "bollinger",
+            "params": {
+              "period": 20,
+              "num_std": 2.0
+            }
+          },
+          "output": "lower",
+          "offset": 0
+        },
+        "direction": "above"
+      }
+    ],
+    "short": [
+      {
+        "op": "crossover",
+        "fast": {
+          "kind": "price",
+          "field": "close",
+          "offset": 0
+        },
+        "slow": {
+          "kind": "indicator",
+          "spec": {
+            "indicator": "bollinger",
+            "params": {
+              "period": 20,
+              "num_std": 2.0
+            }
+          },
+          "output": "upper",
+          "offset": 0
+        },
+        "direction": "below"
+      }
+    ]
+  },
+  "confirmation": {
+    "long": [
+      {
+        "op": "threshold",
+        "operand": {
+          "kind": "indicator",
+          "spec": {
+            "indicator": "rsi",
+            "params": {
+              "period": 14
+            }
+          },
+          "output": "",
+          "offset": 0
+        },
+        "comparator": "<",
+        "value": 40.0
+      }
+    ],
+    "short": [
+      {
+        "op": "threshold",
+        "operand": {
+          "kind": "indicator",
+          "spec": {
+            "indicator": "rsi",
+            "params": {
+              "period": 14
+            }
+          },
+          "output": "",
+          "offset": 0
+        },
+        "comparator": ">",
+        "value": 60.0
+      }
+    ]
+  },
+  "filters": [],
+  "invalidation": {
+    "long": [
+      {
+        "op": "indicator_vs_price",
+        "indicator": {
+          "kind": "indicator",
+          "spec": {
+            "indicator": "donchian",
+            "params": {
+              "period": 60
+            }
+          },
+          "output": "lower_prior",
+          "offset": 0
+        },
+        "price": {
+          "kind": "price",
+          "field": "close",
+          "offset": 0
+        },
+        "comparator": ">"
+      }
+    ],
+    "short": [
+      {
+        "op": "indicator_vs_price",
+        "indicator": {
+          "kind": "indicator",
+          "spec": {
+            "indicator": "donchian",
+            "params": {
+              "period": 60
+            }
+          },
+          "output": "upper_prior",
+          "offset": 0
+        },
+        "price": {
+          "kind": "price",
+          "field": "close",
+          "offset": 0
+        },
+        "comparator": "<"
+      }
+    ]
+  },
+  "stop": {
+    "kind": "atr_multiple",
+    "value": 1.5,
+    "atr": {
+      "kind": "indicator",
+      "spec": {
+        "indicator": "atr",
+        "params": {
+          "period": 14
+        }
+      },
+      "output": "",
+      "offset": 0
+    },
+    "level": null,
+    "buffer_atr": 0.0,
+    "min_distance_atr": 0.5
+  },
+  "take_profits": [
+    {
+      "kind": "r_multiple",
+      "value": 1.0,
+      "allocation": 0.5,
+      "atr": null,
+      "level": null,
+      "label": "first_r"
+    },
+    {
+      "kind": "indicator_level",
+      "value": 1.0,
+      "allocation": 0.5,
+      "atr": null,
+      "level": {
+        "kind": "indicator",
+        "spec": {
+          "indicator": "bollinger",
+          "params": {
+            "period": 20,
+            "num_std": 2.0
+          }
+        },
+        "output": "mid",
+        "offset": 0
+      },
+      "label": "band_midline"
+    }
+  ],
+  "trailing": null,
+  "position_management": {
+    "max_concurrent_positions": 2,
+    "allow_pyramiding": false,
+    "max_pyramid_legs": 1,
+    "move_stop_to_breakeven_at_r": null,
+    "allow_reversal_on_opposite_signal": false,
+    "max_bars_in_trade": 24,
+    "cooldown_bars_after_exit": 6
+  },
+  "sessions": {
+    "windows": [
+      [
+        6,
+        21
+      ]
+    ],
+    "weekdays": [
+      0,
+      1,
+      2,
+      3,
+      4
+    ],
+    "block_bars_before_weekend": 0
+  },
+  "events": {
+    "block_minutes_before": 45,
+    "block_minutes_after": 45,
+    "blocked_event_tags": [
+      "nfp",
+      "cpi",
+      "central_bank_rate"
+    ],
+    "avoid_month_end": false,
+    "avoid_rollover_hour": true
+  },
+  "parameters": {
+    "rsi_period": {
+      "kind": "int",
+      "default": 14,
+      "description": "",
+      "min_value": 7.0,
+      "max_value": 21.0,
+      "step": 1.0,
+      "choices": null
+    },
+    "rsi_ceiling": {
+      "kind": "float",
+      "default": 40.0,
+      "description": "Depressed-RSI confirmation (mirrored for shorts)",
+      "min_value": 25.0,
+      "max_value": 55.0,
+      "step": 2.5,
+      "choices": null
+    },
+    "adx_ceiling": {
+      "kind": "float",
+      "default": 25.0,
+      "description": "Range-regime gate",
+      "min_value": 12.0,
+      "max_value": 35.0,
+      "step": 2.0,
+      "choices": null
+    },
+    "bb_num_std": {
+      "kind": "float",
+      "default": 2.0,
+      "description": "",
+      "min_value": 1.5,
+      "max_value": 3.0,
+      "step": 0.25,
+      "choices": null
+    },
+    "time_stop_bars": {
+      "kind": "int",
+      "default": 24,
+      "description": "",
+      "min_value": 8.0,
+      "max_value": 72.0,
+      "step": 4.0,
+      "choices": null
+    },
+    "breakout_veto_period": {
+      "kind": "int",
+      "default": 60,
+      "description": "Channel whose break vetoes the fade",
+      "min_value": 30.0,
+      "max_value": 120.0,
+      "step": 10.0,
+      "choices": null
+    }
+  },
+  "parent_strategy_ids": [],
+  "mutation": null,
+  "notes": "",
+  "author": "fiboki-v2-seed",
+  "complexity_score": 12.5
+}

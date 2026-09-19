@@ -180,10 +180,22 @@ class AcceptedStrategy:
     content_hash: str
     warmup_period: int
     complexity_score: float
+    #: The binding that was compiled. A proposal is usually a TEMPLATE -- it
+    #: declares parameters and references them -- and a template cannot be
+    #: compiled, so acceptance compiles the one binding the document itself
+    #: declares. Both documents are kept: ``document`` is what the agent
+    #: proposed and what the ledger records, ``bound`` is what was proved to
+    #: run, and the two have different content hashes because they are
+    #: different things.
+    bound: StrategyDocument | None = None
 
     @property
     def strategy_id(self) -> str:
         return self.document.strategy_id
+
+    @property
+    def bound_content_hash(self) -> str:
+        return (self.bound or self.document).content_hash()
 
 
 def validate_strategy_payload(
@@ -197,7 +209,10 @@ def validate_strategy_payload(
 
     There is no "validate but do not compile" mode: a proposal nobody can
     realise is a proposal nobody can reason about, so compilation is part of
-    acceptance rather than a later, skippable step.
+    acceptance rather than a later, skippable step. For a document that
+    references its declared parameters, what is compiled is its DEFAULT
+    BINDING -- an unbound template has no numbers to compile, and a proposal
+    whose defaults do not realise is not realisable by anybody.
     """
     data = parse_payload(payload)
     _walk(data, "", 0, [0])
@@ -223,7 +238,8 @@ def validate_strategy_payload(
         raise SandboxRejection("schema_invalid", str(exc)) from exc
 
     try:
-        compiled = compile_strategy(document)
+        bound = document.bind_defaults() if document.unbound_parameters() else document
+        compiled = compile_strategy(bound)
     except (CompilationError, ValueError) as exc:
         raise SandboxRejection("does_not_compile", str(exc)) from exc
 
@@ -233,6 +249,7 @@ def validate_strategy_payload(
         content_hash=document.content_hash(),
         warmup_period=compiled.warmup_period,
         complexity_score=document.complexity_score,
+        bound=bound,
     )
 
 

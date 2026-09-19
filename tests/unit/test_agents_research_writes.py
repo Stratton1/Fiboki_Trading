@@ -10,15 +10,15 @@ from pathlib import Path
 
 import pytest
 
-from fiboki.agents.research_store import (
+from fiboki.agents.roles import AgentRole
+from fiboki.agents.session import open_session
+from fiboki.agents.tools import MutationOperator, ToolExecutionError
+from fiboki.research.artefacts import (
     BacktestRecord,
     Hypothesis,
     ResearchNote,
     ResearchStore,
 )
-from fiboki.agents.roles import AgentRole
-from fiboki.agents.session import open_session
-from fiboki.agents.tools import MutationOperator, ToolExecutionError
 from tests.agents_fixtures import Harness, ema_crossover_document
 
 AGENTS_ROOT = Path("src/fiboki/agents")
@@ -307,6 +307,47 @@ def test_design_experiment_pre_registers_criteria(harness: Harness) -> None:
     assert result.n_criteria == 1
     stored = harness.research.get_experiment(result.experiment_id)
     assert stored.success_criteria[0].metric == "n_trades"
+
+
+def test_design_experiment_also_lands_in_the_PLATFORM_experiment_ledger(
+    harness: Harness,
+) -> None:
+    """The migration, proved end to end.
+
+    An agent's pre-registered experiment used to exist only in the agent layer,
+    so ``ResearchMemory`` -- whose entire job is answering "have we tried this
+    already?" -- could not see it. Now the same act writes an experiment the rest
+    of the platform reads, carrying the hypothesis's own prediction and falsifier
+    as the recorded REASON rather than a manufactured one.
+    """
+    session = _session(harness, AgentRole.STATISTICAL_AUDITOR)
+    hypothesis = harness.research.add_hypothesis(
+        Hypothesis(
+            title="A ledger-visible claim about EURUSD",
+            statement="x" * 45,
+            rationale="y" * 45,
+            testable_prediction="momentum persists at H1 after a 20-bar break",
+            falsifier="no positive expectancy out of sample over 200 trades",
+        )
+    )
+    before = len(harness.research.ledger.list())
+    result = session.call(
+        "design_experiment",
+        _experiment_inputs(hypothesis_id=hypothesis.hypothesis_id),
+        reason="pre-register",
+    )
+    rows = harness.research.ledger.list()
+    assert len(rows) == before + 1
+    row = rows[-1]
+    assert row.actor_kind.value == "agent"
+    assert row.strategy_id == "ema_cross_fixture"
+    assert row.hypothesis_id == hypothesis.hypothesis_id
+    assert "momentum persists" in row.reason
+    assert "no positive expectancy" in row.reason
+    assert result.experiment_id in row.tags
+    # ... and the structure hash is populated, so a later reparameterisation of
+    # the same rules is recognised as a rediscovery rather than as novel work.
+    assert row.structure_hash
 
 
 def test_an_experiment_for_an_unknown_hypothesis_is_refused(harness: Harness) -> None:

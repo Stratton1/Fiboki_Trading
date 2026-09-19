@@ -45,16 +45,6 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from fiboki.agents.capabilities import Capability, assert_no_execution_capability
 from fiboki.agents.orchestrator import JobSpec, JobTicket, JobType
-from fiboki.agents.research_store import (
-    Critique,
-    ExperimentDesign,
-    Hypothesis,
-    Objection,
-    ResearchNote,
-    ResearchStore,
-    StrategyProposal,
-    SuccessCriterion,
-)
 from fiboki.agents.sandbox import SandboxRejection, validate_strategy_payload
 from fiboki.backtest.metrics import max_drawdown
 from fiboki.core.enums import Timeframe
@@ -64,6 +54,17 @@ from fiboki.data.integrity import validate as validate_integrity
 from fiboki.data.telemetry import TelemetryReader, slippage_summary
 from fiboki.marketstate.features import FeatureEngine, FeatureError
 from fiboki.marketstate.regime import RegimeAxis, RegimeClassifier, RegimeError
+from fiboki.research.artefacts import (
+    Critique,
+    ExperimentDesign,
+    Hypothesis,
+    Objection,
+    ResearchNote,
+    ResearchStore,
+    StrategyProposal,
+    SuccessCriterion,
+)
+from fiboki.research.experiment import ActorKind, ExperimentDraft, Outcome
 from fiboki.strategy.dsl import StrategyDocument
 from fiboki.strategy.registry import StrategyRegistry
 from fiboki.validation.gates import GATE_SET_V2
@@ -1857,7 +1858,7 @@ class DesignExperimentOut(_Out):
 
 
 def _design_experiment(ctx: ToolContext, inputs: DesignExperimentIn) -> DesignExperimentOut:
-    ctx.research.get_hypothesis(inputs.hypothesis_id)  # raises if unknown
+    hypothesis = ctx.research.get_hypothesis(inputs.hypothesis_id)  # raises if unknown
     for sid in inputs.strategy_ids:
         if sid not in ctx.strategies:
             raise ToolExecutionError(f"experiment names unregistered strategy {sid!r}")
@@ -1908,6 +1909,38 @@ def _design_experiment(ctx: ToolContext, inputs: DesignExperimentIn) -> DesignEx
             role=ctx.role,
         )
     )
+    # ... and the same pre-registration is appended to the PLATFORM ledger, so
+    # that research memory can answer "have we tried this already?" with work the
+    # agents did. An agent proposal that only existed in the agent layer was
+    # invisible to the very mechanism built to stop rediscovery.
+    for sid in record.strategy_ids:
+        ctx.research.record_experiment(
+            ExperimentDraft(
+                actor_kind=ActorKind.AGENT,
+                actor_name=ctx.agent_id,
+                reason=(
+                    f"pre-registered experiment {record.experiment_id} for hypothesis "
+                    f"{record.hypothesis_id}: {hypothesis.testable_prediction} "
+                    f"Falsifier: {hypothesis.falsifier}"
+                    + (f" Notes: {record.notes}" if record.notes else "")
+                ),
+                hypothesis_id=record.hypothesis_id,
+                strategy_id=sid,
+                strategy_document=ctx.strategies.get(sid)
+                if sid in ctx.strategies
+                else None,
+                parameters={
+                    "train": [record.train_start, record.train_end],
+                    "test": [record.test_start, record.test_end],
+                    "n_folds": record.n_folds,
+                    "embargo_bars": record.embargo_bars,
+                    "n_trials_in_search": record.n_trials_in_search,
+                    "seed": record.seed,
+                },
+                outcome=Outcome.PENDING,
+                tags=("agent", "pre_registered", record.experiment_id),
+            )
+        )
     return DesignExperimentOut(
         experiment_id=record.experiment_id,
         hypothesis_id=record.hypothesis_id,

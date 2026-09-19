@@ -51,7 +51,9 @@
           "spec": {
             "indicator": "ema",
             "params": {
-              "period": 100
+              "period": {
+                "$param": "trend_ema"
+              }
             }
           },
           "output": "",
@@ -73,7 +75,9 @@
           "spec": {
             "indicator": "ema",
             "params": {
-              "period": 100
+              "period": {
+                "$param": "trend_ema"
+              }
             }
           },
           "output": "",
@@ -97,7 +101,9 @@
           "spec": {
             "indicator": "donchian",
             "params": {
-              "period": 20
+              "period": {
+                "$param": "channel_period"
+              }
             }
           },
           "output": "upper_prior",
@@ -119,7 +125,9 @@
           "spec": {
             "indicator": "donchian",
             "params": {
-              "period": 20
+              "period": {
+                "$param": "channel_period"
+              }
             }
           },
           "output": "lower_prior",
@@ -145,7 +153,9 @@
   },
   "stop": {
     "kind": "atr_multiple",
-    "value": 2.0,
+    "value": {
+      "$param": "stop_atr_multiple"
+    },
     "atr": {
       "kind": "indicator",
       "spec": {
@@ -164,7 +174,9 @@
   "take_profits": [],
   "trailing": {
     "kind": "atr_chandelier",
-    "value": 3.0,
+    "value": {
+      "$param": "trail_atr_multiple"
+    },
     "activate_after_r": 0.0,
     "atr": {
       "kind": "indicator",
@@ -237,6 +249,7 @@
       "choices": null
     }
   },
+  "binding": null,
   "parent_strategy_ids": [],
   "mutation": null,
   "notes": "",

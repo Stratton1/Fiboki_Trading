@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  launchd unit for the research worker on the operator's Mac. THE PRIMARY
+  DEPLOYMENT TARGET -- Fiboki V2 is local-first, and this is how the worker
+  actually runs day to day.
+
+  Install:
+      cp deploy/launchd/com.fiboki.research-worker.plist ~/Library/LaunchAgents/
+      # edit the three paths below to match your checkout
+      launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.fiboki.research-worker.plist
+      launchctl kickstart -p gui/$(id -u)/com.fiboki.research-worker
+
+  Inspect / stop:
+      launchctl print gui/$(id -u)/com.fiboki.research-worker
+      launchctl bootout gui/$(id -u)/com.fiboki.research-worker
+
+  Notes that matter:
+
+  * KeepAlive uses SuccessfulExit=false, so launchd restarts a CRASH but not a
+    clean exit. Exit 75 (another holder has the lease) is not a success, so it
+    WOULD be restarted -- ThrottleInterval below makes that a slow retry rather
+    than a spin, and `fiboki worker status` tells you who holds it.
+  * ExitTimeOut must exceed WorkerConfig.shutdown_grace_seconds, or launchd
+    SIGKILLs a worker that is in the middle of shutting down cleanly.
+  * A LaunchAgent (not a LaunchDaemon) because it should run as the operator,
+    with the operator's data directory, and stop when they log out. A research
+    worker that survives logout on a laptop is a research worker that drains
+    the battery in a bag.
+-->
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.fiboki.research-worker</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>/Users/CHANGEME/fiboki/v2/.venv/bin/fiboki</string>
+        <string>worker</string>
+        <string>run</string>
+        <string>research</string>
+        <string>--nice</string>
+        <string>10</string>
+    </array>
+
+    <key>WorkingDirectory</key>
+    <string>/Users/CHANGEME/fiboki/v2</string>
+
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>FIBOKI_HOME</key>
+        <string>/Users/CHANGEME/.fiboki</string>
+        <key>FIBOKI_STATE_DB</key>
+        <string>/Users/CHANGEME/.fiboki/state.db</string>
+        <key>FIBOKI_DATA_ROOT</key>
+        <string>/Users/CHANGEME/fiboki-data</string>
+        <key>FIBOKI_ALERT_LOG</key>
+        <string>/Users/CHANGEME/.fiboki/alerts.jsonl</string>
+        <key>FIBOKI_LOG_FORMAT</key>
+        <string>json</string>
+        <key>FIBOKI_EXECUTION_MODE</key>
+        <string>paper</string>
+        <!-- Tell the watchdog which workers OUGHT to exist, so it can alert on
+             one that never started after a reboot rather than only on one that
+             started and went stale. -->
+        <key>FIBOKI_EXPECTED_WORKERS</key>
+        <string>research@CHANGEME-mac.local</string>
+        <!-- FIBOKI_LIVE_EXECUTION_ENABLED is deliberately absent. -->
+    </dict>
+
+    <key>RunAtLoad</key>
+    <true/>
+
+    <key>KeepAlive</key>
+    <dict>
+        <key>SuccessfulExit</key>
+        <false/>
+    </dict>
+
+    <!-- Do not hammer a contended lease or a crash loop. -->
+    <key>ThrottleInterval</key>
+    <integer>60</integer>
+
+    <!-- Longer than WorkerConfig.shutdown_grace_seconds (30s default). -->
+    <key>ExitTimeOut</key>
+    <integer>45</integer>
+
+    <!-- Yield to whatever the operator is doing. -->
+    <key>Nice</key>
+    <integer>10</integer>
+    <key>ProcessType</key>
+    <string>Background</string>
+    <key>LowPriorityIO</key>
+    <true/>
+
+    <key>StandardOutPath</key>
+    <string>/Users/CHANGEME/.fiboki/logs/research-worker.log</string>
+    <key>StandardErrorPath</key>
+    <string>/Users/CHANGEME/.fiboki/logs/research-worker.err.log</string>
+</dict>
+</plist>

@@ -336,7 +336,25 @@ def _any(rules: tuple[Rule, ...], ctx: EvalContext) -> bool:
 
 
 def compile_strategy(doc: StrategyDocument) -> CompiledStrategy:
-    """Turn a document into a :class:`CompiledStrategy`. Deterministic."""
+    """Turn a document into a :class:`CompiledStrategy`. Deterministic.
+
+    A document that still contains unresolved parameter references is REFUSED.
+    There is deliberately no "compile it with the defaults" convenience here: a
+    half-bound strategy that runs is a strategy whose reported parameters and
+    executed parameters can disagree, and that disagreement is invisible in the
+    result. Callers that mean the declared defaults say so, with
+    ``doc.bind_defaults()``, and the binding is then recorded on the document
+    and in its content hash.
+    """
+    unbound = doc.unbound_parameters()
+    if unbound:
+        raise CompilationError(
+            f"{doc.strategy_id}: refusing to compile a document with unresolved "
+            f"parameter reference(s) {list(unbound)}. Call "
+            f"document.bind({{...}}) -- or document.bind_defaults() if the declared "
+            "defaults are what you meant -- before compiling. A half-bound "
+            "strategy must never run."
+        )
     specs: dict[str, IndicatorSpec] = {}
     for spec in doc.rule_indicators():
         specs.setdefault(spec.key, spec)

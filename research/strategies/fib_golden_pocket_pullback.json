@@ -38,7 +38,9 @@
         "output": "",
         "offset": 0
       },
-      "min_value": 18.0,
+      "min_value": {
+        "$param": "adx_floor"
+      },
       "max_value": null,
       "invert": false
     }
@@ -52,7 +54,9 @@
           "spec": {
             "indicator": "fibonacci",
             "params": {
-              "swing_lookback": 5,
+              "swing_lookback": {
+                "$param": "swing_lookback"
+              },
               "retracements": [
                 0.382,
                 0.5,
@@ -80,7 +84,9 @@
           "spec": {
             "indicator": "fibonacci",
             "params": {
-              "swing_lookback": 5,
+              "swing_lookback": {
+                "$param": "swing_lookback"
+              },
               "retracements": [
                 0.382,
                 0.5,
@@ -110,7 +116,9 @@
           "spec": {
             "indicator": "fibonacci",
             "params": {
-              "swing_lookback": 5,
+              "swing_lookback": {
+                "$param": "swing_lookback"
+              },
               "retracements": [
                 0.382,
                 0.5,
@@ -140,7 +148,9 @@
           "spec": {
             "indicator": "fibonacci",
             "params": {
-              "swing_lookback": 5,
+              "swing_lookback": {
+                "$param": "swing_lookback"
+              },
               "retracements": [
                 0.382,
                 0.5,
@@ -172,7 +182,9 @@
           "spec": {
             "indicator": "fibonacci",
             "params": {
-              "swing_lookback": 5,
+              "swing_lookback": {
+                "$param": "swing_lookback"
+              },
               "retracements": [
                 0.382,
                 0.5,
@@ -202,7 +214,9 @@
           "spec": {
             "indicator": "fibonacci",
             "params": {
-              "swing_lookback": 5,
+              "swing_lookback": {
+                "$param": "swing_lookback"
+              },
               "retracements": [
                 0.382,
                 0.5,
@@ -243,7 +257,9 @@
           "offset": 0
         },
         "comparator": ">",
-        "value": 40.0
+        "value": {
+          "$param": "rsi_floor"
+        }
       }
     ],
     "short": [
@@ -261,7 +277,9 @@
           "offset": 0
         },
         "comparator": "<",
-        "value": 60.0
+        "value": {
+          "$param": "rsi_ceiling"
+        }
       }
     ]
   },
@@ -289,7 +307,9 @@
       "spec": {
         "indicator": "fibonacci",
         "params": {
-          "swing_lookback": 5,
+          "swing_lookback": {
+            "$param": "swing_lookback"
+          },
           "retracements": [
             0.382,
             0.5,
@@ -305,7 +325,9 @@
       "output": "start",
       "offset": 0
     },
-    "buffer_atr": 0.25,
+    "buffer_atr": {
+      "$param": "stop_buffer_atr"
+    },
     "min_distance_atr": 0.5
   },
   "take_profits": [
@@ -319,7 +341,9 @@
         "spec": {
           "indicator": "fibonacci",
           "params": {
-            "swing_lookback": 5,
+            "swing_lookback": {
+              "$param": "swing_lookback"
+            },
             "retracements": [
               0.382,
               0.5,
@@ -347,7 +371,9 @@
         "spec": {
           "indicator": "fibonacci",
           "params": {
-            "swing_lookback": 5,
+            "swing_lookback": {
+              "$param": "swing_lookback"
+            },
             "retracements": [
               0.382,
               0.5,
@@ -440,10 +466,28 @@
     "rsi_floor": {
       "kind": "float",
       "default": 40.0,
-      "description": "",
+      "description": "Momentum floor for longs",
       "min_value": 30.0,
       "max_value": 55.0,
       "step": 2.5,
+      "choices": null
+    },
+    "rsi_ceiling": {
+      "kind": "float",
+      "default": 60.0,
+      "description": "Momentum ceiling for shorts",
+      "min_value": 45.0,
+      "max_value": 70.0,
+      "step": 2.5,
+      "choices": null
+    },
+    "adx_floor": {
+      "kind": "float",
+      "default": 18.0,
+      "description": "Trend-regime gate",
+      "min_value": 10.0,
+      "max_value": 35.0,
+      "step": 2.0,
       "choices": null
     },
     "stop_buffer_atr": {
@@ -456,9 +500,10 @@
       "choices": null
     }
   },
+  "binding": null,
   "parent_strategy_ids": [],
   "mutation": null,
   "notes": "Falsification target: compare against identical rules with arbitrary (non-Fibonacci) retracement depths.",
   "author": "fiboki-v2-seed",
-  "complexity_score": 13.0
+  "complexity_score": 14.0
 }

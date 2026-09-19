@@ -12,7 +12,6 @@ import pytest
 
 from fiboki.agents.audit import ActionKind, Outcome
 from fiboki.agents.providers import EchoProvider, ModelRouter
-from fiboki.agents.research_store import Critique, ResearchNote
 from fiboki.agents.roles import AgentRole
 from fiboki.agents.session import open_session
 from fiboki.agents.tools import ToolExecutionError
@@ -22,6 +21,7 @@ from fiboki.agents.workflows import (
     run_failure_investigation,
     run_research_cycle,
 )
+from fiboki.research.artefacts import Critique, ResearchNote
 from tests.agents_fixtures import Harness
 
 TRAIN = ("2024-01-01", "2024-02-01")

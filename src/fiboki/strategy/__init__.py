@@ -6,8 +6,11 @@ from fiboki.strategy.compiler import (
 )
 from fiboki.strategy.dsl import (
     SCHEMA_VERSION,
+    BindingError,
     EventRestriction,
+    InfeasibleBindingError,
     MutationRecord,
+    OutOfDomainError,
     ParameterSpec,
     PositionManagement,
     RuleSet,
@@ -18,8 +21,10 @@ from fiboki.strategy.dsl import (
     TakeProfitLeg,
     TradeDirection,
     TrailingModel,
+    UnknownParameterError,
 )
 from fiboki.strategy.primitives import (
+    PARAM_REF_KEY,
     AllOfRule,
     AnyOfRule,
     ConstantOperand,
@@ -30,11 +35,15 @@ from fiboki.strategy.primitives import (
     IndicatorVsIndicatorRule,
     IndicatorVsPriceRule,
     NotRule,
+    ParamRef,
     PriceOperand,
     RegimeGateRule,
     SessionWindowRule,
     SpecError,
     ThresholdRule,
+    UnboundParameterError,
+    is_ref,
+    resolve_refs,
 )
 from fiboki.strategy.registry import (
     DuplicateStrategyError,
@@ -45,9 +54,11 @@ from fiboki.strategy.registry import (
 )
 
 __all__ = [
+    "PARAM_REF_KEY",
     "SCHEMA_VERSION",
     "AllOfRule",
     "AnyOfRule",
+    "BindingError",
     "CompilationError",
     "CompiledStrategy",
     "ConstantOperand",
@@ -61,8 +72,11 @@ __all__ = [
     "IndicatorSpec",
     "IndicatorVsIndicatorRule",
     "IndicatorVsPriceRule",
+    "InfeasibleBindingError",
     "MutationRecord",
     "NotRule",
+    "OutOfDomainError",
+    "ParamRef",
     "ParameterSpec",
     "PositionManagement",
     "PriceOperand",
@@ -79,6 +93,10 @@ __all__ = [
     "ThresholdRule",
     "TradeDirection",
     "TrailingModel",
+    "UnboundParameterError",
+    "UnknownParameterError",
     "compile_strategy",
+    "is_ref",
     "load_seed_registry",
+    "resolve_refs",
 ]

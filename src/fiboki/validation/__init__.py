@@ -33,6 +33,11 @@ is worth keeping: it is the only record of where the search has already been.
 """
 from __future__ import annotations
 
+from fiboki.validation.engine_evaluator import (
+    EngineEvaluator,
+    EvaluationCache,
+    EvaluatorConfig,
+)
 from fiboki.validation.evaluation import (
     Candidate,
     DateWindow,
@@ -82,6 +87,7 @@ from fiboki.validation.report import (
     Verdict,
     code_version,
 )
+from fiboki.validation.run import ValidationRun, run_validation
 
 __all__ = [
     "DEFAULT_HOLDOUT_FRACTION",
@@ -92,7 +98,10 @@ __all__ = [
     "Comparison",
     "DateWindow",
     "DeflationRung",
+    "EngineEvaluator",
+    "EvaluationCache",
     "Evaluator",
+    "EvaluatorConfig",
     "Gate",
     "GateResult",
     "GateSet",
@@ -118,9 +127,11 @@ __all__ = [
     "UnknownHoldout",
     "ValidationLadder",
     "ValidationReport",
+    "ValidationRun",
     "Verdict",
     "WalkForwardRung",
     "WindowEvaluation",
     "code_version",
     "default_rungs",
+    "run_validation",
 ]

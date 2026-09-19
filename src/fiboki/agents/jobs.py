@@ -38,11 +38,6 @@ import numpy as np
 import pandas as pd
 
 from fiboki.agents.orchestrator import JobContext, JobType, Orchestrator
-from fiboki.agents.research_store import (
-    BacktestRecord,
-    ResearchStore,
-    ValidationReportRecord,
-)
 from fiboki.agents.tools import BarSource, ToolExecutionError
 from fiboki.backtest.engine import (
     BacktestConfig,
@@ -55,6 +50,11 @@ from fiboki.core.contracts import Signal, Trade
 from fiboki.core.enums import Provenance, Timeframe
 from fiboki.core.instruments import get as get_instrument
 from fiboki.core.money import IdentityFxSource
+from fiboki.research.artefacts import (
+    BacktestRecord,
+    ResearchStore,
+    ValidationReportRecord,
+)
 from fiboki.sim.profiles import get_profile
 from fiboki.stats.bootstrap import bootstrap_confidence_interval
 from fiboki.stats.sharpe import (
@@ -203,6 +203,34 @@ def _clean_metrics(metrics: Any) -> dict[str, Any]:
 # ---------------------------------------------------------------------------
 
 
+def _materialise(
+    document: StrategyDocument, parameters: Mapping[str, Any] | None = None
+) -> tuple[StrategyDocument, tuple[str, ...]]:
+    """Bind a registered TEMPLATE so it can be compiled, and say what was used.
+
+    A registered document declares parameters and references them; the compiler
+    refuses one outright, because a strategy whose reported parameters and
+    executed parameters can differ is unusable as evidence. Jobs therefore state
+    the binding here, once, and the binding is returned as a caveat so it reaches
+    the recorded result rather than living only in this function.
+    """
+    if not document.unbound_parameters():
+        return document, ()
+    overrides = dict(parameters or {})
+    binding = {**document.default_values(), **overrides}
+    bound = document.bind(binding)
+    note = (
+        "PARAMETER BINDING: "
+        + ", ".join(f"{k}={binding[k]!r}" for k in sorted(binding))
+        + (
+            " (declared defaults)"
+            if not overrides
+            else f" (overridden: {sorted(overrides)})"
+        )
+    )
+    return bound, (note,)
+
+
 def _run_one(
     *,
     document: StrategyDocument,
@@ -217,6 +245,7 @@ def _run_one(
     profile_name: str,
     fx_acknowledged: bool,
     strategy_id_override: str | None = None,
+    parameters: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Compile, load, run, measure.  The one place the engine is invoked."""
     symbol = instrument.upper()
@@ -231,6 +260,7 @@ def _run_one(
             f"{document.strategy_id}: {timeframe.value} is not a permitted timeframe "
             f"{[t.value for t in document.timeframes]}"
         )
+    document, binding_caveats = _materialise(document, parameters)
     compiled = compile_strategy(document)
     frame, version_id = bars.load(symbol, timeframe, start=start, end=end)
     if len(frame) <= compiled.warmup_period:
@@ -268,8 +298,9 @@ def _run_one(
         "result": result,
         "metrics": _clean_metrics(metrics),
         "dataset_version_id": version_id,
-        "caveats": caveats,
+        "caveats": (*binding_caveats, *caveats),
         "content_hash": document.content_hash(),
+        "binding": dict(document.binding or {}),
         "signals_emitted": runner.signals_emitted,
         "n_bars": len(frame),
         "first_timestamp": str(frame.index[0]),
@@ -300,6 +331,7 @@ def backtest_handler(ctx: JobContext) -> Mapping[str, Any]:
         account_ccy=str(payload.get("account_ccy", "USD")),
         profile_name=str(payload.get("profile", "ig_realistic")),
         fx_acknowledged=bool(payload.get("fx_approximation_acknowledged", False)),
+        parameters=payload.get("parameters"),
     )
     result = run["result"]
     record = store.add_backtest(
@@ -552,7 +584,8 @@ def walkforward_handler(ctx: JobContext) -> Mapping[str, Any]:
     frame, _version = bars.load(
         symbol, timeframe, start=payload.get("start"), end=payload.get("end")
     )
-    compiled = compile_strategy(document)
+    fold_parameters = payload.get("parameters")
+    compiled = compile_strategy(_materialise(document, fold_parameters)[0])
     usable = len(frame) - compiled.warmup_period
     if usable <= n_folds * (embargo + 2):
         raise ValueError(
@@ -584,6 +617,7 @@ def walkforward_handler(ctx: JobContext) -> Mapping[str, Any]:
             account_ccy=str(payload.get("account_ccy", "USD")),
             profile_name=str(payload.get("profile", "ig_realistic")),
             fx_acknowledged=bool(payload.get("fx_approximation_acknowledged", False)),
+            parameters=payload.get("parameters"),
         )
         result = run["result"]
         record = store.add_backtest(
@@ -715,6 +749,7 @@ def ablation_handler(ctx: JobContext) -> Mapping[str, Any]:
             account_ccy=str(payload.get("account_ccy", "USD")),
             profile_name=str(payload.get("profile", "ig_realistic")),
             fx_acknowledged=bool(payload.get("fx_approximation_acknowledged", False)),
+            parameters=payload.get("parameters"),
             strategy_id_override=strategy_id_override,
         )
 

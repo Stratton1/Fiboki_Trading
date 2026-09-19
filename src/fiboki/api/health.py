@@ -1,0 +1,226 @@
+"""A health endpoint that can actually fail.
+
+V1's returned ``{"status": "ok", "version": "1.0.0"}`` from a literal and was
+green with the database stopped. Every field below is measured at request time:
+
+* **database** — a real connection and a real ``SELECT 1``.
+* **migration_revision** — read from ``alembic_version``. ``null`` means the
+  revision is unknown, which is reported as a degradation rather than as "fine".
+* **build_sha** — injected at deploy. Empty is reported as unknown.
+* **worker_heartbeat_age_seconds** — ``null`` when a worker has never beaten,
+  which is a different state from ``0`` and renders differently.
+
+The overall status is the worst component status, never an average and never an
+assertion. ``ok`` requires every critical check to pass.
+"""
+from __future__ import annotations
+
+import platform as py_platform
+from datetime import UTC, datetime
+
+from pydantic import BaseModel, ConfigDict, Field
+
+from fiboki.api.platform import Platform
+from fiboki.api.settings import Settings
+
+__all__ = ["HealthCheck", "HealthReport", "build_health"]
+
+_ORDER = {"ok": 0, "degraded": 1, "down": 2}
+
+
+class HealthCheck(BaseModel):
+    model_config = ConfigDict(frozen=True)
+
+    name: str
+    status: str = Field(pattern="^(ok|degraded|down)$")
+    detail: str
+    critical: bool = True
+    latency_ms: float | None = None
+
+
+class HealthReport(BaseModel):
+    model_config = ConfigDict(frozen=True)
+
+    status: str = Field(pattern="^(ok|degraded|down)$")
+    checked_at: datetime
+    build_sha: str | None
+    build_time: str | None
+    migration_revision: str | None
+    execution_mode: str
+    worker_heartbeat_age_seconds: float | None
+    uptime_seconds: float
+    python_version: str
+    checks: tuple[HealthCheck, ...]
+    #: Set when the report itself should not be trusted as a green light.
+    advisory: str = ""
+
+
+def build_health(platform: Platform, settings: Settings) -> HealthReport:
+    checks: list[HealthCheck] = []
+
+    db = platform.check_database()
+    checks.append(
+        HealthCheck(
+            name="database",
+            status="ok" if db.healthy else "down",
+            detail=db.detail,
+            critical=True,
+            latency_ms=db.latency_ms,
+        )
+    )
+
+    revision = platform.migration_revision()
+    checks.append(
+        HealthCheck(
+            name="migration_revision",
+            status="ok" if revision else "degraded",
+            detail=(
+                f"at revision {revision}"
+                if revision
+                else "No alembic_version row is readable. The schema version of "
+                "this deployment is unknown."
+            ),
+            critical=False,
+        )
+    )
+
+    checks.append(
+        HealthCheck(
+            name="build_identity",
+            status="ok" if settings.build_sha else "degraded",
+            detail=(
+                f"build {settings.build_sha}"
+                if settings.build_sha
+                else "FIBOKI_BUILD_SHA is not set; this process cannot say which "
+                "commit it is running."
+            ),
+            critical=False,
+        )
+    )
+
+    age = platform.worker_heartbeat_age_seconds()
+    stale = settings.worker_heartbeat_stale_seconds
+    if age is None:
+        worker_status, worker_detail = (
+            "down",
+            "No worker heartbeat has ever been written. Nothing is evaluating "
+            "signals in this deployment.",
+        )
+    elif age > stale:
+        worker_status, worker_detail = (
+            "down",
+            f"Worker heartbeat is {age:.0f}s old (stale after {stale:.0f}s).",
+        )
+    else:
+        worker_status, worker_detail = ("ok", f"Worker beat {age:.0f}s ago.")
+    checks.append(
+        HealthCheck(
+            name="worker_heartbeat",
+            status=worker_status,
+            detail=worker_detail,
+            critical=True,
+        )
+    )
+
+    intact, broken_at = platform.audit.verify_chain()
+    checks.append(
+        HealthCheck(
+            name="audit_chain",
+            status="ok" if intact else "down",
+            detail=(
+                f"{len(platform.audit)} entries, hash chain verified"
+                if intact
+                else f"Hash chain broken at sequence {broken_at}. The operator "
+                "audit record cannot be trusted."
+            ),
+            critical=True,
+        )
+    )
+
+    checks.append(
+        HealthCheck(
+            name="session_secret",
+            status="ok" if not settings.session_secret_is_ephemeral else "degraded",
+            detail=(
+                "Session secret supplied by the environment."
+                if not settings.session_secret_is_ephemeral
+                else "FIBOKI_SESSION_SECRET is unset, so the signing key is "
+                "per-process. Every restart signs every operator out."
+            ),
+            critical=False,
+        )
+    )
+
+    checks.append(
+        HealthCheck(
+            name="origin_allow_list",
+            status="ok" if settings.allowed_origins else "degraded",
+            detail=(
+                f"{len(settings.allowed_origins)} allowed origin(s)"
+                if settings.allowed_origins
+                else "FIBOKI_ALLOWED_ORIGINS is empty, so every mutating request "
+                "will be refused. Set it to the workstation's origin."
+            ),
+            critical=False,
+        )
+    )
+
+    ks = platform.kill_switch.state
+    checks.append(
+        HealthCheck(
+            name="kill_switch",
+            status="ok" if not ks.active else "degraded",
+            detail=(
+                "Disarmed."
+                if not ks.active
+                else f"ARMED in {ks.mode.value if ks.mode else '?'} by "
+                f"{ks.operator}: {ks.reason}"
+            ),
+            critical=False,
+        )
+    )
+
+    seed_sources = [s for s in platform.data_sources() if s.kind == "seed"]
+    if seed_sources:
+        checks.append(
+            HealthCheck(
+                name="data_provenance",
+                status="degraded",
+                detail=(
+                    "Some surfaces are served from a deterministic fixture, not a "
+                    "measurement: " + ", ".join(s.name for s in seed_sources)
+                ),
+                critical=False,
+            )
+        )
+
+    worst = "ok"
+    for check in checks:
+        rank = _ORDER[check.status]
+        if not check.critical and check.status == "down":
+            rank = _ORDER["degraded"]
+        if rank > _ORDER[worst]:
+            worst = next(k for k, v in _ORDER.items() if v == rank)
+
+    advisory = ""
+    if worst != "ok":
+        advisory = (
+            "This deployment is not fully healthy. Do not read a flat or empty "
+            "screen as a quiet market until every check below is ok."
+        )
+
+    return HealthReport(
+        status=worst,
+        checked_at=datetime.now(tz=UTC),
+        build_sha=settings.build_sha or None,
+        build_time=settings.build_time or None,
+        migration_revision=revision,
+        execution_mode=settings.execution_mode.value,
+        worker_heartbeat_age_seconds=age,
+        uptime_seconds=round(platform.uptime_seconds, 1),
+        python_version=py_platform.python_version(),
+        checks=tuple(checks),
+        advisory=advisory,
+    )
+
+

@@ -1,5 +1,6 @@
 """Fiboki V2 research record: what was tried, by whom, why, and what happened.
 
+    artefacts   what an agent may write: hypotheses, proposals, critiques, notes
     structure   a strategy reduced to its shape, with the numbers removed
     experiment  the append-only ledger of every experiment ever run
     memory      "have we tried this already?", answered BEFORE the work
@@ -13,6 +14,18 @@ rediscovering its failures.
 """
 from __future__ import annotations
 
+from fiboki.research.artefacts import (
+    BacktestRecord,
+    Critique,
+    ExperimentDesign,
+    Hypothesis,
+    Objection,
+    ResearchNote,
+    ResearchStore,
+    StrategyProposal,
+    SuccessCriterion,
+    ValidationReportRecord,
+)
 from fiboki.research.experiment import (
     APPEND_ONLY_MESSAGE,
     ActorKind,
@@ -51,15 +64,20 @@ from fiboki.research.structure import (
 __all__ = [
     "APPEND_ONLY_MESSAGE",
     "ActorKind",
+    "BacktestRecord",
+    "Critique",
     "Experiment",
+    "ExperimentDesign",
     "ExperimentDraft",
     "ExperimentLedger",
     "ExperimentNotFound",
+    "Hypothesis",
     "LedgerError",
     "LineageEdge",
     "LineageGraph",
     "LineageNode",
     "LineageService",
+    "Objection",
     "Outcome",
     "ProvenanceChain",
     "ProvenanceStep",
@@ -67,7 +85,12 @@ __all__ = [
     "RelatedExperiment",
     "Relation",
     "ResearchMemory",
+    "ResearchNote",
+    "ResearchStore",
+    "StrategyProposal",
     "StructuralFingerprint",
+    "SuccessCriterion",
+    "ValidationReportRecord",
     "fingerprint",
     "is_append_only_violation",
     "is_reparameterisation",

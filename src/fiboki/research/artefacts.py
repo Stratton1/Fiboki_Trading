@@ -1,16 +1,32 @@
-"""The research domain: the only place an agent's writes can land.
+"""Agent research artefacts, stored in the PLATFORM's append-only ledger.
 
-Every artefact an agent may create -- a hypothesis, a strategy proposal, a
-mutation, an experiment design, a critique, a filed note -- is a record in this
-store.  Nothing here touches market data, risk configuration, execution state
-or the broker.  That is the point: the write surface available to an LLM is
-this module and nothing else.
+This module used to live at ``fiboki/agents/research_store.py`` with its own
+JSONL persistence, its own append-only convention and its own note search. That
+was a second research store standing beside
+:mod:`fiboki.research.experiment` and :mod:`fiboki.research.memory`, which is an
+architecture defect with three concrete costs:
 
-Records are append-only in spirit and in API.  There is no ``update`` method.
-A revised hypothesis is a NEW hypothesis with ``supersedes`` pointing at the
-old one, so the lineage of a research programme is readable end to end.  Job
-results are likewise appended, never overwritten, because a re-run that
-disagrees with an earlier run is a finding, not a correction.
+* **Two append-only guarantees, one of them weaker.** The ledger enforces it with
+  SQLite triggers -- a property of the artefact. The JSONL store enforced it by
+  not having an ``update`` method, which is a property of the API and survives
+  exactly as long as nobody opens the file.
+* **Agent work was invisible to research memory.** ``ResearchMemory`` answers
+  "have we tried this already?" from the ledger. Anything an agent proposed lived
+  somewhere else, so the answer was wrong by construction.
+* **Two lineages.** ``research.lineage`` walks from a live candidate back to raw
+  bytes through the ledger. A chain that passes through an agent proposal broke.
+
+So the artefacts now live in the SAME database as the experiment ledger, under
+the same triggers, and the store exposes the ledger and the research memory it
+is built on. The API is unchanged -- ``add_*`` / ``get_*`` / ``list`` and
+deliberately no ``update`` or ``delete`` -- because the API was never the
+problem.
+
+Records are append-only in spirit and in API. A revised hypothesis is a NEW
+hypothesis with ``supersedes`` pointing at the old one, so the lineage of a
+research programme is readable end to end. Job results are likewise appended,
+never overwritten, because a re-run that disagrees with an earlier run is a
+finding, not a correction.
 """
 from __future__ import annotations
 
@@ -22,8 +38,19 @@ from pathlib import Path
 from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
+from sqlalchemy import DateTime, String, Text, select, text
+from sqlalchemy.orm import Mapped, mapped_column
+
+from fiboki.research.experiment import (
+    APPEND_ONLY_MESSAGE,
+    Base,
+    ExperimentDraft,
+    ExperimentLedger,
+)
+from fiboki.research.memory import ResearchMemory
 
 SCHEMA_VERSION = "1.0.0"
+
 
 
 def _now() -> datetime:
@@ -216,7 +243,7 @@ ANY_RECORD = (
 
 
 # ---------------------------------------------------------------------------
-# The store
+# Storage
 # ---------------------------------------------------------------------------
 
 _COLLECTIONS: dict[str, tuple[type[BaseModel], str]] = {
@@ -230,57 +257,122 @@ _COLLECTIONS: dict[str, tuple[type[BaseModel], str]] = {
 }
 
 
-class ResearchStore:
-    """Append-only, in-memory research domain with optional JSONL durability.
+class ArtefactRow(Base):
+    """One agent artefact, in the experiment ledger's own database.
 
-    Note the API: ``add_*`` and ``get_*``/``list_*``.  There is no ``update``
-    and no ``delete``.  Superseding a record is an explicit new record that
-    points back, which is what makes a research trail auditable months later.
+    The payload is stored whole rather than shredded into columns: the record
+    types are pydantic models that evolve, and a column per field would turn
+    every schema change into a migration of data nobody is allowed to rewrite.
+    The columns that DO exist are the ones something queries or joins on.
     """
 
-    def __init__(self, directory: str | Path | None = None) -> None:
-        self._data: dict[str, dict[str, BaseModel]] = {k: {} for k in _COLLECTIONS}
+    __tablename__ = "research_artefact"
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    collection: Mapped[str] = mapped_column(String(32), index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
+    created_by: Mapped[str] = mapped_column(String(128), default="")
+    role: Mapped[str] = mapped_column(String(64), default="")
+    strategy_id: Mapped[str] = mapped_column(String(128), default="", index=True)
+    content_hash: Mapped[str] = mapped_column(String(64), default="", index=True)
+    payload_json: Mapped[str] = mapped_column(Text)
+
+
+#: Same guarantee as the experiment table, and for the same reason: an API
+#: without a delete is a convention, a trigger is a property of the file.
+_ARTEFACT_TRIGGERS = (
+    f"""
+    CREATE TRIGGER IF NOT EXISTS research_artefact_no_update
+    BEFORE UPDATE ON research_artefact
+    BEGIN
+        SELECT RAISE(ABORT, '{APPEND_ONLY_MESSAGE}');
+    END;
+    """,
+    f"""
+    CREATE TRIGGER IF NOT EXISTS research_artefact_no_delete
+    BEFORE DELETE ON research_artefact
+    BEGIN
+        SELECT RAISE(ABORT, '{APPEND_ONLY_MESSAGE}');
+    END;
+    """,
+)
+
+
+class ResearchStore:
+    """Append-only research domain, sharing the platform ledger's database.
+
+    Note the API: ``add_*`` and ``get_*``/``list_*``. There is no ``update`` and
+    no ``delete``. Superseding a record is an explicit new record that points
+    back, which is what makes a research trail auditable months later.
+    """
+
+    def __init__(
+        self,
+        directory: str | Path | None = None,
+        *,
+        ledger: ExperimentLedger | None = None,
+    ) -> None:
         self.directory = Path(directory) if directory is not None else None
-        if self.directory is not None:
+        if ledger is not None:
+            self.ledger = ledger
+        elif self.directory is not None:
             self.directory.mkdir(parents=True, exist_ok=True)
-            self._load()
+            self.ledger = ExperimentLedger(self.directory / "research.sqlite")
+        else:
+            self.ledger = ExperimentLedger.in_memory()
+        self._engine = self.ledger.engine
+        Base.metadata.create_all(self._engine)
+        with self._engine.begin() as conn:
+            for ddl in _ARTEFACT_TRIGGERS:
+                conn.execute(text(ddl))
+        self.memory = ResearchMemory(self.ledger)
 
-    # -- persistence ------------------------------------------------------
+    # -- lifecycle --------------------------------------------------------
 
-    def _path(self, collection: str) -> Path:
-        assert self.directory is not None
-        return self.directory / f"{collection}.jsonl"
+    def close(self) -> None:
+        self.ledger.close()
 
-    def _load(self) -> None:
-        for collection, (model, id_field) in _COLLECTIONS.items():
-            path = self._path(collection)
-            if not path.exists():
-                continue
-            with open(path, encoding="utf-8") as handle:
-                for line in handle:
-                    text = line.strip()
-                    if not text:
-                        continue
-                    record = model.model_validate(json.loads(text))
-                    self._data[collection][str(getattr(record, id_field))] = record
+    def __enter__(self) -> ResearchStore:
+        return self
 
-    def _persist(self, collection: str, record: BaseModel) -> None:
-        if self.directory is None:
-            return
-        with open(self._path(collection), "a", encoding="utf-8") as handle:
-            handle.write(json.dumps(record.model_dump(mode="json"), sort_keys=True) + "\n")
+    def __exit__(self, *exc: object) -> None:
+        self.close()
+
+    # -- internals --------------------------------------------------------
+
+    def _session(self):
+        return self.ledger._session_factory()
 
     def _add(self, collection: str, record: BaseModel) -> BaseModel:
         _model, id_field = _COLLECTIONS[collection]
         key = str(getattr(record, id_field))
-        if key in self._data[collection]:
-            raise ValueError(
-                f"{collection} already contains {key!r}. The research store is "
-                "append-only: supersede the record rather than rewriting it."
+        with self._session() as session:
+            if session.get(ArtefactRow, key) is not None:
+                raise ValueError(
+                    f"{collection} already contains {key!r}. The research store is "
+                    "append-only: supersede the record rather than rewriting it."
+                )
+            session.add(
+                ArtefactRow(
+                    id=key,
+                    collection=collection,
+                    created_at=getattr(record, "created_at", _now()),
+                    created_by=str(getattr(record, "created_by", "") or ""),
+                    role=str(getattr(record, "role", "") or ""),
+                    strategy_id=str(getattr(record, "strategy_id", "") or ""),
+                    content_hash=str(getattr(record, "content_hash", "") or ""),
+                    payload_json=json.dumps(
+                        record.model_dump(mode="json"), sort_keys=True
+                    ),
+                )
             )
-        self._data[collection][key] = record
-        self._persist(collection, record)
+            session.commit()
         return record
+
+    @staticmethod
+    def _hydrate(row: ArtefactRow) -> BaseModel:
+        model, _id_field = _COLLECTIONS[row.collection]
+        return model.model_validate(json.loads(row.payload_json))
 
     # -- writes -----------------------------------------------------------
 
@@ -305,14 +397,26 @@ class ResearchStore:
     def add_note(self, record: ResearchNote) -> ResearchNote:
         return self._add("notes", record)  # type: ignore[return-value]
 
+    def record_experiment(self, draft: ExperimentDraft):
+        """Append a row to the PLATFORM experiment ledger.
+
+        The bridge that makes the migration real rather than cosmetic: an agent's
+        pre-registered experiment becomes an experiment the rest of the platform
+        can see -- ``ResearchMemory`` will answer "have we tried this already?"
+        with it, and ``research.lineage`` can walk through it.
+        """
+        return self.ledger.create(draft)
+
     # -- reads ------------------------------------------------------------
 
     def get(self, collection: str, record_id: str) -> BaseModel:
-        if collection not in self._data:
+        if collection not in _COLLECTIONS:
             raise KeyError(f"unknown collection {collection!r}")
-        if record_id not in self._data[collection]:
-            raise KeyError(f"{collection}: no record {record_id!r}")
-        return self._data[collection][record_id]
+        with self._session() as session:
+            row = session.get(ArtefactRow, str(record_id))
+            if row is None or row.collection != collection:
+                raise KeyError(f"{collection}: no record {record_id!r}")
+            return self._hydrate(row)
 
     def get_hypothesis(self, record_id: str) -> Hypothesis:
         return self.get("hypotheses", record_id)  # type: ignore[return-value]
@@ -331,14 +435,19 @@ class ResearchStore:
 
     def list(self, collection: str) -> tuple[BaseModel, ...]:
         """Insertion-stable, time-ordered view of one collection."""
-        if collection not in self._data:
+        if collection not in _COLLECTIONS:
             raise KeyError(f"unknown collection {collection!r}")
-        return tuple(
-            sorted(
-                self._data[collection].values(),
-                key=lambda r: (getattr(r, "created_at"), repr(r)),  # noqa: B009
-            )
-        )
+        with self._session() as session:
+            rows = session.scalars(
+                select(ArtefactRow)
+                .where(ArtefactRow.collection == collection)
+                .order_by(ArtefactRow.created_at, ArtefactRow.id)
+            ).all()
+        records = [self._hydrate(r) for r in rows]
+        # Ties inside one timestamp are broken by the record's own canonical
+        # form, matching the JSONL store this replaced: two records filed in the
+        # same microsecond must not swap between reads.
+        return tuple(sorted(records, key=lambda r: (_created(r), repr(r))))
 
     def backtests_for(self, strategy_id: str) -> tuple[BacktestRecord, ...]:
         return tuple(
@@ -372,7 +481,14 @@ class ResearchStore:
         tags: Sequence[str] = (),
         limit: int = 20,
     ) -> tuple[ResearchNote, ...]:
-        """Substring + tag search.  Deterministic ordering, newest first."""
+        """Substring + tag search. Deterministic ordering, newest first.
+
+        Kept alongside :attr:`memory`, which answers a different question:
+        ``ResearchMemory.recall`` matches a STRATEGY against prior experiments by
+        structure, while this matches free text against filed notes. Collapsing
+        the two would lose the structural match, which is the one that catches a
+        rediscovery.
+        """
         needle = query.lower().strip()
         wanted = {t.lower() for t in tags}
         hits: list[tuple[int, ResearchNote]] = []
@@ -389,21 +505,30 @@ class ResearchStore:
                 if score == 0:
                     continue
             hits.append((score, note))
-        # Best match first; ties broken by most recent, then by id for full
-        # determinism (two notes filed in the same microsecond must not swap).
         hits.sort(key=lambda pair: (-pair[0], -pair[1].created_at.timestamp(), pair[1].note_id))
         return tuple(note for _score, note in hits[:limit])
 
     def counts(self) -> dict[str, int]:
-        return {name: len(values) for name, values in sorted(self._data.items())}
+        with self._session() as session:
+            rows = session.scalars(select(ArtefactRow.collection)).all()
+        counts = {name: 0 for name in _COLLECTIONS}
+        for name in rows:
+            counts[name] = counts.get(name, 0) + 1
+        return dict(sorted(counts.items()))
 
     def all_records(self) -> Iterable[BaseModel]:
-        for collection in sorted(self._data):
+        for collection in sorted(_COLLECTIONS):
             yield from self.list(collection)
+
+
+def _created(record: BaseModel) -> datetime:
+    value = getattr(record, "created_at", None)
+    return value if isinstance(value, datetime) else _now()
 
 
 __all__ = [
     "SCHEMA_VERSION",
+    "ArtefactRow",
     "BacktestRecord",
     "Critique",
     "ExperimentDesign",
