@@ -4,6 +4,31 @@ Reverse-chronological log of build, deployment, and maintenance actions.
 
 ---
 
+## 2026-07-09 — Grok Cursor onboarding audit (docs only)
+
+**What changed:** Evidence-led platform map for a new agent; refreshed current status. No execution/risk/strategy/schema/UI/deploy code changes.
+
+**Files:**
+- Created `docs/GROK_CURSOR_ONBOARDING_AUDIT.md` (22-section audit)
+- Rewrote `docs/CURRENT_STATUS.md` to 2026-07-09 truth (64 strategies, candidates UI, broker ledger ops gap)
+- This build-log entry
+
+**Commands run + results:**
+- `python --version` → 3.11.15
+- `pip install -e ".[dev]"` → OK
+- `python -m ruff check src/` → All checks passed
+- Full `pytest -q --timeout=120` → hung ~15m at ~6%; killed (environment/test hygiene)
+- Core subset (+ `test_broker_ledger`, `test_promotion`) → **122 passed**, 5 warnings, 56.02s
+- `npm run build` (frontend) → success; routes include `/research/candidates`
+- Registry introspection → `loaded_count=64`, tiers 12/9/25/10/8; instruments 67 / canonical 60
+- Local data → `data/canonical/histdata` 60 symbols, 7.2G; Phase-1 checkpoint 25 lines; sweep.csv 3401 rows; `broker_trades` count 0
+
+**Evidence:** command outputs above; audit appendix B.
+
+**Caveats / not done:** Did not verify prod Sync/`SBQLDCAC` visibility against Railway. Did not alter code. Recommended next slice: Broker Trade UI completion (IG read path + findability + bot linkage).
+
+---
+
 ## 2026-03-14 — Phase 19: UX + Correctness Hardening (in progress)
 
 **Slice A — DRY-UP TP-hit negative PnL explanation**

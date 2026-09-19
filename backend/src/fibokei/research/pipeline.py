@@ -70,15 +70,25 @@ class ComboResult:
     entries: list[str] = field(default_factory=list)
 
     def to_stats(self) -> dict:
-        """Full stat set persisted to the ledger (stats_json) for review."""
+        """Full stat set persisted to the ledger (stats_json) for review.
+
+        Values are coerced to native Python types: numpy scalars (np.bool_,
+        np.float64, ...) leak in from metric computations and are not
+        JSON-serializable, which crashes the ledger write.
+        """
         return {
-            "trades": self.trades, "composite": self.composite,
-            "sharpe": self.sharpe, "profit_factor": self.profit_factor,
-            "max_dd": self.max_dd, "net_profit": self.net_profit,
-            "wf_test_score": self.wf_test_score, "oos_score": self.oos_score,
-            "oos_robust": self.oos_robust, "mc_profit_prob": self.mc_profit_prob,
-            "mc_ruin_prob": self.mc_ruin_prob, "sens_stable": self.sens_stable,
-            "cost_net": self.cost_net, "rung_failed": self.rung_failed,
+            "trades": int(self.trades), "composite": float(self.composite),
+            "sharpe": float(self.sharpe),
+            "profit_factor": float(self.profit_factor),
+            "max_dd": float(self.max_dd), "net_profit": float(self.net_profit),
+            "wf_test_score": float(self.wf_test_score),
+            "oos_score": float(self.oos_score),
+            "oos_robust": bool(self.oos_robust),
+            "mc_profit_prob": float(self.mc_profit_prob),
+            "mc_ruin_prob": float(self.mc_ruin_prob),
+            "sens_stable": bool(self.sens_stable),
+            "cost_net": float(self.cost_net),
+            "rung_failed": str(self.rung_failed),
         }
 
 
@@ -284,10 +294,12 @@ def load_checkpoint(path: Path) -> set[str]:
 
 def append_checkpoint(path: Path, c: ComboResult) -> None:
     key = f"{c.strategy_id}|{c.instrument}|{c.timeframe}"
-    rec = {"key": key, "content_hash": c.content_hash, "trades": c.trades,
-           "composite": c.composite, "sharpe": c.sharpe,
-           "rung_failed": c.rung_failed, "recommended_state": c.recommended_state,
-           "status": c.status}
+    # Coerce to native types — numpy scalars break json.dumps (see to_stats).
+    rec = {"key": key, "content_hash": c.content_hash, "trades": int(c.trades),
+           "composite": float(c.composite), "sharpe": float(c.sharpe),
+           "rung_failed": str(c.rung_failed),
+           "recommended_state": str(c.recommended_state),
+           "status": str(c.status)}
     with path.open("a") as f:
         f.write(json.dumps(rec) + "\n")
 

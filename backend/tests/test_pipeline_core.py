@@ -47,6 +47,33 @@ def test_checkpoint_resume_skips_completed(tmp_path: Path):
     assert todo == [("s1", "EURUSD", "H1")]  # finished one skipped
 
 
+def test_stats_and_checkpoint_serialize_numpy_scalars(tmp_path: Path):
+    """Regression: numpy scalars (np.bool_/np.int64/np.float64) leaked into
+    stats_json and crashed the ledger write, wedging the Phase-1 backfill at
+    done=0. to_stats() and append_checkpoint() must coerce to native types."""
+    import json
+
+    import numpy as np
+
+    c = _c("s1", "EURUSD", "H4")
+    c.trades = np.int64(120)
+    c.composite = np.float64(0.61)
+    c.sharpe = np.float32(1.2)
+    c.oos_robust = np.bool_(True)
+    c.sens_stable = np.bool_(False)
+
+    stats = c.to_stats()
+    json.dumps(stats)  # must not raise
+    assert type(stats["trades"]) is int
+    assert type(stats["oos_robust"]) is bool
+    assert type(stats["sens_stable"]) is bool
+    assert type(stats["sharpe"]) is float
+
+    p = tmp_path / "checkpoint.jsonl"
+    append_checkpoint(p, c)  # must not raise
+    assert "s1|EURUSD|H4" in load_checkpoint(p)
+
+
 def test_trade_overlap():
     assert trade_overlap(["a", "b", "c"], ["a", "b"]) == 1.0  # subset
     assert trade_overlap(["a", "b"], ["c", "d"]) == 0.0

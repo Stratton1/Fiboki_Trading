@@ -61,3 +61,9 @@ Thumbs.db
 *.db
 *.sqlite3
 fiboki_backup_*.sql
+
+# debug probe debris (never commit)
+_*.db
+_*.db-journal
+*.db-journal
+_*probe*

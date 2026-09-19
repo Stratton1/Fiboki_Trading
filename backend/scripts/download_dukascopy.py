@@ -91,7 +91,11 @@ def _read_csv(csv_path: Path) -> pd.DataFrame | None:
     df = pd.read_csv(csv_path)
     if "timestamp" not in df.columns or df.empty:
         return None
-    df["timestamp"] = pd.to_datetime(df["timestamp"], unit="ms", utc=True)
+    # Coerce to numeric epoch-ms first: under pandas 3.0, to_datetime(unit="ms")
+    # on a string column takes the date-string path and overflows on big ints.
+    df["timestamp"] = pd.to_datetime(
+        pd.to_numeric(df["timestamp"], errors="coerce"), unit="ms", utc=True)
+    df = df.dropna(subset=["timestamp"])
     if "volume" not in df.columns:
         df["volume"] = 0.0
     df = df.set_index("timestamp").sort_index()
