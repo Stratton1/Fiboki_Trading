@@ -1,8 +1,9 @@
 # Fiboki V2 — Completion Report
 
-**Programme:** Phases A–L, executed continuously on 19 September 2026.
-**Verified at completion:** 3,112 tests passing, 2 skipped, 85 of them hand-calculated golden financial tests. `ruff check src` clean. 65,458 lines of source across 22 packages, 36,077 lines of tests.
-**Repository:** a self-contained git repository with six checkpoint commits, built in isolation. It has not been merged into `Fiboki_Trading` — see USER_ACTIONS C1.
+**Programme:** Phases A–L, executed continuously on 19–20 September 2026.
+**Verified at completion:** 3,315 tests passing, 2 skipped, including hand-calculated golden financial tests. `ruff check src tests` clean, `mypy` down to a single error in an excluded directory. 69,359 lines of source across 23 packages, 40,293 lines of tests.
+**Verified on the target machine:** the tree was synced to the MacBook and the suite was run there under a fresh Python 3.11 environment — it passes.
+**Repository:** a self-contained git repository with eight checkpoint commits, now present on the Mac at `Fiboki/v2` with full history.
 
 Status labels are used strictly throughout: **IMPLEMENTED** means the code exists and its tests pass. **VERIFIED** means I ran it and checked the result myself. **PARTIALLY VERIFIED** means tested in part, with the untested part named. **UNWIRED** means implemented and tested but nothing calls it in a running system. **BLOCKED** means waiting on an external dependency. **REQUIRES FORWARD DATA** means it cannot be verified until the platform has been running for a period.
 
@@ -10,17 +11,21 @@ Status labels are used strictly throughout: **IMPLEMENTED** means the code exist
 
 ## 1. The headline
 
-Fiboki V2 is an honest research platform that currently says: **no strategy qualifies.**
+Fiboki V2 is an honest research platform that, after two campaigns and 4,026 trials, says: **no strategy qualifies.**
 
-Campaign K1 ran 326 true trials on XAUUSD H4 and produced zero survivors. Twenty-six candidates died at the sanity rung, four at walk-forward, none reached deflation, and the holdout has never been consumed by anything. Nothing was tuned to produce a different answer.
+Campaign K1 ran 326 trials on one instrument. Campaign K2 ran 542 cells across 13 instruments and 539,059 bars of H4 data, with a true trial count of 3,700 fixed before any compute was spent and propagated into the deflation threshold. Both produced zero survivors. The holdout has never been consumed on any of the 16 datasets.
 
-That is the programme working. The point of the rebuild was to stop the platform from manufacturing false positives, and the most direct evidence that it has stopped is that it now returns nothing when there is nothing.
+K2 matters more than K1 because of depth, not verdict. With 16 instruments the 400-trade minimum became reachable for 140 of 542 cells, so **the purged cross-validation, robustness and deflation rungs executed against real market data for the first time**. The deepest cell — a Donchian breakout mutant on GBPJPY — reached a per-bar Sharpe of 0.01026 against a noise threshold of 0.02183. That threshold is the Sharpe a search of 3,700 trials is expected to produce from pure chance. The best thing found across two campaigns was **below what the search would have manufactured from nothing**.
 
-Two results from the build are worth more than any strategy ranking.
+The regime breakdown on that same cell is the sharpest single result in the programme. It is a channel-breakout system, so it should earn its money when markets trend. Segmented by regime, its trending bucket produced +68 over 108 trades at a t-statistic of 0.05, while 120% of its net profit sat in a single neutral-direction bucket. The method worked exactly as intended and reported: this was the sample, not a mechanism.
+
+Three results from the build are worth more than any strategy ranking.
 
 **The V1-versus-V2 procedure contrast, measured on real market data.** On XAUUSD H4, the V1 procedure — evaluating fixed default parameters on the test window — reports a positive out-of-sample rate of 0.0394 and a 50% window hit rate for the Ichimoku seed. The V2 procedure, which selects parameters on the training window and transfers *that* selection to the test window, loses in every single fold: walk-forward efficiency −150.96%, hit rate 0 of 4. Same strategy, same data, same engine. The difference is entirely the honesty of the procedure.
 
 **Implementing the strategies correctly made two of them worse.** Once the engine honoured the exit vocabulary the documents actually declared, the Ichimoku seed went from +$720 to −$52 and its trade count fell from 71 to 49, because `avoid_rollover_hour` — declared `true` by every seed document and silently ignored by the engine — removes one H4 entry bar in six. The Donchian seed went from 6 trades in thirteen years to 583, because its ATR chandelier trail had never executed. Neither change was a tuning decision; both were the engine stopping lying about what the strategy said.
+
+**The deflation bar rises as the search grows, automatically.** Between K1 and K2 the same cell's required threshold rose about 24% purely because more things were tried. That is the mechanism V1 lacked entirely, and it is why V1's 23,040-combination search could rank noise with confidence.
 
 ---
 
@@ -113,13 +118,15 @@ Campaign K1: 326 true trials, 30 mutants evaluated, 13 skipped as out of univers
 
 ## 7. Best surviving candidates
 
-**There are none, and I will not manufacture one.**
+**There are none, across two campaigns and 4,026 trials, and I will not manufacture one.**
 
-The nearest approaches were the Donchian breakout with ATR trail, which now clears the 400-trade production minimum and dies at walk-forward efficiency 38.86 against a required 50, and the MACD/EMA hybrid at 5.6. Neither is a finding. Both are strategies that failed a gate, and the gate is the point.
+The deepest cell reached was a Donchian breakout mutant on GBPJPY, which cleared the sanity, screen, walk-forward, purged-CV and robustness rungs and died at deflation with a per-bar Sharpe of 0.01026 against a required 0.02183. Its regime breakdown shows the edge was not where the mechanism says it should be. That is a rejection with an explanation, which is the most useful kind.
 
-A necessary caveat on the rejections: the dominant reason was the 400-trade minimum, a bar written for a campaign across 60 instruments. A single instrument on a single timeframe mostly cannot reach it. Most cells were therefore rejected for having **too little evidence, not bad evidence**. Nothing here demonstrates that the underlying effects do not exist — only that this data cannot establish that they do.
+Across K2, rejection reasons were: insufficient trades 402 cells (74.2%), non-positive expectancy 115 (21.2%), walk-forward efficiency 17, no profitable parameterisation 4, out-of-sample hit rate 2, parameter plateau 1, deflated Sharpe 1.
 
----
+One premise of mine needs qualifying, and the campaign agent was right to push back on it. I expected 16 instruments to dissolve the 400-trade constraint. It did not: the minimum was reachable for 140 of 542 cells, but insufficient trades still accounted for 74.2% of rejections against roughly 70% in K1. The Ichimoku and MACD families median 68 and 55 trades over twenty years and cannot reach 400 on any instrument here at any declared parameter setting. That is a fact about those strategies' trade frequency meeting a fixed gate, and it means the gate and the strategy library need to be designed together rather than independently.
+
+An instrument pattern worth recording as a data finding rather than a research one: GBPJPY and EURJPY carry the highest median trade counts and cleared rung 0 most often, and DE40 has the fewest bars but the highest clear rate. The search is finding instruments whose bar statistics happen to fit a fixed trade minimum and a fixed ATR stop. Three ingested instruments — AUDJPY, UK100 and XAGUSD — are in no seed's declared universe and were never testable, which is a gap in the strategy library rather than in the data.
 
 ## 8. Data inventory and what the migration found
 
@@ -167,27 +174,25 @@ Not defended against, and stated plainly: a compromised operator workstation, a 
 
 ## 11. Unresolved defects and technical debt
 
-~~The IG and OANDA adapters have no position manager — the largest item before demo enablement.~~ **CLOSED.** `broker/position_manager.py`'s `VenuePositionManager` drives the same `PositionBook` the backtester and the paper adapter drive, against IG, OANDA and the simulated venue: the hard stop and the first target are attached at entry, and every later leg, trail step, breakeven move and time stop is issued as a venue amendment or partial close when a bar closes. `tests/integration/test_venue_position_manager.py` asserts byte-identical trade and leg ledgers across all three venues.
+**Closed since the first report.** The IG and OANDA adapters now drive the same `PositionBook` as the backtester and paper adapter, with byte-identical ledgers across all five execution paths under the full exit vocabulary — this was the largest item before demo enablement. The four dead `RiskContext` inputs now carry real data, with the day boundary derived from the clock rather than from a job having run (V1's daily reset lived inside a 21:00 summary block, so a worker down at 21:00 meant the daily stop could never fire again). `MarketStateEngine.replay()` takes 26,837 bars from roughly 3.55 hours to 2.06 seconds, bit-identically. `ExitReason.BREAKEVEN` exists with an explicit open-set persistence contract. The structural fingerprint now distinguishes session and event restrictions. `ruff` is at zero and `mypy` at one.
 
-What is NOT closed, and cannot be: a client-side exit still depends on the worker being alive. It is now *measured* (`managed_exit_exposure`, a per-bar account-currency number and a Prometheus gauge) and *gated* (`require_venue_realisable()` refuses demo promotion for a policy a venue cannot hold unless a named operator accepts the exposure). See `USER_ACTIONS.md` D2.
+**Still open.**
 
-Two residual approximations in that path, both recorded rather than reconciled away. The manager's book is MODELLED — its entry price is the fill simulator's, not the venue's — so every level derived from the entry, the breakeven move above all, inherits the dealt-versus-modelled difference; it is on every `AmendTelemetry` row as `entry_divergence`. And a restart cannot recover `bars_held`, so **a time stop is longer than the document says across a restart**.
+`MarketStateEngine.ingest_bar` remains O(history) per call, and when `max_history_bars` binds, an expanding percentile silently becomes a rolling one. The exact incremental percentile primitive is built and proven bit-identical, but it has no production caller: making the whole feature path streaming requires a shared streaming kernel in `indicators/` and a re-stamp of every stored feature and regime value. That is a phase of work, not a patch, and the honest position is that the batch replay path is what makes long histories practical today.
 
-The lifecycle service is implemented and tested but nothing schedules `evaluate()` outside the worker path that was wired late; treat it as PARTIALLY UNWIRED until you have watched it run.
+All five seed strategies' structure hashes moved when the fingerprint learned to see session restrictions. **Prior novelty verdicts and any persisted `structure_hash` are stale and must be recomputed.** Both the old and new hashes are pinned in a test so a further unintended move fails loudly.
 
-`MarketStateEngine.ingest_bar` recomputes features over the retained window, so it is O(n²) on a long replay and was dropped from the long demo. It needs incremental features or a cap before production.
+A position reconstructed from a venue after a restart cannot tell a breakeven stop from a trailing stop, cannot recover `bars_held` (so a time stop runs longer than the document says), and cannot distinguish legs already banked from legs never reached — the ladder is re-planned over the remaining size, producing more scale-outs than declared at the declared prices. Each is reported as a divergence rather than guessed.
 
-`research/structure.py`'s structural fingerprint has no token for session or event restrictions, so two documents differing only in when they may deal share a hash. The discovery layer works around it at the decision layer rather than in the fingerprint.
+The position manager's book is modelled, not dealt: entry price comes from the fill simulator rather than the venue, so every level derived from entry inherits that difference. It is recorded as `entry_divergence` on every amend and deliberately not corrected, because correcting it would make demo run a different strategy from the backtest.
 
-`ExitReason` has no `BREAKEVEN` member, so a breakeven stop-out currently reports as `TRAILING_STOP`. The enum's values are persisted, which is why it was not widened unilaterally. It needs a decision.
+`DataStore` returns microsecond-resolution timestamps while `Trade` uses nanoseconds, so regime analysis of stored bars fails on the mismatch until one side is converted. Worked around locally during K2; the proper fix belongs in the data layer.
 
-Backfilled prior trials are double-counted for one strategy in the K1 trial accounting. This makes deflation *more* demanding, so the error is in the safe direction, and it is recorded rather than quietly corrected.
+The `misaligned_bar_start` integrity warning fires on 100% of H4 bars and 0% of H1 bars, because the alignment anchor is midnight UTC while the corrected HistData H4 grid is anchored at 21:00. It is a warning only and nothing acts on it, but a warning that always fires is a warning nobody reads.
 
-Every stored backtest predating the exit-vocabulary change is invalid. The evaluation cache key was bumped so stale entries miss, and a supersession sweep marks old records rather than deleting them.
+The IG and OANDA adapters remain fixture-tested rather than endpoint-tested. First contact with a real demo endpoint will find discrepancies.
 
 **A correction to my own earlier audit.** The audit of 19 September quoted minimum track record lengths of 2.8 years to separate an observed Sharpe of 1.0 from zero and 11.2 years from 0.5. Computed against the implemented function at Gaussian moments and 95% confidence, those are 5.1 and 17.2 years. The implemented values are more demanding, so the direction is safe — but the audit figures were wrong and the implementation is right.
-
----
 
 ## 12. Recommended next research
 
