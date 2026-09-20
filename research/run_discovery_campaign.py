@@ -45,10 +45,15 @@ import argparse
 import json
 import sys
 import time
+from collections.abc import Sequence
 from pathlib import Path
 from typing import Any
 
+import pandas as pd
+
 from fiboki.core.enums import Timeframe
+from fiboki.core.instruments import get as get_instrument
+from fiboki.core.money import SeriesFxSource
 from fiboki.data.schema import DatasetKind
 from fiboki.data.store import DataStore
 from fiboki.discovery.campaign import (
@@ -77,9 +82,28 @@ from fiboki.validation.report import ValidationReport
 SEED_DIR = Path("research/strategies")
 HYPOTHESIS_DIR = Path("research/hypotheses")
 
-#: XAUUSD is quoted in USD and the account is run in USD so that no exchange
-#: rate is invented. Every monetary figure in the report is therefore USD.
+#: The account currency for the campaign. Every monetary figure is in it.
 ACCOUNT_CCY = "USD"
+
+#: Quote currency -> the HistData series that converts it into USD.
+#:
+#: Nine of sixteen H4 series are quoted in something other than USD, and
+#: ``run_validation`` refuses to run those in a USD account without a real rate
+#: rather than applying a 1.0 that would mis-state every monetary figure by the
+#: exchange rate. These are the pairs that supply the rate.
+#: :class:`~fiboki.core.money.SeriesFxSource` derives the inverse itself, so
+#: ``USDJPY`` serves ``JPY -> USD`` as ``1 / USDJPY`` and no rate is inverted by
+#: hand. The rates are bid closes from the same HistData source as the bars, and
+#: the conversion is therefore a bid-to-bid conversion, not a mid one -- stated
+#: rather than corrected, because correcting it would need an ask series that
+#: does not exist.
+FX_SERIES_FOR: dict[str, str] = {
+    "JPY": "USDJPY",
+    "CHF": "USDCHF",
+    "CAD": "USDCAD",
+    "GBP": "GBPUSD",
+    "EUR": "EURUSD",
+}
 
 #: Loosened ONLY under ``--gates diagnostic``, and only so that the rungs after
 #: 0 execute on real data. 25 trades is not a promotion bar.
@@ -106,6 +130,98 @@ def gate_set_for(mode: str) -> GateSet:
         f"diagnostic-single-instrument-min{DIAGNOSTIC_MIN_TRADES}",
         min_trades=float(DIAGNOSTIC_MIN_TRADES),
     )
+
+
+def build_fx_source(
+    store: DataStore, instruments: Sequence[str], timeframe: Timeframe
+) -> tuple[SeriesFxSource | None, str, dict[str, Any]]:
+    """An FX source over the SAME ingested bars, or an honest refusal.
+
+    Returns ``(source, label, coverage)``. ``coverage`` names which pairs were
+    loaded, which quote currencies each instrument needs, and -- the part that
+    matters -- any instrument whose first bar predates the first observation of
+    the series that has to convert it, because ``SeriesFxSource`` looks up
+    as-of BACKWARD and will raise rather than extrapolate. Such an instrument is
+    reported here so it can be dropped from the universe deliberately instead of
+    erroring cell by cell halfway through a campaign.
+    """
+    needed: dict[str, list[str]] = {}
+    for symbol in instruments:
+        quote = get_instrument(symbol.upper()).quote.upper()
+        if quote != ACCOUNT_CCY:
+            needed.setdefault(quote, []).append(symbol.upper())
+    if not needed:
+        return None, "", {"pairs_loaded": [], "needed_by_quote_ccy": {}}
+
+    series: dict[str, pd.Series] = {}
+    loaded: dict[str, dict[str, Any]] = {}
+    missing: dict[str, str] = {}
+    for quote in sorted(needed):
+        pair = FX_SERIES_FOR.get(quote)
+        if pair is None:
+            missing[quote] = f"no series declared in FX_SERIES_FOR for {quote}"
+            continue
+        try:
+            frame, version = store.read_latest(
+                pair, timeframe, kind=DatasetKind.VALIDATED
+            )
+        except Exception as exc:
+            missing[quote] = f"{pair} {timeframe.value} not readable: {exc}"
+            continue
+        close = frame["close"].astype(float)
+        series[pair.upper()] = close
+        loaded[pair.upper()] = {
+            "quote_ccy_served": quote,
+            "dataset_version_id": str(version.version_id),
+            "observations": int(len(close)),
+            "first": str(close.index[0]),
+            "last": str(close.index[-1]),
+        }
+
+    # Coverage: a rate must exist at or before every bar it has to convert.
+    uncovered: list[dict[str, Any]] = []
+    for quote, symbols in sorted(needed.items()):
+        pair = FX_SERIES_FOR.get(quote)
+        if pair is None or pair.upper() not in series:
+            for symbol in symbols:
+                uncovered.append(
+                    {"instrument": symbol, "quote_ccy": quote, "reason": missing.get(quote, "")}
+                )
+            continue
+        fx_first = series[pair.upper()].index[0]
+        for symbol in symbols:
+            try:
+                bars, _ = store.read_latest(symbol, timeframe, kind=DatasetKind.VALIDATED)
+            except Exception as exc:
+                uncovered.append(
+                    {"instrument": symbol, "quote_ccy": quote, "reason": f"bars unreadable: {exc}"}
+                )
+                continue
+            if len(bars) and bars.index[0] < fx_first:
+                uncovered.append(
+                    {
+                        "instrument": symbol,
+                        "quote_ccy": quote,
+                        "reason": (
+                            f"first bar {bars.index[0]} predates the first {pair} "
+                            f"observation {fx_first}; an as-of backward lookup has "
+                            "nothing to read there and would raise"
+                        ),
+                    }
+                )
+
+    label = (
+        "SeriesFxSource(" + ", ".join(f"{k}->{v['quote_ccy_served']}" for k, v in sorted(loaded.items()))
+        + f"; bid closes, HistData {timeframe.value}, as-of backward)"
+    )
+    coverage = {
+        "pairs_loaded": loaded,
+        "needed_by_quote_ccy": {k: sorted(v) for k, v in sorted(needed.items())},
+        "missing_series": missing,
+        "instruments_without_usable_coverage": uncovered,
+        "label": label,
+    }
+    return (SeriesFxSource(series=series) if series else None), label, coverage
 
 
 def bars_from_store(store: DataStore):
@@ -159,6 +275,24 @@ def main(argv: list[str] | None = None) -> int:
         ),
     )
     parser.add_argument(
+        "--external-prior-trials",
+        type=int,
+        default=0,
+        help=(
+            "Trials already spent on THESE BARS that this ledger cannot see. A "
+            "dataset version id hashes content together with lineage, so a fresh "
+            "ingest of identical bytes mints a new id and the ledger reports zero "
+            "prior trials for a series that has been searched hundreds of times. "
+            "This adds them back. It can only raise the trial count, and it is "
+            "refused without --external-prior-trials-reason."
+        ),
+    )
+    parser.add_argument(
+        "--external-prior-trials-reason",
+        default="",
+        help="Where those trials were spent and how you know they were on these bars.",
+    )
+    parser.add_argument(
         "--plan-only",
         action="store_true",
         help="Print the plan and the trial accounting, and run nothing.",
@@ -171,10 +305,28 @@ def main(argv: list[str] | None = None) -> int:
     seeds = seed_documents(SEED_DIR)
     hypotheses = load_hypotheses(HYPOTHESIS_DIR)
 
+    instruments = [s.upper() for s in args.instruments]
+    timeframes = [Timeframe(t) for t in args.timeframes]
+    fx, fx_label, fx_coverage = build_fx_source(store, instruments, timeframes[0])
+    (args.out / "fx_coverage.json").write_text(
+        json.dumps(fx_coverage, indent=2, default=str), encoding="utf-8"
+    )
+    if fx is None:
+        print("fx: none needed -- every instrument is quoted in the account currency")
+    else:
+        print(f"fx: {fx_label}")
+        for pair, detail in sorted(fx_coverage["pairs_loaded"].items()):
+            print(
+                f"     {pair} serves {detail['quote_ccy_served']}->{ACCOUNT_CCY}, "
+                f"{detail['observations']:,} obs {detail['first'][:10]}..{detail['last'][:10]}"
+            )
+    for row in fx_coverage.get("instruments_without_usable_coverage", ()):
+        print(f"     NO FX COVERAGE {row['instrument']}: {row['reason']}")
+
     spec = CampaignSpec(
         campaign_id=args.campaign_id,
-        universe=tuple(s.upper() for s in args.instruments),
-        timeframes=tuple(Timeframe(t) for t in args.timeframes),
+        universe=tuple(instruments),
+        timeframes=tuple(timeframes),
         hypotheses=hypotheses,
         actor=args.actor,
         actor_kind=ActorKind.AGENT,
@@ -186,12 +338,21 @@ def main(argv: list[str] | None = None) -> int:
         sweep_parameters=SWEEP_AXES,
         walk_forward_folds=args.folds,
         max_generations=args.generations,
+        external_prior_trials=args.external_prior_trials,
+        external_prior_trials_reason=args.external_prior_trials_reason,
+        fx_label=fx_label,
         notes=(
             f"Phase K campaign {args.campaign_id} on "
-            f"{', '.join(args.instruments)} {', '.join(args.timeframes)}, "
-            f"{args.gates} gate set, USD account, IG_REALISTIC profile, no FX "
-            "conversion performed. Every cell is deflated against the campaign's "
-            "true trial count, not against its own parameter sweep."
+            f"{len(instruments)} instrument(s) {', '.join(instruments)} "
+            f"{', '.join(args.timeframes)}, {args.gates} gate set, "
+            f"{ACCOUNT_CCY} account, IG_REALISTIC profile, "
+            + (
+                f"quote currencies converted by {fx_label}. "
+                if fx is not None
+                else "no FX conversion performed. "
+            )
+            + "Every cell is deflated against the campaign's true trial count, "
+            "not against its own parameter sweep."
         ),
     )
 
@@ -219,6 +380,7 @@ def main(argv: list[str] | None = None) -> int:
         checkpoint=CampaignCheckpoint(args.out / "checkpoint.json"),
         report_dir=args.out,
         cache_dir=args.cache,
+        fx=fx,
     )
 
     print(f"gate set: {gates.version} (min_trades={gates.by_name('min_trades').threshold:g})")
@@ -235,8 +397,12 @@ def main(argv: list[str] | None = None) -> int:
     print()
     print(
         f"TRUE TRIAL COUNT {plan.true_trial_count} "
-        f"(planned {plan.planned_trial_count} + prior {plan.prior_trial_count})"
+        f"(planned {plan.planned_trial_count} "
+        f"+ ledger prior {plan.prior_trial_count} "
+        f"+ declared prior {plan.external_prior_trial_count})"
     )
+    if plan.external_prior_trial_count:
+        print(f"  declared prior trials because: {plan.external_prior_trials_reason}")
     if args.plan_only:
         store.close()
         ledger.close()
@@ -334,6 +500,7 @@ def _digest(report: Any, elapsed: float) -> dict[str, Any]:
         "datasets": report.dataset_versions,
         "planned_trials": report.planned_trial_count,
         "prior_trials": report.prior_trial_count,
+        "trial_accounting": report.lineage.get("trial_accounting", {}),
         "true_trial_count": report.true_trial_count,
         "ladder_evaluations": report.n_ladder_evaluations,
         "engine_backtests_run": report.n_engine_evaluations,

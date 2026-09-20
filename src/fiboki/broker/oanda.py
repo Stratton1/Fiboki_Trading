@@ -59,6 +59,7 @@ from fiboki.broker.base import (
     DuplicateClientRef,
     OrderAck,
     OrderStatus,
+    PositionNotFound,
 )
 from fiboki.core.contracts import AccountState, Fill, Order, Position
 from fiboki.core.enums import Direction, ExecutionMode
@@ -634,7 +635,7 @@ class OandaAdapter(BrokerAdapter):
             {"units": "ALL"},
         )
         if response.status == 404:
-            raise BrokerRejected(f"OANDA has no trade {position.venue_ref}")
+            raise PositionNotFound(f"OANDA has no trade {position.venue_ref}")
         if not response.ok:
             raise BrokerUnavailable(f"OANDA close HTTP {response.status}; fate unknown")
         fill_tx = response.body.get("orderFillTransaction", {}) or {}
@@ -658,5 +659,164 @@ class OandaAdapter(BrokerAdapter):
                 venue_ref=str(position.venue_ref),
             ),
             message=reason or "closed",
+            raw=response.body,
+        )
+
+    # -- venue-side position management ------------------------------------
+
+    def amend_position(
+        self,
+        position: Position,
+        *,
+        stop_loss: float | None,
+        take_profit: float | None,
+        client_ref: str,
+        reason: str = "",
+    ) -> OrderAck:
+        """``PUT /v3/accounts/{id}/trades/{tradeID}/orders``.
+
+        OANDA's dependent-order endpoint replaces the trade's stop-loss and
+        take-profit orders. A level named in the payload is set; a level ABSENT
+        from the payload is left alone. That is the opposite of IG's whole-set
+        semantics, and it is the reason the two adapters do not share this
+        method: pretending one shape fits both is how a trail step deletes a
+        target on one venue and not the other.
+
+        A ``None`` argument is therefore simply omitted here, which is the
+        documented "leave it as it is" of the :class:`BrokerAdapter` contract.
+        """
+        if not position.venue_ref:
+            raise BrokerRejected(
+                "Cannot amend an OANDA trade with no trade id. Amendment is keyed "
+                "on the venue's reference, exactly like closing is."
+            )
+        instrument = get_instrument(position.instrument)
+        precision = instrument.price_precision
+        payload: dict[str, Any] = {}
+        if stop_loss is not None:
+            payload["stopLoss"] = {
+                "price": f"{float(stop_loss):.{precision}f}",
+                "timeInForce": "GTC",
+            }
+        if take_profit is not None:
+            payload["takeProfit"] = {
+                "price": f"{float(take_profit):.{precision}f}",
+                "timeInForce": "GTC",
+            }
+        if not payload:
+            raise BrokerRejected(
+                "amend_position was given neither a stop nor a target. An amend "
+                "that changes nothing is a bug in the caller, not a no-op to "
+                "absorb here."
+            )
+
+        response = self._call(
+            "PUT",
+            self._account_path(f"/trades/{position.venue_ref}/orders"),
+            payload,
+        )
+        if response.status == 404:
+            raise PositionNotFound(f"OANDA has no trade {position.venue_ref}")
+        if response.status == 400:
+            err = str(
+                response.body.get("errorCode", "")
+                or response.body.get("errorMessage", "")
+                or response.body
+            )
+            raise BrokerRejected(f"OANDA refused the amendment: {err}")
+        if response.status in (401, 403):
+            raise BrokerRejected(f"OANDA auth failure on amend: HTTP {response.status}")
+        if not response.ok:
+            raise BrokerUnavailable(
+                f"OANDA amend HTTP {response.status}; the venue's levels are unknown"
+            )
+        body = response.body
+        # A REJECT transaction is the venue saying no AFTER a 2xx. Reading only
+        # the status code would record a trail step as applied that never was.
+        for key in (
+            "stopLossOrderRejectTransaction",
+            "takeProfitOrderRejectTransaction",
+        ):
+            rejected = body.get(key)
+            if rejected:
+                raise BrokerRejected(
+                    f"OANDA rejected the amendment: {rejected.get('rejectReason')}"
+                )
+        when = self._now_fn()
+        for key in ("stopLossOrderTransaction", "takeProfitOrderTransaction"):
+            tx = body.get(key) or {}
+            if tx.get("time"):
+                when = pd.Timestamp(tx["time"]).tz_convert("UTC")
+                break
+        return OrderAck(
+            status=OrderStatus.ACCEPTED,
+            broker_ref=str(position.venue_ref),
+            client_ref=client_ref,
+            order_id=client_ref,
+            submitted_at=when,
+            acked_at=when,
+            message=reason or "amended",
+            raw=body,
+        )
+
+    def close_partial(
+        self, position: Position, *, size: float, client_ref: str, reason: str = ""
+    ) -> OrderAck:
+        """Close ``size`` units of a trade. The units are the manager's number."""
+        if not position.venue_ref:
+            raise BrokerRejected("Cannot partially close an OANDA trade with no trade id")
+        if size <= 0 or size > position.size + 1e-9:
+            raise BrokerRejected(
+                f"OANDA partial close of {size} is not within the open size "
+                f"{position.size}; the adapter will not clamp it."
+            )
+        instrument = get_instrument(position.instrument)
+        if instrument.is_fx:
+            rounded = round(size)
+            if abs(rounded - size) > 1e-9:
+                raise BrokerRejected(
+                    f"{position.instrument}: partial size {size} is not an integer "
+                    "number of OANDA units. The adapter will not round -- that is "
+                    "an adapter re-deciding the size."
+                )
+            units = str(int(rounded))
+        else:
+            units = f"{float(size):.10f}".rstrip("0").rstrip(".")
+
+        response = self._call(
+            "PUT",
+            self._account_path(f"/trades/{position.venue_ref}/close"),
+            {"units": units},
+        )
+        if response.status == 404:
+            raise PositionNotFound(f"OANDA has no trade {position.venue_ref}")
+        if response.status == 400:
+            raise BrokerRejected(f"OANDA refused the partial close: {response.body}")
+        if not response.ok:
+            raise BrokerUnavailable(
+                f"OANDA partial close HTTP {response.status}; fate unknown"
+            )
+        fill_tx = response.body.get("orderFillTransaction", {}) or {}
+        when = pd.Timestamp(fill_tx.get("time") or self._now_fn()).tz_convert("UTC")
+        price = float(fill_tx.get("price", 0.0))
+        return OrderAck(
+            status=OrderStatus.FILLED,
+            broker_ref=str(position.venue_ref),
+            client_ref=client_ref,
+            order_id=client_ref,
+            submitted_at=when,
+            acked_at=when,
+            fill=Fill(
+                order_id=client_ref,
+                instrument=position.instrument,
+                direction=position.direction.opposite,
+                filled_size=float(size),
+                filled_price=price,
+                requested_price=price,
+                filled_at=when,
+                venue_ref=str(position.venue_ref),
+                partial=size + 1e-9 < position.size,
+            ),
+            message=reason or "partially_closed",
             raw=response.body,
         )

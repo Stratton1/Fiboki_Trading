@@ -1,0 +1,594 @@
+{
+  "campaign_id": "k2_multi_instrument_h4",
+  "gate_set_version": "v2.0.0-audit",
+  "true_trial_count": 3700,
+  "trial_accounting": {
+    "planned_in_this_campaign": 3350,
+    "prior_from_ledger": 0,
+    "prior_declared_externally": 350,
+    "external_reason": "K1 (campaign k1_xauusd_h4) spent 326 trials on XAUUSD H4, and the earlier ladder runs in research/reports/xauusd_h4/ spent 184 in total, of which K1 counted 160; the remaining 24 are the superseded-engine set on ds_45aeaa0e6921181e43384041. All of them were spent on the SAME XAUUSD H4 bars this campaign reads: re-running research/run_xauusd_h4_ladder.py's ingest() against data/canonical/histdata today reproduces ds_817053e6d9976bdc8f40bca9, the version K2 uses, over the same 26,837 bars 2009-03-15..2025-12-31, and research/reports/xauusd_h4/README.md records that the differing version ids are fresh lineage nodes over identical bytes. This campaign's ledger is new so it can see none of them. 350 = 166 planned by K1 + 184 in that directory. K1's 30 XAUUSD mutant cells are planned again here, so those trials are counted twice; double counting makes the deflation HARDER, not easier, and it is stated rather than quietly netted off. NOT counted: an aborted first attempt at this campaign that completed 141 cells before being stopped, because it ran the SAME plan on the same bars and every cell it completed was on a USD-quoted instrument where the FX source added here is a no-op -- those are the same trials this run performs, not additional ones.",
+    "true_trial_count": 3700
+  },
+  "campaign_deflation_threshold": 0.02183127465797646,
+  "deflation_variance_used": 3.656612699145103e-05,
+  "cells_attempted": 542,
+  "cells_skipped": 273,
+  "survivors": [],
+  "deepest_rung_reached": {
+    "RUNG 0 SANITY": 517,
+    "RUNG 1 IN_SAMPLE": 4,
+    "RUNG 2 WALK_FORWARD": 19,
+    "RUNG 4 ROBUSTNESS": 1,
+    "RUNG 5 DEFLATION": 1
+  },
+  "rungs_executed_on_n_cells": {
+    "RUNG 0 SANITY": 542,
+    "RUNG 1 IN_SAMPLE": 25,
+    "RUNG 2 WALK_FORWARD": 21,
+    "RUNG 3 PURGED_CV": 2,
+    "RUNG 4 ROBUSTNESS": 2,
+    "RUNG 5 DEFLATION": 1
+  },
+  "rejections_by_rung": {
+    "RUNG 0 SANITY": 517,
+    "RUNG 2 WALK_FORWARD": 19,
+    "RUNG 1 IN_SAMPLE_SCREEN": 4,
+    "RUNG 4 ROBUSTNESS": 1,
+    "RUNG 5 DEFLATION": 1
+  },
+  "rejections_by_binding_gate": {
+    "min_trades": 402,
+    "RUNG 0 SANITY": 115,
+    "walk_forward_efficiency": 17,
+    "RUNG 1 IN_SAMPLE_SCREEN": 4,
+    "oos_window_hit_rate": 2,
+    "parameter_plateau": 1,
+    "deflated_sharpe": 1
+  },
+  "rejections_by_rung_then_gate": {
+    "RUNG 0 SANITY": {
+      "min_trades": 402,
+      "RUNG 0 SANITY": 115
+    },
+    "RUNG 2 WALK_FORWARD": {
+      "walk_forward_efficiency": 17,
+      "oos_window_hit_rate": 2
+    },
+    "RUNG 4 ROBUSTNESS": {
+      "parameter_plateau": 1
+    },
+    "RUNG 1 IN_SAMPLE_SCREEN": {
+      "RUNG 1 IN_SAMPLE_SCREEN": 4
+    },
+    "RUNG 5 DEFLATION": {
+      "deflated_sharpe": 1
+    }
+  },
+  "min_trades_rejection_share": 0.7417,
+  "skips_by_kind": {
+    "mutation_rejected": 15,
+    "out_of_universe": 258
+  },
+  "per_instrument": [
+    {
+      "instrument": "AUDUSD",
+      "timeframe": "H4",
+      "bars": 39010,
+      "cells": 50,
+      "survivors": 0,
+      "cleared_rung_0": 0,
+      "deepest_rung": "RUNG 0 SANITY",
+      "rejections": {
+        "min_trades": 37,
+        "RUNG 0 SANITY": 13
+      },
+      "n_cells_with_trade_count": 50,
+      "median_trades": 235.0,
+      "max_trades": 960.0,
+      "cells_at_or_above_400_trades": 13
+    },
+    {
+      "instrument": "EURUSD",
+      "timeframe": "H4",
+      "bars": 40540,
+      "cells": 50,
+      "survivors": 0,
+      "cleared_rung_0": 2,
+      "deepest_rung": "RUNG 2 WALK_FORWARD",
+      "rejections": {
+        "min_trades": 37,
+        "RUNG 0 SANITY": 11,
+        "RUNG 1 IN_SAMPLE_SCREEN": 1,
+        "walk_forward_efficiency": 1
+      },
+      "n_cells_with_trade_count": 50,
+      "median_trades": 179.0,
+      "max_trades": 909.0,
+      "cells_at_or_above_400_trades": 13
+    },
+    {
+      "instrument": "GBPUSD",
+      "timeframe": "H4",
+      "bars": 40543,
+      "cells": 50,
+      "survivors": 0,
+      "cleared_rung_0": 0,
+      "deepest_rung": "RUNG 0 SANITY",
+      "rejections": {
+        "min_trades": 37,
+        "RUNG 0 SANITY": 13
+      },
+      "n_cells_with_trade_count": 50,
+      "median_trades": 213.0,
+      "max_trades": 902.0,
+      "cells_at_or_above_400_trades": 13
+    },
+    {
+      "instrument": "NZDUSD",
+      "timeframe": "H4",
+      "bars": 32714,
+      "cells": 50,
+      "survivors": 0,
+      "cleared_rung_0": 0,
+      "deepest_rung": "RUNG 0 SANITY",
+      "rejections": {
+        "min_trades": 38,
+        "RUNG 0 SANITY": 12
+      },
+      "n_cells_with_trade_count": 50,
+      "median_trades": 190.0,
+      "max_trades": 802.0,
+      "cells_at_or_above_400_trades": 12
+    },
+    {
+      "instrument": "USDCAD",
+      "timeframe": "H4",
+      "bars": 39635,
+      "cells": 50,
+      "survivors": 0,
+      "cleared_rung_0": 0,
+      "deepest_rung": "RUNG 0 SANITY",
+      "rejections": {
+        "min_trades": 37,
+        "RUNG 0 SANITY": 13
+      },
+      "n_cells_with_trade_count": 50,
+      "median_trades": 172.0,
+      "max_trades": 752.0,
+      "cells_at_or_above_400_trades": 13
+    },
+    {
+      "instrument": "USDCHF",
+      "timeframe": "H4",
+      "bars": 40494,
+      "cells": 50,
+      "survivors": 0,
+      "cleared_rung_0": 1,
+      "deepest_rung": "RUNG 2 WALK_FORWARD",
+      "rejections": {
+        "min_trades": 37,
+        "RUNG 0 SANITY": 12,
+        "walk_forward_efficiency": 1
+      },
+      "n_cells_with_trade_count": 50,
+      "median_trades": 199.0,
+      "max_trades": 871.0,
+      "cells_at_or_above_400_trades": 13
+    },
+    {
+      "instrument": "USDJPY",
+      "timeframe": "H4",
+      "bars": 40561,
+      "cells": 50,
+      "survivors": 0,
+      "cleared_rung_0": 0,
+      "deepest_rung": "RUNG 0 SANITY",
+      "rejections": {
+        "min_trades": 37,
+        "RUNG 0 SANITY": 13
+      },
+      "n_cells_with_trade_count": 50,
+      "median_trades": 209.0,
+      "max_trades": 849.0,
+      "cells_at_or_above_400_trades": 13
+    },
+    {
+      "instrument": "DE40",
+      "timeframe": "H4",
+      "bars": 18061,
+      "cells": 37,
+      "survivors": 0,
+      "cleared_rung_0": 7,
+      "deepest_rung": "RUNG 2 WALK_FORWARD",
+      "rejections": {
+        "min_trades": 30,
+        "walk_forward_efficiency": 5,
+        "RUNG 1 IN_SAMPLE_SCREEN": 2
+      },
+      "n_cells_with_trade_count": 37,
+      "median_trades": 174.0,
+      "max_trades": 476.0,
+      "cells_at_or_above_400_trades": 7
+    },
+    {
+      "instrument": "EURJPY",
+      "timeframe": "H4",
+      "bars": 38175,
+      "cells": 37,
+      "survivors": 0,
+      "cleared_rung_0": 1,
+      "deepest_rung": "RUNG 4 ROBUSTNESS",
+      "rejections": {
+        "min_trades": 25,
+        "RUNG 0 SANITY": 11,
+        "parameter_plateau": 1
+      },
+      "n_cells_with_trade_count": 37,
+      "median_trades": 281.0,
+      "max_trades": 818.0,
+      "cells_at_or_above_400_trades": 12
+    },
+    {
+      "instrument": "GBPJPY",
+      "timeframe": "H4",
+      "bars": 37863,
+      "cells": 37,
+      "survivors": 0,
+      "cleared_rung_0": 9,
+      "deepest_rung": "RUNG 5 DEFLATION",
+      "rejections": {
+        "min_trades": 25,
+        "walk_forward_efficiency": 7,
+        "RUNG 0 SANITY": 3,
+        "RUNG 1 IN_SAMPLE_SCREEN": 1,
+        "deflated_sharpe": 1
+      },
+      "n_cells_with_trade_count": 37,
+      "median_trades": 286.0,
+      "max_trades": 842.0,
+      "cells_at_or_above_400_trades": 12
+    },
+    {
+      "instrument": "US500",
+      "timeframe": "H4",
+      "bars": 24066,
+      "cells": 37,
+      "survivors": 0,
+      "cleared_rung_0": 0,
+      "deepest_rung": "RUNG 0 SANITY",
+      "rejections": {
+        "min_trades": 28,
+        "RUNG 0 SANITY": 9
+      },
+      "n_cells_with_trade_count": 37,
+      "median_trades": 211.0,
+      "max_trades": 609.0,
+      "cells_at_or_above_400_trades": 9
+    },
+    {
+      "instrument": "XAUUSD",
+      "timeframe": "H4",
+      "bars": 26837,
+      "cells": 37,
+      "survivors": 0,
+      "cleared_rung_0": 5,
+      "deepest_rung": "RUNG 2 WALK_FORWARD",
+      "rejections": {
+        "min_trades": 27,
+        "RUNG 0 SANITY": 5,
+        "walk_forward_efficiency": 3,
+        "oos_window_hit_rate": 2
+      },
+      "n_cells_with_trade_count": 37,
+      "median_trades": 202.0,
+      "max_trades": 659.0,
+      "cells_at_or_above_400_trades": 10
+    },
+    {
+      "instrument": "EURGBP",
+      "timeframe": "H4",
+      "bars": 38170,
+      "cells": 7,
+      "survivors": 0,
+      "cleared_rung_0": 0,
+      "deepest_rung": "RUNG 0 SANITY",
+      "rejections": {
+        "min_trades": 7
+      },
+      "n_cells_with_trade_count": 7,
+      "median_trades": 202.0,
+      "max_trades": 292.0,
+      "cells_at_or_above_400_trades": 0
+    }
+  ],
+  "per_family": [
+    {
+      "family": "donchian_breakout_atr",
+      "cells": 127,
+      "survivors": 0,
+      "cleared_rung_0": 23,
+      "median_trades": 711.0
+    },
+    {
+      "family": "fib_golden_pocket_pullback",
+      "cells": 120,
+      "survivors": 0,
+      "cleared_rung_0": 2,
+      "median_trades": 313.5
+    },
+    {
+      "family": "ichimoku_kumo_trend",
+      "cells": 103,
+      "survivors": 0,
+      "cleared_rung_0": 0,
+      "median_trades": 68.0
+    },
+    {
+      "family": "macd_ema_trend_hybrid",
+      "cells": 115,
+      "survivors": 0,
+      "cleared_rung_0": 0,
+      "median_trades": 55.0
+    },
+    {
+      "family": "rsi_band",
+      "cells": 77,
+      "survivors": 0,
+      "cleared_rung_0": 0,
+      "median_trades": 200.0
+    }
+  ],
+  "trade_count_extremes": {
+    "max": [
+      "AUDUSD",
+      960.0
+    ],
+    "min": [
+      "AUDUSD",
+      0.0
+    ],
+    "median_across_all_cells": 199.0
+  },
+  "holdout": {
+    "consumptions": [],
+    "segments": [
+      {
+        "dataset_version_id": "ds_0e3faa46dff1175060e9d326",
+        "data_start": "2005-08-12T21:00:00+00:00",
+        "data_end": "2025-12-31T21:00:00+00:00",
+        "holdout_start": "2021-12-03T16:12:00+00:00",
+        "holdout_fraction": 0.2,
+        "label": "NZDUSD H4",
+        "holdout_window": {
+          "name": "holdout::ds_0e3faa46dff1175060e9d326",
+          "start": "2021-12-03T16:12:00+00:00",
+          "end": "2025-12-31T21:00:00+00:00"
+        },
+        "research_window": {
+          "name": "research::ds_0e3faa46dff1175060e9d326",
+          "start": "2005-08-12T21:00:00+00:00",
+          "end": "2021-12-03T16:12:00+00:00"
+        }
+      },
+      {
+        "dataset_version_id": "ds_1dda4939609f65d3e4598af5",
+        "data_start": "2000-05-30T21:00:00+00:00",
+        "data_end": "2025-12-31T21:00:00+00:00",
+        "holdout_start": "2020-11-18T16:12:00+00:00",
+        "holdout_fraction": 0.2,
+        "label": "USDJPY H4",
+        "holdout_window": {
+          "name": "holdout::ds_1dda4939609f65d3e4598af5",
+          "start": "2020-11-18T16:12:00+00:00",
+          "end": "2025-12-31T21:00:00+00:00"
+        },
+        "research_window": {
+          "name": "research::ds_1dda4939609f65d3e4598af5",
+          "start": "2000-05-30T21:00:00+00:00",
+          "end": "2020-11-18T16:12:00+00:00"
+        }
+      },
+      {
+        "dataset_version_id": "ds_2520a5885ca425d750bceeff",
+        "data_start": "2010-11-14T21:00:00+00:00",
+        "data_end": "2025-12-31T21:00:00+00:00",
+        "holdout_start": "2022-12-22T16:12:00+00:00",
+        "holdout_fraction": 0.2,
+        "label": "US500 H4",
+        "holdout_window": {
+          "name": "holdout::ds_2520a5885ca425d750bceeff",
+          "start": "2022-12-22T16:12:00+00:00",
+          "end": "2025-12-31T21:00:00+00:00"
+        },
+        "research_window": {
+          "name": "research::ds_2520a5885ca425d750bceeff",
+          "start": "2010-11-14T21:00:00+00:00",
+          "end": "2022-12-22T16:12:00+00:00"
+        }
+      },
+      {
+        "dataset_version_id": "ds_35b64adc59ad1ab04b21891a",
+        "data_start": "2000-05-30T21:00:00+00:00",
+        "data_end": "2025-12-31T21:00:00+00:00",
+        "holdout_start": "2020-11-18T16:12:00+00:00",
+        "holdout_fraction": 0.2,
+        "label": "GBPUSD H4",
+        "holdout_window": {
+          "name": "holdout::ds_35b64adc59ad1ab04b21891a",
+          "start": "2020-11-18T16:12:00+00:00",
+          "end": "2025-12-31T21:00:00+00:00"
+        },
+        "research_window": {
+          "name": "research::ds_35b64adc59ad1ab04b21891a",
+          "start": "2000-05-30T21:00:00+00:00",
+          "end": "2020-11-18T16:12:00+00:00"
+        }
+      },
+      {
+        "dataset_version_id": "ds_40c4a73dcfc949c253309279",
+        "data_start": "2002-03-03T21:00:00+00:00",
+        "data_end": "2025-12-31T21:00:00+00:00",
+        "holdout_start": "2021-03-27T01:48:00+00:00",
+        "holdout_fraction": 0.2,
+        "label": "EURJPY H4",
+        "holdout_window": {
+          "name": "holdout::ds_40c4a73dcfc949c253309279",
+          "start": "2021-03-27T01:48:00+00:00",
+          "end": "2025-12-31T21:00:00+00:00"
+        },
+        "research_window": {
+          "name": "research::ds_40c4a73dcfc949c253309279",
+          "start": "2002-03-03T21:00:00+00:00",
+          "end": "2021-03-27T01:48:00+00:00"
+        }
+      },
+      {
+        "dataset_version_id": "ds_6df120b22d63737e477c57b5",
+        "data_start": "2010-11-15T05:00:00+00:00",
+        "data_end": "2025-12-31T17:00:00+00:00",
+        "holdout_start": "2022-12-22T14:36:00+00:00",
+        "holdout_fraction": 0.2,
+        "label": "DE40 H4",
+        "holdout_window": {
+          "name": "holdout::ds_6df120b22d63737e477c57b5",
+          "start": "2022-12-22T14:36:00+00:00",
+          "end": "2025-12-31T17:00:00+00:00"
+        },
+        "research_window": {
+          "name": "research::ds_6df120b22d63737e477c57b5",
+          "start": "2010-11-15T05:00:00+00:00",
+          "end": "2022-12-22T14:36:00+00:00"
+        }
+      },
+      {
+        "dataset_version_id": "ds_7667128f4d105f1c3db58f32",
+        "data_start": "2002-05-01T13:00:00+00:00",
+        "data_end": "2025-12-31T21:00:00+00:00",
+        "holdout_start": "2021-04-07T19:24:00+00:00",
+        "holdout_fraction": 0.2,
+        "label": "GBPJPY H4",
+        "holdout_window": {
+          "name": "holdout::ds_7667128f4d105f1c3db58f32",
+          "start": "2021-04-07T19:24:00+00:00",
+          "end": "2025-12-31T21:00:00+00:00"
+        },
+        "research_window": {
+          "name": "research::ds_7667128f4d105f1c3db58f32",
+          "start": "2002-05-01T13:00:00+00:00",
+          "end": "2021-04-07T19:24:00+00:00"
+        }
+      },
+      {
+        "dataset_version_id": "ds_817053e6d9976bdc8f40bca9",
+        "data_start": "2009-03-15T21:00:00+00:00",
+        "data_end": "2025-12-31T21:00:00+00:00",
+        "holdout_start": "2022-08-22T21:00:00+00:00",
+        "holdout_fraction": 0.2,
+        "label": "XAUUSD H4",
+        "holdout_window": {
+          "name": "holdout::ds_817053e6d9976bdc8f40bca9",
+          "start": "2022-08-22T21:00:00+00:00",
+          "end": "2025-12-31T21:00:00+00:00"
+        },
+        "research_window": {
+          "name": "research::ds_817053e6d9976bdc8f40bca9",
+          "start": "2009-03-15T21:00:00+00:00",
+          "end": "2022-08-22T21:00:00+00:00"
+        }
+      },
+      {
+        "dataset_version_id": "ds_872f168ff7f7132af53b868e",
+        "data_start": "2002-03-03T21:00:00+00:00",
+        "data_end": "2025-12-31T21:00:00+00:00",
+        "holdout_start": "2021-03-27T01:48:00+00:00",
+        "holdout_fraction": 0.2,
+        "label": "EURGBP H4",
+        "holdout_window": {
+          "name": "holdout::ds_872f168ff7f7132af53b868e",
+          "start": "2021-03-27T01:48:00+00:00",
+          "end": "2025-12-31T21:00:00+00:00"
+        },
+        "research_window": {
+          "name": "research::ds_872f168ff7f7132af53b868e",
+          "start": "2002-03-03T21:00:00+00:00",
+          "end": "2021-03-27T01:48:00+00:00"
+        }
+      },
+      {
+        "dataset_version_id": "ds_a1a788203a3a5aa2d14f4917",
+        "data_start": "2000-05-30T21:00:00+00:00",
+        "data_end": "2025-12-31T21:00:00+00:00",
+        "holdout_start": "2020-11-18T16:12:00+00:00",
+        "holdout_fraction": 0.2,
+        "label": "USDCHF H4",
+        "holdout_window": {
+          "name": "holdout::ds_a1a788203a3a5aa2d14f4917",
+          "start": "2020-11-18T16:12:00+00:00",
+          "end": "2025-12-31T21:00:00+00:00"
+        },
+        "research_window": {
+          "name": "research::ds_a1a788203a3a5aa2d14f4917",
+          "start": "2000-05-30T21:00:00+00:00",
+          "end": "2020-11-18T16:12:00+00:00"
+        }
+      },
+      {
+        "dataset_version_id": "ds_a304e7c3fd751ef6be04ce52",
+        "data_start": "2000-06-12T17:00:00+00:00",
+        "data_end": "2025-12-31T21:00:00+00:00",
+        "holdout_start": "2020-11-21T05:48:00+00:00",
+        "holdout_fraction": 0.2,
+        "label": "USDCAD H4",
+        "holdout_window": {
+          "name": "holdout::ds_a304e7c3fd751ef6be04ce52",
+          "start": "2020-11-21T05:48:00+00:00",
+          "end": "2025-12-31T21:00:00+00:00"
+        },
+        "research_window": {
+          "name": "research::ds_a304e7c3fd751ef6be04ce52",
+          "start": "2000-06-12T17:00:00+00:00",
+          "end": "2020-11-21T05:48:00+00:00"
+        }
+      },
+      {
+        "dataset_version_id": "ds_b0ee7d8fd1cc8f40714cd2da",
+        "data_start": "2000-06-05T17:00:00+00:00",
+        "data_end": "2025-12-31T21:00:00+00:00",
+        "holdout_start": "2020-11-19T20:12:00+00:00",
+        "holdout_fraction": 0.2,
+        "label": "AUDUSD H4",
+        "holdout_window": {
+          "name": "holdout::ds_b0ee7d8fd1cc8f40714cd2da",
+          "start": "2020-11-19T20:12:00+00:00",
+          "end": "2025-12-31T21:00:00+00:00"
+        },
+        "research_window": {
+          "name": "research::ds_b0ee7d8fd1cc8f40714cd2da",
+          "start": "2000-06-05T17:00:00+00:00",
+          "end": "2020-11-19T20:12:00+00:00"
+        }
+      },
+      {
+        "dataset_version_id": "ds_ce5009f8f12e1c407c45994d",
+        "data_start": "2000-05-30T21:00:00+00:00",
+        "data_end": "2025-12-31T21:00:00+00:00",
+        "holdout_start": "2020-11-18T16:12:00+00:00",
+        "holdout_fraction": 0.2,
+        "label": "EURUSD H4",
+        "holdout_window": {
+          "name": "holdout::ds_ce5009f8f12e1c407c45994d",
+          "start": "2020-11-18T16:12:00+00:00",
+          "end": "2025-12-31T21:00:00+00:00"
+        },
+        "research_window": {
+          "name": "research::ds_ce5009f8f12e1c407c45994d",
+          "start": "2000-05-30T21:00:00+00:00",
+          "end": "2020-11-18T16:12:00+00:00"
+        }
+      }
+    ],
+    "n_consumed": 0,
+    "unconsumed": true,
+    "note": "No candidate reached rung 6, so the holdout segment is untouched and remains available for a future campaign."
+  }
+}

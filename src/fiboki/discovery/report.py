@@ -330,8 +330,8 @@ class CampaignReport:
             f"ladder over {scope}, against gate set {self.gate_set_version or 'unversioned'}. "
             f"The true trial count for the whole search is {self.true_trial_count} "
             f"({self.planned_trial_count} planned in this campaign plus "
-            f"{self.prior_trial_count} already in the ledger for the same dataset "
-            "version(s)), and that is the number the deflation used -- not the size "
+            f"{self.prior_trial_count} already spent on the same bars before it "
+            "began), and that is the number the deflation used -- not the size "
             "of any one strategy's own parameter sweep."
         )
         if not self.survivors:
@@ -467,7 +467,8 @@ class CampaignReport:
             "## Trial accounting",
             "",
             f"- planned in this campaign: **{self.planned_trial_count}**",
-            f"- already in the ledger for the same dataset version(s): **{self.prior_trial_count}**",
+            f"- already spent on the same bars before this campaign began: "
+            f"**{self.prior_trial_count}**",
             f"- **true trial count: {self.true_trial_count}**",
             f"- ladder evaluations requested: {self.n_ladder_evaluations}",
             f"- engine backtests actually run: {self.n_engine_evaluations} "

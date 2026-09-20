@@ -580,12 +580,73 @@ def test_breakeven_moves_the_stop_to_entry_at_the_declared_r():
     protected = _run(frame, signal, policy=ExitPolicy(breakeven_at_r=1.0))
     assert protected.trades[0].exit_price == pytest.approx(1.1000, abs=1e-12)
     assert protected.trades[0].net_pnl == pytest.approx(0.0, abs=1e-9)
-    assert protected.trades[0].exit_reason is ExitReason.TRAILING_STOP
+    # BREAKEVEN, not TRAILING_STOP: no trail is declared on this policy at all,
+    # so the old label was simply false. See ``ExitReason.BREAKEVEN``.
+    assert protected.trades[0].exit_reason is ExitReason.BREAKEVEN
     assert protected.trades[0].exit_time == pd.Timestamp("2024-01-02 12:00", tz="UTC")
 
     unprotected = _run(frame, signal)
     assert unprotected.trades[0].exit_reason is ExitReason.END_OF_DATA
     assert unprotected.trades[0].net_pnl == pytest.approx(-40.0, abs=1e-9)
+
+
+def test_a_trail_that_takes_over_from_breakeven_reports_the_trail():
+    """Breakeven first, trail second: the level in force came from the trail.
+
+    Long 10,000 at 1.1000, stop 1.0900 => 0.0100 risk. ``breakeven_at_r=0.5``
+    and a 0.0050 fixed-distance trail with no activation threshold.
+
+      04:00: MFE = 1.1060 - 1.1000 = 0.0060 -> 0.60R. Breakeven proposes
+             1.1000; the trail proposes 1.1060 - 0.0050 = 1.1010, which is
+             better, so 1.1010 is what is placed and the trail is what moved it.
+      08:00: low 1.0995 <= 1.1010 -> stopped out at 1.1010.
+
+    The exit reason must be TRAILING_STOP. Reporting BREAKEVEN here would
+    credit the breakeven rule with a level it did not set.
+    """
+    frame = make_frame([
+        ("2024-01-02 00:00", 1.1000, 1.1010, 1.0990, 1.1000),
+        ("2024-01-02 04:00", 1.1000, 1.1060, 1.0995, 1.1050),
+        ("2024-01-02 08:00", 1.1050, 1.1055, 1.0995, 1.1000),
+    ])
+    res = _run(
+        frame,
+        [_signal("2024-01-02 00:00", 1.1000, 1.0900)],
+        policy=ExitPolicy(
+            breakeven_at_r=0.5,
+            trailing=TrailSpec(kind=TrailKind.FIXED_DISTANCE, value=0.0050),
+        ),
+    )
+    assert res.trades[0].exit_price == pytest.approx(1.1010, abs=1e-12)
+    assert res.trades[0].exit_reason is ExitReason.TRAILING_STOP
+
+
+def test_a_stop_that_never_moved_is_still_a_plain_stop():
+    """A declared breakeven rule that never fires changes no label at all."""
+    frame = make_frame([
+        ("2024-01-02 00:00", 1.1000, 1.1010, 1.0990, 1.1000),
+        ("2024-01-02 04:00", 1.1000, 1.1005, 1.0890, 1.0900),
+    ])
+    res = _run(
+        frame,
+        [_signal("2024-01-02 00:00", 1.1000, 1.0900)],
+        policy=ExitPolicy(breakeven_at_r=5.0),
+    )
+    assert res.trades[0].exit_reason is ExitReason.STOP_LOSS
+
+
+def test_breakeven_is_a_persisted_value_readers_can_round_trip():
+    """The enum value is what lands in a stored trade, and it must come back."""
+    assert ExitReason.BREAKEVEN.value == "breakeven"
+    assert ExitReason("breakeven") is ExitReason.BREAKEVEN
+    # Every previously stored value still resolves: adding a member widens the
+    # vocabulary, it does not invalidate anything already written.
+    for value in (
+        "stop_loss", "take_profit", "trailing_stop", "time_stop",
+        "opposite_signal", "invalidation", "session_close", "risk_halt",
+        "end_of_data", "margin_call",
+    ):
+        assert ExitReason(value).value == value
 
 
 def test_breakeven_below_the_current_stop_is_not_applied():

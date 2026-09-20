@@ -51,6 +51,7 @@ from fiboki.marketstate.cross_asset import (
 from fiboki.marketstate.features import (
     FEATURE_ENGINE_VERSION,
     DroppedBars,
+    ExpandingRankTracker,
     FeatureConfig,
     FeatureEngine,
     FeatureError,
@@ -116,6 +117,7 @@ __all__ = [
     "EconomicCalendar",
     "EconomicEvent",
     "EngineConfig",
+    "ExpandingRankTracker",
     "FeatureConfig",
     "FeatureEngine",
     "FeatureError",

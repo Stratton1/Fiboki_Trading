@@ -50,6 +50,7 @@ from fiboki.strategy.primitives import (
     collect_indicators,
     count_rules,
     is_ref,
+    literal_number,
     resolve_refs,
 )
 
@@ -229,10 +230,12 @@ class StopModel(BaseModel):
         # A reference is treated as POSSIBLY positive, so the atr operand is
         # required. Refusing later, after binding, would let a document validate
         # today and fail mid-sweep tomorrow.
-        if (is_ref(self.buffer_atr) or self.buffer_atr > 0) and self.atr is None:
+        buffer_atr = literal_number(self.buffer_atr)
+        if (buffer_atr is None or buffer_atr > 0) and self.atr is None:
             raise ValueError("buffer_atr > 0 needs an 'atr' operand")
+        min_distance_atr = literal_number(self.min_distance_atr)
         if (
-            (is_ref(self.min_distance_atr) or self.min_distance_atr > 0)
+            (min_distance_atr is None or min_distance_atr > 0)
             and self.atr is None
             and self.kind != "atr_multiple"
         ):
@@ -275,7 +278,8 @@ class TrailingModel(BaseModel):
         if self.kind == "atr_chandelier":
             if self.atr is None:
                 raise ValueError("atr_chandelier trailing needs an 'atr' operand")
-            if not is_ref(self.value) and self.value <= 0:
+            value = literal_number(self.value)
+            if value is not None and value <= 0:
                 raise ValueError("atr_chandelier trailing needs value > 0")
         if self.kind == "indicator_line" and self.level is None:
             raise ValueError("indicator_line trailing needs a 'level' operand")

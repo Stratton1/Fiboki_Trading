@@ -55,6 +55,7 @@ from typing import Any, Protocol
 import pandas as pd
 
 from fiboki.core.enums import Timeframe
+from fiboki.core.money import FxRateSource
 from fiboki.discovery.hypothesis import Hypothesis, HypothesisLedger
 from fiboki.discovery.mutation import MutationEngine, MutationProposal, mutation_lineage
 from fiboki.discovery.novelty import NoveltyIndex, NoveltyVerdict
@@ -166,7 +167,51 @@ class CampaignSpec:
     the true trial count. On by default: those trials were part of the search
     that this campaign's results have to be corrected for."""
 
+    external_prior_trials: int = 0
+    """Trials spent on THESE BARS that the ledger cannot see, declared by hand.
+
+    A :class:`~fiboki.data.versioning.DatasetVersion` id hashes the content
+    checksum together with its lineage, so re-ingesting identical bytes through
+    a different path mints a NEW id for the SAME BARS. The ledger keys prior
+    trials on the version id, so after a re-ingest it reports zero prior trials
+    for a series that has in fact been searched hundreds of times -- which is
+    the under-counting Phase K exists to prevent, in a new form.
+
+    This field is the escape hatch, and it is deliberately blunt: it can only
+    ADD trials, which can only make the deflation harder, and it is refused
+    without a reason that a reader can check. It is not a tuning knob.
+    """
+
+    external_prior_trials_reason: str = ""
+    """Why :attr:`external_prior_trials` is what it is. Mandatory when non-zero:
+    a trial count nobody can reconstruct is the defect this phase exists to fix."""
+
+    fx_label: str = ""
+    """What converts an instrument's QUOTE currency into :attr:`account_ccy`.
+
+    A campaign over a real universe is mostly NOT quoted in its account
+    currency: of sixteen HistData series, nine are quoted in JPY, GBP, CHF, CAD
+    or EUR. ``run_validation`` refuses to run those without an FX source rather
+    than applying a 1.0 that would mis-state every monetary figure by the
+    exchange rate, so a multi-instrument campaign has to supply one -- and this
+    field is the serialisable record of WHICH one, since the source object
+    itself is passed to the runner and cannot go in a JSON report.
+    """
+
     notes: str = ""
+
+    def __post_init__(self) -> None:
+        if self.external_prior_trials < 0:
+            raise ValueError(
+                "external_prior_trials cannot be negative: this field exists to "
+                "remember trials the ledger has forgotten, never to discount them"
+            )
+        if self.external_prior_trials and not self.external_prior_trials_reason.strip():
+            raise ValueError(
+                "external_prior_trials was set without a reason. State where those "
+                "trials were spent and how you know they were spent on these bars; "
+                "an undeclared trial count is a silent one."
+            )
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -191,6 +236,9 @@ class CampaignSpec:
             "max_generations": int(self.max_generations),
             "mutation_operators": list(self.mutation_operators),
             "include_prior_trials": bool(self.include_prior_trials),
+            "external_prior_trials": int(self.external_prior_trials),
+            "external_prior_trials_reason": self.external_prior_trials_reason,
+            "fx_label": self.fx_label,
             "notes": self.notes,
         }
 
@@ -266,16 +314,25 @@ class CampaignPlan:
     skipped: tuple[SkippedCell, ...] = ()
     rejected_mutations: tuple[MutationProposal, ...] = field(default=(), repr=False)
     prior_trial_count: int = 0
+    """Trials the LEDGER holds for the dataset versions in play."""
     dataset_versions: dict[str, str] = field(default_factory=dict)
+    external_prior_trial_count: int = 0
+    """Trials on these bars that the ledger cannot see, declared on the spec."""
+    external_prior_trials_reason: str = ""
 
     @property
     def planned_trial_count(self) -> int:
         return sum(c.n_trials for c in self.cells)
 
     @property
+    def total_prior_trial_count(self) -> int:
+        """Everything tried before this campaign, from both sources."""
+        return self.prior_trial_count + self.external_prior_trial_count
+
+    @property
     def true_trial_count(self) -> int:
         """Every parameterisation this search will have tried, plus the history."""
-        return self.planned_trial_count + self.prior_trial_count
+        return self.planned_trial_count + self.total_prior_trial_count
 
     def external_trials_for(self, cell: CandidateCell) -> int:
         """Trials run OUTSIDE this candidate's own sweep. Never negative.
@@ -289,9 +346,15 @@ class CampaignPlan:
         lines = [
             f"{len(self.cells)} cells queued, {len(self.skipped)} skipped, "
             f"{len(self.rejected_mutations)} mutations refused",
-            f"planned trials {self.planned_trial_count} + prior {self.prior_trial_count} "
+            f"planned trials {self.planned_trial_count} "
+            f"+ ledger prior {self.prior_trial_count} "
+            f"+ declared prior {self.external_prior_trial_count} "
             f"= TRUE TRIAL COUNT {self.true_trial_count}",
         ]
+        if self.external_prior_trial_count:
+            lines.append(
+                f"  declared prior trials: {self.external_prior_trials_reason}"
+            )
         lines += [f"  {c.describe()}" for c in self.cells]
         return "\n".join(lines)
 
@@ -420,8 +483,17 @@ def run_cell(
     experiment_id: str = "",
     notes: str = "",
     cache_dir: str | Path | None = None,
+    fx: FxRateSource | None = None,
+    fx_label: str = "",
 ) -> CellOutcome:
-    """The production validator: the real engine, through the real ladder."""
+    """The production validator: the real engine, through the real ladder.
+
+    ``fx`` is forwarded rather than defaulted here. ``run_validation`` builds an
+    :class:`~fiboki.core.money.IdentityFxSource` only when the instrument's quote
+    currency already equals the account currency, and raises otherwise -- so
+    passing ``None`` for a JPY-quoted instrument in a USD account is a refusal,
+    not a silent 1.0.
+    """
     try:
         run = run_validation(
             document=cell.document,
@@ -435,6 +507,8 @@ def run_cell(
             initial_balance=spec.initial_balance,
             risk_fraction=spec.risk_fraction,
             gate_set=spec.gate_set,
+            fx=fx,
+            fx_label=fx_label or spec.fx_label,
             ladder_config=ladder_config,
             holdout_fraction=spec.holdout_fraction,
             max_grid_points=spec.max_grid_points,
@@ -481,8 +555,17 @@ class CampaignRunner:
         mutation_engine: MutationEngine | None = None,
         novelty: NoveltyIndex | None = None,
         cache_dir: str | Path | None = None,
+        fx: FxRateSource | None = None,
     ) -> None:
+        if fx is not None and not spec.fx_label.strip():
+            raise ValueError(
+                "an FX source was supplied but spec.fx_label is blank. The source "
+                "object cannot go in a JSON report, so the label is the only record "
+                "a reader gets of how quote currencies were converted; an undeclared "
+                "conversion is a silent one."
+            )
         self.spec = spec
+        self.fx = fx
         self.bars = bars
         self.ledger = ledger
         self.registry = registry
@@ -493,7 +576,12 @@ class CampaignRunner:
         self.hypotheses = HypothesisLedger(ledger)
         self.cache_dir = cache_dir
         self._validator = validator or (
-            lambda **kw: run_cell(cache_dir=self.cache_dir, **kw)
+            lambda **kw: run_cell(
+                cache_dir=self.cache_dir,
+                fx=self.fx,
+                fx_label=self.spec.fx_label,
+                **kw,
+            )
         )
         self._bar_cache: dict[tuple[str, str], BarSet | None] = {}
 
@@ -611,6 +699,8 @@ class CampaignRunner:
             rejected_mutations=tuple(self.mutations.rejected),
             prior_trial_count=self._prior_trial_count(),
             dataset_versions=dict(self._known_dataset_versions()),
+            external_prior_trial_count=int(self.spec.external_prior_trials),
+            external_prior_trials_reason=self.spec.external_prior_trials_reason,
         )
 
     def _population(
@@ -1053,7 +1143,7 @@ class CampaignRunner:
             skipped=skipped,
             rejected_mutations=tuple(p.to_dict() for p in plan.rejected_mutations),
             planned_trial_count=plan.planned_trial_count,
-            prior_trial_count=plan.prior_trial_count,
+            prior_trial_count=plan.total_prior_trial_count,
             true_trial_count=plan.true_trial_count,
             n_engine_evaluations=engine_evaluations,
             n_ladder_evaluations=sum(int(c.n_evaluations) for c in results),
@@ -1061,7 +1151,16 @@ class CampaignRunner:
             deflation_variance_used=variance,
             deflation_note=note,
             holdout=self._holdout_state(plan),
-            lineage=mutation_lineage(list(self.mutations.proposals)).to_dict(),
+            lineage={
+                **mutation_lineage(list(self.mutations.proposals)).to_dict(),
+                "trial_accounting": {
+                    "planned_in_this_campaign": int(plan.planned_trial_count),
+                    "prior_from_ledger": int(plan.prior_trial_count),
+                    "prior_declared_externally": int(plan.external_prior_trial_count),
+                    "external_reason": plan.external_prior_trials_reason,
+                    "true_trial_count": int(plan.true_trial_count),
+                },
+            },
         )
         if self.report_dir is not None:
             report.save(self.report_dir / f"campaign_{self.spec.campaign_id}.json")

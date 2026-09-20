@@ -97,7 +97,7 @@ def test_duplicate_timestamps_are_detected():
 
 def test_non_monotonic_index_is_detected():
     frame = make_bars(periods=50)
-    shuffled = frame.iloc[[0, 1, 5, 2, 3, 4] + list(range(6, 50))]
+    shuffled = frame.iloc[[0, 1, 5, 2, 3, 4, *range(6, 50)]]
     report = validate(shuffled)
     assert report.has(DefectCode.NON_MONOTONIC_INDEX)
     assert report.by_code(DefectCode.NON_MONOTONIC_INDEX).severity is Severity.ERROR

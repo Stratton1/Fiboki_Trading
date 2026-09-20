@@ -1,0 +1,2418 @@
+{
+  "histdata_root": "/home/claude/v2/data/canonical/histdata",
+  "data_root": "/tmp/claude-0/-home-claude/9877530d-b85e-5cd6-8708-2bf1b965546f/scratchpad/k2_dataroot",
+  "series_found": 18,
+  "series_usable": 18,
+  "series_excluded": [],
+  "total_bars_ingested": 794812,
+  "total_bars_stored": 794810,
+  "total_rows_removed_by_repair": 2,
+  "dataset_versions": {
+    "AUDJPY_H4": "ds_19f44f2abfd555e57a286b15",
+    "AUDUSD_H4": "ds_b0ee7d8fd1cc8f40714cd2da",
+    "DE40_H4": "ds_6df120b22d63737e477c57b5",
+    "EURGBP_H4": "ds_872f168ff7f7132af53b868e",
+    "EURJPY_H4": "ds_40c4a73dcfc949c253309279",
+    "EURUSD_H1": "ds_bf8d24a154c0c858c6e4bd7d",
+    "EURUSD_H4": "ds_ce5009f8f12e1c407c45994d",
+    "GBPJPY_H4": "ds_7667128f4d105f1c3db58f32",
+    "GBPUSD_H4": "ds_35b64adc59ad1ab04b21891a",
+    "NZDUSD_H4": "ds_0e3faa46dff1175060e9d326",
+    "UK100_H4": "ds_de15bdaad611ef7e8a79a22d",
+    "US500_H4": "ds_2520a5885ca425d750bceeff",
+    "USDCAD_H4": "ds_a304e7c3fd751ef6be04ce52",
+    "USDCHF_H4": "ds_a1a788203a3a5aa2d14f4917",
+    "USDJPY_H4": "ds_1dda4939609f65d3e4598af5",
+    "XAGUSD_H4": "ds_62662a885909bc6cfbba42c9",
+    "XAUUSD_H1": "ds_0df90b7d6e72504697fa17bf",
+    "XAUUSD_H4": "ds_817053e6d9976bdc8f40bca9"
+  },
+  "series": [
+    {
+      "instrument": "AUDJPY",
+      "timeframe": "H4",
+      "raw_version_id": "ds_0aabe2637cdae6068d0cc23f",
+      "bars_ingested": 36085,
+      "first_bar": "2002-08-19 21:00:00+00:00",
+      "last_bar": "2025-12-31 21:00:00+00:00",
+      "price_basis": "bid",
+      "timezone_of_origin": "EST-fixed (UTC-05:00, no DST)",
+      "adjustments": [
+        {
+          "kind": "timezone_correction",
+          "description": "HistData stamps bars in EST with no daylight saving; the V1 store additionally labelled those naive stamps as UTC without shifting them. Both errors are corrected here by adding 5 hours.",
+          "parameters": {
+            "source_convention": "EST-fixed (UTC-05:00, no DST)",
+            "offset_applied_hours": 5,
+            "input_was_mislabelled_utc": true,
+            "original_first_timestamp": "2002-08-19 16:00:00+00:00",
+            "corrected_first_timestamp": "2002-08-19 21:00:00+00:00",
+            "evidence": "fixed-offset clock (source is NOT true UTC) (weekly open hour 16:00 UTC, 1 distinct open hours observed)"
+          }
+        },
+        {
+          "kind": "price_basis_declaration",
+          "description": "Bars are BID. They are not mid. Any consumer needing mid must add an explicit half-spread and say so.",
+          "parameters": {
+            "price_basis": "bid"
+          }
+        }
+      ],
+      "integrity_before": {
+        "quality": "validated",
+        "is_clean": true,
+        "worst_severity": "warning",
+        "gap_count": 1221,
+        "unexpected_gap_count": 66,
+        "defects": [
+          {
+            "code": "misaligned_bar_start",
+            "severity": "warning",
+            "count": 36085,
+            "message": "bar starts not on the H4 grid; the source may use a session-anchored origin rather than an epoch-anchored one",
+            "sample_timestamps": [
+              "2002-08-19 21:00:00+00:00",
+              "2002-08-20 01:00:00+00:00",
+              "2002-08-20 05:00:00+00:00",
+              "2002-08-20 09:00:00+00:00",
+              "2002-08-20 13:00:00+00:00"
+            ]
+          },
+          {
+            "code": "unexpected_gap",
+            "severity": "warning",
+            "count": 66,
+            "message": "66 gaps during expected trading hours, 1532 bars missing in total",
+            "sample_timestamps": [
+              "2002-09-02 13:00:00+00:00",
+              "2002-10-11 21:00:00+00:00",
+              "2002-11-28 13:00:00+00:00",
+              "2002-11-29 17:00:00+00:00",
+              "2002-12-24 17:00:00+00:00"
+            ]
+          },
+          {
+            "code": "expected_gap",
+            "severity": "info",
+            "count": 1155,
+            "message": "session-closed gaps (weekends, holidays, daily breaks)",
+            "sample_timestamps": []
+          },
+          {
+            "code": "off_session_bar",
+            "severity": "warning",
+            "count": 1342,
+            "message": "bars timestamped outside the fx_24_5 session. Either the source timezone convention is wrong, or foreign data has been stitched in.",
+            "sample_timestamps": [
+              "2002-08-23 21:00:00+00:00",
+              "2002-09-06 21:00:00+00:00",
+              "2002-09-13 21:00:00+00:00",
+              "2002-09-20 21:00:00+00:00",
+              "2002-09-27 21:00:00+00:00"
+            ]
+          },
+          {
+            "code": "stale_run",
+            "severity": "warning",
+            "count": 9,
+            "message": "9 runs of >= 6 identical consecutive closes (longest 12); a frozen or interpolated feed",
+            "sample_timestamps": [
+              "2004-12-17 21:00:00+00:00",
+              "2004-12-24 21:00:00+00:00",
+              "2005-01-07 21:00:00+00:00",
+              "2005-01-14 21:00:00+00:00",
+              "2005-01-21 21:00:00+00:00"
+            ]
+          },
+          {
+            "code": "return_outlier",
+            "severity": "warning",
+            "count": 110,
+            "message": "110 log returns beyond 12.0 robust MAD z-scores (max |z| = 2335.2)",
+            "sample_timestamps": [
+              "2005-05-01 21:00:00+00:00",
+              "2005-05-02 01:00:00+00:00",
+              "2005-05-02 05:00:00+00:00",
+              "2005-05-02 09:00:00+00:00",
+              "2005-05-02 17:00:00+00:00"
+            ]
+          },
+          {
+            "code": "volume_always_zero",
+            "severity": "warning",
+            "count": 36085,
+            "message": "volume carries no information (the source provided no volume at all). Any volume-dependent strategy run on this dataset would be running blind, and must be blocked rather than silently produce a flat feature.",
+            "sample_timestamps": []
+          }
+        ]
+      },
+      "repaired": false,
+      "repair_records": [],
+      "rows_removed": 0,
+      "excluded": false,
+      "exclusion_reason": "",
+      "canonical_version_id": "ds_19f44f2abfd555e57a286b15",
+      "bars_stored": 36085,
+      "quality": "validated",
+      "readable_by_campaign": true
+    },
+    {
+      "instrument": "AUDUSD",
+      "timeframe": "H4",
+      "raw_version_id": "ds_cdfc8e97a5a6728ec86802c3",
+      "bars_ingested": 39010,
+      "first_bar": "2000-06-05 17:00:00+00:00",
+      "last_bar": "2025-12-31 21:00:00+00:00",
+      "price_basis": "bid",
+      "timezone_of_origin": "EST-fixed (UTC-05:00, no DST)",
+      "adjustments": [
+        {
+          "kind": "timezone_correction",
+          "description": "HistData stamps bars in EST with no daylight saving; the V1 store additionally labelled those naive stamps as UTC without shifting them. Both errors are corrected here by adding 5 hours.",
+          "parameters": {
+            "source_convention": "EST-fixed (UTC-05:00, no DST)",
+            "offset_applied_hours": 5,
+            "input_was_mislabelled_utc": true,
+            "original_first_timestamp": "2000-06-05 12:00:00+00:00",
+            "corrected_first_timestamp": "2000-06-05 17:00:00+00:00",
+            "evidence": "fixed-offset clock (source is NOT true UTC) (weekly open hour 16:00 UTC, 1 distinct open hours observed)"
+          }
+        },
+        {
+          "kind": "price_basis_declaration",
+          "description": "Bars are BID. They are not mid. Any consumer needing mid must add an explicit half-spread and say so.",
+          "parameters": {
+            "price_basis": "bid"
+          }
+        }
+      ],
+      "integrity_before": {
+        "quality": "validated",
+        "is_clean": true,
+        "worst_severity": "warning",
+        "gap_count": 1426,
+        "unexpected_gap_count": 204,
+        "defects": [
+          {
+            "code": "misaligned_bar_start",
+            "severity": "warning",
+            "count": 39010,
+            "message": "bar starts not on the H4 grid; the source may use a session-anchored origin rather than an epoch-anchored one",
+            "sample_timestamps": [
+              "2000-06-05 17:00:00+00:00",
+              "2000-06-08 17:00:00+00:00",
+              "2000-06-12 17:00:00+00:00",
+              "2000-06-14 01:00:00+00:00",
+              "2000-06-16 21:00:00+00:00"
+            ]
+          },
+          {
+            "code": "unexpected_gap",
+            "severity": "warning",
+            "count": 204,
+            "message": "204 gaps during expected trading hours, 2139 bars missing in total",
+            "sample_timestamps": [
+              "2000-06-05 17:00:00+00:00",
+              "2000-06-08 17:00:00+00:00",
+              "2000-06-12 17:00:00+00:00",
+              "2000-06-14 01:00:00+00:00",
+              "2000-06-16 21:00:00+00:00"
+            ]
+          },
+          {
+            "code": "expected_gap",
+            "severity": "info",
+            "count": 1222,
+            "message": "session-closed gaps (weekends, holidays, daily breaks)",
+            "sample_timestamps": []
+          },
+          {
+            "code": "off_session_bar",
+            "severity": "warning",
+            "count": 1459,
+            "message": "bars timestamped outside the fx_24_5 session. Either the source timezone convention is wrong, or foreign data has been stitched in.",
+            "sample_timestamps": [
+              "2000-06-16 21:00:00+00:00",
+              "2000-07-22 01:00:00+00:00",
+              "2000-07-28 21:00:00+00:00",
+              "2000-07-29 01:00:00+00:00",
+              "2000-08-04 21:00:00+00:00"
+            ]
+          },
+          {
+            "code": "stale_run",
+            "severity": "warning",
+            "count": 9,
+            "message": "9 runs of >= 6 identical consecutive closes (longest 12); a frozen or interpolated feed",
+            "sample_timestamps": [
+              "2004-12-17 21:00:00+00:00",
+              "2004-12-24 17:00:00+00:00",
+              "2005-01-07 21:00:00+00:00",
+              "2005-01-14 21:00:00+00:00",
+              "2005-01-21 21:00:00+00:00"
+            ]
+          },
+          {
+            "code": "return_outlier",
+            "severity": "warning",
+            "count": 35,
+            "message": "35 log returns beyond 12.0 robust MAD z-scores (max |z| = 868.8)",
+            "sample_timestamps": [
+              "2000-06-08 17:00:00+00:00",
+              "2000-07-22 01:00:00+00:00",
+              "2000-08-06 21:00:00+00:00",
+              "2000-08-11 21:00:00+00:00",
+              "2000-09-12 21:00:00+00:00"
+            ]
+          },
+          {
+            "code": "volume_always_zero",
+            "severity": "warning",
+            "count": 39010,
+            "message": "volume carries no information (the source provided no volume at all). Any volume-dependent strategy run on this dataset would be running blind, and must be blocked rather than silently produce a flat feature.",
+            "sample_timestamps": []
+          }
+        ]
+      },
+      "repaired": false,
+      "repair_records": [],
+      "rows_removed": 0,
+      "excluded": false,
+      "exclusion_reason": "",
+      "canonical_version_id": "ds_b0ee7d8fd1cc8f40714cd2da",
+      "bars_stored": 39010,
+      "quality": "validated",
+      "readable_by_campaign": true
+    },
+    {
+      "instrument": "DE40",
+      "timeframe": "H4",
+      "raw_version_id": "ds_4316bd81929439ad9eb34e78",
+      "bars_ingested": 18061,
+      "first_bar": "2010-11-15 05:00:00+00:00",
+      "last_bar": "2025-12-31 17:00:00+00:00",
+      "price_basis": "bid",
+      "timezone_of_origin": "EST-fixed (UTC-05:00, no DST)",
+      "adjustments": [
+        {
+          "kind": "timezone_correction",
+          "description": "HistData stamps bars in EST with no daylight saving; the V1 store additionally labelled those naive stamps as UTC without shifting them. Both errors are corrected here by adding 5 hours.",
+          "parameters": {
+            "source_convention": "EST-fixed (UTC-05:00, no DST)",
+            "offset_applied_hours": 5,
+            "input_was_mislabelled_utc": true,
+            "original_first_timestamp": "2010-11-15 00:00:00+00:00",
+            "corrected_first_timestamp": "2010-11-15 05:00:00+00:00",
+            "evidence": "DST-observing clock consistent with true UTC (weekly open hour 00:00 UTC, 2 distinct open hours observed)"
+          }
+        },
+        {
+          "kind": "price_basis_declaration",
+          "description": "Bars are BID. They are not mid. Any consumer needing mid must add an explicit half-spread and say so.",
+          "parameters": {
+            "price_basis": "bid"
+          }
+        }
+      ],
+      "integrity_before": {
+        "quality": "validated",
+        "is_clean": true,
+        "worst_severity": "warning",
+        "gap_count": 3139,
+        "unexpected_gap_count": 2991,
+        "defects": [
+          {
+            "code": "misaligned_bar_start",
+            "severity": "warning",
+            "count": 18061,
+            "message": "bar starts not on the H4 grid; the source may use a session-anchored origin rather than an epoch-anchored one",
+            "sample_timestamps": [
+              "2010-11-15 05:00:00+00:00",
+              "2010-11-15 09:00:00+00:00",
+              "2010-11-15 13:00:00+00:00",
+              "2010-11-15 17:00:00+00:00",
+              "2010-11-16 05:00:00+00:00"
+            ]
+          },
+          {
+            "code": "unexpected_gap",
+            "severity": "warning",
+            "count": 2991,
+            "message": "2991 gaps during expected trading hours, 4103 bars missing in total",
+            "sample_timestamps": [
+              "2010-11-15 17:00:00+00:00",
+              "2010-11-16 21:00:00+00:00",
+              "2010-11-17 21:00:00+00:00",
+              "2010-11-18 21:00:00+00:00",
+              "2010-11-19 21:00:00+00:00"
+            ]
+          },
+          {
+            "code": "expected_gap",
+            "severity": "info",
+            "count": 148,
+            "message": "session-closed gaps (weekends, holidays, daily breaks)",
+            "sample_timestamps": []
+          },
+          {
+            "code": "off_session_bar",
+            "severity": "warning",
+            "count": 1228,
+            "message": "bars timestamped outside the index session. Either the source timezone convention is wrong, or foreign data has been stitched in.",
+            "sample_timestamps": [
+              "2011-03-14 21:00:00+00:00",
+              "2011-03-16 21:00:00+00:00",
+              "2011-03-17 21:00:00+00:00",
+              "2011-03-18 21:00:00+00:00",
+              "2011-03-22 21:00:00+00:00"
+            ]
+          },
+          {
+            "code": "return_outlier",
+            "severity": "warning",
+            "count": 20,
+            "message": "20 log returns beyond 12.0 robust MAD z-scores (max |z| = 418.7)",
+            "sample_timestamps": [
+              "2011-08-10 13:00:00+00:00",
+              "2011-08-11 13:00:00+00:00",
+              "2011-11-03 09:00:00+00:00",
+              "2016-03-10 13:00:00+00:00",
+              "2016-06-24 05:00:00+00:00"
+            ]
+          },
+          {
+            "code": "volume_always_zero",
+            "severity": "warning",
+            "count": 18061,
+            "message": "volume carries no information (the source provided no volume at all). Any volume-dependent strategy run on this dataset would be running blind, and must be blocked rather than silently produce a flat feature.",
+            "sample_timestamps": []
+          }
+        ]
+      },
+      "repaired": false,
+      "repair_records": [],
+      "rows_removed": 0,
+      "excluded": false,
+      "exclusion_reason": "",
+      "canonical_version_id": "ds_6df120b22d63737e477c57b5",
+      "bars_stored": 18061,
+      "quality": "validated",
+      "readable_by_campaign": true
+    },
+    {
+      "instrument": "EURGBP",
+      "timeframe": "H4",
+      "raw_version_id": "ds_30b3d21e1b7c8334a83adebe",
+      "bars_ingested": 38170,
+      "first_bar": "2002-03-03 21:00:00+00:00",
+      "last_bar": "2025-12-31 21:00:00+00:00",
+      "price_basis": "bid",
+      "timezone_of_origin": "EST-fixed (UTC-05:00, no DST)",
+      "adjustments": [
+        {
+          "kind": "timezone_correction",
+          "description": "HistData stamps bars in EST with no daylight saving; the V1 store additionally labelled those naive stamps as UTC without shifting them. Both errors are corrected here by adding 5 hours.",
+          "parameters": {
+            "source_convention": "EST-fixed (UTC-05:00, no DST)",
+            "offset_applied_hours": 5,
+            "input_was_mislabelled_utc": true,
+            "original_first_timestamp": "2002-03-03 16:00:00+00:00",
+            "corrected_first_timestamp": "2002-03-03 21:00:00+00:00",
+            "evidence": "fixed-offset clock (source is NOT true UTC) (weekly open hour 16:00 UTC, 1 distinct open hours observed)"
+          }
+        },
+        {
+          "kind": "price_basis_declaration",
+          "description": "Bars are BID. They are not mid. Any consumer needing mid must add an explicit half-spread and say so.",
+          "parameters": {
+            "price_basis": "bid"
+          }
+        }
+      ],
+      "integrity_before": {
+        "quality": "validated",
+        "is_clean": true,
+        "worst_severity": "warning",
+        "gap_count": 1316,
+        "unexpected_gap_count": 87,
+        "defects": [
+          {
+            "code": "misaligned_bar_start",
+            "severity": "warning",
+            "count": 38170,
+            "message": "bar starts not on the H4 grid; the source may use a session-anchored origin rather than an epoch-anchored one",
+            "sample_timestamps": [
+              "2002-03-03 21:00:00+00:00",
+              "2002-03-04 01:00:00+00:00",
+              "2002-03-04 05:00:00+00:00",
+              "2002-03-04 09:00:00+00:00",
+              "2002-03-04 13:00:00+00:00"
+            ]
+          },
+          {
+            "code": "unexpected_gap",
+            "severity": "warning",
+            "count": 87,
+            "message": "87 gaps during expected trading hours, 316 bars missing in total",
+            "sample_timestamps": [
+              "2002-03-07 01:00:00+00:00",
+              "2002-03-14 01:00:00+00:00",
+              "2002-03-21 01:00:00+00:00",
+              "2002-03-28 01:00:00+00:00",
+              "2002-04-04 01:00:00+00:00"
+            ]
+          },
+          {
+            "code": "expected_gap",
+            "severity": "info",
+            "count": 1229,
+            "message": "session-closed gaps (weekends, holidays, daily breaks)",
+            "sample_timestamps": []
+          },
+          {
+            "code": "off_session_bar",
+            "severity": "warning",
+            "count": 1485,
+            "message": "bars timestamped outside the fx_24_5 session. Either the source timezone convention is wrong, or foreign data has been stitched in.",
+            "sample_timestamps": [
+              "2002-03-03 21:00:00+00:00",
+              "2002-03-10 21:00:00+00:00",
+              "2002-03-17 21:00:00+00:00",
+              "2002-03-24 21:00:00+00:00",
+              "2002-03-31 21:00:00+00:00"
+            ]
+          },
+          {
+            "code": "stale_run",
+            "severity": "warning",
+            "count": 17,
+            "message": "17 runs of >= 6 identical consecutive closes (longest 12); a frozen or interpolated feed",
+            "sample_timestamps": [
+              "2004-07-09 21:00:00+00:00",
+              "2004-07-16 21:00:00+00:00",
+              "2004-08-20 21:00:00+00:00",
+              "2004-08-27 21:00:00+00:00",
+              "2004-09-17 21:00:00+00:00"
+            ]
+          },
+          {
+            "code": "return_outlier",
+            "severity": "warning",
+            "count": 23,
+            "message": "23 log returns beyond 12.0 robust MAD z-scores (max |z| = 92.3)",
+            "sample_timestamps": [
+              "2004-03-26 21:00:00+00:00",
+              "2004-03-28 13:00:00+00:00",
+              "2008-11-12 13:00:00+00:00",
+              "2008-11-13 17:00:00+00:00",
+              "2008-12-17 09:00:00+00:00"
+            ]
+          },
+          {
+            "code": "volume_always_zero",
+            "severity": "warning",
+            "count": 38170,
+            "message": "volume carries no information (the source provided no volume at all). Any volume-dependent strategy run on this dataset would be running blind, and must be blocked rather than silently produce a flat feature.",
+            "sample_timestamps": []
+          }
+        ]
+      },
+      "repaired": false,
+      "repair_records": [],
+      "rows_removed": 0,
+      "excluded": false,
+      "exclusion_reason": "",
+      "canonical_version_id": "ds_872f168ff7f7132af53b868e",
+      "bars_stored": 38170,
+      "quality": "validated",
+      "readable_by_campaign": true
+    },
+    {
+      "instrument": "EURJPY",
+      "timeframe": "H4",
+      "raw_version_id": "ds_7b7c84eb2e912a835e131ee3",
+      "bars_ingested": 38175,
+      "first_bar": "2002-03-03 21:00:00+00:00",
+      "last_bar": "2025-12-31 21:00:00+00:00",
+      "price_basis": "bid",
+      "timezone_of_origin": "EST-fixed (UTC-05:00, no DST)",
+      "adjustments": [
+        {
+          "kind": "timezone_correction",
+          "description": "HistData stamps bars in EST with no daylight saving; the V1 store additionally labelled those naive stamps as UTC without shifting them. Both errors are corrected here by adding 5 hours.",
+          "parameters": {
+            "source_convention": "EST-fixed (UTC-05:00, no DST)",
+            "offset_applied_hours": 5,
+            "input_was_mislabelled_utc": true,
+            "original_first_timestamp": "2002-03-03 16:00:00+00:00",
+            "corrected_first_timestamp": "2002-03-03 21:00:00+00:00",
+            "evidence": "fixed-offset clock (source is NOT true UTC) (weekly open hour 16:00 UTC, 1 distinct open hours observed)"
+          }
+        },
+        {
+          "kind": "price_basis_declaration",
+          "description": "Bars are BID. They are not mid. Any consumer needing mid must add an explicit half-spread and say so.",
+          "parameters": {
+            "price_basis": "bid"
+          }
+        }
+      ],
+      "integrity_before": {
+        "quality": "validated",
+        "is_clean": true,
+        "worst_severity": "warning",
+        "gap_count": 1320,
+        "unexpected_gap_count": 88,
+        "defects": [
+          {
+            "code": "misaligned_bar_start",
+            "severity": "warning",
+            "count": 38175,
+            "message": "bar starts not on the H4 grid; the source may use a session-anchored origin rather than an epoch-anchored one",
+            "sample_timestamps": [
+              "2002-03-03 21:00:00+00:00",
+              "2002-03-04 01:00:00+00:00",
+              "2002-03-04 05:00:00+00:00",
+              "2002-03-04 09:00:00+00:00",
+              "2002-03-04 13:00:00+00:00"
+            ]
+          },
+          {
+            "code": "unexpected_gap",
+            "severity": "warning",
+            "count": 88,
+            "message": "88 gaps during expected trading hours, 313 bars missing in total",
+            "sample_timestamps": [
+              "2002-03-07 01:00:00+00:00",
+              "2002-03-14 01:00:00+00:00",
+              "2002-03-21 01:00:00+00:00",
+              "2002-03-28 01:00:00+00:00",
+              "2002-04-04 01:00:00+00:00"
+            ]
+          },
+          {
+            "code": "expected_gap",
+            "severity": "info",
+            "count": 1232,
+            "message": "session-closed gaps (weekends, holidays, daily breaks)",
+            "sample_timestamps": []
+          },
+          {
+            "code": "off_session_bar",
+            "severity": "warning",
+            "count": 1487,
+            "message": "bars timestamped outside the fx_24_5 session. Either the source timezone convention is wrong, or foreign data has been stitched in.",
+            "sample_timestamps": [
+              "2002-03-03 21:00:00+00:00",
+              "2002-03-10 21:00:00+00:00",
+              "2002-03-17 21:00:00+00:00",
+              "2002-03-24 21:00:00+00:00",
+              "2002-03-31 21:00:00+00:00"
+            ]
+          },
+          {
+            "code": "stale_run",
+            "severity": "warning",
+            "count": 16,
+            "message": "16 runs of >= 6 identical consecutive closes (longest 12); a frozen or interpolated feed",
+            "sample_timestamps": [
+              "2004-07-09 21:00:00+00:00",
+              "2004-07-16 21:00:00+00:00",
+              "2004-08-20 21:00:00+00:00",
+              "2004-08-27 21:00:00+00:00",
+              "2004-09-17 21:00:00+00:00"
+            ]
+          },
+          {
+            "code": "return_outlier",
+            "severity": "warning",
+            "count": 36,
+            "message": "36 log returns beyond 12.0 robust MAD z-scores (max |z| = 42.2)",
+            "sample_timestamps": [
+              "2008-10-06 13:00:00+00:00",
+              "2008-10-24 01:00:00+00:00",
+              "2008-10-24 09:00:00+00:00",
+              "2008-10-24 13:00:00+00:00",
+              "2008-10-27 05:00:00+00:00"
+            ]
+          },
+          {
+            "code": "volume_always_zero",
+            "severity": "warning",
+            "count": 38175,
+            "message": "volume carries no information (the source provided no volume at all). Any volume-dependent strategy run on this dataset would be running blind, and must be blocked rather than silently produce a flat feature.",
+            "sample_timestamps": []
+          }
+        ]
+      },
+      "repaired": false,
+      "repair_records": [],
+      "rows_removed": 0,
+      "excluded": false,
+      "exclusion_reason": "",
+      "canonical_version_id": "ds_40c4a73dcfc949c253309279",
+      "bars_stored": 38175,
+      "quality": "validated",
+      "readable_by_campaign": true
+    },
+    {
+      "instrument": "EURUSD",
+      "timeframe": "H1",
+      "raw_version_id": "ds_01ce156e467846f6f1503b6a",
+      "bars_ingested": 155808,
+      "first_bar": "2000-05-30 22:00:00+00:00",
+      "last_bar": "2025-12-31 21:00:00+00:00",
+      "price_basis": "bid",
+      "timezone_of_origin": "EST-fixed (UTC-05:00, no DST)",
+      "adjustments": [
+        {
+          "kind": "timezone_correction",
+          "description": "HistData stamps bars in EST with no daylight saving; the V1 store additionally labelled those naive stamps as UTC without shifting them. Both errors are corrected here by adding 5 hours.",
+          "parameters": {
+            "source_convention": "EST-fixed (UTC-05:00, no DST)",
+            "offset_applied_hours": 5,
+            "input_was_mislabelled_utc": true,
+            "original_first_timestamp": "2000-05-30 17:00:00+00:00",
+            "corrected_first_timestamp": "2000-05-30 22:00:00+00:00",
+            "evidence": "fixed-offset clock (source is NOT true UTC) (weekly open hour 17:00 UTC, 1 distinct open hours observed)"
+          }
+        },
+        {
+          "kind": "price_basis_declaration",
+          "description": "Bars are BID. They are not mid. Any consumer needing mid must add an explicit half-spread and say so.",
+          "parameters": {
+            "price_basis": "bid"
+          }
+        }
+      ],
+      "integrity_before": {
+        "quality": "rejected",
+        "is_clean": false,
+        "worst_severity": "critical",
+        "gap_count": 2173,
+        "unexpected_gap_count": 1661,
+        "defects": [
+          {
+            "code": "non_positive_price",
+            "severity": "critical",
+            "count": 1,
+            "message": "bars with a zero or negative price. These are sentinel values from the source, not prices, and they destroy log returns.",
+            "sample_timestamps": [
+              "2001-09-12 01:00:00+00:00"
+            ]
+          },
+          {
+            "code": "unexpected_gap",
+            "severity": "warning",
+            "count": 1661,
+            "message": "1661 gaps during expected trading hours, 4642 bars missing in total",
+            "sample_timestamps": [
+              "2000-05-31 03:00:00+00:00",
+              "2000-06-02 21:00:00+00:00",
+              "2000-06-08 01:00:00+00:00",
+              "2000-06-08 04:00:00+00:00",
+              "2000-06-08 09:00:00+00:00"
+            ]
+          },
+          {
+            "code": "expected_gap",
+            "severity": "info",
+            "count": 512,
+            "message": "session-closed gaps (weekends, holidays, daily breaks)",
+            "sample_timestamps": []
+          },
+          {
+            "code": "off_session_bar",
+            "severity": "warning",
+            "count": 1602,
+            "message": "bars timestamped outside the fx_24_5 session. Either the source timezone convention is wrong, or foreign data has been stitched in.",
+            "sample_timestamps": [
+              "2000-06-02 21:00:00+00:00",
+              "2000-06-10 00:00:00+00:00",
+              "2000-06-16 21:00:00+00:00",
+              "2000-06-17 00:00:00+00:00",
+              "2000-06-23 21:00:00+00:00"
+            ]
+          },
+          {
+            "code": "stale_run",
+            "severity": "warning",
+            "count": 9,
+            "message": "9 runs of >= 6 identical consecutive closes (longest 37); a frozen or interpolated feed",
+            "sample_timestamps": [
+              "2004-12-17 21:00:00+00:00",
+              "2004-12-24 21:00:00+00:00",
+              "2005-01-07 21:00:00+00:00",
+              "2005-01-14 22:00:00+00:00",
+              "2005-01-21 21:00:00+00:00"
+            ]
+          },
+          {
+            "code": "return_outlier",
+            "severity": "warning",
+            "count": 161,
+            "message": "161 log returns beyond 12.0 robust MAD z-scores (max |z| = 32.5)",
+            "sample_timestamps": [
+              "2000-06-02 13:00:00+00:00",
+              "2000-06-08 12:00:00+00:00",
+              "2000-06-08 14:00:00+00:00",
+              "2000-07-27 19:00:00+00:00",
+              "2000-07-27 20:00:00+00:00"
+            ]
+          },
+          {
+            "code": "volume_always_zero",
+            "severity": "warning",
+            "count": 155808,
+            "message": "volume carries no information (the source provided no volume at all). Any volume-dependent strategy run on this dataset would be running blind, and must be blocked rather than silently produce a flat feature.",
+            "sample_timestamps": []
+          }
+        ]
+      },
+      "repaired": true,
+      "repair_records": [
+        {
+          "action": "drop_non_positive",
+          "rows_before": 155808,
+          "rows_after": 155807,
+          "removed_timestamps": [
+            "2001-09-12T01:00:00+00:00"
+          ],
+          "reason": "EURUSD H1: HistData ships sentinel bar(s) with a non-positive price. A negative price makes every return computed across it meaningless, so the bar is dropped rather than carried into a backtest. No other defect is repaired.",
+          "actor": "script:ingest_histdata_universe"
+        }
+      ],
+      "rows_removed": 1,
+      "excluded": false,
+      "exclusion_reason": "",
+      "integrity_after": {
+        "quality": "validated",
+        "is_clean": true,
+        "worst_severity": "warning",
+        "defects": [
+          {
+            "code": "unexpected_gap",
+            "severity": "warning",
+            "count": 1661,
+            "message": "1661 gaps during expected trading hours, 4643 bars missing in total",
+            "sample_timestamps": [
+              "2000-05-31 03:00:00+00:00",
+              "2000-06-02 21:00:00+00:00",
+              "2000-06-08 01:00:00+00:00",
+              "2000-06-08 04:00:00+00:00",
+              "2000-06-08 09:00:00+00:00"
+            ]
+          },
+          {
+            "code": "expected_gap",
+            "severity": "info",
+            "count": 512,
+            "message": "session-closed gaps (weekends, holidays, daily breaks)",
+            "sample_timestamps": []
+          },
+          {
+            "code": "off_session_bar",
+            "severity": "warning",
+            "count": 1602,
+            "message": "bars timestamped outside the fx_24_5 session. Either the source timezone convention is wrong, or foreign data has been stitched in.",
+            "sample_timestamps": [
+              "2000-06-02 21:00:00+00:00",
+              "2000-06-10 00:00:00+00:00",
+              "2000-06-16 21:00:00+00:00",
+              "2000-06-17 00:00:00+00:00",
+              "2000-06-23 21:00:00+00:00"
+            ]
+          },
+          {
+            "code": "stale_run",
+            "severity": "warning",
+            "count": 9,
+            "message": "9 runs of >= 6 identical consecutive closes (longest 37); a frozen or interpolated feed",
+            "sample_timestamps": [
+              "2004-12-17 21:00:00+00:00",
+              "2004-12-24 21:00:00+00:00",
+              "2005-01-07 21:00:00+00:00",
+              "2005-01-14 22:00:00+00:00",
+              "2005-01-21 21:00:00+00:00"
+            ]
+          },
+          {
+            "code": "return_outlier",
+            "severity": "warning",
+            "count": 161,
+            "message": "161 log returns beyond 12.0 robust MAD z-scores (max |z| = 32.5)",
+            "sample_timestamps": [
+              "2000-06-02 13:00:00+00:00",
+              "2000-06-08 12:00:00+00:00",
+              "2000-06-08 14:00:00+00:00",
+              "2000-07-27 19:00:00+00:00",
+              "2000-07-27 20:00:00+00:00"
+            ]
+          },
+          {
+            "code": "volume_always_zero",
+            "severity": "warning",
+            "count": 155807,
+            "message": "volume carries no information (the source provided no volume at all). Any volume-dependent strategy run on this dataset would be running blind, and must be blocked rather than silently produce a flat feature.",
+            "sample_timestamps": []
+          }
+        ]
+      },
+      "canonical_version_id": "ds_bf8d24a154c0c858c6e4bd7d",
+      "bars_stored": 155807,
+      "quality": "validated",
+      "readable_by_campaign": true
+    },
+    {
+      "instrument": "EURUSD",
+      "timeframe": "H4",
+      "raw_version_id": "ds_5aa3d824c4f6dccc7097dcbe",
+      "bars_ingested": 40541,
+      "first_bar": "2000-05-30 21:00:00+00:00",
+      "last_bar": "2025-12-31 21:00:00+00:00",
+      "price_basis": "bid",
+      "timezone_of_origin": "EST-fixed (UTC-05:00, no DST)",
+      "adjustments": [
+        {
+          "kind": "timezone_correction",
+          "description": "HistData stamps bars in EST with no daylight saving; the V1 store additionally labelled those naive stamps as UTC without shifting them. Both errors are corrected here by adding 5 hours.",
+          "parameters": {
+            "source_convention": "EST-fixed (UTC-05:00, no DST)",
+            "offset_applied_hours": 5,
+            "input_was_mislabelled_utc": true,
+            "original_first_timestamp": "2000-05-30 16:00:00+00:00",
+            "corrected_first_timestamp": "2000-05-30 21:00:00+00:00",
+            "evidence": "fixed-offset clock (source is NOT true UTC) (weekly open hour 16:00 UTC, 1 distinct open hours observed)"
+          }
+        },
+        {
+          "kind": "price_basis_declaration",
+          "description": "Bars are BID. They are not mid. Any consumer needing mid must add an explicit half-spread and say so.",
+          "parameters": {
+            "price_basis": "bid"
+          }
+        }
+      ],
+      "integrity_before": {
+        "quality": "rejected",
+        "is_clean": false,
+        "worst_severity": "critical",
+        "gap_count": 1399,
+        "unexpected_gap_count": 131,
+        "defects": [
+          {
+            "code": "non_positive_price",
+            "severity": "critical",
+            "count": 1,
+            "message": "bars with a zero or negative price. These are sentinel values from the source, not prices, and they destroy log returns.",
+            "sample_timestamps": [
+              "2001-09-12 01:00:00+00:00"
+            ]
+          },
+          {
+            "code": "misaligned_bar_start",
+            "severity": "warning",
+            "count": 40541,
+            "message": "bar starts not on the H4 grid; the source may use a session-anchored origin rather than an epoch-anchored one",
+            "sample_timestamps": [
+              "2000-05-30 21:00:00+00:00",
+              "2000-05-31 01:00:00+00:00",
+              "2000-05-31 05:00:00+00:00",
+              "2000-05-31 09:00:00+00:00",
+              "2000-05-31 13:00:00+00:00"
+            ]
+          },
+          {
+            "code": "unexpected_gap",
+            "severity": "warning",
+            "count": 131,
+            "message": "131 gaps during expected trading hours, 660 bars missing in total",
+            "sample_timestamps": [
+              "2000-06-09 13:00:00+00:00",
+              "2000-06-16 01:00:00+00:00",
+              "2000-07-04 13:00:00+00:00",
+              "2000-09-04 13:00:00+00:00",
+              "2000-10-09 13:00:00+00:00"
+            ]
+          },
+          {
+            "code": "expected_gap",
+            "severity": "info",
+            "count": 1268,
+            "message": "session-closed gaps (weekends, holidays, daily breaks)",
+            "sample_timestamps": []
+          },
+          {
+            "code": "off_session_bar",
+            "severity": "warning",
+            "count": 1488,
+            "message": "bars timestamped outside the fx_24_5 session. Either the source timezone convention is wrong, or foreign data has been stitched in.",
+            "sample_timestamps": [
+              "2000-06-02 21:00:00+00:00",
+              "2000-06-09 21:00:00+00:00",
+              "2000-06-16 21:00:00+00:00",
+              "2000-06-23 21:00:00+00:00",
+              "2000-06-30 21:00:00+00:00"
+            ]
+          },
+          {
+            "code": "stale_run",
+            "severity": "warning",
+            "count": 9,
+            "message": "9 runs of >= 6 identical consecutive closes (longest 13); a frozen or interpolated feed",
+            "sample_timestamps": [
+              "2004-12-17 21:00:00+00:00",
+              "2004-12-24 21:00:00+00:00",
+              "2005-01-07 21:00:00+00:00",
+              "2005-01-14 21:00:00+00:00",
+              "2005-01-21 21:00:00+00:00"
+            ]
+          },
+          {
+            "code": "return_outlier",
+            "severity": "warning",
+            "count": 23,
+            "message": "23 log returns beyond 12.0 robust MAD z-scores (max |z| = 22.6)",
+            "sample_timestamps": [
+              "2001-01-03 17:00:00+00:00",
+              "2003-03-17 13:00:00+00:00",
+              "2004-08-06 13:00:00+00:00",
+              "2008-10-28 17:00:00+00:00",
+              "2008-10-30 01:00:00+00:00"
+            ]
+          },
+          {
+            "code": "volume_always_zero",
+            "severity": "warning",
+            "count": 40541,
+            "message": "volume carries no information (the source provided no volume at all). Any volume-dependent strategy run on this dataset would be running blind, and must be blocked rather than silently produce a flat feature.",
+            "sample_timestamps": []
+          }
+        ]
+      },
+      "repaired": true,
+      "repair_records": [
+        {
+          "action": "drop_non_positive",
+          "rows_before": 40541,
+          "rows_after": 40540,
+          "removed_timestamps": [
+            "2001-09-12T01:00:00+00:00"
+          ],
+          "reason": "EURUSD H4: HistData ships sentinel bar(s) with a non-positive price. A negative price makes every return computed across it meaningless, so the bar is dropped rather than carried into a backtest. No other defect is repaired.",
+          "actor": "script:ingest_histdata_universe"
+        }
+      ],
+      "rows_removed": 1,
+      "excluded": false,
+      "exclusion_reason": "",
+      "integrity_after": {
+        "quality": "validated",
+        "is_clean": true,
+        "worst_severity": "warning",
+        "defects": [
+          {
+            "code": "misaligned_bar_start",
+            "severity": "warning",
+            "count": 40540,
+            "message": "bar starts not on the H4 grid; the source may use a session-anchored origin rather than an epoch-anchored one",
+            "sample_timestamps": [
+              "2000-05-30 21:00:00+00:00",
+              "2000-05-31 01:00:00+00:00",
+              "2000-05-31 05:00:00+00:00",
+              "2000-05-31 09:00:00+00:00",
+              "2000-05-31 13:00:00+00:00"
+            ]
+          },
+          {
+            "code": "unexpected_gap",
+            "severity": "warning",
+            "count": 132,
+            "message": "132 gaps during expected trading hours, 661 bars missing in total",
+            "sample_timestamps": [
+              "2000-06-09 13:00:00+00:00",
+              "2000-06-16 01:00:00+00:00",
+              "2000-07-04 13:00:00+00:00",
+              "2000-09-04 13:00:00+00:00",
+              "2000-10-09 13:00:00+00:00"
+            ]
+          },
+          {
+            "code": "expected_gap",
+            "severity": "info",
+            "count": 1268,
+            "message": "session-closed gaps (weekends, holidays, daily breaks)",
+            "sample_timestamps": []
+          },
+          {
+            "code": "off_session_bar",
+            "severity": "warning",
+            "count": 1488,
+            "message": "bars timestamped outside the fx_24_5 session. Either the source timezone convention is wrong, or foreign data has been stitched in.",
+            "sample_timestamps": [
+              "2000-06-02 21:00:00+00:00",
+              "2000-06-09 21:00:00+00:00",
+              "2000-06-16 21:00:00+00:00",
+              "2000-06-23 21:00:00+00:00",
+              "2000-06-30 21:00:00+00:00"
+            ]
+          },
+          {
+            "code": "stale_run",
+            "severity": "warning",
+            "count": 9,
+            "message": "9 runs of >= 6 identical consecutive closes (longest 13); a frozen or interpolated feed",
+            "sample_timestamps": [
+              "2004-12-17 21:00:00+00:00",
+              "2004-12-24 21:00:00+00:00",
+              "2005-01-07 21:00:00+00:00",
+              "2005-01-14 21:00:00+00:00",
+              "2005-01-21 21:00:00+00:00"
+            ]
+          },
+          {
+            "code": "return_outlier",
+            "severity": "warning",
+            "count": 23,
+            "message": "23 log returns beyond 12.0 robust MAD z-scores (max |z| = 22.6)",
+            "sample_timestamps": [
+              "2001-01-03 17:00:00+00:00",
+              "2003-03-17 13:00:00+00:00",
+              "2004-08-06 13:00:00+00:00",
+              "2008-10-28 17:00:00+00:00",
+              "2008-10-30 01:00:00+00:00"
+            ]
+          },
+          {
+            "code": "volume_always_zero",
+            "severity": "warning",
+            "count": 40540,
+            "message": "volume carries no information (the source provided no volume at all). Any volume-dependent strategy run on this dataset would be running blind, and must be blocked rather than silently produce a flat feature.",
+            "sample_timestamps": []
+          }
+        ]
+      },
+      "canonical_version_id": "ds_ce5009f8f12e1c407c45994d",
+      "bars_stored": 40540,
+      "quality": "validated",
+      "readable_by_campaign": true
+    },
+    {
+      "instrument": "GBPJPY",
+      "timeframe": "H4",
+      "raw_version_id": "ds_b1dc592539fe204c0c05e84d",
+      "bars_ingested": 37863,
+      "first_bar": "2002-05-01 13:00:00+00:00",
+      "last_bar": "2025-12-31 21:00:00+00:00",
+      "price_basis": "bid",
+      "timezone_of_origin": "EST-fixed (UTC-05:00, no DST)",
+      "adjustments": [
+        {
+          "kind": "timezone_correction",
+          "description": "HistData stamps bars in EST with no daylight saving; the V1 store additionally labelled those naive stamps as UTC without shifting them. Both errors are corrected here by adding 5 hours.",
+          "parameters": {
+            "source_convention": "EST-fixed (UTC-05:00, no DST)",
+            "offset_applied_hours": 5,
+            "input_was_mislabelled_utc": true,
+            "original_first_timestamp": "2002-05-01 08:00:00+00:00",
+            "corrected_first_timestamp": "2002-05-01 13:00:00+00:00",
+            "evidence": "fixed-offset clock (source is NOT true UTC) (weekly open hour 16:00 UTC, 1 distinct open hours observed)"
+          }
+        },
+        {
+          "kind": "price_basis_declaration",
+          "description": "Bars are BID. They are not mid. Any consumer needing mid must add an explicit half-spread and say so.",
+          "parameters": {
+            "price_basis": "bid"
+          }
+        }
+      ],
+      "integrity_before": {
+        "quality": "validated",
+        "is_clean": true,
+        "worst_severity": "warning",
+        "gap_count": 1284,
+        "unexpected_gap_count": 80,
+        "defects": [
+          {
+            "code": "misaligned_bar_start",
+            "severity": "warning",
+            "count": 37863,
+            "message": "bar starts not on the H4 grid; the source may use a session-anchored origin rather than an epoch-anchored one",
+            "sample_timestamps": [
+              "2002-05-01 13:00:00+00:00",
+              "2002-05-01 17:00:00+00:00",
+              "2002-05-01 21:00:00+00:00",
+              "2002-05-02 01:00:00+00:00",
+              "2002-05-05 21:00:00+00:00"
+            ]
+          },
+          {
+            "code": "unexpected_gap",
+            "severity": "warning",
+            "count": 80,
+            "message": "80 gaps during expected trading hours, 273 bars missing in total",
+            "sample_timestamps": [
+              "2002-05-02 01:00:00+00:00",
+              "2002-05-09 01:00:00+00:00",
+              "2002-05-16 01:00:00+00:00",
+              "2002-05-23 01:00:00+00:00",
+              "2002-05-27 13:00:00+00:00"
+            ]
+          },
+          {
+            "code": "expected_gap",
+            "severity": "info",
+            "count": 1204,
+            "message": "session-closed gaps (weekends, holidays, daily breaks)",
+            "sample_timestamps": []
+          },
+          {
+            "code": "off_session_bar",
+            "severity": "warning",
+            "count": 1391,
+            "message": "bars timestamped outside the fx_24_5 session. Either the source timezone convention is wrong, or foreign data has been stitched in.",
+            "sample_timestamps": [
+              "2002-07-19 21:00:00+00:00",
+              "2002-08-02 21:00:00+00:00",
+              "2002-08-09 21:00:00+00:00",
+              "2002-08-16 21:00:00+00:00",
+              "2002-08-23 21:00:00+00:00"
+            ]
+          },
+          {
+            "code": "stale_run",
+            "severity": "warning",
+            "count": 9,
+            "message": "9 runs of >= 6 identical consecutive closes (longest 12); a frozen or interpolated feed",
+            "sample_timestamps": [
+              "2004-12-17 21:00:00+00:00",
+              "2004-12-24 21:00:00+00:00",
+              "2005-01-07 21:00:00+00:00",
+              "2005-01-14 21:00:00+00:00",
+              "2005-01-21 21:00:00+00:00"
+            ]
+          },
+          {
+            "code": "return_outlier",
+            "severity": "warning",
+            "count": 39,
+            "message": "39 log returns beyond 12.0 robust MAD z-scores (max |z| = 64.1)",
+            "sample_timestamps": [
+              "2003-07-20 21:00:00+00:00",
+              "2008-10-06 13:00:00+00:00",
+              "2008-10-08 13:00:00+00:00",
+              "2008-10-24 01:00:00+00:00",
+              "2008-10-24 05:00:00+00:00"
+            ]
+          },
+          {
+            "code": "volume_always_zero",
+            "severity": "warning",
+            "count": 37863,
+            "message": "volume carries no information (the source provided no volume at all). Any volume-dependent strategy run on this dataset would be running blind, and must be blocked rather than silently produce a flat feature.",
+            "sample_timestamps": []
+          }
+        ]
+      },
+      "repaired": false,
+      "repair_records": [],
+      "rows_removed": 0,
+      "excluded": false,
+      "exclusion_reason": "",
+      "canonical_version_id": "ds_7667128f4d105f1c3db58f32",
+      "bars_stored": 37863,
+      "quality": "validated",
+      "readable_by_campaign": true
+    },
+    {
+      "instrument": "GBPUSD",
+      "timeframe": "H4",
+      "raw_version_id": "ds_1205dcb6c19c9d47efcc6e6c",
+      "bars_ingested": 40543,
+      "first_bar": "2000-05-30 21:00:00+00:00",
+      "last_bar": "2025-12-31 21:00:00+00:00",
+      "price_basis": "bid",
+      "timezone_of_origin": "EST-fixed (UTC-05:00, no DST)",
+      "adjustments": [
+        {
+          "kind": "timezone_correction",
+          "description": "HistData stamps bars in EST with no daylight saving; the V1 store additionally labelled those naive stamps as UTC without shifting them. Both errors are corrected here by adding 5 hours.",
+          "parameters": {
+            "source_convention": "EST-fixed (UTC-05:00, no DST)",
+            "offset_applied_hours": 5,
+            "input_was_mislabelled_utc": true,
+            "original_first_timestamp": "2000-05-30 16:00:00+00:00",
+            "corrected_first_timestamp": "2000-05-30 21:00:00+00:00",
+            "evidence": "fixed-offset clock (source is NOT true UTC) (weekly open hour 16:00 UTC, 1 distinct open hours observed)"
+          }
+        },
+        {
+          "kind": "price_basis_declaration",
+          "description": "Bars are BID. They are not mid. Any consumer needing mid must add an explicit half-spread and say so.",
+          "parameters": {
+            "price_basis": "bid"
+          }
+        }
+      ],
+      "integrity_before": {
+        "quality": "validated",
+        "is_clean": true,
+        "worst_severity": "warning",
+        "gap_count": 1398,
+        "unexpected_gap_count": 129,
+        "defects": [
+          {
+            "code": "misaligned_bar_start",
+            "severity": "warning",
+            "count": 40543,
+            "message": "bar starts not on the H4 grid; the source may use a session-anchored origin rather than an epoch-anchored one",
+            "sample_timestamps": [
+              "2000-05-30 21:00:00+00:00",
+              "2000-05-31 01:00:00+00:00",
+              "2000-05-31 05:00:00+00:00",
+              "2000-05-31 09:00:00+00:00",
+              "2000-05-31 13:00:00+00:00"
+            ]
+          },
+          {
+            "code": "unexpected_gap",
+            "severity": "warning",
+            "count": 129,
+            "message": "129 gaps during expected trading hours, 652 bars missing in total",
+            "sample_timestamps": [
+              "2000-06-09 13:00:00+00:00",
+              "2000-06-16 01:00:00+00:00",
+              "2000-07-04 13:00:00+00:00",
+              "2000-09-04 13:00:00+00:00",
+              "2000-10-09 13:00:00+00:00"
+            ]
+          },
+          {
+            "code": "expected_gap",
+            "severity": "info",
+            "count": 1269,
+            "message": "session-closed gaps (weekends, holidays, daily breaks)",
+            "sample_timestamps": []
+          },
+          {
+            "code": "off_session_bar",
+            "severity": "warning",
+            "count": 1482,
+            "message": "bars timestamped outside the fx_24_5 session. Either the source timezone convention is wrong, or foreign data has been stitched in.",
+            "sample_timestamps": [
+              "2000-06-09 21:00:00+00:00",
+              "2000-06-16 21:00:00+00:00",
+              "2000-06-23 21:00:00+00:00",
+              "2000-06-30 21:00:00+00:00",
+              "2000-07-07 21:00:00+00:00"
+            ]
+          },
+          {
+            "code": "stale_run",
+            "severity": "warning",
+            "count": 9,
+            "message": "9 runs of >= 6 identical consecutive closes (longest 12); a frozen or interpolated feed",
+            "sample_timestamps": [
+              "2004-12-17 21:00:00+00:00",
+              "2004-12-24 21:00:00+00:00",
+              "2005-01-07 21:00:00+00:00",
+              "2005-01-14 21:00:00+00:00",
+              "2005-01-21 21:00:00+00:00"
+            ]
+          },
+          {
+            "code": "return_outlier",
+            "severity": "warning",
+            "count": 26,
+            "message": "26 log returns beyond 12.0 robust MAD z-scores (max |z| = 55.4)",
+            "sample_timestamps": [
+              "2008-09-17 17:00:00+00:00",
+              "2008-10-27 05:00:00+00:00",
+              "2008-10-28 17:00:00+00:00",
+              "2008-11-03 13:00:00+00:00",
+              "2008-11-25 13:00:00+00:00"
+            ]
+          },
+          {
+            "code": "volume_always_zero",
+            "severity": "warning",
+            "count": 40543,
+            "message": "volume carries no information (the source provided no volume at all). Any volume-dependent strategy run on this dataset would be running blind, and must be blocked rather than silently produce a flat feature.",
+            "sample_timestamps": []
+          }
+        ]
+      },
+      "repaired": false,
+      "repair_records": [],
+      "rows_removed": 0,
+      "excluded": false,
+      "exclusion_reason": "",
+      "canonical_version_id": "ds_35b64adc59ad1ab04b21891a",
+      "bars_stored": 40543,
+      "quality": "validated",
+      "readable_by_campaign": true
+    },
+    {
+      "instrument": "NZDUSD",
+      "timeframe": "H4",
+      "raw_version_id": "ds_9960f8a54990753d2dccef4f",
+      "bars_ingested": 32714,
+      "first_bar": "2005-08-12 21:00:00+00:00",
+      "last_bar": "2025-12-31 21:00:00+00:00",
+      "price_basis": "bid",
+      "timezone_of_origin": "EST-fixed (UTC-05:00, no DST)",
+      "adjustments": [
+        {
+          "kind": "timezone_correction",
+          "description": "HistData stamps bars in EST with no daylight saving; the V1 store additionally labelled those naive stamps as UTC without shifting them. Both errors are corrected here by adding 5 hours.",
+          "parameters": {
+            "source_convention": "EST-fixed (UTC-05:00, no DST)",
+            "offset_applied_hours": 5,
+            "input_was_mislabelled_utc": true,
+            "original_first_timestamp": "2005-08-12 16:00:00+00:00",
+            "corrected_first_timestamp": "2005-08-12 21:00:00+00:00",
+            "evidence": "fixed-offset clock (source is NOT true UTC) (weekly open hour 16:00 UTC, 1 distinct open hours observed)"
+          }
+        },
+        {
+          "kind": "price_basis_declaration",
+          "description": "Bars are BID. They are not mid. Any consumer needing mid must add an explicit half-spread and say so.",
+          "parameters": {
+            "price_basis": "bid"
+          }
+        }
+      ],
+      "integrity_before": {
+        "quality": "validated",
+        "is_clean": true,
+        "worst_severity": "warning",
+        "gap_count": 1087,
+        "unexpected_gap_count": 37,
+        "defects": [
+          {
+            "code": "misaligned_bar_start",
+            "severity": "warning",
+            "count": 32714,
+            "message": "bar starts not on the H4 grid; the source may use a session-anchored origin rather than an epoch-anchored one",
+            "sample_timestamps": [
+              "2005-08-12 21:00:00+00:00",
+              "2005-08-15 17:00:00+00:00",
+              "2005-08-15 21:00:00+00:00",
+              "2005-08-16 01:00:00+00:00",
+              "2005-08-16 05:00:00+00:00"
+            ]
+          },
+          {
+            "code": "unexpected_gap",
+            "severity": "warning",
+            "count": 37,
+            "message": "37 gaps during expected trading hours, 75 bars missing in total",
+            "sample_timestamps": [
+              "2005-08-12 21:00:00+00:00",
+              "2005-09-05 13:00:00+00:00",
+              "2005-11-24 13:00:00+00:00",
+              "2005-12-29 21:00:00+00:00",
+              "2006-12-22 21:00:00+00:00"
+            ]
+          },
+          {
+            "code": "expected_gap",
+            "severity": "info",
+            "count": 1050,
+            "message": "session-closed gaps (weekends, holidays, daily breaks)",
+            "sample_timestamps": []
+          },
+          {
+            "code": "off_session_bar",
+            "severity": "warning",
+            "count": 1152,
+            "message": "bars timestamped outside the fx_24_5 session. Either the source timezone convention is wrong, or foreign data has been stitched in.",
+            "sample_timestamps": [
+              "2005-08-12 21:00:00+00:00",
+              "2005-08-19 21:00:00+00:00",
+              "2005-08-26 21:00:00+00:00",
+              "2005-09-02 21:00:00+00:00",
+              "2005-09-09 21:00:00+00:00"
+            ]
+          },
+          {
+            "code": "return_outlier",
+            "severity": "warning",
+            "count": 10,
+            "message": "10 log returns beyond 12.0 robust MAD z-scores (max |z| = 19.8)",
+            "sample_timestamps": [
+              "2007-08-16 01:00:00+00:00",
+              "2008-10-06 13:00:00+00:00",
+              "2008-10-12 21:00:00+00:00",
+              "2008-10-24 09:00:00+00:00",
+              "2008-11-13 17:00:00+00:00"
+            ]
+          },
+          {
+            "code": "volume_always_zero",
+            "severity": "warning",
+            "count": 32714,
+            "message": "volume carries no information (the source provided no volume at all). Any volume-dependent strategy run on this dataset would be running blind, and must be blocked rather than silently produce a flat feature.",
+            "sample_timestamps": []
+          }
+        ]
+      },
+      "repaired": false,
+      "repair_records": [],
+      "rows_removed": 0,
+      "excluded": false,
+      "exclusion_reason": "",
+      "canonical_version_id": "ds_0e3faa46dff1175060e9d326",
+      "bars_stored": 32714,
+      "quality": "validated",
+      "readable_by_campaign": true
+    },
+    {
+      "instrument": "UK100",
+      "timeframe": "H4",
+      "raw_version_id": "ds_c50bb98e83170abb3fe557e7",
+      "bars_ingested": 19684,
+      "first_bar": "2010-11-15 05:00:00+00:00",
+      "last_bar": "2025-12-31 17:00:00+00:00",
+      "price_basis": "bid",
+      "timezone_of_origin": "EST-fixed (UTC-05:00, no DST)",
+      "adjustments": [
+        {
+          "kind": "timezone_correction",
+          "description": "HistData stamps bars in EST with no daylight saving; the V1 store additionally labelled those naive stamps as UTC without shifting them. Both errors are corrected here by adding 5 hours.",
+          "parameters": {
+            "source_convention": "EST-fixed (UTC-05:00, no DST)",
+            "offset_applied_hours": 5,
+            "input_was_mislabelled_utc": true,
+            "original_first_timestamp": "2010-11-15 00:00:00+00:00",
+            "corrected_first_timestamp": "2010-11-15 05:00:00+00:00",
+            "evidence": "DST-observing clock consistent with true UTC (weekly open hour 00:00 UTC, 2 distinct open hours observed)"
+          }
+        },
+        {
+          "kind": "price_basis_declaration",
+          "description": "Bars are BID. They are not mid. Any consumer needing mid must add an explicit half-spread and say so.",
+          "parameters": {
+            "price_basis": "bid"
+          }
+        }
+      ],
+      "integrity_before": {
+        "quality": "validated",
+        "is_clean": true,
+        "worst_severity": "warning",
+        "gap_count": 2424,
+        "unexpected_gap_count": 2126,
+        "defects": [
+          {
+            "code": "misaligned_bar_start",
+            "severity": "warning",
+            "count": 19684,
+            "message": "bar starts not on the H4 grid; the source may use a session-anchored origin rather than an epoch-anchored one",
+            "sample_timestamps": [
+              "2010-11-15 05:00:00+00:00",
+              "2010-11-15 09:00:00+00:00",
+              "2010-11-15 13:00:00+00:00",
+              "2010-11-15 17:00:00+00:00",
+              "2010-11-15 21:00:00+00:00"
+            ]
+          },
+          {
+            "code": "unexpected_gap",
+            "severity": "warning",
+            "count": 2126,
+            "message": "2126 gaps during expected trading hours, 3139 bars missing in total",
+            "sample_timestamps": [
+              "2010-11-15 21:00:00+00:00",
+              "2010-11-16 17:00:00+00:00",
+              "2010-11-17 21:00:00+00:00",
+              "2010-11-18 21:00:00+00:00",
+              "2010-11-19 21:00:00+00:00"
+            ]
+          },
+          {
+            "code": "expected_gap",
+            "severity": "info",
+            "count": 298,
+            "message": "session-closed gaps (weekends, holidays, daily breaks)",
+            "sample_timestamps": []
+          },
+          {
+            "code": "off_session_bar",
+            "severity": "warning",
+            "count": 1887,
+            "message": "bars timestamped outside the index session. Either the source timezone convention is wrong, or foreign data has been stitched in.",
+            "sample_timestamps": [
+              "2011-03-18 21:00:00+00:00",
+              "2011-03-23 21:00:00+00:00",
+              "2011-03-29 21:00:00+00:00",
+              "2011-03-30 21:00:00+00:00",
+              "2011-03-31 21:00:00+00:00"
+            ]
+          },
+          {
+            "code": "return_outlier",
+            "severity": "warning",
+            "count": 26,
+            "message": "26 log returns beyond 12.0 robust MAD z-scores (max |z| = 32.1)",
+            "sample_timestamps": [
+              "2011-08-04 17:00:00+00:00",
+              "2011-08-08 17:00:00+00:00",
+              "2011-08-09 09:00:00+00:00",
+              "2011-08-10 13:00:00+00:00",
+              "2011-08-11 13:00:00+00:00"
+            ]
+          },
+          {
+            "code": "volume_always_zero",
+            "severity": "warning",
+            "count": 19684,
+            "message": "volume carries no information (the source provided no volume at all). Any volume-dependent strategy run on this dataset would be running blind, and must be blocked rather than silently produce a flat feature.",
+            "sample_timestamps": []
+          }
+        ]
+      },
+      "repaired": false,
+      "repair_records": [],
+      "rows_removed": 0,
+      "excluded": false,
+      "exclusion_reason": "",
+      "canonical_version_id": "ds_de15bdaad611ef7e8a79a22d",
+      "bars_stored": 19684,
+      "quality": "validated",
+      "readable_by_campaign": true
+    },
+    {
+      "instrument": "US500",
+      "timeframe": "H4",
+      "raw_version_id": "ds_969405533b907b0398b4f13b",
+      "bars_ingested": 24066,
+      "first_bar": "2010-11-14 21:00:00+00:00",
+      "last_bar": "2025-12-31 21:00:00+00:00",
+      "price_basis": "bid",
+      "timezone_of_origin": "EST-fixed (UTC-05:00, no DST)",
+      "adjustments": [
+        {
+          "kind": "timezone_correction",
+          "description": "HistData stamps bars in EST with no daylight saving; the V1 store additionally labelled those naive stamps as UTC without shifting them. Both errors are corrected here by adding 5 hours.",
+          "parameters": {
+            "source_convention": "EST-fixed (UTC-05:00, no DST)",
+            "offset_applied_hours": 5,
+            "input_was_mislabelled_utc": true,
+            "original_first_timestamp": "2010-11-14 16:00:00+00:00",
+            "corrected_first_timestamp": "2010-11-14 21:00:00+00:00",
+            "evidence": "fixed-offset clock (source is NOT true UTC) (weekly open hour 16:00 UTC, 1 distinct open hours observed)"
+          }
+        },
+        {
+          "kind": "price_basis_declaration",
+          "description": "Bars are BID. They are not mid. Any consumer needing mid must add an explicit half-spread and say so.",
+          "parameters": {
+            "price_basis": "bid"
+          }
+        }
+      ],
+      "integrity_before": {
+        "quality": "validated",
+        "is_clean": true,
+        "worst_severity": "warning",
+        "gap_count": 835,
+        "unexpected_gap_count": 100,
+        "defects": [
+          {
+            "code": "misaligned_bar_start",
+            "severity": "warning",
+            "count": 24066,
+            "message": "bar starts not on the H4 grid; the source may use a session-anchored origin rather than an epoch-anchored one",
+            "sample_timestamps": [
+              "2010-11-14 21:00:00+00:00",
+              "2010-11-15 01:00:00+00:00",
+              "2010-11-15 05:00:00+00:00",
+              "2010-11-15 09:00:00+00:00",
+              "2010-11-15 13:00:00+00:00"
+            ]
+          },
+          {
+            "code": "unexpected_gap",
+            "severity": "warning",
+            "count": 100,
+            "message": "100 gaps during expected trading hours, 226 bars missing in total",
+            "sample_timestamps": [
+              "2010-11-26 17:00:00+00:00",
+              "2010-12-17 17:00:00+00:00",
+              "2010-12-23 21:00:00+00:00",
+              "2010-12-31 17:00:00+00:00",
+              "2011-01-17 13:00:00+00:00"
+            ]
+          },
+          {
+            "code": "expected_gap",
+            "severity": "info",
+            "count": 735,
+            "message": "session-closed gaps (weekends, holidays, daily breaks)",
+            "sample_timestamps": []
+          },
+          {
+            "code": "off_session_bar",
+            "severity": "warning",
+            "count": 3354,
+            "message": "bars timestamped outside the index session. Either the source timezone convention is wrong, or foreign data has been stitched in.",
+            "sample_timestamps": [
+              "2010-11-14 21:00:00+00:00",
+              "2010-11-21 21:00:00+00:00",
+              "2010-11-28 21:00:00+00:00",
+              "2010-12-05 21:00:00+00:00",
+              "2010-12-12 21:00:00+00:00"
+            ]
+          },
+          {
+            "code": "return_outlier",
+            "severity": "warning",
+            "count": 59,
+            "message": "59 log returns beyond 12.0 robust MAD z-scores (max |z| = 42.4)",
+            "sample_timestamps": [
+              "2011-08-05 13:00:00+00:00",
+              "2011-08-08 17:00:00+00:00",
+              "2011-08-09 05:00:00+00:00",
+              "2011-08-11 09:00:00+00:00",
+              "2011-08-11 13:00:00+00:00"
+            ]
+          },
+          {
+            "code": "volume_always_zero",
+            "severity": "warning",
+            "count": 24066,
+            "message": "volume carries no information (the source provided no volume at all). Any volume-dependent strategy run on this dataset would be running blind, and must be blocked rather than silently produce a flat feature.",
+            "sample_timestamps": []
+          }
+        ]
+      },
+      "repaired": false,
+      "repair_records": [],
+      "rows_removed": 0,
+      "excluded": false,
+      "exclusion_reason": "",
+      "canonical_version_id": "ds_2520a5885ca425d750bceeff",
+      "bars_stored": 24066,
+      "quality": "validated",
+      "readable_by_campaign": true
+    },
+    {
+      "instrument": "USDCAD",
+      "timeframe": "H4",
+      "raw_version_id": "ds_c9eb273ae946544f39bd796c",
+      "bars_ingested": 39635,
+      "first_bar": "2000-06-12 17:00:00+00:00",
+      "last_bar": "2025-12-31 21:00:00+00:00",
+      "price_basis": "bid",
+      "timezone_of_origin": "EST-fixed (UTC-05:00, no DST)",
+      "adjustments": [
+        {
+          "kind": "timezone_correction",
+          "description": "HistData stamps bars in EST with no daylight saving; the V1 store additionally labelled those naive stamps as UTC without shifting them. Both errors are corrected here by adding 5 hours.",
+          "parameters": {
+            "source_convention": "EST-fixed (UTC-05:00, no DST)",
+            "offset_applied_hours": 5,
+            "input_was_mislabelled_utc": true,
+            "original_first_timestamp": "2000-06-12 12:00:00+00:00",
+            "corrected_first_timestamp": "2000-06-12 17:00:00+00:00",
+            "evidence": "fixed-offset clock (source is NOT true UTC) (weekly open hour 16:00 UTC, 1 distinct open hours observed)"
+          }
+        },
+        {
+          "kind": "price_basis_declaration",
+          "description": "Bars are BID. They are not mid. Any consumer needing mid must add an explicit half-spread and say so.",
+          "parameters": {
+            "price_basis": "bid"
+          }
+        }
+      ],
+      "integrity_before": {
+        "quality": "validated",
+        "is_clean": true,
+        "worst_severity": "warning",
+        "gap_count": 1365,
+        "unexpected_gap_count": 124,
+        "defects": [
+          {
+            "code": "misaligned_bar_start",
+            "severity": "warning",
+            "count": 39635,
+            "message": "bar starts not on the H4 grid; the source may use a session-anchored origin rather than an epoch-anchored one",
+            "sample_timestamps": [
+              "2000-06-12 17:00:00+00:00",
+              "2000-06-13 01:00:00+00:00",
+              "2000-06-16 21:00:00+00:00",
+              "2000-08-04 21:00:00+00:00",
+              "2001-01-02 09:00:00+00:00"
+            ]
+          },
+          {
+            "code": "unexpected_gap",
+            "severity": "warning",
+            "count": 124,
+            "message": "124 gaps during expected trading hours, 1478 bars missing in total",
+            "sample_timestamps": [
+              "2000-06-12 17:00:00+00:00",
+              "2000-06-13 01:00:00+00:00",
+              "2000-06-16 21:00:00+00:00",
+              "2000-08-04 21:00:00+00:00",
+              "2001-01-11 01:00:00+00:00"
+            ]
+          },
+          {
+            "code": "expected_gap",
+            "severity": "info",
+            "count": 1241,
+            "message": "session-closed gaps (weekends, holidays, daily breaks)",
+            "sample_timestamps": []
+          },
+          {
+            "code": "off_session_bar",
+            "severity": "warning",
+            "count": 1453,
+            "message": "bars timestamped outside the fx_24_5 session. Either the source timezone convention is wrong, or foreign data has been stitched in.",
+            "sample_timestamps": [
+              "2000-06-16 21:00:00+00:00",
+              "2000-08-04 21:00:00+00:00",
+              "2001-01-07 21:00:00+00:00",
+              "2001-01-21 21:00:00+00:00",
+              "2001-01-28 21:00:00+00:00"
+            ]
+          },
+          {
+            "code": "stale_run",
+            "severity": "warning",
+            "count": 9,
+            "message": "9 runs of >= 6 identical consecutive closes (longest 12); a frozen or interpolated feed",
+            "sample_timestamps": [
+              "2004-12-17 21:00:00+00:00",
+              "2004-12-24 17:00:00+00:00",
+              "2005-01-07 21:00:00+00:00",
+              "2005-01-14 21:00:00+00:00",
+              "2005-01-21 21:00:00+00:00"
+            ]
+          },
+          {
+            "code": "return_outlier",
+            "severity": "warning",
+            "count": 28,
+            "message": "28 log returns beyond 12.0 robust MAD z-scores (max |z| = 23.2)",
+            "sample_timestamps": [
+              "2004-08-13 13:00:00+00:00",
+              "2005-07-03 21:00:00+00:00",
+              "2008-09-19 13:00:00+00:00",
+              "2008-10-06 13:00:00+00:00",
+              "2008-10-08 13:00:00+00:00"
+            ]
+          },
+          {
+            "code": "volume_always_zero",
+            "severity": "warning",
+            "count": 39635,
+            "message": "volume carries no information (the source provided no volume at all). Any volume-dependent strategy run on this dataset would be running blind, and must be blocked rather than silently produce a flat feature.",
+            "sample_timestamps": []
+          }
+        ]
+      },
+      "repaired": false,
+      "repair_records": [],
+      "rows_removed": 0,
+      "excluded": false,
+      "exclusion_reason": "",
+      "canonical_version_id": "ds_a304e7c3fd751ef6be04ce52",
+      "bars_stored": 39635,
+      "quality": "validated",
+      "readable_by_campaign": true
+    },
+    {
+      "instrument": "USDCHF",
+      "timeframe": "H4",
+      "raw_version_id": "ds_11072c1e9a3234c2cc2165ed",
+      "bars_ingested": 40494,
+      "first_bar": "2000-05-30 21:00:00+00:00",
+      "last_bar": "2025-12-31 21:00:00+00:00",
+      "price_basis": "bid",
+      "timezone_of_origin": "EST-fixed (UTC-05:00, no DST)",
+      "adjustments": [
+        {
+          "kind": "timezone_correction",
+          "description": "HistData stamps bars in EST with no daylight saving; the V1 store additionally labelled those naive stamps as UTC without shifting them. Both errors are corrected here by adding 5 hours.",
+          "parameters": {
+            "source_convention": "EST-fixed (UTC-05:00, no DST)",
+            "offset_applied_hours": 5,
+            "input_was_mislabelled_utc": true,
+            "original_first_timestamp": "2000-05-30 16:00:00+00:00",
+            "corrected_first_timestamp": "2000-05-30 21:00:00+00:00",
+            "evidence": "fixed-offset clock (source is NOT true UTC) (weekly open hour 16:00 UTC, 1 distinct open hours observed)"
+          }
+        },
+        {
+          "kind": "price_basis_declaration",
+          "description": "Bars are BID. They are not mid. Any consumer needing mid must add an explicit half-spread and say so.",
+          "parameters": {
+            "price_basis": "bid"
+          }
+        }
+      ],
+      "integrity_before": {
+        "quality": "validated",
+        "is_clean": true,
+        "worst_severity": "warning",
+        "gap_count": 1396,
+        "unexpected_gap_count": 132,
+        "defects": [
+          {
+            "code": "misaligned_bar_start",
+            "severity": "warning",
+            "count": 40494,
+            "message": "bar starts not on the H4 grid; the source may use a session-anchored origin rather than an epoch-anchored one",
+            "sample_timestamps": [
+              "2000-05-30 21:00:00+00:00",
+              "2000-05-31 01:00:00+00:00",
+              "2000-05-31 05:00:00+00:00",
+              "2000-05-31 09:00:00+00:00",
+              "2000-05-31 13:00:00+00:00"
+            ]
+          },
+          {
+            "code": "unexpected_gap",
+            "severity": "warning",
+            "count": 132,
+            "message": "132 gaps during expected trading hours, 701 bars missing in total",
+            "sample_timestamps": [
+              "2000-06-09 13:00:00+00:00",
+              "2000-06-16 01:00:00+00:00",
+              "2000-07-04 09:00:00+00:00",
+              "2000-09-04 13:00:00+00:00",
+              "2000-09-22 09:00:00+00:00"
+            ]
+          },
+          {
+            "code": "expected_gap",
+            "severity": "info",
+            "count": 1264,
+            "message": "session-closed gaps (weekends, holidays, daily breaks)",
+            "sample_timestamps": []
+          },
+          {
+            "code": "off_session_bar",
+            "severity": "warning",
+            "count": 1482,
+            "message": "bars timestamped outside the fx_24_5 session. Either the source timezone convention is wrong, or foreign data has been stitched in.",
+            "sample_timestamps": [
+              "2000-06-16 21:00:00+00:00",
+              "2000-06-23 21:00:00+00:00",
+              "2000-06-30 21:00:00+00:00",
+              "2000-07-07 21:00:00+00:00",
+              "2000-07-14 21:00:00+00:00"
+            ]
+          },
+          {
+            "code": "stale_run",
+            "severity": "warning",
+            "count": 9,
+            "message": "9 runs of >= 6 identical consecutive closes (longest 12); a frozen or interpolated feed",
+            "sample_timestamps": [
+              "2004-12-17 21:00:00+00:00",
+              "2004-12-24 21:00:00+00:00",
+              "2005-01-07 21:00:00+00:00",
+              "2005-01-14 21:00:00+00:00",
+              "2005-01-21 21:00:00+00:00"
+            ]
+          },
+          {
+            "code": "return_outlier",
+            "severity": "warning",
+            "count": 25,
+            "message": "25 log returns beyond 12.0 robust MAD z-scores (max |z| = 103.2)",
+            "sample_timestamps": [
+              "2001-09-11 13:00:00+00:00",
+              "2002-01-27 21:00:00+00:00",
+              "2003-03-17 13:00:00+00:00",
+              "2004-04-02 13:00:00+00:00",
+              "2004-08-06 13:00:00+00:00"
+            ]
+          },
+          {
+            "code": "volume_always_zero",
+            "severity": "warning",
+            "count": 40494,
+            "message": "volume carries no information (the source provided no volume at all). Any volume-dependent strategy run on this dataset would be running blind, and must be blocked rather than silently produce a flat feature.",
+            "sample_timestamps": []
+          }
+        ]
+      },
+      "repaired": false,
+      "repair_records": [],
+      "rows_removed": 0,
+      "excluded": false,
+      "exclusion_reason": "",
+      "canonical_version_id": "ds_a1a788203a3a5aa2d14f4917",
+      "bars_stored": 40494,
+      "quality": "validated",
+      "readable_by_campaign": true
+    },
+    {
+      "instrument": "USDJPY",
+      "timeframe": "H4",
+      "raw_version_id": "ds_f9aa26468a19d93b4659d8b5",
+      "bars_ingested": 40561,
+      "first_bar": "2000-05-30 21:00:00+00:00",
+      "last_bar": "2025-12-31 21:00:00+00:00",
+      "price_basis": "bid",
+      "timezone_of_origin": "EST-fixed (UTC-05:00, no DST)",
+      "adjustments": [
+        {
+          "kind": "timezone_correction",
+          "description": "HistData stamps bars in EST with no daylight saving; the V1 store additionally labelled those naive stamps as UTC without shifting them. Both errors are corrected here by adding 5 hours.",
+          "parameters": {
+            "source_convention": "EST-fixed (UTC-05:00, no DST)",
+            "offset_applied_hours": 5,
+            "input_was_mislabelled_utc": true,
+            "original_first_timestamp": "2000-05-30 16:00:00+00:00",
+            "corrected_first_timestamp": "2000-05-30 21:00:00+00:00",
+            "evidence": "fixed-offset clock (source is NOT true UTC) (weekly open hour 16:00 UTC, 1 distinct open hours observed)"
+          }
+        },
+        {
+          "kind": "price_basis_declaration",
+          "description": "Bars are BID. They are not mid. Any consumer needing mid must add an explicit half-spread and say so.",
+          "parameters": {
+            "price_basis": "bid"
+          }
+        }
+      ],
+      "integrity_before": {
+        "quality": "validated",
+        "is_clean": true,
+        "worst_severity": "warning",
+        "gap_count": 1400,
+        "unexpected_gap_count": 128,
+        "defects": [
+          {
+            "code": "misaligned_bar_start",
+            "severity": "warning",
+            "count": 40561,
+            "message": "bar starts not on the H4 grid; the source may use a session-anchored origin rather than an epoch-anchored one",
+            "sample_timestamps": [
+              "2000-05-30 21:00:00+00:00",
+              "2000-05-31 01:00:00+00:00",
+              "2000-05-31 05:00:00+00:00",
+              "2000-05-31 09:00:00+00:00",
+              "2000-05-31 13:00:00+00:00"
+            ]
+          },
+          {
+            "code": "unexpected_gap",
+            "severity": "warning",
+            "count": 128,
+            "message": "128 gaps during expected trading hours, 637 bars missing in total",
+            "sample_timestamps": [
+              "2000-06-09 13:00:00+00:00",
+              "2000-06-16 01:00:00+00:00",
+              "2000-07-04 13:00:00+00:00",
+              "2000-09-04 13:00:00+00:00",
+              "2000-10-09 13:00:00+00:00"
+            ]
+          },
+          {
+            "code": "expected_gap",
+            "severity": "info",
+            "count": 1272,
+            "message": "session-closed gaps (weekends, holidays, daily breaks)",
+            "sample_timestamps": []
+          },
+          {
+            "code": "off_session_bar",
+            "severity": "warning",
+            "count": 1485,
+            "message": "bars timestamped outside the fx_24_5 session. Either the source timezone convention is wrong, or foreign data has been stitched in.",
+            "sample_timestamps": [
+              "2000-06-09 21:00:00+00:00",
+              "2000-06-16 21:00:00+00:00",
+              "2000-06-23 21:00:00+00:00",
+              "2000-06-30 21:00:00+00:00",
+              "2000-07-07 21:00:00+00:00"
+            ]
+          },
+          {
+            "code": "stale_run",
+            "severity": "warning",
+            "count": 9,
+            "message": "9 runs of >= 6 identical consecutive closes (longest 12); a frozen or interpolated feed",
+            "sample_timestamps": [
+              "2004-12-17 21:00:00+00:00",
+              "2004-12-24 21:00:00+00:00",
+              "2005-01-07 21:00:00+00:00",
+              "2005-01-14 21:00:00+00:00",
+              "2005-01-21 21:00:00+00:00"
+            ]
+          },
+          {
+            "code": "return_outlier",
+            "severity": "warning",
+            "count": 31,
+            "message": "31 log returns beyond 12.0 robust MAD z-scores (max |z| = 28.1)",
+            "sample_timestamps": [
+              "2001-09-11 13:00:00+00:00",
+              "2002-06-23 21:00:00+00:00",
+              "2002-07-28 21:00:00+00:00",
+              "2008-10-06 13:00:00+00:00",
+              "2008-10-24 09:00:00+00:00"
+            ]
+          },
+          {
+            "code": "volume_always_zero",
+            "severity": "warning",
+            "count": 40561,
+            "message": "volume carries no information (the source provided no volume at all). Any volume-dependent strategy run on this dataset would be running blind, and must be blocked rather than silently produce a flat feature.",
+            "sample_timestamps": []
+          }
+        ]
+      },
+      "repaired": false,
+      "repair_records": [],
+      "rows_removed": 0,
+      "excluded": false,
+      "exclusion_reason": "",
+      "canonical_version_id": "ds_1dda4939609f65d3e4598af5",
+      "bars_stored": 40561,
+      "quality": "validated",
+      "readable_by_campaign": true
+    },
+    {
+      "instrument": "XAGUSD",
+      "timeframe": "H4",
+      "raw_version_id": "ds_582e1a0aef6744eb01d20661",
+      "bars_ingested": 26620,
+      "first_bar": "2009-05-03 21:00:00+00:00",
+      "last_bar": "2025-12-31 21:00:00+00:00",
+      "price_basis": "bid",
+      "timezone_of_origin": "EST-fixed (UTC-05:00, no DST)",
+      "adjustments": [
+        {
+          "kind": "timezone_correction",
+          "description": "HistData stamps bars in EST with no daylight saving; the V1 store additionally labelled those naive stamps as UTC without shifting them. Both errors are corrected here by adding 5 hours.",
+          "parameters": {
+            "source_convention": "EST-fixed (UTC-05:00, no DST)",
+            "offset_applied_hours": 5,
+            "input_was_mislabelled_utc": true,
+            "original_first_timestamp": "2009-05-03 16:00:00+00:00",
+            "corrected_first_timestamp": "2009-05-03 21:00:00+00:00",
+            "evidence": "fixed-offset clock (source is NOT true UTC) (weekly open hour 16:00 UTC, 1 distinct open hours observed)"
+          }
+        },
+        {
+          "kind": "price_basis_declaration",
+          "description": "Bars are BID. They are not mid. Any consumer needing mid must add an explicit half-spread and say so.",
+          "parameters": {
+            "price_basis": "bid"
+          }
+        }
+      ],
+      "integrity_before": {
+        "quality": "validated",
+        "is_clean": true,
+        "worst_severity": "warning",
+        "gap_count": 888,
+        "unexpected_gap_count": 68,
+        "defects": [
+          {
+            "code": "misaligned_bar_start",
+            "severity": "warning",
+            "count": 26620,
+            "message": "bar starts not on the H4 grid; the source may use a session-anchored origin rather than an epoch-anchored one",
+            "sample_timestamps": [
+              "2009-05-03 21:00:00+00:00",
+              "2009-05-04 01:00:00+00:00",
+              "2009-05-04 05:00:00+00:00",
+              "2009-05-04 09:00:00+00:00",
+              "2009-05-04 13:00:00+00:00"
+            ]
+          },
+          {
+            "code": "unexpected_gap",
+            "severity": "warning",
+            "count": 68,
+            "message": "68 gaps during expected trading hours, 151 bars missing in total",
+            "sample_timestamps": [
+              "2009-11-27 17:00:00+00:00",
+              "2009-12-24 17:00:00+00:00",
+              "2009-12-31 21:00:00+00:00",
+              "2010-04-02 13:00:00+00:00",
+              "2010-11-26 17:00:00+00:00"
+            ]
+          },
+          {
+            "code": "expected_gap",
+            "severity": "info",
+            "count": 820,
+            "message": "session-closed gaps (weekends, holidays, daily breaks)",
+            "sample_timestamps": []
+          },
+          {
+            "code": "off_session_bar",
+            "severity": "warning",
+            "count": 3743,
+            "message": "bars timestamped outside the metals session. Either the source timezone convention is wrong, or foreign data has been stitched in.",
+            "sample_timestamps": [
+              "2009-05-03 21:00:00+00:00",
+              "2009-05-04 21:00:00+00:00",
+              "2009-05-05 21:00:00+00:00",
+              "2009-05-06 21:00:00+00:00",
+              "2009-05-07 21:00:00+00:00"
+            ]
+          },
+          {
+            "code": "return_outlier",
+            "severity": "warning",
+            "count": 27,
+            "message": "27 log returns beyond 12.0 robust MAD z-scores (max |z| = 30.0)",
+            "sample_timestamps": [
+              "2010-11-09 17:00:00+00:00",
+              "2011-04-27 17:00:00+00:00",
+              "2011-05-01 21:00:00+00:00",
+              "2011-05-02 17:00:00+00:00",
+              "2011-05-03 17:00:00+00:00"
+            ]
+          },
+          {
+            "code": "volume_always_zero",
+            "severity": "warning",
+            "count": 26620,
+            "message": "volume carries no information (the source provided no volume at all). Any volume-dependent strategy run on this dataset would be running blind, and must be blocked rather than silently produce a flat feature.",
+            "sample_timestamps": []
+          }
+        ]
+      },
+      "repaired": false,
+      "repair_records": [],
+      "rows_removed": 0,
+      "excluded": false,
+      "exclusion_reason": "",
+      "canonical_version_id": "ds_62662a885909bc6cfbba42c9",
+      "bars_stored": 26620,
+      "quality": "validated",
+      "readable_by_campaign": true
+    },
+    {
+      "instrument": "XAUUSD",
+      "timeframe": "H1",
+      "raw_version_id": "ds_81b77b374ede4a152cee3a3e",
+      "bars_ingested": 99945,
+      "first_bar": "2009-03-15 22:00:00+00:00",
+      "last_bar": "2025-12-31 21:00:00+00:00",
+      "price_basis": "bid",
+      "timezone_of_origin": "EST-fixed (UTC-05:00, no DST)",
+      "adjustments": [
+        {
+          "kind": "timezone_correction",
+          "description": "HistData stamps bars in EST with no daylight saving; the V1 store additionally labelled those naive stamps as UTC without shifting them. Both errors are corrected here by adding 5 hours.",
+          "parameters": {
+            "source_convention": "EST-fixed (UTC-05:00, no DST)",
+            "offset_applied_hours": 5,
+            "input_was_mislabelled_utc": true,
+            "original_first_timestamp": "2009-03-15 17:00:00+00:00",
+            "corrected_first_timestamp": "2009-03-15 22:00:00+00:00",
+            "evidence": "fixed-offset clock (source is NOT true UTC) (weekly open hour 18:00 UTC, 1 distinct open hours observed)"
+          }
+        },
+        {
+          "kind": "price_basis_declaration",
+          "description": "Bars are BID. They are not mid. Any consumer needing mid must add an explicit half-spread and say so.",
+          "parameters": {
+            "price_basis": "bid"
+          }
+        }
+      ],
+      "integrity_before": {
+        "quality": "validated",
+        "is_clean": true,
+        "worst_severity": "warning",
+        "gap_count": 3596,
+        "unexpected_gap_count": 2505,
+        "defects": [
+          {
+            "code": "unexpected_gap",
+            "severity": "warning",
+            "count": 2505,
+            "message": "2505 gaps during expected trading hours, 3441 bars missing in total",
+            "sample_timestamps": [
+              "2009-04-03 21:00:00+00:00",
+              "2009-04-10 21:00:00+00:00",
+              "2009-04-17 21:00:00+00:00",
+              "2009-04-24 21:00:00+00:00",
+              "2009-05-08 21:00:00+00:00"
+            ]
+          },
+          {
+            "code": "expected_gap",
+            "severity": "info",
+            "count": 1091,
+            "message": "session-closed gaps (weekends, holidays, daily breaks)",
+            "sample_timestamps": []
+          },
+          {
+            "code": "off_session_bar",
+            "severity": "warning",
+            "count": 3382,
+            "message": "bars timestamped outside the metals session. Either the source timezone convention is wrong, or foreign data has been stitched in.",
+            "sample_timestamps": [
+              "2009-03-16 21:00:00+00:00",
+              "2009-03-17 21:00:00+00:00",
+              "2009-03-18 21:00:00+00:00",
+              "2009-03-19 21:00:00+00:00",
+              "2009-03-20 21:00:00+00:00"
+            ]
+          },
+          {
+            "code": "return_outlier",
+            "severity": "warning",
+            "count": 108,
+            "message": "108 log returns beyond 12.0 robust MAD z-scores (max |z| = 39.0)",
+            "sample_timestamps": [
+              "2009-03-18 19:00:00+00:00",
+              "2009-03-18 20:00:00+00:00",
+              "2009-03-23 20:00:00+00:00",
+              "2009-03-25 14:00:00+00:00",
+              "2009-05-04 14:00:00+00:00"
+            ]
+          },
+          {
+            "code": "volume_always_zero",
+            "severity": "warning",
+            "count": 99945,
+            "message": "volume carries no information (the source provided no volume at all). Any volume-dependent strategy run on this dataset would be running blind, and must be blocked rather than silently produce a flat feature.",
+            "sample_timestamps": []
+          }
+        ]
+      },
+      "repaired": false,
+      "repair_records": [],
+      "rows_removed": 0,
+      "excluded": false,
+      "exclusion_reason": "",
+      "canonical_version_id": "ds_0df90b7d6e72504697fa17bf",
+      "bars_stored": 99945,
+      "quality": "validated",
+      "readable_by_campaign": true
+    },
+    {
+      "instrument": "XAUUSD",
+      "timeframe": "H4",
+      "raw_version_id": "ds_8255fea82fcc7eb49733b83e",
+      "bars_ingested": 26837,
+      "first_bar": "2009-03-15 21:00:00+00:00",
+      "last_bar": "2025-12-31 21:00:00+00:00",
+      "price_basis": "bid",
+      "timezone_of_origin": "EST-fixed (UTC-05:00, no DST)",
+      "adjustments": [
+        {
+          "kind": "timezone_correction",
+          "description": "HistData stamps bars in EST with no daylight saving; the V1 store additionally labelled those naive stamps as UTC without shifting them. Both errors are corrected here by adding 5 hours.",
+          "parameters": {
+            "source_convention": "EST-fixed (UTC-05:00, no DST)",
+            "offset_applied_hours": 5,
+            "input_was_mislabelled_utc": true,
+            "original_first_timestamp": "2009-03-15 16:00:00+00:00",
+            "corrected_first_timestamp": "2009-03-15 21:00:00+00:00",
+            "evidence": "fixed-offset clock (source is NOT true UTC) (weekly open hour 16:00 UTC, 1 distinct open hours observed)"
+          }
+        },
+        {
+          "kind": "price_basis_declaration",
+          "description": "Bars are BID. They are not mid. Any consumer needing mid must add an explicit half-spread and say so.",
+          "parameters": {
+            "price_basis": "bid"
+          }
+        }
+      ],
+      "integrity_before": {
+        "quality": "validated",
+        "is_clean": true,
+        "worst_severity": "warning",
+        "gap_count": 894,
+        "unexpected_gap_count": 67,
+        "defects": [
+          {
+            "code": "misaligned_bar_start",
+            "severity": "warning",
+            "count": 26837,
+            "message": "bar starts not on the H4 grid; the source may use a session-anchored origin rather than an epoch-anchored one",
+            "sample_timestamps": [
+              "2009-03-15 21:00:00+00:00",
+              "2009-03-16 01:00:00+00:00",
+              "2009-03-16 05:00:00+00:00",
+              "2009-03-16 09:00:00+00:00",
+              "2009-03-16 13:00:00+00:00"
+            ]
+          },
+          {
+            "code": "unexpected_gap",
+            "severity": "warning",
+            "count": 67,
+            "message": "67 gaps during expected trading hours, 150 bars missing in total",
+            "sample_timestamps": [
+              "2009-11-27 17:00:00+00:00",
+              "2009-12-24 17:00:00+00:00",
+              "2009-12-31 21:00:00+00:00",
+              "2010-12-24 09:00:00+00:00",
+              "2010-12-31 17:00:00+00:00"
+            ]
+          },
+          {
+            "code": "expected_gap",
+            "severity": "info",
+            "count": 827,
+            "message": "session-closed gaps (weekends, holidays, daily breaks)",
+            "sample_timestamps": []
+          },
+          {
+            "code": "off_session_bar",
+            "severity": "warning",
+            "count": 3784,
+            "message": "bars timestamped outside the metals session. Either the source timezone convention is wrong, or foreign data has been stitched in.",
+            "sample_timestamps": [
+              "2009-03-15 21:00:00+00:00",
+              "2009-03-16 21:00:00+00:00",
+              "2009-03-17 21:00:00+00:00",
+              "2009-03-18 21:00:00+00:00",
+              "2009-03-19 21:00:00+00:00"
+            ]
+          },
+          {
+            "code": "return_outlier",
+            "severity": "warning",
+            "count": 17,
+            "message": "17 log returns beyond 12.0 robust MAD z-scores (max |z| = 25.8)",
+            "sample_timestamps": [
+              "2009-03-18 17:00:00+00:00",
+              "2010-02-04 13:00:00+00:00",
+              "2011-08-24 13:00:00+00:00",
+              "2011-12-14 13:00:00+00:00",
+              "2012-01-25 17:00:00+00:00"
+            ]
+          },
+          {
+            "code": "volume_always_zero",
+            "severity": "warning",
+            "count": 26837,
+            "message": "volume carries no information (the source provided no volume at all). Any volume-dependent strategy run on this dataset would be running blind, and must be blocked rather than silently produce a flat feature.",
+            "sample_timestamps": []
+          }
+        ]
+      },
+      "repaired": false,
+      "repair_records": [],
+      "rows_removed": 0,
+      "excluded": false,
+      "exclusion_reason": "",
+      "canonical_version_id": "ds_817053e6d9976bdc8f40bca9",
+      "bars_stored": 26837,
+      "quality": "validated",
+      "readable_by_campaign": true
+    }
+  ]
+}

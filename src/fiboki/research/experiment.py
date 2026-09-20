@@ -29,6 +29,7 @@ history then shows both the error and the correction, which is the honest record
 """
 from __future__ import annotations
 
+import builtins
 import json
 import uuid
 from collections.abc import Mapping, Sequence
@@ -482,7 +483,11 @@ class ExperimentLedger:
                 stmt = stmt.limit(int(limit))
             return [_from_row(r) for r in session.scalars(stmt).all()]
 
-    def children(self, experiment_id: str) -> list[Experiment]:
+    def children(self, experiment_id: str) -> builtins.list[Experiment]:
+        # ``builtins.list`` spelled out: inside this class body the bare name
+        # ``list`` resolves to the query method above, not to the builtin, so an
+        # unqualified annotation names a function and every caller that iterates
+        # the result is flagged.
         return self.list(parent_experiment_id=str(experiment_id))
 
     def count(self) -> int:

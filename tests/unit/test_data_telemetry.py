@@ -1,7 +1,7 @@
 """Execution telemetry: slippage, latency, partial fills, divergence."""
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 import pytest
 
@@ -16,7 +16,7 @@ from fiboki.data.telemetry import (
     slippage_summary,
 )
 
-T0 = datetime(2026, 1, 6, 12, 0, tzinfo=timezone.utc)
+T0 = datetime(2026, 1, 6, 12, 0, tzinfo=UTC)
 
 
 def an_event(

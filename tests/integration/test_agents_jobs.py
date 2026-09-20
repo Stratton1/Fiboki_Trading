@@ -72,6 +72,54 @@ def test_a_queued_backtest_runs_the_real_engine(harness: Harness, backtest_id: s
     assert record.created_by == "worker"
 
 
+def test_the_record_names_the_exit_policy_that_produced_it(
+    harness: Harness, backtest_id: str
+) -> None:
+    """``exit_policy_fingerprint`` was declared and nothing ever filled it.
+
+    An empty fingerprint on a stored result is not "the default policy": it is
+    "this record predates the stamp", which matters because the exit vocabulary
+    has since changed (``ExitReason.BREAKEVEN``) and the fingerprint plus the
+    engine version are how a reader tells an old result from a new one.
+    """
+    record = harness.research.get_backtest(backtest_id)
+    fp = record.exit_policy_fingerprint
+    assert fp, "a run executed under an exit policy must say which one"
+    # The shape is ExitPolicy.fingerprint(): every field that can change a fill.
+    assert set(fp) >= {
+        "allocations",
+        "trailing",
+        "breakeven_at_r",
+        "max_bars_in_trade",
+        "cooldown_bars_after_exit",
+        "reversal",
+        "events",
+    }
+    assert fp["trailing"]["kind"] in {"none", "atr_chandelier", "fixed_distance",
+                                      "indicator_level", "breakeven_after_r"}
+    assert record.engine_version, "the engine version is stamped alongside it"
+
+
+def test_walkforward_folds_each_name_their_exit_policy(harness: Harness) -> None:
+    """Every stored record, not just the headline one."""
+    result = _run(
+        harness,
+        JobType.WALKFORWARD,
+        {
+            "strategy_id": "ema_cross_fixture",
+            "instrument": "EURUSD",
+            "timeframe": "H1",
+            "account_ccy": "USD",
+            "folds": 2,
+        },
+        key="walkforward_exit_policy_stamp",
+    )
+    ids = [str(f["backtest_id"]) for f in result["folds"]]
+    assert ids
+    for backtest_id in ids:
+        assert harness.research.get_backtest(backtest_id).exit_policy_fingerprint
+
+
 def test_the_recorded_result_is_deterministic(harness: Harness, backtest_id: str) -> None:
     """Same payload, same bytes, same ledger. Re-run it and compare hashes."""
     first = harness.research.get_backtest(backtest_id)

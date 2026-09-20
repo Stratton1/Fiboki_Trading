@@ -85,6 +85,7 @@ from fiboki.broker.base import (
     OrderAck,
     OrderStatus,
 )
+from fiboki.broker.position_manager import BookDriver, queue_entry_for_order
 from fiboki.core.contracts import (
     AccountState,
     Fill,
@@ -237,11 +238,11 @@ class PaperBroker(BrokerAdapter):
         self.fills: list[Fill] = []
         self.equity_curve: list[dict[str, Any]] = []
 
-        self._bar_index = -1
-        self._now: pd.Timestamp | None = None
-        self._last_bar: dict[str, Bar] = {}
-        self._prev_bar_time: dict[str, pd.Timestamp] = {}
-        self._intervals: dict[str, pd.Timedelta] = {}
+        # The per-bar mechanics live in BookDriver, which the IG and OANDA
+        # position managers drive too. This adapter having its own copy of the
+        # monotonic counter and the previous-bar bookkeeping is exactly how the
+        # paper and backtest loops drifted apart the first time.
+        self._driver = BookDriver(self.book)
         self._seen_client_refs: dict[str, str] = {}
         self._plan_strategies: dict[str, str] = {}
         self._acks: dict[str, OrderAck] = {}
@@ -277,6 +278,20 @@ class PaperBroker(BrokerAdapter):
 
     # ------------------------------------------------------------ plumbing
 
+    @property
+    def _bar_index(self) -> int:
+        return self._driver.bar_index
+
+    @property
+    def _now(self) -> pd.Timestamp | None:
+        return self._driver.now
+
+    @property
+    def _last_bar(self) -> dict[str, Bar]:
+        """The most recent bar per instrument. Read by the risk context builder
+        for a mark price, so it stays part of this adapter's surface."""
+        return self._driver.last_bars
+
     def set_bar_interval(self, symbol: str, interval: pd.Timedelta) -> None:
         """Declare the expected bar spacing, used for staleness detection.
 
@@ -285,7 +300,7 @@ class PaperBroker(BrokerAdapter):
         told will not detect stale prices, which is why this is explicit rather
         than guessed.
         """
-        self._intervals[symbol] = interval
+        self._driver.set_bar_interval(symbol, interval)
 
     def register_plan(self, plan_id: str, strategy_id: str) -> None:
         """Associate a plan with its strategy for attribution on the Trade row.
@@ -318,33 +333,10 @@ class PaperBroker(BrokerAdapter):
         to fix, so the book is told and the absence is visible rather than
         silently benign.
         """
-        if bar_index <= self._bar_index:
-            raise ValueError(
-                f"Paper bars must advance monotonically; got {bar_index} after "
-                f"{self._bar_index}. Replaying a bar would double-charge financing."
-            )
-        ts = timestamp
-        if ts is None:
-            if not bars:
-                raise ValueError("on_bar needs either bars or an explicit timestamp")
-            ts = next(iter(bars.values())).timestamp
-        prev_ts = self._now
-        self._bar_index = bar_index
-        self._now = ts
-
-        # Roll the staleness bookkeeping BEFORE anything prices a fill. The
-        # engine's ``_previous_bar_time`` is the bar before the current one, so
-        # ours must be too -- a one-bar offset here would silently change which
-        # fills are treated as stale and break parity in a way that only shows
-        # up at weekend gaps.
-        for _sym, _bar in bars.items():
-            if _sym in self._last_bar:
-                self._prev_bar_time[_sym] = self._last_bar[_sym].timestamp
-            self._last_bar[_sym] = _bar
-
-        view = self._slice(bars, bar_index, ts, prev_ts, series)
-        result = self.book.advance(view)
-        self._record_entries(result, ts)
+        result, view = self._driver.advance(
+            bars, bar_index=bar_index, timestamp=timestamp, series=series
+        )
+        self._record_entries(result, view.timestamp)
         self._mark_to_market(view)
 
         if self.equity <= self.config.bankruptcy_equity:
@@ -362,16 +354,12 @@ class PaperBroker(BrokerAdapter):
         prev_ts: pd.Timestamp | None,
         series: Mapping[str, Mapping[str, float]] | None,
     ) -> BarSlice:
-        return BarSlice(
-            index=bar_index,
+        return self._driver.slice_for(
+            bars,
+            bar_index=bar_index,
             timestamp=ts,
-            bars=dict(bars),
             previous_timestamp=prev_ts,
-            previous_times=dict(self._prev_bar_time),
-            intervals=dict(self._intervals),
-            last_closes={sym: bar.close for sym, bar in self._last_bar.items()},
-            carried_bars=dict(self._last_bar),
-            series={k: dict(v) for k, v in (series or {}).items()},
+            series=series,
         )
 
     def _record_entries(self, result: Any, ts: pd.Timestamp) -> None:
@@ -540,23 +528,21 @@ class PaperBroker(BrokerAdapter):
         self._seen_client_refs[order.client_ref] = broker_ref
         ts = self._now or pd.Timestamp.now(tz="UTC")
 
-        prices = tuple(order.take_profit_prices)
-        if not prices and order.take_profit is not None:
-            prices = (float(order.take_profit),)
-        entry = PendingEntry(
-            seq=seq,
-            instrument=get_instrument(order.instrument),
-            direction=order.direction,
-            size=order.size,
-            stop_price=order.stop_loss if order.stop_loss is not None else 0.0,
-            take_profit_prices=prices,
-            take_profit_allocations=tuple(order.take_profit_allocations),
+        entry = queue_entry_for_order(
+            self.book,
+            order,
+            bar_index=self._bar_index,
+            latency_bars=self.config.profile.latency_bars,
             strategy_id=self._strategy_for(order.plan_id),
-            actionable_index=self._bar_index + 1 + self.config.profile.latency_bars,
-            created_index=self._bar_index,
             ref=broker_ref,
+            # The sequence number was taken ABOVE, to name the broker
+            # reference. Taking a second one here would advance the book's
+            # counter once more on the paper path than on the engine's, and the
+            # counter feeds the fill simulator's counter-based RNG -- so the two
+            # price paths would silently decorrelate and parity would fail in a
+            # way no individual assertion points at.
+            seq=seq,
         )
-        self.book.queue_entry(entry)
         self._pending_by_seq[seq] = _PaperPending(entry, order, broker_ref)
 
         ack = OrderAck(

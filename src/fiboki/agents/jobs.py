@@ -367,6 +367,14 @@ def backtest_handler(ctx: JobContext) -> Mapping[str, Any]:
             dataset_version_ids=(run["dataset_version_id"],),
             config_fingerprint=_jsonable(result.config_fingerprint),
             data_fingerprint=_jsonable(result.data_fingerprint),
+            # Which exit policy produced these numbers. The field existed and
+            # nothing filled it, so every stored result claimed the default
+            # policy by omission. It matters because the exit VOCABULARY has
+            # since changed (``ExitReason.BREAKEVEN``): a reader comparing two
+            # results needs to see that they were executed under different exit
+            # rules, and an empty fingerprint is how a pre-stamp record is told
+            # apart from one that genuinely ran with no trail and no breakeven.
+            exit_policy_fingerprint=_jsonable(result.exit_policy_fingerprint),
             ledger_sha256=result.ledger_sha256(),
             metrics=run["metrics"],
             trades=tuple(_trade_payload(t) for t in result.trades),
@@ -653,6 +661,7 @@ def walkforward_handler(ctx: JobContext) -> Mapping[str, Any]:
                 dataset_version_ids=(run["dataset_version_id"],),
                 config_fingerprint=_jsonable(result.config_fingerprint),
                 data_fingerprint=_jsonable(result.data_fingerprint),
+                exit_policy_fingerprint=_jsonable(result.exit_policy_fingerprint),
                 ledger_sha256=result.ledger_sha256(),
                 metrics=run["metrics"],
                 trades=tuple(_trade_payload(t) for t in result.trades),

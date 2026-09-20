@@ -149,10 +149,10 @@ def align_panel(
         supplied[name] = s
         series[name] = s
 
-    common = None
-    for s in series.values():
-        common = s.index if common is None else common.intersection(s.index)
-    assert common is not None
+    indexes = [s.index for s in series.values()]
+    common = indexes[0]
+    for other in indexes[1:]:
+        common = common.intersection(other)
     common = common.sort_values()
     if len(common) < min_common_bars:
         raise CrossAssetError(

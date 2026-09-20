@@ -46,6 +46,7 @@ from fiboki.strategy.primitives import (
     IndicatorSpec,
     Rule,
     SpecError,
+    bound_number,
 )
 
 Side = Literal["long", "short"]
@@ -233,27 +234,35 @@ class CompiledStrategy:
         sign = 1.0 if side == "long" else -1.0
         atr = self._atr(ctx, model.atr)
 
+        # Read the bindable fields as numbers ONCE. ``compile_strategy`` refuses
+        # a document that still holds a parameter reference, so this can only
+        # raise if that guarantee has been bypassed -- which is exactly when a
+        # loud failure beats arithmetic on a placeholder.
+        value = bound_number(model.value, "stop.value")
+        buffer_atr = bound_number(model.buffer_atr, "stop.buffer_atr")
+        min_distance_atr = bound_number(model.min_distance_atr, "stop.min_distance_atr")
+
         if model.kind == "atr_multiple":
             if not math.isfinite(atr) or atr <= 0:
                 return None
-            distance = model.value * atr
+            distance = value * atr
         elif model.kind == "fixed_pips":
-            distance = model.value * inst.pip_size
+            distance = value * inst.pip_size
         elif model.kind == "percent":
-            distance = reference * model.value / 100.0
+            distance = reference * value / 100.0
         elif model.kind in ("swing_structure", "indicator_level"):
             level = ctx.read(model.level) if model.level is not None else math.nan
             if not math.isfinite(level):
                 return None
-            buffer = model.buffer_atr * atr if model.buffer_atr else 0.0
-            if model.buffer_atr and not math.isfinite(buffer):
+            buffer = buffer_atr * atr if buffer_atr else 0.0
+            if buffer_atr and not math.isfinite(buffer):
                 return None
             distance = (reference - level) * sign + buffer
         else:  # pragma: no cover - Literal exhausted
             raise CompilationError(f"unhandled stop kind {model.kind!r}")
 
-        if math.isfinite(atr) and model.min_distance_atr > 0:
-            distance = max(distance, model.min_distance_atr * atr)
+        if math.isfinite(atr) and min_distance_atr > 0:
+            distance = max(distance, min_distance_atr * atr)
         if not math.isfinite(distance) or distance <= 0:
             return None
 
@@ -336,17 +345,18 @@ class CompiledStrategy:
         risk: float,
         inst: Instrument,
     ) -> float | None:
+        value = bound_number(leg.value, "take_profit.value")
         if leg.kind == "r_multiple":
-            return reference + sign * leg.value * risk
+            return reference + sign * value * risk
         if leg.kind == "atr_multiple":
             atr = self._atr(ctx, leg.atr)
             if not math.isfinite(atr) or atr <= 0:
                 return None
-            return reference + sign * leg.value * atr
+            return reference + sign * value * atr
         if leg.kind == "fixed_pips":
-            return reference + sign * leg.value * inst.pip_size
+            return reference + sign * value * inst.pip_size
         if leg.kind == "percent":
-            return reference * (1.0 + sign * leg.value / 100.0)
+            return reference * (1.0 + sign * value / 100.0)
         if leg.kind == "indicator_level":
             level = ctx.read(leg.level) if leg.level is not None else math.nan
             return level if math.isfinite(level) else None

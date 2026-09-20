@@ -116,14 +116,37 @@ def is_ref(value: Any) -> bool:
     return isinstance(value, dict) and set(value) == {PARAM_REF_KEY}
 
 
-def _number(value: Any, where: str) -> float:
-    """Read a bindable field as a number, refusing an unresolved reference."""
+def bound_number(value: Any, where: str) -> float:
+    """Read a bindable field as a number, refusing an unresolved reference.
+
+    The return type is the point as much as the check: a ``NumberOrRef`` field
+    is ``float | ParamRef`` to a type checker, so arithmetic on it does not type
+    and should not. Everything that needs the number goes through here, gets a
+    ``float``, and gets a loud failure instead of a coercion if the document was
+    never bound.
+    """
     if is_ref(value):
         raise UnboundParameterError(
             f"{where} still holds the unresolved parameter reference {value!r}. "
             "Bind the document before evaluating it: a half-bound strategy must "
             "never run."
         )
+    return float(value)
+
+
+#: Kept as the private spelling the rest of this module already uses.
+_number = bound_number
+
+
+def literal_number(value: Any) -> float | None:
+    """The literal a bindable field holds, or ``None`` while it is a reference.
+
+    For *validation*, where an unbound reference is legal and simply means "this
+    cannot be checked yet". Distinct from :func:`bound_number`, which is for
+    *evaluation*, where an unbound reference is a bug.
+    """
+    if value is None or is_ref(value):
+        return None
     return float(value)
 
 
@@ -474,12 +497,9 @@ class RegimeGateRule(_BaseRule):
     def _bounded(self) -> RegimeGateRule:
         if self.min_value is None and self.max_value is None:
             raise ValueError("regime_gate needs at least one of min_value/max_value")
-        if (
-            self.min_value is not None
-            and self.max_value is not None
-            and not (is_ref(self.min_value) or is_ref(self.max_value))
-            and self.min_value > self.max_value
-        ):
+        lo = literal_number(self.min_value)
+        hi = literal_number(self.max_value)
+        if lo is not None and hi is not None and lo > hi:
             raise ValueError("regime_gate min_value must be <= max_value")
         return self
 

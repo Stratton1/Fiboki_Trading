@@ -549,7 +549,7 @@ def research_sweep_superseded(
         _fail(f"no research store at {store_dir}", EXIT_MISUSE)
     with ResearchStore(store_dir) as store:
         notes = store.sweep_superseded_backtests(dry_run=dry_run)
-        payload = {
+        payload: dict[str, Any] = {
             "engine_version": ENGINE_VERSION,
             "dry_run": dry_run,
             "superseded": [

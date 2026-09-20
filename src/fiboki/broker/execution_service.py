@@ -54,6 +54,7 @@ from typing import Any, Protocol
 import pandas as pd
 
 from fiboki.broker.base import (
+    AmendNotSupported,
     BrokerAdapter,
     BrokerError,
     BrokerRejected,
@@ -61,6 +62,7 @@ from fiboki.broker.base import (
     DuplicateClientRef,
     OrderAck,
     OrderStatus,
+    PositionNotFound,
 )
 from fiboki.broker.mode_guard import ModeGuard
 from fiboki.core.contracts import (
@@ -73,6 +75,7 @@ from fiboki.core.enums import Direction, ExecutionMode, OrderType
 from fiboki.risk.gateway import ExitContext, RiskContext, RiskGateway
 
 __all__ = [
+    "AmendOutcome",
     "ExecutionService",
     "IdempotencyViolation",
     "InMemoryIntentStore",
@@ -84,6 +87,7 @@ __all__ = [
     "RecoveredPosition",
     "RecoveryReport",
     "SubmitOutcome",
+    "amend_client_ref",
     "client_ref_for",
 ]
 
@@ -148,6 +152,31 @@ def client_ref_for(plan: TradePlan) -> str:
     same plan twice is detectable both locally and at the venue.
     """
     return f"FBK-{plan.plan_id}"
+
+
+def amend_client_ref(
+    position_id: str, stop_loss: float | None, take_profit: float | None
+) -> str:
+    """The idempotency key for an amendment. Deterministic in the DESIRED STATE.
+
+    This is the one design decision the whole client-side position manager
+    rests on. An entry's key is derived from the plan, so submitting the same
+    plan twice collides and is refused -- which is right, because a second
+    entry would be a second position. An amendment is not like that: re-issuing
+    "put the stop at 1.0940" is *the same instruction*, and a manager that
+    could not safely re-issue it would have to choose between losing a trail
+    step to one lost HTTP response and risking a double-apply.
+
+    Deriving the key from the levels removes the choice. Re-issuing levels
+    already applied collides with the record of the earlier application and is
+    skipped without a network call; a DIFFERENT level is a different key and a
+    genuinely new instruction. Idempotency is therefore a property of the key
+    space rather than of anybody remembering to check.
+    """
+    def _level(value: float | None) -> str:
+        return "none" if value is None else f"{float(value):.10f}"
+
+    return f"FBK-AMEND-{position_id}-{_level(stop_loss)}-{_level(take_profit)}"
 
 
 @dataclass(frozen=True, slots=True)
@@ -300,6 +329,30 @@ class SubmitOutcome:
     decision: RiskDecision | None
     ack: OrderAck | None = None
     reason: str = ""
+
+    @property
+    def blocked_by_risk(self) -> bool:
+        return self.decision is not None and not self.decision.allowed
+
+
+@dataclass(frozen=True, slots=True)
+class AmendOutcome:
+    """The result of one venue instruction that is not an entry.
+
+    ``skipped`` means the venue already holds these levels and nothing was
+    sent. It is reported separately from ``accepted`` because "we did not need
+    to move it" and "we moved it" are different facts about the system, and a
+    manager that could not tell them apart would count no-ops as evidence its
+    amendments were reaching the venue.
+    """
+
+    accepted: bool
+    intent: OrderIntent | None
+    decision: RiskDecision | None
+    ack: OrderAck | None = None
+    reason: str = ""
+    attempts: int = 0
+    skipped: bool = False
 
     @property
     def blocked_by_risk(self) -> bool:
@@ -561,6 +614,23 @@ class ExecutionService:
             ack = self.adapter.close_position(
                 position, client_ref=client_ref, reason=context.extra.get("reason", "")
             )
+        except PositionNotFound as exc:
+            # The venue has no such position. For a CLOSE that is the state we
+            # wanted: the position is flat, which is what we were asking for.
+            # Recording it as a rejection would make a manager retry an
+            # instruction that can never succeed and then alert on a book that
+            # is exactly right.
+            self._write(
+                replace(
+                    intent,
+                    state=IntentState.CLOSED,
+                    updated_at=now,
+                    last_error=f"already_flat:{exc}",
+                )
+            )
+            return SubmitOutcome(
+                True, self.store.get(client_ref), decision, None, f"already_flat:{exc}"
+            )
         except BrokerRejected as exc:
             self._write(replace(intent, state=IntentState.REJECTED, updated_at=now,
                                 last_error=f"broker_rejected:{exc}"))
@@ -580,6 +650,260 @@ class ExecutionService:
         )
         self._write(closed)
         return SubmitOutcome(True, closed, decision, ack, "")
+
+    # ------------------------------------------------- venue-side management
+
+    def amend(
+        self,
+        position: Position,
+        *,
+        stop_loss: float | None,
+        take_profit: float | None,
+        context: ExitContext,
+        retry: Any = None,
+        sleeper: Any = None,
+        reason: str = "",
+    ) -> AmendOutcome:
+        """Move the ONE stop and ONE limit the venue holds for ``position``.
+
+        This is the only route to an adapter's ``amend_position``. Nothing in
+        ``workers/`` or the position manager calls an adapter directly, for the
+        same reason nothing constructs an ``Order``: the durable record, the
+        gateway decision and the idempotency key are not optional extras that a
+        caller may remember to add, they are the path.
+
+        Four things happen here that do not happen if you call the adapter:
+
+        1. the risk gateway's EXIT check set runs, so a kill switch in FLATTEN
+           mode cannot be bypassed by dressing an instruction up as an amend;
+        2. an intent is written and FSYNCED BEFORE dispatch, so a crash between
+           deciding and dispatching leaves evidence;
+        3. the instruction is idempotent -- see :func:`amend_client_ref` -- so
+           re-issuing levels the venue already holds costs nothing and sends
+           nothing;
+        4. it is RETRIED with backoff. An entry is never retried, because a
+           retry that reached the venue twice doubles a position. An amendment
+           is idempotent, so the calculus inverts: not retrying is the risk.
+
+        A retry is exhausted rather than swallowed. The caller gets
+        ``accepted=False`` and the last error, and is expected to alert --
+        :class:`~fiboki.broker.position_manager.VenuePositionManager` does.
+        """
+        now = context.now
+        client_ref = amend_client_ref(position.position_id, stop_loss, take_profit)
+
+        decision = self.gateway.evaluate_exit(context)
+        if not decision.allowed:
+            return AmendOutcome(
+                False, None, decision, None, "risk_gateway_blocked_amend", 0, False
+            )
+
+        existing = self.store.get(client_ref)
+        if existing is not None and existing.state is IntentState.FILLED:
+            # These exact levels have already been applied at the venue. Not an
+            # error and not a no-op to hide: a reported skip.
+            return AmendOutcome(True, existing, decision, None, "already_applied", 0, True)
+
+        intent = OrderIntent(
+            client_ref=client_ref,
+            plan_id=position.position_id,
+            signal_id="",
+            strategy_id=position.strategy_id,
+            instrument=position.instrument,
+            direction=position.direction,
+            size=position.size,
+            mode=self.mode,
+            state=IntentState.PENDING,
+            created_at=now,
+            updated_at=now,
+            venue=self.adapter.venue_name,
+            broker_ref=position.venue_ref,
+            stop_loss=stop_loss,
+            take_profit=take_profit,
+            extra={"amend": True, "position_id": position.position_id, "reason": reason},
+        )
+        self._write(intent)
+
+        attempts = int(getattr(retry, "attempts", 1) or 1)
+        last_error = ""
+        for attempt in range(1, attempts + 1):
+            intent = replace(intent, dispatch_attempts=attempt, updated_at=now)
+            try:
+                ack = self.adapter.amend_position(
+                    position,
+                    stop_loss=stop_loss,
+                    take_profit=take_profit,
+                    client_ref=client_ref,
+                    reason=reason,
+                )
+            except PositionNotFound as exc:
+                # Nothing to amend. Terminal, and NOT retryable: the position is
+                # gone and no amount of backoff brings it back.
+                self._write(
+                    replace(
+                        intent,
+                        state=IntentState.CLOSED,
+                        updated_at=now,
+                        last_error=f"already_flat:{exc}",
+                    )
+                )
+                return AmendOutcome(
+                    False,
+                    self.store.get(client_ref),
+                    decision,
+                    None,
+                    f"already_flat:{exc}",
+                    attempt,
+                    False,
+                )
+            except AmendNotSupported as exc:
+                # The venue cannot express this at all. Retrying is pointless
+                # and would turn a structural limit into a latency spike.
+                self._write(
+                    replace(
+                        intent,
+                        state=IntentState.REJECTED,
+                        updated_at=now,
+                        last_error=f"amend_not_supported:{exc}",
+                    )
+                )
+                return AmendOutcome(
+                    False,
+                    self.store.get(client_ref),
+                    decision,
+                    None,
+                    f"amend_not_supported:{exc}",
+                    attempt,
+                    False,
+                )
+            except (BrokerRejected, BrokerUnavailable, BrokerError) as exc:
+                last_error = f"{type(exc).__name__}:{exc}"
+                state = (
+                    IntentState.REJECTED
+                    if isinstance(exc, BrokerRejected)
+                    else IntentState.UNKNOWN
+                )
+                self._write(
+                    replace(intent, state=state, updated_at=now, last_error=last_error)
+                )
+                if attempt >= attempts:
+                    break
+                if sleeper is not None and retry is not None:
+                    sleeper(retry.backoff(attempt))
+                continue
+
+            applied = replace(
+                intent,
+                state=IntentState.FILLED,
+                updated_at=now,
+                broker_ref=ack.broker_ref or intent.broker_ref,
+                order_id=intent.order_id or ack.order_id,
+                last_error="",
+            )
+            self._write(applied)
+            return AmendOutcome(True, applied, decision, ack, "", attempt, False)
+
+        return AmendOutcome(
+            False, self.store.get(client_ref), decision, None, last_error, attempts, False
+        )
+
+    def close_partial(
+        self,
+        position: Position,
+        *,
+        size: float,
+        context: ExitContext,
+        reason: str = "",
+    ) -> AmendOutcome:
+        """Close ``size`` of ``position``, leaving the remainder open.
+
+        This is how a scale-out leg beyond the first reaches the venue. Unlike
+        an amendment it is NOT retried: a partial close is not idempotent --
+        two of them close twice the size -- so an unconfirmed one is UNKNOWN
+        and is resolved by reconciliation, exactly like an unconfirmed entry.
+        The asymmetry is the point.
+        """
+        now = context.now
+        client_ref = f"FBK-PARTIAL-{position.position_id}-{float(size):.10f}"
+        decision = self.gateway.evaluate_exit(context)
+        if not decision.allowed:
+            return AmendOutcome(
+                False, None, decision, None, "risk_gateway_blocked_partial", 0, False
+            )
+
+        existing = self.store.get(client_ref)
+        if existing is not None and existing.state.blocks_resubmission:
+            raise IdempotencyViolation(
+                f"a partial close of {size} on {position.position_id} is already "
+                f"{existing.state.value}. Closing it twice would close twice the "
+                "size; resolve the existing one first."
+            )
+
+        intent = OrderIntent(
+            client_ref=client_ref,
+            plan_id=position.position_id,
+            signal_id="",
+            strategy_id=position.strategy_id,
+            instrument=position.instrument,
+            direction=position.direction.opposite,
+            size=float(size),
+            mode=self.mode,
+            state=IntentState.PENDING,
+            created_at=now,
+            updated_at=now,
+            venue=self.adapter.venue_name,
+            broker_ref=position.venue_ref,
+            extra={
+                "partial_close": True,
+                "position_id": position.position_id,
+                "reason": reason,
+            },
+        )
+        self._write(intent)
+        try:
+            ack = self.adapter.close_partial(
+                position, size=float(size), client_ref=client_ref, reason=reason
+            )
+        except PositionNotFound as exc:
+            self._write(
+                replace(
+                    intent,
+                    state=IntentState.CLOSED,
+                    updated_at=now,
+                    last_error=f"already_flat:{exc}",
+                )
+            )
+            return AmendOutcome(
+                True, self.store.get(client_ref), decision, None,
+                f"already_flat:{exc}", 1, True,
+            )
+        except BrokerRejected as exc:
+            self._write(
+                replace(intent, state=IntentState.REJECTED, updated_at=now,
+                        last_error=f"broker_rejected:{exc}")
+            )
+            return AmendOutcome(
+                False, self.store.get(client_ref), decision, None, str(exc), 1, False
+            )
+        except BrokerError as exc:
+            self._write(
+                replace(intent, state=IntentState.UNKNOWN, updated_at=now,
+                        last_error=f"{type(exc).__name__}:{exc}")
+            )
+            return AmendOutcome(
+                False, self.store.get(client_ref), decision, None, str(exc), 1, False
+            )
+
+        done = replace(
+            intent,
+            state=IntentState.FILLED,
+            updated_at=now,
+            broker_ref=ack.broker_ref or intent.broker_ref,
+            filled_size=ack.fill.filled_size if ack.fill else float(size),
+            filled_price=ack.fill.filled_price if ack.fill else None,
+        )
+        self._write(done)
+        return AmendOutcome(True, done, decision, ack, "", 1, False)
 
     def flatten(
         self,
@@ -762,7 +1086,18 @@ class ExecutionService:
             ),
             last_error=last_error,
             limits_version=limits_version,
-            extra={"risk_amount": plan.risk_amount, "sizing_basis": plan.sizing_basis},
+            extra={
+                "risk_amount": plan.risk_amount,
+                "sizing_basis": plan.sizing_basis,
+                # THE WHOLE LADDER, durably. ``take_profit`` above is the one
+                # target a venue can hold; these are every leg the document
+                # declared. After a restart they are the only record of what the
+                # position was supposed to do -- the manager's in-memory book
+                # died with the process -- so a recovered position can have its
+                # intent re-derived instead of merely being stared at.
+                "take_profit_prices": list(plan.signal.take_profit_prices),
+                "take_profit_allocations": list(plan.signal.take_profit_allocations),
+            },
         )
 
     @staticmethod

@@ -49,9 +49,34 @@ class Timeframe(str, Enum):
 
 
 class ExitReason(str, Enum):
+    """Why a position closed.
+
+    **The values are persisted**, in stored trades, backtest records and the
+    paper ledger, so a member is never renamed or removed. The set is OPEN:
+    members are added as the engine learns to distinguish outcomes it used to
+    conflate, and a reader must treat an unrecognised value as "some exit
+    reason I have not been taught", not as a corrupt row. Anything that
+    switches on this enum needs a default branch; anything that persists a
+    distribution of it needs to tolerate new keys appearing.
+
+    ``BREAKEVEN`` was added after the initial vocabulary. Before it, a stop-out
+    at a level the breakeven rule had moved was reported as ``TRAILING_STOP``,
+    which is the right *shape* (the stop had moved) and the wrong *cause* (no
+    trail was involved, and on a strategy with no trail declared at all the
+    label was simply false). **Rows already stored as ``trailing_stop`` stay
+    valid** — they were written by an engine that could not tell the two apart,
+    and they are not rewritten. Whether a given stored result predates the
+    distinction is answered by the stored engine version and exit-policy
+    fingerprint (see :mod:`fiboki.backtest.version` and
+    ``BacktestRecord.exit_policy_fingerprint``), not by guessing from the
+    labels.
+    """
+
     STOP_LOSS = "stop_loss"
     TAKE_PROFIT = "take_profit"
     TRAILING_STOP = "trailing_stop"
+    #: A stop-out at a level the breakeven rule moved, with no trail involved.
+    BREAKEVEN = "breakeven"
     TIME_STOP = "time_stop"
     OPPOSITE_SIGNAL = "opposite_signal"
     INVALIDATION = "invalidation"

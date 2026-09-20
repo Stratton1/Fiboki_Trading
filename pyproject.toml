@@ -45,6 +45,30 @@ dev = [
   "hypothesis==6.122.3",
   "ruff==0.8.4",
   "mypy==1.14.0",
+  # pandas-stubs is DELIBERATELY ABSENT, and this is the record of why so nobody
+  # re-litigates it from first principles.
+  #
+  # Measured on 2026-09-20 with pandas-stubs==2.2.3.241126, the release that
+  # matches the pinned pandas 2.2.3, against the CI invocation
+  # (`mypy --ignore-missing-imports --no-strict-optional src/fiboki`):
+  #
+  #     without pandas-stubs:   1 error
+  #     with    pandas-stubs:  74 errors
+  #
+  # It does remove the `Library stubs not installed for "pandas"` notes (63 of
+  # them under a bare `mypy src/fiboki`), but --ignore-missing-imports already
+  # silences those, so the trade is 0 real errors found for 73 new ones. The 73
+  # are not latent bugs: they are places where the stubs model pandas more
+  # narrowly than pandas behaves -- `DataFrame.index` typed as `Index[Any]` so
+  # `.tz`, `.hour` and `.asi8` are unknown attributes, `DatetimeIndex.freq`
+  # modelled read-only when pandas allows assignment, `.iloc` rejecting a
+  # boolean mask it accepts at runtime. Adopting them would mean ~73 casts and
+  # asserts written to satisfy a stub, in numerical code where a cast is exactly
+  # the thing that should never be reached for.
+  #
+  # Revisit when pandas ships its own py.typed marker, or when a pandas-stubs
+  # release types index accessors on the concrete index class. Until then the
+  # missing-stub notes are recorded here rather than suppressed per-module.
 ]
 
 [project.scripts]

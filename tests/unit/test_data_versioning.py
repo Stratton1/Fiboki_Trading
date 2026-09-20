@@ -196,8 +196,10 @@ def test_lineage_chain_walks_raw_to_features(catalogue):
     h4 = make_bars(timeframe=Timeframe.H4, periods=100)
     resampled = DatasetVersion(
         content_checksum=content_checksum(h4),
-        lineage=validated.lineage
-        + (TransformationStep(operation="resample", parameters={"target": "H4"}),),
+        lineage=(
+            *validated.lineage,
+            TransformationStep(operation="resample", parameters={"target": "H4"}),
+        ),
         instrument="EURUSD",
         timeframe=Timeframe.H4,
         price_basis=PriceBasis.MID,

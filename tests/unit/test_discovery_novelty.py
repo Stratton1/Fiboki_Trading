@@ -211,13 +211,22 @@ class TestOutcomesAreReported:
 
 
 class TestTheStructuralBlindSpot:
-    """``research.structure`` has no token for the session or event restriction.
+    """When a strategy may deal is now part of its structural fingerprint.
 
-    Two documents that differ only in WHEN they may deal therefore share a
-    structure hash, and research memory calls the second a reparameterisation of
-    the first. It is not: "these rules, London only" is a different piece of
-    research from "these rules, unrestricted". The discovery layer detects the
-    blind spot and demotes the relation rather than skipping real work.
+    This used to be a genuine blind spot: ``research.structure`` had no token
+    for the session or event restriction, so two documents differing only in
+    WHEN they may deal shared a structure hash and research memory called the
+    second a reparameterisation of the first. It is not -- "these rules, London
+    only" is a different piece of research from "these rules, unrestricted" --
+    and the discovery layer papered over it by demoting the relation.
+
+    The fingerprint now carries the dealing window, so the hashes differ at
+    source and the demotion never fires for a session variant. The discovery
+    layer's guard is LEFT IN PLACE on purpose: it is now redundant for every
+    difference the fingerprint has learned to see, it only ever demotes towards
+    doing MORE work (never towards skipping), and it keeps its value as a
+    backstop for any future restriction field the fingerprint has not been
+    taught about.
     """
 
     def test_a_session_restriction_is_not_a_reparameterisation(self, ledger) -> None:
@@ -233,17 +242,62 @@ class TestTheStructuralBlindSpot:
         assert mutant is not None
         assert mutant.sessions is not None and base.sessions is None
 
-        # The pre-existing fingerprint genuinely cannot tell them apart...
-        assert structure_hash(mutant) == structure_hash(base)
+        # Fixed at source: the fingerprint can now tell them apart.
+        assert structure_hash(mutant) != structure_hash(base)
 
         file_experiment(ledger, base, reason="the unrestricted donchian baseline")
         verdict = NoveltyIndex(ledger).assess(mutant, dataset_version_id=DATASET)
 
-        # ...so the discovery layer does, and the mutant is queued.
         assert verdict.decision is NoveltyDecision.PROCEED
         assert verdict.is_novel
-        assert verdict.diagnostics["n_demoted_by_blind_spot"] == 1
-        assert verdict.prior_attempts[0].relation == "structural_variant"
+        # Nothing to demote any more: the relation was never a
+        # reparameterisation in the first place.
+        assert verdict.diagnostics["n_demoted_by_blind_spot"] == 0
+        assert all(
+            p.relation != "reparameterisation" for p in verdict.prior_attempts
+        )
+
+    def test_a_blackout_margin_is_a_knob_and_stays_a_reparameterisation(
+        self, ledger
+    ) -> None:
+        """Standing aside for 90 minutes instead of 15 is tuning, not a new idea.
+
+        This is the line the fingerprint draws deliberately: WHICH events and
+        WHETHER there is a blackout are structure; HOW WIDE the blackout is is a
+        number. Widening it must still read as a rediscovery, or a campaign
+        could re-run the same experiment by nudging a margin.
+        """
+        base = seed("donchian_breakout_atr")
+        raw = json.loads(base.to_json())
+        raw["events"]["block_minutes_before"] = 90
+        raw["events"]["block_minutes_after"] = 90
+        widened = StrategyDocument.model_validate(raw)
+
+        from fiboki.research.structure import structure_hash
+
+        assert structure_hash(widened) == structure_hash(base)
+        assert widened.content_hash() != base.content_hash()
+
+        file_experiment(ledger, base, reason="the narrow-blackout donchian baseline")
+        verdict = NoveltyIndex(ledger).assess(widened, dataset_version_id=DATASET)
+        assert verdict.decision is NoveltyDecision.SKIP_REDISCOVERY
+
+    def test_dropping_an_event_tag_is_a_different_piece_of_research(
+        self, ledger
+    ) -> None:
+        """WHICH events are avoided is structure, and the fingerprint sees it."""
+        base = seed("donchian_breakout_atr")
+        raw = json.loads(base.to_json())
+        assert raw["events"]["blocked_event_tags"], "the seed blocks some tags"
+        raw["events"]["blocked_event_tags"] = []
+        unguarded = StrategyDocument.model_validate(raw)
+
+        from fiboki.research.structure import structure_hash
+
+        assert structure_hash(unguarded) != structure_hash(base)
+        file_experiment(ledger, base, reason="the tag-avoiding donchian baseline")
+        verdict = NoveltyIndex(ledger).assess(unguarded, dataset_version_id=DATASET)
+        assert verdict.decision is NoveltyDecision.PROCEED
 
     def test_an_identical_session_restriction_is_still_a_rediscovery(
         self, ledger

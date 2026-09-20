@@ -72,17 +72,30 @@ The engine refuses to invent an exchange rate. If you run a GBP account against 
 
 ## REQUIRED BEFORE BROKER DEMO
 
-### D1. Build position managers for the IG and OANDA adapters
+### D1. ~~Build position managers for the IG and OANDA adapters~~ — BUILT
 
-Only the paper broker currently drives a `PositionBook`. A demo deployment today would attach one stop and one target per position and **nothing would trail** — no scale-out legs, no breakeven move, no time stop.
+`src/fiboki/broker/position_manager.py` now holds `VenuePositionManager`, which drives the *same* `PositionBook` the backtester and the paper adapter drive, against IG, OANDA or the simulated venue. It attaches the hard stop and the first target at entry and then issues amendments and partial closes as bars close for everything else — later legs, trail steps, breakeven moves, time stops.
 
-This is the largest single item of remaining engineering before demo enablement, and it is engineering rather than a user action, but it is listed here because it gates the demo step and you should know it is outstanding.
+`tests/integration/test_venue_position_manager.py` asserts the trade ledger, the per-fill leg ledger, the rejection counts and the final balance are byte-identical to the backtester's across all three venues.
 
-### D2. Understand that client-side exits depend on the worker being alive
+**Nothing here is a user action any more, but two things below are.**
 
-A venue holds exactly one stop and one limit per position. Every strategy that declares more — a multi-leg scale-out, a trailing stop, a breakeven move, a time stop — is managed by our process. If the worker dies, the hard stop stays attached at the broker, but the trail freezes, later legs are never placed and the time stop never fires. A position meant to bank half at 1.5R runs to a stale stop instead.
+### D2. Accept, in writing, the managed-exit exposure of every strategy you promote
 
-**Every backtest figure assumes a worker that never dies, and that assumption is not modelled anywhere.** Decide whether you accept it, and size accordingly.
+A venue holds exactly one stop and one limit per position. Every strategy that declares more — a multi-leg scale-out, a trailing stop, a breakeven move, a time stop — is managed by our process. If the worker dies, the hard stop stays attached at the broker, but the trail freezes, later legs are never placed and the time stop never fires. A position meant to bank half at 1.5R runs to a stale stop instead. **That is not fixable in client code and is not fixed.**
+
+What has changed is that it is now *measured* and *gated*:
+
+* **Measured.** The manager publishes `managed_exit_exposure` — the account-currency risk-to-the-attached-stop of the open size whose intended exit is not resting at the venue — on every bar, as a Prometheus gauge (`fiboki_managed_exit_exposure`). A three-leg document has leg one resting at the venue; the size behind legs two and three counts. A trail-only document (`donchian_breakout_atr`) has no target at the venue at all, so its whole size counts, and it remains the highest-exposure shape we run. A plain stop-and-one-target document reads exactly zero, because a dead worker changes nothing about it.
+* **Gated.** `require_venue_realisable()` **refuses** to promote a strategy whose exit policy a venue cannot hold, unless the caller passes `accept_managed_exit_exposure=True` and names an operator. There is deliberately no config file and no environment variable that grants this: it is an argument at the call site, because the acceptance belongs to whoever is doing the promoting. That is the documented degraded mode.
+
+**Your action:** for each of the twelve strategies, decide whether the outcome a dead worker produces — the hard stop and, at most, the first take-profit leg — is acceptable, and size accordingly. Record the decision with the operator's name. **Every backtest figure still assumes a worker that never dies.** That assumption is now measured at every bar rather than merely stated, but it is still an assumption and it is still optimistic.
+
+### D2b. Treat a stale heartbeat as a position-management incident
+
+When the worker's heartbeat goes stale, the size of the incident is `managed_exit_exposure` at that moment — not zero, and not the whole book. Wire that gauge into whatever you page on, alongside `HEARTBEAT_STALE` and `WORKER_DOWN`.
+
+After any restart the manager's `resume()` runs before trading: it re-derives each recovered position's intent from the durable order record (the full take-profit ladder is persisted on the intent for exactly this purpose) and re-attaches what the venue can hold. Two things it cannot recover, and reports rather than guesses: how far a trail had already moved while we were dead (it re-anchors to the stop the venue actually holds, which can only be at or better than where we left it), and `bars_held` (which restarts at zero, so **a time stop is longer than the document says across a restart**).
 
 ### D3. Prove the alerting actually fires, by killing the worker on purpose
 

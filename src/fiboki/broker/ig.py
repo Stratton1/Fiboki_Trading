@@ -48,6 +48,7 @@ from fiboki.broker.base import (
     DuplicateClientRef,
     OrderAck,
     OrderStatus,
+    PositionNotFound,
 )
 from fiboki.broker.oanda import HttpResponse, RateLimiter, Transport
 from fiboki.core.contracts import AccountState, Fill, Order, Position
@@ -371,6 +372,8 @@ class IgAdapter(BrokerAdapter):
             "orderType": "MARKET",
         }
         response = self._call("POST", "/positions/otc", payload, version="1")
+        if response.status == 404:
+            raise PositionNotFound(f"IG has no position {position.venue_ref}")
         if not response.ok:
             raise BrokerUnavailable(f"IG close HTTP {response.status}; fate unknown")
         when = self._now_fn()
@@ -383,6 +386,119 @@ class IgAdapter(BrokerAdapter):
             acked_at=when,
             message=reason or "closed",
             raw=response.body,
+        )
+
+
+    # -- venue-side position management -----------------------------------
+
+    def amend_position(
+        self,
+        position: Position,
+        *,
+        stop_loss: float | None,
+        take_profit: float | None,
+        client_ref: str,
+        reason: str = "",
+    ) -> OrderAck:
+        """``PUT /positions/otc/{dealId}`` -- IG's stop/limit amendment.
+
+        IG amends the WHOLE protective set in one call: the payload names both
+        levels and a level omitted from it is removed. So a caller that wants to
+        move only the stop must restate the limit, and this method restates
+        whichever of the two it was not given from ``position``. Sending
+        ``limitLevel: null`` because the caller happened not to mention it would
+        silently delete the resting target -- the first scale-out leg -- and the
+        position would then run to its stop with nothing banked.
+        """
+        if not position.venue_ref:
+            raise BrokerRejected(
+                "Cannot amend an IG position without its dealId. Amendment is "
+                "keyed on the venue's reference, exactly like closing is."
+            )
+        stop = position.stop_loss if stop_loss is None else float(stop_loss)
+        limit = take_profit
+        if limit is None and position.take_profit_targets:
+            limit = float(position.take_profit_targets[0])
+        payload: dict[str, Any] = {
+            "stopLevel": float(stop) if stop else None,
+            "limitLevel": float(limit) if limit else None,
+            "trailingStop": False,
+        }
+        response = self._call(
+            "PUT", f"/positions/otc/{position.venue_ref}", payload, version="2"
+        )
+        if response.status == 404:
+            raise PositionNotFound(f"IG has no position {position.venue_ref}")
+        if response.status in (400, 403):
+            # The common one is "level too close to market". A positive refusal,
+            # and one that a later bar may well accept, which is why the manager
+            # retries an amend where it would never retry an entry.
+            raise BrokerRejected(f"IG refused the amendment: {response.body}")
+        if not response.ok:
+            raise BrokerUnavailable(
+                f"IG amend HTTP {response.status}; the venue's levels are unknown"
+            )
+        when = self._now_fn()
+        return OrderAck(
+            status=OrderStatus.ACCEPTED,
+            broker_ref=str(position.venue_ref),
+            client_ref=client_ref,
+            order_id=client_ref,
+            submitted_at=when,
+            acked_at=when,
+            message=reason or "amended",
+            raw={"stopLevel": payload["stopLevel"], "limitLevel": payload["limitLevel"],
+                 **response.body},
+        )
+
+    def close_partial(
+        self, position: Position, *, size: float, client_ref: str, reason: str = ""
+    ) -> OrderAck:
+        """Close ``size`` of an IG position. The same OTC close, sized."""
+        if not position.venue_ref:
+            raise BrokerRejected("Cannot partially close an IG position without its dealId")
+        if size <= 0 or size > position.size + 1e-9:
+            raise BrokerRejected(
+                f"IG partial close of {size} is not within the open size "
+                f"{position.size}. The adapter will not clamp it: a clamped size "
+                "is an adapter re-deciding how much to deal."
+            )
+        payload = {
+            "dealId": position.venue_ref,
+            "direction": "SELL" if position.direction is Direction.LONG else "BUY",
+            "size": float(size),
+            "orderType": "MARKET",
+        }
+        response = self._call("POST", "/positions/otc", payload, version="1")
+        if response.status == 404:
+            raise PositionNotFound(f"IG has no position {position.venue_ref}")
+        if response.status in (400, 403):
+            raise BrokerRejected(f"IG refused the partial close: {response.body}")
+        if not response.ok:
+            raise BrokerUnavailable(f"IG partial close HTTP {response.status}; fate unknown")
+        when = self._now_fn()
+        body = response.body
+        level = float(body.get("level", 0.0) or 0.0)
+        return OrderAck(
+            status=OrderStatus.FILLED,
+            broker_ref=str(position.venue_ref),
+            client_ref=client_ref,
+            order_id=client_ref,
+            submitted_at=when,
+            acked_at=when,
+            fill=Fill(
+                order_id=client_ref,
+                instrument=position.instrument,
+                direction=position.direction.opposite,
+                filled_size=float(size),
+                filled_price=level,
+                requested_price=level,
+                filled_at=when,
+                venue_ref=str(position.venue_ref),
+                partial=size + 1e-9 < position.size,
+            ),
+            message=reason or "partially_closed",
+            raw=body,
         )
 
 

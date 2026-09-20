@@ -44,6 +44,7 @@ from __future__ import annotations
 import math
 from collections.abc import Callable
 from dataclasses import dataclass, field
+from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -571,7 +572,10 @@ def compare_sizing_modes(
     attributable purely to the sizing assumption.
     """
     r_paths = _r_paths(r_multiples, n_paths, block_length, rng)
-    kwargs = {
+    # Annotated, not inferred: without this the dict is ``dict[str, object]``
+    # and every ``**kwargs`` argument is an error the type checker is right
+    # about -- ``object`` really is not a float.
+    kwargs: dict[str, Any] = {
         "initial_equity": initial_equity,
         "risk_fraction": risk_fraction,
         "ruin_fraction": ruin_fraction,

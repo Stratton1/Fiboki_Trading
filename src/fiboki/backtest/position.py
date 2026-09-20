@@ -271,6 +271,11 @@ class ManagedPosition:
     extreme: float = float("nan")
     breakeven_done: bool = False
     stop_trailed: bool = False
+    #: What last moved the protective stop: ``"breakeven"`` or ``"trailing"``.
+    #: Empty while the stop is still where it was placed. A trail overwrites
+    #: breakeven and is never overwritten by it, because a trail only ever
+    #: improves on the level breakeven produced.
+    stop_moved_by: str = ""
     reversal_pending: bool = False
     #: Accumulated across the closing fills, so the final ``Trade`` is the sum.
     realised_gross: float = 0.0
@@ -957,14 +962,24 @@ class PositionBook:
         return ()
 
     def _exit_reason(self, op: ManagedPosition, fill: Any) -> ExitReason:
-        """STOP_LOSS becomes TRAILING_STOP once the stop has actually moved.
+        """STOP_LOSS becomes BREAKEVEN or TRAILING_STOP once the stop has moved.
 
-        Reported, not inferred: ``op.stop_trailed`` is set only when a trail or
-        a breakeven rule moved the level, so a strategy with a trail declared
-        but never activated still reports its stops as stops.
+        Reported, not inferred: ``op.stop_moved_by`` records which rule actually
+        moved the level, so a strategy with a trail declared but never activated
+        still reports its stops as stops, and a strategy with no trail at all
+        can no longer report a ``trailing_stop``.
+
+        The two are worth separating because they answer different questions. A
+        breakeven stop-out is a trade that went far enough to de-risk and then
+        came back — the breakeven rule paid for itself or cost an edge. A
+        trailing stop-out is a trade that was given back a share of an open
+        profit. Conflating them, as this engine did before ``BREAKEVEN`` existed,
+        makes the breakeven rule invisible in every exit-reason breakdown.
         """
         reason = fill.reason or ExitReason.END_OF_DATA
         if reason is ExitReason.STOP_LOSS and op.stop_trailed:
+            if op.stop_moved_by == "breakeven":
+                return ExitReason.BREAKEVEN
             return ExitReason.TRAILING_STOP
         return reason
 
@@ -1008,6 +1023,7 @@ class PositionBook:
         proposed = current
         r_now = op.r_multiple()
 
+        moved_by = ""
         if (
             policy.breakeven_at_r is not None
             and not op.breakeven_done
@@ -1016,6 +1032,7 @@ class PositionBook:
             op.breakeven_done = True
             if (op.entry_mid - proposed) * sign > 0:
                 proposed = op.entry_mid
+                moved_by = "breakeven"
 
         trail = policy.trailing
         if trail.active and r_now >= trail.activate_after_r:
@@ -1028,10 +1045,15 @@ class PositionBook:
             )
             if candidate is not None and (candidate - proposed) * sign > 0:
                 proposed = candidate
+                moved_by = "trailing"
 
         if (proposed - current) * sign > 0:
             op.position.stop_loss = proposed
             op.stop_trailed = True
+            # A trail that has taken over never hands the label back: the level
+            # in force came from the trail, whatever moved it first.
+            if moved_by and op.stop_moved_by != "trailing":
+                op.stop_moved_by = moved_by
 
     # ----------------------------------------------------------- the money
 

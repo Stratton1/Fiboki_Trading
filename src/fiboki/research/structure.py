@@ -15,11 +15,31 @@ indicators, with the same exit shapes, on the same family and direction, share a
 What is elided and what is kept
 -------------------------------
 Elided: every int and float -- indicator periods, comparison thresholds, ATR
-multiples, allocations, session hours, lookbacks.
+multiples, allocations, lookbacks, blackout margins.
 
 Kept: the rule vocabulary (which primitive, comparing what to what), indicator
 NAMES, the exit model kinds, booleans (``invert`` flips a rule's meaning rather
-than tuning it), and the context -- family, direction, timeframes, universe.
+than tuning it), the context -- family, direction, timeframes, universe -- and
+WHEN the strategy may deal.
+
+Session hours are the one deliberate exception to the elide-every-number rule,
+and it is worth spelling out why. A session window is not a threshold somebody
+tuned; it is a claim about which market's participants the strategy is trading
+against. Elided to ``#``, "the same rules, London only" and "the same rules, New
+York only" produce the same token, share a structure hash, and research memory
+reports the second as a reparameterisation of the first -- so a campaign that
+deliberately varied the dealing window would be told it had already run that
+experiment and skip it. The windows, the weekday set and the blocked event tags
+are therefore carried as values. The blackout *margins* (how many minutes either
+side of an event) are genuine knobs and stay elided, which is why the discovery
+layer's own session/event guard in ``discovery/novelty.py`` is still worth
+keeping: it sees differences this fingerprint still deliberately cannot.
+
+Absence contributes nothing. A document with no ``sessions`` block and a default
+``events`` block emits no restriction tokens at all, so its structure hash is
+exactly what it was before these tokens existed. Only a document that actually
+restricts when it may deal gets a new hash -- and for those, prior novelty
+verdicts keyed on the old hash no longer match.
 
 Tokens are namespaced so similarity can be weighted. Two strategies that differ
 only in universe are near-identical research; two that share a universe and
@@ -161,6 +181,49 @@ def _context_tokens(data: Mapping[str, Any]) -> list[str]:
         out.append(f"context:instrument:{inst}")
     for name in sorted(data.get("parameters") or {}):
         out.append(f"context:tunable:{name}")
+    out.extend(_when_tokens(data))
+    return out
+
+
+def _when_tokens(data: Mapping[str, Any]) -> list[str]:
+    """Tokens for WHEN the strategy may deal: sessions and event blackouts.
+
+    Nothing is emitted for a document that imposes no restriction, so adding
+    these tokens leaves an unrestricted document's structure hash untouched.
+    See the module docstring for why the hours themselves are not elided.
+    """
+    out: list[str] = []
+    sessions = data.get("sessions")
+    if isinstance(sessions, Mapping):
+        for window in sessions.get("windows") or ():
+            try:
+                start, end = window
+            except (TypeError, ValueError):  # pragma: no cover - malformed input
+                out.append(f"context:session.window:{_shape(window)}")
+                continue
+            out.append(f"context:session.window:{int(start)}-{int(end)}")
+        weekdays = sessions.get("weekdays")
+        if weekdays is not None:
+            days = ",".join(str(int(d)) for d in sorted(weekdays))
+            # The default Monday-to-Friday set is not a restriction anyone
+            # chose; only a narrower or wider week is worth a token.
+            if days != "0,1,2,3,4":
+                out.append(f"context:session.weekdays:{days}")
+        if sessions.get("block_bars_before_weekend"):
+            # HOW MANY bars is a knob; that the rule exists at all is not.
+            out.append("context:session.weekend_block:present")
+
+    events = data.get("events")
+    if isinstance(events, Mapping):
+        if events.get("block_minutes_before") or events.get("block_minutes_after"):
+            out.append("context:event.blackout:present")
+        for tag in sorted(events.get("blocked_event_tags") or ()):
+            out.append(f"context:event.tag:{tag}")
+        if events.get("avoid_month_end"):
+            out.append("context:event.month_end:present")
+        if events.get("avoid_rollover_hour") is False:
+            # The default is to avoid it, so only switching it OFF is a choice.
+            out.append("context:event.rollover:allowed")
     return out
 
 

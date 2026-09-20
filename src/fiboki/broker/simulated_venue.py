@@ -47,6 +47,7 @@ from fiboki.broker.base import (
     DuplicateClientRef,
     OrderAck,
     OrderStatus,
+    PositionNotFound,
 )
 from fiboki.core.contracts import AccountState, Fill, Order, Position
 from fiboki.core.enums import ExecutionMode
@@ -77,6 +78,30 @@ class VenueConfig:
     #: Reference prices used to fill, keyed by symbol. Missing symbols use the
     #: order's limit price, then 1.0.
     prices: dict[str, float] = field(default_factory=dict)
+
+    # -- amendment friction -------------------------------------------------
+    #
+    # The three rude things a real venue does to a stop amendment, each one
+    # separately switchable because they have different correct responses:
+    # a refusal is terminal for THIS level and may succeed at the next bar, a
+    # rate limit leaves the outcome unknown, and a closed market refuses
+    # everything until it opens.
+    #
+    #: Refuse the Nth and subsequent amendments (1-based). ``None`` disables.
+    reject_amend_after: int | None = None
+    #: Refuse the first N amendments, then behave. Models "too close to market"
+    #: resolving itself once price moves away.
+    reject_amend_count: int = 0
+    #: Refuse an amendment whose stop is within this many PRICE units of the
+    #: venue's reference price for the instrument. IG's minimum stop distance.
+    min_stop_distance: float = 0.0
+    #: Every amendment raises BrokerUnavailable: the fate is UNKNOWN.
+    amend_rate_limited: bool = False
+    #: Every amendment and partial close is refused with "market closed".
+    market_closed: bool = False
+    #: Refuse partial closes outright. Models a venue with no partial-close
+    #: route at all, which is the worst case for a multi-leg document.
+    reject_partial_closes: bool = False
 
     def __post_init__(self) -> None:
         if not 0.0 <= self.rejection_probability <= 1.0:
@@ -132,6 +157,12 @@ class SimulatedVenue(BrokerAdapter):
         self._ack_then_fail_used = 0
         self.total_latency_ms = 0.0
         self.requests: list[dict[str, Any]] = []
+        #: Every amendment the venue was ASKED for, applied or not. The point of
+        #: recording refused ones too is that a manager which loses track of a
+        #: refused amendment is exactly the failure this venue exists to expose.
+        self.amendments: list[dict[str, Any]] = []
+        self.partial_closes: list[dict[str, Any]] = []
+        self._amend_count = 0
 
     # ------------------------------------------------------------ controls
 
@@ -307,9 +338,21 @@ class SimulatedVenue(BrokerAdapter):
         self, position: Position, *, client_ref: str, reason: str = ""
     ) -> OrderAck:
         ref = position.venue_ref
-        if not ref or ref not in self._positions:
+        if not ref:
+            # UNADDRESSABLE, which is not the same as flat. A position with no
+            # broker reference is a local defect: the venue was never told
+            # about it, or we lost the key. Reporting it as "already closed"
+            # would abandon a real position and call the book clean.
             raise BrokerRejected(
-                f"venue has no position {ref!r}; closing is keyed on the BROKER "
+                "cannot close a position with no broker reference; closing is "
+                "keyed on the BROKER reference, never on an internal id"
+            )
+        if ref not in self._positions:
+            # PositionNotFound, a BrokerRejected subtype: the venue positively
+            # answered "there is no such position", which for a CLOSING
+            # instruction is the state the caller wanted.
+            raise PositionNotFound(
+                f"venue has no position {ref!r}; this is keyed on the BROKER "
                 "reference, never on an internal id"
             )
         if not self._connected:
@@ -336,6 +379,148 @@ class SimulatedVenue(BrokerAdapter):
                 venue_ref=ref,
             ),
             message=reason or "closed",
+        )
+
+    # ----------------------------------------------- position management
+
+    def amend_position(
+        self,
+        position: Position,
+        *,
+        stop_loss: float | None,
+        take_profit: float | None,
+        client_ref: str,
+        reason: str = "",
+    ) -> OrderAck:
+        """Amend the ONE stop and ONE limit this venue holds for a position.
+
+        Idempotent by construction: the levels are assigned, not adjusted, so
+        re-sending the levels the venue already holds changes nothing and
+        succeeds. A manager retrying after an unconfirmed response depends on
+        that, and a venue that double-applied an amendment would make every
+        retry a fresh risk decision.
+        """
+        cfg = self.config
+        ref = position.venue_ref
+        self._amend_count += 1
+        attempt = {
+            "client_ref": client_ref,
+            "broker_ref": ref,
+            "stop_loss": stop_loss,
+            "take_profit": take_profit,
+            "reason": reason,
+            "applied": False,
+        }
+        self.amendments.append(attempt)
+
+        if not ref:
+            raise BrokerRejected(
+                "cannot amend a position with no broker reference; amendment is "
+                "keyed on the BROKER reference, never on an internal id"
+            )
+        if ref not in self._positions:
+            raise PositionNotFound(
+                f"venue has no position {ref!r}; this is keyed on the BROKER "
+                "reference, never on an internal id"
+            )
+        if not self._connected:
+            raise BrokerUnavailable("not connected")
+        if cfg.market_closed:
+            raise BrokerRejected("MARKET_HALTED: the market is closed for this instrument")
+        if cfg.amend_rate_limited:
+            # A rate limit is UNKNOWN, not refused. The venue may well have
+            # applied it and simply not told us.
+            raise BrokerUnavailable("RATE_LIMIT_EXCEEDED: amendment outcome unknown")
+        if cfg.reject_amend_count and self._amend_count <= cfg.reject_amend_count:
+            raise BrokerRejected(
+                f"ATTACHED_ORDER_LEVEL_DISTANCE_ERROR: amendment {self._amend_count} "
+                "refused (configured)"
+            )
+        if cfg.reject_amend_after is not None and self._amend_count >= cfg.reject_amend_after:
+            raise BrokerRejected(
+                f"ATTACHED_ORDER_LEVEL_DISTANCE_ERROR: amendment {self._amend_count} "
+                "refused (configured)"
+            )
+
+        held = self._positions[ref]
+        if stop_loss is not None and cfg.min_stop_distance > 0:
+            mark = cfg.prices.get(held.instrument, held.entry_price)
+            if abs(float(stop_loss) - mark) < cfg.min_stop_distance:
+                raise BrokerRejected(
+                    f"ATTACHED_ORDER_LEVEL_DISTANCE_ERROR: stop {stop_loss} is "
+                    f"within {cfg.min_stop_distance} of {mark}"
+                )
+
+        if stop_loss is not None:
+            held.stop_loss = float(stop_loss)
+        if take_profit is not None:
+            held.take_profit_targets = [float(take_profit)]
+        attempt["applied"] = True
+        return OrderAck(
+            status=OrderStatus.ACCEPTED,
+            broker_ref=ref,
+            client_ref=client_ref,
+            order_id=client_ref,
+            submitted_at=self._now,
+            acked_at=self._now,
+            message=reason or "amended",
+            raw={"stop_loss": held.stop_loss, "take_profit": list(held.take_profit_targets)},
+        )
+
+    def close_partial(
+        self, position: Position, *, size: float, client_ref: str, reason: str = ""
+    ) -> OrderAck:
+        ref = position.venue_ref
+        self.partial_closes.append(
+            {"client_ref": client_ref, "broker_ref": ref, "size": size, "applied": False}
+        )
+        if not ref:
+            raise BrokerRejected("cannot partially close a position with no broker reference")
+        if ref not in self._positions:
+            raise PositionNotFound(
+                f"venue has no position {ref!r}; this is keyed on the BROKER "
+                "reference, never on an internal id"
+            )
+        if not self._connected:
+            raise BrokerUnavailable("not connected")
+        if self.config.market_closed:
+            raise BrokerRejected("MARKET_HALTED: the market is closed for this instrument")
+        if self.config.reject_partial_closes:
+            raise BrokerRejected("PARTIAL_CLOSE_NOT_PERMITTED (configured)")
+        held = self._positions[ref]
+        if size <= 0 or size > held.size + 1e-9:
+            raise BrokerRejected(
+                f"partial close of {size} is not within the open size {held.size}"
+            )
+        price = self.config.prices.get(held.instrument, held.entry_price)
+        remaining = held.size - float(size)
+        if remaining <= 1e-12:
+            self._positions.pop(ref)
+            rec = self._orders.get(ref)
+            if rec is not None:
+                rec.status = OrderStatus.CANCELLED
+        else:
+            held.size = remaining
+        self.partial_closes[-1]["applied"] = True
+        return OrderAck(
+            status=OrderStatus.FILLED,
+            broker_ref=ref,
+            client_ref=client_ref,
+            order_id=client_ref,
+            submitted_at=self._now,
+            acked_at=self._now,
+            fill=Fill(
+                order_id=client_ref,
+                instrument=held.instrument,
+                direction=held.direction.opposite,
+                filled_size=float(size),
+                filled_price=price,
+                requested_price=price,
+                filled_at=self._now,
+                venue_ref=ref,
+                partial=remaining > 1e-12,
+            ),
+            message=reason or "partially_closed",
         )
 
     # ------------------------------------------------------------ helpers

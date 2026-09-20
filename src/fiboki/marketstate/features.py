@@ -38,6 +38,7 @@ place indicator calculations are allowed to live.
 """
 from __future__ import annotations
 
+import bisect
 import hashlib
 import json
 import math
@@ -231,6 +232,88 @@ def expanding_rank_pct(
         equal = upto - below
         res[t] = (below + 0.5 * equal) / seen
     return res
+
+
+class ExpandingRankTracker:
+    """Incremental, *exactly* equivalent form of :func:`expanding_rank_pct`.
+
+    :func:`expanding_rank_pct` coordinate-compresses the whole array before its
+    sweep, so it cannot be run one observation at a time: a streaming consumer
+    does not have the future values the compression needs. That is why
+    ``MarketStateEngine.ingest_bar`` re-ranked the entire retained history on
+    every bar, and why capping the history turned an expanding percentile into a
+    rolling one.
+
+    This is the same statistic maintained over an order-statistic structure that
+    only ever sees the past — a sorted list of the observations inserted so far,
+    queried with :mod:`bisect`. Insertion is an ``O(n)`` ``memmove`` and a
+    ``O(log n)`` search, which on the sizes this platform runs (tens of
+    thousands of bars) is roughly two orders of magnitude cheaper than the
+    ``O(n)`` Python sweep it replaces, and unlike a Fenwick tree it needs no
+    knowledge of the value universe.
+
+    **Exactness, not closeness.** The published value is
+    ``(below + 0.5 * equal) / seen`` with ``below``, ``equal`` and ``seen``
+    integers, computed from the same set of already-inserted observations the
+    batch path counts. Identical integers through identical arithmetic give
+    identical floats — there is no accumulation and therefore nothing to drift.
+    ``tests/unit/test_marketstate_incremental.py`` pins this against both the
+    batch path and the naive ``O(n^2)`` reference over every percentile-bearing
+    feature series of the full 26,837-bar XAUUSD H4 file.
+
+    Non-finite observations (NaN *and* infinities, matching ``np.isfinite`` in
+    the batch path) are not inserted and yield NaN. ``min_periods`` suppresses
+    the output until that many finite observations have been seen, exactly as
+    the batch path does.
+    """
+
+    __slots__ = ("_min_periods", "_seen", "_sorted")
+
+    def __init__(self, *, min_periods: int = 1) -> None:
+        if min_periods < 1:
+            raise FeatureError("min_periods must be >= 1")
+        self._min_periods = int(min_periods)
+        self._sorted: list[float] = []
+        self._seen = 0
+
+    @property
+    def seen(self) -> int:
+        """Finite observations inserted so far. The percentile's denominator."""
+        return self._seen
+
+    @property
+    def min_periods(self) -> int:
+        return self._min_periods
+
+    def push(self, value: float) -> float:
+        """Insert one observation and return its expanding percentile rank."""
+        x = float(value)
+        if not math.isfinite(x):
+            return math.nan
+        data = self._sorted
+        below = bisect.bisect_left(data, x)
+        # ``equal`` counts the observation being inserted, because the batch
+        # path inserts into its Fenwick tree BEFORE it reads the counts. Getting
+        # this wrong is an off-by-one that looks like a rounding difference.
+        equal = bisect.bisect_right(data, x, below) - below + 1
+        data.insert(below, x)
+        self._seen += 1
+        if self._seen < self._min_periods:
+            return math.nan
+        # Deliberately the same expression, in the same order, as the batch
+        # path: integer counts, one float multiply, one float divide.
+        return (below + 0.5 * equal) / self._seen
+
+    def extend(
+        self, values: Sequence[float] | np.ndarray | pd.Series
+    ) -> np.ndarray:
+        """Push a whole series, returning the ranks. Seeds a tracker from bulk."""
+        arr = np.asarray(values, dtype=float)
+        out = np.empty(arr.size, dtype=float)
+        push = self.push
+        for i, v in enumerate(arr.tolist()):
+            out[i] = push(v)
+        return out
 
 
 def naive_expanding_rank_pct(
@@ -438,7 +521,9 @@ def session_flags(index: pd.DatetimeIndex) -> pd.DataFrame:
         weekday = local.weekday
         open_ = (hour >= start) & (hour < end) & (weekday < 5)
         out[name] = np.asarray(open_, dtype=bool)
-    code = np.zeros(len(index), dtype=np.int64)
+    # Annotated because each np.where below widens the shape type; the dtype is
+    # pinned by the int64 seed and by the int codes in SESSION_CODES.
+    code: np.ndarray = np.zeros(len(index), dtype=np.int64)
     tk = out["tokyo"].to_numpy()
     ld = out["london"].to_numpy()
     ny = out["new_york"].to_numpy()

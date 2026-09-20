@@ -8,7 +8,7 @@ torn tail is reported rather than swallowed.
 from __future__ import annotations
 
 import json
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 import pandas as pd
 import pytest
@@ -28,7 +28,7 @@ from fiboki.data.recorder import (
 )
 from fiboki.data.schema import MarketState
 
-START = datetime(2026, 1, 5, 9, 0, tzinfo=timezone.utc)
+START = datetime(2026, 1, 5, 9, 0, tzinfo=UTC)
 
 
 def a_quote(i: int = 0, instrument: str = "EURUSD") -> QuoteRecord:
@@ -269,10 +269,10 @@ def test_simulated_feed_changes_with_the_seed():
 
 def test_simulated_feed_widens_the_spread_out_of_session():
     open_feed = SimulatedQuoteFeed(
-        seed=5, start=datetime(2026, 1, 6, 12, 0, tzinfo=timezone.utc)  # Tuesday
+        seed=5, start=datetime(2026, 1, 6, 12, 0, tzinfo=UTC)  # Tuesday
     )
     closed_feed = SimulatedQuoteFeed(
-        seed=5, start=datetime(2026, 1, 10, 12, 0, tzinfo=timezone.utc)  # Saturday
+        seed=5, start=datetime(2026, 1, 10, 12, 0, tzinfo=UTC)  # Saturday
     )
     open_spread = pd.Series([q.spread for q in open_feed.stream(["EURUSD"], limit=200)])
     closed_spread = pd.Series(
@@ -300,7 +300,7 @@ def test_spread_profile_by_hour(tmp_path):
     with QuoteRecorder(directory, fsync_every=0) as rec:
         rec.run(
             SimulatedQuoteFeed(
-                seed=9, start=datetime(2026, 1, 6, 0, 0, tzinfo=timezone.utc),
+                seed=9, start=datetime(2026, 1, 6, 0, 0, tzinfo=UTC),
                 interval_ms=60_000,
             ),
             ["EURUSD"],

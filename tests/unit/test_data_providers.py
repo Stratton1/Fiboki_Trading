@@ -7,7 +7,7 @@ so the bug cannot come back quietly.
 from __future__ import annotations
 
 import lzma
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import pandas as pd
 import pytest
@@ -192,9 +192,9 @@ def test_zero_volume_fraction_reports_blindness():
 
 
 def test_tick_url_uses_a_zero_based_month():
-    when = datetime(2021, 1, 4, 9, tzinfo=timezone.utc)
+    when = datetime(2021, 1, 4, 9, tzinfo=UTC)
     assert tick_url("EURUSD", when).endswith("/EURUSD/2021/00/04/09h_ticks.bi5")
-    december = datetime(2021, 12, 31, 23, tzinfo=timezone.utc)
+    december = datetime(2021, 12, 31, 23, tzinfo=UTC)
     assert tick_url("EURUSD", december).endswith("/EURUSD/2021/11/31/23h_ticks.bi5")
 
 
@@ -226,7 +226,7 @@ def _sample_ticks(hour: datetime, n: int = 120) -> list[DukascopyTick]:
 
 
 def test_tick_encode_decode_roundtrip():
-    hour = datetime(2021, 6, 1, 10, tzinfo=timezone.utc)
+    hour = datetime(2021, 6, 1, 10, tzinfo=UTC)
     ticks = _sample_ticks(hour, 50)
     payload = encode_ticks(ticks, hour, factor=1e5)
     back = decode_ticks(payload, hour, factor=1e5)
@@ -238,7 +238,7 @@ def test_tick_encode_decode_roundtrip():
 
 
 def test_truncated_tick_payload_is_refused_not_partially_decoded():
-    hour = datetime(2021, 6, 1, 10, tzinfo=timezone.utc)
+    hour = datetime(2021, 6, 1, 10, tzinfo=UTC)
     raw = lzma.decompress(encode_ticks(_sample_ticks(hour, 10), hour, factor=1e5))
     truncated = lzma.compress(raw[:-7])
     with pytest.raises(ProviderError, match="truncated"):
@@ -246,7 +246,7 @@ def test_truncated_tick_payload_is_refused_not_partially_decoded():
 
 
 def test_ticks_to_bars_keeps_both_sides_of_the_book():
-    hour = datetime(2021, 6, 1, 10, tzinfo=timezone.utc)
+    hour = datetime(2021, 6, 1, 10, tzinfo=UTC)
     ticks = _sample_ticks(hour, 120)  # one hour of 30-second ticks
     bars = ticks_to_bars(ticks, instrument="EURUSD", timeframe=Timeframe.M15)
     validate_frame_shape(bars)
@@ -260,7 +260,7 @@ def test_ticks_to_bars_keeps_both_sides_of_the_book():
 
 
 def test_ticks_to_bars_on_the_bid_side_declares_bid():
-    hour = datetime(2021, 6, 1, 10, tzinfo=timezone.utc)
+    hour = datetime(2021, 6, 1, 10, tzinfo=UTC)
     bars = ticks_to_bars(
         _sample_ticks(hour, 60),
         instrument="EURUSD",
@@ -272,7 +272,7 @@ def test_ticks_to_bars_on_the_bid_side_declares_bid():
 
 
 def test_dukascopy_offline_batch_declares_its_adjustments():
-    hour = datetime(2021, 6, 1, 10, tzinfo=timezone.utc)
+    hour = datetime(2021, 6, 1, 10, tzinfo=UTC)
     payload = encode_ticks(_sample_ticks(hour, 120), hour, factor=1e5)
     provider = DukascopyProvider()
     batch = provider.bars_from_tick_payloads(

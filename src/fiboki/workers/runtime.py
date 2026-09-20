@@ -60,9 +60,17 @@ from fiboki.core.enums import ExecutionMode, StrategyLifecycle
 from fiboki.core.instruments import Instrument
 from fiboki.core.instruments import get as get_instrument
 from fiboki.core.money import FxRateSource, IdentityFxSource
+from fiboki.obs import metrics as _metrics
 from fiboki.obs.logging import get_logger
-from fiboki.portfolio.construction import PortfolioSnapshot
+from fiboki.portfolio.construction import CorrelationMatrix, PortfolioSnapshot
 from fiboki.portfolio.sizing import SizingPolicy, size_trade
+from fiboki.risk.accounting import (
+    PnlWindows,
+    RealisedPnlLedger,
+    correlated_exposure,
+    correlation_from_frames,
+    realised_portfolio_vol,
+)
 from fiboki.risk.gateway import (
     MarketView,
     RiskContext,
@@ -77,6 +85,8 @@ from fiboki.workers.base import WorkerStore
 from fiboki.workers.live_worker import BarBatch, LiveWorker, LiveWorkerConfig
 
 __all__ = [
+    "MANAGED_EXIT_EXPOSURE",
+    "MANAGED_EXIT_POSITIONS",
     "FrameReplayFeed",
     "LifecycleTimer",
     "MarketStateFeed",
@@ -85,9 +95,58 @@ __all__ = [
     "SignalEvaluator",
     "SignalSource",
     "build_replay_session",
+    "publish_managed_exit_exposure",
 ]
 
 _log = get_logger("fiboki.workers.runtime")
+
+
+# ---------------------------------------------------------------------------
+# The number that says what a dead worker would cost
+# ---------------------------------------------------------------------------
+
+#: Account-currency open risk whose intended exit is NOT resting at the venue,
+#: and which therefore depends on this worker staying alive to be realised.
+#:
+#: Registered HERE rather than in ``broker/`` because ``broker`` sits BELOW
+#: ``obs`` in the dependency order ``tests/unit/test_layering.py`` enforces:
+#: the position manager computes the number and hands it up, and this is the
+#: layer allowed to publish it. See
+#: :data:`fiboki.broker.position_manager.MANAGED_EXIT_USER_ACTION_NOTE` for
+#: what the number means and what an operator is expected to do with it.
+MANAGED_EXIT_EXPOSURE = _metrics.REGISTRY.gauge(
+    "fiboki_managed_exit_exposure",
+    (
+        "Open risk, in the account currency, whose intended exit is managed "
+        "client-side and freezes if this worker dies"
+    ),
+    ("venue", "account_ccy"),
+)
+
+#: How many open positions contribute to the gauge above. A large exposure
+#: spread over one position and over eight are different incidents.
+MANAGED_EXIT_POSITIONS = _metrics.REGISTRY.gauge(
+    "fiboki_managed_exit_positions",
+    "Open positions whose intended exit depends on this worker staying alive",
+    ("venue",),
+)
+
+
+def publish_managed_exit_exposure(exposure: Any, *, venue: str) -> float:
+    """Publish a :class:`ManagedExitExposure` onto the metric registry.
+
+    Takes the value structurally rather than by import so that a caller holding
+    anything with ``amount``/``exposed_positions``/``account_ccy`` can publish
+    it -- which keeps this function honest about being a transport and not a
+    second place where the number is computed.
+    """
+    amount = float(getattr(exposure, "amount", 0.0))
+    ccy = str(getattr(exposure, "account_ccy", "GBP"))
+    MANAGED_EXIT_EXPOSURE.set(amount, venue=venue, account_ccy=ccy)
+    MANAGED_EXIT_POSITIONS.set(
+        float(getattr(exposure, "exposed_positions", 0)), venue=venue
+    )
+    return amount
 
 
 # ---------------------------------------------------------------------------
@@ -322,6 +381,27 @@ class RiskContextBuilder:
     live: a live deployment must replace ``spread_source`` with the broker's
     quoted spread, and ``estimated_spread`` is True on every context this
     builder produces so nothing can mistake one for the other.
+
+    The four inputs that used to run on zeros
+    -----------------------------------------
+    Building a :class:`MarketView` was the gap this class was created to close.
+    It left a second one: four gateway inputs that this class DEFAULTED rather
+    than sourced.
+
+    ==========================  =================================================
+    ``daily_pnl``               ``pnl_ledger`` -- realised P&L over the UTC day
+    ``weekly_pnl``              ``pnl_ledger`` -- realised P&L over the ISO week
+    ``correlated_exposure``     ``correlation`` x the open-position book
+    ``realised_portfolio_vol``  ``equity_curve`` -- annualised equity-curve vol
+    ==========================  =================================================
+
+    Each was ``0.0`` and each fed a check that ran, was named in the audit
+    trail, and could not fire. ``fiboki.risk.accounting`` holds the arithmetic;
+    this class holds the wiring. All four sources are OPTIONAL and default to
+    the old behaviour, so an existing caller is unchanged -- but a session built
+    by :func:`build_replay_session` gets all four, and
+    :attr:`risk_inputs_live` reports which of them are real on every context so
+    a decision record can never be read as enforcing a limit it had no data for.
     """
 
     adapter: Any
@@ -344,8 +424,27 @@ class RiskContextBuilder:
     #: Timestamp of the newest bar per instrument, kept by :meth:`observe`.
     last_bar_times: dict[str, pd.Timestamp] = field(default_factory=dict)
     market_open: bool = True
+    #: STATIC fallbacks, used only when ``pnl_ledger`` is absent. Retained so
+    #: an existing caller that set them by hand keeps working, and so a test can
+    #: pin a value without building a trade history.
     daily_pnl: float = 0.0
     weekly_pnl: float = 0.0
+
+    # -- the four formerly-dead inputs ----------------------------------
+    #: Realised P&L over clock-derived UTC day and week windows. When present it
+    #: WINS over the static fields above, because a measured number beats a
+    #: declared one.
+    pnl_ledger: RealisedPnlLedger | None = None
+    #: Pairwise instrument correlation. ``None`` means the check keeps reading
+    #: zero, which is why :attr:`risk_inputs_live` reports it.
+    correlation: CorrelationMatrix | None = None
+    #: ``() -> equity curve``. Anything :func:`realised_portfolio_vol` accepts:
+    #: a Series, a mapping, or a bare sequence with an index.
+    equity_curve: Callable[[], Any] | None = None
+    #: Minimum equity observations before a volatility estimate is used at all.
+    vol_min_observations: int = 20
+    #: Last computed windows, for the worker's summary and for tests.
+    last_windows: PnlWindows | None = None
 
     def observe(self, batch: BarBatch) -> None:
         """Record when each instrument last produced a closed bar."""
@@ -440,8 +539,67 @@ class RiskContextBuilder:
             instrument_exposure=instrument_exposure,
             strategy_exposure=strategy_exposure,
             currency_exposure=currency_exposure,
+            instrument_correlation=self.correlation or CorrelationMatrix(),
+            realised_portfolio_vol=self.realised_vol(),
             margin_available=max(0.0, account.equity - account.margin_used),
+            regime=(
+                self.regime_source(positions[0].instrument)
+                if self.regime_source is not None and positions
+                else "unknown"
+            ),
         )
+
+    def realised_vol(self) -> float:
+        """Annualised volatility of the equity curve, or 0.0 for "unmeasured".
+
+        ``portfolio/construction.py`` reads this for volatility targeting and
+        treats 0.0 as NEUTRAL -- which meant vol targeting was silently
+        disabled on every live path while remaining configured and unit-tested.
+        With a curve supplied it is measured; without one it is still 0.0, and
+        :meth:`risk_inputs_live` says so rather than letting a reader assume.
+        """
+        if self.equity_curve is None:
+            return 0.0
+        try:
+            return realised_portfolio_vol(
+                self.equity_curve(), min_observations=self.vol_min_observations
+            )
+        except Exception as exc:  # a vol estimate is not worth a dead worker
+            _log.warning(
+                "realised portfolio vol could not be computed",
+                extra={"error": f"{type(exc).__name__}: {exc}"},
+            )
+            return 0.0
+
+    def windows(self, now: pd.Timestamp) -> PnlWindows | None:
+        """Realised day/week P&L, re-derived from ``now`` on every call.
+
+        NOT cached and NOT accumulated. The whole defence against V1's defect --
+        a daily counter reset inside a 21:00 job, so a worker that was down at
+        21:00 never reset it and the daily stop could never fire again -- is
+        that the boundary is a function of the clock and there is no counter to
+        get stuck. Caching the result here would reintroduce exactly that.
+        """
+        if self.pnl_ledger is None:
+            return None
+        windows = self.pnl_ledger.windows(now)
+        self.last_windows = windows
+        return windows
+
+    def risk_inputs_live(self) -> dict[str, bool]:
+        """Which formerly-dead inputs carry real data on this builder.
+
+        Stamped onto every :class:`RiskContext`'s ``extra`` and therefore onto
+        every recorded attempt. An audit that says ``daily_loss`` ran can now
+        also say whether it ran against a measured number or against a zero,
+        which is the difference between a limit and a decoration.
+        """
+        return {
+            "daily_pnl": self.pnl_ledger is not None,
+            "weekly_pnl": self.pnl_ledger is not None,
+            "correlated_exposure": self.correlation is not None,
+            "realised_portfolio_vol": self.equity_curve is not None,
+        }
 
     def open_risk(self, now: pd.Timestamp) -> float:
         total = 0.0
@@ -462,21 +620,42 @@ class RiskContextBuilder:
         now = self.clock()
         instrument = get_instrument(plan.instrument)
         rate = float(self.fx.rate(instrument.quote, self.account_ccy, now))
+        snapshot = self.snapshot(now)
+        windows = self.windows(now)
+        limits = self.limits
+        correlated = (
+            correlated_exposure(
+                plan.instrument,
+                snapshot=snapshot,
+                threshold=limits.correlation_threshold,
+                correlation=self.correlation,
+            )
+            if self.correlation is not None
+            else 0.0
+        )
+        extra: dict[str, Any] = {
+            "estimated_spread": self.spread_source is None,
+            "risk_inputs_live": self.risk_inputs_live(),
+            "realised_portfolio_vol": snapshot.realised_portfolio_vol,
+        }
+        if windows is not None:
+            extra["pnl_window"] = windows.as_row()
         return RiskContext(
             plan=plan,
-            snapshot=self.snapshot(now),
+            snapshot=snapshot,
             now=now,
             mode=self.mode,
-            limits=self.limits,
+            limits=limits,
             market=self.market_view(instrument, now),
             venue=self.venue_view(),
             strategy=self.strategy_view(plan.signal.strategy_id),
             request_kind=RequestKind.OPEN,
             open_risk_amount=self.open_risk(now),
+            correlated_exposure=correlated,
             fx_quote_to_account=rate,
-            daily_pnl=self.daily_pnl,
-            weekly_pnl=self.weekly_pnl,
-            extra={"estimated_spread": self.spread_source is None},
+            daily_pnl=self.daily_pnl if windows is None else windows.daily_pnl,
+            weekly_pnl=self.weekly_pnl if windows is None else windows.weekly_pnl,
+            extra=extra,
         )
 
 
@@ -571,6 +750,21 @@ class PaperSession:
             "rejections": dict(sorted(self.broker.rejections.items())),
             "lifecycle_ticks": 0 if self.lifecycle is None else self.lifecycle.ticks,
             "market_state_bars": 0 if self.market_state is None else self.market_state.ingested,
+            # The four formerly-dead risk inputs, reported as VALUES rather than
+            # as "the check ran". A summary that only says a daily stop was
+            # evaluated is the thing this session was built to stop producing.
+            "risk_inputs_live": self.context_builder.risk_inputs_live(),
+            "daily_pnl": (
+                None
+                if self.context_builder.last_windows is None
+                else self.context_builder.last_windows.daily_pnl
+            ),
+            "weekly_pnl": (
+                None
+                if self.context_builder.last_windows is None
+                else self.context_builder.last_windows.weekly_pnl
+            ),
+            "realised_portfolio_vol": self.context_builder.realised_vol(),
         }
 
 
@@ -594,6 +788,7 @@ def build_replay_session(
     worker_config: LiveWorkerConfig | None = None,
     dispatcher: Any = None,
     default_lifecycle: StrategyLifecycle = StrategyLifecycle.PAPER,
+    correlation: CorrelationMatrix | None = None,
 ) -> PaperSession:
     """Assemble a PAPER runtime end to end over stored bars.
 
@@ -639,6 +834,16 @@ def build_replay_session(
         account_ccy=paper_config.account_ccy,
     )
 
+    def _equity_curve() -> pd.Series:
+        """The venue's own equity curve, one row per bar. Feeds vol targeting."""
+        rows = broker.equity_curve
+        if not rows:
+            return pd.Series(dtype=float)
+        return pd.Series(
+            [float(r["equity"]) for r in rows],
+            index=pd.DatetimeIndex([r["timestamp"] for r in rows]),
+        )
+
     builder = RiskContextBuilder(
         adapter=broker,
         # THE REPLAY CLOCK. See the module docstring: a wall clock against
@@ -651,6 +856,23 @@ def build_replay_session(
         mode=ExecutionMode.PAPER,
         regime_source=(market_state.regime if market_state is not None else None),
         default_lifecycle=default_lifecycle,
+        # THE FOUR FORMERLY-DEAD INPUTS. Each check below ran, was named in the
+        # audit trail, and read a zero it could never breach. They now read the
+        # venue's own closed trades, the venue's own equity curve and a
+        # correlation matrix measured on the very frames being replayed.
+        pnl_ledger=RealisedPnlLedger(
+            # A CALLABLE over the book's trades, not a snapshot of them: the
+            # ledger must see a trade that closed one bar ago without anybody
+            # having remembered to push it.
+            lambda: broker.book.trades,
+            account_ccy=paper_config.account_ccy,
+        ),
+        correlation=(
+            correlation
+            if correlation is not None
+            else correlation_from_frames(frames)
+        ),
+        equity_curve=_equity_curve,
     )
     if lifecycle_service is not None:
         builder.strategy_source = _lifecycle_strategy_source(

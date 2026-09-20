@@ -145,7 +145,7 @@ EURUSD H1 contains a **negative-price sentinel bar** — OHLC all −0.0001, at 
 
 **Portfolio and risk:** single sizing authority VERIFIED end to end; 18-check gateway VERIFIED with an AST bypass proof; kill switch with distinct PAUSE and FLATTEN VERIFIED. Four `RiskContext` inputs — daily P&L, weekly P&L, correlated exposure and realised portfolio volatility — default to zero and have no production data source, so those checks execute and are named but currently run against zeros. PARTIALLY VERIFIED.
 
-**Execution:** paper broker VERIFIED at byte-level parity with the backtester. OANDA and IG adapters IMPLEMENTED against documented REST shapes and fixture-tested only; first contact with a real endpoint will find discrepancies. Neither has a position manager, so a demo deployment today would not trail. Five independent live controls VERIFIED, every one-, two- and three-way subset asserted still blocked.
+**Execution:** paper broker VERIFIED at byte-level parity with the backtester. OANDA and IG adapters IMPLEMENTED against documented REST shapes and fixture-tested only; first contact with a real endpoint will find discrepancies. Both now drive the shared `PositionBook` through `VenuePositionManager`, VERIFIED at byte-level parity against the backtester over in-process venues that speak the adapters' real request payloads — so a demo deployment trails, scales out and time-stops. That is still fixture evidence, not endpoint evidence. Five independent live controls VERIFIED, every one-, two- and three-way subset asserted still blocked.
 
 **Operator platform:** API VERIFIED — provenance is enforced structurally by a test that walks every response model and fails on a bare float. Web workstation VERIFIED to build, typecheck, lint and pass 102 Playwright tests. Trade and position rows are a deterministic seed fixture labelled as such and reported as a health degradation, not measurements.
 
@@ -167,7 +167,11 @@ Not defended against, and stated plainly: a compromised operator workstation, a 
 
 ## 11. Unresolved defects and technical debt
 
-The IG and OANDA adapters have no position manager — the largest item before demo enablement.
+~~The IG and OANDA adapters have no position manager — the largest item before demo enablement.~~ **CLOSED.** `broker/position_manager.py`'s `VenuePositionManager` drives the same `PositionBook` the backtester and the paper adapter drive, against IG, OANDA and the simulated venue: the hard stop and the first target are attached at entry, and every later leg, trail step, breakeven move and time stop is issued as a venue amendment or partial close when a bar closes. `tests/integration/test_venue_position_manager.py` asserts byte-identical trade and leg ledgers across all three venues.
+
+What is NOT closed, and cannot be: a client-side exit still depends on the worker being alive. It is now *measured* (`managed_exit_exposure`, a per-bar account-currency number and a Prometheus gauge) and *gated* (`require_venue_realisable()` refuses demo promotion for a policy a venue cannot hold unless a named operator accepts the exposure). See `USER_ACTIONS.md` D2.
+
+Two residual approximations in that path, both recorded rather than reconciled away. The manager's book is MODELLED — its entry price is the fill simulator's, not the venue's — so every level derived from the entry, the breakeven move above all, inherits the dealt-versus-modelled difference; it is on every `AmendTelemetry` row as `entry_divergence`. And a restart cannot recover `bars_held`, so **a time stop is longer than the document says across a restart**.
 
 The lifecycle service is implemented and tested but nothing schedules `evaluate()` outside the worker path that was wired late; treat it as PARTIALLY UNWIRED until you have watched it run.
 

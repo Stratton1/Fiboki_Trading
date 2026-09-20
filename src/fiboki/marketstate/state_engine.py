@@ -29,6 +29,17 @@ capped window is a rolling percentile, and once the cap binds, the engine says
 so in :attr:`MarketStateSnapshot.history_capped` rather than pretending
 otherwise.
 
+``replay``
+    The same per-bar answers over a whole history, in O(n). Feeding 26,837
+    XAUUSD H4 bars through ``ingest_bar`` takes hours (measured: 217s for the
+    first 3,000 bars alone, growing quadratically); :meth:`replay` produces the
+    identical snapshot sequence in about two seconds, by computing the history
+    once and reading each bar's state off the prefix that ends at it.
+    ``tests/integration/test_marketstate_replay.py`` asserts the two agree
+    field for field, notes included. It is the path a long backtest, a research
+    sweep or a demo should use; ``ingest_bar`` remains the path for a live feed,
+    where one bar arrives per period and O(h) per bar is free.
+
 A signal is joined to its regime with :meth:`MarketStateEngine.attach_regime`,
 which does a backward as-of join onto the *last closed bar* at or before the
 signal's timestamp. Never the containing bar, which would not have closed yet.
@@ -36,7 +47,7 @@ signal's timestamp. Never the containing bar, which would not have closed yet.
 from __future__ import annotations
 
 import json
-from collections.abc import Mapping, Sequence
+from collections.abc import Iterator, Mapping, Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -57,6 +68,7 @@ from fiboki.marketstate.features import (
     FeatureConfig,
     FeatureEngine,
     FeatureSet,
+    invalid_bar_mask,
 )
 from fiboki.marketstate.regime import (
     REGIME_JOIN_COLUMNS,
@@ -271,6 +283,249 @@ class MarketStateEngine:
                 )
         frame = pd.DataFrame([row], index=pd.DatetimeIndex([ts], name="timestamp"))
         return self.ingest_frame(key, frame)
+
+    # ---------------------------------------------------------- replay
+
+    def replay(
+        self, instrument: str, frame: pd.DataFrame
+    ) -> Iterator[MarketStateSnapshot | None]:
+        """Yield the snapshot ``ingest_bar`` would have returned, for every bar.
+
+        ``ingest_bar`` recomputes over the retained history, so feeding it ``n``
+        bars costs ``O(n·h)``. On the 26,837-bar XAUUSD H4 file that is hours,
+        which is why the state engine had to be dropped from the long demo.
+
+        This is the same answer in ``O(n)``. It rests on the property the engine
+        already depends on and already tests — **truncation equivalence**:
+        computing on ``df[:k+1]`` returns exactly the first ``k+1`` rows of
+        computing on ``df``, for features (every one is causal) and for regimes
+        (every axis is elementwise, every percentile is expanding, and the
+        confirmation rule is a forward state machine). So the whole history is
+        computed once and each bar's state is read off the prefix that ends at
+        it, rather than recomputed from scratch.
+
+        The per-bar values are *identical*, not close:
+        ``tests/integration/test_marketstate_replay.py`` asserts the yielded
+        snapshots equal the ones a real bar-by-bar ingestion produces, field for
+        field including the notes.
+
+        Yields ``None`` for a bar at which a genuine bar-by-bar engine would
+        also have had nothing to say — too few bars, or no classifiable stress
+        input yet.
+
+        Two restrictions, both refusals rather than silent approximations:
+
+        * the instrument must be cold, because replay reconstructs prefixes of
+          exactly the frame it is given;
+        * ``max_history_bars`` must be unset. Under a cap the bar-by-bar engine
+          computes over a rolling window, which is a different statistic (see
+          :attr:`MarketStateSnapshot.history_capped`), and replay would not be
+          reproducing it.
+        """
+        key = instrument.upper()
+        if key in self._states:
+            raise StateEngineError(
+                f"{key} already has state; replay reconstructs prefixes of the "
+                "frame it is given and must start from a cold instrument"
+            )
+        if self.config.max_history_bars is not None:
+            raise StateEngineError(
+                "replay refuses to run with max_history_bars set: a capped "
+                "history turns the expanding percentiles into rolling ones, and "
+                "replay would not be reproducing what ingest_bar computes"
+            )
+        if self._cross is not None:
+            raise StateEngineError(
+                "replay refuses to run with cross-asset stress inputs attached: "
+                "the stress panel is built from whole histories, not prefixes"
+            )
+
+        bars = self._clean_incoming(frame)
+        snapshot = self.ingest_frame(key, bars)
+        state = self._states[key]
+        if state.features is None or state.regimes is None or snapshot is None:
+            # Nothing classifiable in the whole frame. Every bar is None, and
+            # saying so is the honest answer.
+            yield from (None for _ in range(len(bars)))
+            return
+
+        f = state.features
+        r = state.regimes
+        cfg = self.config
+
+        # Raw bar position -> feature-frame row. Dropped (sentinel) bars have no
+        # row of their own; they carry the previous one, exactly as a bar-by-bar
+        # engine does, because compute() drops them and snapshot() reads the
+        # last computed row while as_of reads the last RAW bar.
+        bad = invalid_bar_mask(bars)
+        n_dropped_by = np.cumsum(bad.astype(np.int64))
+        feat_row = np.arange(len(bars), dtype=np.int64) - n_dropped_by
+
+        regime_keys = r.frame["regime_key"].to_numpy()
+        feature_rows = f.frame.to_numpy(dtype=float)
+        feature_names = list(f.frame.columns)
+        first_finite = self._first_finite_by_column(f.frame)
+        stress_first = self._stress_first_classifiable(f.frame, first_finite)
+        # Availability is read off the RAW columns, not off the derived
+        # features: volume_z stays NaN until its rolling window warms, so using
+        # it as the availability proxy would claim volume was absent for the
+        # first 50 bars of a dataset that carries it.
+        kept = bars.loc[~bad]
+        spread_first = self._first_present(self._spread_series(kept))
+        volume_first = self._first_present(self._volume_series(kept))
+        closes = {
+            c: bars[c].to_numpy(dtype=float)
+            for c in ("open", "high", "low", "close")
+            if c in bars.columns
+        }
+        index = bars.index
+
+        for j in range(len(bars)):
+            if j + 1 < 3:
+                yield None
+                continue
+            i = int(feat_row[j])
+            if i < 0:
+                yield None
+                continue
+            if stress_first is None or i < stress_first:
+                # The classifier would have raised RegimeError on this prefix
+                # (no usable stress input), and ingest_frame reports that as
+                # "nothing to say yet".
+                yield None
+                continue
+            warm = i >= r.warmup
+            key_now = str(regime_keys[i])
+            since: int | None = None
+            if warm:
+                k = i
+                while k > r.warmup and regime_keys[k - 1] == regime_keys[k]:
+                    k -= 1
+                since = i - k
+            yield MarketStateSnapshot(
+                instrument=key,
+                timeframe=f.timeframe,
+                as_of=index[j],
+                bar={c: float(v[j]) for c, v in closes.items()},
+                features=dict(zip(feature_names, feature_rows[i].tolist(), strict=True)),
+                regime=RegimeVector.from_key(key_now),
+                regime_key=key_now,
+                bars_since_regime_change=since,
+                warm=warm,
+                bars_seen=j + 1,
+                history_capped=False,
+                feature_fingerprint=f.fingerprint,
+                regime_fingerprint=r.fingerprint,
+                notes=self._notes_for_prefix(
+                    n_dropped=int(n_dropped_by[j]),
+                    spread_ok=spread_first is not None and spread_first <= i,
+                    volume_ok=volume_first is not None and volume_first <= i,
+                    stress_used=self._stress_used_at(f.frame, first_finite, i),
+                    cfg=cfg,
+                ),
+            )
+
+    @staticmethod
+    def _spread_series(frame: pd.DataFrame) -> pd.Series:
+        """The quoted-spread series exactly as the feature engine derives it."""
+        if not {"bid_close", "ask_close"}.issubset(frame.columns):
+            return pd.Series(np.nan, index=frame.index)
+        bid = frame["bid_close"].astype(float)
+        ask = frame["ask_close"].astype(float)
+        mid = (bid + ask) / 2.0
+        return (ask - bid) / mid.replace(0.0, np.nan)
+
+    @staticmethod
+    def _volume_series(frame: pd.DataFrame) -> pd.Series:
+        """Real volume only: ``-1`` is the absent marker, ``0`` is FX's fake."""
+        if "volume" not in frame.columns:
+            return pd.Series(np.nan, index=frame.index)
+        vol = pd.to_numeric(frame["volume"], errors="coerce").astype(float)
+        return vol.where(vol > 0.0)
+
+    @staticmethod
+    def _first_present(series: pd.Series) -> int | None:
+        hit = np.flatnonzero(series.notna().to_numpy())
+        return int(hit[0]) if hit.size else None
+
+    @staticmethod
+    def _first_finite_by_column(frame: pd.DataFrame) -> dict[str, int | None]:
+        """Row at which each column first carries a finite value, or ``None``."""
+        out: dict[str, int | None] = {}
+        for name in frame.columns:
+            finite = np.isfinite(frame[name].to_numpy(dtype=float))
+            hit = np.flatnonzero(finite)
+            out[str(name)] = int(hit[0]) if hit.size else None
+        return out
+
+    def _stress_first_classifiable(
+        self, frame: pd.DataFrame, first_finite: Mapping[str, int | None]
+    ) -> int | None:
+        """First row at which at least one stress input exists.
+
+        Before it, :meth:`RegimeClassifier.classify` raises rather than scoring a
+        constant, and the engine reports no state at all.
+        """
+        candidates = [
+            first_finite[name]
+            for name in self.config.regime.stress_features
+            if name in frame.columns and first_finite.get(name) is not None
+        ]
+        return min(c for c in candidates if c is not None) if candidates else None
+
+    def _stress_used_at(
+        self, frame: pd.DataFrame, first_finite: Mapping[str, int | None], i: int
+    ) -> tuple[str, ...]:
+        used: list[str] = []
+        for name in self.config.regime.stress_features:
+            if name not in frame.columns:
+                continue
+            first = first_finite.get(name)
+            if first is not None and first <= i:
+                used.append(name)
+        return tuple(used)
+
+    def _notes_for_prefix(
+        self,
+        *,
+        n_dropped: int,
+        spread_ok: bool,
+        volume_ok: bool,
+        stress_used: Sequence[str],
+        cfg: EngineConfig,
+    ) -> tuple[str, ...]:
+        """Rebuild the note list a prefix compute would have produced.
+
+        Mirrors :meth:`FeatureEngine.compute` and
+        :meth:`RegimeClassifier.classify` in order. Notes are part of what a
+        snapshot says about itself, so replay reproduces them rather than
+        reporting the whole-history ones and hoping nobody compares.
+        """
+        notes: list[str] = []
+        if n_dropped:
+            notes.append(
+                f"dropped {n_dropped} invalid bar(s) before computing features"
+            )
+        if not spread_ok:
+            notes.append(
+                "no bid/ask columns: quoted-spread features are published as NaN "
+                "with spread_available=0 rather than as a modelled constant"
+            )
+        if not volume_ok:
+            notes.append(
+                "volume is absent or identically zero: volume features are NaN "
+                "with volume_available=0. Volume-dependent logic must be blocked "
+                "on this dataset, not fed zeros."
+            )
+        for name in cfg.regime.stress_features:
+            if name in stress_used:
+                continue
+            notes.append(f"stress feature {name!r} is entirely NaN; excluded")
+        notes.append(
+            f"stress score averages {len(stress_used)} input(s): "
+            f"{', '.join(stress_used)}"
+        )
+        return tuple(notes)
 
     @staticmethod
     def _as_row(

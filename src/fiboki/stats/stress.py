@@ -227,7 +227,7 @@ def spread_multiplier_stress(
         if recorded == 0.0
         else ""
     )
-    samples = []
+    samples: list[np.ndarray] = []
     for m in multipliers:
         stressed = [_reprice(t, spread_multiplier=float(m)) for t in trades]
         samples.append(np.array([metric(s) for s in _resample(stressed, n_samples, rng)]))
@@ -262,7 +262,7 @@ def slippage_stress(
     trades = _require(trades)
     if basis not in ("spread_multiple", "currency"):
         raise ValueError("basis must be 'spread_multiple' or 'currency'")
-    samples = []
+    samples: list[np.ndarray] = []
     for lvl in levels:
         stressed = [
             _reprice(
@@ -307,7 +307,7 @@ def execution_delay_stress(
     trades = _require(trades)
     if mode not in ("capture", "adverse"):
         raise ValueError("mode must be 'capture' or 'adverse'")
-    samples = []
+    samples: list[np.ndarray] = []
     for lvl in levels:
         f = float(lvl)
         if mode == "capture":
@@ -343,13 +343,13 @@ def random_deletion_stress(
     trades = _require(trades)
     gen = rng if isinstance(rng, np.random.Generator) else np.random.default_rng(rng)
     n = len(trades)
-    samples = []
+    samples: list[np.ndarray] = []
     for frac in fractions:
         keep = max(1, int(round(n * (1.0 - float(frac)))))
         vals = np.empty(n_samples)
         for i in range(n_samples):
             idx = gen.choice(n, size=keep, replace=False)
-            vals[i] = metric([trades[j] for j in sorted(idx)])
+            vals[i] = metric([trades[int(j)] for j in sorted(idx.tolist())])
         samples.append(vals)
     return StressCurve(
         name="random_deletion",
@@ -378,7 +378,7 @@ def start_date_stress(
     trades = _require(trades)
     ordered = _sorted_by_entry(trades)
     n = len(ordered)
-    samples = []
+    samples: list[np.ndarray] = []
     for frac in fractions:
         cut = min(n - 1, int(round(n * float(frac))))
         samples.append(np.array([metric(ordered[cut:])]))
@@ -405,7 +405,7 @@ def end_date_stress(
     trades = _require(trades)
     ordered = _sorted_by_entry(trades)
     n = len(ordered)
-    samples = []
+    samples: list[np.ndarray] = []
     for frac in fractions:
         cut = max(1, n - int(round(n * float(frac))))
         samples.append(np.array([metric(ordered[:cut])]))
@@ -444,7 +444,7 @@ def missing_fill_stress(
     n = len(trades)
     gen = rng if isinstance(rng, np.random.Generator) else np.random.default_rng(rng)
     ranked = sorted(range(n), key=lambda i: trades[i].net_pnl, reverse=(bias == "worst"))
-    samples = []
+    samples: list[np.ndarray] = []
     for p in probabilities:
         prob = float(p)
         if bias == "random":
