@@ -1,0 +1,112 @@
+import type { ReactNode } from "react";
+import type { Caveat, Figure, SourceNote } from "@/lib/types";
+import { FigureValue } from "./FigureValue";
+
+export function PageHead({
+  title,
+  intro,
+  children,
+}: {
+  title: string;
+  intro: string;
+  children?: ReactNode;
+}) {
+  return (
+    <header className="page-head">
+      <h1>{title}</h1>
+      <p>{intro}</p>
+      {children}
+    </header>
+  );
+}
+
+/**
+ * Where a payload came from, rendered on every list and detail view. The page
+ * never asserts this; it prints what the API said.
+ */
+export function SourceBadge({ source }: { source: SourceNote }) {
+  return (
+    <div className="source-note" data-testid="source-note" data-kind={source.kind}>
+      <span className="source-note__kind" data-kind={source.kind}>
+        {source.kind.toUpperCase()}
+      </span>
+      {source.detail}
+    </div>
+  );
+}
+
+/**
+ * Realism caveats. Always rendered from the payload — a caveat written into a
+ * page is a caveat that goes stale the moment the model behind it changes, and
+ * V1 shipped "Estimated realistic return: 190–230%" as page copy beside a live
+ * computed value.
+ */
+export function CaveatList({ caveats }: { caveats: Caveat[] }) {
+  if (caveats.length === 0) return null;
+  return (
+    <div className="caveats" data-testid="caveat-list">
+      {caveats.map((caveat) => (
+        <div
+          key={caveat.code + caveat.affects}
+          className={`caveat caveat--${caveat.severity}`}
+          data-testid="caveat"
+          data-code={caveat.code}
+        >
+          <span className="caveat__code">
+            {caveat.code}
+            {caveat.direction !== "unknown" ? ` · reads ${caveat.direction}` : ""}
+          </span>
+          {caveat.message}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+export function Tile({
+  label,
+  figure,
+  help,
+  colourSign = false,
+}: {
+  label: string;
+  figure: Figure;
+  help?: string;
+  colourSign?: boolean;
+}) {
+  return (
+    <div className="tile" data-testid="tile" data-label={label}>
+      <div className="tile__label">{label}</div>
+      <div className="tile__value">
+        <FigureValue figure={figure} colourSign={colourSign} />
+      </div>
+      {help ? <div className="tile__help">{help}</div> : null}
+    </div>
+  );
+}
+
+export function StatusBadge({ status }: { status: string }) {
+  const known = ["ok", "degraded", "down"].includes(status);
+  return (
+    <span
+      className={`badge badge--${known ? status : "unknown"}`}
+      data-testid="status-badge"
+      data-status={status}
+    >
+      {status.toUpperCase()}
+    </span>
+  );
+}
+
+export function Card({ title, children }: { title?: string; children: ReactNode }) {
+  return (
+    <section className="card">
+      {title ? <h2 className="card__title">{title}</h2> : null}
+      {children}
+    </section>
+  );
+}
+
+export function TableWrap({ children }: { children: ReactNode }) {
+  return <div className="table-wrap">{children}</div>;
+}

@@ -1,0 +1,552 @@
+{
+  "schema_version": "2.0.0",
+  "strategy_id": "ichimoku_kumo_trend",
+  "name": "Ichimoku Kumo Trend",
+  "hypothesis": "ECONOMIC STORY. The Ichimoku lines are, stripped of the folklore, a set of Donchian midpoints over 9/26/52 bars plus a 26-bar displacement. A close above both spans with tenkan above kijun is therefore a compact statement that price is above its 9-, 26- and 52-bar equilibrium and that the short equilibrium is rising. If time-series momentum exists in FX and index CFDs at the daily-to-4-hour horizon -- and Moskowitz, Ooi and Pedersen (2012) and Hurst, Ooi and Pedersen (2017) document it across 50+ futures over a century -- then this is one cheap, low-parameter way to express it, and the displacement gives a natural trailing reference in the kijun.\n\nEVIDENCE AGAINST, STATED PLAINLY. The specific claim that Ichimoku adds value in FX has an explicitly NEGATIVE published result: Deng, Sakurai and Ueda (2021) test Ichimoku rules on major currency pairs and find no significant profitability once data snooping is accounted for. Ichimoku is also drawn from the same moving-average family as the rules in Coakley, Marzano and Nankervis (2016), which did NOT survive Step-SPA multiple-testing correction on FX. The honest prior on this strategy is therefore 'expected edge approximately zero before costs, negative after spread'. It is included as a baseline: if the research pipeline cannot show this underperforming, the pipeline is broken. Any positive result here must clear a deliberately high bar and survive the holdout untouched.",
+  "family": "ichimoku",
+  "universe": [
+    "EURUSD",
+    "GBPUSD",
+    "USDJPY",
+    "AUDUSD",
+    "USDCAD",
+    "USDCHF",
+    "NZDUSD",
+    "EURJPY",
+    "GBPJPY",
+    "XAUUSD",
+    "US500",
+    "DE40"
+  ],
+  "timeframes": [
+    "H4",
+    "D1"
+  ],
+  "direction": "both",
+  "regime": [
+    {
+      "op": "regime_gate",
+      "metric": {
+        "kind": "indicator",
+        "spec": {
+          "indicator": "adx",
+          "params": {
+            "period": 14
+          }
+        },
+        "output": "",
+        "offset": 0
+      },
+      "min_value": {
+        "$param": "adx_floor"
+      },
+      "max_value": null,
+      "invert": false
+    }
+  ],
+  "setup": {
+    "long": [
+      {
+        "op": "indicator_vs_price",
+        "indicator": {
+          "kind": "indicator",
+          "spec": {
+            "indicator": "ichimoku",
+            "params": {
+              "tenkan_period": {
+                "$param": "tenkan_period"
+              },
+              "kijun_period": {
+                "$param": "kijun_period"
+              },
+              "senkou_b_period": {
+                "$param": "senkou_b_period"
+              },
+              "senkou_shift": {
+                "$param": "senkou_shift"
+              }
+            }
+          },
+          "output": "cloud_top",
+          "offset": 0
+        },
+        "price": {
+          "kind": "price",
+          "field": "close",
+          "offset": 0
+        },
+        "comparator": "<"
+      },
+      {
+        "op": "indicator_vs_indicator",
+        "left": {
+          "kind": "indicator",
+          "spec": {
+            "indicator": "ichimoku",
+            "params": {
+              "tenkan_period": {
+                "$param": "tenkan_period"
+              },
+              "kijun_period": {
+                "$param": "kijun_period"
+              },
+              "senkou_b_period": {
+                "$param": "senkou_b_period"
+              },
+              "senkou_shift": {
+                "$param": "senkou_shift"
+              }
+            }
+          },
+          "output": "tenkan",
+          "offset": 0
+        },
+        "right": {
+          "kind": "indicator",
+          "spec": {
+            "indicator": "ichimoku",
+            "params": {
+              "tenkan_period": {
+                "$param": "tenkan_period"
+              },
+              "kijun_period": {
+                "$param": "kijun_period"
+              },
+              "senkou_b_period": {
+                "$param": "senkou_b_period"
+              },
+              "senkou_shift": {
+                "$param": "senkou_shift"
+              }
+            }
+          },
+          "output": "kijun",
+          "offset": 0
+        },
+        "comparator": ">"
+      }
+    ],
+    "short": [
+      {
+        "op": "indicator_vs_price",
+        "indicator": {
+          "kind": "indicator",
+          "spec": {
+            "indicator": "ichimoku",
+            "params": {
+              "tenkan_period": {
+                "$param": "tenkan_period"
+              },
+              "kijun_period": {
+                "$param": "kijun_period"
+              },
+              "senkou_b_period": {
+                "$param": "senkou_b_period"
+              },
+              "senkou_shift": {
+                "$param": "senkou_shift"
+              }
+            }
+          },
+          "output": "cloud_bottom",
+          "offset": 0
+        },
+        "price": {
+          "kind": "price",
+          "field": "close",
+          "offset": 0
+        },
+        "comparator": ">"
+      },
+      {
+        "op": "indicator_vs_indicator",
+        "left": {
+          "kind": "indicator",
+          "spec": {
+            "indicator": "ichimoku",
+            "params": {
+              "tenkan_period": {
+                "$param": "tenkan_period"
+              },
+              "kijun_period": {
+                "$param": "kijun_period"
+              },
+              "senkou_b_period": {
+                "$param": "senkou_b_period"
+              },
+              "senkou_shift": {
+                "$param": "senkou_shift"
+              }
+            }
+          },
+          "output": "tenkan",
+          "offset": 0
+        },
+        "right": {
+          "kind": "indicator",
+          "spec": {
+            "indicator": "ichimoku",
+            "params": {
+              "tenkan_period": {
+                "$param": "tenkan_period"
+              },
+              "kijun_period": {
+                "$param": "kijun_period"
+              },
+              "senkou_b_period": {
+                "$param": "senkou_b_period"
+              },
+              "senkou_shift": {
+                "$param": "senkou_shift"
+              }
+            }
+          },
+          "output": "kijun",
+          "offset": 0
+        },
+        "comparator": "<"
+      }
+    ]
+  },
+  "entry": {
+    "long": [
+      {
+        "op": "crossover",
+        "fast": {
+          "kind": "indicator",
+          "spec": {
+            "indicator": "ichimoku",
+            "params": {
+              "tenkan_period": {
+                "$param": "tenkan_period"
+              },
+              "kijun_period": {
+                "$param": "kijun_period"
+              },
+              "senkou_b_period": {
+                "$param": "senkou_b_period"
+              },
+              "senkou_shift": {
+                "$param": "senkou_shift"
+              }
+            }
+          },
+          "output": "tenkan",
+          "offset": 0
+        },
+        "slow": {
+          "kind": "indicator",
+          "spec": {
+            "indicator": "ichimoku",
+            "params": {
+              "tenkan_period": {
+                "$param": "tenkan_period"
+              },
+              "kijun_period": {
+                "$param": "kijun_period"
+              },
+              "senkou_b_period": {
+                "$param": "senkou_b_period"
+              },
+              "senkou_shift": {
+                "$param": "senkou_shift"
+              }
+            }
+          },
+          "output": "kijun",
+          "offset": 0
+        },
+        "direction": "above"
+      }
+    ],
+    "short": [
+      {
+        "op": "crossover",
+        "fast": {
+          "kind": "indicator",
+          "spec": {
+            "indicator": "ichimoku",
+            "params": {
+              "tenkan_period": {
+                "$param": "tenkan_period"
+              },
+              "kijun_period": {
+                "$param": "kijun_period"
+              },
+              "senkou_b_period": {
+                "$param": "senkou_b_period"
+              },
+              "senkou_shift": {
+                "$param": "senkou_shift"
+              }
+            }
+          },
+          "output": "tenkan",
+          "offset": 0
+        },
+        "slow": {
+          "kind": "indicator",
+          "spec": {
+            "indicator": "ichimoku",
+            "params": {
+              "tenkan_period": {
+                "$param": "tenkan_period"
+              },
+              "kijun_period": {
+                "$param": "kijun_period"
+              },
+              "senkou_b_period": {
+                "$param": "senkou_b_period"
+              },
+              "senkou_shift": {
+                "$param": "senkou_shift"
+              }
+            }
+          },
+          "output": "kijun",
+          "offset": 0
+        },
+        "direction": "below"
+      }
+    ]
+  },
+  "confirmation": {
+    "long": [
+      {
+        "op": "threshold",
+        "operand": {
+          "kind": "indicator",
+          "spec": {
+            "indicator": "ichimoku",
+            "params": {
+              "tenkan_period": {
+                "$param": "tenkan_period"
+              },
+              "kijun_period": {
+                "$param": "kijun_period"
+              },
+              "senkou_b_period": {
+                "$param": "senkou_b_period"
+              },
+              "senkou_shift": {
+                "$param": "senkou_shift"
+              }
+            }
+          },
+          "output": "chikou_above_price",
+          "offset": 0
+        },
+        "comparator": ">",
+        "value": 0.5
+      }
+    ],
+    "short": [
+      {
+        "op": "threshold",
+        "operand": {
+          "kind": "indicator",
+          "spec": {
+            "indicator": "ichimoku",
+            "params": {
+              "tenkan_period": {
+                "$param": "tenkan_period"
+              },
+              "kijun_period": {
+                "$param": "kijun_period"
+              },
+              "senkou_b_period": {
+                "$param": "senkou_b_period"
+              },
+              "senkou_shift": {
+                "$param": "senkou_shift"
+              }
+            }
+          },
+          "output": "chikou_above_price",
+          "offset": 0
+        },
+        "comparator": "<",
+        "value": 0.5
+      }
+    ]
+  },
+  "filters": [],
+  "invalidation": {
+    "long": [],
+    "short": []
+  },
+  "stop": {
+    "kind": "indicator_level",
+    "value": 1.0,
+    "atr": {
+      "kind": "indicator",
+      "spec": {
+        "indicator": "atr",
+        "params": {
+          "period": 14
+        }
+      },
+      "output": "",
+      "offset": 0
+    },
+    "level": {
+      "kind": "indicator",
+      "spec": {
+        "indicator": "ichimoku",
+        "params": {
+          "tenkan_period": {
+            "$param": "tenkan_period"
+          },
+          "kijun_period": {
+            "$param": "kijun_period"
+          },
+          "senkou_b_period": {
+            "$param": "senkou_b_period"
+          },
+          "senkou_shift": {
+            "$param": "senkou_shift"
+          }
+        }
+      },
+      "output": "kijun",
+      "offset": 0
+    },
+    "buffer_atr": {
+      "$param": "stop_buffer_atr"
+    },
+    "min_distance_atr": 0.5
+  },
+  "take_profits": [
+    {
+      "kind": "r_multiple",
+      "value": 1.5,
+      "allocation": 0.5,
+      "atr": null,
+      "level": null,
+      "label": "scale_1"
+    },
+    {
+      "kind": "r_multiple",
+      "value": 3.0,
+      "allocation": 0.5,
+      "atr": null,
+      "level": null,
+      "label": "scale_2"
+    }
+  ],
+  "trailing": {
+    "kind": "atr_chandelier",
+    "value": 3.0,
+    "activate_after_r": 1.0,
+    "atr": {
+      "kind": "indicator",
+      "spec": {
+        "indicator": "atr",
+        "params": {
+          "period": 14
+        }
+      },
+      "output": "",
+      "offset": 0
+    },
+    "level": null
+  },
+  "position_management": {
+    "max_concurrent_positions": 1,
+    "allow_pyramiding": false,
+    "max_pyramid_legs": 1,
+    "move_stop_to_breakeven_at_r": 1.0,
+    "allow_reversal_on_opposite_signal": true,
+    "max_bars_in_trade": null,
+    "cooldown_bars_after_exit": 2
+  },
+  "sessions": {
+    "windows": [
+      [
+        7,
+        20
+      ]
+    ],
+    "weekdays": [
+      0,
+      1,
+      2,
+      3,
+      4
+    ],
+    "block_bars_before_weekend": 0
+  },
+  "events": {
+    "block_minutes_before": 30,
+    "block_minutes_after": 30,
+    "blocked_event_tags": [
+      "nfp",
+      "cpi",
+      "central_bank_rate"
+    ],
+    "avoid_month_end": false,
+    "avoid_rollover_hour": true
+  },
+  "parameters": {
+    "tenkan_period": {
+      "kind": "int",
+      "default": 9,
+      "description": "Conversion line lookback",
+      "min_value": 5.0,
+      "max_value": 15.0,
+      "step": 1.0,
+      "choices": null
+    },
+    "kijun_period": {
+      "kind": "int",
+      "default": 26,
+      "description": "Base line lookback",
+      "min_value": 17.0,
+      "max_value": 40.0,
+      "step": 1.0,
+      "choices": null
+    },
+    "senkou_b_period": {
+      "kind": "int",
+      "default": 52,
+      "description": "Leading span B lookback",
+      "min_value": 34.0,
+      "max_value": 78.0,
+      "step": 2.0,
+      "choices": null
+    },
+    "senkou_shift": {
+      "kind": "int",
+      "default": 26,
+      "description": "Cloud displacement, INDEPENDENT of chikou",
+      "min_value": 13.0,
+      "max_value": 39.0,
+      "step": 1.0,
+      "choices": null
+    },
+    "adx_floor": {
+      "kind": "float",
+      "default": 20.0,
+      "description": "Trend-regime gate",
+      "min_value": 10.0,
+      "max_value": 35.0,
+      "step": 2.5,
+      "choices": null
+    },
+    "stop_buffer_atr": {
+      "kind": "float",
+      "default": 0.5,
+      "description": "ATR buffer beyond the kijun",
+      "min_value": 0.0,
+      "max_value": 1.5,
+      "step": 0.25,
+      "choices": null
+    }
+  },
+  "binding": null,
+  "parent_strategy_ids": [],
+  "mutation": null,
+  "notes": "Baseline. Expected to underperform; retained as a negative control.",
+  "author": "fiboki-v2-seed",
+  "complexity_score": 13.5
+}

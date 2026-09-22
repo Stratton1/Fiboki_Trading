@@ -1,0 +1,299 @@
+# CI that GATES.
+#
+# The failure this design closes: V1 deployed on every push to the default
+# branch. Tests ran in the same workflow, on a parallel job, and the deploy
+# step did not depend on them. A red test suite and a deployed service were
+# routine and nobody noticed, because the deploy badge was green either way.
+#
+# Here `deploy` has `needs:` every gate, runs only on a tag or an explicit
+# dispatch, and is bound to a protected GitHub Environment so a human approves
+# it. Push does not deploy. Ever.
+#
+# Jobs:
+#   lint            ruff
+#   typecheck       mypy
+#   test            the full offline suite, with a job timeout
+#   golden          the hand-calculated financial tests, SEPARATELY REQUIRED
+#   live-flags      fails on a committed truthy live-execution flag
+#   lockfile        fails on dependency drift
+#   audit           dependency vulnerability audit
+#   gate            one required status that aggregates the above
+#   deploy          manual, tag-only, needs: gate
+
+name: CI
+
+on:
+  push:
+    branches: ["**"]
+    tags: ["v*"]
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      deploy:
+        description: "Deploy after a green gate"
+        type: boolean
+        default: false
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  PYTHON_VERSION: "3.11"
+  PIP_DISABLE_PIP_VERSION_CHECK: "1"
+  # Nothing in CI may reach a venue, a provider or a live flag.
+  FIBOKI_EXECUTION_MODE: paper
+  FIBOKI_OFFLINE: "1"
+
+jobs:
+  # ---------------------------------------------------------------- lint
+  lint:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+      - name: Install
+        run: |
+          python -m pip install --upgrade pip
+          pip install -c deploy/constraints.txt -e ".[dev]"
+      - name: ruff
+        run: ruff check src tests scripts
+      - name: ruff format check
+        run: ruff format --check src scripts || echo "::warning::formatting drift (not gating)"
+
+  # ------------------------------------------------------------ typecheck
+  typecheck:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+      - name: Install
+        run: |
+          python -m pip install --upgrade pip
+          pip install -c deploy/constraints.txt -e ".[dev]"
+      - name: mypy
+        run: mypy --ignore-missing-imports --no-strict-optional src/fiboki
+
+  # ----------------------------------------------------------------- test
+  test:
+    runs-on: ubuntu-latest
+    # A hard ceiling. A suite that hangs must FAIL, not occupy a runner for six
+    # hours and then be cancelled by a human who assumes it was flaky.
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+      - name: Install
+        run: |
+          python -m pip install --upgrade pip
+          pip install -c deploy/constraints.txt -e ".[dev]"
+      - name: Full offline suite
+        # `external` is excluded by the project's own marker convention. If a
+        # test needs the network it is not part of the gate.
+        run: pytest tests/ -q -m "not external" --timeout=120 --durations=15
+      - name: Assert no test reached the network
+        if: always()
+        run: |
+          # A belt-and-braces check: the suite must not have written a provider
+          # cache. If it did, something called out.
+          test ! -d .provider_cache || (echo "a test hit a live provider"; exit 1)
+
+  # --------------------------------------------------------------- golden
+  golden:
+    # SEPARATE and REQUIRED. These are the hand-calculated financial
+    # correctness tests. They are the ones most likely to be "temporarily"
+    # skipped to unblock a release, so they get their own red X rather than
+    # being one line of a 2,290-test summary nobody reads.
+    name: golden financial tests (required)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+      - name: Install
+        run: |
+          python -m pip install --upgrade pip
+          pip install -c deploy/constraints.txt -e ".[dev]"
+      - name: Golden tests
+        run: pytest tests/ -m golden -q --timeout=120
+      - name: Refuse a silently empty golden run
+        # `pytest -m golden` exits 0 when the marker matches nothing. A suite
+        # that collected zero golden tests is not a passing suite, it is an
+        # absent one, and it would otherwise show green forever.
+        run: |
+          COUNT=$(pytest tests/ -m golden -q --collect-only 2>/dev/null | grep -cE '::' || true)
+          echo "collected $COUNT golden tests"
+          test "$COUNT" -ge 1 || (echo "NO golden tests were collected"; exit 1)
+      - name: Refuse a skipped golden test
+        run: |
+          OUT=$(pytest tests/ -m golden -q --timeout=120 2>&1 | tail -3)
+          echo "$OUT"
+          echo "$OUT" | grep -qiE '[1-9][0-9]* skipped' && \
+            { echo "a golden test was SKIPPED; that is a failure here"; exit 1; } || true
+
+  # ----------------------------------------------------------- live flags
+  live-flags:
+    name: no live-execution flag in committed config
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      - name: Scan committed config
+        run: python scripts/check_live_flags.py .
+      - name: Self-test the scanner against a planted flag
+        # A guard that cannot be shown to catch the thing it guards against is
+        # a guard nobody should trust. This plants V1's exact line -- including
+        # the FIBOKEI typo -- in a scratch directory and asserts a NON-ZERO
+        # exit. The scratch directory is never committed.
+        #
+        # The key is assembled from two halves rather than written out whole.
+        # That is not obfuscation: a literal `FIBOKEI_LIVE_EXECUTION_ENABLED:`
+        # followed by `value: "true"` in THIS file would itself be a committed
+        # truthy live-execution flag, and the step above would (correctly) fail
+        # the build on it. The scanner found exactly that when this job was
+        # first written.
+        run: |
+          set -euo pipefail
+          HALF_A='FIBOKEI_LIVE_EXECUTION'
+          HALF_B='_ENABLED'
+          mkdir -p "$RUNNER_TEMP/planted"
+          printf 'services:\n  - type: web\n    envVars:\n      - key: %s%s\n        value: "true"\n' \
+            "$HALF_A" "$HALF_B" > "$RUNNER_TEMP/planted/render.yaml"
+          echo "--- planted file ---"
+          cat "$RUNNER_TEMP/planted/render.yaml"
+          if python scripts/check_live_flags.py "$RUNNER_TEMP/planted"; then
+            echo "::error::the live-flag check did NOT catch a planted flag"
+            exit 1
+          fi
+          echo "scanner correctly rejected the planted flag"
+
+  # ------------------------------------------------------------- lockfile
+  lockfile:
+    name: dependency lockfile drift
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+      - name: Install from the pinned project
+        run: |
+          python -m pip install --upgrade pip
+          pip install -c deploy/constraints.txt -e ".[dev]"
+      - name: Verify the lockfile still describes this environment
+        run: python scripts/lockfile.py verify --path deploy/requirements.lock
+      - name: Show the drift if there is any
+        if: failure()
+        run: |
+          python scripts/lockfile.py verify --path deploy/requirements.lock --json --warn || true
+          echo "::error::deploy/requirements.lock is stale. Run 'make -f deploy/Makefile lock' and commit."
+
+  # ---------------------------------------------------------------- audit
+  audit:
+    name: dependency audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+      - name: Install
+        run: |
+          python -m pip install --upgrade pip
+          pip install -c deploy/constraints.txt -e ".[dev]"
+          pip install pip-audit==2.7.3
+      - name: pip-audit
+        run: pip-audit --strict --desc
+
+  # ----------------------------------------------------------------- gate
+  gate:
+    # ONE required status check. Branch protection points at this job, so a new
+    # job added above is automatically gating without anybody remembering to
+    # tick a box in a settings page.
+    name: gate
+    if: always()
+    needs: [lint, typecheck, test, golden, live-flags, lockfile, audit]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Require every gate to have SUCCEEDED
+        run: |
+          echo "lint=${{ needs.lint.result }}"
+          echo "typecheck=${{ needs.typecheck.result }}"
+          echo "test=${{ needs.test.result }}"
+          echo "golden=${{ needs.golden.result }}"
+          echo "live-flags=${{ needs.live-flags.result }}"
+          echo "lockfile=${{ needs.lockfile.result }}"
+          echo "audit=${{ needs.audit.result }}"
+          for result in \
+            "${{ needs.lint.result }}" \
+            "${{ needs.typecheck.result }}" \
+            "${{ needs.test.result }}" \
+            "${{ needs.golden.result }}" \
+            "${{ needs['live-flags'].result }}" \
+            "${{ needs.lockfile.result }}" \
+            "${{ needs.audit.result }}" ; do
+            # NOT `!= failure`. A cancelled or skipped gate is not a passed one.
+            if [ "$result" != "success" ]; then
+              echo "::error::a required gate did not succeed: $result"
+              exit 1
+            fi
+          done
+          echo "all gates green"
+
+  # --------------------------------------------------------------- deploy
+  deploy:
+    # NOT on push. A tag, or an explicit dispatch with deploy=true, and only
+    # after `gate` is green. The environment adds a human approval step.
+    name: deploy
+    needs: [gate]
+    if: >
+      needs.gate.result == 'success' &&
+      (startsWith(github.ref, 'refs/tags/v') ||
+       (github.event_name == 'workflow_dispatch' && inputs.deploy))
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment:
+      name: production
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Confirm the release does not enable live execution
+        run: python scripts/check_live_flags.py .
+      - name: Deploy
+        run: |
+          echo "Deploying ${{ github.ref_name }}."
+          echo "Wire the real deployment here. It runs ONLY because:"
+          echo "  * every gate above returned success, and"
+          echo "  * a human approved the 'production' environment, and"
+          echo "  * this is a tag or an explicit dispatch -- never a push."

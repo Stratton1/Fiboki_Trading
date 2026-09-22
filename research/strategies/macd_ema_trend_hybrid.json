@@ -1,0 +1,468 @@
+{
+  "schema_version": "2.0.0",
+  "strategy_id": "macd_ema_trend_hybrid",
+  "name": "MACD / EMA Trend Hybrid",
+  "hypothesis": "ECONOMIC STORY. This separates the two jobs a trend system has to do. The 50/200 EMA relationship is the slow state variable -- it answers 'which way is this market drifting over months' -- while the MACD line crossing its signal is the fast timing trigger that answers 'is momentum re-accelerating now'. Taking the fast trigger only in the direction of the slow state is a standard way to cut the whipsaw rate of a bare crossover roughly in half without giving up the large moves, which is where all the money in time-series momentum is made (Moskowitz, Ooi and Pedersen 2012). The MACD histogram is a difference of two EMAs, so this is an intentionally low-parameter expression of one idea rather than two ideas bolted together.\n\nEVIDENCE AGAINST, STATED PLAINLY. This is the single worst-supported family in the academic literature once snooping is priced in. Moving-average crossover rules -- exactly these -- did NOT survive Step-SPA correction in Coakley, Marzano and Nankervis (2016) on FX. Earlier positive results such as Brock, Lakonishok and LeBaron (1992) are the canonical example of results that shrank when White's Reality Check was applied (Sullivan, Timmermann and White 1999). The 200-EMA filter also costs roughly 600 bars of warmup, which removes a real slice of any sample and makes the effective test period shorter than it looks. Expect a positive but small gross edge in trending instruments, and expect spread and slippage to consume most of it on anything faster than H4.",
+  "family": "trend_following",
+  "universe": [
+    "EURUSD",
+    "GBPUSD",
+    "USDJPY",
+    "AUDUSD",
+    "USDCAD",
+    "USDCHF",
+    "NZDUSD",
+    "EURJPY",
+    "GBPJPY",
+    "XAUUSD",
+    "US500",
+    "DE40"
+  ],
+  "timeframes": [
+    "H4",
+    "D1"
+  ],
+  "direction": "both",
+  "regime": [
+    {
+      "op": "regime_gate",
+      "metric": {
+        "kind": "indicator",
+        "spec": {
+          "indicator": "adx",
+          "params": {
+            "period": 14
+          }
+        },
+        "output": "",
+        "offset": 0
+      },
+      "min_value": {
+        "$param": "adx_floor"
+      },
+      "max_value": null,
+      "invert": false
+    }
+  ],
+  "setup": {
+    "long": [
+      {
+        "op": "indicator_vs_indicator",
+        "left": {
+          "kind": "indicator",
+          "spec": {
+            "indicator": "ema",
+            "params": {
+              "period": {
+                "$param": "fast_ema"
+              }
+            }
+          },
+          "output": "",
+          "offset": 0
+        },
+        "right": {
+          "kind": "indicator",
+          "spec": {
+            "indicator": "ema",
+            "params": {
+              "period": {
+                "$param": "slow_ema"
+              }
+            }
+          },
+          "output": "",
+          "offset": 0
+        },
+        "comparator": ">"
+      },
+      {
+        "op": "indicator_vs_price",
+        "indicator": {
+          "kind": "indicator",
+          "spec": {
+            "indicator": "ema",
+            "params": {
+              "period": {
+                "$param": "fast_ema"
+              }
+            }
+          },
+          "output": "",
+          "offset": 0
+        },
+        "price": {
+          "kind": "price",
+          "field": "close",
+          "offset": 0
+        },
+        "comparator": "<"
+      }
+    ],
+    "short": [
+      {
+        "op": "indicator_vs_indicator",
+        "left": {
+          "kind": "indicator",
+          "spec": {
+            "indicator": "ema",
+            "params": {
+              "period": {
+                "$param": "fast_ema"
+              }
+            }
+          },
+          "output": "",
+          "offset": 0
+        },
+        "right": {
+          "kind": "indicator",
+          "spec": {
+            "indicator": "ema",
+            "params": {
+              "period": {
+                "$param": "slow_ema"
+              }
+            }
+          },
+          "output": "",
+          "offset": 0
+        },
+        "comparator": "<"
+      },
+      {
+        "op": "indicator_vs_price",
+        "indicator": {
+          "kind": "indicator",
+          "spec": {
+            "indicator": "ema",
+            "params": {
+              "period": {
+                "$param": "fast_ema"
+              }
+            }
+          },
+          "output": "",
+          "offset": 0
+        },
+        "price": {
+          "kind": "price",
+          "field": "close",
+          "offset": 0
+        },
+        "comparator": ">"
+      }
+    ]
+  },
+  "entry": {
+    "long": [
+      {
+        "op": "crossover",
+        "fast": {
+          "kind": "indicator",
+          "spec": {
+            "indicator": "macd",
+            "params": {
+              "fast": {
+                "$param": "macd_fast"
+              },
+              "slow": {
+                "$param": "macd_slow"
+              },
+              "signal": {
+                "$param": "macd_signal"
+              }
+            }
+          },
+          "output": "line",
+          "offset": 0
+        },
+        "slow": {
+          "kind": "indicator",
+          "spec": {
+            "indicator": "macd",
+            "params": {
+              "fast": {
+                "$param": "macd_fast"
+              },
+              "slow": {
+                "$param": "macd_slow"
+              },
+              "signal": {
+                "$param": "macd_signal"
+              }
+            }
+          },
+          "output": "signal",
+          "offset": 0
+        },
+        "direction": "above"
+      }
+    ],
+    "short": [
+      {
+        "op": "crossover",
+        "fast": {
+          "kind": "indicator",
+          "spec": {
+            "indicator": "macd",
+            "params": {
+              "fast": {
+                "$param": "macd_fast"
+              },
+              "slow": {
+                "$param": "macd_slow"
+              },
+              "signal": {
+                "$param": "macd_signal"
+              }
+            }
+          },
+          "output": "line",
+          "offset": 0
+        },
+        "slow": {
+          "kind": "indicator",
+          "spec": {
+            "indicator": "macd",
+            "params": {
+              "fast": {
+                "$param": "macd_fast"
+              },
+              "slow": {
+                "$param": "macd_slow"
+              },
+              "signal": {
+                "$param": "macd_signal"
+              }
+            }
+          },
+          "output": "signal",
+          "offset": 0
+        },
+        "direction": "below"
+      }
+    ]
+  },
+  "confirmation": {
+    "long": [
+      {
+        "op": "threshold",
+        "operand": {
+          "kind": "indicator",
+          "spec": {
+            "indicator": "macd",
+            "params": {
+              "fast": {
+                "$param": "macd_fast"
+              },
+              "slow": {
+                "$param": "macd_slow"
+              },
+              "signal": {
+                "$param": "macd_signal"
+              }
+            }
+          },
+          "output": "line",
+          "offset": 0
+        },
+        "comparator": "<",
+        "value": 0.0
+      }
+    ],
+    "short": [
+      {
+        "op": "threshold",
+        "operand": {
+          "kind": "indicator",
+          "spec": {
+            "indicator": "macd",
+            "params": {
+              "fast": {
+                "$param": "macd_fast"
+              },
+              "slow": {
+                "$param": "macd_slow"
+              },
+              "signal": {
+                "$param": "macd_signal"
+              }
+            }
+          },
+          "output": "line",
+          "offset": 0
+        },
+        "comparator": ">",
+        "value": 0.0
+      }
+    ]
+  },
+  "filters": [],
+  "invalidation": {
+    "long": [],
+    "short": []
+  },
+  "stop": {
+    "kind": "atr_multiple",
+    "value": {
+      "$param": "stop_atr_multiple"
+    },
+    "atr": {
+      "kind": "indicator",
+      "spec": {
+        "indicator": "atr",
+        "params": {
+          "period": 14
+        }
+      },
+      "output": "",
+      "offset": 0
+    },
+    "level": null,
+    "buffer_atr": 0.0,
+    "min_distance_atr": 0.5
+  },
+  "take_profits": [
+    {
+      "kind": "r_multiple",
+      "value": 1.0,
+      "allocation": 0.4,
+      "atr": null,
+      "level": null,
+      "label": "de_risk"
+    },
+    {
+      "kind": "r_multiple",
+      "value": 2.5,
+      "allocation": 0.3,
+      "atr": null,
+      "level": null,
+      "label": "core"
+    }
+  ],
+  "trailing": {
+    "kind": "atr_chandelier",
+    "value": 3.5,
+    "activate_after_r": 1.0,
+    "atr": {
+      "kind": "indicator",
+      "spec": {
+        "indicator": "atr",
+        "params": {
+          "period": 14
+        }
+      },
+      "output": "",
+      "offset": 0
+    },
+    "level": null
+  },
+  "position_management": {
+    "max_concurrent_positions": 1,
+    "allow_pyramiding": false,
+    "max_pyramid_legs": 1,
+    "move_stop_to_breakeven_at_r": 1.0,
+    "allow_reversal_on_opposite_signal": false,
+    "max_bars_in_trade": null,
+    "cooldown_bars_after_exit": 3
+  },
+  "sessions": {
+    "windows": [
+      [
+        6,
+        21
+      ]
+    ],
+    "weekdays": [
+      0,
+      1,
+      2,
+      3,
+      4
+    ],
+    "block_bars_before_weekend": 0
+  },
+  "events": {
+    "block_minutes_before": 30,
+    "block_minutes_after": 30,
+    "blocked_event_tags": [
+      "nfp",
+      "cpi",
+      "central_bank_rate"
+    ],
+    "avoid_month_end": false,
+    "avoid_rollover_hour": true
+  },
+  "parameters": {
+    "macd_fast": {
+      "kind": "int",
+      "default": 12,
+      "description": "",
+      "min_value": 6.0,
+      "max_value": 20.0,
+      "step": 1.0,
+      "choices": null
+    },
+    "macd_slow": {
+      "kind": "int",
+      "default": 26,
+      "description": "",
+      "min_value": 22.0,
+      "max_value": 40.0,
+      "step": 2.0,
+      "choices": null
+    },
+    "macd_signal": {
+      "kind": "int",
+      "default": 9,
+      "description": "",
+      "min_value": 5.0,
+      "max_value": 15.0,
+      "step": 1.0,
+      "choices": null
+    },
+    "fast_ema": {
+      "kind": "int",
+      "default": 50,
+      "description": "",
+      "min_value": 20.0,
+      "max_value": 100.0,
+      "step": 10.0,
+      "choices": null
+    },
+    "slow_ema": {
+      "kind": "int",
+      "default": 200,
+      "description": "",
+      "min_value": 125.0,
+      "max_value": 300.0,
+      "step": 25.0,
+      "choices": null
+    },
+    "stop_atr_multiple": {
+      "kind": "float",
+      "default": 2.5,
+      "description": "",
+      "min_value": 1.0,
+      "max_value": 4.0,
+      "step": 0.5,
+      "choices": null
+    },
+    "adx_floor": {
+      "kind": "float",
+      "default": 18.0,
+      "description": "Trend-regime gate",
+      "min_value": 10.0,
+      "max_value": 35.0,
+      "step": 2.0,
+      "choices": null
+    }
+  },
+  "binding": null,
+  "parent_strategy_ids": [],
+  "mutation": null,
+  "notes": "",
+  "author": "fiboki-v2-seed",
+  "complexity_score": 14.0
+}

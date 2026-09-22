@@ -1,0 +1,56 @@
+{
+  "hypothesis_id": "golden_pocket_pullback_holds",
+  "title": "Gold pullbacks into the 0.618-0.65 retracement resume the trend",
+  "economic_rationale": "The claim is not about the number. It is that a large cohort of discretionary and systematic participants place resting orders at conventional retracement levels, so those levels become places where resting liquidity is concentrated. Concentrated resting liquidity makes a reaction more likely at that price than at a neighbouring one, which is a self-fulfilling mechanism rather than a geometric one -- and self-fulfilling mechanisms are real for as long as the convention holds.",
+  "prediction": "Entries on XAUUSD H4 taken when price retraces into the 0.618-0.65 band of the last completed swing, in the direction of the prevailing trend and with RSI not at an extreme, have positive expectancy net of an IG_REALISTIC spread.",
+  "refutation": "Refuted, for this instrument and timeframe, if a candidate expressing it fails the production gate set: fewer than 400 trades at its declared defaults, or a walk-forward efficiency below 50 per cent, or a deflated Sharpe below 0.95 once the WHOLE campaign's trial count is priced in. Any one of those is an observation that counts against the claim on this cell; none of them refutes the mechanism in general.",
+  "instruments": [
+    "XAUUSD"
+  ],
+  "timeframes": [
+    "H4"
+  ],
+  "regimes": [
+    "ADX above its floor",
+    "an identified completed swing"
+  ],
+  "evidence": [
+    {
+      "direction": "for",
+      "claim": "Order-book studies find clustering of resting orders at round numbers and at conventional levels, which is the mechanism this claim depends on.",
+      "source": "",
+      "strength": "weak"
+    },
+    {
+      "direction": "against",
+      "claim": "Coakley, Marzano and Nankervis (2016) find that technical trading rules on currencies do not survive Step-SPA once the full universe of rules considered is priced in. The same correction is applied here, and the prior expectation is therefore that this fails.",
+      "source": "Journal of Banking and Finance 70, 'Estimating the economic value of technical trading rules'",
+      "strength": "strong"
+    },
+    {
+      "direction": "against",
+      "claim": "The 2009-2025 XAUUSD H4 run of this seed produced 231 trades at an expectancy of -16.58 USD per trade. It is the worst of the four seeds on this cell by a wide margin, and it was already negative before the engine gained its full exit vocabulary.",
+      "source": "research/reports/xauusd_h4/README.md",
+      "strength": "strong"
+    },
+    {
+      "direction": "against",
+      "claim": "The specific 0.618 level has no derivation. If the mechanism is concentrated resting liquidity, the band should be wide and the result should be insensitive to its exact edges; if the result depends on the exact edges, the mechanism is not the one claimed.",
+      "source": "",
+      "strength": "moderate"
+    }
+  ],
+  "status": "proposed",
+  "status_reason": "",
+  "seed_strategy_ids": [
+    "fib_golden_pocket_pullback"
+  ],
+  "author": "phase-k",
+  "tags": [
+    "fibonacci",
+    "mean_reversion",
+    "xauusd"
+  ],
+  "supersedes": "",
+  "created_at": "2026-09-19T08:46:13.078676Z"
+}

@@ -1,0 +1,577 @@
+{
+  "actor": "script:run_xauusd_h4_ladder",
+  "binding_constraint": {
+    "comparison": "gte",
+    "description": "walk_forward_efficiency: observed 42.36, required gte 50, short by 7.639",
+    "kind": "gate",
+    "name": "walk_forward_efficiency",
+    "observed": 42.36107468796035,
+    "reason": "promotion gate not met -- walk_forward_efficiency: 42.36 vs required >= 50 -> fail",
+    "required": 50.0,
+    "rung_index": 2,
+    "shortfall": 7.638925312039653
+  },
+  "broker_profile": {
+    "commission": "CommissionModel(per_trade=0.0, per_unit=0.0, bps_of_notional=0.0, minimum=0.0, currency='quote')",
+    "financing": "FinancingModel(annual_bps_long=290.0, annual_bps_short=110.0, basis_days=365.0, currency='quote')",
+    "guaranteed_stop_premium_pips": 3.0,
+    "latency_bars": 0,
+    "min_deal_size": 0.0,
+    "min_stop_distance_pips": 4.0,
+    "min_stop_policy": "reject",
+    "name": "IG_REALISTIC",
+    "partial_fill_min_fraction": 1.0,
+    "partial_fill_probability": 0.0,
+    "rejection_probability": 0.005,
+    "seed": 20260919,
+    "slippage": "ProbabilisticAdverseTickSlippage(probability=0.3, tick_pips=0.4, max_ticks=3)",
+    "spread": "TimeOfDayWideningSpread(base=TypicalMultiplierSpread(multiplier=1.0, floor_pips=0.6), windows=((21, 23, 3.0), (23, 6, 1.8)))",
+    "stale_price_max_gap_multiple": 3.0,
+    "use_guaranteed_stops": false
+  },
+  "code_version": "46e815f22261b399a69523aacdeb08c88816c03d+dirty",
+  "created_at": "2026-09-19T05:30:01.809591+00:00",
+  "cross_trial_sharpe_variance": 4.2040054951579397e-05,
+  "dataset_version_id": "ds_45aeaa0e6921181e43384041",
+  "dsr_variance_source": "",
+  "engine_config": {
+    "account_ccy": "USD",
+    "bankruptcy_equity": 0.0,
+    "charge_financing": true,
+    "close_at_end_of_data": true,
+    "evaluator": {
+      "account_ccy": "USD",
+      "charge_financing": true,
+      "close_at_end_of_data": true,
+      "initial_balance": 10000.0,
+      "instrument": "XAUUSD",
+      "min_window_bars": 30,
+      "profile_name": "IG_REALISTIC",
+      "risk_fraction": 0.01,
+      "timeframe": "H4",
+      "warmup_margin_bars": 8
+    },
+    "financing_rollover_hour_utc": 21,
+    "fx_source": "identity(USD==USD)",
+    "initial_balance": 10000.0,
+    "intrabar_policy": "stop_first",
+    "max_concurrent": 1,
+    "max_per_instrument": 1,
+    "profile": {
+      "commission": "CommissionModel(per_trade=0.0, per_unit=0.0, bps_of_notional=0.0, minimum=0.0, currency='quote')",
+      "financing": "FinancingModel(annual_bps_long=290.0, annual_bps_short=110.0, basis_days=365.0, currency='quote')",
+      "guaranteed_stop_premium_pips": 3.0,
+      "latency_bars": 0,
+      "min_deal_size": 0.0,
+      "min_stop_distance_pips": 4.0,
+      "min_stop_policy": "reject",
+      "name": "IG_REALISTIC",
+      "partial_fill_min_fraction": 1.0,
+      "partial_fill_probability": 0.0,
+      "rejection_probability": 0.005,
+      "seed": 20260919,
+      "slippage": "ProbabilisticAdverseTickSlippage(probability=0.3, tick_pips=0.4, max_ticks=3)",
+      "spread": "TimeOfDayWideningSpread(base=TypicalMultiplierSpread(multiplier=1.0, floor_pips=0.6), windows=((21, 23, 3.0), (23, 6, 1.8)))",
+      "stale_price_max_gap_multiple": 3.0,
+      "use_guaranteed_stops": false
+    },
+    "provenance": "backtest",
+    "reject_on_stale": false
+  },
+  "experiment_id": "",
+  "gate_results": [
+    {
+      "description": "min_trades: 72 vs required >= 25 -> pass",
+      "gate": {
+        "boolean": false,
+        "comparison": "gte",
+        "metric": "n_trades",
+        "name": "min_trades",
+        "rationale": "V1 ranked on a 80-trade minimum. At 23,040 searched cells the standard error of an 80-trade mean is large enough that the leaderboard is a sampling distribution of the maximum, not a ranking of edges. 400 is the point at which a 0.1 per-trade effect is separable from noise at this search scale.",
+        "rung": 0,
+        "threshold": 25.0,
+        "units": "trades"
+      },
+      "passed": true,
+      "shortfall": 0.0,
+      "status": "pass",
+      "value": 72.0
+    },
+    {
+      "description": "walk_forward_efficiency: 42.36 vs required >= 50 -> fail",
+      "gate": {
+        "boolean": false,
+        "comparison": "gte",
+        "metric": "walk_forward_efficiency",
+        "name": "walk_forward_efficiency",
+        "rationale": "Out-of-sample profit rate as a percentage of the in-sample profit rate of the SAME selected parameters. Below 50% the selection step is destroying more than it adds.",
+        "rung": 2,
+        "threshold": 50.0,
+        "units": "%"
+      },
+      "passed": false,
+      "shortfall": 7.638925312039653,
+      "status": "fail",
+      "value": 42.36107468796035
+    },
+    {
+      "description": "oos_window_hit_rate: 0.75 vs required >= 0.6 -> pass",
+      "gate": {
+        "boolean": false,
+        "comparison": "gte",
+        "metric": "oos_profitable_fraction",
+        "name": "oos_window_hit_rate",
+        "rationale": "A strategy profitable in aggregate but in only half its windows is a bet on one regime that happened to be in the sample.",
+        "rung": 2,
+        "threshold": 0.6,
+        "units": "fraction"
+      },
+      "passed": true,
+      "shortfall": 0.0,
+      "status": "pass",
+      "value": 0.75
+    },
+    {
+      "description": "deflated_sharpe: not_evaluated (required > 0.95)",
+      "gate": {
+        "boolean": false,
+        "comparison": "gt",
+        "metric": "deflated_sharpe_ratio",
+        "name": "deflated_sharpe",
+        "rationale": "Probability the Sharpe exceeds the expected MAXIMUM of a search of this effective size. The single number V1 never computed.",
+        "rung": 5,
+        "threshold": 0.95,
+        "units": "probability"
+      },
+      "passed": false,
+      "shortfall": null,
+      "status": "not_evaluated",
+      "value": null
+    },
+    {
+      "description": "pbo: not_evaluated (required < 0.2)",
+      "gate": {
+        "boolean": false,
+        "comparison": "lt",
+        "metric": "pbo",
+        "name": "pbo",
+        "rationale": "CSCV probability that the in-sample best ranks below median out-of-sample. At 0.5 selection carries no information at all.",
+        "rung": 5,
+        "threshold": 0.2,
+        "units": "probability"
+      },
+      "passed": false,
+      "shortfall": null,
+      "status": "not_evaluated",
+      "value": null
+    },
+    {
+      "description": "spa_consistent_p: not_evaluated (required < 0.05)",
+      "gate": {
+        "boolean": false,
+        "comparison": "lt",
+        "metric": "spa_p_consistent",
+        "name": "spa_consistent_p",
+        "rationale": "Hansen's consistent p-value for the best of the family against the benchmark, which corrects for the whole family being searched.",
+        "rung": 5,
+        "threshold": 0.05,
+        "units": "p-value"
+      },
+      "passed": false,
+      "shortfall": null,
+      "status": "not_evaluated",
+      "value": null
+    },
+    {
+      "description": "stepm_survivor: not_evaluated (required >= 1)",
+      "gate": {
+        "boolean": true,
+        "comparison": "gte",
+        "metric": "stepm_member",
+        "name": "stepm_survivor",
+        "rationale": "Romano-Wolf StepM identifies WHICH strategies beat the benchmark under FWER control. A candidate outside the survivor set has not been individually shown to have an edge.",
+        "rung": 5,
+        "threshold": 1.0,
+        "units": ""
+      },
+      "passed": false,
+      "shortfall": null,
+      "status": "not_evaluated",
+      "value": null
+    },
+    {
+      "description": "survives_2x_spread: not_evaluated (required > 0)",
+      "gate": {
+        "boolean": false,
+        "comparison": "gt",
+        "metric": "net_profit_at_2x_spread",
+        "name": "survives_2x_spread",
+        "rationale": "Spreads widen. An edge that is exactly the cost assumption is a cost assumption, not an edge.",
+        "rung": 4,
+        "threshold": 0.0,
+        "units": "account ccy"
+      },
+      "passed": false,
+      "shortfall": null,
+      "status": "not_evaluated",
+      "value": null
+    },
+    {
+      "description": "parameter_plateau: not_evaluated (required <= 1.25)",
+      "gate": {
+        "boolean": false,
+        "comparison": "lte",
+        "metric": "point_plateau_ratio",
+        "name": "parameter_plateau",
+        "rationale": "Selected point's score divided by the mean of its neighbourhood. Above 1.25 the result is a spike in the parameter surface, which does not survive contact with a different sample.",
+        "rung": 4,
+        "threshold": 1.25,
+        "units": "ratio"
+      },
+      "passed": false,
+      "shortfall": null,
+      "status": "not_evaluated",
+      "value": null
+    }
+  ],
+  "gate_set_fingerprint": "03cbb45b6794ee9467aa3ebefe0d4c3442c8d08bada7bfa9963240149d3aa173",
+  "gate_set_version": "diagnostic-single-instrument-min25",
+  "ladder_config": {
+    "corr_threshold": 0.7,
+    "cscv_splits": 8,
+    "cv_groups": 6,
+    "cv_k": 2,
+    "embargo_pct": 0.01,
+    "external_trial_count": 0,
+    "holdout_min_trades": 30,
+    "min_path_positive_fraction": 0.5,
+    "min_trades": 25,
+    "seed": 20260919,
+    "selection_metric": "sharpe",
+    "spa_bootstraps": 400,
+    "stability_radius": 1,
+    "stress_samples": 100,
+    "walk_forward_folds": 4,
+    "walk_forward_scheme": "anchored"
+  },
+  "lifecycle_recommendation": "research",
+  "notes": "XAUUSD H4 single-instrument cell, diagnostic gate set. USD account, IG_REALISTIC profile, no FX conversion performed.",
+  "provenance_labels": {
+    "n_trades": "backtest",
+    "oos_profitable_fraction": "walkforward",
+    "walk_forward_efficiency": "walkforward"
+  },
+  "raw_trial_count": 12,
+  "report_version": "2.0.0",
+  "rungs": [
+    {
+      "index": 0,
+      "is_evidence": true,
+      "label": "RUNG 0 SANITY",
+      "metrics": {
+        "baseline": {
+          "dataset_version_id": "ds_45aeaa0e6921181e43384041",
+          "degeneracies": [],
+          "engine_config_hash": "fbb7045aa9c8e1257e771939dcb77cc717f4678ebaa1870de1e4c8e3094e98e6",
+          "expectancy": 3.144453998193022,
+          "n_returns": 21490,
+          "n_trades": 72,
+          "net_profit": 226.40068786989758,
+          "params": {
+            "adx_floor": 18.0,
+            "fast_ema": 50,
+            "macd_fast": 12,
+            "macd_signal": 9,
+            "macd_slow": 26,
+            "slow_ema": 200,
+            "stop_atr_multiple": 2.5
+          },
+          "profit_per_day": 0.046128909508944084,
+          "returns_basis": "period",
+          "sharpe": 0.0019056392004359636,
+          "strategy_content_hash": "bed09990a35466acff9350b5f7c8bea3ff5b1733e458ec174672e924d9414765",
+          "window": {
+            "end": "2022-08-22T21:00:00+00:00",
+            "name": "research::ds_45aeaa0e6921181e43384041",
+            "start": "2009-03-15T21:00:00+00:00"
+          }
+        },
+        "expectancy": 3.144453998193022,
+        "min_trades_required": 25,
+        "n_trades": 72,
+        "net_profit": 226.40068786989758
+      },
+      "name": "SANITY",
+      "outcome": "pass",
+      "provenance": "backtest",
+      "reason": ""
+    },
+    {
+      "index": 1,
+      "is_evidence": false,
+      "label": "RUNG 1 IN_SAMPLE_SCREEN",
+      "metrics": {
+        "SCREEN_NOT_EVIDENCE": "In-sample results select; they do not demonstrate. Nothing on this rung may be quoted as performance.",
+        "best_in_sample": {
+          "dataset_version_id": "ds_45aeaa0e6921181e43384041",
+          "degeneracies": [],
+          "engine_config_hash": "fbb7045aa9c8e1257e771939dcb77cc717f4678ebaa1870de1e4c8e3094e98e6",
+          "expectancy": 19.741859842886413,
+          "n_returns": 21490,
+          "n_trades": 76,
+          "net_profit": 1500.3813480593674,
+          "params": {
+            "adx_floor": 10.0,
+            "macd_fast": 6,
+            "macd_slow": 40
+          },
+          "profit_per_day": 0.3057011711612403,
+          "returns_basis": "period",
+          "sharpe": 0.011038449179759902,
+          "strategy_content_hash": "a31b7775f381a1f53427c99ab450768812bfc76e07c675300e07ab5b98f0ba31",
+          "window": {
+            "end": "2022-08-22T21:00:00+00:00",
+            "name": "research::ds_45aeaa0e6921181e43384041",
+            "start": "2009-03-15T21:00:00+00:00"
+          }
+        },
+        "best_index": 2,
+        "best_params": {
+          "adx_floor": 10.0,
+          "macd_fast": 6,
+          "macd_slow": 40
+        },
+        "cross_trial_sharpe_variance": 4.2040054951579397e-05,
+        "grid": {
+          "axes": [
+            {
+              "name": "adx_floor",
+              "values": [
+                10.0,
+                34.0
+              ]
+            },
+            {
+              "name": "macd_fast",
+              "values": [
+                6,
+                20
+              ]
+            },
+            {
+              "name": "macd_slow",
+              "values": [
+                22,
+                26,
+                40
+              ]
+            }
+          ],
+          "full_size": 12,
+          "truncated_from": 27
+        },
+        "n_trials": 12,
+        "trials_matrix": "21490 periods x 12 trials"
+      },
+      "name": "IN_SAMPLE_SCREEN",
+      "outcome": "pass",
+      "provenance": "backtest",
+      "reason": ""
+    },
+    {
+      "index": 2,
+      "is_evidence": true,
+      "label": "RUNG 2 WALK_FORWARD",
+      "metrics": {
+        "CONTRAST_fixed_parameter_hit_rate": 0.75,
+        "CONTRAST_fixed_parameter_oos_rate": 0.12408499416870125,
+        "CONTRAST_note": "The CONTRAST_* figures re-run the DEFAULT parameters on the same test windows -- what V1 called walk-forward. They are diagnostics only: a candidate whose contrast figures are healthy while its true walk-forward figures are not was being selected on noise.",
+        "folds": [
+          {
+            "fixed_param_oos_net_profit": 253.4927537502335,
+            "fixed_param_oos_rate": 0.2582444516607921,
+            "fold": 0,
+            "is_net_profit": 252.81544845309074,
+            "is_rate": 0.2575544503393345,
+            "oos_net_profit": 447.0286724445281,
+            "oos_rate": 0.45540818301194796,
+            "oos_sharpe": 0.014087649331988967,
+            "oos_trades": 26,
+            "selected_params": {
+              "adx_floor": 10.0,
+              "macd_fast": 20,
+              "macd_slow": 26
+            },
+            "test": {
+              "end": "2014-07-31T01:48:00+00:00",
+              "name": "wf_test_0",
+              "start": "2011-11-22T11:24:00+00:00"
+            },
+            "train": {
+              "end": "2011-11-22T11:24:00+00:00",
+              "name": "wf_train_0",
+              "start": "2009-03-15T21:00:00+00:00"
+            }
+          },
+          {
+            "fixed_param_oos_net_profit": -396.59726256727083,
+            "fixed_param_oos_rate": -0.4040314410832017,
+            "fold": 1,
+            "is_net_profit": 1284.5257536511904,
+            "is_rate": 0.6543020342559038,
+            "oos_net_profit": -217.09291111937748,
+            "oos_rate": -0.22116229739137885,
+            "oos_sharpe": -0.008687437878362785,
+            "oos_trades": 15,
+            "selected_params": {
+              "adx_floor": 10.0,
+              "macd_fast": 6,
+              "macd_slow": 40
+            },
+            "test": {
+              "end": "2017-04-07T16:12:00+00:00",
+              "name": "wf_test_1",
+              "start": "2014-07-31T01:48:00+00:00"
+            },
+            "train": {
+              "end": "2014-07-31T01:48:00+00:00",
+              "name": "wf_train_1",
+              "start": "2009-03-15T21:00:00+00:00"
+            }
+          },
+          {
+            "fixed_param_oos_net_profit": 198.35036828315475,
+            "fixed_param_oos_rate": 0.20206842734632716,
+            "fold": 2,
+            "is_net_profit": 1039.6956742267773,
+            "is_rate": 0.35306155739838946,
+            "oos_net_profit": 319.06314696360903,
+            "oos_rate": 0.32504395574939793,
+            "oos_sharpe": 0.010400807640668667,
+            "oos_trades": 21,
+            "selected_params": {
+              "adx_floor": 10.0,
+              "macd_fast": 6,
+              "macd_slow": 40
+            },
+            "test": {
+              "end": "2019-12-15T06:36:00+00:00",
+              "name": "wf_test_2",
+              "start": "2017-04-07T16:12:00+00:00"
+            },
+            "train": {
+              "end": "2017-04-07T16:12:00+00:00",
+              "name": "wf_train_2",
+              "start": "2009-03-15T21:00:00+00:00"
+            }
+          },
+          {
+            "fixed_param_oos_net_profit": 431.9614616378712,
+            "fixed_param_oos_rate": 0.4400585387508875,
+            "fold": 3,
+            "is_net_profit": 1391.582641154365,
+            "is_rate": 0.3544169318343432,
+            "oos_net_profit": 124.34698378487803,
+            "oos_rate": 0.12667785634156278,
+            "oos_sharpe": 0.005904070259533465,
+            "oos_trades": 12,
+            "selected_params": {
+              "adx_floor": 10.0,
+              "macd_fast": 6,
+              "macd_slow": 40
+            },
+            "test": {
+              "end": "2022-08-22T21:00:00+00:00",
+              "name": "wf_test_3",
+              "start": "2019-12-15T06:36:00+00:00"
+            },
+            "train": {
+              "end": "2019-12-15T06:36:00+00:00",
+              "name": "wf_train_3",
+              "start": "2009-03-15T21:00:00+00:00"
+            }
+          }
+        ],
+        "mean_is_rate": 0.40483374345699275,
+        "mean_oos_rate": 0.17149192442788247,
+        "n_folds": 4,
+        "oos_profitable_fraction": 0.75,
+        "parameter_stability_across_folds": {
+          "modal_share": 0.75,
+          "n_distinct_selections": 2,
+          "n_folds": 4,
+          "note": "n_distinct_selections equal to n_folds means every fold chose differently: the surface has no stable optimum and the selection step is fitting noise."
+        },
+        "scheme": "anchored",
+        "selected_params": {
+          "adx_floor": 10.0,
+          "macd_fast": 6,
+          "macd_slow": 40
+        },
+        "walk_forward_efficiency": 42.36107468796035
+      },
+      "name": "WALK_FORWARD",
+      "outcome": "fail",
+      "provenance": "walkforward",
+      "reason": "promotion gate not met -- walk_forward_efficiency: 42.36 vs required >= 50 -> fail"
+    },
+    {
+      "index": 3,
+      "is_evidence": true,
+      "label": "RUNG 3 PURGED_CV",
+      "metrics": {},
+      "name": "PURGED_CV",
+      "outcome": "not_reached",
+      "provenance": "out_of_sample",
+      "reason": ""
+    },
+    {
+      "index": 4,
+      "is_evidence": true,
+      "label": "RUNG 4 ROBUSTNESS",
+      "metrics": {},
+      "name": "ROBUSTNESS",
+      "outcome": "not_reached",
+      "provenance": "backtest",
+      "reason": ""
+    },
+    {
+      "index": 5,
+      "is_evidence": true,
+      "label": "RUNG 5 DEFLATION",
+      "metrics": {},
+      "name": "DEFLATION",
+      "outcome": "not_reached",
+      "provenance": "out_of_sample",
+      "reason": ""
+    },
+    {
+      "index": 6,
+      "is_evidence": true,
+      "label": "RUNG 6 HOLDOUT",
+      "metrics": {},
+      "name": "HOLDOUT",
+      "outcome": "not_reached",
+      "provenance": "holdout",
+      "reason": ""
+    }
+  ],
+  "strategy_content_hash": "bed09990a35466acff9350b5f7c8bea3ff5b1733e458ec174672e924d9414765",
+  "strategy_id": "macd_ema_trend_hybrid",
+  "trial_count_n": 0,
+  "verdict": "reject",
+  "windows": {
+    "holdout": {
+      "end": "2025-12-31T21:00:00+00:00",
+      "name": "holdout::ds_45aeaa0e6921181e43384041",
+      "start": "2022-08-22T21:00:00+00:00"
+    },
+    "holdout_fraction": 0.2,
+    "n_evaluations": 69,
+    "research": {
+      "end": "2022-08-22T21:00:00+00:00",
+      "name": "research::ds_45aeaa0e6921181e43384041",
+      "start": "2009-03-15T21:00:00+00:00"
+    }
+  }
+}

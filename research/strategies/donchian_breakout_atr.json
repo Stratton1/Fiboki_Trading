@@ -1,0 +1,258 @@
+{
+  "schema_version": "2.0.0",
+  "strategy_id": "donchian_breakout_atr",
+  "name": "Donchian Breakout with ATR Stop",
+  "hypothesis": "ECONOMIC STORY. A breakout of the prior 20-bar range is the classic time-series momentum expression. The economic mechanism most often advanced is slow information diffusion plus flow effects from risk management and option hedging: positions are added as price extends, so a range break is followed by further movement in the same direction more often than a coin flip. Moskowitz, Ooi and Pedersen (2012) document 12-month time-series momentum across asset classes; Hurst, Ooi and Pedersen (2017) extend it back to 1880. The 100-bar EMA filter restricts entries to the side of the longer trend, which is a crude proxy for the same effect at a slower frequency, and the ATR stop makes risk stationary across instruments and volatility regimes.\n\nEVIDENCE AGAINST, STATED PLAINLY. The channel-breakout family is exactly the family that fails multiple-testing correction on FX: Coakley, Marzano and Nankervis (2016) find that technical trading rules on currencies do not survive Step-SPA once the full universe of rules considered is priced in. Managed-futures trend returns have also decayed materially since 2009 (widely documented in practitioner replication work), so historical Sharpe from long samples is likely an overestimate of forward performance. And crucially, the '20-bar high' is computed from the PRIOR window (donchian_upper_prior) -- a channel that includes the current bar's own high can never be broken by that bar, which is the kind of detail that turns a flat strategy into a spectacular backtest and nothing else.",
+  "family": "breakout",
+  "universe": [
+    "EURUSD",
+    "GBPUSD",
+    "USDJPY",
+    "AUDUSD",
+    "USDCAD",
+    "USDCHF",
+    "NZDUSD",
+    "EURJPY",
+    "GBPJPY",
+    "XAUUSD",
+    "US500",
+    "DE40"
+  ],
+  "timeframes": [
+    "H4",
+    "D1"
+  ],
+  "direction": "both",
+  "regime": [
+    {
+      "op": "regime_gate",
+      "metric": {
+        "kind": "indicator",
+        "spec": {
+          "indicator": "realised_volatility",
+          "params": {
+            "period": 20
+          }
+        },
+        "output": "",
+        "offset": 0
+      },
+      "min_value": 0.0015,
+      "max_value": 0.05,
+      "invert": false
+    }
+  ],
+  "setup": {
+    "long": [
+      {
+        "op": "indicator_vs_price",
+        "indicator": {
+          "kind": "indicator",
+          "spec": {
+            "indicator": "ema",
+            "params": {
+              "period": {
+                "$param": "trend_ema"
+              }
+            }
+          },
+          "output": "",
+          "offset": 0
+        },
+        "price": {
+          "kind": "price",
+          "field": "close",
+          "offset": 0
+        },
+        "comparator": "<"
+      }
+    ],
+    "short": [
+      {
+        "op": "indicator_vs_price",
+        "indicator": {
+          "kind": "indicator",
+          "spec": {
+            "indicator": "ema",
+            "params": {
+              "period": {
+                "$param": "trend_ema"
+              }
+            }
+          },
+          "output": "",
+          "offset": 0
+        },
+        "price": {
+          "kind": "price",
+          "field": "close",
+          "offset": 0
+        },
+        "comparator": ">"
+      }
+    ]
+  },
+  "entry": {
+    "long": [
+      {
+        "op": "indicator_vs_price",
+        "indicator": {
+          "kind": "indicator",
+          "spec": {
+            "indicator": "donchian",
+            "params": {
+              "period": {
+                "$param": "channel_period"
+              }
+            }
+          },
+          "output": "upper_prior",
+          "offset": 0
+        },
+        "price": {
+          "kind": "price",
+          "field": "close",
+          "offset": 0
+        },
+        "comparator": "<"
+      }
+    ],
+    "short": [
+      {
+        "op": "indicator_vs_price",
+        "indicator": {
+          "kind": "indicator",
+          "spec": {
+            "indicator": "donchian",
+            "params": {
+              "period": {
+                "$param": "channel_period"
+              }
+            }
+          },
+          "output": "lower_prior",
+          "offset": 0
+        },
+        "price": {
+          "kind": "price",
+          "field": "close",
+          "offset": 0
+        },
+        "comparator": ">"
+      }
+    ]
+  },
+  "confirmation": {
+    "long": [],
+    "short": []
+  },
+  "filters": [],
+  "invalidation": {
+    "long": [],
+    "short": []
+  },
+  "stop": {
+    "kind": "atr_multiple",
+    "value": {
+      "$param": "stop_atr_multiple"
+    },
+    "atr": {
+      "kind": "indicator",
+      "spec": {
+        "indicator": "atr",
+        "params": {
+          "period": 14
+        }
+      },
+      "output": "",
+      "offset": 0
+    },
+    "level": null,
+    "buffer_atr": 0.0,
+    "min_distance_atr": 0.5
+  },
+  "take_profits": [],
+  "trailing": {
+    "kind": "atr_chandelier",
+    "value": {
+      "$param": "trail_atr_multiple"
+    },
+    "activate_after_r": 0.0,
+    "atr": {
+      "kind": "indicator",
+      "spec": {
+        "indicator": "atr",
+        "params": {
+          "period": 14
+        }
+      },
+      "output": "",
+      "offset": 0
+    },
+    "level": null
+  },
+  "position_management": {
+    "max_concurrent_positions": 1,
+    "allow_pyramiding": false,
+    "max_pyramid_legs": 1,
+    "move_stop_to_breakeven_at_r": null,
+    "allow_reversal_on_opposite_signal": true,
+    "max_bars_in_trade": 120,
+    "cooldown_bars_after_exit": 1
+  },
+  "sessions": null,
+  "events": {
+    "block_minutes_before": 15,
+    "block_minutes_after": 15,
+    "blocked_event_tags": [
+      "nfp",
+      "central_bank_rate"
+    ],
+    "avoid_month_end": false,
+    "avoid_rollover_hour": true
+  },
+  "parameters": {
+    "channel_period": {
+      "kind": "int",
+      "default": 20,
+      "description": "Donchian lookback",
+      "min_value": 10.0,
+      "max_value": 60.0,
+      "step": 5.0,
+      "choices": null
+    },
+    "trend_ema": {
+      "kind": "int",
+      "default": 100,
+      "description": "Directional filter EMA",
+      "min_value": 50.0,
+      "max_value": 200.0,
+      "step": 25.0,
+      "choices": null
+    },
+    "stop_atr_multiple": {
+      "kind": "float",
+      "default": 2.0,
+      "description": "",
+      "min_value": 1.0,
+      "max_value": 4.0,
+      "step": 0.5,
+      "choices": null
+    },
+    "trail_atr_multiple": {
+      "kind": "float",
+      "default": 3.0,
+      "description": "",
+      "min_value": 1.5,
+      "max_value": 6.0,
+      "step": 0.5,
+      "choices": null
+    }
+  },
+  "binding": null,
+  "parent_strategy_ids": [],
+  "mutation": null,
+  "notes": "",
+  "author": "fiboki-v2-seed",
+  "complexity_score": 8.0
+}

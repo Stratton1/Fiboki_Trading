@@ -1,0 +1,464 @@
+{
+  "schema_version": "2.0.0",
+  "strategy_id": "fib_golden_pocket_pullback",
+  "name": "Fibonacci Golden-Pocket Trend Pullback",
+  "hypothesis": "ECONOMIC STORY -- AND IT IS A WEAK ONE. The defensible part of this strategy is not Fibonacci at all: it is 'buy a shallow pullback inside an established trend', which is a momentum-continuation trade with a decent prior. The 0.618-0.786 zone is simply a rule for defining 'shallow but not trivial', and the confirmed swing low that anchors it doubles as a natural, structural stop level, which makes the risk definition objective rather than arbitrary. To the extent this works it works because of trend continuation and because a cluster of stop orders sits under a prior swing, creating a real liquidity feature at that price.\n\nEVIDENCE AGAINST, STATED PLAINLY. There is no credible academic evidence that Fibonacci ratios have predictive power in financial prices. The numbers have no theoretical basis in market microstructure or asset pricing; the ratios are imported from a growth sequence with no connection to price formation, and studies that test them tend to find that any apparent effect is explained by ordinary support/resistance at prior swing levels -- which is to say the SWING matters and the RATIO does not. This strategy is therefore included to be falsified: the correct experiment is to compare it against the identical system using arbitrary retracement depths (e.g. 0.55-0.72). If the Fibonacci version does not beat the arbitrary version out of sample, the ratios add nothing and the family should be retired rather than tuned. Note also that V1's Fibonacci code was direction-blind and emitted nothing whenever the last swing low sat above the last swing high, so any V1 backtest of this family measured a broken implementation, not the idea.",
+  "family": "fibonacci",
+  "universe": [
+    "EURUSD",
+    "GBPUSD",
+    "USDJPY",
+    "AUDUSD",
+    "USDCAD",
+    "USDCHF",
+    "NZDUSD",
+    "EURJPY",
+    "GBPJPY",
+    "XAUUSD",
+    "US500",
+    "DE40"
+  ],
+  "timeframes": [
+    "H1",
+    "H4",
+    "D1"
+  ],
+  "direction": "both",
+  "regime": [
+    {
+      "op": "regime_gate",
+      "metric": {
+        "kind": "indicator",
+        "spec": {
+          "indicator": "adx",
+          "params": {
+            "period": 14
+          }
+        },
+        "output": "",
+        "offset": 0
+      },
+      "min_value": 18.0,
+      "max_value": null,
+      "invert": false
+    }
+  ],
+  "setup": {
+    "long": [
+      {
+        "op": "threshold",
+        "operand": {
+          "kind": "indicator",
+          "spec": {
+            "indicator": "fibonacci",
+            "params": {
+              "swing_lookback": 5,
+              "retracements": [
+                0.382,
+                0.5,
+                0.618,
+                0.786
+              ],
+              "extensions": [
+                1.272,
+                1.618
+              ]
+            }
+          },
+          "output": "dir",
+          "offset": 0
+        },
+        "comparator": ">",
+        "value": 0.5
+      }
+    ],
+    "short": [
+      {
+        "op": "threshold",
+        "operand": {
+          "kind": "indicator",
+          "spec": {
+            "indicator": "fibonacci",
+            "params": {
+              "swing_lookback": 5,
+              "retracements": [
+                0.382,
+                0.5,
+                0.618,
+                0.786
+              ],
+              "extensions": [
+                1.272,
+                1.618
+              ]
+            }
+          },
+          "output": "dir",
+          "offset": 0
+        },
+        "comparator": "<",
+        "value": -0.5
+      }
+    ]
+  },
+  "entry": {
+    "long": [
+      {
+        "op": "indicator_vs_price",
+        "indicator": {
+          "kind": "indicator",
+          "spec": {
+            "indicator": "fibonacci",
+            "params": {
+              "swing_lookback": 5,
+              "retracements": [
+                0.382,
+                0.5,
+                0.618,
+                0.786
+              ],
+              "extensions": [
+                1.272,
+                1.618
+              ]
+            }
+          },
+          "output": "ret_0618",
+          "offset": 0
+        },
+        "price": {
+          "kind": "price",
+          "field": "close",
+          "offset": 0
+        },
+        "comparator": ">="
+      },
+      {
+        "op": "indicator_vs_price",
+        "indicator": {
+          "kind": "indicator",
+          "spec": {
+            "indicator": "fibonacci",
+            "params": {
+              "swing_lookback": 5,
+              "retracements": [
+                0.382,
+                0.5,
+                0.618,
+                0.786
+              ],
+              "extensions": [
+                1.272,
+                1.618
+              ]
+            }
+          },
+          "output": "ret_0786",
+          "offset": 0
+        },
+        "price": {
+          "kind": "price",
+          "field": "close",
+          "offset": 0
+        },
+        "comparator": "<="
+      }
+    ],
+    "short": [
+      {
+        "op": "indicator_vs_price",
+        "indicator": {
+          "kind": "indicator",
+          "spec": {
+            "indicator": "fibonacci",
+            "params": {
+              "swing_lookback": 5,
+              "retracements": [
+                0.382,
+                0.5,
+                0.618,
+                0.786
+              ],
+              "extensions": [
+                1.272,
+                1.618
+              ]
+            }
+          },
+          "output": "ret_0618",
+          "offset": 0
+        },
+        "price": {
+          "kind": "price",
+          "field": "close",
+          "offset": 0
+        },
+        "comparator": "<="
+      },
+      {
+        "op": "indicator_vs_price",
+        "indicator": {
+          "kind": "indicator",
+          "spec": {
+            "indicator": "fibonacci",
+            "params": {
+              "swing_lookback": 5,
+              "retracements": [
+                0.382,
+                0.5,
+                0.618,
+                0.786
+              ],
+              "extensions": [
+                1.272,
+                1.618
+              ]
+            }
+          },
+          "output": "ret_0786",
+          "offset": 0
+        },
+        "price": {
+          "kind": "price",
+          "field": "close",
+          "offset": 0
+        },
+        "comparator": ">="
+      }
+    ]
+  },
+  "confirmation": {
+    "long": [
+      {
+        "op": "threshold",
+        "operand": {
+          "kind": "indicator",
+          "spec": {
+            "indicator": "rsi",
+            "params": {
+              "period": 14
+            }
+          },
+          "output": "",
+          "offset": 0
+        },
+        "comparator": ">",
+        "value": 40.0
+      }
+    ],
+    "short": [
+      {
+        "op": "threshold",
+        "operand": {
+          "kind": "indicator",
+          "spec": {
+            "indicator": "rsi",
+            "params": {
+              "period": 14
+            }
+          },
+          "output": "",
+          "offset": 0
+        },
+        "comparator": "<",
+        "value": 60.0
+      }
+    ]
+  },
+  "filters": [],
+  "invalidation": {
+    "long": [],
+    "short": []
+  },
+  "stop": {
+    "kind": "swing_structure",
+    "value": 1.0,
+    "atr": {
+      "kind": "indicator",
+      "spec": {
+        "indicator": "atr",
+        "params": {
+          "period": 14
+        }
+      },
+      "output": "",
+      "offset": 0
+    },
+    "level": {
+      "kind": "indicator",
+      "spec": {
+        "indicator": "fibonacci",
+        "params": {
+          "swing_lookback": 5,
+          "retracements": [
+            0.382,
+            0.5,
+            0.618,
+            0.786
+          ],
+          "extensions": [
+            1.272,
+            1.618
+          ]
+        }
+      },
+      "output": "start",
+      "offset": 0
+    },
+    "buffer_atr": 0.25,
+    "min_distance_atr": 0.5
+  },
+  "take_profits": [
+    {
+      "kind": "indicator_level",
+      "value": 1.0,
+      "allocation": 0.5,
+      "atr": null,
+      "level": {
+        "kind": "indicator",
+        "spec": {
+          "indicator": "fibonacci",
+          "params": {
+            "swing_lookback": 5,
+            "retracements": [
+              0.382,
+              0.5,
+              0.618,
+              0.786
+            ],
+            "extensions": [
+              1.272,
+              1.618
+            ]
+          }
+        },
+        "output": "ext_1272",
+        "offset": 0
+      },
+      "label": "ext_1272"
+    },
+    {
+      "kind": "indicator_level",
+      "value": 1.0,
+      "allocation": 0.5,
+      "atr": null,
+      "level": {
+        "kind": "indicator",
+        "spec": {
+          "indicator": "fibonacci",
+          "params": {
+            "swing_lookback": 5,
+            "retracements": [
+              0.382,
+              0.5,
+              0.618,
+              0.786
+            ],
+            "extensions": [
+              1.272,
+              1.618
+            ]
+          }
+        },
+        "output": "ext_1618",
+        "offset": 0
+      },
+      "label": "ext_1618"
+    }
+  ],
+  "trailing": {
+    "kind": "breakeven_after_r",
+    "value": 0.0,
+    "activate_after_r": 1.0,
+    "atr": null,
+    "level": null
+  },
+  "position_management": {
+    "max_concurrent_positions": 1,
+    "allow_pyramiding": false,
+    "max_pyramid_legs": 1,
+    "move_stop_to_breakeven_at_r": null,
+    "allow_reversal_on_opposite_signal": false,
+    "max_bars_in_trade": 60,
+    "cooldown_bars_after_exit": 4
+  },
+  "sessions": {
+    "windows": [
+      [
+        7,
+        20
+      ]
+    ],
+    "weekdays": [
+      0,
+      1,
+      2,
+      3,
+      4
+    ],
+    "block_bars_before_weekend": 0
+  },
+  "events": {
+    "block_minutes_before": 30,
+    "block_minutes_after": 30,
+    "blocked_event_tags": [
+      "nfp",
+      "cpi",
+      "central_bank_rate"
+    ],
+    "avoid_month_end": false,
+    "avoid_rollover_hour": true
+  },
+  "parameters": {
+    "swing_lookback": {
+      "kind": "int",
+      "default": 5,
+      "description": "Fractal half-width; confirmation lag",
+      "min_value": 2.0,
+      "max_value": 12.0,
+      "step": 1.0,
+      "choices": null
+    },
+    "pocket_near": {
+      "kind": "float",
+      "default": 0.618,
+      "description": "Shallow edge of the entry zone",
+      "min_value": 0.45,
+      "max_value": 0.72,
+      "step": 0.01,
+      "choices": null
+    },
+    "pocket_far": {
+      "kind": "float",
+      "default": 0.786,
+      "description": "Deep edge of the entry zone",
+      "min_value": 0.7,
+      "max_value": 0.95,
+      "step": 0.01,
+      "choices": null
+    },
+    "rsi_floor": {
+      "kind": "float",
+      "default": 40.0,
+      "description": "",
+      "min_value": 30.0,
+      "max_value": 55.0,
+      "step": 2.5,
+      "choices": null
+    },
+    "stop_buffer_atr": {
+      "kind": "float",
+      "default": 0.25,
+      "description": "",
+      "min_value": 0.0,
+      "max_value": 1.0,
+      "step": 0.25,
+      "choices": null
+    }
+  },
+  "parent_strategy_ids": [],
+  "mutation": null,
+  "notes": "Falsification target: compare against identical rules with arbitrary (non-Fibonacci) retracement depths.",
+  "author": "fiboki-v2-seed",
+  "complexity_score": 13.0
+}

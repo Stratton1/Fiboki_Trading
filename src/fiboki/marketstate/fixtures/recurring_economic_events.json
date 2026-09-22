@@ -1,0 +1,196 @@
+{
+  "schema_version": "1.0.0",
+  "description": "Curated taxonomy of RECURRING economic event TYPES. This file contains NO dated instances and is not a calendar. Populating real dated events requires an external feed - see fiboki.marketstate.calendar.USER_ACTION_NOTE.",
+  "release_times_caveat": "typical_release_utc is the usual UTC clock time under US/EU summer time. Releases follow the issuing country's local clock, so the UTC time shifts by an hour across daylight-saving boundaries. Do not use these strings to date events; they are documentation of the usual slot only.",
+  "event_types": [
+    {
+      "key": "fomc_rate_decision",
+      "name": "FOMC Rate Decision",
+      "currency": "USD",
+      "impact": "high",
+      "typical_schedule": "8 scheduled meetings per year, roughly every 6 weeks (Tue/Wed)",
+      "typical_release_utc": "18:00",
+      "notes": "Statement at the top of the hour, press conference 30 minutes later. The press conference frequently moves the market more than the decision, so a blackout ending at T+30m is often too short."
+    },
+    {
+      "key": "fomc_minutes",
+      "name": "FOMC Meeting Minutes",
+      "currency": "USD",
+      "impact": "medium",
+      "typical_schedule": "3 weeks after each FOMC meeting",
+      "typical_release_utc": "18:00",
+      "notes": "Occasionally high impact when the vote split or balance-sheet language surprises."
+    },
+    {
+      "key": "us_nfp",
+      "name": "US Non-Farm Payrolls",
+      "currency": "USD",
+      "impact": "high",
+      "typical_schedule": "first Friday of each month",
+      "typical_release_utc": "12:30",
+      "notes": "Released with the unemployment rate and average hourly earnings. Historically the single largest scheduled intraday FX move of the month."
+    },
+    {
+      "key": "us_cpi",
+      "name": "US CPI",
+      "currency": "USD",
+      "impact": "high",
+      "typical_schedule": "monthly, usually mid-month",
+      "typical_release_utc": "12:30",
+      "notes": "Core CPI is watched more closely than headline."
+    },
+    {
+      "key": "us_gdp",
+      "name": "US GDP (advance/second/final)",
+      "currency": "USD",
+      "impact": "medium",
+      "typical_schedule": "quarterly, three vintages per quarter",
+      "typical_release_utc": "12:30",
+      "notes": "The advance print carries most of the impact; revisions rarely move price."
+    },
+    {
+      "key": "us_retail_sales",
+      "name": "US Retail Sales",
+      "currency": "USD",
+      "impact": "medium",
+      "typical_schedule": "monthly, mid-month",
+      "typical_release_utc": "12:30",
+      "notes": ""
+    },
+    {
+      "key": "us_ism_manufacturing",
+      "name": "US ISM Manufacturing PMI",
+      "currency": "USD",
+      "impact": "medium",
+      "typical_schedule": "first business day of each month",
+      "typical_release_utc": "14:00",
+      "notes": ""
+    },
+    {
+      "key": "ecb_rate_decision",
+      "name": "ECB Rate Decision",
+      "currency": "EUR",
+      "impact": "high",
+      "typical_schedule": "8 scheduled Governing Council meetings per year (Thursdays)",
+      "typical_release_utc": "12:15",
+      "notes": "Press conference at 12:45 UTC. As with the FOMC, the conference often dominates the decision."
+    },
+    {
+      "key": "eu_cpi_flash",
+      "name": "Euro Area Flash CPI",
+      "currency": "EUR",
+      "impact": "high",
+      "typical_schedule": "monthly, end of month",
+      "typical_release_utc": "09:00",
+      "notes": "National prints (German, Spanish) leak the direction a day or two earlier."
+    },
+    {
+      "key": "eu_gdp_flash",
+      "name": "Euro Area Flash GDP",
+      "currency": "EUR",
+      "impact": "medium",
+      "typical_schedule": "quarterly",
+      "typical_release_utc": "09:00",
+      "notes": ""
+    },
+    {
+      "key": "boe_rate_decision",
+      "name": "Bank of England Rate Decision",
+      "currency": "GBP",
+      "impact": "high",
+      "typical_schedule": "8 scheduled MPC meetings per year (Thursdays)",
+      "typical_release_utc": "11:00",
+      "notes": "Decision, minutes and vote split are released together, so the vote split is an immediate market mover."
+    },
+    {
+      "key": "uk_cpi",
+      "name": "UK CPI",
+      "currency": "GBP",
+      "impact": "high",
+      "typical_schedule": "monthly",
+      "typical_release_utc": "06:00",
+      "notes": "Released before the London equity open; the FX reaction is in thin early-London liquidity."
+    },
+    {
+      "key": "uk_employment",
+      "name": "UK Labour Market Report",
+      "currency": "GBP",
+      "impact": "medium",
+      "typical_schedule": "monthly",
+      "typical_release_utc": "06:00",
+      "notes": ""
+    },
+    {
+      "key": "boj_rate_decision",
+      "name": "Bank of Japan Rate Decision",
+      "currency": "JPY",
+      "impact": "high",
+      "typical_schedule": "8 scheduled meetings per year",
+      "typical_release_utc": "03:00",
+      "notes": "No fixed release time - the BoJ announces when it has finished, which can be anywhere across a two-hour band. A fixed-width blackout around a nominal time will miss it."
+    },
+    {
+      "key": "japan_cpi",
+      "name": "Japan National CPI",
+      "currency": "JPY",
+      "impact": "medium",
+      "typical_schedule": "monthly",
+      "typical_release_utc": "23:30",
+      "notes": "Released on the previous UTC day relative to the Tokyo date."
+    },
+    {
+      "key": "snb_rate_decision",
+      "name": "SNB Rate Decision",
+      "currency": "CHF",
+      "impact": "high",
+      "typical_schedule": "quarterly",
+      "typical_release_utc": "07:30",
+      "notes": ""
+    },
+    {
+      "key": "rba_rate_decision",
+      "name": "RBA Rate Decision",
+      "currency": "AUD",
+      "impact": "high",
+      "typical_schedule": "8 meetings per year (was monthly before 2024)",
+      "typical_release_utc": "03:30",
+      "notes": "Meeting cadence changed in 2024; a backtest spanning that change sees two different schedules."
+    },
+    {
+      "key": "australia_employment",
+      "name": "Australia Employment Change",
+      "currency": "AUD",
+      "impact": "medium",
+      "typical_schedule": "monthly",
+      "typical_release_utc": "00:30",
+      "notes": ""
+    },
+    {
+      "key": "boc_rate_decision",
+      "name": "Bank of Canada Rate Decision",
+      "currency": "CAD",
+      "impact": "high",
+      "typical_schedule": "8 meetings per year",
+      "typical_release_utc": "14:00",
+      "notes": ""
+    },
+    {
+      "key": "canada_employment",
+      "name": "Canada Employment Change",
+      "currency": "CAD",
+      "impact": "medium",
+      "typical_schedule": "monthly, usually the same Friday as US NFP",
+      "typical_release_utc": "12:30",
+      "notes": "Collides with NFP, so USDCAD sees both prints in the same second."
+    },
+    {
+      "key": "rbnz_rate_decision",
+      "name": "RBNZ Rate Decision",
+      "currency": "NZD",
+      "impact": "high",
+      "typical_schedule": "7 meetings per year",
+      "typical_release_utc": "01:00",
+      "notes": ""
+    }
+  ]
+}

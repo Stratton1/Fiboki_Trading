@@ -1,0 +1,63 @@
+{
+  "pairs_loaded": {
+    "USDCAD": {
+      "quote_ccy_served": "CAD",
+      "dataset_version_id": "ds_a304e7c3fd751ef6be04ce52",
+      "observations": 39635,
+      "first": "2000-06-12 17:00:00+00:00",
+      "last": "2025-12-31 21:00:00+00:00"
+    },
+    "USDCHF": {
+      "quote_ccy_served": "CHF",
+      "dataset_version_id": "ds_a1a788203a3a5aa2d14f4917",
+      "observations": 40494,
+      "first": "2000-05-30 21:00:00+00:00",
+      "last": "2025-12-31 21:00:00+00:00"
+    },
+    "EURUSD": {
+      "quote_ccy_served": "EUR",
+      "dataset_version_id": "ds_ce5009f8f12e1c407c45994d",
+      "observations": 40540,
+      "first": "2000-05-30 21:00:00+00:00",
+      "last": "2025-12-31 21:00:00+00:00"
+    },
+    "GBPUSD": {
+      "quote_ccy_served": "GBP",
+      "dataset_version_id": "ds_35b64adc59ad1ab04b21891a",
+      "observations": 40543,
+      "first": "2000-05-30 21:00:00+00:00",
+      "last": "2025-12-31 21:00:00+00:00"
+    },
+    "USDJPY": {
+      "quote_ccy_served": "JPY",
+      "dataset_version_id": "ds_1dda4939609f65d3e4598af5",
+      "observations": 40561,
+      "first": "2000-05-30 21:00:00+00:00",
+      "last": "2025-12-31 21:00:00+00:00"
+    }
+  },
+  "needed_by_quote_ccy": {
+    "CAD": [
+      "USDCAD"
+    ],
+    "CHF": [
+      "USDCHF"
+    ],
+    "EUR": [
+      "DE40"
+    ],
+    "GBP": [
+      "EURGBP",
+      "UK100"
+    ],
+    "JPY": [
+      "AUDJPY",
+      "EURJPY",
+      "GBPJPY",
+      "USDJPY"
+    ]
+  },
+  "missing_series": {},
+  "instruments_without_usable_coverage": [],
+  "label": "SeriesFxSource(EURUSD->EUR, GBPUSD->GBP, USDCAD->CAD, USDCHF->CHF, USDJPY->JPY; bid closes, HistData H4, as-of backward)"
+}

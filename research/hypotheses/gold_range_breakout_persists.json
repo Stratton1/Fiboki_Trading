@@ -1,0 +1,50 @@
+{
+  "hypothesis_id": "gold_range_breakout_persists",
+  "title": "Range breakouts on gold persist at H4 when volatility is not extreme",
+  "economic_rationale": "Gold is held by central banks, ETFs, macro funds and retail, whose position changes are large relative to the turnover of any one four-hour bar and are worked over days rather than minutes. When a multi-day range breaks, the flow that broke it is typically not finished, and risk-management and option-hedging flows add to the move in the same direction. The claim is that this makes the conditional distribution of the next few bars after a range break asymmetric in the direction of the break, by more than the dealing cost of taking the position.",
+  "prediction": "A close beyond the prior 20-bar Donchian channel on XAUUSD H4, taken in the direction of a 100-bar EMA filter and managed with an ATR stop and an ATR chandelier trail, has positive expectancy net of an IG_REALISTIC spread across the 2009-2022 research window, and that expectancy survives fitting the channel and stop parameters on one window and trading them on the next.",
+  "refutation": "Refuted, for this instrument and timeframe, if a candidate expressing it fails the production gate set: fewer than 400 trades at its declared defaults, or a walk-forward efficiency below 50 per cent, or a deflated Sharpe below 0.95 once the WHOLE campaign's trial count is priced in. Any one of those is an observation that counts against the claim on this cell; none of them refutes the mechanism in general.",
+  "instruments": [
+    "XAUUSD"
+  ],
+  "timeframes": [
+    "H4"
+  ],
+  "regimes": [
+    "realised volatility above a floor and below its top tail",
+    "price on the far side of the 100-bar EMA"
+  ],
+  "evidence": [
+    {
+      "direction": "for",
+      "claim": "Moskowitz, Ooi and Pedersen (2012) document time-series momentum across 58 instruments including commodities; Hurst, Ooi and Pedersen (2017) extend the result back to 1880.",
+      "source": "Journal of Financial Economics 104(2); Journal of Portfolio Management 44(1)",
+      "strength": "moderate"
+    },
+    {
+      "direction": "against",
+      "claim": "Coakley, Marzano and Nankervis (2016) find that technical trading rules on currencies do not survive Step-SPA once the full universe of rules considered is priced in. The same correction is applied here, and the prior expectation is therefore that this fails.",
+      "source": "Journal of Banking and Finance 70, 'Estimating the economic value of technical trading rules'",
+      "strength": "strong"
+    },
+    {
+      "direction": "against",
+      "claim": "Managed-futures trend returns have decayed materially since 2009, which is most of this sample, so a Sharpe estimated over the whole window is likely an overestimate of what the last third of it would have paid.",
+      "source": "practitioner replication work, widely reported",
+      "strength": "moderate"
+    }
+  ],
+  "status": "proposed",
+  "status_reason": "",
+  "seed_strategy_ids": [
+    "donchian_breakout_atr"
+  ],
+  "author": "phase-k",
+  "tags": [
+    "breakout",
+    "trend",
+    "xauusd"
+  ],
+  "supersedes": "",
+  "created_at": "2026-09-19T08:46:13.078592Z"
+}

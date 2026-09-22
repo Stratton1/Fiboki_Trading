@@ -1,0 +1,126 @@
+# Optional containerised stack.
+#
+# LOCAL-FIRST, so read this file as "what you can turn on", not "how Fiboki
+# runs".  The default local setup is: SQLite on the operator's disk, the API in
+# a terminal, and the worker under launchd (deploy/launchd/).  This compose
+# file exists for two situations:
+#
+#   1. you want Postgres instead of SQLite (multi-writer, or a second machine);
+#   2. you want the whole thing reproducible on a Linux box.
+#
+# Profiles keep it opt-in:
+#   docker compose up                          -> nothing (everything is profiled)
+#   docker compose --profile db up             -> Postgres only
+#   docker compose --profile local up          -> Postgres + API + research worker
+#
+# The live worker has NO service here on purpose.  A market-facing process
+# started by a compose file that somebody copy-pasted is exactly the accident
+# this project is built to prevent; it is started explicitly, by a human, from
+# the application entrypoint that owns its risk wiring.
+
+name: fiboki
+
+x-common-env: &common-env
+  FIBOKI_LOG_FORMAT: json
+  FIBOKI_EXECUTION_MODE: paper
+  FIBOKI_HOME: /var/lib/fiboki
+  FIBOKI_DATA_ROOT: /var/lib/fiboki/data
+  FIBOKI_ALERT_LOG: /var/log/fiboki/alerts.jsonl
+  # FIBOKI_LIVE_EXECUTION_ENABLED is intentionally absent. See
+  # scripts/check_live_flags.py -- CI fails if it appears here set to a truthy
+  # literal, which is precisely what V1 shipped in render.yaml.
+
+x-build: &build
+  build:
+    context: ..
+    dockerfile: deploy/Dockerfile
+
+services:
+  postgres:
+    profiles: ["db", "local"]
+    image: postgres:16.4-alpine
+    environment:
+      POSTGRES_USER: fiboki
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in your .env}
+      POSTGRES_DB: fiboki
+    ports:
+      - "127.0.0.1:5432:5432"   # loopback only; never 0.0.0.0
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U fiboki -d fiboki"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    restart: unless-stopped
+
+  api:
+    profiles: ["local"]
+    <<: *build
+    command: ["system", "health"]
+    environment:
+      <<: *common-env
+      FIBOKI_DATABASE_URL: postgresql+psycopg://fiboki:${POSTGRES_PASSWORD}@postgres:5432/fiboki
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - fibokidata:/var/lib/fiboki
+      - fibokilogs:/var/log/fiboki
+    ports:
+      - "127.0.0.1:8000:8000"
+    restart: unless-stopped
+    read_only: true
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+
+  research-worker:
+    profiles: ["local"]
+    <<: *build
+    # A SEPARATE SERVICE, not a thread inside `api`. That is the whole point:
+    # this container has its own pid, its own exit code and its own restart
+    # policy, so its death is an event Docker reports rather than a silence
+    # inside a green API.
+    command: ["worker", "run", "research", "--nice", "10"]
+    environment:
+      <<: *common-env
+      FIBOKI_DATABASE_URL: postgresql+psycopg://fiboki:${POSTGRES_PASSWORD}@postgres:5432/fiboki
+      FIBOKI_STATE_DB: /var/lib/fiboki/state.db
+      FIBOKI_EXPECTED_WORKERS: ${FIBOKI_EXPECTED_WORKERS:-}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - fibokidata:/var/lib/fiboki
+      - fibokilogs:/var/log/fiboki
+    # Only ONE. The database lease makes a second replica exit with code 75
+    # rather than silently double-processing, but do not rely on that to
+    # paper over a misconfiguration.
+    deploy:
+      replicas: 1
+      resources:
+        limits:
+          # Leave the host usable. The in-process scheduler backs off on
+          # memory pressure too, but a hard limit is the one the kernel
+          # enforces.
+          cpus: "2.0"
+          memory: 4g
+    restart: unless-stopped
+    stop_signal: SIGTERM
+    # Must exceed WorkerConfig.shutdown_grace_seconds so a graceful shutdown
+    # completes instead of being SIGKILLed halfway through a job.
+    stop_grace_period: 45s
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+
+volumes:
+  pgdata:
+  fibokidata:
+  fibokilogs:

@@ -1,3 +1,7 @@
+# Merged .gitignore: V1 (now under legacy/v1/) + V2 (repository root).
+# Both trees' ignores apply everywhere, because both trees now live in one
+# repository and share one working directory.
+
 # Worktrees
 .worktrees/
 
@@ -35,23 +39,32 @@ out/
 .env
 .env.local
 .env.production
-!frontend/.env.production
+!legacy/v1/frontend/.env.production
 *.key
 *.pem
 
-# Data (keep fixtures and starter)
+# Data (keep fixtures and starter).
+# data/ is ~10 GB of market data shared by both trees. Everything bulk is
+# ignored; the small committed fixtures and the starter parquet set are not.
 data/raw/*
 data/cleaned/*
 data/canonical/
+data/live/
+data/features/
 !data/raw/.gitkeep
 !data/cleaned/.gitkeep
 !data/starter/
 
+# V2 research artefacts
+research/experiments/*.db
+
 # Playwright
 .playwright-mcp/
-frontend/test-results/
-frontend/playwright-report/
-frontend/screenshots/
+legacy/v1/frontend/test-results/
+legacy/v1/frontend/playwright-report/
+legacy/v1/frontend/screenshots/
+test-results/
+playwright-report/
 
 # OS
 .DS_Store
@@ -64,6 +77,7 @@ fiboki_backup_*.sql
 
 # debug probe debris (never commit)
 _*.db
+_*.db*
 _*.db-journal
 *.db-journal
 _*probe*
