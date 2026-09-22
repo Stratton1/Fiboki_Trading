@@ -33,7 +33,7 @@ services:
           name: fibokei-db
           property: connectionString
       - key: FIBOKEI_LIVE_EXECUTION_ENABLED
-        value: "true"
+        sync: false
       - key: FIBOKEI_IG_API_KEY
         sync: false
       - key: FIBOKEI_IG_USERNAME
