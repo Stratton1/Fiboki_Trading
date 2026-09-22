@@ -1,0 +1,4 @@
+V2 placeholder directory. It was an empty, untracked directory in the V2
+repository, so git could not carry it through the merge; recreated here so
+the structure described in the integration plan exists. Nothing references
+it in code yet.
