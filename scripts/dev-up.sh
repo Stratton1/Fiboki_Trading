@@ -21,7 +21,11 @@ export FIBOKI_OPERATORS="joe:admin:${HASH},tom:operator:${HASH}"
 
 # ---- State and data
 export FIBOKI_STATE_DIR="$ROOT/var"
-export FIBOKI_DATA_ROOT="$ROOT/data/canonical/histdata"
+# The MIGRATED V2 store, not V1's raw parquet directory. DataStore requires a
+# marked root (.fiboki-data-root) and refuses an unmarked plausible-looking
+# directory, so pointing this at data/canonical/histdata gave a data_root that
+# exists() -- and so reported "live" -- while every read raised DataRootNotFound.
+export FIBOKI_DATA_ROOT="$ROOT/var/datastore"
 export FIBOKI_EXPERIMENT_DB="$ROOT/var/experiments.sqlite"
 # The worker owns this db; the API reads it so the heartbeat check is real.
 export FIBOKI_WORKER_HEARTBEAT="${FIBOKI_WORKER_HEARTBEAT:-$HOME/.fiboki/state.db}"
@@ -31,6 +35,20 @@ export FIBOKI_BUILD_SHA="$(git rev-parse --short HEAD 2>/dev/null || echo local)
 export FIBOKI_BUILD_TIME="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 
 mkdir -p "$ROOT/var"
+
+# ---- Refuse to start half-provisioned, loudly. An unmarked or missing data
+#      root and an empty ledger are exactly the states that make a screen look
+#      like a quiet market instead of an unprovisioned deployment.
+if [ ! -f "$FIBOKI_DATA_ROOT/.fiboki-data-root" ]; then
+  echo "WARNING: $FIBOKI_DATA_ROOT is not a marked Fiboki data root."
+  echo "         Every bar read will fail. Build it first:"
+  echo "           scripts/migrate-store.sh"
+fi
+if [ ! -s "$FIBOKI_EXPERIMENT_DB" ]; then
+  echo "WARNING: $FIBOKI_EXPERIMENT_DB is missing or empty."
+  echo "         Research pages will render empty. Populate it first:"
+  echo "           .venv/bin/python scripts/build_research_ledger.py"
+fi
 
 echo "== Fiboki V2 local =="
 echo "mode        : paper (live requires 5 controls, none set)"

@@ -1,0 +1,6 @@
+# var/ is runtime state: logs, journals, the local V2 data store and the
+# rebuildable experiment ledger. None of it belongs in git.
+# The ledger is reproducible with scripts/build_research_ledger.py; the data
+# store is reproducible with scripts/migrate-store.sh.
+*
+!.gitignore

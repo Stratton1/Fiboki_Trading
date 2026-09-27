@@ -253,13 +253,19 @@ def experiments(
 
     items = [
         ExperimentView(
-            experiment_id=getattr(r, "experiment_id", ""),
+            # fiboki.research.experiment.Experiment names these `id`,
+            # `actor_name` and `hypothesis_id`. Reading `experiment_id`,
+            # `actor` and `hypothesis` through getattr defaults meant this
+            # view rendered every row with a blank id, actor and hypothesis
+            # however full the ledger was -- the getattr default turned three
+            # wrong attribute names into silence instead of an AttributeError.
+            experiment_id=getattr(r, "id", ""),
             strategy_id=getattr(r, "strategy_id", ""),
-            actor=getattr(r, "actor", ""),
+            actor=getattr(r, "actor_name", ""),
             actor_kind=str(getattr(getattr(r, "actor_kind", ""), "value", "")),
             outcome=str(getattr(getattr(r, "outcome", ""), "value", "")),
             created_at=getattr(r, "created_at", None),
-            hypothesis=getattr(r, "hypothesis", "") or "",
+            hypothesis=getattr(r, "hypothesis_id", "") or "",
             dataset_version_id=getattr(r, "dataset_version_id", "") or "",
             verdict=str(getattr(getattr(r, "outcome", ""), "value", "")),
         )
