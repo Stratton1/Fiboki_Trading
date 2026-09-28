@@ -248,3 +248,135 @@ import-direction layering test, a backtest regression pin, and an Alembic baseli
 Nothing in Fiboki V2 has placed an order, and no strategy has been shown to make money. That is
 the correct state for a platform at this stage, and it is the state the documentation says it is
 in.
+
+## 2026-09-28: agent-layer and settings hardening (uncommitted working tree)
+
+Four bounded items, measured in the working tree on `v2/integration` before commit.
+
+- **Audit ledger inter-process safety.** `JsonlAuditLedger.append` extended an in-memory chain
+  with no lock and no check that the file still ended at its cached tail, so the API and the
+  research worker writing one file could fork the hash chain. It now holds an exclusive `flock`
+  on `<path>.lock` across read-tail, append and fsync, adopts (after verifying) records other
+  writers appended, refuses a stale or forked view with `AuditChainForkError`, fsyncs the
+  directory on first create, and refuses to extend a chain that failed verification on
+  `reload()`. Measured: four spawned writers × 25 records gave 100 records in one valid chain;
+  the same run with the lock patched out gave 45 records and a broken chain.
+- **Pinned agent clock.** `ToolContext.as_of` (UTC-aware; naive refused). When set,
+  `query_market_data`, `query_regime` and `query_data_quality` see only candles closed by it,
+  later model-supplied dates are clamped with `as_of_clamped: true` and `effective_as_of` in the
+  output, absent dates default to it, and `query_execution_telemetry` hides later records.
+  `None` leaves behaviour unchanged. Job submissions are not clamped (recorded as a gap in
+  `AI_AGENT_ARCHITECTURE.md` §10).
+- **Settings hygiene.** Booleans parse strictly (`FIBOKI_COOKIE_SECURE=ture` is now a startup
+  error, not a silent `False`); malformed numbers name the variable; `ENV_REGISTRY` declares
+  every `FIBOKI_*` variable the platform reads, including the ones other modules read directly;
+  `warn_unknown_env` lists unknown `FIBOKI_*`/`FIBOKEI_*` names, a startup error in DEMO and LIVE
+  and a once-per-process warning otherwise. No default changed. An AST test fails if a module
+  starts reading an undeclared `FIBOKI_*` name; on its first run it found `FIBOKI_PAPER_ROOT`
+  (`api/platform.py`), which is now declared.
+- **Documentation truth.** `AI_AGENT_ARCHITECTURE.md` said the `Capability` enum had 20 members;
+  the code has 19. Module count (11, not 12) and the research-store location corrected; tool,
+  role, write-domain and job-type counts re-checked and unchanged.
+
+No stored backtest, validation or research result is affected: nothing here touches the engine,
+cost model, metrics or gates.
+
+## 2026-09-28: operator API truth for worker health and paper trading (uncommitted working tree)
+
+- **False-DOWN heartbeat.** `Platform.worker_heartbeat_age_seconds` returned the age of the
+  worker store's file mtime. The store is SQLite in WAL mode, so beats land in `state.db-wal`
+  and the main file's mtime stays old. Reproduced in a test: a `Heartbeat.write` one hour after
+  the main file's mtime was set back left the mtime 3,600 s old with `beat_at` fresh. The API
+  now opens the store read-only, reads every `worker_heartbeat` row, ages the newest `beat_at`
+  on its own clock, and reports `absent` / `stale` (age at or above threshold) / `ok` with a
+  reason (`file_missing`, `no_heartbeat_table`, `no_rows`, `unreadable`, `sqlite`, or a labelled
+  `mtime_fallback` for a non-SQLite path). `/api/system/workers` lists one row per worker.
+- **Paper journal instead of the seed.** New `api/paper_journal.py` reads persisted sessions
+  under `FIBOKI_PAPER_ROOT` (default `<state_dir>/paper`). With a journal, trades, positions,
+  portfolio, exposure and risk are served from it as PAPER, in the session currency, with the
+  replay's last bar as `as_of`. Against the two committed XAUUSD H4 replays
+  (`research/reports/paper_sessions`, copied to `tests/fixtures/paper_journal`) the API serves
+  283 closed trades (5 + 278), 1 open position, balance 182,618.54 USD on 200,000 USD across two
+  independent accounts. `var/paper` does not exist in this mirror, so a default local start
+  here still serves the seed.
+- **Seed never PAPER.** Seed rows that were PAPER or SHADOW are BACKTEST now (same buckets, so
+  research rows are unchanged); seed positions are BACKTEST. No `SEED` member was added to
+  `Provenance`: the frontend enumerates eight values and `api/provenance.py` keys trust on
+  them. The fixture label is the envelope's `SourceNote` (`kind: "seed"`) plus a `seed_fixture`
+  caveat. With no journal the account, drawdown and daily-loss figures are `null`, not a 25,000
+  balance.
+
+No stored backtest, validation or research result is affected. Any screenshot or note taken
+from the workstation's Portfolio, Risk or Exposure pages before this change showed fixture
+numbers under a PAPER label and should be discarded.
+
+## 2026-09-28: dated official economic calendar and the fail-open guard (uncommitted working tree)
+
+- **What was wrong.** `marketstate/calendar.py` shipped no dated events, so every blackout query
+  returned False and every declared event restriction in the five seed documents was inert.
+- **Fixture.** `marketstate/fixtures/scheduled_events_official.json`: 339 scheduled events from
+  official publishers only (Fed 32, ECB 40, BoE 32, BoJ 32, BLS NFP 35, BLS CPI 35, ONS CPI 37,
+  ONS monthly GDP 48, ONS labour market 48), 2024-01-01 onwards, declared complete to
+  2026-12-04 13:30Z. No aggregator was used. The header lists every URL, the time convention per
+  source and what was skipped.
+- **Calendar.** `EconomicEvent` gained optional `source_url`, `retrieved_at`, `time_known`,
+  `window_end` and `tags` (old JSON/CSV loads unchanged; `event_type` is read as an alias of
+  `recurring_key`). Blackout queries honour `window_end` (BoJ). Coverage can carry a declared
+  span; `assert_populated` takes `currencies`. New `load_official_calendar`,
+  `official_calendar_manifest`, `events_near_currencies`. `USER_ACTION_NOTE` rewritten to the
+  remaining gap.
+- **CLI.** `fiboki calendar status [--start --end] [--json]`, `fiboki calendar check <ISO-UTC> <CCY>`.
+- **Guards.** `run_validation(calendar=..., allow_empty_calendar=False)` refuses a supplied
+  calendar that is empty, does not span the bars or lacks the instrument's currencies, passes it
+  to the engine as the blackout source, and segregates the evaluation cache by calendar digest
+  (the cache key does not include the blackout source). `calendar=None` with a declared blackout
+  logs a WARNING only. `scripts/run_paper_session.py` refuses an uncovered replay unless
+  `--allow-empty-calendar`, and records the guard in `summary.json`.
+- **Gaps left open.** The paper runtime does not feed the calendar to the risk gateway's
+  `event_blackout` check; `discovery.campaign.run_cell` passes no calendar; the calendar covers
+  only 2024 onwards and four currencies.
+
+Stored results: no stored backtest or validation result changes, because no existing caller
+supplies a calendar. Any future run that does supply one will differ from its no-calendar
+predecessor for the seed documents (all five declare 15 to 45 minute blackouts); compare them as
+different experiments, not as a regression.
+
+## 2026-09-28: live-feed plumbing, startup reconcile, read retries (uncommitted working tree)
+
+- **What was wrong.** Nothing implemented `BarFeed` for a venue. `LiveWorker.resume` reconciled
+  but only logged a CRITICAL line on a divergent report and then traded; periodic reconciliation
+  was cycle-counted only (twelve H4 cycles is two days) and treated a report carrying only
+  `errors` (`venue_unreachable`) as clean. `OandaAdapter` raised `BrokerUnavailable` on the first
+  429/5xx/transport failure for reads as well as writes.
+- **Feed.** New `workers/feeds.py`: `OandaPollingBarFeed` (boundary + 5 s offset, bounded
+  30 s waits, venue `complete` flag authoritative, 3 re-polls 5 s apart, `DATA_QUALITY_DEFECT`
+  after a 20 s grace, never gap-fills, session calendar decides closed-vs-stale),
+  `TransportHttpClient` (lets the candle provider speak through a broker `Transport`, so
+  `RecordedTransport` serves both), metric `fiboki_feed_late_candles_total`.
+  `RiskContextBuilder` gained `observe_closes`, `market_open_source` and a close-price mid
+  fallback; `BarBatch` gained `market_closed`.
+- **Provider.** `OandaCandlesProvider.fetch_bars(count=)`; `request_params` now sends
+  `dailyAlignment=0&alignmentTimezone=UTC` by default (`align_utc=False` restores v20's New York
+  alignment).
+- **Reconcile.** Startup fails closed: divergence exits 75 (reusing the do-not-restart code),
+  inability to reconcile exits 1. Wall-time interval (900 s) added alongside the cycle count;
+  `errors` now alert `BROKER_UNHEALTHY`; optional `position_reconciler` called with
+  `repair=False`.
+- **Retry.** New `broker/retry.py` (`retry_idempotent_read`, `ReadRetry`). Applied to
+  `OandaAdapter._get` only, and to the provider's `fetch_bars` by the feed.
+  `tests/unit/test_retry_scope.py` asserts over the AST that no write-shaped function is ever
+  wrapped.
+- **Worker.** `log_once(key, ttl)` in `workers/base.py` (obs/ had none). Cycle budget: a live
+  evaluation cycle over 25% of the timeframe (excluding the wait for the bar) sets
+  `fiboki_live_cycle_seconds`, increments `fiboki_live_cycle_budget_exceeded_total` and fires
+  `STRATEGY_DEGRADED` at WARNING (the taxonomy has no slow-worker event).
+- **Tests changed.** Two tests in `tests/unit/test_live_worker.py` now also assert that
+  `resume()` raises; their original alert assertions are unchanged.
+- **Still unwired.** No entrypoint composes a live worker: no real HTTP `Transport` exists in
+  `src/`, no live `spread_source`, and nothing drives `VenuePositionManager.on_bar`.
+  `deploy/README.md` documents exit 75 as "lease held" only.
+
+Stored results: none affected. No engine, cost model, metric or gate changed. No OANDA candle
+data is stored (no credentials have ever existed), so the alignment default invalidates nothing;
+any future OANDA H4/D1 import made with `align_utc=False` would not be comparable with the
+UTC-anchored research frames.
