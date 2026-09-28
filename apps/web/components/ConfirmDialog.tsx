@@ -2,6 +2,12 @@
 
 import { useEffect, useId, useRef, useState } from "react";
 
+/** One server-supplied qualifier the operator must tick before confirming. */
+export interface Acknowledgement {
+  code: string;
+  text: string;
+}
+
 export interface ConfirmChoice {
   id: string;
   title: string;
@@ -24,7 +30,12 @@ export interface ConfirmChoice {
  *  - the current execution mode is stated in the dialog itself;
  *  - a reason is mandatory and goes to the audit trail;
  *  - a choice must be picked explicitly when several exist — no default;
- *  - a confirm phrase can be required for the worst actions.
+ *  - a confirm phrase can be required for the worst actions;
+ *  - server-supplied acknowledgements (realism caveats on a promotion) render
+ *    as one required checkbox each, unticked on every open. Confirm stays
+ *    disabled until every one is ticked, and the ticked codes are handed to
+ *    `onConfirm` so the caller sends what the operator actually acknowledged
+ *    rather than a hard-coded `true`.
  */
 export function ConfirmDialog({
   open,
@@ -37,6 +48,8 @@ export function ConfirmDialog({
   confirmLabel = "Confirm",
   busy = false,
   errorMessage,
+  notice,
+  acknowledgements = [],
   onCancel,
   onConfirm,
 }: {
@@ -50,14 +63,18 @@ export function ConfirmDialog({
   confirmLabel?: string;
   busy?: boolean;
   errorMessage?: string | null;
+  /** A non-error status line, e.g. while server-computed consequences load. */
+  notice?: string | null;
+  acknowledgements?: Acknowledgement[];
   onCancel: () => void;
-  onConfirm: (choiceId: string, reason: string) => void;
+  onConfirm: (choiceId: string, reason: string, acknowledged: string[]) => void;
 }) {
   const [choiceId, setChoiceId] = useState<string | null>(
     choices.length === 1 ? (choices[0]?.id ?? null) : null,
   );
   const [reason, setReason] = useState("");
   const [phrase, setPhrase] = useState("");
+  const [ticked, setTicked] = useState<ReadonlySet<string>>(new Set());
   const headingId = useId();
   const dialogRef = useRef<HTMLDivElement>(null);
 
@@ -71,6 +88,7 @@ export function ConfirmDialog({
     setChoiceId(choices.length === 1 ? (choices[0]?.id ?? null) : null);
     setReason("");
     setPhrase("");
+    setTicked(new Set());
   }
 
   useEffect(() => {
@@ -85,10 +103,27 @@ export function ConfirmDialog({
 
   if (!open) return null;
 
-  const selected = choices.find((c) => c.id === choiceId) ?? null;
+  // A lone choice is selected even when it arrives after the dialog opened
+  // (server-computed choices load asynchronously).
+  const selected =
+    choices.find((c) => c.id === choiceId) ??
+    (choices.length === 1 ? (choices[0] ?? null) : null);
   const reasonOk = !requireReason || reason.trim().length >= reasonMinLength;
   const phraseOk = !confirmPhrase || phrase.trim() === confirmPhrase;
-  const canConfirm = selected !== null && reasonOk && phraseOk && !busy;
+  const acknowledgedCodes = acknowledgements
+    .map((a) => a.code)
+    .filter((code) => ticked.has(code));
+  const acknowledgedOk = acknowledgedCodes.length === acknowledgements.length;
+  const canConfirm =
+    selected !== null && reasonOk && phraseOk && acknowledgedOk && !busy;
+
+  const toggle = (code: string, on: boolean) =>
+    setTicked((previous) => {
+      const next = new Set(previous);
+      if (on) next.add(code);
+      else next.delete(code);
+      return next;
+    });
 
   return (
     <div className="dialog-scrim" data-testid="confirm-scrim">
@@ -136,11 +171,43 @@ export function ConfirmDialog({
               ))}
             </ul>
           </>
-        ) : (
+        ) : choices.length > 0 ? (
           <p className="muted" data-testid="confirm-no-choice">
             Select an action above to see its consequences.
           </p>
-        )}
+        ) : null}
+
+        {acknowledgements.length > 0 ? (
+          <>
+            <label>
+              Acknowledge each caveat ({acknowledgedCodes.length} of{" "}
+              {acknowledgements.length}). Every one is required.
+            </label>
+            <ul className="ack-list" data-testid="confirm-acknowledgements">
+              {acknowledgements.map((ack) => (
+                <li key={ack.code}>
+                  <label data-testid={`confirm-ack-${ack.code}`}>
+                    <input
+                      type="checkbox"
+                      data-testid={`confirm-ack-input-${ack.code}`}
+                      checked={ticked.has(ack.code)}
+                      onChange={(e) => toggle(ack.code, e.target.checked)}
+                    />
+                    <span>
+                      <span className="mono">{ack.code}</span> {ack.text}
+                    </span>
+                  </label>
+                </li>
+              ))}
+            </ul>
+          </>
+        ) : null}
+
+        {notice ? (
+          <p className="muted" data-testid="confirm-notice" role="status">
+            {notice}
+          </p>
+        ) : null}
 
         {requireReason ? (
           <>
@@ -189,7 +256,7 @@ export function ConfirmDialog({
             disabled={!canConfirm}
             data-testid="confirm-submit"
             onClick={() => {
-              if (selected) onConfirm(selected.id, reason.trim());
+              if (selected) onConfirm(selected.id, reason.trim(), acknowledgedCodes);
             }}
           >
             {busy ? "Working…" : confirmLabel}

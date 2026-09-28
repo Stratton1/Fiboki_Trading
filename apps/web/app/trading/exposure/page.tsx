@@ -3,6 +3,7 @@
 import { ListPage, type Column } from "@/components/ListPage";
 import { FigureValue } from "@/components/FigureValue";
 import { BarChart } from "@/components/charts";
+import { deriveProvenance } from "@/lib/provenance";
 import type { ExposureRow } from "@/lib/types";
 
 /** TRADING · Exposure: notional against the versioned limit set. */
@@ -45,20 +46,28 @@ export default function ExposurePage() {
       columns={columns}
       rowKey={(row) => row.key}
     >
-      {(page) => (
-        <div className="card">
-          <BarChart
-            title="Utilisation against limit"
-            provenance={page.items[0]?.exposure_pct.provenance ?? "paper"}
-            unit="pct"
-            bars={page.items.slice(0, 16).map((row) => ({
-              label: row.label,
-              value: row.exposure_pct.value,
-              limit: row.limit_pct.value,
-            }))}
-          />
-        </div>
-      )}
+      {(page) => {
+        const charted = page.items.slice(0, 16);
+        return (
+          <div className="card">
+            <BarChart
+              title="Utilisation against limit"
+              provenance={deriveProvenance(
+                charted.flatMap((row) => [
+                  row.exposure_pct.provenance,
+                  row.limit_pct.provenance,
+                ]),
+              )}
+              unit="pct"
+              bars={charted.map((row) => ({
+                label: row.label,
+                value: row.exposure_pct.value,
+                limit: row.limit_pct.value,
+              }))}
+            />
+          </div>
+        );
+      }}
     </ListPage>
   );
 }

@@ -237,6 +237,28 @@ export interface CandidateRow {
   next_action_requires_role: string;
 }
 
+/**
+ * GET /api/trading/candidates/{id}/promote/preflight. Everything the promote
+ * dialog shows comes from here: the caveats the operator must tick one by one,
+ * and the consequences of each target, keyed by the value the POST accepts.
+ */
+export interface PromotePreflightView {
+  strategy_id: string;
+  execution_mode: string;
+  eligible: boolean;
+  blocking_reasons: string[];
+  caveats: Caveat[];
+  consequences: Record<string, string[]>;
+}
+
+/** GET /api/trading/preflight/kill-switch-disarm, for the re-arm dialog. */
+export interface KillSwitchDisarmPreflightView {
+  active: boolean;
+  mode: string | null;
+  execution_mode: string;
+  consequences: Record<string, string[]>;
+}
+
 export interface PortfolioView {
   balance: Figure;
   equity: Figure;

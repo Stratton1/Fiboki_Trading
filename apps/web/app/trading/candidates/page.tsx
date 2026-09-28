@@ -3,7 +3,11 @@
 import { useState } from "react";
 import { ApiError, apiFetch, useApi } from "@/lib/api";
 import { AsyncBoundary } from "@/components/AsyncBoundary";
-import { ConfirmDialog } from "@/components/ConfirmDialog";
+import {
+  ConfirmDialog,
+  type Acknowledgement,
+  type ConfirmChoice,
+} from "@/components/ConfirmDialog";
 import { FigureValue } from "@/components/FigureValue";
 import {
   CaveatList,
@@ -16,6 +20,7 @@ import type {
   Envelope,
   ExecutionModeBanner,
   Page,
+  PromotePreflightView,
 } from "@/lib/types";
 
 /**
@@ -25,6 +30,13 @@ import type {
  * action. V1 had four competing surfaces for the question and six different
  * routes to approve a bot, each with different copy and different gating — so
  * whether a promotion was allowed depended on which button you found first.
+ *
+ * The dialog's content is server-computed: GET .../promote/preflight returns
+ * the consequences of each target and the realism caveats on the candidate's
+ * figures. Each caveat is a required checkbox, and `acknowledge_caveats` is
+ * sent true only when every one was ticked, with the ticked codes alongside.
+ * The page used to send `acknowledge_caveats: true` unconditionally, signing
+ * the acknowledgement on the operator's behalf.
  */
 export default function CandidatesPage() {
   const state = useApi<Page<CandidateRow>>("/api/trading/candidates");
@@ -33,19 +45,52 @@ export default function CandidatesPage() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const preflight = useApi<Envelope<PromotePreflightView>>(
+    target
+      ? `/api/trading/candidates/${encodeURIComponent(target.strategy_id)}/promote/preflight`
+      : null,
+  );
+
   const executionMode = mode.status === "success" ? mode.data.data.mode : "unknown";
 
-  async function promote(choiceId: string, reason: string) {
-    if (!target) return;
+  const view = preflight.status === "success" ? preflight.data.data : null;
+  const promotable = view !== null && view.eligible;
+  const choices: ConfirmChoice[] = promotable
+    ? Object.entries(view.consequences).map(([id, consequences]) => ({
+        id,
+        title: `TO ${id.toUpperCase()}`,
+        body: `Promote to the ${id} lifecycle. The consequences below are computed by the platform.`,
+        consequences,
+      }))
+    : [];
+  const acknowledgements: Acknowledgement[] = promotable
+    ? view.caveats.map((caveat) => ({ code: caveat.code, text: caveat.message }))
+    : [];
+  const notice =
+    preflight.status === "loading"
+      ? "Loading the consequences and caveats for this promotion from the platform."
+      : view !== null && !view.eligible
+        ? `This candidate cannot be promoted: ${view.blocking_reasons.join(" ")}`
+        : null;
+  const preflightError =
+    preflight.status === "error"
+      ? `Could not load what this promotion would do: ${preflight.error.message} (${preflight.error.code}). Nothing can be confirmed without it.`
+      : null;
+
+  async function promote(choiceId: string, reason: string, acknowledged: string[]) {
+    if (!target || view === null) return;
+    const required = view.caveats.map((c) => c.code);
+    const allAcknowledged = required.every((code) => acknowledged.includes(code));
     setBusy(true);
     setError(null);
     try {
-      await apiFetch(`/api/trading/candidates/${target.strategy_id}/promote`, {
+      await apiFetch(`/api/trading/candidates/${encodeURIComponent(target.strategy_id)}/promote`, {
         method: "POST",
         body: JSON.stringify({
           target_lifecycle: choiceId,
           reason,
-          acknowledge_caveats: true,
+          acknowledge_caveats: allAcknowledged,
+          acknowledged_caveats: acknowledged,
         }),
       });
       setTarget(null);
@@ -175,37 +220,13 @@ export default function CandidatesPage() {
         title={`Promote ${target?.name ?? ""}`}
         executionMode={executionMode}
         busy={busy}
-        errorMessage={error}
+        errorMessage={error ?? preflightError}
+        notice={notice}
         confirmLabel="Promote"
         onCancel={() => setTarget(null)}
         onConfirm={promote}
-        choices={[
-          {
-            id: "paper",
-            title: "TO PAPER",
-            body: "Run it in the paper engine against recorded executable prices.",
-            consequences: [
-              "The strategy begins consuming risk budget in the paper book.",
-              "Its figures will start carrying the PAPER provenance, not OOS.",
-              `Realism caveats attached to its figures still apply: ${
-                target?.net_pnl.caveats.map((c) => c.code).join(", ") || "none"
-              }.`,
-              "This is recorded against your name in the audit trail.",
-              "It does NOT reach a broker. Demo and live are not options here.",
-            ],
-          },
-          {
-            id: "shadow",
-            title: "TO SHADOW",
-            body: "Mirror it against live pricing without submitting any order.",
-            consequences: [
-              "Signals are evaluated against the venue's real pricing.",
-              "No order is submitted and no position is opened.",
-              "Backtest-versus-live divergence starts being recorded.",
-              "This is recorded against your name in the audit trail.",
-            ],
-          },
-        ]}
+        choices={choices}
+        acknowledgements={acknowledgements}
       />
     </>
   );

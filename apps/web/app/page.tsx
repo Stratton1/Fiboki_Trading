@@ -14,7 +14,7 @@ import {
 } from "@/components/primitives";
 import { FigureValue } from "@/components/FigureValue";
 import { ProvenanceChip } from "@/components/ProvenanceChip";
-import { formatAge } from "@/lib/format";
+import { formatAge, formatTimestamp } from "@/lib/format";
 import type {
   Envelope,
   HealthReport,
@@ -46,13 +46,16 @@ export default function OverviewPage() {
       <Card title="Platform health">
         <AsyncBoundary state={health} label="platform health" onRetry={health.reload}>
           {(report) => (
-            <div>
+            <div data-testid="health-panel">
               <div className="row" style={{ marginBottom: 10 }}>
                 <StatusBadge status={report.status} />
                 <span className="muted">
                   build {report.build_sha ?? "unknown"} · mode {report.execution_mode} ·
                   migration {report.migration_revision ?? "unknown"} · worker heartbeat{" "}
-                  {formatAge(report.worker_heartbeat_age_seconds)}
+                  <span data-testid="health-heartbeat">
+                    {formatAge(report.worker_heartbeat_age_seconds)}
+                  </span>{" "}
+                  · checked {formatTimestamp(report.checked_at)}
                 </span>
               </div>
               {report.advisory ? (

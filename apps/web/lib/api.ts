@@ -96,7 +96,34 @@ export async function apiFetch<T>(
 export type AsyncState<T> =
   | { status: "loading"; data: null; error: null }
   | { status: "error"; data: null; error: ApiError }
-  | { status: "success"; data: T; error: null };
+  | {
+      status: "success";
+      data: T;
+      error: null;
+      /** Client receipt time (ISO, UTC) of the data currently held. */
+      asOf: string;
+      /** A poll or manual reload is in flight; `data` is the last good payload. */
+      refreshing: boolean;
+      /**
+       * The most recent refresh failed. `data` is still the last good payload
+       * and is NOT current; the view must say so rather than blank itself.
+       */
+      refreshError: ApiError | null;
+    };
+
+/** The hook's return: the state, a manual reload, and the poll interval in force. */
+export type ApiHandle<T> = AsyncState<T> & {
+  reload: () => void;
+  refreshMs: number | undefined;
+};
+
+const LOADING = { status: "loading", data: null, error: null } as const;
+
+function toApiError(error: unknown): ApiError {
+  return error instanceof ApiError
+    ? error
+    : new ApiError(0, { code: "unexpected_error" }, String(error));
+}
 
 /**
  * The four states are modelled in the type, so a component physically cannot
@@ -104,29 +131,43 @@ export type AsyncState<T> =
  *
  * "empty" is derived by the consumer from the successful payload, because only
  * the consumer knows what empty means for its shape.
+ *
+ * Refresh semantics. The state resets to loading ONLY when the path changes. A
+ * poll tick or a manual reload keeps the last good payload on screen, marks it
+ * `refreshing`, and on failure records `refreshError` beside it. Once a path
+ * has succeeded, its view never falls back to the loading or error branch:
+ * blanking the execution-mode banner every 30 seconds taught operators to
+ * ignore it, and a view that flickers to a skeleton on each poll is a view
+ * whose outages look like routine refreshes.
  */
 export function useApi<T>(
   path: string | null,
   options: { refreshMs?: number } = {},
-): AsyncState<T> & { reload: () => void } {
-  const [state, setState] = useState<AsyncState<T>>({
-    status: "loading",
-    data: null,
-    error: null,
-  });
+): ApiHandle<T> {
+  const [state, setState] = useState<AsyncState<T>>(LOADING);
   const [nonce, setNonce] = useState(0);
-  // Reset to the loading state DURING render when the request identity changes,
-  // rather than in an effect. React sanctions adjusting state during render for
-  // exactly this; doing it in an effect renders one frame of stale success data
-  // for the new path, which on this product means showing the previous
+  // Adjust state DURING render when the request identity changes, rather than
+  // in an effect. React sanctions adjusting state during render for exactly
+  // this; doing it in an effect renders one frame of stale success data for
+  // the new path, which on this product means showing the previous
   // instrument's numbers under the new instrument's heading.
   const [tracked, setTracked] = useState<{ path: string | null; nonce: number }>({
     path,
     nonce,
   });
-  if (tracked.path !== path || tracked.nonce !== nonce) {
+  if (tracked.path !== path) {
+    // A different resource: nothing held belongs to it.
     setTracked({ path, nonce });
-    setState({ status: "loading", data: null, error: null });
+    setState(LOADING);
+  } else if (tracked.nonce !== nonce) {
+    // The same resource, fetched again: keep the last good payload.
+    setTracked({ path, nonce });
+    if (state.status === "success") {
+      if (!state.refreshing) setState({ ...state, refreshing: true });
+    } else if (state.status === "error") {
+      // Never succeeded: a retry is a fresh load.
+      setState(LOADING);
+    }
   }
 
   const mounted = useRef(true);
@@ -143,16 +184,24 @@ export function useApi<T>(
     apiFetch<T>(path)
       .then((data) => {
         if (!cancelled && mounted.current) {
-          setState({ status: "success", data, error: null });
+          setState({
+            status: "success",
+            data,
+            error: null,
+            asOf: new Date().toISOString(),
+            refreshing: false,
+            refreshError: null,
+          });
         }
       })
       .catch((error: unknown) => {
         if (cancelled || !mounted.current) return;
-        const apiError =
-          error instanceof ApiError
-            ? error
-            : new ApiError(0, { code: "unexpected_error" }, String(error));
-        setState({ status: "error", data: null, error: apiError });
+        const apiError = toApiError(error);
+        setState((previous) =>
+          previous.status === "success"
+            ? { ...previous, refreshing: false, refreshError: apiError }
+            : { status: "error", data: null, error: apiError },
+        );
       });
     return () => {
       cancelled = true;
@@ -167,5 +216,5 @@ export function useApi<T>(
   }, [options.refreshMs, path]);
 
   const reload = useCallback(() => setNonce((n) => n + 1), []);
-  return { ...state, reload };
+  return { ...state, reload, refreshMs: options.refreshMs };
 }

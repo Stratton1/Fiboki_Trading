@@ -157,6 +157,100 @@ export function candidatesPage() {
   };
 }
 
+export const PREFLIGHT_CAVEATS = [
+  {
+    code: "slippage_not_modelled",
+    severity: "warning",
+    message: "Slippage model is 'zero': every fill is assumed at the requested price.",
+    affects: "net_pnl",
+    direction: "optimistic",
+  },
+  {
+    code: "static_spread",
+    severity: "warning",
+    message: "Spreads are the instrument's typical value, held constant.",
+    affects: "net_pnl",
+    direction: "optimistic",
+  },
+  {
+    code: "simulated_execution",
+    severity: "warning",
+    message: "Produced by simulation (out_of_sample); no order reached a venue.",
+    affects: "expectancy",
+    direction: "optimistic",
+  },
+];
+
+/** GET /api/trading/candidates/{id}/promote/preflight. */
+export function promotePreflight(overrides: Record<string, unknown> = {}) {
+  return {
+    data: {
+      strategy_id: "ichimoku_kumo_trend",
+      execution_mode: "paper",
+      eligible: true,
+      blocking_reasons: [],
+      caveats: PREFLIGHT_CAVEATS,
+      consequences: {
+        paper: [
+          "SERVER-PAPER-1: records the promotion to PAPER on 124 out_of_sample trade(s).",
+          "SERVER-PAPER-2: this route does not itself start a run.",
+        ],
+        shadow: [
+          "SERVER-SHADOW-1: records the promotion to SHADOW.",
+          "SERVER-SHADOW-2: no order is submitted and no position is opened.",
+        ],
+      },
+      ...overrides,
+    },
+    source: source("live"),
+    caveats: [],
+  };
+}
+
+/** GET /api/trading/preflight/kill-switch-disarm. */
+export function disarmPreflight(lines?: string[]) {
+  return {
+    data: {
+      active: true,
+      mode: "pause",
+      execution_mode: "paper",
+      consequences: {
+        disarm: lines ?? [
+          "SERVER-DISARM-1: lifts the PAUSE halt armed by joe.",
+          "SERVER-DISARM-2: the deployment stays in PAPER mode.",
+        ],
+      },
+    },
+    source: source("live"),
+    caveats: [],
+  };
+}
+
+export function healthReport(overrides: Record<string, unknown> = {}) {
+  return {
+    status: "ok",
+    checked_at: "2026-09-19T12:00:00Z",
+    build_sha: "deadbeef",
+    build_time: null,
+    migration_revision: "0007",
+    execution_mode: "paper",
+    worker_heartbeat_age_seconds: 12,
+    uptime_seconds: 3600,
+    python_version: "3.11.9",
+    checks: [
+      {
+        name: "database",
+        status: "ok",
+        detail: "reachable in 3 ms",
+        critical: true,
+        latency_ms: 3,
+      },
+    ],
+    advisory: "",
+    ...overrides,
+  };
+}
+
 /** Install the default happy-path API. Individual tests override routes after. */
 export async function mockApi(page: Page) {
   await page.route(`${API}/api/system/execution-mode`, (route: Route) =>
@@ -170,6 +264,12 @@ export async function mockApi(page: Page) {
   );
   await page.route(`${API}/api/trading/candidates`, (route: Route) =>
     route.fulfill({ json: candidatesPage() }),
+  );
+  await page.route(`${API}/api/trading/candidates/*/promote/preflight`, (route: Route) =>
+    route.fulfill({ json: promotePreflight() }),
+  );
+  await page.route(`${API}/api/trading/preflight/kill-switch-disarm`, (route: Route) =>
+    route.fulfill({ json: disarmPreflight() }),
   );
 }
 

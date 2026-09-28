@@ -102,6 +102,66 @@ test.describe("source rules", () => {
     ).toEqual([]);
   });
 
+  test("no code invents a provenance with a fallback", async () => {
+    // `page.items[0]?.provenance ?? "backtest"` labelled a MIXED trade list with
+    // its first row's provenance, or with "backtest" when empty. Aggregates
+    // derive their label from the data (lib/provenance.ts deriveProvenance).
+    const names =
+      "backtest|walkforward|out_of_sample|holdout|paper|shadow|broker_demo|broker_live";
+    const fallback = new RegExp(`(\\?\\?|\\|\\|)\\s*["'\`](${names})["'\`]`);
+    const offenders: string[] = [];
+    for (const file of sources(ROOT)) {
+      const text = stripComments(readFileSync(file, "utf8"));
+      text.split("\n").forEach((line, index) => {
+        if (fallback.test(line)) {
+          offenders.push(`${file.replace(ROOT, "")}:${index + 1}: ${line.trim()}`);
+        }
+      });
+    }
+    expect(
+      offenders,
+      "A provenance must come from the data. When there is none, render 'unlabelled source'.",
+    ).toEqual([]);
+  });
+
+  test("no page hard-codes a provenance literal", async () => {
+    // market-pulse and correlations passed provenance="backtest" to their
+    // charts although neither payload is a backtest result.
+    const literal = /(?<![-\w])provenance\s*=\s*\{?\s*["'`][a-z_]+["'`]/;
+    const offenders: string[] = [];
+    for (const file of sources(join(ROOT, "app"))) {
+      const text = stripComments(readFileSync(file, "utf8"));
+      text.split("\n").forEach((line, index) => {
+        if (literal.test(line)) {
+          offenders.push(`${file.replace(ROOT, "")}:${index + 1}: ${line.trim()}`);
+        }
+      });
+    }
+    expect(offenders).toEqual([]);
+  });
+
+  test("no React key is random", async () => {
+    // intelligence/runs used Math.random() as a row key, remounting every row
+    // on every render and defeating reconciliation.
+    const offenders: string[] = [];
+    for (const file of sources(ROOT)) {
+      const text = stripComments(readFileSync(file, "utf8"));
+      if (/Math\.random\s*\(/.test(text)) offenders.push(file.replace(ROOT, ""));
+    }
+    expect(offenders).toEqual([]);
+  });
+
+  test("the rules above would catch the patterns they ban", async () => {
+    // Guard against a regex that silently matches nothing.
+    const names = "backtest|paper";
+    const fallback = new RegExp(`(\\?\\?|\\|\\|)\\s*["'\`](${names})["'\`]`);
+    expect(fallback.test('provenance={page.items[0]?.provenance ?? "backtest"}')).toBe(true);
+    expect(fallback.test("x?.exposure_pct.provenance ?? 'paper'")).toBe(true);
+    const literal = /(?<![-\w])provenance\s*=\s*\{?\s*["'`][a-z_]+["'`]/;
+    expect(literal.test('                provenance="backtest"')).toBe(true);
+    expect(literal.test('data-provenance="mixed"')).toBe(false);
+  });
+
   test("no charting library is bundled", async () => {
     // V1 shipped ~4.5MB of Plotly, including mapbox-gl, to draw line charts.
     const pkg = JSON.parse(readFileSync(join(ROOT, "package.json"), "utf8"));

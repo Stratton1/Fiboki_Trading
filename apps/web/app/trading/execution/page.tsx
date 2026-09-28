@@ -7,6 +7,7 @@ import { ProvenanceChip } from "@/components/ProvenanceChip";
 import { Distribution } from "@/components/charts";
 import { PROVENANCES, type Provenance, type TradeRow } from "@/lib/types";
 import { formatTimestamp } from "@/lib/format";
+import { deriveProvenance } from "@/lib/provenance";
 
 /**
  * TRADING · Execution.
@@ -77,14 +78,24 @@ export default function ExecutionPage() {
             </select>
           </div>
           <div className="card">
-            <Distribution
-              title="R-multiple distribution"
-              provenance={page.items[0]?.provenance ?? "backtest"}
-              unit="R"
-              values={page.items
-                .map((t) => t.r_multiple.value)
-                .filter((v): v is number => v !== null)}
-            />
+            {(() => {
+              // Label the distribution from the values that are IN it: rows
+              // whose R is null contribute nothing and so claim nothing.
+              const plotted = page.items.filter((t) => t.r_multiple.value !== null);
+              return (
+                <Distribution
+                  title="R-multiple distribution"
+                  provenance={deriveProvenance(
+                    plotted.map((t) => t.r_multiple.provenance),
+                    "No trade in this result has an R-multiple, so nothing is plotted and nothing is labelled.",
+                  )}
+                  unit="R"
+                  values={plotted
+                    .map((t) => t.r_multiple.value)
+                    .filter((v): v is number => v !== null)}
+                />
+              );
+            })()}
           </div>
         </>
       )}

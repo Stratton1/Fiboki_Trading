@@ -23,7 +23,13 @@ export default function CorrelationsPage() {
             <div className="card">
               <Heatmap
                 title="Rolling correlation"
-                provenance="backtest"
+                // TODO(backend): CorrelationView carries no provenance and no
+                // as_of for the window it was estimated over. Add
+                // `provenance: Provenance` and `as_of: datetime` to the
+                // /api/markets/correlations payload; until then the chip
+                // shows the envelope's SourceNote, which is what the API
+                // actually supplies, instead of a guessed provenance.
+                provenance={{ kind: "source", source: envelope.source }}
                 labels={envelope.data.instruments}
                 matrix={envelope.data.matrix}
               />

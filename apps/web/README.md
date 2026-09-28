@@ -48,6 +48,10 @@ the V1 frontend misled an operator.
 | Kill switch reachable in every mode, PAUSE ≠ FLATTEN | `KillSwitch`; `kill-switch.spec.ts` |
 | Responsive from 360px, drawer under lg, no x-scroll | `globals.css`; `responsive.spec.ts` |
 | Realism caveats are server-computed, never page copy | `CaveatList` renders payload only; `source-rules.spec.ts` |
+| A poll never blanks a view; a failed refresh keeps the last good data, marked STALE | `useApi` resets only on a path change; `AsyncBoundary`/`ModeBanner`; `refresh.spec.ts` |
+| Promotion caveats are ticked one by one; consequences are server-computed | `ConfirmDialog` acknowledgements; `.../promote/preflight`; `promote.spec.ts` |
+| A chart's provenance is derived from its rows (MIXED, or "unlabelled source"), never a fallback | `lib/provenance.ts`; `chart-provenance.spec.ts`; `source-rules.spec.ts` |
+| Every time is labelled UTC; `as_of` is shown | `lib/format.ts`; `FigureValue`; `SourceBadge`; `time-labels.spec.ts` |
 | No heavyweight charting library | `components/charts.tsx` is inline SVG; `source-rules.spec.ts` pins `dependencies` to next/react/react-dom |
 
 ## Charts

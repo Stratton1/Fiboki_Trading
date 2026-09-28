@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import type { Caveat, Figure, SourceNote } from "@/lib/types";
+import { formatTimestamp } from "@/lib/format";
 import { FigureValue } from "./FigureValue";
 
 export function PageHead({
@@ -22,7 +23,9 @@ export function PageHead({
 
 /**
  * Where a payload came from, rendered on every list and detail view. The page
- * never asserts this; it prints what the API said.
+ * never asserts this; it prints what the API said, including when the API says
+ * the payload was produced (`as_of`, in UTC). An absent as-of is stated as
+ * absent rather than left blank.
  */
 export function SourceBadge({ source }: { source: SourceNote }) {
   return (
@@ -31,6 +34,15 @@ export function SourceBadge({ source }: { source: SourceNote }) {
         {source.kind.toUpperCase()}
       </span>
       {source.detail}
+      <span
+        className="source-note__asof"
+        data-testid="source-note-as-of"
+        data-as-of={source.as_of ?? undefined}
+      >
+        {source.as_of
+          ? `as of ${formatTimestamp(source.as_of)}`
+          : "as-of time not supplied"}
+      </span>
     </div>
   );
 }
@@ -78,7 +90,7 @@ export function Tile({
     <div className="tile" data-testid="tile" data-label={label}>
       <div className="tile__label">{label}</div>
       <div className="tile__value">
-        <FigureValue figure={figure} colourSign={colourSign} />
+        <FigureValue figure={figure} colourSign={colourSign} asOf="suffix" />
       </div>
       {help ? <div className="tile__help">{help}</div> : null}
     </div>

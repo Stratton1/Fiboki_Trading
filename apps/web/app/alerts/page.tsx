@@ -3,6 +3,7 @@
 import { useApi } from "@/lib/api";
 import { AsyncBoundary } from "@/components/AsyncBoundary";
 import { Card, PageHead, StatusBadge } from "@/components/primitives";
+import { formatTimestamp } from "@/lib/format";
 import type { Envelope, HealthReport, RiskStateView } from "@/lib/types";
 
 /**
@@ -35,7 +36,7 @@ export default function AlertsPage() {
                     <StatusBadge status={report.status} />
                   </div>
                   <div className="state__body">
-                    Every health probe returned ok at {report.checked_at}.
+                    Every health probe returned ok at {formatTimestamp(report.checked_at)}.
                   </div>
                 </div>
               );

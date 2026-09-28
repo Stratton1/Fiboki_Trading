@@ -2,7 +2,12 @@
 
 import { useState } from "react";
 import { ApiError, apiFetch, useApi } from "@/lib/api";
-import type { Envelope, ExecutionModeBanner, KillSwitchView } from "@/lib/types";
+import type {
+  Envelope,
+  ExecutionModeBanner,
+  KillSwitchDisarmPreflightView,
+  KillSwitchView,
+} from "@/lib/types";
 import { AsyncBoundary } from "./AsyncBoundary";
 import { ConfirmDialog, type ConfirmChoice } from "./ConfirmDialog";
 
@@ -19,7 +24,10 @@ import { ConfirmDialog, type ConfirmChoice } from "./ConfirmDialog";
  *  - the consequences of each come from the API, computed for the current mode
  *    and the current number of open positions;
  *  - it goes through the one shared ConfirmDialog;
- *  - FLATTEN additionally requires typing the word FLATTEN.
+ *  - FLATTEN additionally requires typing the word FLATTEN;
+ *  - the disarm (re-arm trading) consequences are server-computed too, from
+ *    GET /api/trading/preflight/kill-switch-disarm, fetched when the dialog
+ *    opens so they describe the halt actually being lifted.
  */
 export function KillSwitchPanel({ compact = false }: { compact?: boolean }) {
   const state = useApi<Envelope<KillSwitchView>>("/api/system/kill-switch");
@@ -27,8 +35,30 @@ export function KillSwitchPanel({ compact = false }: { compact?: boolean }) {
   const [dialog, setDialog] = useState<"arm" | "disarm" | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const disarmPreflight = useApi<Envelope<KillSwitchDisarmPreflightView>>(
+    dialog === "disarm" ? "/api/trading/preflight/kill-switch-disarm" : null,
+  );
 
   const executionMode = mode.status === "success" ? mode.data.data.mode : "unknown";
+  const disarmChoices: ConfirmChoice[] =
+    disarmPreflight.status === "success"
+      ? Object.entries(disarmPreflight.data.data.consequences).map(
+          ([id, consequences]) => ({
+            id,
+            title: id.toUpperCase(),
+            body: "Lift the halt and allow risk-adding orders again.",
+            consequences,
+          }),
+        )
+      : [];
+  const disarmNotice =
+    disarmPreflight.status === "loading"
+      ? "Loading the consequences of re-arming from the platform."
+      : null;
+  const disarmError =
+    disarmPreflight.status === "error"
+      ? `Could not load what re-arming would do: ${disarmPreflight.error.message} (${disarmPreflight.error.code}). Nothing can be confirmed without it.`
+      : null;
 
   async function submit(choiceId: string, reason: string) {
     setBusy(true);
@@ -151,20 +181,9 @@ export function KillSwitchPanel({ compact = false }: { compact?: boolean }) {
               confirmPhrase="RE-ARM"
               confirmLabel="Re-arm trading"
               busy={busy}
-              errorMessage={error}
-              choices={[
-                {
-                  id: "disarm",
-                  title: "DISARM",
-                  body: "Lift the halt and allow risk-adding orders again.",
-                  consequences: [
-                    "New positions and increases become permitted again.",
-                    "Strategies that were blocked will act on their next signal.",
-                    `Execution resumes in ${executionMode.toUpperCase()} mode.`,
-                    "This is recorded against your name in the audit trail.",
-                  ],
-                },
-              ]}
+              errorMessage={error ?? disarmError}
+              notice={disarmNotice}
+              choices={disarmChoices}
               onCancel={() => setDialog(null)}
               onConfirm={submit}
             />

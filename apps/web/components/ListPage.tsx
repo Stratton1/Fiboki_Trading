@@ -37,7 +37,11 @@ export function ListPage<T>({
   path: string;
   label: string;
   columns: Column<T>[];
-  rowKey: (row: T) => string;
+  /**
+   * A stable key per row. The index is supplied for payloads with no id of
+   * their own; a random key would remount every row on every render.
+   */
+  rowKey: (row: T, index: number) => string;
   emptyTitle?: string;
   emptyBody?: string;
   children?: (page: Page<T>) => ReactNode;
@@ -72,8 +76,8 @@ export function ListPage<T>({
                   </tr>
                 </thead>
                 <tbody>
-                  {page.items.map((row) => (
-                    <tr key={rowKey(row)}>
+                  {page.items.map((row, index) => (
+                    <tr key={rowKey(row, index)}>
                       {columns.map((column) => (
                         <td
                           key={column.key}

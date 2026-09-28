@@ -19,7 +19,12 @@ export default function RunsPage() {
       path="/api/intelligence/runs"
       label="agent runs"
       columns={columns}
-      rowKey={(row) => String(row.run_id ?? Math.random())}
+      rowKey={(row, index) =>
+        (typeof row.run_id === "string" && row.run_id !== "") ||
+        typeof row.run_id === "number"
+          ? `run:${String(row.run_id)}`
+          : `row:${index}`
+      }
       emptyTitle="No agent runs recorded"
       emptyBody="Read the source badge: if it says ABSENT, no orchestrator is attached to this deployment. No run recorded is not the same as every run succeeding."
     />

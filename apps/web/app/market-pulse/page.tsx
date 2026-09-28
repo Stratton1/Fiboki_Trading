@@ -4,6 +4,7 @@ import { useApi } from "@/lib/api";
 import { AsyncBoundary } from "@/components/AsyncBoundary";
 import { BarChart } from "@/components/charts";
 import { Card, PageHead, SourceBadge } from "@/components/primitives";
+import { deriveProvenance } from "@/lib/provenance";
 import type { InstrumentRow, Page, RegimeRow } from "@/lib/types";
 
 /** COMMAND · Market Pulse: what the universe looks like right now. */
@@ -19,20 +20,28 @@ export default function MarketPulsePage() {
       />
       <Card title="Spread cost across the universe">
         <AsyncBoundary state={instruments} label="instruments" onRetry={instruments.reload}>
-          {(page) => (
-            <>
-              <SourceBadge source={page.source} />
-              <BarChart
-                title="Typical spread (pips)"
-                provenance="backtest"
-                unit="pips"
-                bars={page.items.slice(0, 20).map((row) => ({
-                  label: row.symbol,
-                  value: row.typical_spread_pips.value,
-                }))}
-              />
-            </>
-          )}
+          {(page) => {
+            const charted = page.items.slice(0, 20);
+            return (
+              <>
+                <SourceBadge source={page.source} />
+                <BarChart
+                  title="Typical spread (pips)"
+                  // Whatever provenance the API attaches to each spread figure.
+                  // Instrument specifications are reference data rather than a
+                  // result; the chip shows the API's label, not a page's claim.
+                  provenance={deriveProvenance(
+                    charted.map((row) => row.typical_spread_pips.provenance),
+                  )}
+                  unit="pips"
+                  bars={charted.map((row) => ({
+                    label: row.symbol,
+                    value: row.typical_spread_pips.value,
+                  }))}
+                />
+              </>
+            );
+          }}
         </AsyncBoundary>
       </Card>
       <Card title="Regime standing">

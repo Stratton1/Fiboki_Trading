@@ -1,6 +1,7 @@
 import type { Provenance, Series } from "@/lib/types";
 import { PROVENANCE_LABEL, formatNumber } from "@/lib/format";
-import { ProvenanceChip } from "./ProvenanceChip";
+import { singleProvenance, type ProvenanceLabel } from "@/lib/provenance";
+import { ProvenanceLabelChip } from "./ProvenanceChip";
 
 /**
  * Charts, hand-rolled as inline SVG.
@@ -11,7 +12,10 @@ import { ProvenanceChip } from "./ProvenanceChip";
  * heatmap and distribution views cost zero kilobytes of vendor JavaScript.
  *
  * Every chart takes a provenance and prints the chip in its own legend, because
- * a chart is a pile of numbers and the same labelling rule applies.
+ * a chart is a pile of numbers and the same labelling rule applies. Charts over
+ * many rows take a `ProvenanceLabel` derived from those rows
+ * (`lib/provenance.ts`), so a mixed set renders MIXED rather than the first
+ * row's label, and a payload with no provenance renders "unlabelled source".
  */
 
 const PALETTE: Record<Provenance, string> = {
@@ -24,6 +28,13 @@ const PALETTE: Record<Provenance, string> = {
   broker_demo: "#f5a524",
   broker_live: "#ff4d4d",
 };
+
+/** Mixed, source-only and unlabelled data get a neutral ink, not a provenance's. */
+const NEUTRAL = "#9aa5bd";
+
+function inkFor(label: ProvenanceLabel): string {
+  return label.kind === "single" ? PALETTE[label.provenance] : NEUTRAL;
+}
 
 interface Box {
   width: number;
@@ -58,7 +69,7 @@ function ChartFrame({
   children,
 }: {
   title: string;
-  provenance: Provenance;
+  provenance: ProvenanceLabel;
   unit: string;
   note?: string;
   children: React.ReactNode;
@@ -67,7 +78,7 @@ function ChartFrame({
     <figure className="chart" style={{ margin: 0 }} data-testid="chart">
       <figcaption className="row" style={{ marginBottom: 6 }}>
         <strong>{title}</strong>
-        <ProvenanceChip provenance={provenance} />
+        <ProvenanceLabelChip label={provenance} />
         {unit ? <span className="muted">({unit})</span> : null}
       </figcaption>
       {children}
@@ -91,7 +102,11 @@ export function LineChart({ series }: { series: Series }) {
   );
   if (points.length < 2) {
     return (
-      <ChartFrame title={series.name} provenance={series.provenance} unit={series.unit}>
+      <ChartFrame
+        title={series.name}
+        provenance={singleProvenance(series.provenance)}
+        unit={series.unit}
+      >
         <EmptyChart
           message={`Not enough points to draw a line (${points.length}). This is a missing series, not a flat one.`}
         />
@@ -118,7 +133,7 @@ export function LineChart({ series }: { series: Series }) {
   return (
     <ChartFrame
       title={series.name}
-      provenance={series.provenance}
+      provenance={singleProvenance(series.provenance)}
       unit={series.unit}
       note={`${points.length} points · ${PROVENANCE_LABEL[series.provenance]}`}
     >
@@ -153,7 +168,7 @@ export function BarChart({
   bars,
 }: {
   title: string;
-  provenance: Provenance;
+  provenance: ProvenanceLabel;
   unit: string;
   bars: { label: string; value: number | null; limit?: number | null }[];
 }) {
@@ -179,7 +194,7 @@ export function BarChart({
   const width = 720;
   const labelW = 150;
   const height = usable.length * rowH + 8;
-  const colour = PALETTE[provenance];
+  const colour = inkFor(provenance);
 
   return (
     <ChartFrame
@@ -246,7 +261,7 @@ export function Heatmap({
   matrix,
 }: {
   title: string;
-  provenance: Provenance;
+  provenance: ProvenanceLabel;
   labels: string[];
   matrix: number[][];
 }) {
@@ -319,7 +334,7 @@ export function Distribution({
   bins = 24,
 }: {
   title: string;
-  provenance: Provenance;
+  provenance: ProvenanceLabel;
   unit: string;
   values: number[];
   bins?: number;
@@ -347,7 +362,7 @@ export function Distribution({
   const innerW = width - padL - padR;
   const innerH = height - padT - padB;
   const barW = innerW / bins;
-  const colour = PALETTE[provenance];
+  const colour = inkFor(provenance);
   const zeroX = padL + ((0 - min) / (max - min || 1)) * innerW;
 
   return (
