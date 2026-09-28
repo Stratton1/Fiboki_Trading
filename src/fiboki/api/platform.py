@@ -9,6 +9,18 @@ deterministic fixture from :mod:`fiboki.api.seed`.
 The rule this package follows: never make an unprovisioned source look
 provisioned. V1's dashboard drew a flat £0.00 line with an "Online" badge when
 the backend was down; the whole design here is that absence is visible.
+
+Trades, positions and the account come from the persisted PAPER journal under
+``FIBOKI_PAPER_ROOT`` (default ``<FIBOKI_STATE_DIR>/paper``) whenever one
+exists, read by :class:`fiboki.api.paper_journal.PaperJournalReader`. Only when
+no journal exists does the platform fall back to the seed fixture, and then
+``data_source`` is ``"seed"`` and no fixture row carries an executed
+provenance.
+
+The worker heartbeat is read from the ``worker_heartbeat`` table of the
+worker's SQLite store (``FIBOKI_WORKER_HEARTBEAT``), opened read-only. The
+file's mtime is NOT the heartbeat: in WAL mode a write lands in ``-wal`` and
+the main file's mtime can stay hours old while the worker beats every second.
 """
 from __future__ import annotations
 
@@ -22,6 +34,7 @@ from pathlib import Path
 from typing import Any
 
 from fiboki.api.audit_trail import ApiAuditTrail
+from fiboki.api.paper_journal import PaperAccount, PaperJournal, PaperJournalReader
 from fiboki.api.seed import PositionRow, SeedClock, TradeRow, generate
 from fiboki.api.settings import Settings
 from fiboki.broker.mode_guard import (
@@ -36,7 +49,21 @@ from fiboki.risk.limits import LIMIT_SETS, LimitSet, get_limit_set
 
 log = logging.getLogger("fiboki.api.platform")
 
-__all__ = ["Platform", "SourceStatus", "build_platform"]
+__all__ = [
+    "HeartbeatReading",
+    "Platform",
+    "SourceStatus",
+    "WorkerBeat",
+    "build_platform",
+    "read_worker_heartbeat",
+]
+
+#: Environment variable naming the paper journal root. Read here rather than in
+#: ``api/settings.py`` because it selects a read-only data source, not a
+#: behaviour; it defaults to ``<FIBOKI_STATE_DIR>/paper``.
+PAPER_ROOT_ENV = "FIBOKI_PAPER_ROOT"  # parsed by fiboki.api.settings into Settings.paper_root
+
+_SQLITE_MAGIC = b"SQLite format 3\x00"
 
 
 @dataclass(frozen=True, slots=True)
@@ -60,10 +87,198 @@ class SourceStatus:
         }
 
 
+# ------------------------------------------------------------ heartbeat
+
+
+@dataclass(frozen=True, slots=True)
+class WorkerBeat:
+    """One row of the worker's ``worker_heartbeat`` table, aged by the API."""
+
+    worker_id: str
+    kind: str
+    status: str
+    beat_at: datetime
+    age_seconds: float
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "worker_id": self.worker_id,
+            "kind": self.kind,
+            "status": self.status,
+            "beat_at": self.beat_at.isoformat(),
+            "age_seconds": self.age_seconds,
+        }
+
+
+@dataclass(frozen=True, slots=True)
+class HeartbeatReading:
+    """What the API can honestly say about worker liveness right now.
+
+    ``state`` is one of:
+
+    * ``absent`` -- nothing has ever beaten that the API can see: no path, no
+      file, no ``worker_heartbeat`` table, no rows, or an unreadable store.
+      ``age_seconds`` is ``None``, never ``0``. ``reason`` says which.
+    * ``stale`` -- the newest beat is at least the stale threshold old.
+    * ``ok`` -- the newest beat is younger than the threshold.
+
+    ``reason`` is ``sqlite`` when the age came from the table, and
+    ``mtime_fallback`` when the path is not a SQLite database and the file's
+    modification time was used as a last resort (a legacy touch-file).
+    """
+
+    state: str
+    age_seconds: float | None
+    reason: str
+    detail: str
+    path: str | None
+    workers: tuple[WorkerBeat, ...] = ()
+    newest_beat_at: datetime | None = None
+
+
+def _parse_beat(value: Any) -> datetime | None:
+    """``beat_at`` as SQLAlchemy stores it on SQLite: naive UTC text."""
+    if value is None:
+        return None
+    if isinstance(value, datetime):
+        stamp = value
+    else:
+        text = str(value).strip()
+        if not text:
+            return None
+        try:
+            stamp = datetime.fromisoformat(text)
+        except ValueError:
+            return None
+    return stamp.replace(tzinfo=UTC) if stamp.tzinfo is None else stamp.astimezone(UTC)
+
+
+def _is_sqlite(path: Path) -> bool:
+    try:
+        with path.open("rb") as handle:
+            return handle.read(16) == _SQLITE_MAGIC
+    except OSError:
+        return False
+
+
+def read_worker_heartbeat(
+    path: Path | None,
+    *,
+    stale_after_seconds: float,
+    now: datetime | None = None,
+) -> HeartbeatReading:
+    """Read the worker heartbeat from the worker's own store, read-only.
+
+    The age is computed from THIS process's clock against ``beat_at``, so a
+    healthy worker whose database file has an old mtime (WAL mode) is reported
+    as alive, and a dead worker whose file was recently touched is not.
+    """
+    stamp = now or datetime.now(tz=UTC)
+    shown = str(path) if path is not None else None
+    if path is None:
+        return HeartbeatReading(
+            "absent", None, "no_path", "No worker heartbeat location is configured.", shown
+        )
+    if not path.exists():
+        return HeartbeatReading(
+            "absent",
+            None,
+            "file_missing",
+            f"No worker store exists at {path}. No worker has ever beaten here.",
+            shown,
+        )
+
+    def judge(age: float) -> str:
+        return "stale" if age >= stale_after_seconds else "ok"
+
+    if not _is_sqlite(path):
+        try:
+            age = max(0.0, stamp.timestamp() - path.stat().st_mtime)
+        except OSError:  # pragma: no cover - race on a vanishing file
+            return HeartbeatReading(
+                "absent", None, "file_missing", f"{path} vanished while being read.", shown
+            )
+        return HeartbeatReading(
+            judge(age),
+            age,
+            "mtime_fallback",
+            f"{path} is not a SQLite worker store; its modification time was used as "
+            "a last resort. This is not a worker_heartbeat row.",
+            shown,
+        )
+
+    from fiboki.workers.base import WORKER_HEARTBEAT
+
+    table = WORKER_HEARTBEAT.name
+    try:
+        with sqlite3.connect(
+            f"file:{path.resolve()}?mode=ro", uri=True, timeout=2.0
+        ) as conn:
+            present = conn.execute(
+                "SELECT 1 FROM sqlite_master WHERE type='table' AND name=?", (table,)
+            ).fetchone()
+            if present is None:
+                return HeartbeatReading(
+                    "absent",
+                    None,
+                    "no_heartbeat_table",
+                    f"{path} has no {table} table. No worker has ever beaten into it.",
+                    shown,
+                )
+            rows = conn.execute(
+                f"SELECT worker_id, kind, status, beat_at FROM {table}"
+            ).fetchall()
+    except sqlite3.Error as exc:
+        return HeartbeatReading(
+            "absent",
+            None,
+            "unreadable",
+            f"The worker store at {path} could not be read ({type(exc).__name__}: "
+            f"{exc}). Liveness is unknown, which is not the same as alive.",
+            shown,
+        )
+
+    beats: list[WorkerBeat] = []
+    for worker, kind, status, beat_at in rows:
+        beat = _parse_beat(beat_at)
+        if beat is None:
+            continue
+        beats.append(
+            WorkerBeat(
+                worker_id=str(worker),
+                kind=str(kind or ""),
+                status=str(status or ""),
+                beat_at=beat,
+                age_seconds=round(max(0.0, (stamp - beat).total_seconds()), 3),
+            )
+        )
+    if not beats:
+        return HeartbeatReading(
+            "absent",
+            None,
+            "no_rows",
+            f"The {table} table at {path} is empty. No worker has ever beaten.",
+            shown,
+        )
+    beats.sort(key=lambda b: b.beat_at, reverse=True)
+    newest = beats[0]
+    state = judge(newest.age_seconds)
+    return HeartbeatReading(
+        state,
+        newest.age_seconds,
+        "sqlite",
+        f"{len(beats)} worker(s) in {table}; newest {newest.worker_id} beat "
+        f"{newest.age_seconds:.0f}s ago (stale at {stale_after_seconds:.0f}s).",
+        shown,
+        workers=tuple(beats),
+        newest_beat_at=newest.beat_at,
+    )
+
+
 class Platform:
     """Assembled once per process and shared. Read-mostly, lock-guarded writes."""
 
-    def __init__(self, settings: Settings) -> None:
+    def __init__(self, settings: Settings, *, paper_root: Path | None = None) -> None:
         self.settings = settings
         self.started_at = time.time()
         self._lock = threading.Lock()
@@ -89,10 +304,23 @@ class Platform:
         self._sources: dict[str, SourceStatus] = {}
         self._lifecycle: Any | None = None
 
-        # ---- fixtures, labelled --------------------------------------
+        # ---- the paper journal, read-only ----------------------------
+        self.paper_root: Path = (
+            paper_root
+            if paper_root is not None
+            else settings.paper_root
+            if settings.paper_root is not None
+            else settings.state_dir / "paper"
+        )
+        self._journal_reader = PaperJournalReader(self.paper_root)
+        self._journal_signature: tuple[tuple[str, int, int], ...] | None = None
+        self._journal: PaperJournal | None = None
+        self._refresh_journal()
+
+        # ---- fixtures, labelled; served ONLY when no journal exists ----
         self.clock = SeedClock.fixed()
         symbols = self.instruments.all_symbols()
-        self._trades, self._positions = generate(
+        self._seed_trades, self._seed_positions = generate(
             self.strategy_ids or ["unregistered"],
             symbols[:24] or ["EURUSD"],
             clock=self.clock,
@@ -197,7 +425,102 @@ class Platform:
             return None
         return self._strategy_registry.health_check()
 
+    # ----------------------------------------------------- paper journal
+
+    def _refresh_journal(self) -> PaperJournal | None:
+        """Reload the journal when any session file changed. Cheap stats only."""
+        with self._lock:
+            try:
+                signature = self._journal_reader.signature()
+            except OSError as exc:  # pragma: no cover - unreadable root
+                log.warning("paper_journal_unreadable", extra={"error": str(exc)})
+                signature = ()
+            if signature != self._journal_signature:
+                self._journal = self._journal_reader.load()
+                self._journal_signature = signature
+                if self._journal is not None:
+                    for name, error in self._journal.errors:
+                        log.warning(
+                            "paper_session_unreadable", extra={"session": name, "error": error}
+                        )
+            return self._journal
+
+    @property
+    def journal(self) -> PaperJournal | None:
+        """The loaded journal, or ``None`` when no journal exists at all."""
+        return self._refresh_journal()
+
+    @property
+    def data_source(self) -> str:
+        """``live`` (a paper journal), ``absent`` (one exists but none of its
+        sessions parse) or ``seed`` (no journal; the labelled fixture)."""
+        journal = self.journal
+        if journal is None:
+            return "seed"
+        return "live" if journal.sessions else "absent"
+
+    def account(self) -> PaperAccount | None:
+        """Account figures from the journal. ``None`` when there is no journal:
+        the seed fixture has no account, and inventing a starting balance for
+        it would put a number on a screen that nothing measured."""
+        journal = self.journal
+        if journal is None or not journal.sessions:
+            return None
+        return journal.account()
+
+    def journal_as_of(self) -> datetime | None:
+        journal = self.journal
+        return journal.as_of if journal is not None else None
+
+    def journal_warnings(self) -> list[str]:
+        """Human sentences the trading routes attach as caveats."""
+        journal = self.journal
+        if journal is None:
+            return []
+        out: list[str] = []
+        if journal.sessions:
+            as_of = journal.as_of.isoformat() if journal.as_of else "an unknown time"
+            out.append(
+                f"Served from {len(journal.sessions)} persisted PAPER session(s) under "
+                f"{journal.root}, as of {as_of}. A replay session's open position is "
+                "open at the end of the replayed data, not now."
+            )
+            account = journal.account()
+            out.extend(account.warnings)
+        out.extend(
+            f"Paper session {name!r} could not be read and is excluded: {error}"
+            for name, error in journal.errors
+        )
+        return out
+
+    def trade_record_detail(self) -> str:
+        journal = self.journal
+        if journal is None:
+            return (
+                "Deterministic demonstration fixture (fiboki.api.seed). No paper "
+                f"journal exists at {self.paper_root}, so these rows are generated, "
+                "not measured. No fixture row carries an executed provenance."
+            )
+        if not journal.sessions:
+            return (
+                f"A paper journal exists at {journal.root} but none of its "
+                f"{len(journal.errors)} session(s) could be read; nothing is served."
+            )
+        return (
+            f"{len(journal.sessions)} PAPER session(s) at {journal.root}: "
+            f"{len(journal.trades)} closed trade(s), {len(journal.positions)} open "
+            "position(s)"
+            + (f"; {len(journal.errors)} unreadable session(s)" if journal.errors else "")
+            + "."
+        )
+
     # ------------------------------------------------------------ trades
+
+    def _trade_rows(self) -> list[Any]:
+        journal = self.journal
+        if journal is None:
+            return list(self._seed_trades)
+        return list(journal.trades)
 
     def trades(
         self,
@@ -208,7 +531,12 @@ class Platform:
         limit: int = 200,
         offset: int = 0,
     ) -> tuple[list[TradeRow], int]:
-        rows = self._trades
+        """Journal trades when a journal exists, the seed fixture otherwise.
+
+        The two are never mixed: a fixture row next to a measured one is the
+        V1 "Paper / Backtest" page again.
+        """
+        rows = self._trade_rows()
         if provenance:
             rows = [t for t in rows if t.provenance in provenance]
         if strategy_id:
@@ -219,7 +547,10 @@ class Platform:
         return rows[offset : offset + limit], len(rows)
 
     def positions(self) -> list[PositionRow]:
-        return list(self._positions)
+        journal = self.journal
+        if journal is None:
+            return list(self._seed_positions)
+        return list(journal.positions)
 
     # ------------------------------------------------------------ health
 
@@ -276,20 +607,21 @@ class Platform:
             return None
         return str(row[0]) if row else None
 
+    def worker_heartbeat(self) -> HeartbeatReading:
+        """Liveness from the worker's ``worker_heartbeat`` table, read-only."""
+        return read_worker_heartbeat(
+            self.settings.worker_heartbeat_path,
+            stale_after_seconds=self.settings.worker_heartbeat_stale_seconds,
+        )
+
     def worker_heartbeat_age_seconds(self) -> float | None:
-        """Age of the worker heartbeat file, or ``None`` if it has never beaten.
+        """Age of the newest worker beat, or ``None`` if none has been seen.
 
         ``None`` is NOT zero. A worker that has never started and a worker that
         beat a moment ago must not render the same, which is precisely the
         confusion V1's dashboard created.
         """
-        path = self.settings.worker_heartbeat_path
-        if path is None or not path.exists():
-            return None
-        try:
-            return max(0.0, time.time() - path.stat().st_mtime)
-        except OSError:  # pragma: no cover - race on a vanishing file
-            return None
+        return self.worker_heartbeat().age_seconds
 
     def data_sources(self) -> list[SourceStatus]:
         sources = [self.check_database()]
@@ -357,36 +689,27 @@ class Platform:
                 healthy=intact,
             )
         )
-        heartbeat = self.worker_heartbeat_age_seconds()
+        beat = self.worker_heartbeat()
+        heartbeat = beat.age_seconds
         sources.append(
             SourceStatus(
                 "paper_worker",
-                "absent" if heartbeat is None else "live",
-                "No heartbeat has ever been written by a worker in this deployment."
-                if heartbeat is None
-                else f"Last beat {heartbeat:.0f}s ago",
-                healthy=(
-                    heartbeat is not None
-                    and heartbeat <= self.settings.worker_heartbeat_stale_seconds
-                ),
+                "absent" if beat.state == "absent" else "live",
+                f"[{beat.state}/{beat.reason}] {beat.detail}",
+                healthy=beat.state == "ok",
                 latency_ms=None if heartbeat is None else round(heartbeat * 1000, 0),
             )
         )
+        record_kind = self.data_source
         sources.append(
             SourceStatus(
                 "trade_and_position_records",
-                "seed",
-                "Deterministic demonstration fixture (fiboki.api.seed). No paper "
-                "engine journal or broker session is provisioned in this "
-                "deployment, so these rows are generated, not measured.",
-                healthy=False,
+                record_kind,
+                self.trade_record_detail(),
+                healthy=record_kind == "live",
             )
         )
         return sources
-
-    @property
-    def data_source(self) -> str:
-        return "seed"
 
     # ------------------------------------------------------------- mode
 

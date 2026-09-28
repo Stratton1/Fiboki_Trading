@@ -8,11 +8,19 @@ against something. This module generates that something from a fixed seed, so
 runs are reproducible and Playwright can assert on values.
 
 It is labelled everywhere it surfaces. :attr:`Platform.data_source` reports
-``"seed"``, ``/api/system/services`` reports the datasets as absent, and the
-health endpoint is DEGRADED rather than OK. Nothing here pretends to be a
-measurement. Each generated trade still carries a real
-:class:`~fiboki.core.enums.Provenance` drawn from a realistic mix, because the
-whole point of the UI work is that a mixed-provenance table renders honestly.
+``"seed"``, every trading envelope carries a ``SourceNote`` of kind ``seed``,
+``/api/system/services`` reports the trade record as a fixture, and the health
+endpoint is DEGRADED rather than OK. Nothing here pretends to be a measurement.
+
+Every generated row carries a NON-EXECUTED provenance (see
+:data:`SEED_PROVENANCES`): backtest, walk-forward, out-of-sample or holdout. A
+fixture row is never labelled PAPER, SHADOW or BROKER_*, because the frontend
+renders the provenance chip verbatim and a PAPER chip on generated data is the
+exact claim this module exists not to make. The mix is still mixed, so a
+mixed-provenance table can be built and tested against it. There is no SEED
+member of :class:`~fiboki.core.enums.Provenance`: the enum has eight values the
+frontend enumerates, and the "this is a fixture" label lives on the envelope's
+``SourceNote``, not on the row.
 """
 from __future__ import annotations
 
@@ -23,7 +31,7 @@ from datetime import UTC, datetime, timedelta
 
 from fiboki.core.enums import Direction, ExitReason, Provenance
 
-__all__ = ["PositionRow", "SeedClock", "TradeRow", "generate"]
+__all__ = ["SEED_PROVENANCES", "PositionRow", "SeedClock", "TradeRow", "generate"]
 
 
 def _rand(seed: str, index: int) -> float:
@@ -79,16 +87,27 @@ class PositionRow:
     provenance: Provenance
 
 
-#: The provenance mix a real deployment in monitored paper would show: a large
-#: backtest history, a smaller walk-forward and out-of-sample record, and a
-#: young paper record. Rendering this correctly is the point of the exercise.
+#: The only provenances a fixture row may carry: the simulated, never-executed
+#: ones. Enforced by ``tests/unit/test_api_paper_journal.py``.
+SEED_PROVENANCES: frozenset[Provenance] = frozenset(
+    {
+        Provenance.BACKTEST,
+        Provenance.WALKFORWARD,
+        Provenance.OUT_OF_SAMPLE,
+        Provenance.HOLDOUT,
+    }
+)
+
+#: A research-shaped mix: a large backtest history and a smaller walk-forward,
+#: out-of-sample and holdout record. The buckets that used to be PAPER (22) and
+#: SHADOW (4) are BACKTEST now, in the same positions, so the research rows a
+#: given index produces are unchanged.
 _MIX: tuple[tuple[Provenance, int], ...] = (
     (Provenance.BACKTEST, 46),
     (Provenance.WALKFORWARD, 14),
     (Provenance.OUT_OF_SAMPLE, 10),
     (Provenance.HOLDOUT, 4),
-    (Provenance.PAPER, 22),
-    (Provenance.SHADOW, 4),
+    (Provenance.BACKTEST, 26),
 )
 
 
@@ -178,9 +197,10 @@ def generate(
                 stop_loss=round(entry * (1 - 0.006 * direction.sign), 5),
                 take_profit=round(entry * (1 + 0.014 * direction.sign), 5),
                 unrealised_pnl=round((mark - entry) * direction.sign * size * 10000, 2),
-                # Open positions exist only where execution happens. In a paper
-                # deployment they are PAPER; nothing here invents a broker fill.
-                provenance=Provenance.PAPER,
+                # A generated position is not an executed one. It is labelled
+                # BACKTEST, never PAPER, so no PAPER chip lands on fixture data;
+                # the envelope's SourceNote says "seed".
+                provenance=Provenance.BACKTEST,
             )
         )
     return trades, positions

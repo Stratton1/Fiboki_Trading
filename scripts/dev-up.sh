@@ -27,8 +27,13 @@ export FIBOKI_STATE_DIR="$ROOT/var"
 # exists() -- and so reported "live" -- while every read raised DataRootNotFound.
 export FIBOKI_DATA_ROOT="$ROOT/var/datastore"
 export FIBOKI_EXPERIMENT_DB="$ROOT/var/experiments.sqlite"
-# The worker owns this db; the API reads it so the heartbeat check is real.
+# The worker owns this db; the API opens it READ-ONLY and ages MAX(beat_at) from
+# its worker_heartbeat table (not the file mtime, which WAL mode leaves stale).
 export FIBOKI_WORKER_HEARTBEAT="${FIBOKI_WORKER_HEARTBEAT:-$HOME/.fiboki/state.db}"
+# Persisted PAPER sessions (one directory each: summary.json, trades.csv,
+# positions.csv). With none here the trading pages serve the labelled seed
+# fixture and say "seed"; they never show it as PAPER.
+export FIBOKI_PAPER_ROOT="${FIBOKI_PAPER_ROOT:-$ROOT/var/paper}"
 export FIBOKI_ALERT_LOG="$ROOT/var/alerts.jsonl"
 export FIBOKI_INCIDENT_LOG="$ROOT/var/incidents.jsonl"
 export FIBOKI_BUILD_SHA="$(git rev-parse --short HEAD 2>/dev/null || echo local)"

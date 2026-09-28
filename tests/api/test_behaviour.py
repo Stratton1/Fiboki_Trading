@@ -1,6 +1,8 @@
 """Behavioural tests for the failures the V1 audit found."""
 from __future__ import annotations
 
+from pathlib import Path
+
 import pytest
 from fastapi.testclient import TestClient
 
@@ -23,11 +25,39 @@ def test_trades_carry_provenance_per_row_not_per_page(admin_client):
         assert row["net_pnl"]["provenance"] == row["provenance"]
 
 
-def test_trades_view_actually_contains_paper_trades(admin_client):
-    """V1's 'Paper / Backtest' page contained zero paper trades."""
-    body = admin_client.get("/api/trading/trades?provenance=paper&limit=50").json()
-    assert body["items"]
-    assert {row["provenance"] for row in body["items"]} == {"paper"}
+def test_trades_view_actually_contains_paper_trades(tmp_path, monkeypatch):
+    """V1's 'Paper / Backtest' page contained zero paper trades.
+
+    PAPER rows come only from a real paper journal; the seed fixture is a
+    demonstration and is never allowed to carry the label. So this test runs
+    the API against the recorded journal fixture rather than the seed.
+    """
+    from tests.api.conftest import ADMIN_PW, _sha, login
+
+    journal = Path(__file__).resolve().parents[1] / "fixtures" / "paper_journal"
+    monkeypatch.setenv("FIBOKI_OPERATORS", f"joe:admin:{_sha(ADMIN_PW)}")
+    settings = load_settings(
+        {
+            "FIBOKI_STATE_DIR": str(tmp_path / "state"),
+            "FIBOKI_ALLOWED_ORIGINS": ORIGIN,
+            "FIBOKI_COOKIE_SECURE": "false",
+            "FIBOKI_SESSION_SECRET": "test-secret-not-for-production",
+            "FIBOKI_PAPER_ROOT": str(journal),
+        }
+    )
+    with TestClient(create_app(settings, configure_logs=False), base_url=ORIGIN) as client:
+        assert login(client, "joe", ADMIN_PW).status_code == 200
+        body = client.get("/api/trading/trades?provenance=paper&limit=50").json()
+        assert body["items"]
+        assert {row["provenance"] for row in body["items"]} == {"paper"}
+        assert body["source"]["kind"] == "live"
+
+
+def test_seed_fixture_never_claims_paper_provenance(admin_client):
+    """Demonstration rows must not wear the label of executed trades."""
+    body = admin_client.get("/api/trading/trades?limit=500").json()
+    assert body["source"]["kind"] == "seed"
+    assert "paper" not in {row["provenance"] for row in body["items"]}
 
 
 def test_mixed_provenance_result_is_flagged(admin_client):

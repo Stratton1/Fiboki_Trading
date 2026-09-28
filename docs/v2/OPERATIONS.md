@@ -137,9 +137,34 @@ If `FIBOKI_SESSION_SECRET` is unset, sessions are signed with a per-process key 
 invalidate them. That is correct for a development box and is reported as a health warning so
 nobody ships it.
 
-If the platform is running against `api/seed.py` rather than a provisioned data store,
-`data_source` reports `"seed"`, the services endpoint reports the datasets as **absent**, and
-health is **DEGRADED rather than OK**. Nothing in the seed pretends to be a measurement.
+### Where the API reads the worker heartbeat and the paper journal
+
+**Heartbeat.** `FIBOKI_WORKER_HEARTBEAT` names the worker's SQLite store (`scripts/dev-up.sh`
+sets `~/.fiboki/state.db`, the same file `fiboki worker run` writes). The API opens it
+read-only (`mode=ro`) and ages the newest `beat_at` in the `worker_heartbeat` table against its
+own clock; `/api/system/workers` lists every worker row with its own age. The file's mtime is
+**not** the heartbeat: the store runs in WAL mode, so a beat lands in `state.db-wal` and the main
+file can look hours old while the worker is alive. That was the false-DOWN. States: `absent`
+(no path, no file, no table, no rows, or unreadable; age `null`, and the detail names which),
+`stale` (age at or above `FIBOKI_WORKER_STALE_SECONDS`, default 120) and `ok`. Only a path that
+is not a SQLite file at all falls back to its mtime, and that row is labelled `mtime_fallback`.
+
+**Paper journal.** `FIBOKI_PAPER_ROOT` (default `<FIBOKI_STATE_DIR>/paper`; `dev-up.sh` sets
+`var/paper`) holds one directory per session in the format `scripts/run_paper_session.py`
+writes: `summary.json`, `trades.csv`, `positions.csv`. To publish a session to the
+workstation, run it with `--out var/paper/<name>` (or copy those three files there). The API
+reads them read-only, re-reads when a file changes, and serves trades, open positions, the
+account, exposure and drawdown from them with provenance `paper`, the session's own currency,
+and an `as_of` equal to the last replayed bar. Several sessions are separate accounts; the
+portfolio sums them and says so in a caveat. A session whose summary does not state a
+provenance, or whose rows disagree with it, is refused and listed, never assumed PAPER.
+
+**No journal.** Only when the paper root holds no session does the API serve the
+`api/seed.py` fixture. Then every trading envelope carries `source.kind = "seed"` and a
+`seed_fixture` caveat, no seed row carries an executed provenance (paper, shadow, broker), the
+account, drawdown and daily-loss figures are `null` rather than a made-up balance, and health
+is **DEGRADED rather than OK**. A journal that exists but none of whose sessions parse is
+`absent`, not seed: nothing is served.
 
 ## 5. The kill switch
 

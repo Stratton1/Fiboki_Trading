@@ -156,34 +156,72 @@ def services(platform: PlatformDep) -> Page[ServiceRow]:
 
 @router.get("/workers", response_model=Page[WorkerRow])
 def workers(platform: PlatformDep, settings: SettingsDep) -> Page[WorkerRow]:
-    age = platform.worker_heartbeat_age_seconds()
-    if age is None:
-        state, detail = (
-            "never_started",
-            "No heartbeat file has ever been written. This is NOT the same as a "
-            "worker that is running with nothing to do.",
+    """One row per worker in the worker's own ``worker_heartbeat`` table.
+
+    Read-only from the worker's SQLite store. The file's mtime is not used
+    unless the configured path is not a SQLite store at all, and then the row
+    says so (``mtime_fallback``). No heartbeat is ``never_started`` with a
+    ``null`` age, never ``0``.
+    """
+    reading = platform.worker_heartbeat()
+    stale_after = settings.worker_heartbeat_stale_seconds
+    provenance = settings.provenance_for_execution()
+    rows: list[WorkerRow] = []
+    if reading.state == "absent":
+        rows.append(
+            WorkerRow(
+                name="paper_engine",
+                state="never_started",
+                heartbeat_age=Figure.missing(
+                    provenance, unit="s", reason=f"No heartbeat ({reading.reason})."
+                ),
+                detail=f"[{reading.reason}] {reading.detail} This is NOT the same as a "
+                "worker that is running with nothing to do.",
+            )
         )
-    elif age > settings.worker_heartbeat_stale_seconds:
-        state, detail = ("stale", f"Last beat {age:.0f}s ago; stale threshold is "
-                                  f"{settings.worker_heartbeat_stale_seconds:.0f}s.")
+    elif reading.reason == "mtime_fallback":
+        rows.append(
+            WorkerRow(
+                name="heartbeat_file",
+                state="stale" if reading.state == "stale" else "running",
+                heartbeat_age=Figure(
+                    value=reading.age_seconds, provenance=provenance, unit="s",
+                    estimated=True,
+                ),
+                detail=f"[mtime_fallback] {reading.detail}",
+            )
+        )
     else:
-        state, detail = ("running", f"Last beat {age:.0f}s ago.")
-    rows = [
-        WorkerRow(
-            name="paper_engine",
-            state=state,
-            heartbeat_age=Figure(
-                value=age,
-                provenance=settings.provenance_for_execution(),
-                unit="s",
-            ),
-            detail=detail,
-        )
-    ]
+        for beat in reading.workers:
+            if beat.status in {"stopped", "crashed"}:
+                state = "stopped"
+            elif beat.age_seconds >= stale_after:
+                state = "stale"
+            else:
+                state = "running"
+            rows.append(
+                WorkerRow(
+                    name=beat.worker_id,
+                    state=state,
+                    heartbeat_age=Figure(
+                        value=beat.age_seconds,
+                        provenance=provenance,
+                        unit="s",
+                        as_of=beat.beat_at,
+                    ),
+                    detail=f"{beat.kind or 'worker'}: status {beat.status or 'unknown'}, "
+                    f"last beat {beat.age_seconds:.0f}s ago at "
+                    f"{beat.beat_at.isoformat()} (stale at {stale_after:.0f}s).",
+                )
+            )
     return Page(
         items=rows,
         total=len(rows),
-        source=_note("live", "Heartbeat file mtime, read at request time."),
+        source=_note(
+            "live" if reading.state != "absent" else "absent",
+            f"worker_heartbeat read-only from {reading.path or '<unset>'} "
+            f"({reading.reason}), aged by the API clock at request time.",
+        ),
     )
 
 
