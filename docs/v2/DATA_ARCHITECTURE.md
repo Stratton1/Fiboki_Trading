@@ -410,3 +410,38 @@ per instrument (`Instrument.typical_spread_pips`), and financing rates in `sim/p
 **static over the whole sample** in a period where real rates moved from roughly 0% to roughly
 5.5%. Both are stated on the profiles that carry them and both are closed by data the recorder is
 accumulating.
+
+## 13. Scheduled economic events
+
+`marketstate/fixtures/scheduled_events_official.json` is the only dated event data in the tree.
+It was fetched once, on 2026-09-28, from the publishers' own pages and committed;
+`marketstate/calendar.py` still performs no network access, so a backtest re-run later reads the
+same bytes. `load_official_calendar()` returns it as an `InMemoryEconomicCalendar`;
+`fiboki calendar status` prints its coverage and `fiboki calendar check <ISO-UTC> <CCY>` answers a
+single blackout question.
+
+| Source | Events | Local clock | Horizon |
+|---|---|---|---|
+| Federal Reserve, FOMC decisions | 32 | 14:00 New York | 2027 (Fed: dates tentative until the preceding meeting) |
+| ECB Governing Council decisions | 40 | 14:15 Frankfurt | 2028 |
+| Bank of England MPC | 32 | 12:00 London | 2027 |
+| Bank of Japan MPM | 32 | **no fixed time**: 09:00-14:00 Tokyo window | 2027 |
+| BLS Employment Situation (NFP) | 35 | 08:30 New York | Dec 2026 (no 2027 schedule published) |
+| BLS CPI | 35 | 08:30 New York | Dec 2026 |
+| ONS CPI / monthly GDP / labour market | 37 / 48 / 48 | 07:00 London | confirmed dates only (to Jan 2027 / Dec 2027 / Dec 2027) |
+
+Rules the file keeps: every `event_time` is UTC and re-derives from the stored `local_date`,
+`local_time` and `local_tz` (a test checks all of them, which is the DST bug class); scheduled
+times only, no actual/forecast/previous; the October 2025 NFP and CPI that were never published
+(US appropriations lapse) are absent, not invented; ONS provisional dates are dropped. Events with
+no fixed time carry `time_known: false` and a `window_end`, and blackout queries treat the whole
+span as the event.
+
+Coverage is **declared**: `2024-01-01` to the earliest last-published event across sources, so a
+span only counts as covered where every source is complete. Outside it, and for any currency
+other than USD, EUR, GBP and JPY, the calendar still answers "not in blackout".
+`EconomicCalendar.assert_populated(start, end, currencies)` is the guard; `run_validation` applies
+it to a supplied calendar and `scripts/run_paper_session.py` applies it by default
+(`--allow-empty-calendar` opts out and is recorded). Two gaps remain and are stated rather than
+hidden: the paper runtime does not yet feed the calendar to the risk gateway's `event_blackout`
+check, and no validation caller passes a calendar yet.

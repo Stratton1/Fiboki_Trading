@@ -14,6 +14,16 @@ a REAL seed document from ``research/strategies``, compiled through
 ``fiboki.strategy.compiler``, so the signals are the platform's own and not a
 stand-in written for this script.
 
+Economic calendar guard
+-----------------------
+Before replaying, the committed official calendar
+(``fiboki.marketstate.calendar.load_official_calendar``) must cover the replay's
+span and the instrument's currencies, or the script refuses with
+``USER_ACTION_NOTE``. ``--allow-empty-calendar`` is the explicit opt-out and is
+recorded in ``summary.json``. KNOWN GAP: the calendar is CHECKED here but not
+yet wired into the risk gateway (``build_replay_session`` takes no event
+source), so the gateway's ``event_blackout`` check still sees no events.
+
 PAPER ONLY. ``build_replay_session`` constructs its ``ExecutionService`` with
 ``ExecutionMode.PAPER`` and a ``PaperBroker``; there is no argument here that
 could widen that, and none of the five live controls is touched.
@@ -66,6 +76,11 @@ from fiboki.core.enums import Timeframe  # noqa: E402
 from fiboki.core.money import IdentityFxSource  # noqa: E402
 from fiboki.data.schema import DatasetKind  # noqa: E402
 from fiboki.data.store import DataStore  # noqa: E402
+from fiboki.marketstate.calendar import (  # noqa: E402
+    CalendarError,
+    instrument_currencies,
+    load_official_calendar,
+)
 from fiboki.portfolio.sizing import SizingPolicy  # noqa: E402
 from fiboki.risk.limits import PAPER_LIMITS  # noqa: E402
 from fiboki.sim.profiles import IG_REALISTIC  # noqa: E402
@@ -172,6 +187,36 @@ def _write_csv(path: Path, records: list[Any]) -> int:
     return len(rows)
 
 
+def _calendar_guard(symbol: str, ohlc: pd.DataFrame, *, allow_empty: bool) -> dict[str, Any]:
+    """Refuse to replay blind through scheduled events unless explicitly allowed."""
+    calendar = load_official_calendar()
+    cov = calendar.coverage()
+    record: dict[str, Any] = {
+        "source": "fiboki.marketstate.calendar.load_official_calendar",
+        "declared_start": str(cov.declared_start),
+        "declared_end": str(cov.declared_end),
+        "currencies": list(cov.currencies),
+        "replay_start": ohlc.index[0].isoformat(),
+        "replay_end": ohlc.index[-1].isoformat(),
+        "allow_empty_calendar": allow_empty,
+        "wired_into_gateway": False,
+    }
+    try:
+        calendar.assert_populated(
+            start=ohlc.index[0], end=ohlc.index[-1], currencies=instrument_currencies(symbol)
+        )
+        record["covered"] = True
+    except CalendarError as exc:
+        record["covered"] = False
+        if not allow_empty:
+            raise SystemExit(
+                f"refusing to replay {symbol}: {exc}\n"
+                "Pass --allow-empty-calendar to replay anyway (recorded in summary.json)."
+            ) from exc
+        print(f"  WARNING calendar does not cover this replay: {str(exc).splitlines()[0]}")
+    return record
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--data-root", type=Path, default=REPO / "var" / "datastore")
@@ -194,6 +239,14 @@ def main(argv: list[str] | None = None) -> int:
         default=REPO / "research" / "reports" / "paper_session_xauusd_h4",
     )
     parser.add_argument("--store-db", type=Path, default=REPO / "var" / "paper" / "session.sqlite")
+    parser.add_argument(
+        "--allow-empty-calendar",
+        action="store_true",
+        help=(
+            "Replay even when the official economic calendar does not cover the "
+            "replay span or the instrument's currencies. Recorded in summary.json."
+        ),
+    )
     args = parser.parse_args(argv)
 
     timeframe = Timeframe(args.timeframe.upper())
@@ -205,6 +258,8 @@ def main(argv: list[str] | None = None) -> int:
     ohlc = frame[["open", "high", "low", "close"]].astype(float)
     if args.bars:
         ohlc = ohlc.iloc[: args.bars]
+
+    args.calendar_guard = _calendar_guard(symbol, ohlc, allow_empty=args.allow_empty_calendar)
 
     document = StrategyDocument.from_json(
         (REPO / "research" / "strategies" / f"{args.strategy}.json").read_text(
@@ -335,6 +390,7 @@ def _report(
         "losses": n_trades - wins,
         "win_rate_pct": round(100.0 * wins / n_trades, 2) if n_trades else None,
         "open_positions_at_end": n_open,
+        "economic_calendar": getattr(args, "calendar_guard", None),
         **summary,
     }
     (args.out / "summary.json").write_text(

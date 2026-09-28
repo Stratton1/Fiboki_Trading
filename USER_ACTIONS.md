@@ -48,13 +48,18 @@ This is the single highest-value thing you can start today, and its value is pro
 
 Once P1 gives you a practice token, point the recorder at OANDA's pricing stream and leave it running. In six months you will have the only dataset that actually predicts your fills.
 
-### P3. Supply an economic-events feed, or accept trading through the news
+### P3. Extend the economic calendar beyond 2024 and four currencies, and wire it in
 
-`src/fiboki/marketstate/calendar.py` ships the taxonomy (21 recurring event types — FOMC, NFP, CPI, ECB, BoE and the rest) and a complete blackout implementation, but **no dated events and no network access**. Until a feed is loaded every blackout query returns "not in blackout", which is the dangerous default: backtests and paper bots trade straight through FOMC and NFP.
+Since 2026-09-28 `src/fiboki/marketstate/fixtures/scheduled_events_official.json` carries 339 dated, scheduled events taken only from the publishers' own pages: FOMC, ECB, Bank of England and Bank of Japan decisions, US NFP and CPI (BLS), and UK CPI, monthly GDP and labour-market releases (ONS). `load_official_calendar()` loads it; `fiboki calendar status` shows what it covers. There is still **no network access** in the module.
 
-Candidate feeds: ForexFactory export, Econoday, Trading Economics, FRED release dates, or your broker's own calendar. Licensing is yours to check — several forbid redistribution.
+What remains yours:
 
-One trap worth knowing: feeds return *revised* actuals for historical dates, not the print the market traded. Any backtest conditioned on "actual versus forecast" is optimistic unless the feed preserves first prints. `EconomicCalendar.assert_populated()` exists as the guard for any pipeline that must not run blind.
+1. **Before 2024 and other currencies.** The fixture is declared complete from 2024-01-01 to 2026-12-04 and for USD, EUR, GBP and JPY only. Outside that, blackout queries still answer "not in blackout", so a backtest over 2005-2023, or on AUD, CAD, CHF or NZD pairs, trades straight through FOMC and NFP. Extend it from official sources (central bank and statistics-office archives) in the same shape; commercial aggregators such as ForexFactory and Investing.com forbid automated extraction.
+2. **Refresh before the declared end.** Future dates are schedules and can move (the Fed marks each date tentative until the preceding meeting; the 2025 US appropriations lapse cancelled a month of NFP and CPI). Rebuild the file before 2026-12-04 and whenever a publisher revises its calendar.
+3. **Wire it in.** Paper sessions (`scripts/run_paper_session.py`) now refuse to replay a span the calendar does not cover unless `--allow-empty-calendar`, and `run_validation` refuses an empty or non-covering calendar unless `allow_empty_calendar=True`. But the paper runtime does not yet pass the calendar to the risk gateway's `event_blackout` check, and no validation caller (including campaigns) passes one yet. Until both are wired, the guard proves coverage and nothing is actually blacked out.
+4. **Impact choice.** Every fixture event is `high`, including UK labour and monthly GDP, which the recurring taxonomy rates `medium`. Lower them if you disagree.
+
+One trap still worth knowing: feeds return *revised* actuals for historical dates, not the print the market traded. The official fixture stores no figures at all, only scheduled times; any future feed with actuals is optimistic unless it preserves first prints.
 
 ### P4. Provide the full historical data store
 

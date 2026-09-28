@@ -17,6 +17,14 @@ What this module refuses to let a caller do
 * **Silently convert currency.** An FX source must be supplied whenever the
   account currency differs from the instrument's quote currency; there is no
   1.0 default.
+* **Run an event blackout against a calendar that cannot answer.** A supplied
+  ``calendar`` must be populated, span the bars and know the instrument's
+  currencies, or the run refuses with
+  ``fiboki.marketstate.calendar.USER_ACTION_NOTE``, unless the caller passes
+  ``allow_empty_calendar=True``. KNOWN GAP: with ``calendar=None`` (every
+  current caller, including ``discovery.campaign.run_cell``) no blackout is
+  applied at all; a document that declares one gets a logged WARNING, not a
+  refusal, because refusing would stop every existing campaign.
 
 What it does NOT do
 -------------------
@@ -26,6 +34,9 @@ and the record of it is the point.
 """
 from __future__ import annotations
 
+import hashlib
+import json
+import logging
 from collections.abc import Iterable, Mapping
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -36,6 +47,7 @@ import pandas as pd
 from fiboki.core.enums import Timeframe
 from fiboki.core.instruments import get as get_instrument
 from fiboki.core.money import FxRateSource, IdentityFxSource
+from fiboki.marketstate.calendar import EconomicCalendar, instrument_currencies
 from fiboki.strategy.dsl import StrategyDocument
 from fiboki.validation.engine_evaluator import (
     EngineEvaluator,
@@ -48,6 +60,18 @@ from fiboki.validation.ladder import LadderConfig, ValidationLadder
 from fiboki.validation.report import ValidationReport
 
 __all__ = ["ValidationRun", "run_validation"]
+
+_log = logging.getLogger(__name__)
+
+
+def _declares_calendar_blackout(document: StrategyDocument) -> bool:
+    ev = document.events
+    return int(ev.block_minutes_before) > 0 or int(ev.block_minutes_after) > 0
+
+
+def _calendar_digest(calendar: EconomicCalendar) -> str:
+    blob = json.dumps([e.to_dict() for e in calendar.all_events()], sort_keys=True)
+    return hashlib.sha256(blob.encode("utf-8")).hexdigest()[:16]
 
 
 @dataclass(frozen=True, slots=True)
@@ -97,6 +121,8 @@ def run_validation(
     experiment_id: str = "",
     actor: str = "",
     notes: str = "",
+    calendar: EconomicCalendar | None = None,
+    allow_empty_calendar: bool = False,
 ) -> ValidationRun:
     """Run every rung of the ladder against the real engine and return the report.
 
@@ -104,6 +130,11 @@ def run_validation(
     ledger is the one piece of state that MUST outlive a single run. A registry
     created inside this function would give every process a fresh, unspent
     holdout, which is exactly the property the registry exists to deny.
+
+    ``calendar`` is handed to the engine as its blackout source. Before
+    anything runs it must pass ``assert_populated`` over the bars' span and
+    the instrument's currencies; ``allow_empty_calendar=True`` is the explicit,
+    recorded opt-out.
     """
     tf = Timeframe(timeframe) if not isinstance(timeframe, Timeframe) else timeframe
     symbol = instrument.upper()
@@ -120,6 +151,28 @@ def run_validation(
             )
         fx = IdentityFxSource()
         fx_label = fx_label or f"identity({spec.quote}=={account_ccy.upper()})"
+
+    if calendar is not None and not allow_empty_calendar:
+        # Raises CalendarError carrying USER_ACTION_NOTE: an empty or
+        # non-covering calendar would answer "not in blackout" for every bar.
+        calendar.assert_populated(
+            start=bars.index[0],
+            end=bars.index[-1],
+            currencies=instrument_currencies(symbol),
+        )
+    if calendar is None and _declares_calendar_blackout(document):
+        _log.warning(
+            "validation without an economic calendar: %s declares an event "
+            "blackout but none will be applied; results trade through every "
+            "scheduled release",
+            document.strategy_id,
+            extra={"strategy_id": document.strategy_id, "instrument": symbol},
+        )
+    if calendar is not None and cache_dir is not None:
+        # The evaluation cache key does not include the blackout source, so a
+        # calendar run must never share a directory with a no-calendar run (or
+        # with a different calendar): it would be served the other's answers.
+        cache_dir = Path(cache_dir) / f"calendar-{_calendar_digest(calendar)}"
 
     config = EvaluatorConfig(
         instrument=symbol,
@@ -138,6 +191,7 @@ def run_validation(
         fx=fx,
         fx_label=fx_label or type(fx).__name__,
         cache=EvaluationCache(cache_dir),
+        blackout=calendar,
     )
 
     # The segment is fixed from the DATA, before a single evaluation runs, and

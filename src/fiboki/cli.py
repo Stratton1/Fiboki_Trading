@@ -74,6 +74,10 @@ worker_app = typer.Typer(help="Worker processes: run and inspect.", no_args_is_h
 system_app = typer.Typer(help="Health and diagnostics.", no_args_is_help=True)
 broker_app = typer.Typer(help="Venue status and reconciliation.", no_args_is_help=True)
 killswitch_app = typer.Typer(help="Pause, flatten, and status.", no_args_is_help=True)
+calendar_app = typer.Typer(
+    help="Economic calendar: coverage of the official fixture, blackout checks.",
+    no_args_is_help=True,
+)
 
 app.add_typer(data_app, name="data")
 app.add_typer(research_app, name="research")
@@ -82,6 +86,7 @@ app.add_typer(worker_app, name="worker")
 app.add_typer(system_app, name="system")
 app.add_typer(broker_app, name="broker")
 app.add_typer(killswitch_app, name="killswitch")
+app.add_typer(calendar_app, name="calendar")
 
 
 # ---------------------------------------------------------------------------
@@ -1478,6 +1483,179 @@ def killswitch_status(
         )
 
     _emit(payload, as_json=as_json, render=_render)
+
+
+# ---------------------------------------------------------------------------
+# calendar
+# ---------------------------------------------------------------------------
+
+
+def _utc_arg(raw: str, what: str) -> Any:
+    import pandas as pd
+
+    try:
+        ts = pd.Timestamp(raw)
+    except (ValueError, TypeError):
+        _fail(f"{what} {raw!r} is not an ISO-8601 timestamp", EXIT_MISUSE)
+    if ts.tzinfo is None:
+        _fail(
+            f"{what} {raw!r} has no timezone. Give it in UTC, e.g. "
+            "2025-03-07T13:30:00Z; the calendar will not guess a zone.",
+            EXIT_MISUSE,
+        )
+    return ts.tz_convert("UTC")
+
+
+@calendar_app.command("status")
+def calendar_status(
+    start: str | None = typer.Option(None, "--start", help="ISO UTC start of a run to check coverage for."),
+    end: str | None = typer.Option(None, "--end", help="ISO UTC end of a run to check coverage for."),
+    fixture: Path | None = typer.Option(None, "--fixture", help="Alternative events file (default: the official fixture)."),
+    as_json: bool = typer.Option(False, "--json"),
+) -> None:
+    """What the official calendar actually knows. Exit 1 if it cannot cover --start..--end."""
+    from fiboki.marketstate.calendar import (
+        CalendarError,
+        load_official_calendar,
+        official_calendar_manifest,
+    )
+
+    try:
+        calendar = load_official_calendar(fixture)
+        manifest = official_calendar_manifest(fixture)
+    except CalendarError as exc:
+        _fail(str(exc))
+    cov = calendar.coverage()
+    per_source: dict[str, dict[str, Any]] = {}
+    for e in calendar.all_events():
+        row = per_source.setdefault(
+            e.source, {"n": 0, "currency": e.currency, "first": e.event_time, "last": e.event_time}
+        )
+        row["n"] += 1
+        row["last"] = e.event_time
+    covered: bool | None = None
+    if start is not None or end is not None:
+        if start is None or end is None:
+            _fail("--start and --end go together", EXIT_MISUSE)
+        covered = cov.covers(_utc_arg(start, "--start"), _utc_arg(end, "--end"))
+    payload = {
+        "coverage": cov.to_dict(),
+        "per_source": {
+            k: {**v, "first": str(v["first"]), "last": str(v["last"])} for k, v in per_source.items()
+        },
+        "retrieved_at": manifest.get("retrieved_at"),
+        "sources_skipped": manifest.get("sources_skipped", {}),
+        "requested": None if covered is None else {"start": start, "end": end, "covered": covered},
+    }
+
+    def _render() -> None:
+        console.print(
+            f"[bold]{cov.n_events}[/bold] events  {cov.first_event} .. {cov.last_event}"
+        )
+        console.print(
+            f"declared complete span  {cov.declared_start} .. {cov.declared_end}"
+        )
+        console.print(f"currencies  {', '.join(cov.currencies)}")
+        console.print(f"retrieved   {manifest.get('retrieved_at')}")
+        table = Table("source", "ccy", "n", "first", "last")
+        for key, row in sorted(per_source.items()):
+            table.add_row(key, row["currency"], str(row["n"]), str(row["first"]), str(row["last"]))
+        console.print(table)
+        for key, why in (manifest.get("sources_skipped") or {}).items():
+            _warn(f"skipped {key}: {why}")
+        if covered is True:
+            _ok(f"covers {start} .. {end}")
+        elif covered is False:
+            err_console.print(
+                f"[bold red]✗[/bold red] does NOT cover {start} .. {end}: blackout "
+                "queries outside the declared span answer False, i.e. trade through events"
+            )
+
+    _emit(payload, as_json=as_json, render=_render)
+    if not cov.is_populated or covered is False:
+        raise typer.Exit(EXIT_FAIL)
+
+
+@calendar_app.command("check")
+def calendar_check(
+    instant: str = typer.Argument(..., help="ISO-8601 UTC instant, e.g. 2025-03-07T13:30:00Z."),
+    ccy: str = typer.Argument(..., help="Currency (USD) or a registered instrument (EURUSD)."),
+    minutes_before: int = typer.Option(30, "--before", help="Blackout minutes before an event."),
+    minutes_after: int = typer.Option(30, "--after", help="Blackout minutes after an event."),
+    min_impact: str = typer.Option("high", "--min-impact"),
+    fixture: Path | None = typer.Option(None, "--fixture"),
+    as_json: bool = typer.Option(False, "--json"),
+) -> None:
+    """Is INSTANT in an event blackout for CCY, and why.
+
+    Exit 0 with an answer (in blackout or not); exit 1 when the calendar cannot
+    answer honestly (instant outside the declared span, or no events for the
+    currency), because "not in blackout" would then be a guess.
+    """
+    from fiboki.marketstate.calendar import (
+        CalendarError,
+        instrument_currencies,
+        load_official_calendar,
+    )
+
+    ts = _utc_arg(instant, "INSTANT")
+    code = ccy.upper()
+    try:
+        currencies = (code,) if len(code) == 3 else instrument_currencies(code)
+    except Exception as exc:  # unregistered instrument
+        _fail(f"{ccy!r} is neither a currency code nor a registered instrument: {exc}", EXIT_MISUSE)
+    try:
+        calendar = load_official_calendar(fixture)
+        events = calendar.events_near_currencies(
+            currencies, ts, minutes_before=minutes_before, minutes_after=minutes_after,
+            min_impact=min_impact,
+        )
+    except (CalendarError, ValueError) as exc:
+        _fail(str(exc), EXIT_MISUSE)
+    cov = calendar.coverage()
+    unknown: list[str] = []
+    if not cov.covers(ts, ts):
+        unknown.append(
+            f"{ts} is outside the declared span {cov.declared_start} .. {cov.declared_end}"
+        )
+    missing = sorted(set(currencies) - set(cov.currencies))
+    if missing:
+        unknown.append(f"no events at all for {missing}")
+    in_blackout = bool(events)
+    payload = {
+        "instant": ts.isoformat(),
+        "currencies": list(currencies),
+        "in_blackout": in_blackout,
+        "answer_trustworthy": not unknown,
+        "why_untrustworthy": unknown,
+        "window": {"minutes_before": minutes_before, "minutes_after": minutes_after,
+                   "min_impact": min_impact},
+        "events": [
+            {"event_time": e.event_time.isoformat(),
+             "window_end": None if e.window_end is None else e.window_end.isoformat(),
+             "currency": e.currency, "name": e.name, "source": e.source,
+             "source_url": e.source_url}
+            for e in events
+        ],
+    }
+
+    def _render() -> None:
+        if in_blackout:
+            console.print(f"[bold red]IN BLACKOUT[/bold red]  {ts} for {', '.join(currencies)}")
+            for e in events:
+                span = "" if e.window_end is None else f" .. {e.window_end} (time not fixed)"
+                console.print(f"  {e.currency} {e.name} @ {e.event_time}{span}  (source: {e.source})")
+        elif unknown:
+            console.print(f"[bold yellow]UNKNOWN[/bold yellow]  {ts} for {', '.join(currencies)}")
+        else:
+            _ok(f"not in blackout  {ts} for {', '.join(currencies)} "
+                f"(±{minutes_before}/{minutes_after} min, impact >= {min_impact})")
+        for why in unknown:
+            _warn(why)
+
+    _emit(payload, as_json=as_json, render=_render)
+    if unknown and not in_blackout:
+        raise typer.Exit(EXIT_FAIL)
 
 
 def main(argv: Sequence[str] | None = None) -> int:

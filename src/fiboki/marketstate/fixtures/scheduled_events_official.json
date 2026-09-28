@@ -1,0 +1,6327 @@
+{
+ "schema_version": "1.0.0",
+ "description": "Dated SCHEDULED economic events from OFFICIAL publishers only (central banks, BLS, ONS). Scheduled times only: no actual/forecast/previous values are stored, so nothing here can leak a realised figure into a backtest. All event_time values are UTC; local_date/local_time/local_tz record the publisher's own clock so every conversion can be re-derived.",
+ "retrieved_at": "2026-09-28",
+ "licence_note": "Dates are facts published by public bodies (Federal Reserve, ECB, Bank of England, Bank of Japan, US BLS, UK ONS under the Open Government Licence). No commercial aggregator (ForexFactory, Investing.com, Trading Economics, etc.) was used.",
+ "coverage": {
+  "declared_start": "2024-01-01T00:00:00+00:00",
+  "declared_end": "2026-12-04T13:30:00+00:00",
+  "rule": "declared_start: every source was enumerated from 2024-01-01, so the absence of an event after that instant is a fact. declared_end: the EARLIEST last-published event across sources, so a span is only reported as covered where every source is complete.",
+  "currencies": [
+   "EUR",
+   "GBP",
+   "JPY",
+   "USD"
+  ],
+  "not_covered": "Anything before 2024-01-01; any currency other than USD/EUR/GBP/JPY (AUD, CAD, CHF, NZD have no events); euro-area data releases (HICP flash, GDP); US data other than NFP and CPI; FOMC minutes and press conferences as separate events."
+ },
+ "taxonomy_extensions": {
+  "uk_gdp_monthly": "UK monthly GDP estimate (ONS). Not in recurring_economic_events.json; declared here."
+ },
+ "impact_note": "Every event is stored as impact=high, as specified for this fixture. The recurring taxonomy rates uk_employment as medium; blackout queries at min_impact=high therefore include the UK labour and monthly GDP releases.",
+ "sources_used": {
+  "fed_fomc": {
+   "authority": "Board of Governors of the Federal Reserve System",
+   "series": "FOMC scheduled meeting decisions (statement)",
+   "urls": [
+    "https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm"
+   ],
+   "time_rule": "14:00 America/New_York on the final day of each scheduled meeting (statement time; the page lists dates only, the 14:00 ET statement time is the Fed's standing practice)",
+   "method": "HTML fetched and parsed (fomc-meeting__month / fomc-meeting__date cells); cross-checked with WebFetch",
+   "exclusions": "2025-08-22 notation vote on the longer-run strategy statement excluded (not a scheduled rate decision). The Fed states every date is tentative until confirmed at the preceding meeting; 2027 events carry status 'tentative'.",
+   "n_events": 32,
+   "first_event": "2024-01-31T19:00:00+00:00",
+   "last_event": "2027-12-08T19:00:00+00:00"
+  },
+  "ecb_governing_council": {
+   "authority": "European Central Bank",
+   "series": "Governing Council monetary policy decisions",
+   "urls": [
+    "https://www.ecb.europa.eu/press/govcdec/mopo/html/index.en.html (per-year index_include pages for 2024, 2025, 2026)",
+    "https://www.ecb.europa.eu/press/calendars/mgcgc/html/index.en.html"
+   ],
+   "time_rule": "14:15 Europe/Berlin (CET/CEST) on the decision day",
+   "method": "Past: 'Monetary policy decisions' press releases (ecb.mpYYMMDD) from the decisions index; future: Day-2 'monetary policy meeting ... followed by press conference' rows of the meeting calendar",
+   "exclusions": "Non-monetary policy meetings and General Council meetings excluded.",
+   "n_events": 40,
+   "first_event": "2024-01-25T13:15:00+00:00",
+   "last_event": "2028-12-07T13:15:00+00:00"
+  },
+  "boe_mpc": {
+   "authority": "Bank of England",
+   "series": "MPC Bank Rate announcements",
+   "urls": [
+    "https://www.bankofengland.co.uk/monetary-policy/upcoming-mpc-dates",
+    "https://www.bankofengland.co.uk/monetary-policy-summary-and-minutes/{2024,2025}/{month}-{year}"
+   ],
+   "time_rule": "12:00 Europe/London",
+   "method": "2026-2027 from the 'confirmed dates' lists; 2024-2025 from the 'Published on' date of each Monetary Policy Summary and minutes page (months without an MPC redirect and were skipped)",
+   "exclusions": "",
+   "n_events": 32,
+   "first_event": "2024-02-01T12:00:00+00:00",
+   "last_event": "2027-12-16T12:00:00+00:00"
+  },
+  "boj_mpm": {
+   "authority": "Bank of Japan",
+   "series": "Monetary Policy Meeting decisions (final day of each MPM)",
+   "urls": [
+    "https://www.boj.or.jp/en/mopo/mpmsche_minu/index.htm",
+    "https://www.boj.or.jp/en/mopo/mpmsche_minu/past.htm"
+   ],
+   "time_rule": "NO FIXED TIME. time_known=false; event_time = 09:00 Asia/Tokyo (00:00Z) and window_end = 14:00 Asia/Tokyo (05:00Z), a deliberately conservative window: announcements usually land late morning JST but have run past noon",
+   "method": "HTML tables parsed; for held meetings the decision date was cross-checked against the statement PDF name (kYYMMDDa.pdf)",
+   "exclusions": "",
+   "n_events": 32,
+   "first_event": "2024-01-23T00:00:00+00:00",
+   "last_event": "2027-12-17T00:00:00+00:00"
+  },
+  "bls_empsit": {
+   "authority": "US Bureau of Labor Statistics",
+   "series": "The Employment Situation (NFP)",
+   "urls": [
+    "https://www.bls.gov/bls/news-release/empsit.htm",
+    "https://www.bls.gov/schedule/news_release/empsit.htm"
+   ],
+   "time_rule": "08:30 America/New_York",
+   "method": "bls.gov refuses scripted HTTP (403), so dates were read with WebFetch: archive release links (empsit_MMDDYYYY.htm, dates encoded in the URL) and the published schedule table (which states 08:30 AM)",
+   "exclusions": "October 2025 Employment Situation was not published (2025 lapse in appropriations); September 2025 data released 2025-11-20. BLS has not published a 2027 schedule (bls.gov/schedule/2027/home.htm returned 404).",
+   "n_events": 35,
+   "first_event": "2024-01-05T13:30:00+00:00",
+   "last_event": "2026-12-04T13:30:00+00:00"
+  },
+  "bls_cpi": {
+   "authority": "US Bureau of Labor Statistics",
+   "series": "Consumer Price Index",
+   "urls": [
+    "https://www.bls.gov/bls/news-release/cpi.htm",
+    "https://www.bls.gov/schedule/news_release/cpi.htm"
+   ],
+   "time_rule": "08:30 America/New_York",
+   "method": "As bls_empsit (cpi_MMDDYYYY.htm archive links plus the schedule table)",
+   "exclusions": "October 2025 CPI was not published (2025 lapse in appropriations); September 2025 CPI released 2025-10-24. No 2027 schedule published.",
+   "n_events": 35,
+   "first_event": "2024-01-11T13:30:00+00:00",
+   "last_event": "2026-12-10T13:30:00+00:00"
+  },
+  "ons_cpi": {
+   "authority": "Office for National Statistics",
+   "series": "Consumer price inflation, UK",
+   "urls": [
+    "https://api.beta.ons.gov.uk/v1/search/releases (the ONS release calendar's own API; Open Government Licence)"
+   ],
+   "time_rule": "07:00 Europe/London (the API returns UTC; every value was asserted to be 07:00 UK time)",
+   "method": "Published and CONFIRMED releases titled 'Consumer price inflation, UK: <Month YYYY>'; 'time series' companion releases and cancelled entries dropped",
+   "exclusions": "11 PROVISIONAL dates (2027-02 onwards) dropped: provisional ONS dates can move.",
+   "n_events": 37,
+   "first_event": "2024-01-17T07:00:00+00:00",
+   "last_event": "2027-01-20T07:00:00+00:00"
+  },
+  "ons_gdp_monthly": {
+   "authority": "Office for National Statistics",
+   "series": "GDP monthly estimate, UK",
+   "urls": [
+    "https://api.beta.ons.gov.uk/v1/search/releases"
+   ],
+   "time_rule": "07:00 Europe/London",
+   "method": "As ons_cpi",
+   "exclusions": "None provisional in range.",
+   "n_events": 48,
+   "first_event": "2024-01-12T07:00:00+00:00",
+   "last_event": "2027-12-10T07:00:00+00:00"
+  },
+  "ons_labour_market": {
+   "authority": "Office for National Statistics",
+   "series": "UK labour market (monthly bulletin)",
+   "urls": [
+    "https://api.beta.ons.gov.uk/v1/search/releases"
+   ],
+   "time_rule": "07:00 Europe/London",
+   "method": "As ons_cpi; titles vary ('UK labour market: <M>', 'UK Labour Market <M>'); every date cross-checked against the same-day 'Labour market in the regions of the UK' release",
+   "exclusions": "",
+   "n_events": 48,
+   "first_event": "2024-01-16T07:00:00+00:00",
+   "last_event": "2027-12-14T07:00:00+00:00"
+  }
+ },
+ "sources_skipped": {
+  "bls_2027": "BLS has not published a 2027 release schedule (404).",
+  "ons_provisional": "ONS provisional dates dropped (11 UK CPI dates in 2027).",
+  "aggregators": "ForexFactory / Investing.com / similar deliberately not used (terms forbid automated extraction)."
+ },
+ "events": [
+  {
+   "event_time": "2024-01-05T13:30:00+00:00",
+   "currency": "USD",
+   "name": "US Non-Farm Payrolls",
+   "event_type": "us_nfp",
+   "impact": "high",
+   "tags": [
+    "nfp"
+   ],
+   "source": "bls_empsit",
+   "source_url": "https://www.bls.gov/bls/news-release/empsit.htm",
+   "retrieved_at": "2026-09-28",
+   "status": "released",
+   "local_date": "2024-01-05",
+   "local_time": "08:30",
+   "local_tz": "America/New_York",
+   "time_known": true
+  },
+  {
+   "event_time": "2024-01-11T13:30:00+00:00",
+   "currency": "USD",
+   "name": "US CPI",
+   "event_type": "us_cpi",
+   "impact": "high",
+   "tags": [
+    "cpi"
+   ],
+   "source": "bls_cpi",
+   "source_url": "https://www.bls.gov/bls/news-release/cpi.htm",
+   "retrieved_at": "2026-09-28",
+   "status": "released",
+   "local_date": "2024-01-11",
+   "local_time": "08:30",
+   "local_tz": "America/New_York",
+   "time_known": true
+  },
+  {
+   "event_time": "2024-01-12T07:00:00+00:00",
+   "currency": "GBP",
+   "name": "UK GDP (monthly estimate)",
+   "event_type": "uk_gdp_monthly",
+   "impact": "high",
+   "tags": [
+    "gdp"
+   ],
+   "source": "ons_gdp_monthly",
+   "source_url": "https://www.ons.gov.uk/releases/gdpmonthlyestimateuknovember2023",
+   "retrieved_at": "2026-09-28",
+   "status": "released",
+   "local_date": "2024-01-12",
+   "local_time": "07:00",
+   "local_tz": "Europe/London",
+   "time_known": true
+  },
+  {
+   "event_time": "2024-01-16T07:00:00+00:00",
+   "currency": "GBP",
+   "name": "UK Labour Market Report",
+   "event_type": "uk_employment",
+   "impact": "high",
+   "tags": [
+    "employment"
+   ],
+   "source": "ons_labour_market",
+   "source_url": "https://www.ons.gov.uk/releases/uklabourmarketjanuary2024",
+   "retrieved_at": "2026-09-28",
+   "status": "released",
+   "local_date": "2024-01-16",
+   "local_time": "07:00",
+   "local_tz": "Europe/London",
+   "time_known": true
+  },
+  {
+   "event_time": "2024-01-17T07:00:00+00:00",
+   "currency": "GBP",
+   "name": "UK CPI",
+   "event_type": "uk_cpi",
+   "impact": "high",
+   "tags": [
+    "cpi"
+   ],
+   "source": "ons_cpi",
+   "source_url": "https://www.ons.gov.uk/releases/consumerpriceinflationukdecember2023",
+   "retrieved_at": "2026-09-28",
+   "status": "released",
+   "local_date": "2024-01-17",
+   "local_time": "07:00",
+   "local_tz": "Europe/London",
+   "time_known": true
+  },
+  {
+   "event_time": "2024-01-23T00:00:00+00:00",
+   "currency": "JPY",
+   "name": "Bank of Japan Rate Decision",
+   "event_type": "boj_rate_decision",
+   "impact": "high",
+   "tags": [
+    "central_bank_rate"
+   ],
+   "source": "boj_mpm",
+   "source_url": "https://www.boj.or.jp/en/mopo/mpmsche_minu/past.htm",
+   "retrieved_at": "2026-09-28",
+   "status": "held",
+   "local_date": "2024-01-23",
+   "local_time": "09:00",
+   "local_tz": "Asia/Tokyo",
+   "time_known": false,
+   "window_end": "2024-01-23T05:00:00+00:00",
+   "note": "BoJ announces on completion of the meeting; no fixed time. event_time is the START of a conservative 09:00-14:00 JST window and window_end its end."
+  },
+  {
+   "event_time": "2024-01-25T13:15:00+00:00",
+   "currency": "EUR",
+   "name": "ECB Rate Decision",
+   "event_type": "ecb_rate_decision",
+   "impact": "high",
+   "tags": [
+    "central_bank_rate"
+   ],
+   "source": "ecb_governing_council",
+   "source_url": "https://www.ecb.europa.eu/press/govcdec/mopo/html/index.en.html",
+   "retrieved_at": "2026-09-28",
+   "status": "held",
+   "local_date": "2024-01-25",
+   "local_time": "14:15",
+   "local_tz": "Europe/Berlin",
+   "time_known": true
+  },
+  {
+   "event_time": "2024-01-31T19:00:00+00:00",
+   "currency": "USD",
+   "name": "FOMC Rate Decision",
+   "event_type": "fomc_rate_decision",
+   "impact": "high",
+   "tags": [
+    "central_bank_rate"
+   ],
+   "source": "fed_fomc",
+   "source_url": "https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm",
+   "retrieved_at": "2026-09-28",
+   "status": "held",
+   "local_date": "2024-01-31",
+   "local_time": "14:00",
+   "local_tz": "America/New_York",
+   "time_known": true
+  },
+  {
+   "event_time": "2024-02-01T12:00:00+00:00",
+   "currency": "GBP",
+   "name": "Bank of England Rate Decision",
+   "event_type": "boe_rate_decision",
+   "impact": "high",
+   "tags": [
+    "central_bank_rate"
+   ],
+   "source": "boe_mpc",
+   "source_url": "https://www.bankofengland.co.uk/monetary-policy-summary-and-minutes/2024/february-2024",
+   "retrieved_at": "2026-09-28",
+   "status": "held",
+   "local_date": "2024-02-01",
+   "local_time": "12:00",
+   "local_tz": "Europe/London",
+   "time_known": true
+  },
+  {
+   "event_time": "2024-02-02T13:30:00+00:00",
+   "currency": "USD",
+   "name": "US Non-Farm Payrolls",
+   "event_type": "us_nfp",
+   "impact": "high",
+   "tags": [
+    "nfp"
+   ],
+   "source": "bls_empsit",
+   "source_url": "https://www.bls.gov/bls/news-release/empsit.htm",
+   "retrieved_at": "2026-09-28",
+   "status": "released",
+   "local_date": "2024-02-02",
+   "local_time": "08:30",
+   "local_tz": "America/New_York",
+   "time_known": true
+  },
+  {
+   "event_time": "2024-02-13T07:00:00+00:00",
+   "currency": "GBP",
+   "name": "UK Labour Market Report",
+   "event_type": "uk_employment",
+   "impact": "high",
+   "tags": [
+    "employment"
+   ],
+   "source": "ons_labour_market",
+   "source_url": "https://www.ons.gov.uk/releases/uklabourmarketfebruary2024",
+   "retrieved_at": "2026-09-28",
+   "status": "released",
+   "local_date": "2024-02-13",
+   "local_time": "07:00",
+   "local_tz": "Europe/London",
+   "time_known": true
+  },
+  {
+   "event_time": "2024-02-13T13:30:00+00:00",
+   "currency": "USD",
+   "name": "US CPI",
+   "event_type": "us_cpi",
+   "impact": "high",
+   "tags": [
+    "cpi"
+   ],
+   "source": "bls_cpi",
+   "source_url": "https://www.bls.gov/bls/news-release/cpi.htm",
+   "retrieved_at": "2026-09-28",
+   "status": "released",
+   "local_date": "2024-02-13",
+   "local_time": "08:30",
+   "local_tz": "America/New_York",
+   "time_known": true
+  },
+  {
+   "event_time": "2024-02-14T07:00:00+00:00",
+   "currency": "GBP",
+   "name": "UK CPI",
+   "event_type": "uk_cpi",
+   "impact": "high",
+   "tags": [
+    "cpi"
+   ],
+   "source": "ons_cpi",
+   "source_url": "https://www.ons.gov.uk/releases/consumerpriceinflationukjanuary2024",
+   "retrieved_at": "2026-09-28",
+   "status": "released",
+   "local_date": "2024-02-14",
+   "local_time": "07:00",
+   "local_tz": "Europe/London",
+   "time_known": true
+  },
+  {
+   "event_time": "2024-02-15T07:00:00+00:00",
+   "currency": "GBP",
+   "name": "UK GDP (monthly estimate)",
+   "event_type": "uk_gdp_monthly",
+   "impact": "high",
+   "tags": [
+    "gdp"
+   ],
+   "source": "ons_gdp_monthly",
+   "source_url": "https://www.ons.gov.uk/releases/gdpmonthlyestimateukdecember2023",
+   "retrieved_at": "2026-09-28",
+   "status": "released",
+   "local_date": "2024-02-15",
+   "local_time": "07:00",
+   "local_tz": "Europe/London",
+   "time_known": true
+  },
+  {
+   "event_time": "2024-03-07T13:15:00+00:00",
+   "currency": "EUR",
+   "name": "ECB Rate Decision",
+   "event_type": "ecb_rate_decision",
+   "impact": "high",
+   "tags": [
+    "central_bank_rate"
+   ],
+   "source": "ecb_governing_council",
+   "source_url": "https://www.ecb.europa.eu/press/govcdec/mopo/html/index.en.html",
+   "retrieved_at": "2026-09-28",
+   "status": "held",
+   "local_date": "2024-03-07",
+   "local_time": "14:15",
+   "local_tz": "Europe/Berlin",
+   "time_known": true
+  },
+  {
+   "event_time": "2024-03-08T13:30:00+00:00",
+   "currency": "USD",
+   "name": "US Non-Farm Payrolls",
+   "event_type": "us_nfp",
+   "impact": "high",
+   "tags": [
+    "nfp"
+   ],
+   "source": "bls_empsit",
+   "source_url": "https://www.bls.gov/bls/news-release/empsit.htm",
+   "retrieved_at": "2026-09-28",
+   "status": "released",
+   "local_date": "2024-03-08",
+   "local_time": "08:30",
+   "local_tz": "America/New_York",
+   "time_known": true
+  },
+  {
+   "event_time": "2024-03-12T07:00:00+00:00",
+   "currency": "GBP",
+   "name": "UK Labour Market Report",
+   "event_type": "uk_employment",
+   "impact": "high",
+   "tags": [
+    "employment"
+   ],
+   "source": "ons_labour_market",
+   "source_url": "https://www.ons.gov.uk/releases/uklabourmarketmarch2024",
+   "retrieved_at": "2026-09-28",
+   "status": "released",
+   "local_date": "2024-03-12",
+   "local_time": "07:00",
+   "local_tz": "Europe/London",
+   "time_known": true
+  },
+  {
+   "event_time": "2024-03-12T12:30:00+00:00",
+   "currency": "USD",
+   "name": "US CPI",
+   "event_type": "us_cpi",
+   "impact": "high",
+   "tags": [
+    "cpi"
+   ],
+   "source": "bls_cpi",
+   "source_url": "https://www.bls.gov/bls/news-release/cpi.htm",
+   "retrieved_at": "2026-09-28",
+   "status": "released",
+   "local_date": "2024-03-12",
+   "local_time": "08:30",
+   "local_tz": "America/New_York",
+   "time_known": true
+  },
+  {
+   "event_time": "2024-03-13T07:00:00+00:00",
+   "currency": "GBP",
+   "name": "UK GDP (monthly estimate)",
+   "event_type": "uk_gdp_monthly",
+   "impact": "high",
+   "tags": [
+    "gdp"
+   ],
+   "source": "ons_gdp_monthly",
+   "source_url": "https://www.ons.gov.uk/releases/gdpmonthlyestimateukjanuary2024",
+   "retrieved_at": "2026-09-28",
+   "status": "released",
+   "local_date": "2024-03-13",
+   "local_time": "07:00",
+   "local_tz": "Europe/London",
+   "time_known": true
+  },
+  {
+   "event_time": "2024-03-19T00:00:00+00:00",
+   "currency": "JPY",
+   "name": "Bank of Japan Rate Decision",
+   "event_type": "boj_rate_decision",
+   "impact": "high",
+   "tags": [
+    "central_bank_rate"
+   ],
+   "source": "boj_mpm",
+   "source_url": "https://www.boj.or.jp/en/mopo/mpmsche_minu/past.htm",
+   "retrieved_at": "2026-09-28",
+   "status": "held",
+   "local_date": "2024-03-19",
+   "local_time": "09:00",
+   "local_tz": "Asia/Tokyo",
+   "time_known": false,
+   "window_end": "2024-03-19T05:00:00+00:00",
+   "note": "BoJ announces on completion of the meeting; no fixed time. event_time is the START of a conservative 09:00-14:00 JST window and window_end its end."
+  },
+  {
+   "event_time": "2024-03-20T07:00:00+00:00",
+   "currency": "GBP",
+   "name": "UK CPI",
+   "event_type": "uk_cpi",
+   "impact": "high",
+   "tags": [
+    "cpi"
+   ],
+   "source": "ons_cpi",
+   "source_url": "https://www.ons.gov.uk/releases/consumerpriceinflationukfebruary2024",
+   "retrieved_at": "2026-09-28",
+   "status": "released",
+   "local_date": "2024-03-20",
+   "local_time": "07:00",
+   "local_tz": "Europe/London",
+   "time_known": true
+  },
+  {
+   "event_time": "2024-03-20T18:00:00+00:00",
+   "currency": "USD",
+   "name": "FOMC Rate Decision",
+   "event_type": "fomc_rate_decision",
+   "impact": "high",
+   "tags": [
+    "central_bank_rate"
+   ],
+   "source": "fed_fomc",
+   "source_url": "https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm",
+   "retrieved_at": "2026-09-28",
+   "status": "held",
+   "local_date": "2024-03-20",
+   "local_time": "14:00",
+   "local_tz": "America/New_York",
+   "time_known": true
+  },
+  {
+   "event_time": "2024-03-21T12:00:00+00:00",
+   "currency": "GBP",
+   "name": "Bank of England Rate Decision",
+   "event_type": "boe_rate_decision",
+   "impact": "high",
+   "tags": [
+    "central_bank_rate"
+   ],
+   "source": "boe_mpc",
+   "source_url": "https://www.bankofengland.co.uk/monetary-policy-summary-and-minutes/2024/march-2024",
+   "retrieved_at": "2026-09-28",
+   "status": "held",
+   "local_date": "2024-03-21",
+   "local_time": "12:00",
+   "local_tz": "Europe/London",
+   "time_known": true
+  },
+  {
+   "event_time": "2024-04-05T12:30:00+00:00",
+   "currency": "USD",
+   "name": "US Non-Farm Payrolls",
+   "event_type": "us_nfp",
+   "impact": "high",
+   "tags": [
+    "nfp"
+   ],
+   "source": "bls_empsit",
+   "source_url": "https://www.bls.gov/bls/news-release/empsit.htm",
+   "retrieved_at": "2026-09-28",
+   "status": "released",
+   "local_date": "2024-04-05",
+   "local_time": "08:30",
+   "local_tz": "America/New_York",
+   "time_known": true
+  },
+  {
+   "event_time": "2024-04-10T12:30:00+00:00",
+   "currency": "USD",
+   "name": "US CPI",
+   "event_type": "us_cpi",
+   "impact": "high",
+   "tags": [
+    "cpi"
+   ],
+   "source": "bls_cpi",
+   "source_url": "https://www.bls.gov/bls/news-release/cpi.htm",
+   "retrieved_at": "2026-09-28",
+   "status": "released",
+   "local_date": "2024-04-10",
+   "local_time": "08:30",
+   "local_tz": "America/New_York",
+   "time_known": true
+  },
+  {
+   "event_time": "2024-04-11T12:15:00+00:00",
+   "currency": "EUR",
+   "name": "ECB Rate Decision",
+   "event_type": "ecb_rate_decision",
+   "impact": "high",
+   "tags": [
+    "central_bank_rate"
+   ],
+   "source": "ecb_governing_council",
+   "source_url": "https://www.ecb.europa.eu/press/govcdec/mopo/html/index.en.html",
+   "retrieved_at": "2026-09-28",
+   "status": "held",
+   "local_date": "2024-04-11",
+   "local_time": "14:15",
+   "local_tz": "Europe/Berlin",
+   "time_known": true
+  },
+  {
+   "event_time": "2024-04-12T06:00:00+00:00",
+   "currency": "GBP",
+   "name": "UK GDP (monthly estimate)",
+   "event_type": "uk_gdp_monthly",
+   "impact": "high",
+   "tags": [
+    "gdp"
+   ],
+   "source": "ons_gdp_monthly",
+   "source_url": "https://www.ons.gov.uk/releases/gdpmonthlyestimateukfebruary2024",
+   "retrieved_at": "2026-09-28",
+   "status": "released",
+   "local_date": "2024-04-12",
+   "local_time": "07:00",
+   "local_tz": "Europe/London",
+   "time_known": true
+  },
+  {
+   "event_time": "2024-04-16T06:00:00+00:00",
+   "currency": "GBP",
+   "name": "UK Labour Market Report",
+   "event_type": "uk_employment",
+   "impact": "high",
+   "tags": [
+    "employment"
+   ],
+   "source": "ons_labour_market",
+   "source_url": "https://www.ons.gov.uk/releases/uklabourmarketapril2024",
+   "retrieved_at": "2026-09-28",
+   "status": "released",
+   "local_date": "2024-04-16",
+   "local_time": "07:00",
+   "local_tz": "Europe/London",
+   "time_known": true
+  },
+  {
+   "event_time": "2024-04-17T06:00:00+00:00",
+   "currency": "GBP",
+   "name": "UK CPI",
+   "event_type": "uk_cpi",
+   "impact": "high",
+   "tags": [
+    "cpi"
+   ],
+   "source": "ons_cpi",
+   "source_url": "https://www.ons.gov.uk/releases/consumerpriceinflationukmarch2024",
+   "retrieved_at": "2026-09-28",
+   "status": "released",
+   "local_date": "2024-04-17",
+   "local_time": "07:00",
+   "local_tz": "Europe/London",
+   "time_known": true
+  },
+  {
+   "event_time": "2024-04-26T00:00:00+00:00",
+   "currency": "JPY",
+   "name": "Bank of Japan Rate Decision",
+   "event_type": "boj_rate_decision",
+   "impact": "high",
+   "tags": [
+    "central_bank_rate"
+   ],
+   "source": "boj_mpm",
+   "source_url": "https://www.boj.or.jp/en/mopo/mpmsche_minu/past.htm",
+   "retrieved_at": "2026-09-28",
+   "status": "held",
+   "local_date": "2024-04-26",
+   "local_time": "09:00",
+   "local_tz": "Asia/Tokyo",
+   "time_known": false,
+   "window_end": "2024-04-26T05:00:00+00:00",
+   "note": "BoJ announces on completion of the meeting; no fixed time. event_time is the START of a conservative 09:00-14:00 JST window and window_end its end."
+  },
+  {
+   "event_time": "2024-05-01T18:00:00+00:00",
+   "currency": "USD",
+   "name": "FOMC Rate Decision",
+   "event_type": "fomc_rate_decision",
+   "impact": "high",
+   "tags": [
+    "central_bank_rate"
+   ],
+   "source": "fed_fomc",
+   "source_url": "https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm",
+   "retrieved_at": "2026-09-28",
+   "status": "held",
+   "local_date": "2024-05-01",
+   "local_time": "14:00",
+   "local_tz": "America/New_York",
+   "time_known": true
+  },
+  {
+   "event_time": "2024-05-03T12:30:00+00:00",
+   "currency": "USD",
+   "name": "US Non-Farm Payrolls",
+   "event_type": "us_nfp",
+   "impact": "high",
+   "tags": [
+    "nfp"
+   ],
+   "source": "bls_empsit",
+   "source_url": "https://www.bls.gov/bls/news-release/empsit.htm",
+   "retrieved_at": "2026-09-28",
+   "status": "released",
+   "local_date": "2024-05-03",
+   "local_time": "08:30",
+   "local_tz": "America/New_York",
+   "time_known": true
+  },
+  {
+   "event_time": "2024-05-09T11:00:00+00:00",
+   "currency": "GBP",
+   "name": "Bank of England Rate Decision",
+   "event_type": "boe_rate_decision",
+   "impact": "high",
+   "tags": [
+    "central_bank_rate"
+   ],
+   "source": "boe_mpc",
+   "source_url": "https://www.bankofengland.co.uk/monetary-policy-summary-and-minutes/2024/may-2024",
+   "retrieved_at": "2026-09-28",
+   "status": "held",
+   "local_date": "2024-05-09",
+   "local_time": "12:00",
+   "local_tz": "Europe/London",
+   "time_known": true
+  },
+  {
+   "event_time": "2024-05-10T06:00:00+00:00",
+   "currency": "GBP",
+   "name": "UK GDP (monthly estimate)",
+   "event_type": "uk_gdp_monthly",
+   "impact": "high",
+   "tags": [
+    "gdp"
+   ],
+   "source": "ons_gdp_monthly",
+   "source_url": "https://www.ons.gov.uk/releases/gdpmonthlyestimateukmarch2024",
+   "retrieved_at": "2026-09-28",
+   "status": "released",
+   "local_date": "2024-05-10",
+   "local_time": "07:00",
+   "local_tz": "Europe/London",
+   "time_known": true
+  },
+  {
+   "event_time": "2024-05-14T06:00:00+00:00",
+   "currency": "GBP",
+   "name": "UK Labour Market Report",
+   "event_type": "uk_employment",
+   "impact": "high",
+   "tags": [
+    "employment"
+   ],
+   "source": "ons_labour_market",
+   "source_url": "https://www.ons.gov.uk/releases/uklabourmarketmay2024",
+   "retrieved_at": "2026-09-28",
+   "status": "released",
+   "local_date": "2024-05-14",
+   "local_time": "07:00",
+   "local_tz": "Europe/London",
+   "time_known": true
+  },
+  {
+   "event_time": "2024-05-15T12:30:00+00:00",
+   "currency": "USD",
+   "name": "US CPI",
+   "event_type": "us_cpi",
+   "impact": "high",
+   "tags": [
+    "cpi"
+   ],
+   "source": "bls_cpi",
+   "source_url": "https://www.bls.gov/bls/news-release/cpi.htm",
+   "retrieved_at": "2026-09-28",
+   "status": "released",
+   "local_date": "2024-05-15",
+   "local_time": "08:30",
+   "local_tz": "America/New_York",
+   "time_known": true
+  },
+  {
+   "event_time": "2024-05-22T06:00:00+00:00",
+   "currency": "GBP",
+   "name": "UK CPI",
+   "event_type": "uk_cpi",
+   "impact": "high",
+   "tags": [
+    "cpi"
+   ],
+   "source": "ons_cpi",
+   "source_url": "https://www.ons.gov.uk/releases/consumerpriceinflationukapril2024",
+   "retrieved_at": "2026-09-28",
+   "status": "released",
+   "local_date": "2024-05-22",
+   "local_time": "07:00",
+   "local_tz": "Europe/London",
+   "time_known": true
+  },
+  {
+   "event_time": "2024-06-06T12:15:00+00:00",
+   "currency": "EUR",
+   "name": "ECB Rate Decision",
+   "event_type": "ecb_rate_decision",
+   "impact": "high",
+   "tags": [
+    "central_bank_rate"
+   ],
+   "source": "ecb_governing_council",
+   "source_url": "https://www.ecb.europa.eu/press/govcdec/mopo/html/index.en.html",
+   "retrieved_at": "2026-09-28",
+   "status": "held",
+   "local_date": "2024-06-06",
+   "local_time": "14:15",
+   "local_tz": "Europe/Berlin",
+   "time_known": true
+  },
+  {
+   "event_time": "2024-06-07T12:30:00+00:00",
+   "currency": "USD",
+   "name": "US Non-Farm Payrolls",
+   "event_type": "us_nfp",
+   "impact": "high",
+   "tags": [
+    "nfp"
+   ],
+   "source": "bls_empsit",
+   "source_url": "https://www.bls.gov/bls/news-release/empsit.htm",
+   "retrieved_at": "2026-09-28",
+   "status": "released",
+   "local_date": "2024-06-07",
+   "local_time": "08:30",
+   "local_tz": "America/New_York",
+   "time_known": true
+  },
+  {
+   "event_time": "2024-06-11T06:00:00+00:00",
+   "currency": "GBP",
+   "name": "UK Labour Market Report",
+   "event_type": "uk_employment",
+   "impact": "high",
+   "tags": [
+    "employment"
+   ],
+   "source": "ons_labour_market",
+   "source_url": "https://www.ons.gov.uk/releases/uklabourmarketjune2024",
+   "retrieved_at": "2026-09-28",
+   "status": "released",
+   "local_date": "2024-06-11",
+   "local_time": "07:00",
+   "local_tz": "Europe/London",
+   "time_known": true
+  },
+  {
+   "event_time": "2024-06-12T06:00:00+00:00",
+   "currency": "GBP",
+   "name": "UK GDP (monthly estimate)",
+   "event_type": "uk_gdp_monthly",
+   "impact": "high",
+   "tags": [
+    "gdp"
+   ],
+   "source": "ons_gdp_monthly",
+   "source_url": "https://www.ons.gov.uk/releases/gdpmonthlyestimateukapril2024",
+   "retrieved_at": "2026-09-28",
+   "status": "released",
+   "local_date": "2024-06-12",
+   "local_time": "07:00",
+   "local_tz": "Europe/London",
+   "time_known": true
+  },
+  {
+   "event_time": "2024-06-12T12:30:00+00:00",
+   "currency": "USD",
+   "name": "US CPI",
+   "event_type": "us_cpi",
+   "impact": "high",
+   "tags": [
+    "cpi"
+   ],
+   "source": "bls_cpi",
+   "source_url": "https://www.bls.gov/bls/news-release/cpi.htm",
+   "retrieved_at": "2026-09-28",
+   "status": "released",
+   "local_date": "2024-06-12",
+   "local_time": "08:30",
+   "local_tz": "America/New_York",
+   "time_known": true
+  },
+  {
+   "event_time": "2024-06-12T18:00:00+00:00",
+   "currency": "USD",
+   "name": "FOMC Rate Decision",
+   "event_type": "fomc_rate_decision",
+   "impact": "high",
+   "tags": [
+    "central_bank_rate"
+   ],
+   "source": "fed_fomc",
+   "source_url": "https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm",
+   "retrieved_at": "2026-09-28",
+   "status": "held",
+   "local_date": "2024-06-12",
+   "local_time": "14:00",
+   "local_tz": "America/New_York",
+   "time_known": true
+  },
+  {
+   "event_time": "2024-06-14T00:00:00+00:00",
+   "currency": "JPY",
+   "name": "Bank of Japan Rate Decision",
+   "event_type": "boj_rate_decision",
+   "impact": "high",
+   "tags": [
+    "central_bank_rate"
+   ],
+   "source": "boj_mpm",
+   "source_url": "https://www.boj.or.jp/en/mopo/mpmsche_minu/past.htm",
+   "retrieved_at": "2026-09-28",
+   "status": "held",
+   "local_date": "2024-06-14",
+   "local_time": "09:00",
+   "local_tz": "Asia/Tokyo",
+   "time_known": false,
+   "window_end": "2024-06-14T05:00:00+00:00",
+   "note": "BoJ announces on completion of the meeting; no fixed time. event_time is the START of a conservative 09:00-14:00 JST window and window_end its end."
+  },
+  {
+   "event_time": "2024-06-19T06:00:00+00:00",
+   "currency": "GBP",
+   "name": "UK CPI",
+   "event_type": "uk_cpi",
+   "impact": "high",
+   "tags": [
+    "cpi"
+   ],
+   "source": "ons_cpi",
+   "source_url": "https://www.ons.gov.uk/releases/consumerpriceinflationukmay2024",
+   "retrieved_at": "2026-09-28",
+   "status": "released",
+   "local_date": "2024-06-19",
+   "local_time": "07:00",
+   "local_tz": "Europe/London",
+   "time_known": true
+  },
+  {
+   "event_time": "2024-06-20T11:00:00+00:00",
+   "currency": "GBP",
+   "name": "Bank of England Rate Decision",
+   "event_type": "boe_rate_decision",
+   "impact": "high",
+   "tags": [
+    "central_bank_rate"
+   ],
+   "source": "boe_mpc",
+   "source_url": "https://www.bankofengland.co.uk/monetary-policy-summary-and-minutes/2024/june-2024",
+   "retrieved_at": "2026-09-28",
+   "status": "held",
+   "local_date": "2024-06-20",
+   "local_time": "12:00",
+   "local_tz": "Europe/London",
+   "time_known": true
+  },
+  {
+   "event_time": "2024-07-05T12:30:00+00:00",
+   "currency": "USD",
+   "name": "US Non-Farm Payrolls",
+   "event_type": "us_nfp",
+   "impact": "high",
+   "tags": [
+    "nfp"
+   ],
+   "source": "bls_empsit",
+   "source_url": "https://www.bls.gov/bls/news-release/empsit.htm",
+   "retrieved_at": "2026-09-28",
+   "status": "released",
+   "local_date": "2024-07-05",
+   "local_time": "08:30",
+   "local_tz": "America/New_York",
+   "time_known": true
+  },
+  {
+   "event_time": "2024-07-11T06:00:00+00:00",
+   "currency": "GBP",
+   "name": "UK GDP (monthly estimate)",
+   "event_type": "uk_gdp_monthly",
+   "impact": "high",
+   "tags": [
+    "gdp"
+   ],
+   "source": "ons_gdp_monthly",
+   "source_url": "https://www.ons.gov.uk/releases/gdpmonthlyestimateukmay2024",
+   "retrieved_at": "2026-09-28",
+   "status": "released",
+   "local_date": "2024-07-11",
+   "local_time": "07:00",
+   "local_tz": "Europe/London",
+   "time_known": true
+  },
+  {
+   "event_time": "2024-07-11T12:30:00+00:00",
+   "currency": "USD",
+   "name": "US CPI",
+   "event_type": "us_cpi",
+   "impact": "high",
+   "tags": [
+    "cpi"
+   ],
+   "source": "bls_cpi",
+   "source_url": "https://www.bls.gov/bls/news-release/cpi.htm",
+   "retrieved_at": "2026-09-28",
+   "status": "released",
+   "local_date": "2024-07-11",
+   "local_time": "08:30",
+   "local_tz": "America/New_York",
+   "time_known": true
+  },
+  {
+   "event_time": "2024-07-17T06:00:00+00:00",
+   "currency": "GBP",
+   "name": "UK CPI",
+   "event_type": "uk_cpi",
+   "impact": "high",
+   "tags": [
+    "cpi"
+   ],
+   "source": "ons_cpi",
+   "source_url": "https://www.ons.gov.uk/releases/consumerpriceinflationukjune2024",
+   "retrieved_at": "2026-09-28",
+   "status": "released",
+   "local_date": "2024-07-17",
+   "local_time": "07:00",
+   "local_tz": "Europe/London",
+   "time_known": true
+  },
+  {
+   "event_time": "2024-07-18T06:00:00+00:00",
+   "currency": "GBP",
+   "name": "UK Labour Market Report",
+   "event_type": "uk_employment",
+   "impact": "high",
+   "tags": [
+    "employment"
+   ],
+   "source": "ons_labour_market",
+   "source_url": "https://www.ons.gov.uk/releases/uklabourmarketjuly2024",
+   "retrieved_at": "2026-09-28",
+   "status": "released",
+   "local_date": "2024-07-18",
+   "local_time": "07:00",
+   "local_tz": "Europe/London",
+   "time_known": true
+  },
+  {
+   "event_time": "2024-07-18T12:15:00+00:00",
+   "currency": "EUR",
+   "name": "ECB Rate Decision",
+   "event_type": "ecb_rate_decision",
+   "impact": "high",
+   "tags": [
+    "central_bank_rate"
+   ],
+   "source": "ecb_governing_council",
+   "source_url": "https://www.ecb.europa.eu/press/govcdec/mopo/html/index.en.html",
+   "retrieved_at": "2026-09-28",
+   "status": "held",
+   "local_date": "2024-07-18",
+   "local_time": "14:15",
+   "local_tz": "Europe/Berlin",
+   "time_known": true
+  },
+  {
+   "event_time": "2024-07-31T00:00:00+00:00",
+   "currency": "JPY",
+   "name": "Bank of Japan Rate Decision",
+   "event_type": "boj_rate_decision",
+   "impact": "high",
+   "tags": [
+    "central_bank_rate"
+   ],
+   "source": "boj_mpm",
+   "source_url": "https://www.boj.or.jp/en/mopo/mpmsche_minu/past.htm",
+   "retrieved_at": "2026-09-28",
+   "status": "held",
+   "local_date": "2024-07-31",
+   "local_time": "09:00",
+   "local_tz": "Asia/Tokyo",
+   "time_known": false,
+   "window_end": "2024-07-31T05:00:00+00:00",
+   "note": "BoJ announces on completion of the meeting; no fixed time. event_time is the START of a conservative 09:00-14:00 JST window and window_end its end."
+  },
+  {
+   "event_time": "2024-07-31T18:00:00+00:00",
+   "currency": "USD",
+   "name": "FOMC Rate Decision",
+   "event_type": "fomc_rate_decision",
+   "impact": "high",
+   "tags": [
+    "central_bank_rate"
+   ],
+   "source": "fed_fomc",
+   "source_url": "https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm",
+   "retrieved_at": "2026-09-28",
+   "status": "held",
+   "local_date": "2024-07-31",
+   "local_time": "14:00",
+   "local_tz": "America/New_York",
+   "time_known": true
+  },
+  {
+   "event_time": "2024-08-01T11:00:00+00:00",
+   "currency": "GBP",
+   "name": "Bank of England Rate Decision",
+   "event_type": "boe_rate_decision",
+   "impact": "high",
+   "tags": [
+    "central_bank_rate"
+   ],
+   "source": "boe_mpc",
+   "source_url": "https://www.bankofengland.co.uk/monetary-policy-summary-and-minutes/2024/august-2024",
+   "retrieved_at": "2026-09-28",
+   "status": "held",
+   "local_date": "2024-08-01",
+   "local_time": "12:00",
+   "local_tz": "Europe/London",
+   "time_known": true
+  },
+  {
+   "event_time": "2024-08-02T12:30:00+00:00",
+   "currency": "USD",
+   "name": "US Non-Farm Payrolls",
+   "event_type": "us_nfp",
+   "impact": "high",
+   "tags": [
+    "nfp"
+   ],
+   "source": "bls_empsit",
+   "source_url": "https://www.bls.gov/bls/news-release/empsit.htm",
+   "retrieved_at": "2026-09-28",
+   "status": "released",
+   "local_date": "2024-08-02",
+   "local_time": "08:30",
+   "local_tz": "America/New_York",
+   "time_known": true
+  },
+  {
+   "event_time": "2024-08-13T06:00:00+00:00",
+   "currency": "GBP",
+   "name": "UK Labour Market Report",
+   "event_type": "uk_employment",
+   "impact": "high",
+   "tags": [
+    "employment"
+   ],
+   "source": "ons_labour_market",
+   "source_url": "https://www.ons.gov.uk/releases/uklabourmarketaugust2024",
+   "retrieved_at": "2026-09-28",
+   "status": "released",
+   "local_date": "2024-08-13",
+   "local_time": "07:00",
+   "local_tz": "Europe/London",
+   "time_known": true
+  },
+  {
+   "event_time": "2024-08-14T06:00:00+00:00",
+   "currency": "GBP",
+   "name": "UK CPI",
+   "event_type": "uk_cpi",
+   "impact": "high",
+   "tags": [
+    "cpi"
+   ],
+   "source": "ons_cpi",
+   "source_url": "https://www.ons.gov.uk/releases/consumerpriceinflationukjuly2024",
+   "retrieved_at": "2026-09-28",
+   "status": "released",
+   "local_date": "2024-08-14",
+   "local_time": "07:00",
+   "local_tz": "Europe/London",
+   "time_known": true
+  },
+  {
+   "event_time": "2024-08-14T12:30:00+00:00",
+   "currency": "USD",
+   "name": "US CPI",
+   "event_type": "us_cpi",
+   "impact": "high",
+   "tags": [
+    "cpi"
+   ],
+   "source": "bls_cpi",
+   "source_url": "https://www.bls.gov/bls/news-release/cpi.htm",
+   "retrieved_at": "2026-09-28",
+   "status": "released",
+   "local_date": "2024-08-14",
+   "local_time": "08:30",
+   "local_tz": "America/New_York",
+   "time_known": true
+  },
+  {
+   "event_time": "2024-08-15T06:00:00+00:00",
+   "currency": "GBP",
+   "name": "UK GDP (monthly estimate)",
+   "event_type": "uk_gdp_monthly",
+   "impact": "high",
+   "tags": [
+    "gdp"
+   ],
+   "source": "ons_gdp_monthly",
+   "source_url": "https://www.ons.gov.uk/releases/gdpmonthlyestimateukjune2024",
+   "retrieved_at": "2026-09-28",
+   "status": "released",
+   "local_date": "2024-08-15",
+   "local_time": "07:00",
+   "local_tz": "Europe/London",
+   "time_known": true
+  },
+  {
+   "event_time": "2024-09-06T12:30:00+00:00",
+   "currency": "USD",
+   "name": "US Non-Farm Payrolls",
+   "event_type": "us_nfp",
+   "impact": "high",
+   "tags": [
+    "nfp"
+   ],
+   "source": "bls_empsit",
+   "source_url": "https://www.bls.gov/bls/news-release/empsit.htm",
+   "retrieved_at": "2026-09-28",
+   "status": "released",
+   "local_date": "2024-09-06",
+   "local_time": "08:30",
+   "local_tz": "America/New_York",
+   "time_known": true
+  },
+  {
+   "event_time": "2024-09-10T06:00:00+00:00",
+   "currency": "GBP",
+   "name": "UK Labour Market Report",
+   "event_type": "uk_employment",
+   "impact": "high",
+   "tags": [
+    "employment"
+   ],
+   "source": "ons_labour_market",
+   "source_url": "https://www.ons.gov.uk/releases/uklabourmarketseptember2024",
+   "retrieved_at": "2026-09-28",
+   "status": "released",
+   "local_date": "2024-09-10",
+   "local_time": "07:00",
+   "local_tz": "Europe/London",
+   "time_known": true
+  },
+  {
+   "event_time": "2024-09-11T06:00:00+00:00",
+   "currency": "GBP",
+   "name": "UK GDP (monthly estimate)",
+   "event_type": "uk_gdp_monthly",
+   "impact": "high",
+   "tags": [
+    "gdp"
+   ],
+   "source": "ons_gdp_monthly",
+   "source_url": "https://www.ons.gov.uk/releases/gdpmonthlyestimateukjuly2024",
+   "retrieved_at": "2026-09-28",
+   "status": "released",
+   "local_date": "2024-09-11",
+   "local_time": "07:00",
+   "local_tz": "Europe/London",
+   "time_known": true
+  },
+  {
+   "event_time": "2024-09-11T12:30:00+00:00",
+   "currency": "USD",
+   "name": "US CPI",
+   "event_type": "us_cpi",
+   "impact": "high",
+   "tags": [
+    "cpi"
+   ],
+   "source": "bls_cpi",
+   "source_url": "https://www.bls.gov/bls/news-release/cpi.htm",
+   "retrieved_at": "2026-09-28",
+   "status": "released",
+   "local_date": "2024-09-11",
+   "local_time": "08:30",
+   "local_tz": "America/New_York",
+   "time_known": true
+  },
+  {
+   "event_time": "2024-09-12T12:15:00+00:00",
+   "currency": "EUR",
+   "name": "ECB Rate Decision",
+   "event_type": "ecb_rate_decision",
+   "impact": "high",
+   "tags": [
+    "central_bank_rate"
+   ],
+   "source": "ecb_governing_council",
+   "source_url": "https://www.ecb.europa.eu/press/govcdec/mopo/html/index.en.html",
+   "retrieved_at": "2026-09-28",
+   "status": "held",
+   "local_date": "2024-09-12",
+   "local_time": "14:15",
+   "local_tz": "Europe/Berlin",
+   "time_known": true
+  },
+  {
+   "event_time": "2024-09-18T06:00:00+00:00",
+   "currency": "GBP",
+   "name": "UK CPI",
+   "event_type": "uk_cpi",
+   "impact": "high",
+   "tags": [
+    "cpi"
+   ],
+   "source": "ons_cpi",
+   "source_url": "https://www.ons.gov.uk/releases/consumerpriceinflationukaugust2024",
+   "retrieved_at": "2026-09-28",
+   "status": "released",
+   "local_date": "2024-09-18",
+   "local_time": "07:00",
+   "local_tz": "Europe/London",
+   "time_known": true
+  },
+  {
+   "event_time": "2024-09-18T18:00:00+00:00",
+   "currency": "USD",
+   "name": "FOMC Rate Decision",
+   "event_type": "fomc_rate_decision",
+   "impact": "high",
+   "tags": [
+    "central_bank_rate"
+   ],
+   "source": "fed_fomc",
+   "source_url": "https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm",
+   "retrieved_at": "2026-09-28",
+   "status": "held",
+   "local_date": "2024-09-18",
+   "local_time": "14:00",
+   "local_tz": "America/New_York",
+   "time_known": true
+  },
+  {
+   "event_time": "2024-09-19T11:00:00+00:00",
+   "currency": "GBP",
+   "name": "Bank of England Rate Decision",
+   "event_type": "boe_rate_decision",
+   "impact": "high",
+   "tags": [
+    "central_bank_rate"
+   ],
+   "source": "boe_mpc",
+   "source_url": "https://www.bankofengland.co.uk/monetary-policy-summary-and-minutes/2024/september-2024",
+   "retrieved_at": "2026-09-28",
+   "status": "held",
+   "local_date": "2024-09-19",
+   "local_time": "12:00",
+   "local_tz": "Europe/London",
+   "time_known": true
+  },
+  {
+   "event_time": "2024-09-20T00:00:00+00:00",
+   "currency": "JPY",
+   "name": "Bank of Japan Rate Decision",
+   "event_type": "boj_rate_decision",
+   "impact": "high",
+   "tags": [
+    "central_bank_rate"
+   ],
+   "source": "boj_mpm",
+   "source_url": "https://www.boj.or.jp/en/mopo/mpmsche_minu/past.htm",
+   "retrieved_at": "2026-09-28",
+   "status": "held",
+   "local_date": "2024-09-20",
+   "local_time": "09:00",
+   "local_tz": "Asia/Tokyo",
+   "time_known": false,
+   "window_end": "2024-09-20T05:00:00+00:00",
+   "note": "BoJ announces on completion of the meeting; no fixed time. event_time is the START of a conservative 09:00-14:00 JST window and window_end its end."
+  },
+  {
+   "event_time": "2024-10-04T12:30:00+00:00",
+   "currency": "USD",
+   "name": "US Non-Farm Payrolls",
+   "event_type": "us_nfp",
+   "impact": "high",
+   "tags": [
+    "nfp"
+   ],
+   "source": "bls_empsit",
+   "source_url": "https://www.bls.gov/bls/news-release/empsit.htm",
+   "retrieved_at": "2026-09-28",
+   "status": "released",
+   "local_date": "2024-10-04",
+   "local_time": "08:30",
+   "local_tz": "America/New_York",
+   "time_known": true
+  },
+  {
+   "event_time": "2024-10-10T12:30:00+00:00",
+   "currency": "USD",
+   "name": "US CPI",
+   "event_type": "us_cpi",
+   "impact": "high",
+   "tags": [
+    "cpi"
+   ],
+   "source": "bls_cpi",
+   "source_url": "https://www.bls.gov/bls/news-release/cpi.htm",
+   "retrieved_at": "2026-09-28",
+   "status": "released",
+   "local_date": "2024-10-10",
+   "local_time": "08:30",
+   "local_tz": "America/New_York",
+   "time_known": true
+  },
+  {
+   "event_time": "2024-10-11T06:00:00+00:00",
+   "currency": "GBP",
+   "name": "UK GDP (monthly estimate)",
+   "event_type": "uk_gdp_monthly",
+   "impact": "high",
+   "tags": [
+    "gdp"
+   ],
+   "source": "ons_gdp_monthly",
+   "source_url": "https://www.ons.gov.uk/releases/gdpmonthlyestimateukaugust2024",
+   "retrieved_at": "2026-09-28",
+   "status": "released",
+   "local_date": "2024-10-11",
+   "local_time": "07:00",
+   "local_tz": "Europe/London",
+   "time_known": true
+  },
+  {
+   "event_time": "2024-10-15T06:00:00+00:00",
+   "currency": "GBP",
+   "name": "UK Labour Market Report",
+   "event_type": "uk_employment",
+   "impact": "high",
+   "tags": [
+    "employment"
+   ],
+   "source": "ons_labour_market",
+   "source_url": "https://www.ons.gov.uk/releases/uklabourmarketoctober2024",
+   "retrieved_at": "2026-09-28",
+   "status": "released",
+   "local_date": "2024-10-15",
+   "local_time": "07:00",
+   "local_tz": "Europe/London",
+   "time_known": true
+  },
+  {
+   "event_time": "2024-10-16T06:00:00+00:00",
+   "currency": "GBP",
+   "name": "UK CPI",
+   "event_type": "uk_cpi",
+   "impact": "high",
+   "tags": [
+    "cpi"
+   ],
+   "source": "ons_cpi",
+   "source_url": "https://www.ons.gov.uk/releases/consumerpriceinflationukseptember2024",
+   "retrieved_at": "2026-09-28",
+   "status": "released",
+   "local_date": "2024-10-16",
+   "local_time": "07:00",
+   "local_tz": "Europe/London",
+   "time_known": true
+  },
+  {
+   "event_time": "2024-10-17T12:15:00+00:00",
+   "currency": "EUR",
+   "name": "ECB Rate Decision",
+   "event_type": "ecb_rate_decision",
+   "impact": "high",
+   "tags": [
+    "central_bank_rate"
+   ],
+   "source": "ecb_governing_council",
+   "source_url": "https://www.ecb.europa.eu/press/govcdec/mopo/html/index.en.html",
+   "retrieved_at": "2026-09-28",
+   "status": "held",
+   "local_date": "2024-10-17",
+   "local_time": "14:15",
+   "local_tz": "Europe/Berlin",
+   "time_known": true
+  },
+  {
+   "event_time": "2024-10-31T00:00:00+00:00",
+   "currency": "JPY",
+   "name": "Bank of Japan Rate Decision",
+   "event_type": "boj_rate_decision",
+   "impact": "high",
+   "tags": [
+    "central_bank_rate"
+   ],
+   "source": "boj_mpm",
+   "source_url": "https://www.boj.or.jp/en/mopo/mpmsche_minu/past.htm",
+   "retrieved_at": "2026-09-28",
+   "status": "held",
+   "local_date": "2024-10-31",
+   "local_time": "09:00",
+   "local_tz": "Asia/Tokyo",
+   "time_known": false,
+   "window_end": "2024-10-31T05:00:00+00:00",
+   "note": "BoJ announces on completion of the meeting; no fixed time. event_time is the START of a conservative 09:00-14:00 JST window and window_end its end."
+  },
+  {
+   "event_time": "2024-11-01T12:30:00+00:00",
+   "currency": "USD",
+   "name": "US Non-Farm Payrolls",
+   "event_type": "us_nfp",
+   "impact": "high",
+   "tags": [
+    "nfp"
+   ],
+   "source": "bls_empsit",
+   "source_url": "https://www.bls.gov/bls/news-release/empsit.htm",
+   "retrieved_at": "2026-09-28",
+   "status": "released",
+   "local_date": "2024-11-01",
+   "local_time": "08:30",
+   "local_tz": "America/New_York",
+   "time_known": true
+  },
+  {
+   "event_time": "2024-11-07T12:00:00+00:00",
+   "currency": "GBP",
+   "name": "Bank of England Rate Decision",
+   "event_type": "boe_rate_decision",
+   "impact": "high",
+   "tags": [
+    "central_bank_rate"
+   ],
+   "source": "boe_mpc",
+   "source_url": "https://www.bankofengland.co.uk/monetary-policy-summary-and-minutes/2024/november-2024",
+   "retrieved_at": "2026-09-28",
+   "status": "held",
+   "local_date": "2024-11-07",
+   "local_time": "12:00",
+   "local_tz": "Europe/London",
+   "time_known": true
+  },
+  {
+   "event_time": "2024-11-07T19:00:00+00:00",
+   "currency": "USD",
+   "name": "FOMC Rate Decision",
+   "event_type": "fomc_rate_decision",
+   "impact": "high",
+   "tags": [
+    "central_bank_rate"
+   ],
+   "source": "fed_fomc",
+   "source_url": "https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm",
+   "retrieved_at": "2026-09-28",
+   "status": "held",
+   "local_date": "2024-11-07",
+   "local_time": "14:00",
+   "local_tz": "America/New_York",
+   "time_known": true
+  },
+  {
+   "event_time": "2024-11-12T07:00:00+00:00",
+   "currency": "GBP",
+   "name": "UK Labour Market Report",
+   "event_type": "uk_employment",
+   "impact": "high",
+   "tags": [
+    "employment"
+   ],
+   "source": "ons_labour_market",
+   "source_url": "https://www.ons.gov.uk/releases/uklabourmarketnovember2024",
+   "retrieved_at": "2026-09-28",
+   "status": "released",
+   "local_date": "2024-11-12",
+   "local_time": "07:00",
+   "local_tz": "Europe/London",
+   "time_known": true
+  },
+  {
+   "event_time": "2024-11-13T13:30:00+00:00",
+   "currency": "USD",
+   "name": "US CPI",
+   "event_type": "us_cpi",
+   "impact": "high",
+   "tags": [
+    "cpi"
+   ],
+   "source": "bls_cpi",
+   "source_url": "https://www.bls.gov/bls/news-release/cpi.htm",
+   "retrieved_at": "2026-09-28",
+   "status": "released",
+   "local_date": "2024-11-13",
+   "local_time": "08:30",
+   "local_tz": "America/New_York",
+   "time_known": true
+  },
+  {
+   "event_time": "2024-11-15T07:00:00+00:00",
+   "currency": "GBP",
+   "name": "UK GDP (monthly estimate)",
+   "event_type": "uk_gdp_monthly",
+   "impact": "high",
+   "tags": [
+    "gdp"
+   ],
+   "source": "ons_gdp_monthly",
+   "source_url": "https://www.ons.gov.uk/releases/gdpmonthlyestimateukseptember2024",
+   "retrieved_at": "2026-09-28",
+   "status": "released",
+   "local_date": "2024-11-15",
+   "local_time": "07:00",
+   "local_tz": "Europe/London",
+   "time_known": true
+  },
+  {
+   "event_time": "2024-11-20T07:00:00+00:00",
+   "currency": "GBP",
+   "name": "UK CPI",
+   "event_type": "uk_cpi",
+   "impact": "high",
+   "tags": [
+    "cpi"
+   ],
+   "source": "ons_cpi",
+   "source_url": "https://www.ons.gov.uk/releases/consumerpriceinflationukoctober2024",
+   "retrieved_at": "2026-09-28",
+   "status": "released",
+   "local_date": "2024-11-20",
+   "local_time": "07:00",
+   "local_tz": "Europe/London",
+   "time_known": true
+  },
+  {
+   "event_time": "2024-12-06T13:30:00+00:00",
+   "currency": "USD",
+   "name": "US Non-Farm Payrolls",
+   "event_type": "us_nfp",
+   "impact": "high",
+   "tags": [
+    "nfp"
+   ],
+   "source": "bls_empsit",
+   "source_url": "https://www.bls.gov/bls/news-release/empsit.htm",
+   "retrieved_at": "2026-09-28",
+   "status": "released",
+   "local_date": "2024-12-06",
+   "local_time": "08:30",
+   "local_tz": "America/New_York",
+   "time_known": true
+  },
+  {
+   "event_time": "2024-12-11T13:30:00+00:00",
+   "currency": "USD",
+   "name": "US CPI",
+   "event_type": "us_cpi",
+   "impact": "high",
+   "tags": [
+    "cpi"
+   ],
+   "source": "bls_cpi",
+   "source_url": "https://www.bls.gov/bls/news-release/cpi.htm",
+   "retrieved_at": "2026-09-28",
+   "status": "released",
+   "local_date": "2024-12-11",
+   "local_time": "08:30",
+   "local_tz": "America/New_York",
+   "time_known": true
+  },
+  {
+   "event_time": "2024-12-12T13:15:00+00:00",
+   "currency": "EUR",
+   "name": "ECB Rate Decision",
+   "event_type": "ecb_rate_decision",
+   "impact": "high",
+   "tags": [
+    "central_bank_rate"
+   ],
+   "source": "ecb_governing_council",
+   "source_url": "https://www.ecb.europa.eu/press/govcdec/mopo/html/index.en.html",
+   "retrieved_at": "2026-09-28",
+   "status": "held",
+   "local_date": "2024-12-12",
+   "local_time": "14:15",
+   "local_tz": "Europe/Berlin",
+   "time_known": true
+  },
+  {
+   "event_time": "2024-12-13T07:00:00+00:00",
+   "currency": "GBP",
+   "name": "UK GDP (monthly estimate)",
+   "event_type": "uk_gdp_monthly",
+   "impact": "high",
+   "tags": [
+    "gdp"
+   ],
+   "source": "ons_gdp_monthly",
+   "source_url": "https://www.ons.gov.uk/releases/gdpmonthlyestimateukoctober2024",
+   "retrieved_at": "2026-09-28",
+   "status": "released",
+   "local_date": "2024-12-13",
+   "local_time": "07:00",
+   "local_tz": "Europe/London",
+   "time_known": true
+  },
+  {
+   "event_time": "2024-12-17T07:00:00+00:00",
+   "currency": "GBP",
+   "name": "UK Labour Market Report",
+   "event_type": "uk_employment",
+   "impact": "high",
+   "tags": [
+    "employment"
+   ],
+   "source": "ons_labour_market",
+   "source_url": "https://www.ons.gov.uk/releases/uklabourmarketdecember2024",
+   "retrieved_at": "2026-09-28",
+   "status": "released",
+   "local_date": "2024-12-17",
+   "local_time": "07:00",
+   "local_tz": "Europe/London",
+   "time_known": true
+  },
+  {
+   "event_time": "2024-12-18T07:00:00+00:00",
+   "currency": "GBP",
+   "name": "UK CPI",
+   "event_type": "uk_cpi",
+   "impact": "high",
+   "tags": [
+    "cpi"
+   ],
+   "source": "ons_cpi",
+   "source_url": "https://www.ons.gov.uk/releases/consumerpriceinflationuknovember2024",
+   "retrieved_at": "2026-09-28",
+   "status": "released",
+   "local_date": "2024-12-18",
+   "local_time": "07:00",
+   "local_tz": "Europe/London",
+   "time_known": true
+  },
+  {
+   "event_time": "2024-12-18T19:00:00+00:00",
+   "currency": "USD",
+   "name": "FOMC Rate Decision",
+   "event_type": "fomc_rate_decision",
+   "impact": "high",
+   "tags": [
+    "central_bank_rate"
+   ],
+   "source": "fed_fomc",
+   "source_url": "https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm",
+   "retrieved_at": "2026-09-28",
+   "status": "held",
+   "local_date": "2024-12-18",
+   "local_time": "14:00",
+   "local_tz": "America/New_York",
+   "time_known": true
+  },
+  {
+   "event_time": "2024-12-19T00:00:00+00:00",
+   "currency": "JPY",
+   "name": "Bank of Japan Rate Decision",
+   "event_type": "boj_rate_decision",
+   "impact": "high",
+   "tags": [
+    "central_bank_rate"
+   ],
+   "source": "boj_mpm",
+   "source_url": "https://www.boj.or.jp/en/mopo/mpmsche_minu/past.htm",
+   "retrieved_at": "2026-09-28",
+   "status": "held",
+   "local_date": "2024-12-19",
+   "local_time": "09:00",
+   "local_tz": "Asia/Tokyo",
+   "time_known": false,
+   "window_end": "2024-12-19T05:00:00+00:00",
+   "note": "BoJ announces on completion of the meeting; no fixed time. event_time is the START of a conservative 09:00-14:00 JST window and window_end its end."
+  },
+  {
+   "event_time": "2024-12-19T12:00:00+00:00",
+   "currency": "GBP",
+   "name": "Bank of England Rate Decision",
+   "event_type": "boe_rate_decision",
+   "impact": "high",
+   "tags": [
+    "central_bank_rate"
+   ],
+   "source": "boe_mpc",
+   "source_url": "https://www.bankofengland.co.uk/monetary-policy-summary-and-minutes/2024/december-2024",
+   "retrieved_at": "2026-09-28",
+   "status": "held",
+   "local_date": "2024-12-19",
+   "local_time": "12:00",
+   "local_tz": "Europe/London",
+   "time_known": true
+  },
+  {
+   "event_time": "2025-01-10T13:30:00+00:00",
+   "currency": "USD",
+   "name": "US Non-Farm Payrolls",
+   "event_type": "us_nfp",
+   "impact": "high",
+   "tags": [
+    "nfp"
+   ],
+   "source": "bls_empsit",
+   "source_url": "https://www.bls.gov/bls/news-release/empsit.htm",
+   "retrieved_at": "2026-09-28",
+   "status": "released",
+   "local_date": "2025-01-10",
+   "local_time": "08:30",
+   "local_tz": "America/New_York",
+   "time_known": true
+  },
+  {
+   "event_time": "2025-01-15T07:00:00+00:00",
+   "currency": "GBP",
+   "name": "UK CPI",
+   "event_type": "uk_cpi",
+   "impact": "high",
+   "tags": [
+    "cpi"
+   ],
+   "source": "ons_cpi",
+   "source_url": "https://www.ons.gov.uk/releases/consumerpriceinflationukdecember2024",
+   "retrieved_at": "2026-09-28",
+   "status": "released",
+   "local_date": "2025-01-15",
+   "local_time": "07:00",
+   "local_tz": "Europe/London",
+   "time_known": true
+  },
+  {
+   "event_time": "2025-01-15T13:30:00+00:00",
+   "currency": "USD",
+   "name": "US CPI",
+   "event_type": "us_cpi",
+   "impact": "high",
+   "tags": [
+    "cpi"
+   ],
+   "source": "bls_cpi",
+   "source_url": "https://www.bls.gov/bls/news-release/cpi.htm",
+   "retrieved_at": "2026-09-28",
+   "status": "released",
+   "local_date": "2025-01-15",
+   "local_time": "08:30",
+   "local_tz": "America/New_York",
+   "time_known": true
+  },
+  {
+   "event_time": "2025-01-16T07:00:00+00:00",
+   "currency": "GBP",
+   "name": "UK GDP (monthly estimate)",
+   "event_type": "uk_gdp_monthly",
+   "impact": "high",
+   "tags": [
+    "gdp"
+   ],
+   "source": "ons_gdp_monthly",
+   "source_url": "https://www.ons.gov.uk/releases/gdpmonthlyestimateuknovember2024",
+   "retrieved_at": "2026-09-28",
+   "status": "released",
+   "local_date": "2025-01-16",
+   "local_time": "07:00",
+   "local_tz": "Europe/London",
+   "time_known": true
+  },
+  {
+   "event_time": "2025-01-21T07:00:00+00:00",
+   "currency": "GBP",
+   "name": "UK Labour Market Report",
+   "event_type": "uk_employment",
+   "impact": "high",
+   "tags": [
+    "employment"
+   ],
+   "source": "ons_labour_market",
+   "source_url": "https://www.ons.gov.uk/releases/uklabourmarketjanuary2025",
+   "retrieved_at": "2026-09-28",
+   "status": "released",
+   "local_date": "2025-01-21",
+   "local_time": "07:00",
+   "local_tz": "Europe/London",
+   "time_known": true
+  },
+  {
+   "event_time": "2025-01-24T00:00:00+00:00",
+   "currency": "JPY",
+   "name": "Bank of Japan Rate Decision",
+   "event_type": "boj_rate_decision",
+   "impact": "high",
+   "tags": [
+    "central_bank_rate"
+   ],
+   "source": "boj_mpm",
+   "source_url": "https://www.boj.or.jp/en/mopo/mpmsche_minu/past.htm",
+   "retrieved_at": "2026-09-28",
+   "status": "held",
+   "local_date": "2025-01-24",
+   "local_time": "09:00",
+   "local_tz": "Asia/Tokyo",
+   "time_known": false,
+   "window_end": "2025-01-24T05:00:00+00:00",
+   "note": "BoJ announces on completion of the meeting; no fixed time. event_time is the START of a conservative 09:00-14:00 JST window and window_end its end."
+  },
+  {
+   "event_time": "2025-01-29T19:00:00+00:00",
+   "currency": "USD",
+   "name": "FOMC Rate Decision",
+   "event_type": "fomc_rate_decision",
+   "impact": "high",
+   "tags": [
+    "central_bank_rate"
+   ],
+   "source": "fed_fomc",
+   "source_url": "https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm",
+   "retrieved_at": "2026-09-28",
+   "status": "held",
+   "local_date": "2025-01-29",
+   "local_time": "14:00",
+   "local_tz": "America/New_York",
+   "time_known": true
+  },
+  {
+   "event_time": "2025-01-30T13:15:00+00:00",
+   "currency": "EUR",
+   "name": "ECB Rate Decision",
+   "event_type": "ecb_rate_decision",
+   "impact": "high",
+   "tags": [
+    "central_bank_rate"
+   ],
+   "source": "ecb_governing_council",
+   "source_url": "https://www.ecb.europa.eu/press/govcdec/mopo/html/index.en.html",
+   "retrieved_at": "2026-09-28",
+   "status": "held",
+   "local_date": "2025-01-30",
+   "local_time": "14:15",
+   "local_tz": "Europe/Berlin",
+   "time_known": true
+  },
+  {
+   "event_time": "2025-02-06T12:00:00+00:00",
+   "currency": "GBP",
+   "name": "Bank of England Rate Decision",
+   "event_type": "boe_rate_decision",
+   "impact": "high",
+   "tags": [
+    "central_bank_rate"
+   ],
+   "source": "boe_mpc",
+   "source_url": "https://www.bankofengland.co.uk/monetary-policy-summary-and-minutes/2025/february-2025",
+   "retrieved_at": "2026-09-28",
+   "status": "held",
+   "local_date": "2025-02-06",
+   "local_time": "12:00",
+   "local_tz": "Europe/London",
+   "time_known": true
+  },
+  {
+   "event_time": "2025-02-07T13:30:00+00:00",
+   "currency": "USD",
+   "name": "US Non-Farm Payrolls",
+   "event_type": "us_nfp",
+   "impact": "high",
+   "tags": [
+    "nfp"
+   ],
+   "source": "bls_empsit",
+   "source_url": "https://www.bls.gov/bls/news-release/empsit.htm",
+   "retrieved_at": "2026-09-28",
+   "status": "released",
+   "local_date": "2025-02-07",
+   "local_time": "08:30",
+   "local_tz": "America/New_York",
+   "time_known": true
+  },
+  {
+   "event_time": "2025-02-12T13:30:00+00:00",
+   "currency": "USD",
+   "name": "US CPI",
+   "event_type": "us_cpi",
+   "impact": "high",
+   "tags": [
+    "cpi"
+   ],
+   "source": "bls_cpi",
+   "source_url": "https://www.bls.gov/bls/news-release/cpi.htm",
+   "retrieved_at": "2026-09-28",
+   "status": "released",
+   "local_date": "2025-02-12",
+   "local_time": "08:30",
+   "local_tz": "America/New_York",
+   "time_known": true
+  },
+  {
+   "event_time": "2025-02-13T07:00:00+00:00",
+   "currency": "GBP",
+   "name": "UK GDP (monthly estimate)",
+   "event_type": "uk_gdp_monthly",
+   "impact": "high",
+   "tags": [
+    "gdp"
+   ],
+   "source": "ons_gdp_monthly",
+   "source_url": "https://www.ons.gov.uk/releases/gdpmonthlyestimateukdecember2024",
+   "retrieved_at": "2026-09-28",
+   "status": "released",
+   "local_date": "2025-02-13",
+   "local_time": "07:00",
+   "local_tz": "Europe/London",
+   "time_known": true
+  },
+  {
+   "event_time": "2025-02-18T07:00:00+00:00",
+   "currency": "GBP",
+   "name": "UK Labour Market Report",
+   "event_type": "uk_employment",
+   "impact": "high",
+   "tags": [
+    "employment"
+   ],
+   "source": "ons_labour_market",
+   "source_url": "https://www.ons.gov.uk/releases/uklabourmarketfebruary2025",
+   "retrieved_at": "2026-09-28",
+   "status": "released",
+   "local_date": "2025-02-18",
+   "local_time": "07:00",
+   "local_tz": "Europe/London",
+   "time_known": true
+  },
+  {
+   "event_time": "2025-02-19T07:00:00+00:00",
+   "currency": "GBP",
+   "name": "UK CPI",
+   "event_type": "uk_cpi",
+   "impact": "high",
+   "tags": [
+    "cpi"
+   ],
+   "source": "ons_cpi",
+   "source_url": "https://www.ons.gov.uk/releases/consumerpriceinflationukjanuary2025",
+   "retrieved_at": "2026-09-28",
+   "status": "released",
+   "local_date": "2025-02-19",
+   "local_time": "07:00",
+   "local_tz": "Europe/London",
+   "time_known": true
+  },
+  {
+   "event_time": "2025-03-06T13:15:00+00:00",
+   "currency": "EUR",
+   "name": "ECB Rate Decision",
+   "event_type": "ecb_rate_decision",
+   "impact": "high",
+   "tags": [
+    "central_bank_rate"
+   ],
+   "source": "ecb_governing_council",
+   "source_url": "https://www.ecb.europa.eu/press/govcdec/mopo/html/index.en.html",
+   "retrieved_at": "2026-09-28",
+   "status": "held",
+   "local_date": "2025-03-06",
+   "local_time": "14:15",
+   "local_tz": "Europe/Berlin",
+   "time_known": true
+  },
+  {
+   "event_time": "2025-03-07T13:30:00+00:00",
+   "currency": "USD",
+   "name": "US Non-Farm Payrolls",
+   "event_type": "us_nfp",
+   "impact": "high",
+   "tags": [
+    "nfp"
+   ],
+   "source": "bls_empsit",
+   "source_url": "https://www.bls.gov/bls/news-release/empsit.htm",
+   "retrieved_at": "2026-09-28",
+   "status": "released",
+   "local_date": "2025-03-07",
+   "local_time": "08:30",
+   "local_tz": "America/New_York",
+   "time_known": true
+  },
+  {
+   "event_time": "2025-03-12T12:30:00+00:00",
+   "currency": "USD",
+   "name": "US CPI",
+   "event_type": "us_cpi",
+   "impact": "high",
+   "tags": [
+    "cpi"
+   ],
+   "source": "bls_cpi",
+   "source_url": "https://www.bls.gov/bls/news-release/cpi.htm",
+   "retrieved_at": "2026-09-28",
+   "status": "released",
+   "local_date": "2025-03-12",
+   "local_time": "08:30",
+   "local_tz": "America/New_York",
+   "time_known": true
+  },
+  {
+   "event_time": "2025-03-14T07:00:00+00:00",
+   "currency": "GBP",
+   "name": "UK GDP (monthly estimate)",
+   "event_type": "uk_gdp_monthly",
+   "impact": "high",
+   "tags": [
+    "gdp"
+   ],
+   "source": "ons_gdp_monthly",
+   "source_url": "https://www.ons.gov.uk/releases/gdpmonthlyestimateukjanuary2025",
+   "retrieved_at": "2026-09-28",
+   "status": "released",
+   "local_date": "2025-03-14",
+   "local_time": "07:00",
+   "local_tz": "Europe/London",
+   "time_known": true
+  },
+  {
+   "event_time": "2025-03-19T00:00:00+00:00",
+   "currency": "JPY",
+   "name": "Bank of Japan Rate Decision",
+   "event_type": "boj_rate_decision",
+   "impact": "high",
+   "tags": [
+    "central_bank_rate"
+   ],
+   "source": "boj_mpm",
+   "source_url": "https://www.boj.or.jp/en/mopo/mpmsche_minu/past.htm",
+   "retrieved_at": "2026-09-28",
+   "status": "held",
+   "local_date": "2025-03-19",
+   "local_time": "09:00",
+   "local_tz": "Asia/Tokyo",
+   "time_known": false,
+   "window_end": "2025-03-19T05:00:00+00:00",
+   "note": "BoJ announces on completion of the meeting; no fixed time. event_time is the START of a conservative 09:00-14:00 JST window and window_end its end."
+  },
+  {
+   "event_time": "2025-03-19T18:00:00+00:00",
+   "currency": "USD",
+   "name": "FOMC Rate Decision",
+   "event_type": "fomc_rate_decision",
+   "impact": "high",
+   "tags": [
+    "central_bank_rate"
+   ],
+   "source": "fed_fomc",
+   "source_url": "https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm",
+   "retrieved_at": "2026-09-28",
+   "status": "held",
+   "local_date": "2025-03-19",
+   "local_time": "14:00",
+   "local_tz": "America/New_York",
+   "time_known": true
+  },
+  {
+   "event_time": "2025-03-20T07:00:00+00:00",
+   "currency": "GBP",
+   "name": "UK Labour Market Report",
+   "event_type": "uk_employment",
+   "impact": "high",
+   "tags": [
+    "employment"
+   ],
+   "source": "ons_labour_market",
+   "source_url": "https://www.ons.gov.uk/releases/uklabourmarketmarch2025",
+   "retrieved_at": "2026-09-28",
+   "status": "released",
+   "local_date": "2025-03-20",
+   "local_time": "07:00",
+   "local_tz": "Europe/London",
+   "time_known": true
+  },
+  {
+   "event_time": "2025-03-20T12:00:00+00:00",
+   "currency": "GBP",
+   "name": "Bank of England Rate Decision",
+   "event_type": "boe_rate_decision",
+   "impact": "high",
+   "tags": [
+    "central_bank_rate"
+   ],
+   "source": "boe_mpc",
+   "source_url": "https://www.bankofengland.co.uk/monetary-policy-summary-and-minutes/2025/march-2025",
+   "retrieved_at": "2026-09-28",
+   "status": "held",
+   "local_date": "2025-03-20",
+   "local_time": "12:00",
+   "local_tz": "Europe/London",
+   "time_known": true
+  },
+  {
+   "event_time": "2025-03-26T07:00:00+00:00",
+   "currency": "GBP",
+   "name": "UK CPI",
+   "event_type": "uk_cpi",
+   "impact": "high",
+   "tags": [
+    "cpi"
+   ],
+   "source": "ons_cpi",
+   "source_url": "https://www.ons.gov.uk/releases/consumerpriceinflationukfebruary2025",
+   "retrieved_at": "2026-09-28",
+   "status": "released",
+   "local_date": "2025-03-26",
+   "local_time": "07:00",
+   "local_tz": "Europe/London",
+   "time_known": true
+  },
+  {
+   "event_time": "2025-04-04T12:30:00+00:00",
+   "currency": "USD",
+   "name": "US Non-Farm Payrolls",
+   "event_type": "us_nfp",
+   "impact": "high",
+   "tags": [
+    "nfp"
+   ],
+   "source": "bls_empsit",
+   "source_url": "https://www.bls.gov/bls/news-release/empsit.htm",
+   "retrieved_at": "2026-09-28",
+   "status": "released",
+   "local_date": "2025-04-04",
+   "local_time": "08:30",
+   "local_tz": "America/New_York",
+   "time_known": true
+  },
+  {
+   "event_time": "2025-04-10T12:30:00+00:00",
+   "currency": "USD",
+   "name": "US CPI",
+   "event_type": "us_cpi",
+   "impact": "high",
+   "tags": [
+    "cpi"
+   ],
+   "source": "bls_cpi",
+   "source_url": "https://www.bls.gov/bls/news-release/cpi.htm",
+   "retrieved_at": "2026-09-28",
+   "status": "released",
+   "local_date": "2025-04-10",
+   "local_time": "08:30",
+   "local_tz": "America/New_York",
+   "time_known": true
+  },
+  {
+   "event_time": "2025-04-11T06:00:00+00:00",
+   "currency": "GBP",
+   "name": "UK GDP (monthly estimate)",
+   "event_type": "uk_gdp_monthly",
+   "impact": "high",
+   "tags": [
+    "gdp"
+   ],
+   "source": "ons_gdp_monthly",
+   "source_url": "https://www.ons.gov.uk/releases/gdpmonthlyestimateukfebruary2025",
+   "retrieved_at": "2026-09-28",
+   "status": "released",
+   "local_date": "2025-04-11",
+   "local_time": "07:00",
+   "local_tz": "Europe/London",
+   "time_known": true
+  },
+  {
+   "event_time": "2025-04-15T06:00:00+00:00",
+   "currency": "GBP",
+   "name": "UK Labour Market Report",
+   "event_type": "uk_employment",
+   "impact": "high",
+   "tags": [
+    "employment"
+   ],
+   "source": "ons_labour_market",
+   "source_url": "https://www.ons.gov.uk/releases/uklabourmarketapril2025",
+   "retrieved_at": "2026-09-28",
+   "status": "released",
+   "local_date": "2025-04-15",
+   "local_time": "07:00",
+   "local_tz": "Europe/London",
+   "time_known": true
+  },
+  {
+   "event_time": "2025-04-16T06:00:00+00:00",
+   "currency": "GBP",
+   "name": "UK CPI",
+   "event_type": "uk_cpi",
+   "impact": "high",
+   "tags": [
+    "cpi"
+   ],
+   "source": "ons_cpi",
+   "source_url": "https://www.ons.gov.uk/releases/consumerpriceinflationukmarch2025",
+   "retrieved_at": "2026-09-28",
+   "status": "released",
+   "local_date": "2025-04-16",
+   "local_time": "07:00",
+   "local_tz": "Europe/London",
+   "time_known": true
+  },
+  {
+   "event_time": "2025-04-17T12:15:00+00:00",
+   "currency": "EUR",
+   "name": "ECB Rate Decision",
+   "event_type": "ecb_rate_decision",
+   "impact": "high",
+   "tags": [
+    "central_bank_rate"
+   ],
+   "source": "ecb_governing_council",
+   "source_url": "https://www.ecb.europa.eu/press/govcdec/mopo/html/index.en.html",
+   "retrieved_at": "2026-09-28",
+   "status": "held",
+   "local_date": "2025-04-17",
+   "local_time": "14:15",
+   "local_tz": "Europe/Berlin",
+   "time_known": true
+  },
+  {
+   "event_time": "2025-05-01T00:00:00+00:00",
+   "currency": "JPY",
+   "name": "Bank of Japan Rate Decision",
+   "event_type": "boj_rate_decision",
+   "impact": "high",
+   "tags": [
+    "central_bank_rate"
+   ],
+   "source": "boj_mpm",
+   "source_url": "https://www.boj.or.jp/en/mopo/mpmsche_minu/past.htm",
+   "retrieved_at": "2026-09-28",
+   "status": "held",
+   "local_date": "2025-05-01",
+   "local_time": "09:00",
+   "local_tz": "Asia/Tokyo",
+   "time_known": false,
+   "window_end": "2025-05-01T05:00:00+00:00",
+   "note": "BoJ announces on completion of the meeting; no fixed time. event_time is the START of a conservative 09:00-14:00 JST window and window_end its end."
+  },
+  {
+   "event_time": "2025-05-02T12:30:00+00:00",
+   "currency": "USD",
+   "name": "US Non-Farm Payrolls",
+   "event_type": "us_nfp",
+   "impact": "high",
+   "tags": [
+    "nfp"
+   ],
+   "source": "bls_empsit",
+   "source_url": "https://www.bls.gov/bls/news-release/empsit.htm",
+   "retrieved_at": "2026-09-28",
+   "status": "released",
+   "local_date": "2025-05-02",
+   "local_time": "08:30",
+   "local_tz": "America/New_York",
+   "time_known": true
+  },
+  {
+   "event_time": "2025-05-07T18:00:00+00:00",
+   "currency": "USD",
+   "name": "FOMC Rate Decision",
+   "event_type": "fomc_rate_decision",
+   "impact": "high",
+   "tags": [
+    "central_bank_rate"
+   ],
+   "source": "fed_fomc",
+   "source_url": "https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm",
+   "retrieved_at": "2026-09-28",
+   "status": "held",
+   "local_date": "2025-05-07",
+   "local_time": "14:00",
+   "local_tz": "America/New_York",
+   "time_known": true
+  },
+  {
+   "event_time": "2025-05-08T11:00:00+00:00",
+   "currency": "GBP",
+   "name": "Bank of England Rate Decision",
+   "event_type": "boe_rate_decision",
+   "impact": "high",
+   "tags": [
+    "central_bank_rate"
+   ],
+   "source": "boe_mpc",
+   "source_url": "https://www.bankofengland.co.uk/monetary-policy-summary-and-minutes/2025/may-2025",
+   "retrieved_at": "2026-09-28",
+   "status": "held",
+   "local_date": "2025-05-08",
+   "local_time": "12:00",
+   "local_tz": "Europe/London",
+   "time_known": true
+  },
+  {
+   "event_time": "2025-05-13T06:00:00+00:00",
+   "currency": "GBP",
+   "name": "UK Labour Market Report",
+   "event_type": "uk_employment",
+   "impact": "high",
+   "tags": [
+    "employment"
+   ],
+   "source": "ons_labour_market",
+   "source_url": "https://www.ons.gov.uk/releases/uklabourmarketmay2025",
+   "retrieved_at": "2026-09-28",
+   "status": "released",
+   "local_date": "2025-05-13",
+   "local_time": "07:00",
+   "local_tz": "Europe/London",
+   "time_known": true
+  },
+  {
+   "event_time": "2025-05-13T12:30:00+00:00",
+   "currency": "USD",
+   "name": "US CPI",
+   "event_type": "us_cpi",
+   "impact": "high",
+   "tags": [
+    "cpi"
+   ],
+   "source": "bls_cpi",
+   "source_url": "https://www.bls.gov/bls/news-release/cpi.htm",
+   "retrieved_at": "2026-09-28",
+   "status": "released",
+   "local_date": "2025-05-13",
+   "local_time": "08:30",
+   "local_tz": "America/New_York",
+   "time_known": true
+  },
+  {
+   "event_time": "2025-05-15T06:00:00+00:00",
+   "currency": "GBP",
+   "name": "UK GDP (monthly estimate)",
+   "event_type": "uk_gdp_monthly",
+   "impact": "high",
+   "tags": [
+    "gdp"
+   ],
+   "source": "ons_gdp_monthly",
+   "source_url": "https://www.ons.gov.uk/releases/gdpmonthlyestimateukmarch2025",
+   "retrieved_at": "2026-09-28",
+   "status": "released",
+   "local_date": "2025-05-15",
+   "local_time": "07:00",
+   "local_tz": "Europe/London",
+   "time_known": true
+  },
+  {
+   "event_time": "2025-05-21T06:00:00+00:00",
+   "currency": "GBP",
+   "name": "UK CPI",
+   "event_type": "uk_cpi",
+   "impact": "high",
+   "tags": [
+    "cpi"
+   ],
+   "source": "ons_cpi",
+   "source_url": "https://www.ons.gov.uk/releases/consumerpriceinflationukapril2025",
+   "retrieved_at": "2026-09-28",
+   "status": "released",
+   "local_date": "2025-05-21",
+   "local_time": "07:00",
+   "local_tz": "Europe/London",
+   "time_known": true
+  },
+  {
+   "event_time": "2025-06-05T12:15:00+00:00",
+   "currency": "EUR",
+   "name": "ECB Rate Decision",
+   "event_type": "ecb_rate_decision",
+   "impact": "high",
+   "tags": [
+    "central_bank_rate"
+   ],
+   "source": "ecb_governing_council",
+   "source_url": "https://www.ecb.europa.eu/press/govcdec/mopo/html/index.en.html",
+   "retrieved_at": "2026-09-28",
+   "status": "held",
+   "local_date": "2025-06-05",
+   "local_time": "14:15",
+   "local_tz": "Europe/Berlin",
+   "time_known": true
+  },
+  {
+   "event_time": "2025-06-06T12:30:00+00:00",
+   "currency": "USD",
+   "name": "US Non-Farm Payrolls",
+   "event_type": "us_nfp",
+   "impact": "high",
+   "tags": [
+    "nfp"
+   ],
+   "source": "bls_empsit",
+   "source_url": "https://www.bls.gov/bls/news-release/empsit.htm",
+   "retrieved_at": "2026-09-28",
+   "status": "released",
+   "local_date": "2025-06-06",
+   "local_time": "08:30",
+   "local_tz": "America/New_York",
+   "time_known": true
+  },
+  {
+   "event_time": "2025-06-10T06:00:00+00:00",
+   "currency": "GBP",
+   "name": "UK Labour Market Report",
+   "event_type": "uk_employment",
+   "impact": "high",
+   "tags": [
+    "employment"
+   ],
+   "source": "ons_labour_market",
+   "source_url": "https://www.ons.gov.uk/releases/uklabourmarketjune2025",
+   "retrieved_at": "2026-09-28",
+   "status": "released",
+   "local_date": "2025-06-10",
+   "local_time": "07:00",
+   "local_tz": "Europe/London",
+   "time_known": true
+  },
+  {
+   "event_time": "2025-06-11T12:30:00+00:00",
+   "currency": "USD",
+   "name": "US CPI",
+   "event_type": "us_cpi",
+   "impact": "high",
+   "tags": [
+    "cpi"
+   ],
+   "source": "bls_cpi",
+   "source_url": "https://www.bls.gov/bls/news-release/cpi.htm",
+   "retrieved_at": "2026-09-28",
+   "status": "released",
+   "local_date": "2025-06-11",
+   "local_time": "08:30",
+   "local_tz": "America/New_York",
+   "time_known": true
+  },
+  {
+   "event_time": "2025-06-12T06:00:00+00:00",
+   "currency": "GBP",
+   "name": "UK GDP (monthly estimate)",
+   "event_type": "uk_gdp_monthly",
+   "impact": "high",
+   "tags": [
+    "gdp"
+   ],
+   "source": "ons_gdp_monthly",
+   "source_url": "https://www.ons.gov.uk/releases/gdpmonthlyestimateukapril2025",
+   "retrieved_at": "2026-09-28",
+   "status": "released",
+   "local_date": "2025-06-12",
+   "local_time": "07:00",
+   "local_tz": "Europe/London",
+   "time_known": true
+  },
+  {
+   "event_time": "2025-06-17T00:00:00+00:00",
+   "currency": "JPY",
+   "name": "Bank of Japan Rate Decision",
+   "event_type": "boj_rate_decision",
+   "impact": "high",
+   "tags": [
+    "central_bank_rate"
+   ],
+   "source": "boj_mpm",
+   "source_url": "https://www.boj.or.jp/en/mopo/mpmsche_minu/past.htm",
+   "retrieved_at": "2026-09-28",
+   "status": "held",
+   "local_date": "2025-06-17",
+   "local_time": "09:00",
+   "local_tz": "Asia/Tokyo",
+   "time_known": false,
+   "window_end": "2025-06-17T05:00:00+00:00",
+   "note": "BoJ announces on completion of the meeting; no fixed time. event_time is the START of a conservative 09:00-14:00 JST window and window_end its end."
+  },
+  {
+   "event_time": "2025-06-18T06:00:00+00:00",
+   "currency": "GBP",
+   "name": "UK CPI",
+   "event_type": "uk_cpi",
+   "impact": "high",
+   "tags": [
+    "cpi"
+   ],
+   "source": "ons_cpi",
+   "source_url": "https://www.ons.gov.uk/releases/consumerpriceinflationukmay2025",
+   "retrieved_at": "2026-09-28",
+   "status": "released",
+   "local_date": "2025-06-18",
+   "local_time": "07:00",
+   "local_tz": "Europe/London",
+   "time_known": true
+  },
+  {
+   "event_time": "2025-06-18T18:00:00+00:00",
+   "currency": "USD",
+   "name": "FOMC Rate Decision",
+   "event_type": "fomc_rate_decision",
+   "impact": "high",
+   "tags": [
+    "central_bank_rate"
+   ],
+   "source": "fed_fomc",
+   "source_url": "https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm",
+   "retrieved_at": "2026-09-28",
+   "status": "held",
+   "local_date": "2025-06-18",
+   "local_time": "14:00",
+   "local_tz": "America/New_York",
+   "time_known": true
+  },
+  {
+   "event_time": "2025-06-19T11:00:00+00:00",
+   "currency": "GBP",
+   "name": "Bank of England Rate Decision",
+   "event_type": "boe_rate_decision",
+   "impact": "high",
+   "tags": [
+    "central_bank_rate"
+   ],
+   "source": "boe_mpc",
+   "source_url": "https://www.bankofengland.co.uk/monetary-policy-summary-and-minutes/2025/june-2025",
+   "retrieved_at": "2026-09-28",
+   "status": "held",
+   "local_date": "2025-06-19",
+   "local_time": "12:00",
+   "local_tz": "Europe/London",
+   "time_known": true
+  },
+  {
+   "event_time": "2025-07-03T12:30:00+00:00",
+   "currency": "USD",
+   "name": "US Non-Farm Payrolls",
+   "event_type": "us_nfp",
+   "impact": "high",
+   "tags": [
+    "nfp"
+   ],
+   "source": "bls_empsit",
+   "source_url": "https://www.bls.gov/bls/news-release/empsit.htm",
+   "retrieved_at": "2026-09-28",
+   "status": "released",
+   "local_date": "2025-07-03",
+   "local_time": "08:30",
+   "local_tz": "America/New_York",
+   "time_known": true
+  },
+  {
+   "event_time": "2025-07-11T06:00:00+00:00",
+   "currency": "GBP",
+   "name": "UK GDP (monthly estimate)",
+   "event_type": "uk_gdp_monthly",
+   "impact": "high",
+   "tags": [
+    "gdp"
+   ],
+   "source": "ons_gdp_monthly",
+   "source_url": "https://www.ons.gov.uk/releases/gdpmonthlyestimateukmay2025",
+   "retrieved_at": "2026-09-28",
+   "status": "released",
+   "local_date": "2025-07-11",
+   "local_time": "07:00",
+   "local_tz": "Europe/London",
+   "time_known": true
+  },
+  {
+   "event_time": "2025-07-15T12:30:00+00:00",
+   "currency": "USD",
+   "name": "US CPI",
+   "event_type": "us_cpi",
+   "impact": "high",
+   "tags": [
+    "cpi"
+   ],
+   "source": "bls_cpi",
+   "source_url": "https://www.bls.gov/bls/news-release/cpi.htm",
+   "retrieved_at": "2026-09-28",
+   "status": "released",
+   "local_date": "2025-07-15",
+   "local_time": "08:30",
+   "local_tz": "America/New_York",
+   "time_known": true
+  },
+  {
+   "event_time": "2025-07-16T06:00:00+00:00",
+   "currency": "GBP",
+   "name": "UK CPI",
+   "event_type": "uk_cpi",
+   "impact": "high",
+   "tags": [
+    "cpi"
+   ],
+   "source": "ons_cpi",
+   "source_url": "https://www.ons.gov.uk/releases/consumerpriceinflationukjune2025",
+   "retrieved_at": "2026-09-28",
+   "status": "released",
+   "local_date": "2025-07-16",
+   "local_time": "07:00",
+   "local_tz": "Europe/London",
+   "time_known": true
+  },
+  {
+   "event_time": "2025-07-17T06:00:00+00:00",
+   "currency": "GBP",
+   "name": "UK Labour Market Report",
+   "event_type": "uk_employment",
+   "impact": "high",
+   "tags": [
+    "employment"
+   ],
+   "source": "ons_labour_market",
+   "source_url": "https://www.ons.gov.uk/releases/uklabourmarketjuly2025",
+   "retrieved_at": "2026-09-28",
+   "status": "released",
+   "local_date": "2025-07-17",
+   "local_time": "07:00",
+   "local_tz": "Europe/London",
+   "time_known": true
+  },
+  {
+   "event_time": "2025-07-24T12:15:00+00:00",
+   "currency": "EUR",
+   "name": "ECB Rate Decision",
+   "event_type": "ecb_rate_decision",
+   "impact": "high",
+   "tags": [
+    "central_bank_rate"
+   ],
+   "source": "ecb_governing_council",
+   "source_url": "https://www.ecb.europa.eu/press/govcdec/mopo/html/index.en.html",
+   "retrieved_at": "2026-09-28",
+   "status": "held",
+   "local_date": "2025-07-24",
+   "local_time": "14:15",
+   "local_tz": "Europe/Berlin",
+   "time_known": true
+  },
+  {
+   "event_time": "2025-07-30T18:00:00+00:00",
+   "currency": "USD",
+   "name": "FOMC Rate Decision",
+   "event_type": "fomc_rate_decision",
+   "impact": "high",
+   "tags": [
+    "central_bank_rate"
+   ],
+   "source": "fed_fomc",
+   "source_url": "https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm",
+   "retrieved_at": "2026-09-28",
+   "status": "held",
+   "local_date": "2025-07-30",
+   "local_time": "14:00",
+   "local_tz": "America/New_York",
+   "time_known": true
+  },
+  {
+   "event_time": "2025-07-31T00:00:00+00:00",
+   "currency": "JPY",
+   "name": "Bank of Japan Rate Decision",
+   "event_type": "boj_rate_decision",
+   "impact": "high",
+   "tags": [
+    "central_bank_rate"
+   ],
+   "source": "boj_mpm",
+   "source_url": "https://www.boj.or.jp/en/mopo/mpmsche_minu/past.htm",
+   "retrieved_at": "2026-09-28",
+   "status": "held",
+   "local_date": "2025-07-31",
+   "local_time": "09:00",
+   "local_tz": "Asia/Tokyo",
+   "time_known": false,
+   "window_end": "2025-07-31T05:00:00+00:00",
+   "note": "BoJ announces on completion of the meeting; no fixed time. event_time is the START of a conservative 09:00-14:00 JST window and window_end its end."
+  },
+  {
+   "event_time": "2025-08-01T12:30:00+00:00",
+   "currency": "USD",
+   "name": "US Non-Farm Payrolls",
+   "event_type": "us_nfp",
+   "impact": "high",
+   "tags": [
+    "nfp"
+   ],
+   "source": "bls_empsit",
+   "source_url": "https://www.bls.gov/bls/news-release/empsit.htm",
+   "retrieved_at": "2026-09-28",
+   "status": "released",
+   "local_date": "2025-08-01",
+   "local_time": "08:30",
+   "local_tz": "America/New_York",
+   "time_known": true
+  },
+  {
+   "event_time": "2025-08-07T11:00:00+00:00",
+   "currency": "GBP",
+   "name": "Bank of England Rate Decision",
+   "event_type": "boe_rate_decision",
+   "impact": "high",
+   "tags": [
+    "central_bank_rate"
+   ],
+   "source": "boe_mpc",
+   "source_url": "https://www.bankofengland.co.uk/monetary-policy-summary-and-minutes/2025/august-2025",
+   "retrieved_at": "2026-09-28",
+   "status": "held",
+   "local_date": "2025-08-07",
+   "local_time": "12:00",
+   "local_tz": "Europe/London",
+   "time_known": true
+  },
+  {
+   "event_time": "2025-08-12T06:00:00+00:00",
+   "currency": "GBP",
+   "name": "UK Labour Market Report",
+   "event_type": "uk_employment",
+   "impact": "high",
+   "tags": [
+    "employment"
+   ],
+   "source": "ons_labour_market",
+   "source_url": "https://www.ons.gov.uk/releases/uklabourmarketaugust2025",
+   "retrieved_at": "2026-09-28",
+   "status": "released",
+   "local_date": "2025-08-12",
+   "local_time": "07:00",
+   "local_tz": "Europe/London",
+   "time_known": true
+  },
+  {
+   "event_time": "2025-08-12T12:30:00+00:00",
+   "currency": "USD",
+   "name": "US CPI",
+   "event_type": "us_cpi",
+   "impact": "high",
+   "tags": [
+    "cpi"
+   ],
+   "source": "bls_cpi",
+   "source_url": "https://www.bls.gov/bls/news-release/cpi.htm",
+   "retrieved_at": "2026-09-28",
+   "status": "released",
+   "local_date": "2025-08-12",
+   "local_time": "08:30",
+   "local_tz": "America/New_York",
+   "time_known": true
+  },
+  {
+   "event_time": "2025-08-14T06:00:00+00:00",
+   "currency": "GBP",
+   "name": "UK GDP (monthly estimate)",
+   "event_type": "uk_gdp_monthly",
+   "impact": "high",
+   "tags": [
+    "gdp"
+   ],
+   "source": "ons_gdp_monthly",
+   "source_url": "https://www.ons.gov.uk/releases/gdpmonthlyestimateukjune2025",
+   "retrieved_at": "2026-09-28",
+   "status": "released",
+   "local_date": "2025-08-14",
+   "local_time": "07:00",
+   "local_tz": "Europe/London",
+   "time_known": true
+  },
+  {
+   "event_time": "2025-08-20T06:00:00+00:00",
+   "currency": "GBP",
+   "name": "UK CPI",
+   "event_type": "uk_cpi",
+   "impact": "high",
+   "tags": [
+    "cpi"
+   ],
+   "source": "ons_cpi",
+   "source_url": "https://www.ons.gov.uk/releases/consumerpriceinflationukjuly2025",
+   "retrieved_at": "2026-09-28",
+   "status": "released",
+   "local_date": "2025-08-20",
+   "local_time": "07:00",
+   "local_tz": "Europe/London",
+   "time_known": true
+  },
+  {
+   "event_time": "2025-09-05T12:30:00+00:00",
+   "currency": "USD",
+   "name": "US Non-Farm Payrolls",
+   "event_type": "us_nfp",
+   "impact": "high",
+   "tags": [
+    "nfp"
+   ],
+   "source": "bls_empsit",
+   "source_url": "https://www.bls.gov/bls/news-release/empsit.htm",
+   "retrieved_at": "2026-09-28",
+   "status": "released",
+   "local_date": "2025-09-05",
+   "local_time": "08:30",
+   "local_tz": "America/New_York",
+   "time_known": true
+  },
+  {
+   "event_time": "2025-09-11T12:15:00+00:00",
+   "currency": "EUR",
+   "name": "ECB Rate Decision",
+   "event_type": "ecb_rate_decision",
+   "impact": "high",
+   "tags": [
+    "central_bank_rate"
+   ],
+   "source": "ecb_governing_council",
+   "source_url": "https://www.ecb.europa.eu/press/govcdec/mopo/html/index.en.html",
+   "retrieved_at": "2026-09-28",
+   "status": "held",
+   "local_date": "2025-09-11",
+   "local_time": "14:15",
+   "local_tz": "Europe/Berlin",
+   "time_known": true
+  },
+  {
+   "event_time": "2025-09-11T12:30:00+00:00",
+   "currency": "USD",
+   "name": "US CPI",
+   "event_type": "us_cpi",
+   "impact": "high",
+   "tags": [
+    "cpi"
+   ],
+   "source": "bls_cpi",
+   "source_url": "https://www.bls.gov/bls/news-release/cpi.htm",
+   "retrieved_at": "2026-09-28",
+   "status": "released",
+   "local_date": "2025-09-11",
+   "local_time": "08:30",
+   "local_tz": "America/New_York",
+   "time_known": true
+  },
+  {
+   "event_time": "2025-09-12T06:00:00+00:00",
+   "currency": "GBP",
+   "name": "UK GDP (monthly estimate)",
+   "event_type": "uk_gdp_monthly",
+   "impact": "high",
+   "tags": [
+    "gdp"
+   ],
+   "source": "ons_gdp_monthly",
+   "source_url": "https://www.ons.gov.uk/releases/gdpmonthlyestimateukjuly2025",
+   "retrieved_at": "2026-09-28",
+   "status": "released",
+   "local_date": "2025-09-12",
+   "local_time": "07:00",
+   "local_tz": "Europe/London",
+   "time_known": true
+  },
+  {
+   "event_time": "2025-09-16T06:00:00+00:00",
+   "currency": "GBP",
+   "name": "UK Labour Market Report",
+   "event_type": "uk_employment",
+   "impact": "high",
+   "tags": [
+    "employment"
+   ],
+   "source": "ons_labour_market",
+   "source_url": "https://www.ons.gov.uk/releases/uklabourmarketseptember2025",
+   "retrieved_at": "2026-09-28",
+   "status": "released",
+   "local_date": "2025-09-16",
+   "local_time": "07:00",
+   "local_tz": "Europe/London",
+   "time_known": true
+  },
+  {
+   "event_time": "2025-09-17T06:00:00+00:00",
+   "currency": "GBP",
+   "name": "UK CPI",
+   "event_type": "uk_cpi",
+   "impact": "high",
+   "tags": [
+    "cpi"
+   ],
+   "source": "ons_cpi",
+   "source_url": "https://www.ons.gov.uk/releases/consumerpriceinflationukaugust2025",
+   "retrieved_at": "2026-09-28",
+   "status": "released",
+   "local_date": "2025-09-17",
+   "local_time": "07:00",
+   "local_tz": "Europe/London",
+   "time_known": true
+  },
+  {
+   "event_time": "2025-09-17T18:00:00+00:00",
+   "currency": "USD",
+   "name": "FOMC Rate Decision",
+   "event_type": "fomc_rate_decision",
+   "impact": "high",
+   "tags": [
+    "central_bank_rate"
+   ],
+   "source": "fed_fomc",
+   "source_url": "https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm",
+   "retrieved_at": "2026-09-28",
+   "status": "held",
+   "local_date": "2025-09-17",
+   "local_time": "14:00",
+   "local_tz": "America/New_York",
+   "time_known": true
+  },
+  {
+   "event_time": "2025-09-18T11:00:00+00:00",
+   "currency": "GBP",
+   "name": "Bank of England Rate Decision",
+   "event_type": "boe_rate_decision",
+   "impact": "high",
+   "tags": [
+    "central_bank_rate"
+   ],
+   "source": "boe_mpc",
+   "source_url": "https://www.bankofengland.co.uk/monetary-policy-summary-and-minutes/2025/september-2025",
+   "retrieved_at": "2026-09-28",
+   "status": "held",
+   "local_date": "2025-09-18",
+   "local_time": "12:00",
+   "local_tz": "Europe/London",
+   "time_known": true
+  },
+  {
+   "event_time": "2025-09-19T00:00:00+00:00",
+   "currency": "JPY",
+   "name": "Bank of Japan Rate Decision",
+   "event_type": "boj_rate_decision",
+   "impact": "high",
+   "tags": [
+    "central_bank_rate"
+   ],
+   "source": "boj_mpm",
+   "source_url": "https://www.boj.or.jp/en/mopo/mpmsche_minu/past.htm",
+   "retrieved_at": "2026-09-28",
+   "status": "held",
+   "local_date": "2025-09-19",
+   "local_time": "09:00",
+   "local_tz": "Asia/Tokyo",
+   "time_known": false,
+   "window_end": "2025-09-19T05:00:00+00:00",
+   "note": "BoJ announces on completion of the meeting; no fixed time. event_time is the START of a conservative 09:00-14:00 JST window and window_end its end."
+  },
+  {
+   "event_time": "2025-10-14T06:00:00+00:00",
+   "currency": "GBP",
+   "name": "UK Labour Market Report",
+   "event_type": "uk_employment",
+   "impact": "high",
+   "tags": [
+    "employment"
+   ],
+   "source": "ons_labour_market",
+   "source_url": "https://www.ons.gov.uk/releases/uklabourmarketoctober2025",
+   "retrieved_at": "2026-09-28",
+   "status": "released",
+   "local_date": "2025-10-14",
+   "local_time": "07:00",
+   "local_tz": "Europe/London",
+   "time_known": true
+  },
+  {
+   "event_time": "2025-10-16T06:00:00+00:00",
+   "currency": "GBP",
+   "name": "UK GDP (monthly estimate)",
+   "event_type": "uk_gdp_monthly",
+   "impact": "high",
+   "tags": [
+    "gdp"
+   ],
+   "source": "ons_gdp_monthly",
+   "source_url": "https://www.ons.gov.uk/releases/gdpmonthlyestimateukaugust2025",
+   "retrieved_at": "2026-09-28",
+   "status": "released",
+   "local_date": "2025-10-16",
+   "local_time": "07:00",
+   "local_tz": "Europe/London",
+   "time_known": true
+  },
+  {
+   "event_time": "2025-10-22T06:00:00+00:00",
+   "currency": "GBP",
+   "name": "UK CPI",
+   "event_type": "uk_cpi",
+   "impact": "high",
+   "tags": [
+    "cpi"
+   ],
+   "source": "ons_cpi",
+   "source_url": "https://www.ons.gov.uk/releases/consumerpriceinflationukseptember2025",
+   "retrieved_at": "2026-09-28",
+   "status": "released",
+   "local_date": "2025-10-22",
+   "local_time": "07:00",
+   "local_tz": "Europe/London",
+   "time_known": true
+  },
+  {
+   "event_time": "2025-10-24T12:30:00+00:00",
+   "currency": "USD",
+   "name": "US CPI",
+   "event_type": "us_cpi",
+   "impact": "high",
+   "tags": [
+    "cpi"
+   ],
+   "source": "bls_cpi",
+   "source_url": "https://www.bls.gov/bls/news-release/cpi.htm",
+   "retrieved_at": "2026-09-28",
+   "status": "released",
+   "local_date": "2025-10-24",
+   "local_time": "08:30",
+   "local_tz": "America/New_York",
+   "time_known": true
+  },
+  {
+   "event_time": "2025-10-29T18:00:00+00:00",
+   "currency": "USD",
+   "name": "FOMC Rate Decision",
+   "event_type": "fomc_rate_decision",
+   "impact": "high",
+   "tags": [
+    "central_bank_rate"
+   ],
+   "source": "fed_fomc",
+   "source_url": "https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm",
+   "retrieved_at": "2026-09-28",
+   "status": "held",
+   "local_date": "2025-10-29",
+   "local_time": "14:00",
+   "local_tz": "America/New_York",
+   "time_known": true
+  },
+  {
+   "event_time": "2025-10-30T00:00:00+00:00",
+   "currency": "JPY",
+   "name": "Bank of Japan Rate Decision",
+   "event_type": "boj_rate_decision",
+   "impact": "high",
+   "tags": [
+    "central_bank_rate"
+   ],
+   "source": "boj_mpm",
+   "source_url": "https://www.boj.or.jp/en/mopo/mpmsche_minu/past.htm",
+   "retrieved_at": "2026-09-28",
+   "status": "held",
+   "local_date": "2025-10-30",
+   "local_time": "09:00",
+   "local_tz": "Asia/Tokyo",
+   "time_known": false,
+   "window_end": "2025-10-30T05:00:00+00:00",
+   "note": "BoJ announces on completion of the meeting; no fixed time. event_time is the START of a conservative 09:00-14:00 JST window and window_end its end."
+  },
+  {
+   "event_time": "2025-10-30T13:15:00+00:00",
+   "currency": "EUR",
+   "name": "ECB Rate Decision",
+   "event_type": "ecb_rate_decision",
+   "impact": "high",
+   "tags": [
+    "central_bank_rate"
+   ],
+   "source": "ecb_governing_council",
+   "source_url": "https://www.ecb.europa.eu/press/govcdec/mopo/html/index.en.html",
+   "retrieved_at": "2026-09-28",
+   "status": "held",
+   "local_date": "2025-10-30",
+   "local_time": "14:15",
+   "local_tz": "Europe/Berlin",
+   "time_known": true
+  },
+  {
+   "event_time": "2025-11-06T12:00:00+00:00",
+   "currency": "GBP",
+   "name": "Bank of England Rate Decision",
+   "event_type": "boe_rate_decision",
+   "impact": "high",
+   "tags": [
+    "central_bank_rate"
+   ],
+   "source": "boe_mpc",
+   "source_url": "https://www.bankofengland.co.uk/monetary-policy-summary-and-minutes/2025/november-2025",
+   "retrieved_at": "2026-09-28",
+   "status": "held",
+   "local_date": "2025-11-06",
+   "local_time": "12:00",
+   "local_tz": "Europe/London",
+   "time_known": true
+  },
+  {
+   "event_time": "2025-11-11T07:00:00+00:00",
+   "currency": "GBP",
+   "name": "UK Labour Market Report",
+   "event_type": "uk_employment",
+   "impact": "high",
+   "tags": [
+    "employment"
+   ],
+   "source": "ons_labour_market",
+   "source_url": "https://www.ons.gov.uk/releases/uklabourmarketnovember2025",
+   "retrieved_at": "2026-09-28",
+   "status": "released",
+   "local_date": "2025-11-11",
+   "local_time": "07:00",
+   "local_tz": "Europe/London",
+   "time_known": true
+  },
+  {
+   "event_time": "2025-11-13T07:00:00+00:00",
+   "currency": "GBP",
+   "name": "UK GDP (monthly estimate)",
+   "event_type": "uk_gdp_monthly",
+   "impact": "high",
+   "tags": [
+    "gdp"
+   ],
+   "source": "ons_gdp_monthly",
+   "source_url": "https://www.ons.gov.uk/releases/gdpmonthlyestimateukseptember2025",
+   "retrieved_at": "2026-09-28",
+   "status": "released",
+   "local_date": "2025-11-13",
+   "local_time": "07:00",
+   "local_tz": "Europe/London",
+   "time_known": true
+  },
+  {
+   "event_time": "2025-11-19T07:00:00+00:00",
+   "currency": "GBP",
+   "name": "UK CPI",
+   "event_type": "uk_cpi",
+   "impact": "high",
+   "tags": [
+    "cpi"
+   ],
+   "source": "ons_cpi",
+   "source_url": "https://www.ons.gov.uk/releases/consumerpriceinflationukoctober2025",
+   "retrieved_at": "2026-09-28",
+   "status": "released",
+   "local_date": "2025-11-19",
+   "local_time": "07:00",
+   "local_tz": "Europe/London",
+   "time_known": true
+  },
+  {
+   "event_time": "2025-11-20T13:30:00+00:00",
+   "currency": "USD",
+   "name": "US Non-Farm Payrolls",
+   "event_type": "us_nfp",
+   "impact": "high",
+   "tags": [
+    "nfp"
+   ],
+   "source": "bls_empsit",
+   "source_url": "https://www.bls.gov/bls/news-release/empsit.htm",
+   "retrieved_at": "2026-09-28",
+   "status": "released",
+   "local_date": "2025-11-20",
+   "local_time": "08:30",
+   "local_tz": "America/New_York",
+   "time_known": true
+  },
+  {
+   "event_time": "2025-12-10T19:00:00+00:00",
+   "currency": "USD",
+   "name": "FOMC Rate Decision",
+   "event_type": "fomc_rate_decision",
+   "impact": "high",
+   "tags": [
+    "central_bank_rate"
+   ],
+   "source": "fed_fomc",
+   "source_url": "https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm",
+   "retrieved_at": "2026-09-28",
+   "status": "held",
+   "local_date": "2025-12-10",
+   "local_time": "14:00",
+   "local_tz": "America/New_York",
+   "time_known": true
+  },
+  {
+   "event_time": "2025-12-12T07:00:00+00:00",
+   "currency": "GBP",
+   "name": "UK GDP (monthly estimate)",
+   "event_type": "uk_gdp_monthly",
+   "impact": "high",
+   "tags": [
+    "gdp"
+   ],
+   "source": "ons_gdp_monthly",
+   "source_url": "https://www.ons.gov.uk/releases/gdpmonthlyestimateukoctober2025",
+   "retrieved_at": "2026-09-28",
+   "status": "released",
+   "local_date": "2025-12-12",
+   "local_time": "07:00",
+   "local_tz": "Europe/London",
+   "time_known": true
+  },
+  {
+   "event_time": "2025-12-16T07:00:00+00:00",
+   "currency": "GBP",
+   "name": "UK Labour Market Report",
+   "event_type": "uk_employment",
+   "impact": "high",
+   "tags": [
+    "employment"
+   ],
+   "source": "ons_labour_market",
+   "source_url": "https://www.ons.gov.uk/releases/uklabourmarketdecember2025",
+   "retrieved_at": "2026-09-28",
+   "status": "released",
+   "local_date": "2025-12-16",
+   "local_time": "07:00",
+   "local_tz": "Europe/London",
+   "time_known": true
+  },
+  {
+   "event_time": "2025-12-16T13:30:00+00:00",
+   "currency": "USD",
+   "name": "US Non-Farm Payrolls",
+   "event_type": "us_nfp",
+   "impact": "high",
+   "tags": [
+    "nfp"
+   ],
+   "source": "bls_empsit",
+   "source_url": "https://www.bls.gov/bls/news-release/empsit.htm",
+   "retrieved_at": "2026-09-28",
+   "status": "released",
+   "local_date": "2025-12-16",
+   "local_time": "08:30",
+   "local_tz": "America/New_York",
+   "time_known": true
+  },
+  {
+   "event_time": "2025-12-17T07:00:00+00:00",
+   "currency": "GBP",
+   "name": "UK CPI",
+   "event_type": "uk_cpi",
+   "impact": "high",
+   "tags": [
+    "cpi"
+   ],
+   "source": "ons_cpi",
+   "source_url": "https://www.ons.gov.uk/releases/consumerpriceinflationuknovember2025",
+   "retrieved_at": "2026-09-28",
+   "status": "released",
+   "local_date": "2025-12-17",
+   "local_time": "07:00",
+   "local_tz": "Europe/London",
+   "time_known": true
+  },
+  {
+   "event_time": "2025-12-18T12:00:00+00:00",
+   "currency": "GBP",
+   "name": "Bank of England Rate Decision",
+   "event_type": "boe_rate_decision",
+   "impact": "high",
+   "tags": [
+    "central_bank_rate"
+   ],
+   "source": "boe_mpc",
+   "source_url": "https://www.bankofengland.co.uk/monetary-policy-summary-and-minutes/2025/december-2025",
+   "retrieved_at": "2026-09-28",
+   "status": "held",
+   "local_date": "2025-12-18",
+   "local_time": "12:00",
+   "local_tz": "Europe/London",
+   "time_known": true
+  },
+  {
+   "event_time": "2025-12-18T13:15:00+00:00",
+   "currency": "EUR",
+   "name": "ECB Rate Decision",
+   "event_type": "ecb_rate_decision",
+   "impact": "high",
+   "tags": [
+    "central_bank_rate"
+   ],
+   "source": "ecb_governing_council",
+   "source_url": "https://www.ecb.europa.eu/press/govcdec/mopo/html/index.en.html",
+   "retrieved_at": "2026-09-28",
+   "status": "held",
+   "local_date": "2025-12-18",
+   "local_time": "14:15",
+   "local_tz": "Europe/Berlin",
+   "time_known": true
+  },
+  {
+   "event_time": "2025-12-18T13:30:00+00:00",
+   "currency": "USD",
+   "name": "US CPI",
+   "event_type": "us_cpi",
+   "impact": "high",
+   "tags": [
+    "cpi"
+   ],
+   "source": "bls_cpi",
+   "source_url": "https://www.bls.gov/bls/news-release/cpi.htm",
+   "retrieved_at": "2026-09-28",
+   "status": "released",
+   "local_date": "2025-12-18",
+   "local_time": "08:30",
+   "local_tz": "America/New_York",
+   "time_known": true
+  },
+  {
+   "event_time": "2025-12-19T00:00:00+00:00",
+   "currency": "JPY",
+   "name": "Bank of Japan Rate Decision",
+   "event_type": "boj_rate_decision",
+   "impact": "high",
+   "tags": [
+    "central_bank_rate"
+   ],
+   "source": "boj_mpm",
+   "source_url": "https://www.boj.or.jp/en/mopo/mpmsche_minu/past.htm",
+   "retrieved_at": "2026-09-28",
+   "status": "held",
+   "local_date": "2025-12-19",
+   "local_time": "09:00",
+   "local_tz": "Asia/Tokyo",
+   "time_known": false,
+   "window_end": "2025-12-19T05:00:00+00:00",
+   "note": "BoJ announces on completion of the meeting; no fixed time. event_time is the START of a conservative 09:00-14:00 JST window and window_end its end."
+  },
+  {
+   "event_time": "2026-01-09T13:30:00+00:00",
+   "currency": "USD",
+   "name": "US Non-Farm Payrolls",
+   "event_type": "us_nfp",
+   "impact": "high",
+   "tags": [
+    "nfp"
+   ],
+   "source": "bls_empsit",
+   "source_url": "https://www.bls.gov/bls/news-release/empsit.htm",
+   "retrieved_at": "2026-09-28",
+   "status": "released",
+   "local_date": "2026-01-09",
+   "local_time": "08:30",
+   "local_tz": "America/New_York",
+   "time_known": true
+  },
+  {
+   "event_time": "2026-01-13T13:30:00+00:00",
+   "currency": "USD",
+   "name": "US CPI",
+   "event_type": "us_cpi",
+   "impact": "high",
+   "tags": [
+    "cpi"
+   ],
+   "source": "bls_cpi",
+   "source_url": "https://www.bls.gov/bls/news-release/cpi.htm",
+   "retrieved_at": "2026-09-28",
+   "status": "released",
+   "local_date": "2026-01-13",
+   "local_time": "08:30",
+   "local_tz": "America/New_York",
+   "time_known": true
+  },
+  {
+   "event_time": "2026-01-15T07:00:00+00:00",
+   "currency": "GBP",
+   "name": "UK GDP (monthly estimate)",
+   "event_type": "uk_gdp_monthly",
+   "impact": "high",
+   "tags": [
+    "gdp"
+   ],
+   "source": "ons_gdp_monthly",
+   "source_url": "https://www.ons.gov.uk/releases/gdpmonthlyestimateuknovember2025",
+   "retrieved_at": "2026-09-28",
+   "status": "released",
+   "local_date": "2026-01-15",
+   "local_time": "07:00",
+   "local_tz": "Europe/London",
+   "time_known": true
+  },
+  {
+   "event_time": "2026-01-20T07:00:00+00:00",
+   "currency": "GBP",
+   "name": "UK Labour Market Report",
+   "event_type": "uk_employment",
+   "impact": "high",
+   "tags": [
+    "employment"
+   ],
+   "source": "ons_labour_market",
+   "source_url": "https://www.ons.gov.uk/releases/uklabourmarketjanuary2026",
+   "retrieved_at": "2026-09-28",
+   "status": "released",
+   "local_date": "2026-01-20",
+   "local_time": "07:00",
+   "local_tz": "Europe/London",
+   "time_known": true
+  },
+  {
+   "event_time": "2026-01-21T07:00:00+00:00",
+   "currency": "GBP",
+   "name": "UK CPI",
+   "event_type": "uk_cpi",
+   "impact": "high",
+   "tags": [
+    "cpi"
+   ],
+   "source": "ons_cpi",
+   "source_url": "https://www.ons.gov.uk/releases/consumerpriceinflationukdecember2025",
+   "retrieved_at": "2026-09-28",
+   "status": "released",
+   "local_date": "2026-01-21",
+   "local_time": "07:00",
+   "local_tz": "Europe/London",
+   "time_known": true
+  },
+  {
+   "event_time": "2026-01-23T00:00:00+00:00",
+   "currency": "JPY",
+   "name": "Bank of Japan Rate Decision",
+   "event_type": "boj_rate_decision",
+   "impact": "high",
+   "tags": [
+    "central_bank_rate"
+   ],
+   "source": "boj_mpm",
+   "source_url": "https://www.boj.or.jp/en/mopo/mpmsche_minu/index.htm",
+   "retrieved_at": "2026-09-28",
+   "status": "held",
+   "local_date": "2026-01-23",
+   "local_time": "09:00",
+   "local_tz": "Asia/Tokyo",
+   "time_known": false,
+   "window_end": "2026-01-23T05:00:00+00:00",
+   "note": "BoJ announces on completion of the meeting; no fixed time. event_time is the START of a conservative 09:00-14:00 JST window and window_end its end."
+  },
+  {
+   "event_time": "2026-01-28T19:00:00+00:00",
+   "currency": "USD",
+   "name": "FOMC Rate Decision",
+   "event_type": "fomc_rate_decision",
+   "impact": "high",
+   "tags": [
+    "central_bank_rate"
+   ],
+   "source": "fed_fomc",
+   "source_url": "https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm",
+   "retrieved_at": "2026-09-28",
+   "status": "held",
+   "local_date": "2026-01-28",
+   "local_time": "14:00",
+   "local_tz": "America/New_York",
+   "time_known": true
+  },
+  {
+   "event_time": "2026-02-05T12:00:00+00:00",
+   "currency": "GBP",
+   "name": "Bank of England Rate Decision",
+   "event_type": "boe_rate_decision",
+   "impact": "high",
+   "tags": [
+    "central_bank_rate"
+   ],
+   "source": "boe_mpc",
+   "source_url": "https://www.bankofengland.co.uk/monetary-policy/upcoming-mpc-dates",
+   "retrieved_at": "2026-09-28",
+   "status": "held",
+   "local_date": "2026-02-05",
+   "local_time": "12:00",
+   "local_tz": "Europe/London",
+   "time_known": true
+  },
+  {
+   "event_time": "2026-02-05T13:15:00+00:00",
+   "currency": "EUR",
+   "name": "ECB Rate Decision",
+   "event_type": "ecb_rate_decision",
+   "impact": "high",
+   "tags": [
+    "central_bank_rate"
+   ],
+   "source": "ecb_governing_council",
+   "source_url": "https://www.ecb.europa.eu/press/govcdec/mopo/html/index.en.html",
+   "retrieved_at": "2026-09-28",
+   "status": "held",
+   "local_date": "2026-02-05",
+   "local_time": "14:15",
+   "local_tz": "Europe/Berlin",
+   "time_known": true
+  },
+  {
+   "event_time": "2026-02-11T13:30:00+00:00",
+   "currency": "USD",
+   "name": "US Non-Farm Payrolls",
+   "event_type": "us_nfp",
+   "impact": "high",
+   "tags": [
+    "nfp"
+   ],
+   "source": "bls_empsit",
+   "source_url": "https://www.bls.gov/bls/news-release/empsit.htm",
+   "retrieved_at": "2026-09-28",
+   "status": "released",
+   "local_date": "2026-02-11",
+   "local_time": "08:30",
+   "local_tz": "America/New_York",
+   "time_known": true
+  },
+  {
+   "event_time": "2026-02-12T07:00:00+00:00",
+   "currency": "GBP",
+   "name": "UK GDP (monthly estimate)",
+   "event_type": "uk_gdp_monthly",
+   "impact": "high",
+   "tags": [
+    "gdp"
+   ],
+   "source": "ons_gdp_monthly",
+   "source_url": "https://www.ons.gov.uk/releases/gdpmonthlyestimateukdecember2025",
+   "retrieved_at": "2026-09-28",
+   "status": "released",
+   "local_date": "2026-02-12",
+   "local_time": "07:00",
+   "local_tz": "Europe/London",
+   "time_known": true
+  },
+  {
+   "event_time": "2026-02-13T13:30:00+00:00",
+   "currency": "USD",
+   "name": "US CPI",
+   "event_type": "us_cpi",
+   "impact": "high",
+   "tags": [
+    "cpi"
+   ],
+   "source": "bls_cpi",
+   "source_url": "https://www.bls.gov/bls/news-release/cpi.htm",
+   "retrieved_at": "2026-09-28",
+   "status": "released",
+   "local_date": "2026-02-13",
+   "local_time": "08:30",
+   "local_tz": "America/New_York",
+   "time_known": true
+  },
+  {
+   "event_time": "2026-02-17T07:00:00+00:00",
+   "currency": "GBP",
+   "name": "UK Labour Market Report",
+   "event_type": "uk_employment",
+   "impact": "high",
+   "tags": [
+    "employment"
+   ],
+   "source": "ons_labour_market",
+   "source_url": "https://www.ons.gov.uk/releases/uklabourmarketfebruary2026",
+   "retrieved_at": "2026-09-28",
+   "status": "released",
+   "local_date": "2026-02-17",
+   "local_time": "07:00",
+   "local_tz": "Europe/London",
+   "time_known": true
+  },
+  {
+   "event_time": "2026-02-18T07:00:00+00:00",
+   "currency": "GBP",
+   "name": "UK CPI",
+   "event_type": "uk_cpi",
+   "impact": "high",
+   "tags": [
+    "cpi"
+   ],
+   "source": "ons_cpi",
+   "source_url": "https://www.ons.gov.uk/releases/consumerpriceinflationukjanuary2026",
+   "retrieved_at": "2026-09-28",
+   "status": "released",
+   "local_date": "2026-02-18",
+   "local_time": "07:00",
+   "local_tz": "Europe/London",
+   "time_known": true
+  },
+  {
+   "event_time": "2026-03-06T13:30:00+00:00",
+   "currency": "USD",
+   "name": "US Non-Farm Payrolls",
+   "event_type": "us_nfp",
+   "impact": "high",
+   "tags": [
+    "nfp"
+   ],
+   "source": "bls_empsit",
+   "source_url": "https://www.bls.gov/bls/news-release/empsit.htm",
+   "retrieved_at": "2026-09-28",
+   "status": "released",
+   "local_date": "2026-03-06",
+   "local_time": "08:30",
+   "local_tz": "America/New_York",
+   "time_known": true
+  },
+  {
+   "event_time": "2026-03-11T12:30:00+00:00",
+   "currency": "USD",
+   "name": "US CPI",
+   "event_type": "us_cpi",
+   "impact": "high",
+   "tags": [
+    "cpi"
+   ],
+   "source": "bls_cpi",
+   "source_url": "https://www.bls.gov/bls/news-release/cpi.htm",
+   "retrieved_at": "2026-09-28",
+   "status": "released",
+   "local_date": "2026-03-11",
+   "local_time": "08:30",
+   "local_tz": "America/New_York",
+   "time_known": true
+  },
+  {
+   "event_time": "2026-03-13T07:00:00+00:00",
+   "currency": "GBP",
+   "name": "UK GDP (monthly estimate)",
+   "event_type": "uk_gdp_monthly",
+   "impact": "high",
+   "tags": [
+    "gdp"
+   ],
+   "source": "ons_gdp_monthly",
+   "source_url": "https://www.ons.gov.uk/releases/gdpmonthlyestimateukjanuary2026",
+   "retrieved_at": "2026-09-28",
+   "status": "released",
+   "local_date": "2026-03-13",
+   "local_time": "07:00",
+   "local_tz": "Europe/London",
+   "time_known": true
+  },
+  {
+   "event_time": "2026-03-18T18:00:00+00:00",
+   "currency": "USD",
+   "name": "FOMC Rate Decision",
+   "event_type": "fomc_rate_decision",
+   "impact": "high",
+   "tags": [
+    "central_bank_rate"
+   ],
+   "source": "fed_fomc",
+   "source_url": "https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm",
+   "retrieved_at": "2026-09-28",
+   "status": "held",
+   "local_date": "2026-03-18",
+   "local_time": "14:00",
+   "local_tz": "America/New_York",
+   "time_known": true
+  },
+  {
+   "event_time": "2026-03-19T00:00:00+00:00",
+   "currency": "JPY",
+   "name": "Bank of Japan Rate Decision",
+   "event_type": "boj_rate_decision",
+   "impact": "high",
+   "tags": [
+    "central_bank_rate"
+   ],
+   "source": "boj_mpm",
+   "source_url": "https://www.boj.or.jp/en/mopo/mpmsche_minu/index.htm",
+   "retrieved_at": "2026-09-28",
+   "status": "held",
+   "local_date": "2026-03-19",
+   "local_time": "09:00",
+   "local_tz": "Asia/Tokyo",
+   "time_known": false,
+   "window_end": "2026-03-19T05:00:00+00:00",
+   "note": "BoJ announces on completion of the meeting; no fixed time. event_time is the START of a conservative 09:00-14:00 JST window and window_end its end."
+  },
+  {
+   "event_time": "2026-03-19T07:00:00+00:00",
+   "currency": "GBP",
+   "name": "UK Labour Market Report",
+   "event_type": "uk_employment",
+   "impact": "high",
+   "tags": [
+    "employment"
+   ],
+   "source": "ons_labour_market",
+   "source_url": "https://www.ons.gov.uk/releases/uklabourmarketmarch2026",
+   "retrieved_at": "2026-09-28",
+   "status": "released",
+   "local_date": "2026-03-19",
+   "local_time": "07:00",
+   "local_tz": "Europe/London",
+   "time_known": true
+  },
+  {
+   "event_time": "2026-03-19T12:00:00+00:00",
+   "currency": "GBP",
+   "name": "Bank of England Rate Decision",
+   "event_type": "boe_rate_decision",
+   "impact": "high",
+   "tags": [
+    "central_bank_rate"
+   ],
+   "source": "boe_mpc",
+   "source_url": "https://www.bankofengland.co.uk/monetary-policy/upcoming-mpc-dates",
+   "retrieved_at": "2026-09-28",
+   "status": "held",
+   "local_date": "2026-03-19",
+   "local_time": "12:00",
+   "local_tz": "Europe/London",
+   "time_known": true
+  },
+  {
+   "event_time": "2026-03-19T13:15:00+00:00",
+   "currency": "EUR",
+   "name": "ECB Rate Decision",
+   "event_type": "ecb_rate_decision",
+   "impact": "high",
+   "tags": [
+    "central_bank_rate"
+   ],
+   "source": "ecb_governing_council",
+   "source_url": "https://www.ecb.europa.eu/press/govcdec/mopo/html/index.en.html",
+   "retrieved_at": "2026-09-28",
+   "status": "held",
+   "local_date": "2026-03-19",
+   "local_time": "14:15",
+   "local_tz": "Europe/Berlin",
+   "time_known": true
+  },
+  {
+   "event_time": "2026-03-25T07:00:00+00:00",
+   "currency": "GBP",
+   "name": "UK CPI",
+   "event_type": "uk_cpi",
+   "impact": "high",
+   "tags": [
+    "cpi"
+   ],
+   "source": "ons_cpi",
+   "source_url": "https://www.ons.gov.uk/releases/consumerpriceinflationukfebruary2026",
+   "retrieved_at": "2026-09-28",
+   "status": "released",
+   "local_date": "2026-03-25",
+   "local_time": "07:00",
+   "local_tz": "Europe/London",
+   "time_known": true
+  },
+  {
+   "event_time": "2026-04-03T12:30:00+00:00",
+   "currency": "USD",
+   "name": "US Non-Farm Payrolls",
+   "event_type": "us_nfp",
+   "impact": "high",
+   "tags": [
+    "nfp"
+   ],
+   "source": "bls_empsit",
+   "source_url": "https://www.bls.gov/bls/news-release/empsit.htm",
+   "retrieved_at": "2026-09-28",
+   "status": "released",
+   "local_date": "2026-04-03",
+   "local_time": "08:30",
+   "local_tz": "America/New_York",
+   "time_known": true
+  },
+  {
+   "event_time": "2026-04-10T12:30:00+00:00",
+   "currency": "USD",
+   "name": "US CPI",
+   "event_type": "us_cpi",
+   "impact": "high",
+   "tags": [
+    "cpi"
+   ],
+   "source": "bls_cpi",
+   "source_url": "https://www.bls.gov/bls/news-release/cpi.htm",
+   "retrieved_at": "2026-09-28",
+   "status": "released",
+   "local_date": "2026-04-10",
+   "local_time": "08:30",
+   "local_tz": "America/New_York",
+   "time_known": true
+  },
+  {
+   "event_time": "2026-04-16T06:00:00+00:00",
+   "currency": "GBP",
+   "name": "UK GDP (monthly estimate)",
+   "event_type": "uk_gdp_monthly",
+   "impact": "high",
+   "tags": [
+    "gdp"
+   ],
+   "source": "ons_gdp_monthly",
+   "source_url": "https://www.ons.gov.uk/releases/gdpmonthlyestimateukfebruary2026",
+   "retrieved_at": "2026-09-28",
+   "status": "released",
+   "local_date": "2026-04-16",
+   "local_time": "07:00",
+   "local_tz": "Europe/London",
+   "time_known": true
+  },
+  {
+   "event_time": "2026-04-21T06:00:00+00:00",
+   "currency": "GBP",
+   "name": "UK Labour Market Report",
+   "event_type": "uk_employment",
+   "impact": "high",
+   "tags": [
+    "employment"
+   ],
+   "source": "ons_labour_market",
+   "source_url": "https://www.ons.gov.uk/releases/uklabourmarketapril2026",
+   "retrieved_at": "2026-09-28",
+   "status": "released",
+   "local_date": "2026-04-21",
+   "local_time": "07:00",
+   "local_tz": "Europe/London",
+   "time_known": true
+  },
+  {
+   "event_time": "2026-04-22T06:00:00+00:00",
+   "currency": "GBP",
+   "name": "UK CPI",
+   "event_type": "uk_cpi",
+   "impact": "high",
+   "tags": [
+    "cpi"
+   ],
+   "source": "ons_cpi",
+   "source_url": "https://www.ons.gov.uk/releases/consumerpriceinflationukmarch2026",
+   "retrieved_at": "2026-09-28",
+   "status": "released",
+   "local_date": "2026-04-22",
+   "local_time": "07:00",
+   "local_tz": "Europe/London",
+   "time_known": true
+  },
+  {
+   "event_time": "2026-04-28T00:00:00+00:00",
+   "currency": "JPY",
+   "name": "Bank of Japan Rate Decision",
+   "event_type": "boj_rate_decision",
+   "impact": "high",
+   "tags": [
+    "central_bank_rate"
+   ],
+   "source": "boj_mpm",
+   "source_url": "https://www.boj.or.jp/en/mopo/mpmsche_minu/index.htm",
+   "retrieved_at": "2026-09-28",
+   "status": "held",
+   "local_date": "2026-04-28",
+   "local_time": "09:00",
+   "local_tz": "Asia/Tokyo",
+   "time_known": false,
+   "window_end": "2026-04-28T05:00:00+00:00",
+   "note": "BoJ announces on completion of the meeting; no fixed time. event_time is the START of a conservative 09:00-14:00 JST window and window_end its end."
+  },
+  {
+   "event_time": "2026-04-29T18:00:00+00:00",
+   "currency": "USD",
+   "name": "FOMC Rate Decision",
+   "event_type": "fomc_rate_decision",
+   "impact": "high",
+   "tags": [
+    "central_bank_rate"
+   ],
+   "source": "fed_fomc",
+   "source_url": "https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm",
+   "retrieved_at": "2026-09-28",
+   "status": "held",
+   "local_date": "2026-04-29",
+   "local_time": "14:00",
+   "local_tz": "America/New_York",
+   "time_known": true
+  },
+  {
+   "event_time": "2026-04-30T11:00:00+00:00",
+   "currency": "GBP",
+   "name": "Bank of England Rate Decision",
+   "event_type": "boe_rate_decision",
+   "impact": "high",
+   "tags": [
+    "central_bank_rate"
+   ],
+   "source": "boe_mpc",
+   "source_url": "https://www.bankofengland.co.uk/monetary-policy/upcoming-mpc-dates",
+   "retrieved_at": "2026-09-28",
+   "status": "held",
+   "local_date": "2026-04-30",
+   "local_time": "12:00",
+   "local_tz": "Europe/London",
+   "time_known": true
+  },
+  {
+   "event_time": "2026-04-30T12:15:00+00:00",
+   "currency": "EUR",
+   "name": "ECB Rate Decision",
+   "event_type": "ecb_rate_decision",
+   "impact": "high",
+   "tags": [
+    "central_bank_rate"
+   ],
+   "source": "ecb_governing_council",
+   "source_url": "https://www.ecb.europa.eu/press/govcdec/mopo/html/index.en.html",
+   "retrieved_at": "2026-09-28",
+   "status": "held",
+   "local_date": "2026-04-30",
+   "local_time": "14:15",
+   "local_tz": "Europe/Berlin",
+   "time_known": true
+  },
+  {
+   "event_time": "2026-05-08T12:30:00+00:00",
+   "currency": "USD",
+   "name": "US Non-Farm Payrolls",
+   "event_type": "us_nfp",
+   "impact": "high",
+   "tags": [
+    "nfp"
+   ],
+   "source": "bls_empsit",
+   "source_url": "https://www.bls.gov/bls/news-release/empsit.htm",
+   "retrieved_at": "2026-09-28",
+   "status": "released",
+   "local_date": "2026-05-08",
+   "local_time": "08:30",
+   "local_tz": "America/New_York",
+   "time_known": true
+  },
+  {
+   "event_time": "2026-05-12T12:30:00+00:00",
+   "currency": "USD",
+   "name": "US CPI",
+   "event_type": "us_cpi",
+   "impact": "high",
+   "tags": [
+    "cpi"
+   ],
+   "source": "bls_cpi",
+   "source_url": "https://www.bls.gov/bls/news-release/cpi.htm",
+   "retrieved_at": "2026-09-28",
+   "status": "released",
+   "local_date": "2026-05-12",
+   "local_time": "08:30",
+   "local_tz": "America/New_York",
+   "time_known": true
+  },
+  {
+   "event_time": "2026-05-14T06:00:00+00:00",
+   "currency": "GBP",
+   "name": "UK GDP (monthly estimate)",
+   "event_type": "uk_gdp_monthly",
+   "impact": "high",
+   "tags": [
+    "gdp"
+   ],
+   "source": "ons_gdp_monthly",
+   "source_url": "https://www.ons.gov.uk/releases/gdpmonthlyestimateukmarch2026",
+   "retrieved_at": "2026-09-28",
+   "status": "released",
+   "local_date": "2026-05-14",
+   "local_time": "07:00",
+   "local_tz": "Europe/London",
+   "time_known": true
+  },
+  {
+   "event_time": "2026-05-19T06:00:00+00:00",
+   "currency": "GBP",
+   "name": "UK Labour Market Report",
+   "event_type": "uk_employment",
+   "impact": "high",
+   "tags": [
+    "employment"
+   ],
+   "source": "ons_labour_market",
+   "source_url": "https://www.ons.gov.uk/releases/uklabourmarketmay2026",
+   "retrieved_at": "2026-09-28",
+   "status": "released",
+   "local_date": "2026-05-19",
+   "local_time": "07:00",
+   "local_tz": "Europe/London",
+   "time_known": true
+  },
+  {
+   "event_time": "2026-05-20T06:00:00+00:00",
+   "currency": "GBP",
+   "name": "UK CPI",
+   "event_type": "uk_cpi",
+   "impact": "high",
+   "tags": [
+    "cpi"
+   ],
+   "source": "ons_cpi",
+   "source_url": "https://www.ons.gov.uk/releases/consumerpriceinflationukapril2026",
+   "retrieved_at": "2026-09-28",
+   "status": "released",
+   "local_date": "2026-05-20",
+   "local_time": "07:00",
+   "local_tz": "Europe/London",
+   "time_known": true
+  },
+  {
+   "event_time": "2026-06-05T12:30:00+00:00",
+   "currency": "USD",
+   "name": "US Non-Farm Payrolls",
+   "event_type": "us_nfp",
+   "impact": "high",
+   "tags": [
+    "nfp"
+   ],
+   "source": "bls_empsit",
+   "source_url": "https://www.bls.gov/bls/news-release/empsit.htm",
+   "retrieved_at": "2026-09-28",
+   "status": "released",
+   "local_date": "2026-06-05",
+   "local_time": "08:30",
+   "local_tz": "America/New_York",
+   "time_known": true
+  },
+  {
+   "event_time": "2026-06-10T12:30:00+00:00",
+   "currency": "USD",
+   "name": "US CPI",
+   "event_type": "us_cpi",
+   "impact": "high",
+   "tags": [
+    "cpi"
+   ],
+   "source": "bls_cpi",
+   "source_url": "https://www.bls.gov/bls/news-release/cpi.htm",
+   "retrieved_at": "2026-09-28",
+   "status": "released",
+   "local_date": "2026-06-10",
+   "local_time": "08:30",
+   "local_tz": "America/New_York",
+   "time_known": true
+  },
+  {
+   "event_time": "2026-06-11T12:15:00+00:00",
+   "currency": "EUR",
+   "name": "ECB Rate Decision",
+   "event_type": "ecb_rate_decision",
+   "impact": "high",
+   "tags": [
+    "central_bank_rate"
+   ],
+   "source": "ecb_governing_council",
+   "source_url": "https://www.ecb.europa.eu/press/govcdec/mopo/html/index.en.html",
+   "retrieved_at": "2026-09-28",
+   "status": "held",
+   "local_date": "2026-06-11",
+   "local_time": "14:15",
+   "local_tz": "Europe/Berlin",
+   "time_known": true
+  },
+  {
+   "event_time": "2026-06-12T06:00:00+00:00",
+   "currency": "GBP",
+   "name": "UK GDP (monthly estimate)",
+   "event_type": "uk_gdp_monthly",
+   "impact": "high",
+   "tags": [
+    "gdp"
+   ],
+   "source": "ons_gdp_monthly",
+   "source_url": "https://www.ons.gov.uk/releases/gdpmonthlyestimateukapril2026",
+   "retrieved_at": "2026-09-28",
+   "status": "released",
+   "local_date": "2026-06-12",
+   "local_time": "07:00",
+   "local_tz": "Europe/London",
+   "time_known": true
+  },
+  {
+   "event_time": "2026-06-16T00:00:00+00:00",
+   "currency": "JPY",
+   "name": "Bank of Japan Rate Decision",
+   "event_type": "boj_rate_decision",
+   "impact": "high",
+   "tags": [
+    "central_bank_rate"
+   ],
+   "source": "boj_mpm",
+   "source_url": "https://www.boj.or.jp/en/mopo/mpmsche_minu/index.htm",
+   "retrieved_at": "2026-09-28",
+   "status": "held",
+   "local_date": "2026-06-16",
+   "local_time": "09:00",
+   "local_tz": "Asia/Tokyo",
+   "time_known": false,
+   "window_end": "2026-06-16T05:00:00+00:00",
+   "note": "BoJ announces on completion of the meeting; no fixed time. event_time is the START of a conservative 09:00-14:00 JST window and window_end its end."
+  },
+  {
+   "event_time": "2026-06-17T06:00:00+00:00",
+   "currency": "GBP",
+   "name": "UK CPI",
+   "event_type": "uk_cpi",
+   "impact": "high",
+   "tags": [
+    "cpi"
+   ],
+   "source": "ons_cpi",
+   "source_url": "https://www.ons.gov.uk/releases/consumerpriceinflationukmay2026",
+   "retrieved_at": "2026-09-28",
+   "status": "released",
+   "local_date": "2026-06-17",
+   "local_time": "07:00",
+   "local_tz": "Europe/London",
+   "time_known": true
+  },
+  {
+   "event_time": "2026-06-17T18:00:00+00:00",
+   "currency": "USD",
+   "name": "FOMC Rate Decision",
+   "event_type": "fomc_rate_decision",
+   "impact": "high",
+   "tags": [
+    "central_bank_rate"
+   ],
+   "source": "fed_fomc",
+   "source_url": "https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm",
+   "retrieved_at": "2026-09-28",
+   "status": "held",
+   "local_date": "2026-06-17",
+   "local_time": "14:00",
+   "local_tz": "America/New_York",
+   "time_known": true
+  },
+  {
+   "event_time": "2026-06-18T06:00:00+00:00",
+   "currency": "GBP",
+   "name": "UK Labour Market Report",
+   "event_type": "uk_employment",
+   "impact": "high",
+   "tags": [
+    "employment"
+   ],
+   "source": "ons_labour_market",
+   "source_url": "https://www.ons.gov.uk/releases/uklabourmarketjune2026",
+   "retrieved_at": "2026-09-28",
+   "status": "released",
+   "local_date": "2026-06-18",
+   "local_time": "07:00",
+   "local_tz": "Europe/London",
+   "time_known": true
+  },
+  {
+   "event_time": "2026-06-18T11:00:00+00:00",
+   "currency": "GBP",
+   "name": "Bank of England Rate Decision",
+   "event_type": "boe_rate_decision",
+   "impact": "high",
+   "tags": [
+    "central_bank_rate"
+   ],
+   "source": "boe_mpc",
+   "source_url": "https://www.bankofengland.co.uk/monetary-policy/upcoming-mpc-dates",
+   "retrieved_at": "2026-09-28",
+   "status": "held",
+   "local_date": "2026-06-18",
+   "local_time": "12:00",
+   "local_tz": "Europe/London",
+   "time_known": true
+  },
+  {
+   "event_time": "2026-07-02T12:30:00+00:00",
+   "currency": "USD",
+   "name": "US Non-Farm Payrolls",
+   "event_type": "us_nfp",
+   "impact": "high",
+   "tags": [
+    "nfp"
+   ],
+   "source": "bls_empsit",
+   "source_url": "https://www.bls.gov/bls/news-release/empsit.htm",
+   "retrieved_at": "2026-09-28",
+   "status": "released",
+   "local_date": "2026-07-02",
+   "local_time": "08:30",
+   "local_tz": "America/New_York",
+   "time_known": true
+  },
+  {
+   "event_time": "2026-07-14T12:30:00+00:00",
+   "currency": "USD",
+   "name": "US CPI",
+   "event_type": "us_cpi",
+   "impact": "high",
+   "tags": [
+    "cpi"
+   ],
+   "source": "bls_cpi",
+   "source_url": "https://www.bls.gov/bls/news-release/cpi.htm",
+   "retrieved_at": "2026-09-28",
+   "status": "released",
+   "local_date": "2026-07-14",
+   "local_time": "08:30",
+   "local_tz": "America/New_York",
+   "time_known": true
+  },
+  {
+   "event_time": "2026-07-16T06:00:00+00:00",
+   "currency": "GBP",
+   "name": "UK GDP (monthly estimate)",
+   "event_type": "uk_gdp_monthly",
+   "impact": "high",
+   "tags": [
+    "gdp"
+   ],
+   "source": "ons_gdp_monthly",
+   "source_url": "https://www.ons.gov.uk/releases/gdpmonthlyestimateukmay2026",
+   "retrieved_at": "2026-09-28",
+   "status": "released",
+   "local_date": "2026-07-16",
+   "local_time": "07:00",
+   "local_tz": "Europe/London",
+   "time_known": true
+  },
+  {
+   "event_time": "2026-07-21T06:00:00+00:00",
+   "currency": "GBP",
+   "name": "UK Labour Market Report",
+   "event_type": "uk_employment",
+   "impact": "high",
+   "tags": [
+    "employment"
+   ],
+   "source": "ons_labour_market",
+   "source_url": "https://www.ons.gov.uk/releases/uklabourmarketjuly2026",
+   "retrieved_at": "2026-09-28",
+   "status": "released",
+   "local_date": "2026-07-21",
+   "local_time": "07:00",
+   "local_tz": "Europe/London",
+   "time_known": true
+  },
+  {
+   "event_time": "2026-07-22T06:00:00+00:00",
+   "currency": "GBP",
+   "name": "UK CPI",
+   "event_type": "uk_cpi",
+   "impact": "high",
+   "tags": [
+    "cpi"
+   ],
+   "source": "ons_cpi",
+   "source_url": "https://www.ons.gov.uk/releases/consumerpriceinflationukjune2026",
+   "retrieved_at": "2026-09-28",
+   "status": "released",
+   "local_date": "2026-07-22",
+   "local_time": "07:00",
+   "local_tz": "Europe/London",
+   "time_known": true
+  },
+  {
+   "event_time": "2026-07-23T12:15:00+00:00",
+   "currency": "EUR",
+   "name": "ECB Rate Decision",
+   "event_type": "ecb_rate_decision",
+   "impact": "high",
+   "tags": [
+    "central_bank_rate"
+   ],
+   "source": "ecb_governing_council",
+   "source_url": "https://www.ecb.europa.eu/press/govcdec/mopo/html/index.en.html",
+   "retrieved_at": "2026-09-28",
+   "status": "held",
+   "local_date": "2026-07-23",
+   "local_time": "14:15",
+   "local_tz": "Europe/Berlin",
+   "time_known": true
+  },
+  {
+   "event_time": "2026-07-29T18:00:00+00:00",
+   "currency": "USD",
+   "name": "FOMC Rate Decision",
+   "event_type": "fomc_rate_decision",
+   "impact": "high",
+   "tags": [
+    "central_bank_rate"
+   ],
+   "source": "fed_fomc",
+   "source_url": "https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm",
+   "retrieved_at": "2026-09-28",
+   "status": "held",
+   "local_date": "2026-07-29",
+   "local_time": "14:00",
+   "local_tz": "America/New_York",
+   "time_known": true
+  },
+  {
+   "event_time": "2026-07-30T11:00:00+00:00",
+   "currency": "GBP",
+   "name": "Bank of England Rate Decision",
+   "event_type": "boe_rate_decision",
+   "impact": "high",
+   "tags": [
+    "central_bank_rate"
+   ],
+   "source": "boe_mpc",
+   "source_url": "https://www.bankofengland.co.uk/monetary-policy/upcoming-mpc-dates",
+   "retrieved_at": "2026-09-28",
+   "status": "held",
+   "local_date": "2026-07-30",
+   "local_time": "12:00",
+   "local_tz": "Europe/London",
+   "time_known": true
+  },
+  {
+   "event_time": "2026-07-31T00:00:00+00:00",
+   "currency": "JPY",
+   "name": "Bank of Japan Rate Decision",
+   "event_type": "boj_rate_decision",
+   "impact": "high",
+   "tags": [
+    "central_bank_rate"
+   ],
+   "source": "boj_mpm",
+   "source_url": "https://www.boj.or.jp/en/mopo/mpmsche_minu/index.htm",
+   "retrieved_at": "2026-09-28",
+   "status": "held",
+   "local_date": "2026-07-31",
+   "local_time": "09:00",
+   "local_tz": "Asia/Tokyo",
+   "time_known": false,
+   "window_end": "2026-07-31T05:00:00+00:00",
+   "note": "BoJ announces on completion of the meeting; no fixed time. event_time is the START of a conservative 09:00-14:00 JST window and window_end its end."
+  },
+  {
+   "event_time": "2026-08-07T12:30:00+00:00",
+   "currency": "USD",
+   "name": "US Non-Farm Payrolls",
+   "event_type": "us_nfp",
+   "impact": "high",
+   "tags": [
+    "nfp"
+   ],
+   "source": "bls_empsit",
+   "source_url": "https://www.bls.gov/bls/news-release/empsit.htm",
+   "retrieved_at": "2026-09-28",
+   "status": "released",
+   "local_date": "2026-08-07",
+   "local_time": "08:30",
+   "local_tz": "America/New_York",
+   "time_known": true
+  },
+  {
+   "event_time": "2026-08-12T12:30:00+00:00",
+   "currency": "USD",
+   "name": "US CPI",
+   "event_type": "us_cpi",
+   "impact": "high",
+   "tags": [
+    "cpi"
+   ],
+   "source": "bls_cpi",
+   "source_url": "https://www.bls.gov/bls/news-release/cpi.htm",
+   "retrieved_at": "2026-09-28",
+   "status": "released",
+   "local_date": "2026-08-12",
+   "local_time": "08:30",
+   "local_tz": "America/New_York",
+   "time_known": true
+  },
+  {
+   "event_time": "2026-08-13T06:00:00+00:00",
+   "currency": "GBP",
+   "name": "UK GDP (monthly estimate)",
+   "event_type": "uk_gdp_monthly",
+   "impact": "high",
+   "tags": [
+    "gdp"
+   ],
+   "source": "ons_gdp_monthly",
+   "source_url": "https://www.ons.gov.uk/releases/gdpmonthlyestimateukjune2026",
+   "retrieved_at": "2026-09-28",
+   "status": "released",
+   "local_date": "2026-08-13",
+   "local_time": "07:00",
+   "local_tz": "Europe/London",
+   "time_known": true
+  },
+  {
+   "event_time": "2026-08-18T06:00:00+00:00",
+   "currency": "GBP",
+   "name": "UK Labour Market Report",
+   "event_type": "uk_employment",
+   "impact": "high",
+   "tags": [
+    "employment"
+   ],
+   "source": "ons_labour_market",
+   "source_url": "https://www.ons.gov.uk/releases/uklabourmarketaugust2026",
+   "retrieved_at": "2026-09-28",
+   "status": "released",
+   "local_date": "2026-08-18",
+   "local_time": "07:00",
+   "local_tz": "Europe/London",
+   "time_known": true
+  },
+  {
+   "event_time": "2026-08-19T06:00:00+00:00",
+   "currency": "GBP",
+   "name": "UK CPI",
+   "event_type": "uk_cpi",
+   "impact": "high",
+   "tags": [
+    "cpi"
+   ],
+   "source": "ons_cpi",
+   "source_url": "https://www.ons.gov.uk/releases/consumerpriceinflationukjuly2026",
+   "retrieved_at": "2026-09-28",
+   "status": "released",
+   "local_date": "2026-08-19",
+   "local_time": "07:00",
+   "local_tz": "Europe/London",
+   "time_known": true
+  },
+  {
+   "event_time": "2026-09-04T12:30:00+00:00",
+   "currency": "USD",
+   "name": "US Non-Farm Payrolls",
+   "event_type": "us_nfp",
+   "impact": "high",
+   "tags": [
+    "nfp"
+   ],
+   "source": "bls_empsit",
+   "source_url": "https://www.bls.gov/bls/news-release/empsit.htm",
+   "retrieved_at": "2026-09-28",
+   "status": "released",
+   "local_date": "2026-09-04",
+   "local_time": "08:30",
+   "local_tz": "America/New_York",
+   "time_known": true
+  },
+  {
+   "event_time": "2026-09-10T12:15:00+00:00",
+   "currency": "EUR",
+   "name": "ECB Rate Decision",
+   "event_type": "ecb_rate_decision",
+   "impact": "high",
+   "tags": [
+    "central_bank_rate"
+   ],
+   "source": "ecb_governing_council",
+   "source_url": "https://www.ecb.europa.eu/press/govcdec/mopo/html/index.en.html",
+   "retrieved_at": "2026-09-28",
+   "status": "held",
+   "local_date": "2026-09-10",
+   "local_time": "14:15",
+   "local_tz": "Europe/Berlin",
+   "time_known": true
+  },
+  {
+   "event_time": "2026-09-11T06:00:00+00:00",
+   "currency": "GBP",
+   "name": "UK GDP (monthly estimate)",
+   "event_type": "uk_gdp_monthly",
+   "impact": "high",
+   "tags": [
+    "gdp"
+   ],
+   "source": "ons_gdp_monthly",
+   "source_url": "https://www.ons.gov.uk/releases/gdpmonthlyestimateukjuly2026",
+   "retrieved_at": "2026-09-28",
+   "status": "released",
+   "local_date": "2026-09-11",
+   "local_time": "07:00",
+   "local_tz": "Europe/London",
+   "time_known": true
+  },
+  {
+   "event_time": "2026-09-11T12:30:00+00:00",
+   "currency": "USD",
+   "name": "US CPI",
+   "event_type": "us_cpi",
+   "impact": "high",
+   "tags": [
+    "cpi"
+   ],
+   "source": "bls_cpi",
+   "source_url": "https://www.bls.gov/bls/news-release/cpi.htm",
+   "retrieved_at": "2026-09-28",
+   "status": "released",
+   "local_date": "2026-09-11",
+   "local_time": "08:30",
+   "local_tz": "America/New_York",
+   "time_known": true
+  },
+  {
+   "event_time": "2026-09-15T06:00:00+00:00",
+   "currency": "GBP",
+   "name": "UK Labour Market Report",
+   "event_type": "uk_employment",
+   "impact": "high",
+   "tags": [
+    "employment"
+   ],
+   "source": "ons_labour_market",
+   "source_url": "https://www.ons.gov.uk/releases/uklabourmarketseptember2026",
+   "retrieved_at": "2026-09-28",
+   "status": "released",
+   "local_date": "2026-09-15",
+   "local_time": "07:00",
+   "local_tz": "Europe/London",
+   "time_known": true
+  },
+  {
+   "event_time": "2026-09-16T06:00:00+00:00",
+   "currency": "GBP",
+   "name": "UK CPI",
+   "event_type": "uk_cpi",
+   "impact": "high",
+   "tags": [
+    "cpi"
+   ],
+   "source": "ons_cpi",
+   "source_url": "https://www.ons.gov.uk/releases/consumerpriceinflationukaugust2026",
+   "retrieved_at": "2026-09-28",
+   "status": "released",
+   "local_date": "2026-09-16",
+   "local_time": "07:00",
+   "local_tz": "Europe/London",
+   "time_known": true
+  },
+  {
+   "event_time": "2026-09-16T18:00:00+00:00",
+   "currency": "USD",
+   "name": "FOMC Rate Decision",
+   "event_type": "fomc_rate_decision",
+   "impact": "high",
+   "tags": [
+    "central_bank_rate"
+   ],
+   "source": "fed_fomc",
+   "source_url": "https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm",
+   "retrieved_at": "2026-09-28",
+   "status": "held",
+   "local_date": "2026-09-16",
+   "local_time": "14:00",
+   "local_tz": "America/New_York",
+   "time_known": true
+  },
+  {
+   "event_time": "2026-09-17T11:00:00+00:00",
+   "currency": "GBP",
+   "name": "Bank of England Rate Decision",
+   "event_type": "boe_rate_decision",
+   "impact": "high",
+   "tags": [
+    "central_bank_rate"
+   ],
+   "source": "boe_mpc",
+   "source_url": "https://www.bankofengland.co.uk/monetary-policy/upcoming-mpc-dates",
+   "retrieved_at": "2026-09-28",
+   "status": "held",
+   "local_date": "2026-09-17",
+   "local_time": "12:00",
+   "local_tz": "Europe/London",
+   "time_known": true
+  },
+  {
+   "event_time": "2026-09-18T00:00:00+00:00",
+   "currency": "JPY",
+   "name": "Bank of Japan Rate Decision",
+   "event_type": "boj_rate_decision",
+   "impact": "high",
+   "tags": [
+    "central_bank_rate"
+   ],
+   "source": "boj_mpm",
+   "source_url": "https://www.boj.or.jp/en/mopo/mpmsche_minu/index.htm",
+   "retrieved_at": "2026-09-28",
+   "status": "held",
+   "local_date": "2026-09-18",
+   "local_time": "09:00",
+   "local_tz": "Asia/Tokyo",
+   "time_known": false,
+   "window_end": "2026-09-18T05:00:00+00:00",
+   "note": "BoJ announces on completion of the meeting; no fixed time. event_time is the START of a conservative 09:00-14:00 JST window and window_end its end."
+  },
+  {
+   "event_time": "2026-10-02T12:30:00+00:00",
+   "currency": "USD",
+   "name": "US Non-Farm Payrolls",
+   "event_type": "us_nfp",
+   "impact": "high",
+   "tags": [
+    "nfp"
+   ],
+   "source": "bls_empsit",
+   "source_url": "https://www.bls.gov/schedule/news_release/empsit.htm",
+   "retrieved_at": "2026-09-28",
+   "status": "scheduled",
+   "local_date": "2026-10-02",
+   "local_time": "08:30",
+   "local_tz": "America/New_York",
+   "time_known": true
+  },
+  {
+   "event_time": "2026-10-14T12:30:00+00:00",
+   "currency": "USD",
+   "name": "US CPI",
+   "event_type": "us_cpi",
+   "impact": "high",
+   "tags": [
+    "cpi"
+   ],
+   "source": "bls_cpi",
+   "source_url": "https://www.bls.gov/schedule/news_release/cpi.htm",
+   "retrieved_at": "2026-09-28",
+   "status": "scheduled",
+   "local_date": "2026-10-14",
+   "local_time": "08:30",
+   "local_tz": "America/New_York",
+   "time_known": true
+  },
+  {
+   "event_time": "2026-10-15T06:00:00+00:00",
+   "currency": "GBP",
+   "name": "UK GDP (monthly estimate)",
+   "event_type": "uk_gdp_monthly",
+   "impact": "high",
+   "tags": [
+    "gdp"
+   ],
+   "source": "ons_gdp_monthly",
+   "source_url": "https://www.ons.gov.uk/releases/gdpmonthlyestimateukaugust2026",
+   "retrieved_at": "2026-09-28",
+   "status": "scheduled",
+   "local_date": "2026-10-15",
+   "local_time": "07:00",
+   "local_tz": "Europe/London",
+   "time_known": true
+  },
+  {
+   "event_time": "2026-10-20T06:00:00+00:00",
+   "currency": "GBP",
+   "name": "UK Labour Market Report",
+   "event_type": "uk_employment",
+   "impact": "high",
+   "tags": [
+    "employment"
+   ],
+   "source": "ons_labour_market",
+   "source_url": "https://www.ons.gov.uk/releases/uklabourmarketoctober2026",
+   "retrieved_at": "2026-09-28",
+   "status": "scheduled",
+   "local_date": "2026-10-20",
+   "local_time": "07:00",
+   "local_tz": "Europe/London",
+   "time_known": true
+  },
+  {
+   "event_time": "2026-10-21T06:00:00+00:00",
+   "currency": "GBP",
+   "name": "UK CPI",
+   "event_type": "uk_cpi",
+   "impact": "high",
+   "tags": [
+    "cpi"
+   ],
+   "source": "ons_cpi",
+   "source_url": "https://www.ons.gov.uk/releases/consumerpriceinflationukseptember2026",
+   "retrieved_at": "2026-09-28",
+   "status": "scheduled",
+   "local_date": "2026-10-21",
+   "local_time": "07:00",
+   "local_tz": "Europe/London",
+   "time_known": true
+  },
+  {
+   "event_time": "2026-10-28T18:00:00+00:00",
+   "currency": "USD",
+   "name": "FOMC Rate Decision",
+   "event_type": "fomc_rate_decision",
+   "impact": "high",
+   "tags": [
+    "central_bank_rate"
+   ],
+   "source": "fed_fomc",
+   "source_url": "https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm",
+   "retrieved_at": "2026-09-28",
+   "status": "scheduled",
+   "local_date": "2026-10-28",
+   "local_time": "14:00",
+   "local_tz": "America/New_York",
+   "time_known": true
+  },
+  {
+   "event_time": "2026-10-29T13:15:00+00:00",
+   "currency": "EUR",
+   "name": "ECB Rate Decision",
+   "event_type": "ecb_rate_decision",
+   "impact": "high",
+   "tags": [
+    "central_bank_rate"
+   ],
+   "source": "ecb_governing_council",
+   "source_url": "https://www.ecb.europa.eu/press/calendars/mgcgc/html/index.en.html",
+   "retrieved_at": "2026-09-28",
+   "status": "scheduled",
+   "local_date": "2026-10-29",
+   "local_time": "14:15",
+   "local_tz": "Europe/Berlin",
+   "time_known": true
+  },
+  {
+   "event_time": "2026-10-30T00:00:00+00:00",
+   "currency": "JPY",
+   "name": "Bank of Japan Rate Decision",
+   "event_type": "boj_rate_decision",
+   "impact": "high",
+   "tags": [
+    "central_bank_rate"
+   ],
+   "source": "boj_mpm",
+   "source_url": "https://www.boj.or.jp/en/mopo/mpmsche_minu/index.htm",
+   "retrieved_at": "2026-09-28",
+   "status": "scheduled",
+   "local_date": "2026-10-30",
+   "local_time": "09:00",
+   "local_tz": "Asia/Tokyo",
+   "time_known": false,
+   "window_end": "2026-10-30T05:00:00+00:00",
+   "note": "BoJ announces on completion of the meeting; no fixed time. event_time is the START of a conservative 09:00-14:00 JST window and window_end its end."
+  },
+  {
+   "event_time": "2026-11-05T12:00:00+00:00",
+   "currency": "GBP",
+   "name": "Bank of England Rate Decision",
+   "event_type": "boe_rate_decision",
+   "impact": "high",
+   "tags": [
+    "central_bank_rate"
+   ],
+   "source": "boe_mpc",
+   "source_url": "https://www.bankofengland.co.uk/monetary-policy/upcoming-mpc-dates",
+   "retrieved_at": "2026-09-28",
+   "status": "scheduled",
+   "local_date": "2026-11-05",
+   "local_time": "12:00",
+   "local_tz": "Europe/London",
+   "time_known": true
+  },
+  {
+   "event_time": "2026-11-06T13:30:00+00:00",
+   "currency": "USD",
+   "name": "US Non-Farm Payrolls",
+   "event_type": "us_nfp",
+   "impact": "high",
+   "tags": [
+    "nfp"
+   ],
+   "source": "bls_empsit",
+   "source_url": "https://www.bls.gov/schedule/news_release/empsit.htm",
+   "retrieved_at": "2026-09-28",
+   "status": "scheduled",
+   "local_date": "2026-11-06",
+   "local_time": "08:30",
+   "local_tz": "America/New_York",
+   "time_known": true
+  },
+  {
+   "event_time": "2026-11-10T13:30:00+00:00",
+   "currency": "USD",
+   "name": "US CPI",
+   "event_type": "us_cpi",
+   "impact": "high",
+   "tags": [
+    "cpi"
+   ],
+   "source": "bls_cpi",
+   "source_url": "https://www.bls.gov/schedule/news_release/cpi.htm",
+   "retrieved_at": "2026-09-28",
+   "status": "scheduled",
+   "local_date": "2026-11-10",
+   "local_time": "08:30",
+   "local_tz": "America/New_York",
+   "time_known": true
+  },
+  {
+   "event_time": "2026-11-12T07:00:00+00:00",
+   "currency": "GBP",
+   "name": "UK GDP (monthly estimate)",
+   "event_type": "uk_gdp_monthly",
+   "impact": "high",
+   "tags": [
+    "gdp"
+   ],
+   "source": "ons_gdp_monthly",
+   "source_url": "https://www.ons.gov.uk/releases/gdpmonthlyestimateukseptember2026",
+   "retrieved_at": "2026-09-28",
+   "status": "scheduled",
+   "local_date": "2026-11-12",
+   "local_time": "07:00",
+   "local_tz": "Europe/London",
+   "time_known": true
+  },
+  {
+   "event_time": "2026-11-17T07:00:00+00:00",
+   "currency": "GBP",
+   "name": "UK Labour Market Report",
+   "event_type": "uk_employment",
+   "impact": "high",
+   "tags": [
+    "employment"
+   ],
+   "source": "ons_labour_market",
+   "source_url": "https://www.ons.gov.uk/releases/uklabourmarketnovember2026",
+   "retrieved_at": "2026-09-28",
+   "status": "scheduled",
+   "local_date": "2026-11-17",
+   "local_time": "07:00",
+   "local_tz": "Europe/London",
+   "time_known": true
+  },
+  {
+   "event_time": "2026-11-18T07:00:00+00:00",
+   "currency": "GBP",
+   "name": "UK CPI",
+   "event_type": "uk_cpi",
+   "impact": "high",
+   "tags": [
+    "cpi"
+   ],
+   "source": "ons_cpi",
+   "source_url": "https://www.ons.gov.uk/releases/consumerpriceinflationukoctober2026",
+   "retrieved_at": "2026-09-28",
+   "status": "scheduled",
+   "local_date": "2026-11-18",
+   "local_time": "07:00",
+   "local_tz": "Europe/London",
+   "time_known": true
+  },
+  {
+   "event_time": "2026-12-04T13:30:00+00:00",
+   "currency": "USD",
+   "name": "US Non-Farm Payrolls",
+   "event_type": "us_nfp",
+   "impact": "high",
+   "tags": [
+    "nfp"
+   ],
+   "source": "bls_empsit",
+   "source_url": "https://www.bls.gov/schedule/news_release/empsit.htm",
+   "retrieved_at": "2026-09-28",
+   "status": "scheduled",
+   "local_date": "2026-12-04",
+   "local_time": "08:30",
+   "local_tz": "America/New_York",
+   "time_known": true
+  },
+  {
+   "event_time": "2026-12-09T19:00:00+00:00",
+   "currency": "USD",
+   "name": "FOMC Rate Decision",
+   "event_type": "fomc_rate_decision",
+   "impact": "high",
+   "tags": [
+    "central_bank_rate"
+   ],
+   "source": "fed_fomc",
+   "source_url": "https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm",
+   "retrieved_at": "2026-09-28",
+   "status": "scheduled",
+   "local_date": "2026-12-09",
+   "local_time": "14:00",
+   "local_tz": "America/New_York",
+   "time_known": true
+  },
+  {
+   "event_time": "2026-12-10T13:30:00+00:00",
+   "currency": "USD",
+   "name": "US CPI",
+   "event_type": "us_cpi",
+   "impact": "high",
+   "tags": [
+    "cpi"
+   ],
+   "source": "bls_cpi",
+   "source_url": "https://www.bls.gov/schedule/news_release/cpi.htm",
+   "retrieved_at": "2026-09-28",
+   "status": "scheduled",
+   "local_date": "2026-12-10",
+   "local_time": "08:30",
+   "local_tz": "America/New_York",
+   "time_known": true
+  },
+  {
+   "event_time": "2026-12-11T07:00:00+00:00",
+   "currency": "GBP",
+   "name": "UK GDP (monthly estimate)",
+   "event_type": "uk_gdp_monthly",
+   "impact": "high",
+   "tags": [
+    "gdp"
+   ],
+   "source": "ons_gdp_monthly",
+   "source_url": "https://www.ons.gov.uk/releases/gdpmonthlyestimateukoctober2026",
+   "retrieved_at": "2026-09-28",
+   "status": "scheduled",
+   "local_date": "2026-12-11",
+   "local_time": "07:00",
+   "local_tz": "Europe/London",
+   "time_known": true
+  },
+  {
+   "event_time": "2026-12-15T07:00:00+00:00",
+   "currency": "GBP",
+   "name": "UK Labour Market Report",
+   "event_type": "uk_employment",
+   "impact": "high",
+   "tags": [
+    "employment"
+   ],
+   "source": "ons_labour_market",
+   "source_url": "https://www.ons.gov.uk/releases/uklabourmarketdecember2026",
+   "retrieved_at": "2026-09-28",
+   "status": "scheduled",
+   "local_date": "2026-12-15",
+   "local_time": "07:00",
+   "local_tz": "Europe/London",
+   "time_known": true
+  },
+  {
+   "event_time": "2026-12-16T07:00:00+00:00",
+   "currency": "GBP",
+   "name": "UK CPI",
+   "event_type": "uk_cpi",
+   "impact": "high",
+   "tags": [
+    "cpi"
+   ],
+   "source": "ons_cpi",
+   "source_url": "https://www.ons.gov.uk/releases/consumerpriceinflationuknovember2026",
+   "retrieved_at": "2026-09-28",
+   "status": "scheduled",
+   "local_date": "2026-12-16",
+   "local_time": "07:00",
+   "local_tz": "Europe/London",
+   "time_known": true
+  },
+  {
+   "event_time": "2026-12-17T12:00:00+00:00",
+   "currency": "GBP",
+   "name": "Bank of England Rate Decision",
+   "event_type": "boe_rate_decision",
+   "impact": "high",
+   "tags": [
+    "central_bank_rate"
+   ],
+   "source": "boe_mpc",
+   "source_url": "https://www.bankofengland.co.uk/monetary-policy/upcoming-mpc-dates",
+   "retrieved_at": "2026-09-28",
+   "status": "scheduled",
+   "local_date": "2026-12-17",
+   "local_time": "12:00",
+   "local_tz": "Europe/London",
+   "time_known": true
+  },
+  {
+   "event_time": "2026-12-17T13:15:00+00:00",
+   "currency": "EUR",
+   "name": "ECB Rate Decision",
+   "event_type": "ecb_rate_decision",
+   "impact": "high",
+   "tags": [
+    "central_bank_rate"
+   ],
+   "source": "ecb_governing_council",
+   "source_url": "https://www.ecb.europa.eu/press/calendars/mgcgc/html/index.en.html",
+   "retrieved_at": "2026-09-28",
+   "status": "scheduled",
+   "local_date": "2026-12-17",
+   "local_time": "14:15",
+   "local_tz": "Europe/Berlin",
+   "time_known": true
+  },
+  {
+   "event_time": "2026-12-18T00:00:00+00:00",
+   "currency": "JPY",
+   "name": "Bank of Japan Rate Decision",
+   "event_type": "boj_rate_decision",
+   "impact": "high",
+   "tags": [
+    "central_bank_rate"
+   ],
+   "source": "boj_mpm",
+   "source_url": "https://www.boj.or.jp/en/mopo/mpmsche_minu/index.htm",
+   "retrieved_at": "2026-09-28",
+   "status": "scheduled",
+   "local_date": "2026-12-18",
+   "local_time": "09:00",
+   "local_tz": "Asia/Tokyo",
+   "time_known": false,
+   "window_end": "2026-12-18T05:00:00+00:00",
+   "note": "BoJ announces on completion of the meeting; no fixed time. event_time is the START of a conservative 09:00-14:00 JST window and window_end its end."
+  },
+  {
+   "event_time": "2027-01-15T07:00:00+00:00",
+   "currency": "GBP",
+   "name": "UK GDP (monthly estimate)",
+   "event_type": "uk_gdp_monthly",
+   "impact": "high",
+   "tags": [
+    "gdp"
+   ],
+   "source": "ons_gdp_monthly",
+   "source_url": "https://www.ons.gov.uk/releases/gdpmonthlyestimateuknovember2026",
+   "retrieved_at": "2026-09-28",
+   "status": "scheduled",
+   "local_date": "2027-01-15",
+   "local_time": "07:00",
+   "local_tz": "Europe/London",
+   "time_known": true
+  },
+  {
+   "event_time": "2027-01-19T07:00:00+00:00",
+   "currency": "GBP",
+   "name": "UK Labour Market Report",
+   "event_type": "uk_employment",
+   "impact": "high",
+   "tags": [
+    "employment"
+   ],
+   "source": "ons_labour_market",
+   "source_url": "https://www.ons.gov.uk/releases/uklabourmarketjanuary2027",
+   "retrieved_at": "2026-09-28",
+   "status": "scheduled",
+   "local_date": "2027-01-19",
+   "local_time": "07:00",
+   "local_tz": "Europe/London",
+   "time_known": true
+  },
+  {
+   "event_time": "2027-01-20T07:00:00+00:00",
+   "currency": "GBP",
+   "name": "UK CPI",
+   "event_type": "uk_cpi",
+   "impact": "high",
+   "tags": [
+    "cpi"
+   ],
+   "source": "ons_cpi",
+   "source_url": "https://www.ons.gov.uk/releases/consumerpriceinflationukdecember2026",
+   "retrieved_at": "2026-09-28",
+   "status": "scheduled",
+   "local_date": "2027-01-20",
+   "local_time": "07:00",
+   "local_tz": "Europe/London",
+   "time_known": true
+  },
+  {
+   "event_time": "2027-01-22T00:00:00+00:00",
+   "currency": "JPY",
+   "name": "Bank of Japan Rate Decision",
+   "event_type": "boj_rate_decision",
+   "impact": "high",
+   "tags": [
+    "central_bank_rate"
+   ],
+   "source": "boj_mpm",
+   "source_url": "https://www.boj.or.jp/en/mopo/mpmsche_minu/index.htm",
+   "retrieved_at": "2026-09-28",
+   "status": "scheduled",
+   "local_date": "2027-01-22",
+   "local_time": "09:00",
+   "local_tz": "Asia/Tokyo",
+   "time_known": false,
+   "window_end": "2027-01-22T05:00:00+00:00",
+   "note": "BoJ announces on completion of the meeting; no fixed time. event_time is the START of a conservative 09:00-14:00 JST window and window_end its end."
+  },
+  {
+   "event_time": "2027-01-27T19:00:00+00:00",
+   "currency": "USD",
+   "name": "FOMC Rate Decision",
+   "event_type": "fomc_rate_decision",
+   "impact": "high",
+   "tags": [
+    "central_bank_rate"
+   ],
+   "source": "fed_fomc",
+   "source_url": "https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm",
+   "retrieved_at": "2026-09-28",
+   "status": "tentative",
+   "local_date": "2027-01-27",
+   "local_time": "14:00",
+   "local_tz": "America/New_York",
+   "time_known": true,
+   "note": "Fed page: each meeting date is tentative until confirmed at the preceding meeting."
+  },
+  {
+   "event_time": "2027-02-04T12:00:00+00:00",
+   "currency": "GBP",
+   "name": "Bank of England Rate Decision",
+   "event_type": "boe_rate_decision",
+   "impact": "high",
+   "tags": [
+    "central_bank_rate"
+   ],
+   "source": "boe_mpc",
+   "source_url": "https://www.bankofengland.co.uk/monetary-policy/upcoming-mpc-dates",
+   "retrieved_at": "2026-09-28",
+   "status": "scheduled",
+   "local_date": "2027-02-04",
+   "local_time": "12:00",
+   "local_tz": "Europe/London",
+   "time_known": true
+  },
+  {
+   "event_time": "2027-02-04T13:15:00+00:00",
+   "currency": "EUR",
+   "name": "ECB Rate Decision",
+   "event_type": "ecb_rate_decision",
+   "impact": "high",
+   "tags": [
+    "central_bank_rate"
+   ],
+   "source": "ecb_governing_council",
+   "source_url": "https://www.ecb.europa.eu/press/calendars/mgcgc/html/index.en.html",
+   "retrieved_at": "2026-09-28",
+   "status": "scheduled",
+   "local_date": "2027-02-04",
+   "local_time": "14:15",
+   "local_tz": "Europe/Berlin",
+   "time_known": true
+  },
+  {
+   "event_time": "2027-02-12T07:00:00+00:00",
+   "currency": "GBP",
+   "name": "UK GDP (monthly estimate)",
+   "event_type": "uk_gdp_monthly",
+   "impact": "high",
+   "tags": [
+    "gdp"
+   ],
+   "source": "ons_gdp_monthly",
+   "source_url": "https://www.ons.gov.uk/releases/gdpmonthlyestimateukdecember2026",
+   "retrieved_at": "2026-09-28",
+   "status": "scheduled",
+   "local_date": "2027-02-12",
+   "local_time": "07:00",
+   "local_tz": "Europe/London",
+   "time_known": true
+  },
+  {
+   "event_time": "2027-02-16T07:00:00+00:00",
+   "currency": "GBP",
+   "name": "UK Labour Market Report",
+   "event_type": "uk_employment",
+   "impact": "high",
+   "tags": [
+    "employment"
+   ],
+   "source": "ons_labour_market",
+   "source_url": "https://www.ons.gov.uk/releases/uklabourmarketfebruary2027",
+   "retrieved_at": "2026-09-28",
+   "status": "scheduled",
+   "local_date": "2027-02-16",
+   "local_time": "07:00",
+   "local_tz": "Europe/London",
+   "time_known": true
+  },
+  {
+   "event_time": "2027-03-11T07:00:00+00:00",
+   "currency": "GBP",
+   "name": "UK GDP (monthly estimate)",
+   "event_type": "uk_gdp_monthly",
+   "impact": "high",
+   "tags": [
+    "gdp"
+   ],
+   "source": "ons_gdp_monthly",
+   "source_url": "https://www.ons.gov.uk/releases/gdpmonthlyestimateukjanuary2027",
+   "retrieved_at": "2026-09-28",
+   "status": "scheduled",
+   "local_date": "2027-03-11",
+   "local_time": "07:00",
+   "local_tz": "Europe/London",
+   "time_known": true
+  },
+  {
+   "event_time": "2027-03-16T07:00:00+00:00",
+   "currency": "GBP",
+   "name": "UK Labour Market Report",
+   "event_type": "uk_employment",
+   "impact": "high",
+   "tags": [
+    "employment"
+   ],
+   "source": "ons_labour_market",
+   "source_url": "https://www.ons.gov.uk/releases/uklabourmarketmarch2027",
+   "retrieved_at": "2026-09-28",
+   "status": "scheduled",
+   "local_date": "2027-03-16",
+   "local_time": "07:00",
+   "local_tz": "Europe/London",
+   "time_known": true
+  },
+  {
+   "event_time": "2027-03-17T18:00:00+00:00",
+   "currency": "USD",
+   "name": "FOMC Rate Decision",
+   "event_type": "fomc_rate_decision",
+   "impact": "high",
+   "tags": [
+    "central_bank_rate"
+   ],
+   "source": "fed_fomc",
+   "source_url": "https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm",
+   "retrieved_at": "2026-09-28",
+   "status": "tentative",
+   "local_date": "2027-03-17",
+   "local_time": "14:00",
+   "local_tz": "America/New_York",
+   "time_known": true,
+   "note": "Fed page: each meeting date is tentative until confirmed at the preceding meeting."
+  },
+  {
+   "event_time": "2027-03-18T00:00:00+00:00",
+   "currency": "JPY",
+   "name": "Bank of Japan Rate Decision",
+   "event_type": "boj_rate_decision",
+   "impact": "high",
+   "tags": [
+    "central_bank_rate"
+   ],
+   "source": "boj_mpm",
+   "source_url": "https://www.boj.or.jp/en/mopo/mpmsche_minu/index.htm",
+   "retrieved_at": "2026-09-28",
+   "status": "scheduled",
+   "local_date": "2027-03-18",
+   "local_time": "09:00",
+   "local_tz": "Asia/Tokyo",
+   "time_known": false,
+   "window_end": "2027-03-18T05:00:00+00:00",
+   "note": "BoJ announces on completion of the meeting; no fixed time. event_time is the START of a conservative 09:00-14:00 JST window and window_end its end."
+  },
+  {
+   "event_time": "2027-03-18T12:00:00+00:00",
+   "currency": "GBP",
+   "name": "Bank of England Rate Decision",
+   "event_type": "boe_rate_decision",
+   "impact": "high",
+   "tags": [
+    "central_bank_rate"
+   ],
+   "source": "boe_mpc",
+   "source_url": "https://www.bankofengland.co.uk/monetary-policy/upcoming-mpc-dates",
+   "retrieved_at": "2026-09-28",
+   "status": "scheduled",
+   "local_date": "2027-03-18",
+   "local_time": "12:00",
+   "local_tz": "Europe/London",
+   "time_known": true
+  },
+  {
+   "event_time": "2027-03-18T13:15:00+00:00",
+   "currency": "EUR",
+   "name": "ECB Rate Decision",
+   "event_type": "ecb_rate_decision",
+   "impact": "high",
+   "tags": [
+    "central_bank_rate"
+   ],
+   "source": "ecb_governing_council",
+   "source_url": "https://www.ecb.europa.eu/press/calendars/mgcgc/html/index.en.html",
+   "retrieved_at": "2026-09-28",
+   "status": "scheduled",
+   "local_date": "2027-03-18",
+   "local_time": "14:15",
+   "local_tz": "Europe/Berlin",
+   "time_known": true
+  },
+  {
+   "event_time": "2027-04-14T06:00:00+00:00",
+   "currency": "GBP",
+   "name": "UK GDP (monthly estimate)",
+   "event_type": "uk_gdp_monthly",
+   "impact": "high",
+   "tags": [
+    "gdp"
+   ],
+   "source": "ons_gdp_monthly",
+   "source_url": "https://www.ons.gov.uk/releases/gdpmonthlyestimateukfebruary2027",
+   "retrieved_at": "2026-09-28",
+   "status": "scheduled",
+   "local_date": "2027-04-14",
+   "local_time": "07:00",
+   "local_tz": "Europe/London",
+   "time_known": true
+  },
+  {
+   "event_time": "2027-04-20T06:00:00+00:00",
+   "currency": "GBP",
+   "name": "UK Labour Market Report",
+   "event_type": "uk_employment",
+   "impact": "high",
+   "tags": [
+    "employment"
+   ],
+   "source": "ons_labour_market",
+   "source_url": "https://www.ons.gov.uk/releases/uklabourmarketapril2027",
+   "retrieved_at": "2026-09-28",
+   "status": "scheduled",
+   "local_date": "2027-04-20",
+   "local_time": "07:00",
+   "local_tz": "Europe/London",
+   "time_known": true
+  },
+  {
+   "event_time": "2027-04-28T00:00:00+00:00",
+   "currency": "JPY",
+   "name": "Bank of Japan Rate Decision",
+   "event_type": "boj_rate_decision",
+   "impact": "high",
+   "tags": [
+    "central_bank_rate"
+   ],
+   "source": "boj_mpm",
+   "source_url": "https://www.boj.or.jp/en/mopo/mpmsche_minu/index.htm",
+   "retrieved_at": "2026-09-28",
+   "status": "scheduled",
+   "local_date": "2027-04-28",
+   "local_time": "09:00",
+   "local_tz": "Asia/Tokyo",
+   "time_known": false,
+   "window_end": "2027-04-28T05:00:00+00:00",
+   "note": "BoJ announces on completion of the meeting; no fixed time. event_time is the START of a conservative 09:00-14:00 JST window and window_end its end."
+  },
+  {
+   "event_time": "2027-04-28T18:00:00+00:00",
+   "currency": "USD",
+   "name": "FOMC Rate Decision",
+   "event_type": "fomc_rate_decision",
+   "impact": "high",
+   "tags": [
+    "central_bank_rate"
+   ],
+   "source": "fed_fomc",
+   "source_url": "https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm",
+   "retrieved_at": "2026-09-28",
+   "status": "tentative",
+   "local_date": "2027-04-28",
+   "local_time": "14:00",
+   "local_tz": "America/New_York",
+   "time_known": true,
+   "note": "Fed page: each meeting date is tentative until confirmed at the preceding meeting."
+  },
+  {
+   "event_time": "2027-04-29T11:00:00+00:00",
+   "currency": "GBP",
+   "name": "Bank of England Rate Decision",
+   "event_type": "boe_rate_decision",
+   "impact": "high",
+   "tags": [
+    "central_bank_rate"
+   ],
+   "source": "boe_mpc",
+   "source_url": "https://www.bankofengland.co.uk/monetary-policy/upcoming-mpc-dates",
+   "retrieved_at": "2026-09-28",
+   "status": "scheduled",
+   "local_date": "2027-04-29",
+   "local_time": "12:00",
+   "local_tz": "Europe/London",
+   "time_known": true
+  },
+  {
+   "event_time": "2027-04-29T12:15:00+00:00",
+   "currency": "EUR",
+   "name": "ECB Rate Decision",
+   "event_type": "ecb_rate_decision",
+   "impact": "high",
+   "tags": [
+    "central_bank_rate"
+   ],
+   "source": "ecb_governing_council",
+   "source_url": "https://www.ecb.europa.eu/press/calendars/mgcgc/html/index.en.html",
+   "retrieved_at": "2026-09-28",
+   "status": "scheduled",
+   "local_date": "2027-04-29",
+   "local_time": "14:15",
+   "local_tz": "Europe/Berlin",
+   "time_known": true
+  },
+  {
+   "event_time": "2027-05-14T06:00:00+00:00",
+   "currency": "GBP",
+   "name": "UK GDP (monthly estimate)",
+   "event_type": "uk_gdp_monthly",
+   "impact": "high",
+   "tags": [
+    "gdp"
+   ],
+   "source": "ons_gdp_monthly",
+   "source_url": "https://www.ons.gov.uk/releases/gdpmonthlyestimateukmarch2027",
+   "retrieved_at": "2026-09-28",
+   "status": "scheduled",
+   "local_date": "2027-05-14",
+   "local_time": "07:00",
+   "local_tz": "Europe/London",
+   "time_known": true
+  },
+  {
+   "event_time": "2027-05-18T06:00:00+00:00",
+   "currency": "GBP",
+   "name": "UK Labour Market Report",
+   "event_type": "uk_employment",
+   "impact": "high",
+   "tags": [
+    "employment"
+   ],
+   "source": "ons_labour_market",
+   "source_url": "https://www.ons.gov.uk/releases/uklabourmarketmay2027",
+   "retrieved_at": "2026-09-28",
+   "status": "scheduled",
+   "local_date": "2027-05-18",
+   "local_time": "07:00",
+   "local_tz": "Europe/London",
+   "time_known": true
+  },
+  {
+   "event_time": "2027-06-09T18:00:00+00:00",
+   "currency": "USD",
+   "name": "FOMC Rate Decision",
+   "event_type": "fomc_rate_decision",
+   "impact": "high",
+   "tags": [
+    "central_bank_rate"
+   ],
+   "source": "fed_fomc",
+   "source_url": "https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm",
+   "retrieved_at": "2026-09-28",
+   "status": "tentative",
+   "local_date": "2027-06-09",
+   "local_time": "14:00",
+   "local_tz": "America/New_York",
+   "time_known": true,
+   "note": "Fed page: each meeting date is tentative until confirmed at the preceding meeting."
+  },
+  {
+   "event_time": "2027-06-10T12:15:00+00:00",
+   "currency": "EUR",
+   "name": "ECB Rate Decision",
+   "event_type": "ecb_rate_decision",
+   "impact": "high",
+   "tags": [
+    "central_bank_rate"
+   ],
+   "source": "ecb_governing_council",
+   "source_url": "https://www.ecb.europa.eu/press/calendars/mgcgc/html/index.en.html",
+   "retrieved_at": "2026-09-28",
+   "status": "scheduled",
+   "local_date": "2027-06-10",
+   "local_time": "14:15",
+   "local_tz": "Europe/Berlin",
+   "time_known": true
+  },
+  {
+   "event_time": "2027-06-11T00:00:00+00:00",
+   "currency": "JPY",
+   "name": "Bank of Japan Rate Decision",
+   "event_type": "boj_rate_decision",
+   "impact": "high",
+   "tags": [
+    "central_bank_rate"
+   ],
+   "source": "boj_mpm",
+   "source_url": "https://www.boj.or.jp/en/mopo/mpmsche_minu/index.htm",
+   "retrieved_at": "2026-09-28",
+   "status": "scheduled",
+   "local_date": "2027-06-11",
+   "local_time": "09:00",
+   "local_tz": "Asia/Tokyo",
+   "time_known": false,
+   "window_end": "2027-06-11T05:00:00+00:00",
+   "note": "BoJ announces on completion of the meeting; no fixed time. event_time is the START of a conservative 09:00-14:00 JST window and window_end its end."
+  },
+  {
+   "event_time": "2027-06-15T06:00:00+00:00",
+   "currency": "GBP",
+   "name": "UK Labour Market Report",
+   "event_type": "uk_employment",
+   "impact": "high",
+   "tags": [
+    "employment"
+   ],
+   "source": "ons_labour_market",
+   "source_url": "https://www.ons.gov.uk/releases/uklabourmarketjune2027",
+   "retrieved_at": "2026-09-28",
+   "status": "scheduled",
+   "local_date": "2027-06-15",
+   "local_time": "07:00",
+   "local_tz": "Europe/London",
+   "time_known": true
+  },
+  {
+   "event_time": "2027-06-17T06:00:00+00:00",
+   "currency": "GBP",
+   "name": "UK GDP (monthly estimate)",
+   "event_type": "uk_gdp_monthly",
+   "impact": "high",
+   "tags": [
+    "gdp"
+   ],
+   "source": "ons_gdp_monthly",
+   "source_url": "https://www.ons.gov.uk/releases/gdpmonthlyestimateukapril2027",
+   "retrieved_at": "2026-09-28",
+   "status": "scheduled",
+   "local_date": "2027-06-17",
+   "local_time": "07:00",
+   "local_tz": "Europe/London",
+   "time_known": true
+  },
+  {
+   "event_time": "2027-06-17T11:00:00+00:00",
+   "currency": "GBP",
+   "name": "Bank of England Rate Decision",
+   "event_type": "boe_rate_decision",
+   "impact": "high",
+   "tags": [
+    "central_bank_rate"
+   ],
+   "source": "boe_mpc",
+   "source_url": "https://www.bankofengland.co.uk/monetary-policy/upcoming-mpc-dates",
+   "retrieved_at": "2026-09-28",
+   "status": "scheduled",
+   "local_date": "2027-06-17",
+   "local_time": "12:00",
+   "local_tz": "Europe/London",
+   "time_known": true
+  },
+  {
+   "event_time": "2027-07-14T06:00:00+00:00",
+   "currency": "GBP",
+   "name": "UK GDP (monthly estimate)",
+   "event_type": "uk_gdp_monthly",
+   "impact": "high",
+   "tags": [
+    "gdp"
+   ],
+   "source": "ons_gdp_monthly",
+   "source_url": "https://www.ons.gov.uk/releases/gdpmonthlyestimateukmay2027",
+   "retrieved_at": "2026-09-28",
+   "status": "scheduled",
+   "local_date": "2027-07-14",
+   "local_time": "07:00",
+   "local_tz": "Europe/London",
+   "time_known": true
+  },
+  {
+   "event_time": "2027-07-20T06:00:00+00:00",
+   "currency": "GBP",
+   "name": "UK Labour Market Report",
+   "event_type": "uk_employment",
+   "impact": "high",
+   "tags": [
+    "employment"
+   ],
+   "source": "ons_labour_market",
+   "source_url": "https://www.ons.gov.uk/releases/uklabourmarketjuly2027",
+   "retrieved_at": "2026-09-28",
+   "status": "scheduled",
+   "local_date": "2027-07-20",
+   "local_time": "07:00",
+   "local_tz": "Europe/London",
+   "time_known": true
+  },
+  {
+   "event_time": "2027-07-22T00:00:00+00:00",
+   "currency": "JPY",
+   "name": "Bank of Japan Rate Decision",
+   "event_type": "boj_rate_decision",
+   "impact": "high",
+   "tags": [
+    "central_bank_rate"
+   ],
+   "source": "boj_mpm",
+   "source_url": "https://www.boj.or.jp/en/mopo/mpmsche_minu/index.htm",
+   "retrieved_at": "2026-09-28",
+   "status": "scheduled",
+   "local_date": "2027-07-22",
+   "local_time": "09:00",
+   "local_tz": "Asia/Tokyo",
+   "time_known": false,
+   "window_end": "2027-07-22T05:00:00+00:00",
+   "note": "BoJ announces on completion of the meeting; no fixed time. event_time is the START of a conservative 09:00-14:00 JST window and window_end its end."
+  },
+  {
+   "event_time": "2027-07-22T12:15:00+00:00",
+   "currency": "EUR",
+   "name": "ECB Rate Decision",
+   "event_type": "ecb_rate_decision",
+   "impact": "high",
+   "tags": [
+    "central_bank_rate"
+   ],
+   "source": "ecb_governing_council",
+   "source_url": "https://www.ecb.europa.eu/press/calendars/mgcgc/html/index.en.html",
+   "retrieved_at": "2026-09-28",
+   "status": "scheduled",
+   "local_date": "2027-07-22",
+   "local_time": "14:15",
+   "local_tz": "Europe/Berlin",
+   "time_known": true
+  },
+  {
+   "event_time": "2027-07-28T18:00:00+00:00",
+   "currency": "USD",
+   "name": "FOMC Rate Decision",
+   "event_type": "fomc_rate_decision",
+   "impact": "high",
+   "tags": [
+    "central_bank_rate"
+   ],
+   "source": "fed_fomc",
+   "source_url": "https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm",
+   "retrieved_at": "2026-09-28",
+   "status": "tentative",
+   "local_date": "2027-07-28",
+   "local_time": "14:00",
+   "local_tz": "America/New_York",
+   "time_known": true,
+   "note": "Fed page: each meeting date is tentative until confirmed at the preceding meeting."
+  },
+  {
+   "event_time": "2027-07-29T11:00:00+00:00",
+   "currency": "GBP",
+   "name": "Bank of England Rate Decision",
+   "event_type": "boe_rate_decision",
+   "impact": "high",
+   "tags": [
+    "central_bank_rate"
+   ],
+   "source": "boe_mpc",
+   "source_url": "https://www.bankofengland.co.uk/monetary-policy/upcoming-mpc-dates",
+   "retrieved_at": "2026-09-28",
+   "status": "scheduled",
+   "local_date": "2027-07-29",
+   "local_time": "12:00",
+   "local_tz": "Europe/London",
+   "time_known": true
+  },
+  {
+   "event_time": "2027-08-13T06:00:00+00:00",
+   "currency": "GBP",
+   "name": "UK GDP (monthly estimate)",
+   "event_type": "uk_gdp_monthly",
+   "impact": "high",
+   "tags": [
+    "gdp"
+   ],
+   "source": "ons_gdp_monthly",
+   "source_url": "https://www.ons.gov.uk/releases/gdpmonthlyestimateukjune2027",
+   "retrieved_at": "2026-09-28",
+   "status": "scheduled",
+   "local_date": "2027-08-13",
+   "local_time": "07:00",
+   "local_tz": "Europe/London",
+   "time_known": true
+  },
+  {
+   "event_time": "2027-08-17T06:00:00+00:00",
+   "currency": "GBP",
+   "name": "UK Labour Market Report",
+   "event_type": "uk_employment",
+   "impact": "high",
+   "tags": [
+    "employment"
+   ],
+   "source": "ons_labour_market",
+   "source_url": "https://www.ons.gov.uk/releases/uklabourmarketaugust2027",
+   "retrieved_at": "2026-09-28",
+   "status": "scheduled",
+   "local_date": "2027-08-17",
+   "local_time": "07:00",
+   "local_tz": "Europe/London",
+   "time_known": true
+  },
+  {
+   "event_time": "2027-09-09T12:15:00+00:00",
+   "currency": "EUR",
+   "name": "ECB Rate Decision",
+   "event_type": "ecb_rate_decision",
+   "impact": "high",
+   "tags": [
+    "central_bank_rate"
+   ],
+   "source": "ecb_governing_council",
+   "source_url": "https://www.ecb.europa.eu/press/calendars/mgcgc/html/index.en.html",
+   "retrieved_at": "2026-09-28",
+   "status": "scheduled",
+   "local_date": "2027-09-09",
+   "local_time": "14:15",
+   "local_tz": "Europe/Berlin",
+   "time_known": true
+  },
+  {
+   "event_time": "2027-09-10T06:00:00+00:00",
+   "currency": "GBP",
+   "name": "UK GDP (monthly estimate)",
+   "event_type": "uk_gdp_monthly",
+   "impact": "high",
+   "tags": [
+    "gdp"
+   ],
+   "source": "ons_gdp_monthly",
+   "source_url": "https://www.ons.gov.uk/releases/gdpmonthlyestimateukjuly2027",
+   "retrieved_at": "2026-09-28",
+   "status": "scheduled",
+   "local_date": "2027-09-10",
+   "local_time": "07:00",
+   "local_tz": "Europe/London",
+   "time_known": true
+  },
+  {
+   "event_time": "2027-09-14T06:00:00+00:00",
+   "currency": "GBP",
+   "name": "UK Labour Market Report",
+   "event_type": "uk_employment",
+   "impact": "high",
+   "tags": [
+    "employment"
+   ],
+   "source": "ons_labour_market",
+   "source_url": "https://www.ons.gov.uk/releases/uklabourmarketseptember2027",
+   "retrieved_at": "2026-09-28",
+   "status": "scheduled",
+   "local_date": "2027-09-14",
+   "local_time": "07:00",
+   "local_tz": "Europe/London",
+   "time_known": true
+  },
+  {
+   "event_time": "2027-09-15T18:00:00+00:00",
+   "currency": "USD",
+   "name": "FOMC Rate Decision",
+   "event_type": "fomc_rate_decision",
+   "impact": "high",
+   "tags": [
+    "central_bank_rate"
+   ],
+   "source": "fed_fomc",
+   "source_url": "https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm",
+   "retrieved_at": "2026-09-28",
+   "status": "tentative",
+   "local_date": "2027-09-15",
+   "local_time": "14:00",
+   "local_tz": "America/New_York",
+   "time_known": true,
+   "note": "Fed page: each meeting date is tentative until confirmed at the preceding meeting."
+  },
+  {
+   "event_time": "2027-09-16T11:00:00+00:00",
+   "currency": "GBP",
+   "name": "Bank of England Rate Decision",
+   "event_type": "boe_rate_decision",
+   "impact": "high",
+   "tags": [
+    "central_bank_rate"
+   ],
+   "source": "boe_mpc",
+   "source_url": "https://www.bankofengland.co.uk/monetary-policy/upcoming-mpc-dates",
+   "retrieved_at": "2026-09-28",
+   "status": "scheduled",
+   "local_date": "2027-09-16",
+   "local_time": "12:00",
+   "local_tz": "Europe/London",
+   "time_known": true
+  },
+  {
+   "event_time": "2027-09-22T00:00:00+00:00",
+   "currency": "JPY",
+   "name": "Bank of Japan Rate Decision",
+   "event_type": "boj_rate_decision",
+   "impact": "high",
+   "tags": [
+    "central_bank_rate"
+   ],
+   "source": "boj_mpm",
+   "source_url": "https://www.boj.or.jp/en/mopo/mpmsche_minu/index.htm",
+   "retrieved_at": "2026-09-28",
+   "status": "scheduled",
+   "local_date": "2027-09-22",
+   "local_time": "09:00",
+   "local_tz": "Asia/Tokyo",
+   "time_known": false,
+   "window_end": "2027-09-22T05:00:00+00:00",
+   "note": "BoJ announces on completion of the meeting; no fixed time. event_time is the START of a conservative 09:00-14:00 JST window and window_end its end."
+  },
+  {
+   "event_time": "2027-10-14T06:00:00+00:00",
+   "currency": "GBP",
+   "name": "UK GDP (monthly estimate)",
+   "event_type": "uk_gdp_monthly",
+   "impact": "high",
+   "tags": [
+    "gdp"
+   ],
+   "source": "ons_gdp_monthly",
+   "source_url": "https://www.ons.gov.uk/releases/gdpmonthlyestimateukaugust2027",
+   "retrieved_at": "2026-09-28",
+   "status": "scheduled",
+   "local_date": "2027-10-14",
+   "local_time": "07:00",
+   "local_tz": "Europe/London",
+   "time_known": true
+  },
+  {
+   "event_time": "2027-10-19T06:00:00+00:00",
+   "currency": "GBP",
+   "name": "UK Labour Market Report",
+   "event_type": "uk_employment",
+   "impact": "high",
+   "tags": [
+    "employment"
+   ],
+   "source": "ons_labour_market",
+   "source_url": "https://www.ons.gov.uk/releases/uklabourmarketoctober2027",
+   "retrieved_at": "2026-09-28",
+   "status": "scheduled",
+   "local_date": "2027-10-19",
+   "local_time": "07:00",
+   "local_tz": "Europe/London",
+   "time_known": true
+  },
+  {
+   "event_time": "2027-10-27T18:00:00+00:00",
+   "currency": "USD",
+   "name": "FOMC Rate Decision",
+   "event_type": "fomc_rate_decision",
+   "impact": "high",
+   "tags": [
+    "central_bank_rate"
+   ],
+   "source": "fed_fomc",
+   "source_url": "https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm",
+   "retrieved_at": "2026-09-28",
+   "status": "tentative",
+   "local_date": "2027-10-27",
+   "local_time": "14:00",
+   "local_tz": "America/New_York",
+   "time_known": true,
+   "note": "Fed page: each meeting date is tentative until confirmed at the preceding meeting."
+  },
+  {
+   "event_time": "2027-10-28T12:15:00+00:00",
+   "currency": "EUR",
+   "name": "ECB Rate Decision",
+   "event_type": "ecb_rate_decision",
+   "impact": "high",
+   "tags": [
+    "central_bank_rate"
+   ],
+   "source": "ecb_governing_council",
+   "source_url": "https://www.ecb.europa.eu/press/calendars/mgcgc/html/index.en.html",
+   "retrieved_at": "2026-09-28",
+   "status": "scheduled",
+   "local_date": "2027-10-28",
+   "local_time": "14:15",
+   "local_tz": "Europe/Berlin",
+   "time_known": true
+  },
+  {
+   "event_time": "2027-10-29T00:00:00+00:00",
+   "currency": "JPY",
+   "name": "Bank of Japan Rate Decision",
+   "event_type": "boj_rate_decision",
+   "impact": "high",
+   "tags": [
+    "central_bank_rate"
+   ],
+   "source": "boj_mpm",
+   "source_url": "https://www.boj.or.jp/en/mopo/mpmsche_minu/index.htm",
+   "retrieved_at": "2026-09-28",
+   "status": "scheduled",
+   "local_date": "2027-10-29",
+   "local_time": "09:00",
+   "local_tz": "Asia/Tokyo",
+   "time_known": false,
+   "window_end": "2027-10-29T05:00:00+00:00",
+   "note": "BoJ announces on completion of the meeting; no fixed time. event_time is the START of a conservative 09:00-14:00 JST window and window_end its end."
+  },
+  {
+   "event_time": "2027-11-04T12:00:00+00:00",
+   "currency": "GBP",
+   "name": "Bank of England Rate Decision",
+   "event_type": "boe_rate_decision",
+   "impact": "high",
+   "tags": [
+    "central_bank_rate"
+   ],
+   "source": "boe_mpc",
+   "source_url": "https://www.bankofengland.co.uk/monetary-policy/upcoming-mpc-dates",
+   "retrieved_at": "2026-09-28",
+   "status": "scheduled",
+   "local_date": "2027-11-04",
+   "local_time": "12:00",
+   "local_tz": "Europe/London",
+   "time_known": true
+  },
+  {
+   "event_time": "2027-11-12T07:00:00+00:00",
+   "currency": "GBP",
+   "name": "UK GDP (monthly estimate)",
+   "event_type": "uk_gdp_monthly",
+   "impact": "high",
+   "tags": [
+    "gdp"
+   ],
+   "source": "ons_gdp_monthly",
+   "source_url": "https://www.ons.gov.uk/releases/gdpmonthlyestimateukseptember2027",
+   "retrieved_at": "2026-09-28",
+   "status": "scheduled",
+   "local_date": "2027-11-12",
+   "local_time": "07:00",
+   "local_tz": "Europe/London",
+   "time_known": true
+  },
+  {
+   "event_time": "2027-11-16T07:00:00+00:00",
+   "currency": "GBP",
+   "name": "UK Labour Market Report",
+   "event_type": "uk_employment",
+   "impact": "high",
+   "tags": [
+    "employment"
+   ],
+   "source": "ons_labour_market",
+   "source_url": "https://www.ons.gov.uk/releases/uklabourmarketnovember2027",
+   "retrieved_at": "2026-09-28",
+   "status": "scheduled",
+   "local_date": "2027-11-16",
+   "local_time": "07:00",
+   "local_tz": "Europe/London",
+   "time_known": true
+  },
+  {
+   "event_time": "2027-12-08T19:00:00+00:00",
+   "currency": "USD",
+   "name": "FOMC Rate Decision",
+   "event_type": "fomc_rate_decision",
+   "impact": "high",
+   "tags": [
+    "central_bank_rate"
+   ],
+   "source": "fed_fomc",
+   "source_url": "https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm",
+   "retrieved_at": "2026-09-28",
+   "status": "tentative",
+   "local_date": "2027-12-08",
+   "local_time": "14:00",
+   "local_tz": "America/New_York",
+   "time_known": true,
+   "note": "Fed page: each meeting date is tentative until confirmed at the preceding meeting."
+  },
+  {
+   "event_time": "2027-12-10T07:00:00+00:00",
+   "currency": "GBP",
+   "name": "UK GDP (monthly estimate)",
+   "event_type": "uk_gdp_monthly",
+   "impact": "high",
+   "tags": [
+    "gdp"
+   ],
+   "source": "ons_gdp_monthly",
+   "source_url": "https://www.ons.gov.uk/releases/gdpmonthlyestimateukoctober2027",
+   "retrieved_at": "2026-09-28",
+   "status": "scheduled",
+   "local_date": "2027-12-10",
+   "local_time": "07:00",
+   "local_tz": "Europe/London",
+   "time_known": true
+  },
+  {
+   "event_time": "2027-12-14T07:00:00+00:00",
+   "currency": "GBP",
+   "name": "UK Labour Market Report",
+   "event_type": "uk_employment",
+   "impact": "high",
+   "tags": [
+    "employment"
+   ],
+   "source": "ons_labour_market",
+   "source_url": "https://www.ons.gov.uk/releases/uklabourmarketdecember2027",
+   "retrieved_at": "2026-09-28",
+   "status": "scheduled",
+   "local_date": "2027-12-14",
+   "local_time": "07:00",
+   "local_tz": "Europe/London",
+   "time_known": true
+  },
+  {
+   "event_time": "2027-12-16T12:00:00+00:00",
+   "currency": "GBP",
+   "name": "Bank of England Rate Decision",
+   "event_type": "boe_rate_decision",
+   "impact": "high",
+   "tags": [
+    "central_bank_rate"
+   ],
+   "source": "boe_mpc",
+   "source_url": "https://www.bankofengland.co.uk/monetary-policy/upcoming-mpc-dates",
+   "retrieved_at": "2026-09-28",
+   "status": "scheduled",
+   "local_date": "2027-12-16",
+   "local_time": "12:00",
+   "local_tz": "Europe/London",
+   "time_known": true
+  },
+  {
+   "event_time": "2027-12-16T13:15:00+00:00",
+   "currency": "EUR",
+   "name": "ECB Rate Decision",
+   "event_type": "ecb_rate_decision",
+   "impact": "high",
+   "tags": [
+    "central_bank_rate"
+   ],
+   "source": "ecb_governing_council",
+   "source_url": "https://www.ecb.europa.eu/press/calendars/mgcgc/html/index.en.html",
+   "retrieved_at": "2026-09-28",
+   "status": "scheduled",
+   "local_date": "2027-12-16",
+   "local_time": "14:15",
+   "local_tz": "Europe/Berlin",
+   "time_known": true
+  },
+  {
+   "event_time": "2027-12-17T00:00:00+00:00",
+   "currency": "JPY",
+   "name": "Bank of Japan Rate Decision",
+   "event_type": "boj_rate_decision",
+   "impact": "high",
+   "tags": [
+    "central_bank_rate"
+   ],
+   "source": "boj_mpm",
+   "source_url": "https://www.boj.or.jp/en/mopo/mpmsche_minu/index.htm",
+   "retrieved_at": "2026-09-28",
+   "status": "scheduled",
+   "local_date": "2027-12-17",
+   "local_time": "09:00",
+   "local_tz": "Asia/Tokyo",
+   "time_known": false,
+   "window_end": "2027-12-17T05:00:00+00:00",
+   "note": "BoJ announces on completion of the meeting; no fixed time. event_time is the START of a conservative 09:00-14:00 JST window and window_end its end."
+  },
+  {
+   "event_time": "2028-02-03T13:15:00+00:00",
+   "currency": "EUR",
+   "name": "ECB Rate Decision",
+   "event_type": "ecb_rate_decision",
+   "impact": "high",
+   "tags": [
+    "central_bank_rate"
+   ],
+   "source": "ecb_governing_council",
+   "source_url": "https://www.ecb.europa.eu/press/calendars/mgcgc/html/index.en.html",
+   "retrieved_at": "2026-09-28",
+   "status": "scheduled",
+   "local_date": "2028-02-03",
+   "local_time": "14:15",
+   "local_tz": "Europe/Berlin",
+   "time_known": true
+  },
+  {
+   "event_time": "2028-03-23T13:15:00+00:00",
+   "currency": "EUR",
+   "name": "ECB Rate Decision",
+   "event_type": "ecb_rate_decision",
+   "impact": "high",
+   "tags": [
+    "central_bank_rate"
+   ],
+   "source": "ecb_governing_council",
+   "source_url": "https://www.ecb.europa.eu/press/calendars/mgcgc/html/index.en.html",
+   "retrieved_at": "2026-09-28",
+   "status": "scheduled",
+   "local_date": "2028-03-23",
+   "local_time": "14:15",
+   "local_tz": "Europe/Berlin",
+   "time_known": true
+  },
+  {
+   "event_time": "2028-05-04T12:15:00+00:00",
+   "currency": "EUR",
+   "name": "ECB Rate Decision",
+   "event_type": "ecb_rate_decision",
+   "impact": "high",
+   "tags": [
+    "central_bank_rate"
+   ],
+   "source": "ecb_governing_council",
+   "source_url": "https://www.ecb.europa.eu/press/calendars/mgcgc/html/index.en.html",
+   "retrieved_at": "2026-09-28",
+   "status": "scheduled",
+   "local_date": "2028-05-04",
+   "local_time": "14:15",
+   "local_tz": "Europe/Berlin",
+   "time_known": true
+  },
+  {
+   "event_time": "2028-06-08T12:15:00+00:00",
+   "currency": "EUR",
+   "name": "ECB Rate Decision",
+   "event_type": "ecb_rate_decision",
+   "impact": "high",
+   "tags": [
+    "central_bank_rate"
+   ],
+   "source": "ecb_governing_council",
+   "source_url": "https://www.ecb.europa.eu/press/calendars/mgcgc/html/index.en.html",
+   "retrieved_at": "2026-09-28",
+   "status": "scheduled",
+   "local_date": "2028-06-08",
+   "local_time": "14:15",
+   "local_tz": "Europe/Berlin",
+   "time_known": true
+  },
+  {
+   "event_time": "2028-07-20T12:15:00+00:00",
+   "currency": "EUR",
+   "name": "ECB Rate Decision",
+   "event_type": "ecb_rate_decision",
+   "impact": "high",
+   "tags": [
+    "central_bank_rate"
+   ],
+   "source": "ecb_governing_council",
+   "source_url": "https://www.ecb.europa.eu/press/calendars/mgcgc/html/index.en.html",
+   "retrieved_at": "2026-09-28",
+   "status": "scheduled",
+   "local_date": "2028-07-20",
+   "local_time": "14:15",
+   "local_tz": "Europe/Berlin",
+   "time_known": true
+  },
+  {
+   "event_time": "2028-09-07T12:15:00+00:00",
+   "currency": "EUR",
+   "name": "ECB Rate Decision",
+   "event_type": "ecb_rate_decision",
+   "impact": "high",
+   "tags": [
+    "central_bank_rate"
+   ],
+   "source": "ecb_governing_council",
+   "source_url": "https://www.ecb.europa.eu/press/calendars/mgcgc/html/index.en.html",
+   "retrieved_at": "2026-09-28",
+   "status": "scheduled",
+   "local_date": "2028-09-07",
+   "local_time": "14:15",
+   "local_tz": "Europe/Berlin",
+   "time_known": true
+  },
+  {
+   "event_time": "2028-10-12T12:15:00+00:00",
+   "currency": "EUR",
+   "name": "ECB Rate Decision",
+   "event_type": "ecb_rate_decision",
+   "impact": "high",
+   "tags": [
+    "central_bank_rate"
+   ],
+   "source": "ecb_governing_council",
+   "source_url": "https://www.ecb.europa.eu/press/calendars/mgcgc/html/index.en.html",
+   "retrieved_at": "2026-09-28",
+   "status": "scheduled",
+   "local_date": "2028-10-12",
+   "local_time": "14:15",
+   "local_tz": "Europe/Berlin",
+   "time_known": true
+  },
+  {
+   "event_time": "2028-12-07T13:15:00+00:00",
+   "currency": "EUR",
+   "name": "ECB Rate Decision",
+   "event_type": "ecb_rate_decision",
+   "impact": "high",
+   "tags": [
+    "central_bank_rate"
+   ],
+   "source": "ecb_governing_council",
+   "source_url": "https://www.ecb.europa.eu/press/calendars/mgcgc/html/index.en.html",
+   "retrieved_at": "2026-09-28",
+   "status": "scheduled",
+   "local_date": "2028-12-07",
+   "local_time": "14:15",
+   "local_tz": "Europe/Berlin",
+   "time_known": true
+  }
+ ]
+}
