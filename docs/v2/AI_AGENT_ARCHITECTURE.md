@@ -1,9 +1,11 @@
 # AI Agent Architecture
 
-**Snapshot:** 2026-09-19T05:05Z (`pytest tests/ -q` → 2683 passed, 2 skipped). Package: `src/fiboki/agents/` (12 modules, the
-largest being `tools.py` at 2,433 lines). Tests: `tests/unit/test_agents_{capabilities,roles,
-tool_registry,sandbox,audit,orchestrator,providers,research_writes}.py`,
-`tests/integration/test_agents_{permissions,jobs,workflow}.py`.
+**Snapshot:** 2026-09-19T05:05Z (`pytest tests/ -q` → 2683 passed, 2 skipped). Package: `src/fiboki/agents/` (11 modules including
+`__init__.py`; the largest is `tools.py`, 2,599 lines on 2026-09-28). Tests: `tests/unit/test_agents_{capabilities,roles,
+tool_registry,tool_as_of,sandbox,audit,audit_lock,orchestrator,providers,research_writes}.py`,
+`tests/integration/test_agents_{permissions,jobs,workflow}.py`. Counts in this document (19
+capabilities, 25 tools, 12 roles, 7 write domains, 8 job types) were re-checked against the code
+on 2026-09-28.
 
 ---
 
@@ -34,7 +36,7 @@ execution-mode changes, broker routing or writes to market data. An agent cannot
 capability that does not exist, and a tool cannot require one either — `tools.ToolRegistry`
 refuses to register a tool whose declared capability is not a member of this enum.
 
-The complete set — 20 members, and reading the list *is* the statement of what an autonomous
+The complete set — 19 members, and reading the list *is* the statement of what an autonomous
 researcher may touch:
 
 ```
@@ -104,7 +106,8 @@ There is no way to write that line and keep the test suite green.
 
 ### Mechanism 4 — the write surface, and the job queue that cannot express execution
 
-`tools.WriteDomain` enumerates the only destinations a tool may write to:
+`tools.WriteDomain` enumerates the only destinations a tool may write to (seven members, one of
+which, `NONE`, marks a read tool):
 
 ```
 NONE                        (a read tool)
@@ -118,7 +121,7 @@ Every member is a research artefact or the job queue. There is no `MARKET_DATA`,
 cannot describe itself.** `ToolRegistry.register` re-runs the capability guard on the tool's
 declared capability and refuses any tool whose `mutates` flag disagrees with its write domain.
 
-`agents/research_store.py` is the concrete destination: hypotheses, strategy proposals,
+`fiboki.research.artefacts.ResearchStore` is the concrete destination: hypotheses, strategy proposals,
 mutations, experiment designs, critiques and filed notes. It has no `update` method — a revised
 hypothesis is a *new* hypothesis with `supersedes` pointing at the old one, so the lineage of a
 research programme reads end to end. Job results are appended, never overwritten, because a
@@ -186,6 +189,30 @@ in append mode, and reads through a separate read-only handle, so there is no co
 class that can rewrite it.
 
 `Outcome.DENIED` is as important a record as `OK`.
+
+#### Several writers, one chain: the ledger lock
+
+The API process and the research worker can each hold a `JsonlAuditLedger` on the same file.
+Each instance caches the chain it has seen, so two unco-ordinated writers would each seal a
+record on the same tail and fork the chain. `JsonlAuditLedger.append` therefore:
+
+1. takes an exclusive `fcntl.flock` on a sidecar `<path>.lock` (never written) and holds it
+   across read-tail, append and `fsync`;
+2. checks that the line ending where this instance stopped reading still carries its cached
+   tail hash, then adopts any records another writer appended since, verifying that each one
+   continues the chain (sequence, previous hash, own hash);
+3. refuses with `AuditChainForkError` (a `ChainError`) if either check fails: the file was
+   truncated, replaced, edited or extended by a record that does not continue the chain. A
+   refused append writes nothing;
+4. seals, appends, `fsync`s, and on the first write also `fsync`s the parent directory, and only
+   then adds the record to the in-memory chain.
+
+`reload()` runs the full `verify_chain()`; a ledger whose loaded chain fails verification still
+loads, so it can be inspected, but refuses every append rather than burying the break under
+valid records. Steady-state appends cost O(1) in the ledger length. `fcntl` makes this POSIX
+only (macOS and Linux). `tests/unit/test_agents_audit_lock.py` runs four spawned processes
+writing 25 records each and requires exactly 100 records in one valid chain; with the lock
+removed the same run forks the chain and loses records.
 
 ## 3. The text/behaviour boundary
 
@@ -304,6 +331,32 @@ whether it mutates and to which research domain; and a cost and rate budget.
 `ToolBudget.max_rows_returned` is a correctness control as much as a cost one — a tool that
 hands a model 40,000 bars has not given it information, it has given it a context-window
 problem.
+
+### Pinning the agent's clock: `ToolContext.as_of`
+
+`ToolContext.as_of` is a timezone-aware datetime (a naive one is refused at construction;
+any offset is normalised to UTC). When it is set, every dated read tool treats it as "now":
+
+- `query_market_data`, `query_regime` and `query_data_quality` load bars no later than
+  `as_of` and keep only candles **closed** by it. Bars are left-labelled, so a bar stamped
+  `t` closes at `t + timeframe` and the bar that opens at or before `as_of` but closes after it
+  is not visible.
+- A model-supplied `start`, `end` or (for `query_regime`) `as_of` later than the pin is
+  **clamped** to it, not refused, and the output carries `as_of_clamped: true` with
+  `effective_as_of`. A model that supplies no date gets the pin.
+- `query_execution_telemetry` hides records signalled or filled after the pin and says so in
+  its caveats.
+
+`None` means "now, unpinned": every tool behaves exactly as it did before the pin existed.
+Workflows that reason about a point in history should set it; `AgentSession` rebinds the context
+with `dataclasses.replace`, which carries the pin through. Nothing in `src/` constructs a
+`ToolContext` today: it arrives through `WorkflowDeps.context`, so setting the pin is the
+caller's job.
+
+Not pinned: `query_portfolio` returns the provider's snapshot as it is, the research-memory and
+experiment-history reads have no time filter, and the job-submission tools that take a window
+(`run_backtest`, `run_walkforward`, `run_ablation`) pass their
+`start`/`end` to the worker unclamped (see §10).
 
 `BarSource` is a read-only protocol with no `write`. `InMemoryBarSource` raises on a missing key
 rather than returning an empty frame, inheriting the data platform's refusal to conflate
@@ -431,3 +484,7 @@ Stated in `agents/jobs.py` rather than discovered later:
 - **`regime_scan` and `librarian_filing` job types have no agent-facing tool** and no registered
   handler at this snapshot; they are declared for a future wiring.
 - **The audit ledger has no retention or rotation policy.** It grows without bound.
+- **`ToolContext.as_of` does not reach job submissions.** `run_backtest`, `run_walkforward` and
+  `run_ablation` accept a `start`/`end` that is passed to the worker as given, so an agent pinned
+  to a historical `as_of` can still queue a backtest over later data and read its result.
+  `query_portfolio` is likewise unpinned.

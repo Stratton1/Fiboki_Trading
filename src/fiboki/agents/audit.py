@@ -18,21 +18,37 @@ Append-only is enforced at the repository layer, three ways:
     :meth:`AuditLedger.verify_chain` rather than merely discouraged.
 
 The JSONL implementation only ever opens its file in append mode.
+
+Inter-process safety
+--------------------
+The API process and the research worker may both hold a
+:class:`JsonlAuditLedger` on the same file.  Each instance caches the chain it
+has seen, so without coordination two writers would each seal a record on top
+of the same tail and fork the chain.  :meth:`JsonlAuditLedger.append`
+therefore holds an exclusive ``fcntl.flock`` on a sidecar ``<path>.lock`` across
+read-tail, append and fsync; adopts, after verifying them, any records another
+writer appended since this instance last looked; and refuses with
+:class:`AuditChainForkError` if the file no longer continues the chain this
+instance holds.  Pattern after Vibe-Trading ``governance/ledger.py`` (MIT),
+written fresh.  ``fcntl`` makes this POSIX-only (macOS and Linux).
 """
 from __future__ import annotations
 
+import fcntl
 import hashlib
 import json
 import os
+import threading
 import time
 import uuid
 from collections.abc import Iterator, Mapping, Sequence
+from contextlib import contextmanager
 from dataclasses import dataclass, field, replace
 from datetime import UTC, datetime
 from enum import Enum
 from pathlib import Path
 from types import TracebackType
-from typing import Any, Protocol, runtime_checkable
+from typing import IO, Any, Protocol, runtime_checkable
 
 GENESIS_HASH = "0" * 64
 
@@ -195,6 +211,16 @@ class ChainError(RuntimeError):
     """The persisted ledger no longer hashes to itself."""
 
 
+class AuditChainForkError(ChainError):
+    """This instance's view of the chain no longer matches the file on disk.
+
+    Raised by :meth:`JsonlAuditLedger.append` instead of writing, when the
+    record this instance believes is the tail is not where it should be on
+    disk, or when records another writer appended do not continue it.  Sealing
+    a record on top of a tail the file does not hold would fork the chain.
+    """
+
+
 @runtime_checkable
 class AuditLedgerProtocol(Protocol):
     """The only operations a ledger offers.  Note what is missing."""
@@ -269,6 +295,19 @@ class JsonlAuditLedger(AuditLedger):
 
     Reading is done with a separate read-only handle, so there is no code path
     in this class that can truncate or rewrite the file.
+
+    Safe for several instances, in one process or several, on the same path:
+    every append holds an exclusive ``flock`` on ``<path>.lock`` (a sidecar that
+    is never written), re-reads the on-disk tail, catches up on records other
+    writers appended (verifying that they continue this instance's chain) and
+    only then seals and writes.  A file that no longer continues this
+    instance's chain is refused with :class:`AuditChainForkError`.
+
+    Verification cost: :meth:`reload` runs the full :meth:`verify_chain`; each
+    :meth:`append` checks only the cached tail plus any records appended since,
+    so steady-state appends are O(1) in the length of the ledger.  A ledger
+    whose loaded chain failed verification refuses every append: extending a
+    chain already known to be broken would bury the break under valid records.
     """
 
     PUBLIC_SURFACE: tuple[str, ...] = (*AuditLedger.PUBLIC_SURFACE, "path", "reload")
@@ -276,34 +315,182 @@ class JsonlAuditLedger(AuditLedger):
     def __init__(self, path: str | Path) -> None:
         super().__init__()
         self.path = Path(path)
+        self._lock_path = self.path.with_name(self.path.name + ".lock")
+        self._mutex = threading.Lock()
+        #: Bytes of the file this instance has read or written: the position
+        #: at which its cached tail record ends.
+        self._offset = 0
+        #: Result of the full verification run by the last reload.
+        self._loaded_chain_ok = True
         self.path.parent.mkdir(parents=True, exist_ok=True)
         if self.path.exists():
             self.reload()
 
+    # -- locking ----------------------------------------------------------
+
+    @contextmanager
+    def _file_lock(self, *, exclusive: bool) -> Iterator[None]:
+        fd = os.open(self._lock_path, os.O_RDWR | os.O_CREAT, 0o644)
+        try:
+            fcntl.flock(fd, fcntl.LOCK_EX if exclusive else fcntl.LOCK_SH)
+            try:
+                yield
+            finally:
+                fcntl.flock(fd, fcntl.LOCK_UN)
+        finally:
+            os.close(fd)
+
+    # -- writing ----------------------------------------------------------
+
     def append(self, record: AuditRecord) -> AuditRecord:
-        sealed = super().append(record)
-        line = json.dumps(sealed.payload(), sort_keys=True, separators=(",", ":"))
-        # Append mode, flush and fsync: a crash mid-workflow must not lose the
-        # record of what the agent had already done.
-        with open(self.path, "a", encoding="utf-8") as handle:
-            handle.write(line + "\n")
-            handle.flush()
-            os.fsync(handle.fileno())
+        with self._mutex, self._file_lock(exclusive=True):
+            self._catch_up()
+            sealed = record.sealed(
+                sequence=len(self._records),
+                previous_hash=self._records[-1].record_hash if self._records else GENESIS_HASH,
+            )
+            line = (
+                json.dumps(sealed.payload(), sort_keys=True, separators=(",", ":")) + "\n"
+            ).encode("utf-8")
+            created = not self.path.exists()
+            # Append mode, flush and fsync: a crash mid-workflow must not lose the
+            # record of what the agent had already done.
+            with open(self.path, "ab") as handle:
+                handle.write(line)
+                handle.flush()
+                os.fsync(handle.fileno())
+            if created:
+                # The new directory entry must survive a crash too.
+                _fsync_directory(self.path.parent)
+            # Only a record that is durably on disk joins the in-memory chain.
+            self._records.append(sealed)
+            self._offset += len(line)
         return sealed
 
-    def reload(self) -> None:
-        """Re-read the file.  Replaces the in-memory view; never writes."""
-        loaded: list[AuditRecord] = []
-        with open(self.path, encoding="utf-8") as handle:
-            for lineno, line in enumerate(handle, start=1):
-                text = line.strip()
-                if not text:
-                    continue
+    def _catch_up(self) -> None:
+        """Bring the cached chain level with the file, or refuse.  Lock held."""
+        if not self._loaded_chain_ok:
+            raise ChainError(
+                f"{self.path}: the chain loaded from disk failed verification; "
+                "refusing to append to a ledger known to be broken"
+            )
+        tail_hash = self._records[-1].record_hash if self._records else GENESIS_HASH
+        size = self.path.stat().st_size if self.path.exists() else 0
+        if size < self._offset:
+            raise AuditChainForkError(
+                f"{self.path}: file is {size} bytes but this instance has seen "
+                f"{self._offset}; it was truncated or replaced"
+            )
+        if size == 0:
+            return
+        with open(self.path, "rb") as handle:
+            if self._records:
+                # The line ending where this instance stopped reading must be
+                # its own cached tail.
+                on_disk = _line_ending_at(handle, self._offset, self.path)
                 try:
-                    loaded.append(AuditRecord.from_payload(json.loads(text)))
-                except (ValueError, KeyError) as exc:
-                    raise ChainError(f"{self.path}:{lineno}: unreadable record: {exc}") from exc
-        self._records = loaded
+                    disk_hash = json.loads(on_disk).get("record_hash")
+                except ValueError as exc:
+                    raise AuditChainForkError(
+                        f"{self.path}: unreadable record where this instance's tail "
+                        f"should be: {exc}"
+                    ) from exc
+                if disk_hash != tail_hash:
+                    raise AuditChainForkError(
+                        f"{self.path}: on-disk record at this instance's tail has hash "
+                        f"{disk_hash!r}, expected {tail_hash!r}; the file no longer "
+                        "holds the chain this instance extends"
+                    )
+            if size == self._offset:
+                return
+            handle.seek(self._offset)
+            blob = handle.read(size - self._offset)
+        if not blob.endswith(b"\n"):
+            raise AuditChainForkError(
+                f"{self.path}: the file does not end at a record boundary; a writer "
+                "died mid-record or the file was edited"
+            )
+        try:
+            fresh = _parse_lines(blob, self.path)
+        except ChainError as exc:
+            raise AuditChainForkError(str(exc)) from exc
+        previous, sequence = tail_hash, len(self._records)
+        for rec in fresh:
+            if (
+                rec.sequence != sequence
+                or rec.previous_hash != previous
+                or rec.compute_hash() != rec.record_hash
+            ):
+                raise AuditChainForkError(
+                    f"{self.path}: record {rec.action_id} appended by another writer "
+                    f"does not continue this chain at sequence {sequence}"
+                )
+            previous, sequence = rec.record_hash, sequence + 1
+        self._records.extend(fresh)
+        self._offset = size
+
+    # -- reading ----------------------------------------------------------
+
+    def reload(self) -> None:
+        """Re-read the file and run the full chain verification.  Never writes.
+
+        A broken chain loads (so it can be inspected and reported) but is
+        remembered as broken, and :meth:`append` then refuses.
+        """
+        with self._mutex, self._file_lock(exclusive=False):
+            with open(self.path, "rb") as handle:
+                blob = handle.read()
+            self._records = _parse_lines(blob, self.path)
+            self._offset = len(blob)
+            self._loaded_chain_ok = self.verify_chain()
+
+
+def _parse_lines(blob: bytes, path: Path) -> list[AuditRecord]:
+    loaded: list[AuditRecord] = []
+    for lineno, line in enumerate(blob.split(b"\n"), start=1):
+        text = line.strip()
+        if not text:
+            continue
+        try:
+            loaded.append(AuditRecord.from_payload(json.loads(text)))
+        except (ValueError, KeyError) as exc:
+            raise ChainError(f"{path}:{lineno}: unreadable record: {exc}") from exc
+    return loaded
+
+
+def _line_ending_at(handle: IO[bytes], end: int, path: Path) -> bytes:
+    """The line whose terminating newline is the byte at ``end - 1``.
+
+    Reads backwards in chunks, so the cost is the length of one record, not of
+    the file.
+    """
+    handle.seek(end - 1)
+    if handle.read(1) != b"\n":
+        raise AuditChainForkError(
+            f"{path}: byte {end - 1} is not a record boundary; the file was edited "
+            "or replaced"
+        )
+    parts: list[bytes] = []
+    cursor = end - 1
+    while cursor > 0:
+        step = min(8192, cursor)
+        cursor -= step
+        handle.seek(cursor)
+        chunk = handle.read(step)
+        cut = chunk.rfind(b"\n")
+        if cut >= 0:
+            parts.append(chunk[cut + 1 :])
+            break
+        parts.append(chunk)
+    return b"".join(reversed(parts))
+
+
+def _fsync_directory(directory: Path) -> None:
+    fd = os.open(directory, os.O_RDONLY)
+    try:
+        os.fsync(fd)
+    finally:
+        os.close(fd)
 
 
 def _verify(records: Sequence[AuditRecord]) -> bool:
@@ -414,6 +601,7 @@ def _outcome_for(exc: BaseException) -> Outcome:
 __all__ = [
     "GENESIS_HASH",
     "ActionKind",
+    "AuditChainForkError",
     "AuditLedger",
     "AuditLedgerProtocol",
     "AuditRecord",

@@ -360,7 +360,19 @@ class StubWebSearch:
 
 @dataclass(frozen=True, slots=True)
 class ToolContext:
-    """The services available to tool handlers.  Injected, never global."""
+    """The services available to tool handlers.  Injected, never global.
+
+    ``as_of`` pins the agent's clock.  When set (a timezone-aware datetime,
+    normalised to UTC), every dated read tool treats it as "now": bars are
+    loaded no later than it and only candles CLOSED by it are visible (bars are
+    left-labelled, so a bar stamped ``t`` closes at ``t + timeframe``);
+    telemetry signalled or filled after it is hidden; a model-supplied date
+    later than it is clamped to it, not refused, and the tool output carries
+    ``as_of_clamped: true`` plus ``effective_as_of``; a model that supplies no
+    date gets ``as_of``.  ``None`` means "now, unpinned": tools see whatever the
+    sources hold, exactly as before the pin existed.  Workflows that reason
+    about a point in history should always set it.
+    """
 
     research: ResearchStore
     strategies: StrategyRegistry
@@ -372,6 +384,21 @@ class ToolContext:
     agent_id: str = "unknown"
     role: str = "unknown"
     default_queue: str = "research"
+    as_of: datetime | None = None
+
+    def __post_init__(self) -> None:
+        if self.as_of is None:
+            return
+        if not isinstance(self.as_of, datetime):
+            raise TypeError(
+                f"ToolContext.as_of must be a datetime, got {type(self.as_of).__name__}"
+            )
+        if self.as_of.tzinfo is None or self.as_of.utcoffset() is None:
+            raise ValueError(
+                f"ToolContext.as_of={self.as_of!r} is timezone-naive; the agent clock "
+                "must be UTC-aware so it cannot be read in the wrong zone"
+            )
+        object.__setattr__(self, "as_of", self.as_of.astimezone(UTC))
 
     def require_bars(self) -> BarSource:
         if self.bars is None:
@@ -414,6 +441,64 @@ def _tf(value: str) -> Timeframe:
         raise ToolExecutionError(
             f"unknown timeframe {value!r}; registered: {[t.value for t in Timeframe]}"
         ) from exc
+
+
+def _utc(value: str, name: str) -> pd.Timestamp:
+    """A model-supplied date as a UTC timestamp.  Naive strings are UTC."""
+    try:
+        ts = pd.Timestamp(value)
+    except (TypeError, ValueError) as exc:
+        raise ToolExecutionError(f"{name}={value!r} is not a timestamp") from exc
+    return ts.tz_localize("UTC") if ts.tzinfo is None else ts.tz_convert("UTC")
+
+
+@dataclass(frozen=True, slots=True)
+class _Window:
+    """A bar window after the agent clock has been applied."""
+
+    start: str | None
+    end: str | None
+    pin: pd.Timestamp | None
+    clamped: bool
+
+    @property
+    def effective_as_of(self) -> str | None:
+        return self.pin.isoformat() if self.pin is not None else None
+
+
+def _pinned_window(ctx: ToolContext, start: str | None, end: str | None) -> _Window:
+    """Clamp a model-supplied window to ``ctx.as_of``.  Unpinned: unchanged."""
+    if ctx.as_of is None:
+        return _Window(start=start, end=end, pin=None, clamped=False)
+    pin = pd.Timestamp(ctx.as_of)
+    clamped = False
+    eff_start: str | None = None
+    if start is not None:
+        ts = _utc(start, "start")
+        if ts > pin:
+            ts, clamped = pin, True
+        eff_start = ts.isoformat()
+    eff_end = pin
+    if end is not None:
+        ts = _utc(end, "end")
+        if ts > pin:
+            clamped = True
+        else:
+            eff_end = ts
+    return _Window(start=eff_start, end=eff_end.isoformat(), pin=pin, clamped=clamped)
+
+
+def _load_bars(
+    ctx: ToolContext, instrument: str, timeframe: Timeframe, window: _Window
+) -> tuple[pd.DataFrame, str]:
+    """Load through the pinned window; when pinned, keep only closed candles."""
+    frame, version_id = ctx.require_bars().load(
+        instrument, timeframe, start=window.start, end=window.end
+    )
+    if window.pin is not None and not frame.empty:
+        closes_at = frame.index + pd.Timedelta(minutes=timeframe.minutes)
+        frame = frame.loc[closes_at <= window.pin]
+    return frame, version_id
 
 
 def _finite(value: Any) -> float | None:
@@ -463,18 +548,26 @@ class QueryMarketDataOut(_Out):
     tail: tuple[BarRow, ...] = ()
     truncated: bool = False
     caveats: tuple[str, ...] = ()
+    as_of_clamped: bool = False
+    effective_as_of: str | None = None
 
 
 def _query_market_data(ctx: ToolContext, inputs: QueryMarketDataIn) -> QueryMarketDataOut:
     timeframe = _tf(inputs.timeframe)
-    frame, version_id = ctx.require_bars().load(
-        inputs.instrument, timeframe, start=inputs.start, end=inputs.end
-    )
+    window = _pinned_window(ctx, inputs.start, inputs.end)
+    frame, version_id = _load_bars(ctx, inputs.instrument, timeframe, window)
     if frame.empty:
+        pinned = (
+            f" (pinned to as_of {window.effective_as_of}; closed candles only"
+            + (", and a requested date was clamped to it" if window.clamped else "")
+            + ")"
+            if window.pin is not None
+            else ""
+        )
         raise ToolExecutionError(
             f"{inputs.instrument} {timeframe.value}: the source returned zero rows for "
-            "the requested window. An empty window is a fact about the request, not "
-            "about the market; narrow or widen it deliberately."
+            f"the requested window{pinned}. An empty window is a fact about the request, "
+            "not about the market; narrow or widen it deliberately."
         )
     close = frame["close"].to_numpy(dtype=float)
     log_returns = np.diff(np.log(close)) if len(close) > 1 else np.array([])
@@ -520,6 +613,8 @@ def _query_market_data(ctx: ToolContext, inputs: QueryMarketDataIn) -> QueryMark
         tail=tail_rows,
         truncated=bool(inputs.tail_bars) and len(frame) > inputs.tail_bars,
         caveats=tuple(caveats),
+        as_of_clamped=window.clamped,
+        effective_as_of=window.effective_as_of,
     )
 
 
@@ -551,6 +646,8 @@ class QueryRegimeOut(_Out):
     feature_fingerprint: str
     distribution: tuple[AxisDistribution, ...] = ()
     notes: tuple[str, ...] = ()
+    as_of_clamped: bool = False
+    effective_as_of: str | None = None
 
 
 def _query_regime(ctx: ToolContext, inputs: QueryRegimeIn) -> QueryRegimeOut:
@@ -564,9 +661,8 @@ def _query_regime(ctx: ToolContext, inputs: QueryRegimeIn) -> QueryRegimeOut:
     conclusions would start depending on which one a tool happened to call.
     """
     timeframe = _tf(inputs.timeframe)
-    frame, version_id = ctx.require_bars().load(
-        inputs.instrument, timeframe, start=inputs.start, end=inputs.end
-    )
+    window = _pinned_window(ctx, inputs.start, inputs.end)
+    frame, version_id = _load_bars(ctx, inputs.instrument, timeframe, window)
     engine = FeatureEngine(timeframe=timeframe, instrument=inputs.instrument.upper())
     if len(frame) <= engine.warmup:
         raise ToolExecutionError(
@@ -580,7 +676,15 @@ def _query_regime(ctx: ToolContext, inputs: QueryRegimeIn) -> QueryRegimeOut:
     except (FeatureError, RegimeError) as exc:
         raise ToolExecutionError(f"regime classification failed: {exc}") from exc
 
-    when = pd.Timestamp(inputs.as_of, tz="UTC") if inputs.as_of else frame.index[-1]
+    clamped = window.clamped
+    if window.pin is None:
+        when = pd.Timestamp(inputs.as_of, tz="UTC") if inputs.as_of else frame.index[-1]
+    elif inputs.as_of:
+        when = _utc(inputs.as_of, "as_of")
+        if when > window.pin:
+            when, clamped = window.pin, True
+    else:
+        when = window.pin
     if len(series.frame) <= series.warmup:
         raise ToolExecutionError(
             f"{inputs.instrument} {timeframe.value}: the classifier needs "
@@ -623,6 +727,8 @@ def _query_regime(ctx: ToolContext, inputs: QueryRegimeIn) -> QueryRegimeOut:
         feature_fingerprint=features.fingerprint,
         distribution=distribution,
         notes=tuple(series.notes) + tuple(features.notes),
+        as_of_clamped=clamped,
+        effective_as_of=str(when) if window.pin is not None else None,
     )
 
 
@@ -1270,6 +1376,8 @@ class QueryExecutionTelemetryOut(_Out):
     rows: tuple[TelemetryRow, ...]
     read_errors: int
     caveats: tuple[str, ...]
+    as_of_clamped: bool = False
+    effective_as_of: str | None = None
 
 
 def _query_execution_telemetry(
@@ -1282,6 +1390,21 @@ def _query_execution_telemetry(
         )
     reader = TelemetryReader(ctx.telemetry_dir)
     frame, report = reader.frame()
+    pin_caveats: tuple[str, ...] = ()
+    effective_as_of: str | None = None
+    if ctx.as_of is not None:
+        # Pinned clock: an execution signalled, or filled, after as_of had not
+        # happened yet.  Records carry no model-supplied date, so nothing is
+        # clamped; the future is simply not visible.
+        pin = pd.Timestamp(ctx.as_of)
+        effective_as_of = pin.isoformat()
+        pin_caveats = (
+            f"pinned to as_of {effective_as_of}: records signalled or filled after it "
+            "are not visible",
+        )
+        if not frame.empty:
+            fills = frame["fill_ts"]
+            frame = frame.loc[(frame.index <= pin) & (fills.isna() | (fills <= pin))]
     n_total = len(frame)
     if frame.empty:
         return QueryExecutionTelemetryOut(
@@ -1290,7 +1413,11 @@ def _query_execution_telemetry(
             group_by=inputs.group_by,
             rows=(),
             read_errors=len(getattr(report, "errors", ()) or ()),
-            caveats=("the telemetry log is empty; no execution has been recorded yet",),
+            caveats=(
+                "the telemetry log is empty; no execution has been recorded yet",
+                *pin_caveats,
+            ),
+            effective_as_of=effective_as_of,
         )
     if inputs.strategy_id:
         frame = frame[frame["strategy_id"] == inputs.strategy_id]
@@ -1303,7 +1430,8 @@ def _query_execution_telemetry(
             group_by=inputs.group_by,
             rows=(),
             read_errors=len(getattr(report, "errors", ()) or ()),
-            caveats=("the filter matched no telemetry records",),
+            caveats=("the filter matched no telemetry records", *pin_caveats),
+            effective_as_of=effective_as_of,
         )
     summary = slippage_summary(frame, by=inputs.group_by)
     rows: list[TelemetryRow] = []
@@ -1323,7 +1451,9 @@ def _query_execution_telemetry(
         caveats=(
             "realised slippage is measured against the price requested at decision "
             "time; it says nothing about the fills a larger size would have received",
+            *pin_caveats,
         ),
+        effective_as_of=effective_as_of,
     )
 
 
@@ -1354,13 +1484,14 @@ class QueryDataQualityOut(_Out):
     defects: tuple[DefectSummary, ...]
     n_gaps: int
     checks_run: tuple[str, ...]
+    as_of_clamped: bool = False
+    effective_as_of: str | None = None
 
 
 def _query_data_quality(ctx: ToolContext, inputs: QueryDataQualityIn) -> QueryDataQualityOut:
     timeframe = _tf(inputs.timeframe)
-    frame, version_id = ctx.require_bars().load(
-        inputs.instrument, timeframe, start=inputs.start, end=inputs.end
-    )
+    window = _pinned_window(ctx, inputs.start, inputs.end)
+    frame, version_id = _load_bars(ctx, inputs.instrument, timeframe, window)
     report = validate_integrity(frame, config=IntegrityConfig())
     return QueryDataQualityOut(
         instrument=inputs.instrument.upper(),
@@ -1383,6 +1514,8 @@ def _query_data_quality(ctx: ToolContext, inputs: QueryDataQualityIn) -> QueryDa
         ),
         n_gaps=len(report.gaps),
         checks_run=tuple(report.checks_run),
+        as_of_clamped=window.clamped,
+        effective_as_of=window.effective_as_of,
     )
 
 
