@@ -36,6 +36,18 @@ Three things this parser refuses to be casual about:
   exchange; its "volume" is the number of price updates it saw. It is recorded
   as ``tick_volume`` and the real ``volume`` column is left absent, so no
   strategy can mistake broker tick counts for market volume.
+
+Candle alignment
+----------------
+v20 aligns H2-H12 and D candles to ``dailyAlignment=17`` in
+``America/New_York`` by DEFAULT, so an unqualified H4 request returns bars
+starting at 21:00/01:00/05:00 UTC (summer) or 22:00/02:00/06:00 UTC (winter)
+and a D bar starting at New York 17:00. Every stored research frame is
+epoch-anchored UTC (``data/resample.py``). A live H4 bar that starts at 21:00
+UTC is a different bar from the one the strategy was researched on, so
+:meth:`OandaCandlesProvider.request_params` asks for ``dailyAlignment=0`` and
+``alignmentTimezone=UTC`` unless told otherwise. Minute and hourly candles are
+unaffected by these parameters.
 """
 from __future__ import annotations
 
@@ -262,8 +274,14 @@ class OandaCandlesProvider(BarProvider):
         start: pd.Timestamp | None = None,
         end: pd.Timestamp | None = None,
         count: int | None = None,
+        align_utc: bool = True,
     ) -> tuple[str, dict[str, Any]]:
-        """The exact URL and query the fetch would issue. Testable without a network."""
+        """The exact URL and query the fetch would issue. Testable without a network.
+
+        ``align_utc`` (default True) pins daily-aligned granularities to UTC
+        midnight so they match the epoch-anchored research frames. See the
+        module docstring; passing False reproduces v20's New York alignment.
+        """
         self.capabilities.assert_timeframe(timeframe)
         name = to_oanda_instrument(instrument)
         url = f"{self.host}/v3/instruments/{name}/candles"
@@ -271,6 +289,9 @@ class OandaCandlesProvider(BarProvider):
             "granularity": GRANULARITY[timeframe],
             "price": PRICE_COMPONENT[self.price_basis],
         }
+        if align_utc:
+            params["dailyAlignment"] = 0
+            params["alignmentTimezone"] = "UTC"
         if count is not None:
             params["count"] = int(count)
         if start is not None:
@@ -293,7 +314,16 @@ class OandaCandlesProvider(BarProvider):
         *,
         start: pd.Timestamp | None = None,
         end: pd.Timestamp | None = None,
+        count: int | None = None,
     ) -> BarBatch:
+        """Fetch candles. ``count`` asks for the newest N (v20 ``count``).
+
+        This is an idempotent GET. It is deliberately NOT retried here: the
+        data layer sits below ``broker`` and cannot import
+        :mod:`fiboki.broker.retry`. The live feed wraps this method with
+        ``retry_idempotent_read`` at composition time instead
+        (``workers/feeds.py``).
+        """
         if not self.api_token:
             raise AuthenticationRequired(
                 "OANDA v20 needs OANDA_API_TOKEN. No credentials are configured, and "
@@ -302,7 +332,9 @@ class OandaCandlesProvider(BarProvider):
             )
         if self.http_client is None:  # pragma: no cover - needs a live client
             raise ProviderError("no HTTP client configured")
-        url, params = self.request_params(instrument, timeframe, start=start, end=end)
+        url, params = self.request_params(
+            instrument, timeframe, start=start, end=end, count=count
+        )
         response = self.http_client.get(  # type: ignore[attr-defined]
             url,
             params=params,

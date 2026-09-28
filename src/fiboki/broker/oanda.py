@@ -39,6 +39,17 @@ Documented approximations
   the adapter converts our size to the venue's precision and **fails loudly**
   if that conversion would change the number, rather than silently rounding.
   Silently rounding here is how an adapter starts re-deciding size.
+
+Retries: reads only
+-------------------
+Every GET goes through :meth:`OandaAdapter._get`, which is the ONE function in
+this module decorated with
+:func:`~fiboki.broker.retry.retry_idempotent_read`: bounded exponential backoff
+with jitter on 429/5xx/transport failure, ``Retry-After`` honoured, a per-call
+deadline. Orders, closes, partial closes and amendments call :meth:`_call`
+directly and are NEVER retried: their fate on a transport failure is UNKNOWN
+and the answer is reconciliation, not a second request.
+``tests/unit/test_retry_scope.py`` enforces both halves over the AST.
 """
 from __future__ import annotations
 
@@ -61,6 +72,7 @@ from fiboki.broker.base import (
     OrderStatus,
     PositionNotFound,
 )
+from fiboki.broker.retry import ReadRetry, retry_idempotent_read
 from fiboki.core.contracts import AccountState, Fill, Order, Position
 from fiboki.core.enums import Direction, ExecutionMode
 from fiboki.core.instruments import Instrument
@@ -98,6 +110,23 @@ _OANDA_LIVE_ENV = "FIBOKI_OANDA_LIVE_RUNTIME"
 
 class OandaHostError(RuntimeError):
     """The configured base URL is not an authorised host for this build."""
+
+
+def _unavailable(message: str, response: HttpResponse) -> BrokerUnavailable:
+    """``BrokerUnavailable`` carrying the HTTP status and any ``Retry-After``.
+
+    The attributes let :func:`~fiboki.broker.retry.is_retryable` classify a
+    READ failure without parsing a message. They change nothing for a write:
+    the write path never retries, whatever the exception carries.
+    """
+    exc = BrokerUnavailable(message)
+    exc.status = response.status  # type: ignore[attr-defined]
+    retry_after = next(
+        (v for k, v in (response.headers or {}).items() if k.lower() == "retry-after"),
+        None,
+    )
+    exc.retry_after = retry_after  # type: ignore[attr-defined]
+    return exc
 
 
 # --------------------------------------------------------------------------
@@ -291,11 +320,15 @@ class OandaAdapter(BrokerAdapter):
         rate_limiter: RateLimiter | None = None,
         env: dict[str, str] | None = None,
         now_fn=None,
+        read_retry: ReadRetry | None = None,
     ) -> None:
         self.config = config
         self.mode = config.mode
         self.transport = transport
         self.rate_limiter = rate_limiter or RateLimiter(config.max_requests_per_second)
+        #: Retry policy for GETs only. No rate limiter on it: ``_call`` already
+        #: acquires ``self.rate_limiter`` on every attempt.
+        self.read_retry = read_retry or ReadRetry(deadline_s=max(1.0, config.timeout))
         self._env = env if env is not None else dict(os.environ)
         self._now_fn = now_fn or (lambda: pd.Timestamp.now(tz="UTC"))
         self._connected = False
@@ -376,23 +409,33 @@ class OandaAdapter(BrokerAdapter):
         except Exception as exc:
             raise BrokerUnavailable(f"OANDA transport failure on {method} {path}: {exc}") from exc
         if response.status == 429:
-            raise BrokerUnavailable(
-                f"OANDA rate limited {method} {path}; the order's fate is unknown"
+            raise _unavailable(
+                f"OANDA rate limited {method} {path}; the order's fate is unknown",
+                response,
             )
         if response.status in (500, 502, 503, 504):
-            raise BrokerUnavailable(f"OANDA {response.status} on {method} {path}")
+            raise _unavailable(f"OANDA {response.status} on {method} {path}", response)
         return response
+
+    @retry_idempotent_read
+    def _get(self, path: str) -> HttpResponse:
+        """The ONLY retried request in this adapter, and it is a GET.
+
+        A 4xx other than 429 comes back as a response, not an exception, so it
+        is never retried: the caller reads ``response.ok`` exactly as before.
+        """
+        return self._call("GET", path)
 
     # ------------------------------------------------------------ adapter
 
     def connect(self) -> BrokerHealth:
-        response = self._call("GET", self._account_path("/summary"))
+        response = self._get(self._account_path("/summary"))
         self._connected = response.ok
         return self._health_from(response)
 
     def health(self) -> BrokerHealth:
         try:
-            response = self._call("GET", self._account_path("/summary"))
+            response = self._get(self._account_path("/summary"))
         except BrokerUnavailable as exc:
             self._connected = False
             return BrokerHealth(False, 0.0, self._now_fn(), str(exc))
@@ -411,7 +454,7 @@ class OandaAdapter(BrokerAdapter):
         return health
 
     def account(self) -> AccountState:
-        response = self._call("GET", self._account_path("/summary"))
+        response = self._get(self._account_path("/summary"))
         if not response.ok:
             raise BrokerUnavailable(f"OANDA account summary failed: HTTP {response.status}")
         acct = response.body.get("account", {})
@@ -429,7 +472,7 @@ class OandaAdapter(BrokerAdapter):
         )
 
     def positions(self) -> tuple[Position, ...]:
-        response = self._call("GET", self._account_path("/openTrades"))
+        response = self._get(self._account_path("/openTrades"))
         if not response.ok:
             raise BrokerUnavailable(f"OANDA openTrades failed: HTTP {response.status}")
         out: list[Position] = []
@@ -456,7 +499,7 @@ class OandaAdapter(BrokerAdapter):
         return tuple(out)
 
     def orders(self) -> tuple[OrderAck, ...]:
-        response = self._call("GET", self._account_path("/pendingOrders"))
+        response = self._get(self._account_path("/pendingOrders"))
         if not response.ok:
             raise BrokerUnavailable(f"OANDA pendingOrders failed: HTTP {response.status}")
         out: list[OrderAck] = []
@@ -485,7 +528,7 @@ class OandaAdapter(BrokerAdapter):
         """
         ours = get_instrument(symbol)
         name = to_oanda_instrument(symbol)
-        response = self._call("GET", self._account_path(f"/instruments?instruments={name}"))
+        response = self._get(self._account_path(f"/instruments?instruments={name}"))
         if not response.ok:
             raise BrokerUnavailable(f"OANDA instruments failed: HTTP {response.status}")
         for spec in response.body.get("instruments", []):

@@ -15,7 +15,12 @@ import pytest
 
 from fiboki.obs.alerts import AlertDispatcher, AlertEvent, MemoryChannel
 from fiboki.workers.base import WorkerStore
-from fiboki.workers.live_worker import BarBatch, LiveWorker, LiveWorkerConfig
+from fiboki.workers.live_worker import (
+    BarBatch,
+    LiveWorker,
+    LiveWorkerConfig,
+    StartupReconciliationError,
+)
 
 LIVE_WORKER_SOURCE = Path(__file__).resolve().parents[2] / "src/fiboki/workers/live_worker.py"
 
@@ -329,7 +334,9 @@ def test_a_divergent_reconciliation_alerts_with_the_counts(store):
     channel = MemoryChannel()
     execution = FakeExecution(recon=Recon(unknown=("c1",), orphans=("B123",)))
     worker = build(store, execution=execution, dispatcher=AlertDispatcher([channel]))
-    worker.resume()
+    # Fails closed as well as alerting: see test_live_worker_reconcile.py.
+    with pytest.raises(StartupReconciliationError):
+        worker.resume()
     alert = next(a for a in channel.sent if a.event is AlertEvent.RECONCILIATION_DIVERGENCE)
     assert alert.context["orphans"] == 1
     assert alert.context["unknown"] == 1
@@ -341,7 +348,9 @@ def test_a_reconciliation_error_alerts_rather_than_passing_silently(store):
     channel = MemoryChannel()
     execution = FakeExecution(recon=ConnectionError("gateway down"))
     worker = build(store, execution=execution, dispatcher=AlertDispatcher([channel]))
-    worker.resume()
+    # "Could not check" must not read as "clean": the worker refuses to start.
+    with pytest.raises(StartupReconciliationError):
+        worker.resume()
     assert AlertEvent.BROKER_UNHEALTHY in channel.events()
 
 

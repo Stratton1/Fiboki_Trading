@@ -116,6 +116,8 @@ __all__ = [
     "WorkerLease",
     "WorkerState",
     "WorkerStore",
+    "log_once",
+    "reset_log_once",
     "worker_id",
 ]
 
@@ -1154,6 +1156,46 @@ def expected_workers_from_env(env: Mapping[str, str] | None = None) -> tuple[str
     environ = env if env is not None else os.environ
     raw = environ.get("FIBOKI_EXPECTED_WORKERS", "")
     return tuple(part.strip() for part in raw.split(",") if part.strip())
+
+
+_ONCE_LOCK = threading.Lock()
+_ONCE_SEEN: dict[str, float] = {}
+
+
+def log_once(key: str, ttl: float, *, clock: Callable[[], float] = time.monotonic) -> bool:
+    """True the first time ``key`` is seen, then False until ``ttl`` seconds pass.
+
+    For a LEVEL condition that is true on every cycle -- a market closed all
+    weekend, an instrument whose candle keeps arriving late -- where logging it
+    every cycle would bury the one line that matters. Usage::
+
+        if log_once(f"market_closed:{symbol}", 3600):
+            _log.info("market closed", extra={"instrument": symbol})
+
+    It suppresses LOG LINES only. It is not an alert de-duplicator (the
+    :class:`~fiboki.obs.alerts.AlertDispatcher` has its own time-windowed
+    ``dedupe_key``) and it must never gate a check, a metric or an alert: a
+    condition that is still true is still recorded, it is just not re-narrated.
+
+    Pattern after freqtrade ``mixins/logging_mixin.py`` ``log_once`` (GPL-3.0,
+    not copied). A ``ttl`` of zero or less always returns True.
+    """
+    if ttl <= 0:
+        return True
+    now = clock()
+    with _ONCE_LOCK:
+        last = _ONCE_SEEN.get(key)
+        if last is not None and (now - last) < ttl:
+            return False
+        _ONCE_SEEN[key] = now
+        return True
+
+
+def reset_log_once(prefix: str = "") -> None:
+    """Forget remembered keys (all, or those starting with ``prefix``). For tests."""
+    with _ONCE_LOCK:
+        for key in [k for k in _ONCE_SEEN if k.startswith(prefix)]:
+            del _ONCE_SEEN[key]
 
 
 def drain_sleep(stop: threading.Event, seconds: float) -> None:

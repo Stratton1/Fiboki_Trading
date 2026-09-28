@@ -46,20 +46,63 @@ Checked before every evaluation pass.  When it blocks new risk, the worker
 still ingests bars, still updates state, still reconciles -- it simply does
 not submit opening intents.  A kill switch that also stops data is one that
 blinds you at the moment you most need to see.
+
+Reconciliation: at startup, fail closed; afterwards, on a timer
+---------------------------------------------------------------
+:meth:`LiveWorker.resume` runs once, after the lease is held and before the
+first cycle, and reconciles against the venue. It used to log a CRITICAL line
+on a divergent report and then trade anyway. It now refuses to start:
+
+* the report shows unresolved divergences (an UNKNOWN intent, an orphan
+  position at the venue, a size mismatch, or a position-manager divergence) ->
+  :class:`StartupReconciliationError` with ``blocking=True``, and
+  :meth:`LiveWorker.run` exits with :data:`EXIT_RECONCILE_BLOCKED` so a
+  supervisor does not restart straight back into the same divergence;
+* reconciliation could not run at all (the venue was unreachable, the service
+  has no ``reconcile``) -> the same exception with ``blocking=False`` and the
+  ordinary fatal exit code, because that condition may clear by itself.
+
+After startup it reconciles every ``reconcile_interval_seconds`` (default 15
+minutes) of wall time, AND every ``reconcile_every_cycles`` evaluation cycles,
+whichever comes first, and alerts on any divergence. The timer runs even while
+the feed is waiting for a bar, so a weekend with no bars is not a weekend with
+no reconciliation.
+
+Cycle-time budget
+-----------------
+An evaluation cycle that takes longer than ``cycle_budget_fraction`` (25%) of
+the bar's timeframe is measured into ``fiboki_live_cycle_seconds``, counted in
+``fiboki_live_cycle_budget_exceeded_total`` and alerted at WARNING. The time a
+polling feed spends WAITING for the bar boundary is excluded; the time it spends
+fetching and re-polling a late candle is not. Pattern after freqtrade
+``util/measure_time.py`` (GPL-3.0, not copied).
 """
 from __future__ import annotations
 
+import sys
 import time
 from collections.abc import Callable, Iterable, Mapping, Sequence
 from dataclasses import dataclass, field
 from typing import Any, Protocol, runtime_checkable
 
+from fiboki.core.enums import Timeframe
 from fiboki.obs import metrics as _metrics
 from fiboki.obs.alerts import AlertEvent, Severity
 from fiboki.obs.logging import bind, get_logger, new_correlation_id
-from fiboki.workers.base import CycleResult, Worker, WorkerConfig, WorkerStore
+from fiboki.workers.base import (
+    EXIT_FATAL,
+    EXIT_LEASE_HELD,
+    CycleResult,
+    Worker,
+    WorkerConfig,
+    WorkerStore,
+    log_once,
+)
 
 __all__ = [
+    "EXIT_RECONCILE_BLOCKED",
+    "LIVE_CYCLE_BUDGET_EXCEEDED",
+    "LIVE_CYCLE_SECONDS",
     "BarBatch",
     "BarFeed",
     "ContextBuilder",
@@ -67,11 +110,62 @@ __all__ = [
     "LiveWorker",
     "LiveWorkerConfig",
     "MarketStateUpdater",
+    "StartupReconciliationError",
     "StrategyEvaluator",
     "SubmissionRecord",
+    "timeframe_seconds",
 ]
 
 _log = get_logger("fiboki.workers.live")
+
+#: Exit code when startup reconciliation found divergences a restart cannot fix.
+#:
+#: This REUSES the existing do-not-restart-loop code (75, ``EX_TEMPFAIL``),
+#: which both deploy units already treat as "do not restart": systemd lists it
+#: in ``SuccessExitStatus`` and launchd throttles. A divergence needs an operator
+#: to run ``fiboki broker reconcile`` and decide; a supervisor restarting the
+#: worker every few seconds would only re-discover it. ``deploy/README.md``
+#: documents 75 as "lease held" and does not yet mention this second meaning;
+#: the heartbeat row, the stderr line and the CRITICAL alert all say which one
+#: it is.
+EXIT_RECONCILE_BLOCKED = EXIT_LEASE_HELD
+
+#: Wall time of the last live evaluation cycle, excluding the feed's wait for
+#: the bar boundary.
+LIVE_CYCLE_SECONDS = _metrics.REGISTRY.gauge(
+    "fiboki_live_cycle_seconds",
+    "Wall time of the last live evaluation cycle, excluding the wait for the bar",
+    ("worker", "timeframe"),
+)
+
+#: Cycles that took longer than the configured fraction of the timeframe.
+LIVE_CYCLE_BUDGET_EXCEEDED = _metrics.REGISTRY.counter(
+    "fiboki_live_cycle_budget_exceeded_total",
+    "Live evaluation cycles that exceeded their share of the bar's timeframe",
+    ("worker", "timeframe"),
+)
+
+
+def timeframe_seconds(timeframe: str) -> float | None:
+    """``"H1" -> 3600.0``. ``None`` for an empty or unknown label."""
+    try:
+        return float(Timeframe(str(timeframe)).minutes * 60)
+    except ValueError:
+        return None
+
+
+class StartupReconciliationError(RuntimeError):
+    """Startup reconciliation did not come back clean. The worker must not trade.
+
+    ``blocking`` distinguishes the two cases a supervisor must treat
+    differently: True means the venue and our record DISAGREE, which only an
+    operator can resolve; False means reconciliation could not run, which may
+    clear on its own.
+    """
+
+    def __init__(self, message: str, *, blocking: bool) -> None:
+        super().__init__(message)
+        self.blocking = blocking
 
 
 # ---------------------------------------------------------------------------
@@ -95,6 +189,10 @@ class BarBatch:
     #: metric and the DATA_STALE alert.
     ages: Mapping[str, float] = field(default_factory=dict)
     timeframe: str = ""
+    #: Instruments whose session is CLOSED (weekend, daily break, holiday) per
+    #: ``data/calendars.py``. Their age still reaches the metric, but an old
+    #: bar on a closed market is "closed", not "stale", and raises no alert.
+    market_closed: frozenset[str] = frozenset()
 
     @property
     def count(self) -> int:
@@ -103,9 +201,24 @@ class BarBatch:
 
 @runtime_checkable
 class BarFeed(Protocol):
-    """Pulls new bars.  The worker never talks to a provider directly."""
+    """Pulls new bars.  The worker never talks to a provider directly.
+
+    A feed MAY also implement ``wait_until_due(should_stop) -> bool``. When it
+    does, the worker calls it before each cycle: True means "a bar boundary has
+    passed, poll now", False means "not yet", and the cycle returns idle so the
+    loop can renew the lease and write a heartbeat. The feed bounds how long one
+    call blocks; the worker bounds nothing, so a feed that waits an hour inside
+    this call will lose its lease -- see ``workers/feeds.py``.
+    """
 
     def poll(self) -> BarBatch: ...
+
+
+@runtime_checkable
+class PositionReconciler(Protocol):
+    """``VenuePositionManager.reconcile``'s shape: venue levels versus intent."""
+
+    def reconcile(self, *, repair: bool = ...) -> Sequence[Any]: ...
 
 
 @runtime_checkable
@@ -172,6 +285,12 @@ class LiveWorkerConfig(WorkerConfig):
     #: Reconcile against the venue every N cycles. Never zero: reconciliation
     #: that only runs on demand is reconciliation nobody runs.
     reconcile_every_cycles: int = 12
+    #: ... and at least this often in wall time, whether or not bars arrive.
+    #: On an H4 strategy twelve cycles is two days; this is what bounds it.
+    reconcile_interval_seconds: float = 900.0
+    #: Warn when one evaluation cycle takes longer than this fraction of the
+    #: bar's timeframe. 0 disables the check.
+    cycle_budget_fraction: float = 0.25
     #: Bars older than this trigger DATA_STALE.
     data_stale_after_seconds: float = 900.0
     #: Consecutive rejections of the same instrument before alerting.
@@ -206,6 +325,7 @@ class LiveWorker(Worker):
         market_state: MarketStateUpdater | None = None,
         kill_switch: KillSwitchView | None = None,
         lifecycle: LifecycleTicker | None = None,
+        position_reconciler: PositionReconciler | None = None,
         config: LiveWorkerConfig | None = None,
         **kwargs: Any,
     ) -> None:
@@ -217,11 +337,21 @@ class LiveWorker(Worker):
         self.market_state = market_state
         self.kill_switch = kill_switch
         self.lifecycle = lifecycle
+        self.position_reconciler = position_reconciler
         self.submissions: list[SubmissionRecord] = []
         self.demotions: list[str] = []
         self._rejections: dict[str, int] = {}
         self._cycles = 0
         self._lifecycle_ticks = 0
+        #: Monotonic time of the last reconciliation attempt; None until the
+        #: first cycle or ``resume``.
+        self._last_reconcile_mono: float | None = None
+        self.reconciliations = 0
+        self.last_reconciliation: Any = None
+        self.last_position_divergences: tuple[Any, ...] = ()
+        #: Set when ``resume`` refused to start; read by :meth:`run`.
+        self.startup_error: StartupReconciliationError | None = None
+        self.budget_breaches = 0
 
     @property
     def lconfig(self) -> LiveWorkerConfig:
@@ -249,20 +379,89 @@ class LiveWorker(Worker):
         _log.info("live worker mode check passed", extra={"mode": label})
 
     def resume(self) -> None:
-        """Reconcile BEFORE trading anything.
+        """Reconcile BEFORE trading anything, and refuse to trade if unclean.
 
         This is the crash-safe resumption point.  A predecessor that died
         mid-order left an intent in ``PENDING`` or ``UNKNOWN`` with a real
         position possibly behind it.  Trading before resolving that is how a
         restart doubles a position.  Holding the lease is what makes it safe to
         do here: nothing else can be submitting.
+
+        FAIL CLOSED. The previous version logged "NOT clean" at CRITICAL and
+        then went on to trade, which made the log line the only control. Any
+        exception raised here is caught by :meth:`Worker._run_guarded`, which
+        records it on the heartbeat as CRASHED, releases the lease and returns
+        without running a single cycle.
         """
-        report = self._reconcile(reason="startup")
-        if report is not None and not getattr(report, "clean", True):
-            _log.critical(
-                "startup reconciliation is NOT clean",
+        try:
+            report = self._reconcile(reason="startup", strict=True)
+        except StartupReconciliationError as exc:
+            self.startup_error = exc
+            raise
+        divergences = _divergence_counts(report)
+        if self.last_position_divergences:
+            divergences["position_manager"] = len(self.last_position_divergences)
+        errors = tuple(getattr(report, "errors", ()) or ())
+        if not any(divergences.values()) and not errors:
+            _log.info(
+                "startup reconciliation clean",
                 extra={"summary": getattr(report, "summary", lambda: "")()},
             )
+            return
+        # Could not reconcile at all (venue unreachable) is NOT the same as
+        # reconciled-and-disagreed: the first may clear, the second needs a
+        # human. Divergences win when both are present.
+        blocking = any(divergences.values())
+        problems = [f"{k}={v}" for k, v in divergences.items() if v]
+        problems += [f"error={e}" for e in errors]
+        message = (
+            "startup reconciliation is NOT clean; REFUSING TO TRADE: "
+            + "; ".join(problems)
+            + (
+                ". Run `fiboki broker reconcile`, resolve every divergence, then restart."
+                if blocking
+                else ". Reconciliation could not complete; the worker will not trade "
+                "until it can."
+            )
+        )
+        _log.critical(message, extra={"blocking": blocking})
+        if self.dispatcher is not None:
+            self.dispatcher.fire(
+                AlertEvent.RECONCILIATION_DIVERGENCE
+                if blocking
+                else AlertEvent.BROKER_UNHEALTHY,
+                message,
+                severity=Severity.CRITICAL,
+                source=self.worker_id,
+                dedupe_key="startup_reconcile_refused",
+                force=True,
+            )
+        self.startup_error = StartupReconciliationError(message, blocking=blocking)
+        raise self.startup_error
+
+    def run(self, *, install_signals: bool = True) -> int:
+        """As :meth:`Worker.run`, but a BLOCKING startup refusal exits 75.
+
+        The base class maps every ``resume`` failure to ``EXIT_FATAL``, which a
+        supervisor restarts. For a divergence that is a restart loop that
+        re-discovers the same divergence every few seconds, so it is mapped to
+        :data:`EXIT_RECONCILE_BLOCKED` here, where the reason is known.
+        """
+        self.startup_error = None
+        code = super().run(install_signals=install_signals)
+        if (
+            code == EXIT_FATAL
+            and self.startup_error is not None
+            and self.startup_error.blocking
+        ):
+            code = EXIT_RECONCILE_BLOCKED
+            self.exit_code = code
+            print(
+                f"FATAL (exit {code}, do not restart-loop): {self.startup_error}",
+                file=sys.stderr,
+                flush=True,
+            )
+        return code
 
     def on_abandon(self) -> None:
         """A cycle abandoned mid-submit leaves the intent store as the truth.
@@ -289,51 +488,73 @@ class LiveWorker(Worker):
     # -- the cycle -------------------------------------------------------
 
     def run_cycle(self) -> CycleResult:
-        self._cycles += 1
         correlation = new_correlation_id("live")
-        with bind(correlation_id=correlation, cycle=self._cycles):
-            batch = self.feed.poll()
-            self._record_freshness(batch)
+        with bind(correlation_id=correlation):
+            # The timer runs whether or not a bar is due: a weekend with no
+            # bars must still reconcile.
+            reconciled = self._reconcile_if_interval_elapsed()
 
-            if self.market_state is not None and batch.count:
-                self.market_state.update(batch)
+            wait = getattr(self.feed, "wait_until_due", None)
+            if callable(wait) and not wait(should_stop=lambda: self.stopping):
+                return CycleResult.idle("waiting for the next bar boundary")
 
-            if self._cycles % max(1, self.lconfig.reconcile_every_cycles) == 0:
-                self._reconcile(reason="periodic")
+            self._cycles += 1
+            started = self.monotonic()
+            timeframe = ""
+            try:
+                with bind(cycle=self._cycles):
+                    batch = self.feed.poll()
+                    timeframe = batch.timeframe
+                    return self._evaluate(batch, reconciled=reconciled)
+            finally:
+                self._check_cycle_budget(self.monotonic() - started, timeframe)
 
-            # BEFORE evaluation, so a strategy this tick demotes is already
-            # demoted when the gateway reads its lifecycle later in this cycle.
-            if (
-                self.lifecycle is not None
-                and self._cycles % max(1, self.lconfig.lifecycle_every_cycles) == 0
-            ):
-                self._tick_lifecycle()
+    def _evaluate(self, batch: BarBatch, *, reconciled: bool = False) -> CycleResult:
+        """One evaluation pass over a polled batch. The old body of run_cycle."""
+        self._record_freshness(batch)
 
-            instruments = sorted(batch.closed_instruments)
-            if not instruments:
-                return CycleResult.idle("no closed bars")
+        if self.market_state is not None and batch.count:
+            self.market_state.update(batch)
 
-            if self.kill_switch is not None and self.kill_switch.blocks_new_risk():
-                _log.warning(
-                    "kill switch blocks new risk; evaluating nothing this cycle",
-                    extra={"instruments": len(instruments)},
-                )
-                return CycleResult.idle("kill switch active")
+        if (
+            not reconciled
+            and self._cycles % max(1, self.lconfig.reconcile_every_cycles) == 0
+        ):
+            self._reconcile(reason="periodic")
 
-            plans = list(self.evaluator.evaluate(instruments, batch))
-            if not plans:
-                return CycleResult.idle(f"{len(instruments)} closed bar(s), no plans")
+        # BEFORE evaluation, so a strategy this tick demotes is already
+        # demoted when the gateway reads its lifecycle later in this cycle.
+        if (
+            self.lifecycle is not None
+            and self._cycles % max(1, self.lconfig.lifecycle_every_cycles) == 0
+        ):
+            self._tick_lifecycle()
 
-            submitted = 0
-            for plan in plans:
-                if self.stopping:
-                    _log.info("stop requested; not submitting remaining plans")
-                    break
-                if self._submit(plan):
-                    submitted += 1
-            return CycleResult.worked(
-                submitted, f"{len(plans)} plan(s), {submitted} submitted"
+        instruments = sorted(batch.closed_instruments)
+        if not instruments:
+            return CycleResult.idle("no closed bars")
+
+        if self.kill_switch is not None and self.kill_switch.blocks_new_risk():
+            _log.warning(
+                "kill switch blocks new risk; evaluating nothing this cycle",
+                extra={"instruments": len(instruments)},
             )
+            return CycleResult.idle("kill switch active")
+
+        plans = list(self.evaluator.evaluate(instruments, batch))
+        if not plans:
+            return CycleResult.idle(f"{len(instruments)} closed bar(s), no plans")
+
+        submitted = 0
+        for plan in plans:
+            if self.stopping:
+                _log.info("stop requested; not submitting remaining plans")
+                break
+            if self._submit(plan):
+                submitted += 1
+        return CycleResult.worked(
+            submitted, f"{len(plans)} plan(s), {submitted} submitted"
+        )
 
     def _submit(self, plan: Any) -> bool:
         """The ONLY place this module touches execution.  One call. No Order."""
@@ -448,9 +669,37 @@ class LiveWorker(Worker):
 
     # -- reconciliation and freshness ------------------------------------
 
-    def _reconcile(self, *, reason: str) -> Any:
+    def _reconcile_if_interval_elapsed(self) -> bool:
+        """The wall-time reconciliation timer. True if it reconciled."""
+        interval = self.lconfig.reconcile_interval_seconds
+        now = self.monotonic()
+        if self._last_reconcile_mono is None:
+            # First cycle without a resume() (a unit test driving run_cycle):
+            # start the clock rather than reconciling immediately.
+            self._last_reconcile_mono = now
+            return False
+        if interval <= 0 or (now - self._last_reconcile_mono) < interval:
+            return False
+        self._reconcile(reason="interval")
+        return True
+
+    def _reconcile(self, *, reason: str, strict: bool = False) -> Any:
+        """Reconcile against the venue and alert on anything that is not clean.
+
+        ``strict`` is the startup mode: a reconciliation that could not run at
+        all raises :class:`StartupReconciliationError` instead of returning
+        ``None``, because "we could not check" must not read as "clean".
+        """
+        self._last_reconcile_mono = self.monotonic()
+        self.reconciliations += 1
         reconcile = getattr(self.execution, "reconcile", None)
         if reconcile is None:
+            if strict:
+                raise StartupReconciliationError(
+                    "the execution service has no reconcile(); a live worker cannot "
+                    "prove the venue agrees with its record and will not start",
+                    blocking=False,
+                )
             return None
         try:
             report = reconcile()
@@ -464,11 +713,19 @@ class LiveWorker(Worker):
                 f"reconciliation ({reason}) failed: {type(exc).__name__}: {exc}",
                 dedupe_key="reconcile_error",
             )
+            if strict:
+                raise StartupReconciliationError(
+                    f"startup reconciliation raised {type(exc).__name__}: {exc}; "
+                    "REFUSING TO TRADE until it can run",
+                    blocking=False,
+                ) from exc
             return None
+        self.last_reconciliation = report
 
-        unknown = len(getattr(report, "still_unknown", ()) or ())
-        orphans = len(getattr(report, "orphan_broker_refs", ()) or ())
-        mismatches = len(getattr(report, "size_mismatches", ()) or ())
+        counts = _divergence_counts(report)
+        unknown = counts["unknown"]
+        orphans = counts["orphans"]
+        mismatches = counts["size_mismatches"]
         _metrics.record_reconciliation_divergence(
             unknown=unknown, orphan=orphans, size_mismatch=mismatches
         )
@@ -487,12 +744,108 @@ class LiveWorker(Worker):
                 orphans=orphans,
                 size_mismatches=mismatches,
             )
+
+        # ``ExecutionService.reconcile`` catches a venue failure and returns it
+        # as ``errors`` rather than raising. Counting only the three divergence
+        # fields made "the venue did not answer" indistinguishable from clean.
+        errors = tuple(getattr(report, "errors", ()) or ())
+        if errors:
+            self._alert(
+                AlertEvent.BROKER_UNHEALTHY,
+                f"reconciliation ({reason}) could not complete: " + "; ".join(errors),
+                dedupe_key="reconcile_error",
+                errors=len(errors),
+            )
+
+        self._reconcile_positions(reason=reason, strict=strict)
         return report
+
+    def _reconcile_positions(self, *, reason: str, strict: bool) -> None:
+        """Venue-side levels versus the position manager's intent, detect only.
+
+        ``repair=False``: this timer DETECTS. Correcting a stop is an amendment
+        routed through the gateway by the manager's own bar loop; a
+        reconciliation timer that also amended would be a second, unreviewed
+        route to the venue.
+        """
+        self.last_position_divergences = ()
+        if self.position_reconciler is None:
+            return
+        try:
+            found = tuple(self.position_reconciler.reconcile(repair=False) or ())
+        except Exception as exc:
+            _log.error(
+                "position reconciliation failed",
+                extra={"reason": reason, "error": f"{type(exc).__name__}: {exc}"},
+            )
+            self._alert(
+                AlertEvent.BROKER_UNHEALTHY,
+                f"position reconciliation ({reason}) failed: {type(exc).__name__}: {exc}",
+                dedupe_key="position_reconcile_error",
+            )
+            if strict:
+                raise StartupReconciliationError(
+                    f"startup position reconciliation raised {type(exc).__name__}: {exc}",
+                    blocking=False,
+                ) from exc
+            return
+        self.last_position_divergences = found
+        if found:
+            kinds: dict[str, int] = {}
+            for divergence in found:
+                kind = str(getattr(divergence, "kind", "divergence"))
+                kinds[kind] = kinds.get(kind, 0) + 1
+            self._alert(
+                AlertEvent.RECONCILIATION_DIVERGENCE,
+                (
+                    f"position reconciliation ({reason}) found {len(found)} "
+                    "divergence(s) between the venue's resting levels and the "
+                    "manager's intent: "
+                    + ", ".join(f"{k}={v}" for k, v in sorted(kinds.items()))
+                ),
+                dedupe_key="position_reconcile_divergence",
+                divergences=len(found),
+            )
+
+    # -- the cycle-time budget -------------------------------------------
+
+    def _check_cycle_budget(self, elapsed: float, timeframe: str) -> None:
+        label = timeframe or "?"
+        LIVE_CYCLE_SECONDS.set(elapsed, worker=self.worker_id, timeframe=label)
+        fraction = self.lconfig.cycle_budget_fraction
+        span = timeframe_seconds(timeframe)
+        if fraction <= 0 or span is None:
+            return
+        budget = fraction * span
+        if elapsed <= budget:
+            return
+        self.budget_breaches += 1
+        LIVE_CYCLE_BUDGET_EXCEEDED.inc(worker=self.worker_id, timeframe=label)
+        message = (
+            f"live cycle took {elapsed:.1f}s, over its budget of {budget:.0f}s "
+            f"({fraction:.0%} of {label}). Orders from a slow cycle reach the venue "
+            "later than the bar they were computed on."
+        )
+        if log_once(f"cycle_budget:{self.worker_id}", ttl=span):
+            _log.warning(message, extra={"elapsed_s": elapsed, "budget_s": budget})
+        # There is no dedicated slow-worker event in the taxonomy; the base
+        # worker already reports its own degradation as STRATEGY_DEGRADED.
+        self._alert(
+            AlertEvent.STRATEGY_DEGRADED,
+            message,
+            severity=Severity.WARNING,
+            dedupe_key=f"cycle_budget:{self.worker_id}",
+            elapsed_s=round(elapsed, 3),
+            budget_s=budget,
+        )
 
     def _record_freshness(self, batch: BarBatch) -> None:
         stale: list[str] = []
         for instrument, age in batch.ages.items():
             _metrics.record_data_freshness(instrument, batch.timeframe or "?", age)
+            if instrument in batch.market_closed:
+                # Closed, not stale: a Friday bar on a Sunday is expected.
+                continue
             if age >= self.lconfig.data_stale_after_seconds:
                 stale.append(f"{instrument}={age:.0f}s")
         if stale:
@@ -521,4 +874,15 @@ class LiveWorker(Worker):
             "repeat_rejections": dict(self._rejections),
             "lifecycle_ticks": self._lifecycle_ticks,
             "demotions": list(self.demotions),
+            "reconciliations": self.reconciliations,
+            "cycle_budget_breaches": self.budget_breaches,
         }
+
+
+def _divergence_counts(report: Any) -> dict[str, int]:
+    """The three divergence kinds on a ``ReconciliationReport``, as counts."""
+    return {
+        "unknown": len(getattr(report, "still_unknown", ()) or ()),
+        "orphans": len(getattr(report, "orphan_broker_refs", ()) or ()),
+        "size_mismatches": len(getattr(report, "size_mismatches", ()) or ()),
+    }

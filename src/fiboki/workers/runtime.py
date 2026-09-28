@@ -6,7 +6,8 @@ what nothing else held either, were the four objects the loop is given:
 ======================  ====================================================
 Seam                    What was missing
 ======================  ====================================================
-``BarFeed``             no implementation: nothing pulled bars for a worker
+``BarFeed``             :class:`FrameReplayFeed` (history) and, for a venue,
+                        ``workers/feeds.OandaPollingBarFeed``
 ``MarketStateUpdater``  ``marketstate`` existed and nothing fed it
 ``StrategyEvaluator``   no path from a strategy's ``Signal`` to a ``TradePlan``
 ``ContextBuilder``      **nothing anywhere built a** :class:`RiskContext`
@@ -421,9 +422,21 @@ class RiskContextBuilder:
     #: is running; without it every strategy is reported at its declared stage.
     strategy_source: Callable[[str], StrategyView] | None = None
     default_lifecycle: StrategyLifecycle = StrategyLifecycle.PAPER
-    #: Timestamp of the newest bar per instrument, kept by :meth:`observe`.
+    #: Timestamp of the newest bar per instrument, kept by :meth:`observe`
+    #: (replay: the bar's own stamp, against the replay clock) or by
+    #: :meth:`observe_closes` (a live feed: the instant the bar CLOSED, against
+    #: the wall clock). This is what ``data_freshness`` and ``stale_price``
+    #: measure their age from; the gateway owns the threshold.
     last_bar_times: dict[str, pd.Timestamp] = field(default_factory=dict)
     market_open: bool = True
+    #: ``(instrument, now) -> is the session open``. When set it replaces the
+    #: static :attr:`market_open` flag, so ``market_state`` blocks on a weekend
+    #: as "market_closed" rather than every check reading the weekend as stale.
+    market_open_source: Callable[[str, pd.Timestamp], bool] | None = None
+    #: Last closed-bar price per instrument, from :meth:`observe_closes`. Used
+    #: as the mid ONLY when the adapter keeps no bar of its own (a real venue
+    #: adapter does not; the paper broker does).
+    last_closes: dict[str, float] = field(default_factory=dict)
     #: STATIC fallbacks, used only when ``pnl_ledger`` is absent. Retained so
     #: an existing caller that set them by hand keeps working, and so a test can
     #: pin a value without building a trade history.
@@ -450,6 +463,25 @@ class RiskContextBuilder:
         """Record when each instrument last produced a closed bar."""
         for sym, bar in batch.frames.items():
             self.last_bar_times[sym] = bar.timestamp
+
+    def observe_closes(
+        self,
+        closes: Mapping[str, pd.Timestamp],
+        prices: Mapping[str, float] | None = None,
+    ) -> None:
+        """A LIVE feed reports when each instrument's newest bar CLOSED.
+
+        Not the bar's start stamp: on the wall clock an H1 bar stamped 09:00 is
+        an hour old the instant it closes at 10:00, so feeding the start stamp
+        would block every order on ``data_stale`` and invite somebody to widen
+        the limit until it stopped. The age the gateway computes from this is
+        "seconds since the data became complete", which is the quantity its
+        limits were written for.
+        """
+        for sym, closed_at in closes.items():
+            self.last_bar_times[sym] = closed_at
+        for sym, price in (prices or {}).items():
+            self.last_closes[sym] = float(price)
 
     # -- the pieces ------------------------------------------------------
 
@@ -478,7 +510,11 @@ class RiskContextBuilder:
             # timestamp than the data would defeat the check outright.
             quote_time=last_bar,
             last_bar_time=last_bar,
-            market_open=self.market_open,
+            market_open=(
+                self.market_open_source(instrument.symbol, now)
+                if self.market_open_source is not None
+                else self.market_open
+            ),
             regime=(
                 self.regime_source(instrument.symbol)
                 if self.regime_source is not None
@@ -493,7 +529,9 @@ class RiskContextBuilder:
 
     def _mid(self, symbol: str) -> float | None:
         last = getattr(self.adapter, "_last_bar", {}).get(symbol)
-        return None if last is None else float(last.close)
+        if last is not None:
+            return float(last.close)
+        return self.last_closes.get(symbol)
 
     def venue_view(self) -> VenueView:
         health = self.adapter.health()

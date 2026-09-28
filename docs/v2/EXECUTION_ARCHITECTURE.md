@@ -316,9 +316,53 @@ unable to re-enter and unable to exit, and the broker position was orphaned perm
 `ReconciliationReport` is the artefact. `obs/alerts.AlertEvent.RECONCILIATION_DIVERGENCE` exists
 for the case where it is non-empty; the alert taxonomy is in `OBSERVABILITY_STANDARD.md`.
 
-**Not yet wired at this snapshot:** nothing calls `reconcile` on startup or on a timer. The
-method exists and is tested (`tests/integration/test_execution_lifecycle.py`); the scheduler
-that would call it does not exist.
+**Scheduling (2026-09-28).** `LiveWorker.resume` reconciles once, after the lease is held and
+before the first cycle, and **fails closed**: a report with any `still_unknown`,
+`orphan_broker_refs` or `size_mismatches` (or a divergence from an optional position reconciler)
+raises `StartupReconciliationError(blocking=True)` and `LiveWorker.run` exits **75**, the existing
+do-not-restart-loop code, with a CRITICAL `RECONCILIATION_DIVERGENCE`. A reconciliation that could
+not run (the service raised, the report carries `errors` such as `venue_unreachable`, or the service
+has no `reconcile`) also refuses to trade, but exits 1, because that condition may clear. After
+startup the worker reconciles every `reconcile_interval_seconds` (default 900) of wall time as well
+as every `reconcile_every_cycles`, including while the feed is waiting for a bar, and alerts on
+divergences and on `errors` (previously a report carrying only `errors` was counted as clean). The
+position reconciler is called with `repair=False`: the timer detects, it does not amend.
+`tests/unit/test_live_worker_reconcile.py`. This is wired **inside the worker**; nothing yet
+constructs a live worker outside a test (§7).
+
+## 5a. Idempotent-read retries
+
+`broker/retry.py`. `retry_idempotent_read` retries **reads only**: exponential backoff with equal
+jitter, a per-call deadline (10 s), at most 4 attempts, `Retry-After` honoured, and only on
+`BrokerUnavailable`, transport failures and 429/5xx. A 4xx other than 429, `BrokerRejected`,
+`DuplicateClientRef` and test-double `AssertionError`s are never retried. On giving up it
+re-raises the original exception with a note, so the error taxonomy above is unchanged. In
+`OandaAdapter` it decorates exactly one method, `_get`, through which `connect`, `health`,
+`account`, `positions`, `orders` and `market_spec` read; each attempt passes the adapter's
+`RateLimiter` via `_call`. `place_order`, `close_position`, `close_partial` and `amend_position`
+call `_call` directly and are **never** retried: an order whose outcome is unknown is reconciled,
+not resent. `tests/unit/test_retry_scope.py` enforces both halves over the AST and self-tests
+against a planted violation. The data layer sits below `broker`, so the candle provider's
+`fetch_bars` is wrapped with the same decorator by the live feed rather than in `data/`.
+
+## 5b. The live bar feed
+
+`workers/feeds.OandaPollingBarFeed` implements `BarFeed` for OANDA v20 candles. It wakes at the
+epoch-anchored bar boundary plus `offset_s` (5 s) and never inside that window; one
+`wait_until_due` call blocks at most `max_block_s` (30 s) so the worker still renews its 90 s
+lease and writes a heartbeat while an H4 bar forms. The venue's `complete` flag is authoritative
+(the provider drops `complete:false`); the clock is only the second check: a bar still absent or
+incomplete after up to 3 re-polls 5 s apart, with its close at least `late_candle_grace_s` (20 s)
+old, raises `DATA_QUALITY_DEFECT` and that instrument is not evaluated. Nothing is gap-filled.
+`data/calendars.py` decides whether a bar was expected at all, so a weekend is reported in
+`BarBatch.market_closed` ("closed", no `DATA_STALE`) and is not fetched. Each poll delivers the
+newest complete bar not delivered before. `feed.attach(builder)` sets
+`RiskContextBuilder.market_open_source` to the calendar and pushes each bar's **close** time into
+`last_bar_times` via `observe_closes`; the gateway's `data_freshness`/`stale_price` checks then
+measure "seconds since the data became complete" against their own limits. The feed decides no
+threshold. The provider now requests `dailyAlignment=0&alignmentTimezone=UTC` by default, because
+v20 otherwise aligns H4 and D candles to 17:00 New York, which is not the bar the research frames
+contain. `tests/unit/test_polling_feed.py`, `tests/integration/test_live_feed_wiring.py`.
 
 ## 6. Execution-mode isolation
 
@@ -414,8 +458,14 @@ because a typo must not decide where orders go.
   execution service, feed, evaluator and risk-context builder, and *"a live worker assembled from
   command line flags is a live worker whose risk configuration nobody reviewed."* The application
   entrypoint that owns that wiring is not written.
-- **Reconciliation is not scheduled.** `reconcile` and `fiboki broker reconcile` exist and are
-  tested; nothing calls either on startup or on a timer.
+- **Reconciliation is scheduled only inside `LiveWorker`** (§5). Nothing constructs a live
+  worker outside a test, so in any running deployment it still does not happen.
+- **The live feed is implemented but not composed** (§5b). Composition needs, in one reviewed
+  entrypoint: a real HTTP `Transport` (none exists in `src/`; only `RecordedTransport`), the
+  adapter's `RateLimiter` shared with the feed, `feed.attach(builder)`, a live `spread_source` on
+  the builder (the profile fallback returns unknown against a venue adapter, so `abnormal_spread`
+  blocks), `SignalEvaluator(history=feed.history)`, and something that drives
+  `VenuePositionManager.on_bar` from the same batch.
 - **No OANDA credentials** in this environment, so the adapter is proved against recorded
   fixtures and has never spoken to the venue. The two OANDA unknowns — whether v20 can place
   orders on a spread-betting sub-account, and how the candle endpoint compares to the account's
