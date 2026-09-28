@@ -38,6 +38,7 @@ from fiboki.research.structure import (
     fingerprint,
     structural_similarity,
 )
+from fiboki.strategy.dsl import strategy_key_version
 
 __all__ = [
     "RecallResult",
@@ -99,6 +100,12 @@ class RecallResult:
     matches: tuple[RelatedExperiment, ...] = ()
     fingerprint: StructuralFingerprint | None = field(default=None, repr=False)
     threshold: float = 0.75
+    incomparable: tuple[Experiment, ...] = field(default=(), repr=False)
+    """Experiments whose stored keys were derived under a DIFFERENT version of the
+    hashing algorithm, so neither the exact nor the reparameterisation test can be
+    applied to them. They are not evidence of novelty and they are not evidence of
+    rediscovery: they are the absence of an answer, and :attr:`is_novel` treats
+    them as such."""
 
     @property
     def exact(self) -> tuple[RelatedExperiment, ...]:
@@ -114,8 +121,15 @@ class RecallResult:
 
     @property
     def is_novel(self) -> bool:
-        """No exact duplicate and no reparameterisation of an existing structure."""
-        return not self.rediscoveries
+        """No rediscovery, AND every prior experiment was actually comparable.
+
+        Fails CLOSED on :attr:`incomparable`. "Novel" licenses spending a holdout
+        look, so the claim has to be earned: an experiment whose key was derived
+        under a different schema might be this very strategy, and answering
+        "novel" because its hash no longer matches is how a rediscovery gets run
+        as if it were new work.
+        """
+        return not self.rediscoveries and not self.incomparable
 
     @property
     def outcomes(self) -> dict[str, int]:
@@ -127,6 +141,16 @@ class RecallResult:
 
     def recommendation(self) -> str:
         """Plain advice, with the evidence attached. Never a bare verdict."""
+        if self.incomparable:
+            return (
+                f"CANNOT SAY ({len(self.incomparable)} experiment(s) not comparable): "
+                "their stored strategy keys were derived under a different version of "
+                "the hashing algorithm, so neither the exact-duplicate nor the "
+                "reparameterisation test applies to them. This is NOT novelty. Restate "
+                "those rows' key version with ExperimentLedger.restate_key_versions() "
+                "if you can show which version wrote them, or read them by hand before "
+                "spending a holdout look on this."
+            )
         if not self.matches:
             return (
                 "NOVEL: nothing in the ledger resembles this. Proceed, and record "
@@ -171,6 +195,8 @@ class RecallResult:
             "query": self.query,
             "is_novel": self.is_novel,
             "threshold": self.threshold,
+            "n_incomparable_key_versions": len(self.incomparable),
+            "incomparable_experiment_ids": [e.id for e in self.incomparable],
             "outcomes": self.outcomes,
             "recommendation": self.recommendation(),
             "fingerprint": self.fingerprint.to_dict() if self.fingerprint else None,
@@ -195,6 +221,18 @@ def _rung_histogram(matches: Sequence[RelatedExperiment]) -> str:
         rung = m.experiment.rejected_at_rung or "unrecorded"
         counts[rung] = counts.get(rung, 0) + 1
     return ", ".join(f"{k} x{v}" for k, v in sorted(counts.items()))
+
+
+def _keys_comparable(exp: Experiment, expected: str) -> bool:
+    """Can this experiment's strategy keys be compared with keys derived now?
+
+    Both hashes are checked because both are used: the content hash decides EXACT
+    and the structure hash decides REPARAMETERISATION, and one of them being
+    comparable does not make the other so.
+    """
+    return exp.key_is_comparable(
+        "strategy_content_hash", expected
+    ) and exp.key_is_comparable("structure_hash", expected)
 
 
 def _tokenise(text: str) -> set[str]:
@@ -243,8 +281,17 @@ class ResearchMemory:
         if fp is not None:
             query_terms |= set(fp.keywords)
 
+        expected = strategy_key_version()
         matches: dict[str, RelatedExperiment] = {}
-        for exp in self.ledger.list():
+        incomparable: list[Experiment] = []
+        for exp in self.ledger.list(allow_stale_keys=True):
+            # A hash comparison across key versions is meaningless, and its FALSE
+            # answer is the dangerous one: it reads as "never tried". Set those rows
+            # aside where the caller can see them rather than letting them vanish
+            # into the novel bucket.
+            if fp is not None and not _keys_comparable(exp, expected):
+                incomparable.append(exp)
+                continue
             match = self._classify(exp, fp, query_terms, bool(text.strip()))
             if match is not None:
                 matches[exp.id] = match
@@ -267,6 +314,7 @@ class ResearchMemory:
             matches=tuple(ranked[:cap]),
             fingerprint=fp,
             threshold=self.similarity_threshold,
+            incomparable=tuple(incomparable),
         )
 
     def has_been_tried(self, document: Any) -> bool:
@@ -274,6 +322,12 @@ class ResearchMemory:
         return not self.recall(document).is_novel
 
     def outcomes_for_structure(self, document: Any) -> dict[str, int]:
+        """Outcome histogram for this structure.
+
+        Raises :class:`~fiboki.research.experiment.LedgerKeyVersionMismatch` when
+        the ledger holds structure hashes it cannot compare -- an empty histogram
+        would read as "never tried this structure".
+        """
         fp = fingerprint(document)
         counts: dict[str, int] = {}
         for exp in self.ledger.list(structure_hash=fp.structure_hash):

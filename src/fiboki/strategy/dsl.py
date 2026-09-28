@@ -55,6 +55,22 @@ from fiboki.strategy.primitives import (
 )
 
 SCHEMA_VERSION = "2.0.0"
+
+
+def strategy_key_version() -> str:
+    """The version stamped beside any key DERIVED from a strategy document.
+
+    ``StrategyDocument.semantic_payload()`` includes ``schema_version``, so every
+    content hash moves when :data:`SCHEMA_VERSION` is bumped; the structural hash
+    is read off the same dump and moves with any field rename. One version covers
+    all of them because they all break together, and it lives here rather than in
+    ``core/`` because this module is what makes it true.
+
+    Persisted beside such a key so that a stored key and a freshly computed one
+    can be told apart from "different inputs" -- see
+    :mod:`fiboki.core.versioned_key` for the rule and the import-time check.
+    """
+    return f"dsl:{SCHEMA_VERSION}"
 _ID_RE = re.compile(r"^[a-z][a-z0-9_]{2,63}$")
 #: Rule sets with no economic story are curve fits. Enforced, not suggested.
 MIN_HYPOTHESIS_CHARS = 120
@@ -750,4 +766,5 @@ __all__ = [
     "TrailingModel",
     "UnboundParameterError",
     "UnknownParameterError",
+    "strategy_key_version",
 ]

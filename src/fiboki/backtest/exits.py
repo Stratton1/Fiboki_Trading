@@ -53,6 +53,8 @@ from typing import TYPE_CHECKING, Any, Protocol
 
 import pandas as pd
 
+from fiboki.backtest.version import ENGINE_VERSION
+
 if TYPE_CHECKING:  # pragma: no cover - typing only, never an import at runtime
     from fiboki.strategy.dsl import StrategyDocument
 
@@ -375,7 +377,18 @@ class ExitPolicy:
         return self.trailing.columns
 
     def fingerprint(self) -> dict[str, Any]:
+        """Every field of this policy that can move a fill, as stored on a record.
+
+        Carries ``key_version`` because it is PERSISTED and then compared: the
+        fingerprint's SHAPE is a function of this class, so without the stamp a
+        reader cannot tell a different configuration from the same configuration
+        described by a different generation of the code. ``ENGINE_VERSION`` is the
+        right stamp by definition -- it is bumped exactly when a change makes
+        stored results incomparable with new ones. See
+        :mod:`fiboki.core.versioned_key`.
+        """
         return {
+            "key_version": ENGINE_VERSION,
             "allocations": [float(a) for a in self.allocations],
             "trailing": self.trailing.fingerprint(),
             "breakeven_at_r": None if self.breakeven_at_r is None else float(self.breakeven_at_r),

@@ -61,7 +61,7 @@ from fiboki.discovery.mutation import MutationEngine, MutationProposal, mutation
 from fiboki.discovery.novelty import NoveltyIndex, NoveltyVerdict
 from fiboki.discovery.report import CampaignReport, CellResult, SkippedCell, deflation_threshold
 from fiboki.research.experiment import ActorKind, ExperimentDraft, ExperimentLedger, Outcome
-from fiboki.strategy.dsl import StrategyDocument
+from fiboki.strategy.dsl import StrategyDocument, strategy_key_version
 from fiboki.validation.evaluation import ParameterGrid
 from fiboki.validation.gates import GATE_SET_V2, GateSet
 from fiboki.validation.holdout import DEFAULT_HOLDOUT_FRACTION, HoldoutRegistry
@@ -287,9 +287,17 @@ class CandidateCell:
         Keyed on the CONTENT hash rather than the strategy id, so a renamed
         document resumes as the same cell, and on the swept axes, so widening
         the grid is correctly a different piece of work.
+
+        The key version is part of the blob because the content hash is derived
+        from the DSL schema: bumping the schema moves every content hash, so keys
+        minted before and after a bump must not be silently assumed to name the
+        same work. Mixing them in the blob makes them visibly different keys --
+        the checkpoint re-runs the cell rather than resuming from a row that
+        described a strategy under a vocabulary that no longer exists.
         """
         blob = "|".join(
             (
+                strategy_key_version(),
                 self.content_hash,
                 self.instrument.upper(),
                 self.timeframe.value,

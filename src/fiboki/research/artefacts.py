@@ -41,6 +41,13 @@ from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import DateTime, String, Text, select, text
 from sqlalchemy.orm import Mapped, mapped_column
 
+from fiboki.core.versioned_key import (
+    UNSTAMPED,
+    add_missing_columns,
+    key_version_column,
+    require_key_versions,
+    unstamped_column_ddl,
+)
 from fiboki.research.experiment import (
     APPEND_ONLY_MESSAGE,
     Base,
@@ -49,7 +56,19 @@ from fiboki.research.experiment import (
 )
 from fiboki.research.memory import ResearchMemory
 
+#: The record-payload schema these artefacts are stored under. Stamped onto every
+#: row's ``content_hash_key_version``, so a stored hash says which payload shape
+#: produced it rather than leaving a reader to assume.
 SCHEMA_VERSION = "1.0.0"
+
+
+def artefact_key_version() -> str:
+    """The version stamped beside a stored artefact ``content_hash``.
+
+    Lives here, beside the schema it names, rather than in ``core/``: see
+    :mod:`fiboki.core.versioned_key` for why the values are not centralised.
+    """
+    return f"artefact:{SCHEMA_VERSION}"
 
 
 
@@ -286,6 +305,14 @@ class ArtefactRow(Base):
     role: Mapped[str] = mapped_column(String(64), default="")
     strategy_id: Mapped[str] = mapped_column(String(128), default="", index=True)
     content_hash: Mapped[str] = mapped_column(String(64), default="", index=True)
+    #: Which record schema the hash in ``content_hash`` was computed over.
+    #: :data:`SCHEMA_VERSION` used to be declared here and written nowhere, which
+    #: made it decoration: a stored hash could not say which payload shape produced
+    #: it, so a schema change would move every hash and every lookup would miss in
+    #: silence. See :mod:`fiboki.core.versioned_key`.
+    content_hash_key_version: Mapped[str] = mapped_column(
+        String(32), default=UNSTAMPED, index=True
+    )
     payload_json: Mapped[str] = mapped_column(Text)
 
 
@@ -307,6 +334,10 @@ _ARTEFACT_TRIGGERS = (
     END;
     """,
 )
+
+#: Checked at import: this module's table shares the experiment ledger's
+#: ``Base``, so the check covers both by the time anything opens a store.
+require_key_versions(Base.metadata)
 
 
 class ResearchStore:
@@ -336,6 +367,11 @@ class ResearchStore:
         with self._engine.begin() as conn:
             for ddl in _ARTEFACT_TRIGGERS:
                 conn.execute(text(ddl))
+        self.columns_added = add_missing_columns(
+            self._engine,
+            ArtefactRow.__tablename__,
+            {key_version_column("content_hash"): unstamped_column_ddl(32)},
+        )
         self.memory = ResearchMemory(self.ledger)
 
     # -- lifecycle --------------------------------------------------------
@@ -371,7 +407,10 @@ class ResearchStore:
                     created_by=str(getattr(record, "created_by", "") or ""),
                     role=str(getattr(record, "role", "") or ""),
                     strategy_id=str(getattr(record, "strategy_id", "") or ""),
-                    content_hash=str(getattr(record, "content_hash", "") or ""),
+                    content_hash=(artefact_hash := str(getattr(record, "content_hash", "") or "")),
+                    content_hash_key_version=(
+                        artefact_key_version() if artefact_hash else UNSTAMPED
+                    ),
                     payload_json=json.dumps(
                         record.model_dump(mode="json"), sort_keys=True
                     ),

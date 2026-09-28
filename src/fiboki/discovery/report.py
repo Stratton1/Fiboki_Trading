@@ -42,11 +42,19 @@ from typing import Any
 from fiboki.stats.sharpe import expected_max_sharpe
 
 __all__ = [
+    "CAMPAIGN_REPORT_VERSION",
     "CampaignReport",
     "CellResult",
     "SkippedCell",
     "deflation_threshold",
 ]
+
+#: The shape of this report. It was a bare ``"1.0.0"`` default on the dataclass,
+#: written on dump, read on load, and compared with nothing -- so a report written
+#: under a different shape reloaded as if it were current. Named here so a bump has
+#: one home, and actually READ by :meth:`CampaignReport.is_current_version`, which
+#: :meth:`CampaignReport.markdown` prints when it is false.
+CAMPAIGN_REPORT_VERSION = "1.0.0"
 
 
 def _opt_float(value: Any) -> float | None:
@@ -289,9 +297,21 @@ class CampaignReport:
     holdout: dict[str, Any] = field(default_factory=dict)
     lineage: dict[str, Any] = field(default_factory=dict)
 
-    report_version: str = "1.0.0"
+    report_version: str = CAMPAIGN_REPORT_VERSION
 
     # ------------------------------------------------------------- derived
+
+    @property
+    def is_current_version(self) -> bool:
+        """Was this report written under the shape this code understands?
+
+        A reloaded report whose ``report_version`` differs may be missing fields
+        this one relies on, or may mean something different by a field of the same
+        name -- and the trial accounting is the last place to guess. Surfaced in
+        :meth:`markdown` so a reader of an old artefact is told, rather than a
+        caller having to remember to ask.
+        """
+        return self.report_version == CAMPAIGN_REPORT_VERSION
 
     @property
     def survivors(self) -> tuple[CellResult, ...]:
@@ -431,7 +451,7 @@ class CampaignReport:
             deflation_note=str(raw.get("deflation_note", "")),
             holdout=dict(raw.get("holdout", {})),
             lineage=dict(raw.get("lineage", {})),
-            report_version=str(raw.get("report_version", "1.0.0")),
+            report_version=str(raw.get("report_version", CAMPAIGN_REPORT_VERSION)),
         )
 
     def to_json(self, indent: int | None = 2) -> str:
@@ -461,6 +481,15 @@ class CampaignReport:
             f"- actor: `{self.actor}`",
             f"- created: {self.created_at}",
             f"- gate set: `{self.gate_set_version}` (`{self.gate_set_fingerprint[:16]}`)",
+            *(
+                []
+                if self.is_current_version
+                else [
+                    f"- **report version `{self.report_version}`, but this code reads "
+                    f"`{CAMPAIGN_REPORT_VERSION}`**: fields may be missing or may mean "
+                    "something else. Read the numbers below with that in mind."
+                ]
+            ),
             "- datasets: "
             + (", ".join(f"{k} -> `{v}`" for k, v in sorted(self.dataset_versions.items())) or "none"),
             "",

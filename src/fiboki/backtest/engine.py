@@ -96,6 +96,7 @@ from fiboki.backtest.position import (
     size_for_exit,
     snap_to_step,
 )
+from fiboki.backtest.version import ENGINE_VERSION
 from fiboki.core.contracts import (
     AccountState,
     Position,
@@ -269,7 +270,18 @@ class BacktestConfig:
             raise ValueError("financing_rollover_hour_utc must be an hour of day")
 
     def fingerprint(self) -> dict[str, object]:
+        """How this engine was wired, as stored on a record.
+
+        Carries ``key_version`` because it is PERSISTED and then compared: the
+        fingerprint's SHAPE is a function of this class, so without the stamp a
+        reader cannot tell a different configuration from the same configuration
+        described by a different generation of the code. ``ENGINE_VERSION`` is the
+        right stamp by definition -- it is bumped exactly when a change makes
+        stored results incomparable with new ones. See
+        :mod:`fiboki.core.versioned_key`.
+        """
         return {
+            "key_version": ENGINE_VERSION,
             "initial_balance": self.initial_balance,
             "account_ccy": self.account_ccy,
             "profile": self.profile.fingerprint(),

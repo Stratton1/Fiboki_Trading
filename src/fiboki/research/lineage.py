@@ -250,6 +250,12 @@ class LineageService:
         Walks ``MutationRecord.parent_hash`` through the documents stored on the
         ledger, so it works even when the parent document's file has since been
         deleted -- the ledger is the record, not the filesystem.
+
+        Raises :class:`~fiboki.research.experiment.LedgerKeyVersionMismatch` when
+        the ledger holds content hashes derived under a different DSL schema. It
+        used to report ``known_to_ledger: False`` for those, which reads as "that
+        document was deleted" when the truth is "that key moved" -- a wrong answer
+        about provenance, delivered with no hint that it was wrong.
         """
         chain: list[dict[str, Any]] = []
         seen: set[str] = set()

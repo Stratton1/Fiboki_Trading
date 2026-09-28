@@ -66,6 +66,7 @@ from fiboki.validation.evaluation import (
 from fiboki.validation.gates import GATE_SET_V2, GateSet
 from fiboki.validation.holdout import (
     HoldoutAlreadyConsumed,
+    HoldoutKeyVersionMismatch,
     HoldoutRegistry,
     HoldoutSegment,
 )
@@ -940,6 +941,16 @@ class HoldoutRung(Rung):
             )
         except HoldoutAlreadyConsumed as exc:
             metrics["previous_consumption"] = exc.consumption.to_dict()
+            return self._error(str(exc), metrics)
+        except HoldoutKeyVersionMismatch as exc:
+            # The registry cannot tell whether this strategy has already looked,
+            # because the stored claims were keyed under a different version of
+            # the hashing algorithm. An ERROR, not a pass: a rung that cannot
+            # establish its own precondition has not been satisfied.
+            metrics["incomparable_consumptions"] = [
+                c.to_dict() for c in exc.found
+            ]
+            metrics["expected_key_version"] = exc.expected
             return self._error(str(exc), metrics)
 
         result = ctx.evaluate(selected, ctx.holdout_window)

@@ -46,6 +46,13 @@ import numpy as np
 from fiboki.core.enums import Direction
 from fiboki.core.instruments import Instrument
 
+#: The shape of :meth:`ExecutionProfile.fingerprint`. Stored on every backtest
+#: record and then compared, so it needs to say which generation of this class
+#: described it -- otherwise a reader cannot tell a different cost model from the
+#: same cost model described differently. Bump it when a field is added, removed or
+#: reinterpreted. See :mod:`fiboki.core.versioned_key`.
+PROFILE_FINGERPRINT_VERSION = "profile_v1"
+
 __all__ = [
     "IBKR_REALISTIC",
     "IDEALISED_RESEARCH",
@@ -402,8 +409,18 @@ class ExecutionProfile:
         return replace(self, seed=seed)
 
     def fingerprint(self) -> dict[str, object]:
-        """A sortable, JSON-able description used to stamp a result."""
+        """A sortable, JSON-able description used to stamp a result.
+
+        Carries ``key_version`` because it is PERSISTED and then compared: the
+        fingerprint's SHAPE is a function of this class, so without the stamp a
+        reader cannot tell a different configuration from the same configuration
+        described by a different generation of the code. The stamp is
+        :data:`PROFILE_FINGERPRINT_VERSION`, owned by this module: the
+        profile's fingerprint shape is a function of this class and can change
+        without the backtest engine changing. See :mod:`fiboki.core.versioned_key`.
+        """
         return {
+            "key_version": PROFILE_FINGERPRINT_VERSION,
             "name": self.name,
             "spread": repr(self.spread),
             "slippage": repr(self.slippage),

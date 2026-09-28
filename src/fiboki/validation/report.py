@@ -51,9 +51,21 @@ __all__ = [
     "ValidationReport",
     "Verdict",
     "code_version",
+    "report_key_version",
 ]
 
 REPORT_VERSION = "2.0.0"
+
+
+def report_key_version() -> str:
+    """The version stamped beside a stored :meth:`ValidationReport.content_hash`.
+
+    ``to_dict()`` includes ``report_version``, so the hash moves when
+    :data:`REPORT_VERSION` is bumped. A reader holding only the stored string
+    cannot see that, which is why the version is stored alongside it -- see
+    :mod:`fiboki.core.versioned_key`.
+    """
+    return f"report:{REPORT_VERSION}"
 
 
 # --------------------------------------------------------------------------

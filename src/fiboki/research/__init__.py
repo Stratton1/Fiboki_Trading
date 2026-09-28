@@ -34,6 +34,7 @@ from fiboki.research.experiment import (
     ExperimentLedger,
     ExperimentNotFound,
     LedgerError,
+    LedgerKeyVersionMismatch,
     Outcome,
     is_append_only_violation,
 )
@@ -73,6 +74,7 @@ __all__ = [
     "ExperimentNotFound",
     "Hypothesis",
     "LedgerError",
+    "LedgerKeyVersionMismatch",
     "LineageEdge",
     "LineageGraph",
     "LineageNode",

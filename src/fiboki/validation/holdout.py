@@ -23,6 +23,18 @@ Three properties, each enforced rather than documented:
    refuses any research window that overlaps the segment, so the leak that made
    V1's OOS meaningless is a raised exception rather than a silent number.
 
+4. **A key that moved cannot be mistaken for a key that is new.** The content
+   hash is a function of the DSL schema -- ``semantic_payload()`` includes
+   ``schema_version`` -- so bumping :data:`fiboki.strategy.dsl.SCHEMA_VERSION`
+   moves EVERY hash in existence. Without a version beside the stored hash, a
+   moved key looks exactly like a hash nobody has claimed, and property 2 above
+   fails silently and in the permissive direction: every strategy gets a second
+   look. So every consumption row stores the key version it was written under,
+   and :meth:`HoldoutRegistry.claim` REFUSES -- loudly, with
+   :class:`HoldoutKeyVersionMismatch` -- when it is asked to compare a hash
+   against rows it cannot compare it against. A registry that cannot prove a
+   strategy has not already looked must not grant the look.
+
 Keyed on the strategy CONTENT hash, not the strategy id: renaming a strategy, or
 re-registering it under a new id, must not buy a second look.
 """
@@ -49,12 +61,22 @@ from sqlalchemy import (
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, sessionmaker
 
 from fiboki.core.enums import Provenance
+from fiboki.core.versioned_key import (
+    UNSTAMPED,
+    add_missing_columns,
+    key_version_column,
+    require_key_versions,
+    resolve_key_version,
+    unstamped_column_ddl,
+)
+from fiboki.strategy.dsl import strategy_key_version
 from fiboki.validation.evaluation import DateWindow
 
 __all__ = [
     "HoldoutAlreadyConsumed",
     "HoldoutConsumption",
     "HoldoutError",
+    "HoldoutKeyVersionMismatch",
     "HoldoutLeak",
     "HoldoutRegistry",
     "HoldoutSegment",
@@ -82,6 +104,45 @@ class HoldoutAlreadyConsumed(HoldoutError):
             f"actor {consumption.actor or 'unrecorded'}). "
             "A holdout evaluated twice is an in-sample number. Use a NEW dataset "
             "version, or accept the result you already have."
+        )
+
+
+class HoldoutKeyVersionMismatch(HoldoutError):
+    """The stored claims cannot be compared with the hash being claimed.
+
+    Raised when a consumption row for this dataset version carries a different
+    strategy-key version from the one now in force -- or carries no version at
+    all, because it was written before the column existed.
+
+    This is a REFUSAL, not a warning, and it is the whole point of the version
+    column. The alternative is what the registry did before: a stored hash that
+    does not match the incoming one is read as "this strategy has never looked",
+    so bumping the DSL schema hands every strategy in the ledger a second look at
+    the one segment it is allowed one look at. The registry cannot prove the look
+    is unspent, so it does not grant it.
+    """
+
+    def __init__(
+        self,
+        dataset_version_id: str,
+        expected: str,
+        found: tuple[HoldoutConsumption, ...],
+    ) -> None:
+        self.dataset_version_id = str(dataset_version_id)
+        self.expected = str(expected)
+        self.found = tuple(found)
+        versions = sorted({c.key_version or "<unstamped>" for c in found})
+        super().__init__(
+            f"holdout {dataset_version_id} holds {len(found)} consumption row(s) "
+            f"whose strategy keys were computed under {', '.join(versions)}, but "
+            f"this claim is keyed under {expected!r}. Those hashes and this one are "
+            "not comparable, so the registry cannot tell an unspent look from a key "
+            "that moved, and it refuses the look rather than granting a second one. "
+            "Either restate the stored rows' key version with "
+            "HoldoutRegistry.restate_key_versions() if you can show which version "
+            "wrote them, or mint a NEW dataset version -- which is the honest "
+            "answer to a schema bump, because every stored result was computed "
+            "against a strategy vocabulary that no longer exists."
         )
 
 
@@ -123,6 +184,13 @@ class HoldoutConsumptionRow(Base):
     token: Mapped[str] = mapped_column(String(64), unique=True, index=True)
     dataset_version_id: Mapped[str] = mapped_column(String(128), index=True)
     strategy_content_hash: Mapped[str] = mapped_column(String(64), index=True)
+    #: Version of the algorithm that produced ``strategy_content_hash``. Empty
+    #: means the row was written before this column existed -- see
+    #: :class:`HoldoutKeyVersionMismatch` for why that is refused rather than
+    #: assumed, and :class:`HoldoutKeyRestatementRow` for how it is fixed.
+    strategy_content_hash_key_version: Mapped[str] = mapped_column(
+        String(32), default=UNSTAMPED, index=True
+    )
     strategy_id: Mapped[str] = mapped_column(String(128), default="")
     experiment_id: Mapped[str] = mapped_column(String(64), default="")
     actor: Mapped[str] = mapped_column(String(128), default="")
@@ -133,6 +201,34 @@ class HoldoutConsumptionRow(Base):
         DateTime(timezone=True), nullable=True
     )
     note: Mapped[str] = mapped_column(Text, default="")
+
+
+class HoldoutKeyRestatementRow(Base):
+    """"These stored keys were computed under version V", said by a named person.
+
+    A consumption row written before the version column existed carries
+    :data:`UNSTAMPED`, and the registry refuses to compare it. The row itself must
+    not be rewritten -- a claim that can be amended after the fact is not a claim
+    -- so the version is stated ALONGSIDE it instead, with who said so and on what
+    evidence. The consumption row still says what it always said; the restatement
+    says what we now know about how it was written.
+    """
+
+    __tablename__ = "holdout_key_restatement"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    subject_token: Mapped[str] = mapped_column(String(64), index=True)
+    key_column: Mapped[str] = mapped_column(String(64), default="")
+    key_value: Mapped[str] = mapped_column(String(64), default="")
+    key_version: Mapped[str] = mapped_column(String(32), default="")
+    stated_by: Mapped[str] = mapped_column(String(128), default="")
+    reason: Mapped[str] = mapped_column(Text, default="")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+
+
+#: Enforced at import: a derived-key column in this module's schema without a
+#: version companion is a bug of the exact class this file exists to prevent.
+require_key_versions(Base.metadata)
 
 
 def _utc(value: Any) -> pd.Timestamp:
@@ -202,12 +298,22 @@ class HoldoutConsumption:
     outcome: dict[str, Any] | None = None
     outcome_recorded_at: datetime | None = None
     note: str = ""
+    key_version: str = UNSTAMPED
+    """Version of the algorithm that produced ``strategy_content_hash``, resolved
+    from the row's own column or from a restatement. Empty means nobody has said,
+    and the registry refuses to compare it -- see
+    :class:`HoldoutKeyVersionMismatch`."""
+    key_version_restated: bool = False
+    """True when :attr:`key_version` came from a restatement rather than from the
+    row itself, so a reader can tell a stamp from a later attestation."""
 
     def to_dict(self) -> dict[str, Any]:
         return {
             "token": self.token,
             "dataset_version_id": self.dataset_version_id,
             "strategy_content_hash": self.strategy_content_hash,
+            "strategy_content_hash_key_version": self.key_version,
+            "key_version_restated": self.key_version_restated,
             "strategy_id": self.strategy_id,
             "experiment_id": self.experiment_id,
             "actor": self.actor,
@@ -248,6 +354,17 @@ class HoldoutRegistry:
             url = f"sqlite+pysqlite:///{self.db_path}"
         self._engine = create_engine(url, echo=echo, future=True)
         Base.metadata.create_all(self._engine)
+        # A registry file written before the key-version column existed acquires it
+        # here, with every existing row UNSTAMPED. ADD COLUMN, never UPDATE: the
+        # rows keep saying exactly what they said, and what we now believe about
+        # how they were written is said in a restatement instead.
+        self.columns_added = add_missing_columns(
+            self._engine,
+            HoldoutConsumptionRow.__tablename__,
+            {
+                key_version_column("strategy_content_hash"): unstamped_column_ddl(32),
+            },
+        )
         self._session_factory = sessionmaker(bind=self._engine, future=True)
 
     # ------------------------------------------------------------ lifecycle
@@ -395,7 +512,108 @@ class HoldoutRegistry:
                     HoldoutConsumptionRow.strategy_content_hash == str(strategy_content_hash),
                 )
             ).first()
-            return _consumption_from_row(row) if row is not None else None
+            if row is None:
+                return None
+            return _consumption_from_row(row, self._restatements().get(row.token, UNSTAMPED))
+
+    # -------------------------------------------------------- key versions
+
+    def _restatements(self) -> dict[str, str]:
+        """``token -> restated key version`` for the strategy content hash."""
+        with self._session_factory() as session:
+            rows = session.scalars(
+                select(HoldoutKeyRestatementRow)
+                .where(
+                    HoldoutKeyRestatementRow.key_column
+                    == "strategy_content_hash"
+                )
+                .order_by(HoldoutKeyRestatementRow.id)
+            ).all()
+        return {r.subject_token: r.key_version for r in rows if r.key_version}
+
+    def incomparable_consumptions(
+        self, dataset_version_id: str, key_version: str | None = None
+    ) -> tuple[HoldoutConsumption, ...]:
+        """Stored claims whose keys cannot be compared with ``key_version``.
+
+        An empty result is the precondition for trusting a hash lookup on this
+        dataset version. A non-empty one is not a data-quality nit: it means the
+        registry does not know whether a given strategy has already looked.
+        """
+        expected = strategy_key_version() if key_version is None else str(key_version)
+        return tuple(
+            c
+            for c in self.consumptions(dataset_version_id)
+            if c.key_version != expected
+        )
+
+    def assert_keys_comparable(
+        self, dataset_version_id: str, key_version: str | None = None
+    ) -> None:
+        """Raise :class:`HoldoutKeyVersionMismatch` unless every claim is comparable."""
+        expected = strategy_key_version() if key_version is None else str(key_version)
+        found = self.incomparable_consumptions(dataset_version_id, expected)
+        if found:
+            raise HoldoutKeyVersionMismatch(dataset_version_id, expected, found)
+
+    def restate_key_versions(
+        self,
+        key_version: str,
+        *,
+        stated_by: str,
+        reason: str,
+        dataset_version_id: str | None = None,
+    ) -> int:
+        """State which key version the UNSTAMPED consumption rows were written under.
+
+        The migration for a registry file that predates the version column. It
+        writes one restatement row per unstamped claim and returns how many. Rows
+        that already carry a version are left alone: a stamp written by the code
+        that made the claim outranks anything asserted afterwards.
+
+        ``stated_by`` and ``reason`` are mandatory for the same reason
+        ``ExperimentDraft.reason`` is: an attestation nobody is named for, with no
+        evidence attached, is indistinguishable from a guess -- and a guess here
+        re-opens the holdout.
+        """
+        version = str(key_version).strip()
+        if not version:
+            raise ValueError(
+                "key_version is mandatory: restating a row as UNSTAMPED states "
+                "nothing and leaves the claim uncomparable"
+            )
+        if not str(stated_by).strip() or not str(reason).strip():
+            raise ValueError(
+                "stated_by and reason are mandatory: a restatement is an assertion "
+                "about how a claim was written, and an unattributed assertion with "
+                "no evidence is a guess that re-opens the holdout"
+            )
+        known = self._restatements()
+        written = 0
+        now = datetime.now(tz=UTC)
+        with self._session_factory() as session:
+            stmt = select(HoldoutConsumptionRow).order_by(HoldoutConsumptionRow.id)
+            if dataset_version_id is not None:
+                stmt = stmt.where(
+                    HoldoutConsumptionRow.dataset_version_id == str(dataset_version_id)
+                )
+            for row in session.scalars(stmt).all():
+                if row.strategy_content_hash_key_version or row.token in known:
+                    continue
+                session.add(
+                    HoldoutKeyRestatementRow(
+                        subject_token=row.token,
+                        key_column="strategy_content_hash",
+                        key_value=row.strategy_content_hash,
+                        key_version=version,
+                        stated_by=str(stated_by),
+                        reason=str(reason),
+                        created_at=now,
+                    )
+                )
+                written += 1
+            session.commit()
+        return written
 
     def claim(
         self,
@@ -407,14 +625,25 @@ class HoldoutRegistry:
         actor: str = "",
         code_version: str = "",
         note: str = "",
+        key_version: str | None = None,
     ) -> HoldoutToken:
         """Spend this strategy's one look at the holdout.
 
         The row is written BEFORE any evaluation runs. If the caller crashes, the
         look is still spent -- which is correct: the alternative is a process
         that can re-roll the holdout until it likes the answer.
+
+        Refuses with :class:`HoldoutKeyVersionMismatch` when any stored claim for
+        this dataset version was keyed under a different version of the hashing
+        algorithm, because then a non-match proves nothing. ``key_version``
+        defaults to the DSL schema in force and exists so a test -- or a caller
+        that hashes documents itself -- can be explicit about it.
         """
         segment = self.segment(dataset_version_id)
+        version = strategy_key_version() if key_version is None else str(key_version)
+        # BEFORE the hash lookup, not after: the lookup's answer is only
+        # meaningful once every stored key is comparable with this one.
+        self.assert_keys_comparable(segment.dataset_version_id, version)
         existing = self.consumption(dataset_version_id, strategy_content_hash)
         if existing is not None:
             raise HoldoutAlreadyConsumed(existing)
@@ -425,6 +654,7 @@ class HoldoutRegistry:
                     token=token,
                     dataset_version_id=segment.dataset_version_id,
                     strategy_content_hash=str(strategy_content_hash),
+                    strategy_content_hash_key_version=version,
                     strategy_id=str(strategy_id),
                     experiment_id=str(experiment_id),
                     actor=str(actor),
@@ -468,13 +698,17 @@ class HoldoutRegistry:
     def consumptions(
         self, dataset_version_id: str | None = None
     ) -> list[HoldoutConsumption]:
+        restated = self._restatements()
         with self._session_factory() as session:
             stmt = select(HoldoutConsumptionRow).order_by(HoldoutConsumptionRow.id)
             if dataset_version_id is not None:
                 stmt = stmt.where(
                     HoldoutConsumptionRow.dataset_version_id == str(dataset_version_id)
                 )
-            return [_consumption_from_row(r) for r in session.scalars(stmt).all()]
+            return [
+                _consumption_from_row(r, restated.get(r.token, UNSTAMPED))
+                for r in session.scalars(stmt).all()
+            ]
 
     def consumed_hashes(self, dataset_version_id: str) -> tuple[str, ...]:
         return tuple(c.strategy_content_hash for c in self.consumptions(dataset_version_id))
@@ -491,8 +725,13 @@ def _segment_from_row(row: HoldoutSegmentRow) -> HoldoutSegment:
     )
 
 
-def _consumption_from_row(row: HoldoutConsumptionRow) -> HoldoutConsumption:
+def _consumption_from_row(
+    row: HoldoutConsumptionRow, restated: str = UNSTAMPED
+) -> HoldoutConsumption:
+    stored = row.strategy_content_hash_key_version or UNSTAMPED
     return HoldoutConsumption(
+        key_version=resolve_key_version(stored, restated),
+        key_version_restated=bool(not stored and restated),
         token=row.token,
         dataset_version_id=row.dataset_version_id,
         strategy_content_hash=row.strategy_content_hash,
