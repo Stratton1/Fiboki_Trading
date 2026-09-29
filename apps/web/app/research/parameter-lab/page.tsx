@@ -12,6 +12,7 @@ import {
   TableWrap,
   Tile,
 } from "@/components/primitives";
+import { EmptyState } from "@/components/ui/EmptyState";
 import type { Envelope, Page, ParameterLabView, StrategyRow } from "@/lib/types";
 
 /**
@@ -23,6 +24,11 @@ import type { Envelope, Page, ParameterLabView, StrategyRow } from "@/lib/types"
  * every later Sharpe, not discover it in a validation report.
  *
  * The selected strategy is URL state (`?strategy=<id>`).
+ *
+ * With no strategy in the URL, the first registered one is shown. When the
+ * strategy list failed or is empty there is nothing to choose, and the
+ * parameter panel says so: it used to wait on a null path and show "Loading"
+ * forever (report G, trust defect).
  */
 const strategyParser = parseAsString.withOptions({ history: "replace" });
 
@@ -83,6 +89,30 @@ function ParameterLab({
         )}
       </AsyncBoundary>
 
+      {chosen === null && strategies.status === "error" ? (
+        <div
+          className="state state--error"
+          data-testid="parameter-lab-no-strategy"
+          data-reason="strategies-failed"
+          role="alert"
+        >
+          <div className="state__title">No parameter space to show</div>
+          <div className="state__body">
+            The strategy list could not be loaded ({strategies.error.code}), so there is no strategy
+            to read a parameter space for. Nothing on this panel is loading; retry the strategy list
+            above, or open a strategy by its id with <span className="mono">?strategy=</span>.
+          </div>
+        </div>
+      ) : chosen === null && strategies.status === "success" ? (
+        <EmptyState
+          title="No strategy is registered"
+          testId="parameter-lab-no-strategy"
+          data-reason="no-strategies"
+        >
+          The platform answered with an empty strategy list, so there is no parameter space to
+          show.
+        </EmptyState>
+      ) : (
       <AsyncBoundary state={lab} label="the parameter space" onRetry={lab.reload}>
         {(envelope) => (
           <>
@@ -109,12 +139,12 @@ function ParameterLab({
                   <table>
                     <thead>
                       <tr>
-                        <th>Parameter</th>
-                        <th>Default</th>
-                        <th>Min</th>
-                        <th>Max</th>
-                        <th>Step</th>
-                        <th>Description</th>
+                        <th scope="col">Parameter</th>
+                        <th scope="col" className="num">Default</th>
+                        <th scope="col" className="num">Min</th>
+                        <th scope="col" className="num">Max</th>
+                        <th scope="col" className="num">Step</th>
+                        <th scope="col">Description</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -144,6 +174,7 @@ function ParameterLab({
           </>
         )}
       </AsyncBoundary>
+      )}
     </>
   );
 }

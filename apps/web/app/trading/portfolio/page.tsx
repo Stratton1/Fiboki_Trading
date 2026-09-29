@@ -2,7 +2,7 @@
 
 import { useApi } from "@/lib/query";
 import { AsyncBoundary } from "@/components/AsyncBoundary";
-import { LineChart } from "@/components/charts";
+import { LazyLineChart } from "@/components/LazyChart";
 import { FigureValue } from "@/components/FigureValue";
 import { ProvenanceChip } from "@/components/ProvenanceChip";
 import {
@@ -40,7 +40,7 @@ export default function PortfolioPage() {
               <Tile label="Max drawdown" figure={envelope.data.max_drawdown_pct} />
             </div>
             <Card>
-              <LineChart series={envelope.data.equity_curve} />
+              <LazyLineChart series={envelope.data.equity_curve} />
               <CaveatList caveats={envelope.data.equity_curve.caveats} />
             </Card>
           </>

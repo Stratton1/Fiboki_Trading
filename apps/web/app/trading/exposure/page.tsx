@@ -14,16 +14,19 @@ export default function ExposurePage() {
     {
       key: "exposure",
       header: "Exposure",
+      numeric: true,
       cell: (row) => <FigureValue figure={row.exposure_pct} showChip={false} />,
     },
     {
       key: "limit",
       header: "Limit",
+      numeric: true,
       cell: (row) => <FigureValue figure={row.limit_pct} showChip={false} />,
     },
     {
       key: "util",
       header: "Utilisation",
+      numeric: true,
       cell: (row) => <FigureValue figure={row.utilisation_pct} showChip={false} />,
     },
     {

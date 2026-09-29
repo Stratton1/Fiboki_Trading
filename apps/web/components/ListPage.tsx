@@ -12,6 +12,11 @@ export interface Column<T> {
   /** Rendered per row. Figures go through <FigureValue>, so the chip comes too. */
   cell: (row: T) => ReactNode;
   wrap?: boolean;
+  /**
+   * A numeric column: the header is right-aligned over the right-aligned
+   * figures (report G §2.5), not left-aligned over them.
+   */
+  numeric?: boolean;
 }
 
 /**
@@ -71,7 +76,14 @@ export function ListPage<T>({
                 <thead>
                   <tr>
                     {columns.map((column) => (
-                      <th key={column.key}>{column.header}</th>
+                      <th
+                        key={column.key}
+                        scope="col"
+                        className={column.numeric ? "num" : undefined}
+                        data-numeric={column.numeric ? "true" : undefined}
+                      >
+                        {column.header}
+                      </th>
                     ))}
                   </tr>
                 </thead>
@@ -81,7 +93,11 @@ export function ListPage<T>({
                       {columns.map((column) => (
                         <td
                           key={column.key}
-                          className={column.wrap ? "wrap" : undefined}
+                          className={
+                            [column.wrap ? "wrap" : "", column.numeric ? "num" : ""]
+                              .filter(Boolean)
+                              .join(" ") || undefined
+                          }
                         >
                           {column.cell(row)}
                         </td>

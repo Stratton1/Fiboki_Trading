@@ -45,6 +45,22 @@ for (const theme of ["dark", "light"] as const) {
       await expect(page.getByTestId("legend-modes")).toHaveScreenshot(`mode-frames-${theme}.png`);
     });
 
+    test("view states", async ({ page }) => {
+      await page.goto("/system/legend");
+      await ready(page);
+      await expect(page.getByTestId("legend-view-states")).toHaveScreenshot(
+        `view-states-${theme}.png`,
+      );
+    });
+
+    test("P&L in the colour-blind preset", async ({ page }) => {
+      // Report G W-13: profit blue must be visibly different from the accent.
+      await page.goto("/system/legend");
+      await ready(page);
+      await page.evaluate(() => document.documentElement.setAttribute("data-pnl", "cvd"));
+      await expect(page.getByTestId("legend-numbers")).toHaveScreenshot(`pnl-cvd-${theme}.png`);
+    });
+
     test("token sheet", async ({ page }) => {
       await page.goto("/system/legend");
       await ready(page);

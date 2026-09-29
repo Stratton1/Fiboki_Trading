@@ -7,7 +7,10 @@ export type ButtonSize = "sm" | "md" | "icon";
 const BASE =
   "inline-flex items-center justify-center gap-1.5 rounded-sm border font-medium whitespace-nowrap select-none " +
   "transition-[background-color,border-color,color] duration-[var(--dur-xs)] ease-standard " +
-  "disabled:opacity-45 disabled:pointer-events-none";
+  "disabled:opacity-45 disabled:pointer-events-none " +
+  // aria-disabled keeps the control focusable, so the reason it cannot be
+  // pressed stays reachable by keyboard (report G W-15).
+  "aria-disabled:opacity-45 aria-disabled:cursor-not-allowed";
 
 const VARIANT: Record<ButtonVariant, string> = {
   secondary: "border-line-control bg-raised text-fg hover:bg-overlay",

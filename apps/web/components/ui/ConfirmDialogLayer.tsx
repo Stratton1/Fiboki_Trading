@@ -19,7 +19,9 @@ import { LIVE_CONFIRM_PHRASE, type ConfirmDialogProps } from "./ConfirmDialog";
  *
  *  - the consequence list comes from the API, per choice, per mode;
  *  - the current execution mode is stated in the dialog itself, with a DEMO
- *    stamp in demo; in LIVE a typed phrase is always required;
+ *    stamp in demo; in LIVE a typed phrase is required unless the chosen
+ *    action only reduces risk (a choice's `phrase: null`, e.g. PAUSE), and a
+ *    choice may demand its own phrase in every mode (FLATTEN);
  *  - a reason is mandatory and goes to the audit trail;
  *  - choices are a radio group with no default when there are several;
  *  - server-supplied acknowledgements (realism caveats on a promotion) render
@@ -72,12 +74,15 @@ export default function ConfirmDialogLayer({
 
   const mode = executionMode.toLowerCase();
   const modeKnown = mode !== "unknown" && mode !== "loading";
-  const requiredPhrase = confirmPhrase ?? (mode === "live" ? LIVE_CONFIRM_PHRASE : undefined);
 
   // A lone choice is selected even when it arrives after the dialog opened
   // (server-computed choices load asynchronously).
   const selected =
     choices.find((c) => c.id === choiceId) ?? (choices.length === 1 ? (choices[0] ?? null) : null);
+  // Friction follows the chosen act (see ConfirmChoice.phrase).
+  const dialogPhrase = confirmPhrase ?? (mode === "live" ? LIVE_CONFIRM_PHRASE : undefined);
+  const requiredPhrase =
+    selected && selected.phrase !== undefined ? (selected.phrase ?? undefined) : dialogPhrase;
   const reasonOk = !requireReason || reason.trim().length >= reasonMinLength;
   const phraseOk = !requiredPhrase || phrase.trim() === requiredPhrase;
   const acknowledgedCodes = acknowledgements.map((a) => a.code).filter((code) => ticked.has(code));
@@ -229,6 +234,7 @@ export default function ConfirmDialogLayer({
               type="text"
               autoComplete="off"
               data-testid="confirm-phrase"
+              data-phrase={requiredPhrase}
               value={phrase}
               onChange={(e) => setPhrase(e.target.value)}
             />

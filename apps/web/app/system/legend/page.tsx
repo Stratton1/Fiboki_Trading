@@ -7,8 +7,16 @@ import { UrlState } from "@/components/UrlState";
 import { ProvenanceChip, ProvenanceLabelChip } from "@/components/ProvenanceChip";
 import { TITLE_PREFIX } from "@/components/shell/Mode";
 import { StatusPill } from "@/components/ui/StatusPill";
+import { VIEW_STATE_META, VIEW_STATES, ViewStateTag } from "@/components/ui/ViewStateTag";
 import { Tab, TabsList, TabsPanel, TabsRoot } from "@/components/ui/Tabs";
-import { PROVENANCE_EXECUTED, PROVENANCE_HELP, PROVENANCE_LABEL } from "@/lib/format";
+import {
+  PROVENANCE_EXECUTED,
+  PROVENANCE_HELP,
+  PROVENANCE_LABEL,
+  formatSigned,
+  roundedSign,
+  signClass,
+} from "@/lib/format";
 import { PROVENANCES } from "@/lib/types";
 
 const LegendControls = lazy(() => import("./LegendControls"));
@@ -17,7 +25,8 @@ const LegendControls = lazy(() => import("./LegendControls"));
  * SYSTEM · Legend.
  *
  * What every colour, shape and frame on this workstation means, drawn by the
- * same components the screens use. It carries no figures: every number in the
+ * same components the screens use. It carries no platform figures (the Numbers
+ * card shows formatting specimens, labelled as such): every number in the
  * product comes from the platform, and a legend has none to show.
  */
 
@@ -84,6 +93,26 @@ const COLOUR_TOKENS: { group: string; tokens: { name: string; swatch: string }[]
       { name: "--mode-shadow", swatch: "bg-[var(--mode-shadow)]" },
       { name: "--mode-demo", swatch: "bg-[var(--mode-demo)]" },
       { name: "--mode-live", swatch: "bg-[var(--mode-live)]" },
+    ],
+  },
+  {
+    group: "View states",
+    tokens: [
+      { name: "--state-loading", swatch: "bg-[var(--state-loading)]" },
+      { name: "--state-empty", swatch: "bg-[var(--state-empty)]" },
+      { name: "--state-absent", swatch: "bg-[var(--state-absent)]" },
+      { name: "--state-stale", swatch: "bg-[var(--state-stale)]" },
+      { name: "--state-disconnected", swatch: "bg-[var(--state-disconnected)]" },
+      { name: "--state-error", swatch: "bg-[var(--state-error)]" },
+      { name: "--state-forming", swatch: "bg-[var(--state-forming)]" },
+      { name: "--state-replay", swatch: "bg-[var(--state-replay)]" },
+    ],
+  },
+  {
+    group: "Correlation (diverging)",
+    tokens: [
+      { name: "--div-neg", swatch: "bg-[var(--div-neg)]" },
+      { name: "--div-pos", swatch: "bg-[var(--div-pos)]" },
     ],
   },
   {
@@ -162,9 +191,10 @@ function Meanings() {
       <section className="card" data-testid="legend-provenance">
         <h2 className="card__title">Provenance: where a number came from</h2>
         <p className="muted mb-3">
-          A property of each figure. Hollow chips are simulated evidence, told apart by outline
-          (dashed, solid, double); filled chips are executions, in their mode&apos;s colour.
-          Readable in greyscale.
+          A property of each figure. Hollow chips are simulated evidence, told apart by outline:
+          dashed (backtest), solid (walk-forward), solid with a filled corner (out-of-sample),
+          double (holdout). Filled chips are executions, in their mode&apos;s colour. Readable in
+          greyscale.
         </p>
         <div className="table-wrap">
           <table>
@@ -263,9 +293,82 @@ function Meanings() {
           </div>
         </div>
       </section>
+
+      <section className="card" data-testid="legend-view-states">
+        <h2 className="card__title">View states: how current a panel is</h2>
+        <p className="muted mb-3">
+          Eight states, each with its own token, glyph, word and outline. A view that has shown
+          data never goes back to loading; old data stays on screen, marked.
+        </p>
+        <div className="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th scope="col">State</th>
+                <th scope="col">Token</th>
+                <th scope="col">Meaning</th>
+              </tr>
+            </thead>
+            <tbody>
+              {VIEW_STATES.map((state) => (
+                <tr key={state} data-testid={`legend-state-${state}`}>
+                  <td>
+                    <ViewStateTag state={state} />
+                  </td>
+                  <td className="mono">--state-{state}</td>
+                  <td className="wrap">{VIEW_STATE_META[state].meaning}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section className="card" data-testid="legend-numbers">
+        <h2 className="card__title">Numbers</h2>
+        <p className="muted mb-3">
+          Fixed decimals per unit, thousands separators, a real minus sign, and the sign decided
+          after rounding: a loss too small to show at this precision is shown as zero, with no
+          ▼. In grids the unit is in the column header and numbers are right-aligned under a
+          right-aligned heading.
+        </p>
+        <ul className="stack list-none ps-0" data-testid="legend-number-examples">
+          {NUMBER_SPECIMENS.map((specimen) => {
+            const sign = roundedSign(specimen.value, specimen.unit);
+            return (
+              <li key={specimen.note} className="row">
+                <span
+                  className={`figure__value num ${signClass(specimen.value, specimen.unit)}`}
+                  data-testid="legend-number"
+                  data-direction={sign > 0 ? "up" : sign < 0 ? "down" : "flat"}
+                >
+                  {sign !== 0 ? (
+                    <span className="figure__glyph" aria-hidden="true">
+                      {sign > 0 ? "▲" : "▼"}
+                    </span>
+                  ) : null}
+                  {formatSigned(specimen.value, specimen.unit)}
+                </span>
+                <span className="muted text-xs">{specimen.note}</span>
+              </li>
+            );
+          })}
+          <li className="row">
+            <span className="figure__missing">no data</span>
+            <span className="muted text-xs">the platform supplied no value (never 0)</span>
+          </li>
+        </ul>
+      </section>
     </div>
   );
 }
+
+/** Formatting specimens only: none of these is, or claims to be, platform data. */
+const NUMBER_SPECIMENS = [
+  { value: 12345.5, unit: "GBP", note: "a gain: GBP, two decimals, grouped, explicit +" },
+  { value: -233.25, unit: "GBP", note: "a loss: a real minus sign (U+2212), not a hyphen" },
+  { value: -0.001, unit: "pct", note: "−0.001% rounds to zero: no sign, no ▼, no colour" },
+];
 
 function Tokens() {
   return (

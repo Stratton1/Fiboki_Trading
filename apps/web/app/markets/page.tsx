@@ -1,39 +1,42 @@
 "use client";
 
-import { ListPage, type Column } from "@/components/ListPage";
-import { FigureValue } from "@/components/FigureValue";
+import { GridPage } from "@/components/GridPage";
+import type { GridColumn } from "@/components/grid";
 import type { InstrumentRow } from "@/lib/types";
 
-/** MARKETS · Explorer: the instrument universe and its declared frictions. */
+/**
+ * MARKETS · Explorer: the instrument universe and its declared frictions.
+ * Wave 3: a DataGrid (sort, filter, columns, keyboard, CSV with provenance);
+ * `?row=EURUSD` selects an instrument (the palette's "open by id").
+ */
 export default function MarketsExplorerPage() {
-  const columns: Column<InstrumentRow>[] = [
-    { key: "symbol", header: "Symbol", cell: (row) => <strong>{row.symbol}</strong> },
-    { key: "class", header: "Asset class", cell: (row) => row.asset_class },
-    { key: "pair", header: "Base / Quote", cell: (row) => `${row.base} / ${row.quote}` },
-    { key: "hours", header: "Hours", cell: (row) => row.trading_hours },
+  const columns: GridColumn<InstrumentRow>[] = [
     {
-      key: "spread",
-      header: "Typical spread",
-      cell: (row) => <FigureValue figure={row.typical_spread_pips} showChip={false} />,
+      id: "symbol",
+      header: "Symbol",
+      value: (row) => row.symbol,
+      cell: (row) => <strong>{row.symbol}</strong>,
+      width: 110,
+      pin: true,
     },
-    {
-      key: "leverage",
-      header: "Retail leverage",
-      cell: (row) => <FigureValue figure={row.retail_leverage} showChip={false} />,
-    },
-    {
-      key: "financing",
-      header: "Financing",
-      cell: (row) => <FigureValue figure={row.annual_financing_bps} showChip={false} />,
-    },
-    { key: "min", header: "Min size", cell: (row) => <FigureValue figure={row.min_size} showChip={false} /> },
+    { id: "class", header: "Asset class", value: (row) => row.asset_class, width: 120 },
+    { id: "pair", header: "Base / Quote", value: (row) => `${row.base} / ${row.quote}`, width: 120 },
+    { id: "hours", header: "Hours", value: (row) => row.trading_hours, width: 160 },
+    { id: "spread", header: "Typical spread", figure: (row) => row.typical_spread_pips, width: 140 },
+    { id: "leverage", header: "Retail leverage", figure: (row) => row.retail_leverage, width: 140 },
+    { id: "financing", header: "Financing", figure: (row) => row.annual_financing_bps, width: 128 },
+    { id: "min", header: "Min size", figure: (row) => row.min_size, width: 112 },
+    { id: "pip", header: "Pip size", figure: (row) => row.pip_size, hidden: true },
+    { id: "contract", header: "Contract size", figure: (row) => row.contract_size, hidden: true },
+    { id: "step", header: "Size step", figure: (row) => row.size_step, hidden: true },
   ];
   return (
-    <ListPage<InstrumentRow>
+    <GridPage<InstrumentRow>
       title="Explorer"
       intro="The registered instrument universe, with the spread, leverage and financing assumptions every simulation uses."
       path="/api/markets/instruments"
       label="instruments"
+      gridId="instruments"
       columns={columns}
       rowKey={(row) => row.symbol}
     />

@@ -80,6 +80,8 @@ export class MockStream {
   autoHeartbeat = true;
   workerAgeS: number | null = 3;
   workerStaleAfterS = 120;
+  /** Force the platform's verdict (`worker_state`), whatever the age says. */
+  workerState: string | null = null;
   /** Topics the heartbeat stops vouching for (the server has lost track of them). */
   heartbeatOmits: string[] = [];
   /** How long a reconnect waits for pushed events before answering. */
@@ -230,7 +232,14 @@ export class MockStream {
     return this.frame("heartbeat", "heartbeat", seq, {
       server_time: new Date().toISOString(),
       worker_heartbeat_age_s: figure(this.workerAgeS, "paper", "s"),
-      worker_state: this.workerAgeS === null ? "absent" : "running",
+      // The backend's HeartbeatReading.state: absent, stale (age >= threshold) or ok.
+      worker_state:
+        this.workerState ??
+        (this.workerAgeS === null
+          ? "absent"
+          : this.workerAgeS >= this.workerStaleAfterS
+            ? "stale"
+            : "ok"),
       worker_reason: "table",
       worker_stale_after_s: figure(this.workerStaleAfterS, "paper", "s"),
       mode: mode?.mode ?? "paper",

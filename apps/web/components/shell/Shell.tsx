@@ -8,6 +8,7 @@ import { ModeBanner } from "../ModeBanner";
 import { prefetchLayers } from "../ui/layers";
 import { ToastProvider } from "../ui/Toast";
 import { ShellHotkeys } from "./Hotkeys";
+import { ShellCommands } from "./ShellCommands";
 import { InspectorProvider } from "./Inspector";
 import { ModeFrame, ModeHead } from "./Mode";
 import { PageHeader, PageHeaderProvider } from "./PageHeader";
@@ -70,6 +71,7 @@ export function Shell({ children }: { children: ReactNode }) {
                   </div>
                   <StatusBar />
                   <ShellHotkeys />
+                  <ShellCommands />
                 </>
               )}
             </PageHeaderProvider>

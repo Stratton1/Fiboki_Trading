@@ -261,6 +261,68 @@ export async function holdStream(page: Page) {
   await page.route(`${API}/api/stream*`, () => new Promise<void>(() => undefined));
 }
 
+/** GET /api/markets/instruments (InstrumentView rows). */
+export function instrumentsPage() {
+  const make = (symbol: string, pip: number, spread: number) => ({
+    symbol,
+    asset_class: "fx",
+    base: symbol.slice(0, 3),
+    quote: symbol.slice(3),
+    trading_hours: "Sun 22:00 to Fri 22:00 UTC",
+    pip_size: figure(pip, "backtest"),
+    contract_size: figure(100000, "backtest", "count"),
+    min_size: figure(0.01, "backtest", "lots"),
+    size_step: figure(0.01, "backtest", "lots"),
+    typical_spread_pips: figure(spread, "backtest", "pips"),
+    retail_leverage: figure(30, "backtest", "x"),
+    annual_financing_bps: figure(-250, "backtest", "bps"),
+  });
+  const items = [make("EURUSD", 0.0001, 0.6), make("USDJPY", 0.01, 0.9), make("GBPUSD", 0.0001, 0.9)];
+  return { items, total: items.length, offset: 0, limit: 100, source: source("seed"), caveats: [] };
+}
+
+/** GET /api/intelligence/audit (AuditEntryView rows). */
+export function auditPage(count = 3) {
+  const items = Array.from({ length: count }, (_, i) => ({
+    sequence: i + 1,
+    at: `2026-09-19T1${i % 10}:00:00Z`,
+    action: i % 2 === 0 ? "kill_switch.arm" : "kill_switch.disarm",
+    actor: "joe",
+    actor_role: "admin",
+    outcome: i === 1 ? "refused" : "allowed",
+    execution_mode: "paper",
+    target: "kill_switch",
+    reason: `audited reason ${i + 1}`,
+    correlation_id: `cid-${i + 1}`,
+    entry_hash: `hash${i + 1}`.padEnd(16, "0"),
+  }));
+  return { items, total: items.length, offset: 0, limit: 200, source: source("live"), caveats: [] };
+}
+
+export function auditIntegrity() {
+  return {
+    data: { intact: true, entries: 3, first_broken_sequence: null, detail: "3 entries, hash chain verified." },
+    source: source("live"),
+    caveats: [],
+  };
+}
+
+/** `count` trades with distinct ids, for the grid's virtualisation tests. */
+export function manyTrades(count: number) {
+  const base = tradesPage().items;
+  const items = Array.from({ length: count }, (_, i) => {
+    const row = base[i % base.length]!;
+    const pnl = ((i * 37) % 1000) - 500;
+    return {
+      ...row,
+      trade_id: `trd_${String(i).padStart(5, "0")}`,
+      net_pnl: figure(pnl, row.provenance, "GBP"),
+      r_multiple: figure(pnl / 250, row.provenance, "R"),
+    };
+  });
+  return { ...tradesPage(), items, total: count, limit: count };
+}
+
 /** Install the default happy-path API. Individual tests override routes after. */
 export async function mockApi(page: Page) {
   await holdStream(page);
@@ -281,6 +343,15 @@ export async function mockApi(page: Page) {
   );
   await page.route(`${API}/api/trading/preflight/kill-switch-disarm`, (route: Route) =>
     route.fulfill({ json: disarmPreflight() }),
+  );
+  await page.route(`${API}/api/markets/instruments`, (route: Route) =>
+    route.fulfill({ json: instrumentsPage() }),
+  );
+  await page.route((url) => url.pathname === "/api/intelligence/audit", (route: Route) =>
+    route.fulfill({ json: auditPage() }),
+  );
+  await page.route(`${API}/api/intelligence/audit/integrity`, (route: Route) =>
+    route.fulfill({ json: auditIntegrity() }),
   );
 }
 

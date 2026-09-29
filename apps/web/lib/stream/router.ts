@@ -44,6 +44,8 @@ export interface HeartbeatUpdate {
   workerAgeS: number | null;
   /** The backend's worker stale threshold, when the heartbeat carries it. */
   workerStaleAfterS: number | null;
+  /** The platform's verdict on the worker (`ok`, `stale`, `absent`), when sent. */
+  workerState: string | null;
   mode: string;
   killSwitchActive: boolean;
 }
@@ -404,6 +406,7 @@ export class StreamRouter {
       lagMs: Number.isNaN(sent) ? 0 : Math.max(0, now - sent),
       workerAgeS: figureValue(hb.worker_heartbeat_age_s),
       workerStaleAfterS: figureValue(hb.worker_stale_after_s),
+      workerState: typeof hb.worker_state === "string" ? hb.worker_state : null,
       mode: hb.mode,
       killSwitchActive: hb.kill_switch?.active === true,
     });

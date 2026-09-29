@@ -22,13 +22,14 @@
  *   node scripts/contrast.mjs --markdown # the same table as Markdown
  *   node scripts/contrast.mjs --suggest  # for failures, the L that passes
  *   node scripts/contrast.mjs --self-test
+ *   CONTRAST_CSS=other.css node scripts/contrast.mjs   # check another stylesheet
  */
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
-const CSS_PATH = join(HERE, "..", "app", "globals.css");
+const CSS_PATH = process.env.CONTRAST_CSS ?? join(HERE, "..", "app", "globals.css");
 
 // ------------------------------------------------------------ colour maths
 
@@ -238,7 +239,63 @@ export const PAIRS = [
   ...["--series-1", "--series-2", "--series-3", "--series-4", "--series-5", "--series-6"].flatMap(
     (fg) => on(fg, ["--bg-surface"], "graphics", "chart series"),
   ),
+  // View states (report G §2.5): the tag's text is the token.
+  ...[
+    "--state-loading",
+    "--state-empty",
+    "--state-absent",
+    "--state-stale",
+    "--state-disconnected",
+    "--state-error",
+    "--state-forming",
+    "--state-replay",
+  ].flatMap((fg) => on(fg, PANELS, "text", "view-state tag")),
+  // The diverging correlation scale's ends against the surface they sit on.
+  ...["--div-neg", "--div-pos"].flatMap((fg) => on(fg, ["--bg-surface"], "graphics", "heatmap end")),
+  // Chart ink for LIVE is the mode colour (magenta), never loss red.
+  ...on("--mode-live", ["--bg-surface"], "graphics", "LIVE chart series"),
 ];
+
+/**
+ * Colours that must stay DISTINGUISHABLE, not merely legible (report G W-13):
+ * the accent (selection, focus, links) against P&L direction. OKLab distance
+ * of at least 0.10 in every theme, and in the colour-blind presets a
+ * lightness gap of at least 0.08 too for a pair in the same hue family,
+ * because a reader who confuses those hues separates them by lightness.
+ */
+export const DISTINCT = [
+  // In the blue/orange preset profit is blue, like the accent: same hue
+  // family, so lightness must separate them.
+  { a: "--accent", b: "--pnl-up", note: "accent vs profit", sameFamilyInCvd: true },
+  // Blue against orange sits on the axis colour-blind readers keep.
+  { a: "--accent", b: "--pnl-down", note: "accent vs loss", sameFamilyInCvd: false },
+];
+const MIN_DELTA_E = 0.1;
+const MIN_DELTA_L_CVD = 0.08;
+
+function oklab([L, C, H]) {
+  const h = (H * Math.PI) / 180;
+  return [L, C * Math.cos(h), C * Math.sin(h)];
+}
+
+export function distinctness() {
+  const rows = [];
+  for (const [theme, tokens] of Object.entries(themes())) {
+    const cvd = theme.endsWith("+cvd");
+    for (const pair of DISTINCT) {
+      const a = resolve(tokens, pair.a).lch;
+      const b = resolve(tokens, pair.b).lch;
+      const [la, aa, ba] = oklab(a);
+      const [lb, ab, bb] = oklab(b);
+      const deltaE = Math.hypot(la - lb, aa - ab, ba - bb);
+      const deltaL = Math.abs(la - lb);
+      const pass =
+        deltaE >= MIN_DELTA_E && (!cvd || !pair.sameFamilyInCvd || deltaL >= MIN_DELTA_L_CVD);
+      rows.push({ theme, ...pair, deltaE, deltaL, pass });
+    }
+  }
+  return rows;
+}
 
 const PNL_TOKENS = new Set(["--pnl-up", "--pnl-down"]);
 const TARGET = { text: 4.5, graphics: 3, exempt: 0 };
@@ -345,6 +402,15 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
     console.log(
       `\n${checked - failures.length}/${checked} checked pairs pass; ${rows.length - checked} exempt.`,
     );
-    if (failures.length > 0) process.exitCode = 1;
+    const distinct = distinctness();
+    console.log("\nDistinguishability (OKLab ΔE >= 0.10; colour-blind presets also ΔL >= 0.08):");
+    for (const d of distinct) {
+      console.log(
+        `${d.theme.padEnd(10)} ${d.note.padEnd(18)} ${d.a} / ${d.b}  ΔE ${d.deltaE.toFixed(3)}  ΔL ${d.deltaL.toFixed(3)}  ${d.pass ? "pass" : "FAIL"}`,
+      );
+    }
+    const indistinct = distinct.filter((d) => !d.pass);
+    console.log(`${distinct.length - indistinct.length}/${distinct.length} distinct pairs pass.`);
+    if (failures.length > 0 || indistinct.length > 0) process.exitCode = 1;
   }
 }

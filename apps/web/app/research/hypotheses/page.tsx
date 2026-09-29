@@ -14,6 +14,7 @@ export default function HypothesesPage() {
     {
       key: "support",
       header: "Supporting experiments",
+      numeric: true,
       cell: (row) => <FigureValue figure={row.supporting_experiments} />,
     },
   ];

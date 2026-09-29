@@ -1,7 +1,8 @@
 import type { ReactNode } from "react";
 import type { Figure, SourceNote } from "@/lib/types";
 import { formatTimestamp } from "@/lib/format";
-import { FigureValue } from "./FigureValue";
+import type { ToneLabel } from "@/lib/tones";
+import { Stat } from "./Stat";
 
 export { CaveatList } from "./CaveatList";
 
@@ -49,6 +50,10 @@ export function SourceBadge({ source }: { source: SourceNote }) {
   );
 }
 
+/**
+ * The Wave 1 tile, now the Wave 3 `Stat` (components/Stat.tsx): `colourSign`
+ * maps to `signed`, which adds the ▲/▼ glyph and the sign after rounding.
+ */
 export function Tile({
   label,
   figure,
@@ -60,15 +65,7 @@ export function Tile({
   help?: string;
   colourSign?: boolean;
 }) {
-  return (
-    <div className="tile" data-testid="tile" data-label={label}>
-      <div className="tile__label">{label}</div>
-      <div className="tile__value">
-        <FigureValue figure={figure} colourSign={colourSign} glyph={colourSign} asOf="suffix" />
-      </div>
-      {help ? <div className="tile__help">{help}</div> : null}
-    </div>
-  );
+  return <Stat label={label} figure={figure} help={help} signed={colourSign} />;
 }
 
 export function StatusBadge({ status }: { status: string }) {
@@ -95,4 +92,30 @@ export function Card({ title, children }: { title?: string; children: ReactNode 
 
 export function TableWrap({ children }: { children: ReactNode }) {
   return <div className="table-wrap">{children}</div>;
+}
+
+/**
+ * A badge whose tone was decided from its VALUE by one of the exhaustive maps
+ * in lib/tones.ts (report G W-06), never from a sibling flag.
+ */
+export function ToneBadge({
+  tone,
+  testId,
+  value,
+}: {
+  tone: ToneLabel;
+  testId: string;
+  value: string;
+}) {
+  return (
+    <span
+      className={`badge badge--${tone.tone}`}
+      data-testid={testId}
+      data-tone={tone.tone}
+      data-value={value}
+      data-known={tone.known}
+    >
+      {tone.label}
+    </span>
+  );
 }

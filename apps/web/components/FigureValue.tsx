@@ -1,5 +1,5 @@
 import type { Figure } from "@/lib/types";
-import { formatFigure, formatTimestamp, signClass } from "@/lib/format";
+import { formatFigure, formatTimestamp, roundedSign, signClass } from "@/lib/format";
 import { CaveatList } from "./CaveatList";
 import { ProvenanceChip } from "./ProvenanceChip";
 import { Popover } from "./ui/Popover";
@@ -21,7 +21,12 @@ import { Popover } from "./ui/Popover";
  *    title;
  *  - the caveat count ⚠n as a button whose popover renders every caveat in
  *    full, reachable by keyboard and touch;
- *  - right alignment in table cells (globals.css: `td:has(> .figure)`).
+ *  - right alignment in table cells (globals.css: `td:has(> .figure)`);
+ *  - direction (colour, sign, glyph) from the value AT ITS DISPLAYED
+ *    PRECISION, so a loss that rounds to 0.00 shows neither ▼ nor red;
+ *  - `decimals` (a precision the server supplied, e.g. from pip size, or a
+ *    grid column's shared precision) and `bare` (the unit is in the column
+ *    header) for grid cells.
  *
  * `figure.as_of`, when the API supplies one, is always shown: as the hover
  * title by default (tables), or as a subdued suffix (`asOf="suffix"`, tiles).
@@ -34,6 +39,8 @@ export function FigureValue({
   glyph = false,
   missingLabel = "no data",
   asOf = "title",
+  decimals,
+  bare = false,
 }: {
   figure: Figure;
   showChip?: boolean;
@@ -43,19 +50,15 @@ export function FigureValue({
   glyph?: boolean;
   missingLabel?: string;
   asOf?: "title" | "suffix";
+  decimals?: number | null;
+  bare?: boolean;
 }) {
-  const text = formatFigure(figure, { signed: colourSign });
+  const text = formatFigure(figure, { signed: colourSign, decimals, bare });
   const warnings = figure.caveats.filter((c) => c.severity !== "info");
   const critical = warnings.some((c) => c.severity === "critical");
   const asOfText = figure.as_of ? `as of ${formatTimestamp(figure.as_of)}` : undefined;
-  const direction =
-    figure.value === null || !colourSign
-      ? null
-      : figure.value > 0
-        ? "up"
-        : figure.value < 0
-          ? "down"
-          : null;
+  const sign = figure.value === null ? 0 : roundedSign(figure.value, figure.unit, decimals);
+  const direction = !colourSign ? null : sign > 0 ? "up" : sign < 0 ? "down" : null;
 
   return (
     <span className="figure" data-testid="figure" data-as-of={figure.as_of ?? undefined}>
@@ -65,7 +68,7 @@ export function FigureValue({
         </span>
       ) : (
         <span
-          className={`figure__value ${colourSign ? signClass(figure.value) : ""}`}
+          className={`figure__value ${colourSign ? signClass(figure.value, figure.unit, decimals) : ""}`}
           data-testid="figure-value"
           data-direction={direction ?? undefined}
           title={asOfText}

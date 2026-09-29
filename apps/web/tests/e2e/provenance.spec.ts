@@ -57,6 +57,8 @@ test.describe("provenance chips", () => {
     });
     await page.goto("/trading/execution");
     await expect(page.getByTestId("state-success")).toBeVisible();
+    // The grid is loaded on first use (Wave 3): wait for its rows, not just the panel.
+    await expect(page.getByTestId("grid-row")).toHaveCount(tradesPage().items.length);
     const chips = page.locator("tbody tr").locator('[data-testid="provenance-chip"]');
     const count = await chips.count();
     expect(count).toBeGreaterThan(0);
@@ -84,6 +86,8 @@ test.describe("provenance chips", () => {
   test("a chip never renders without a number beside it", async ({ page }) => {
     await page.goto("/trading/candidates");
     await expect(page.getByTestId("state-success")).toBeVisible();
+    // The grid is loaded on first use (Wave 3): wait for its rows.
+    await expect(page.getByTestId("candidate-row")).toHaveCount(candidatesPage().items.length);
     const figures = page.getByTestId("figure");
     const total = await figures.count();
     expect(total).toBeGreaterThan(0);

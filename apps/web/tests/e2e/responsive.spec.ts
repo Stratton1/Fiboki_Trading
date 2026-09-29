@@ -95,8 +95,10 @@ test.describe("mobile 390px", () => {
   test("wide tables scroll inside their container, not the page", async ({ page }) => {
     await page.goto("/trading/execution");
     await expect(page.getByTestId("state-success")).toBeVisible();
+    // Since Wave 3 the trades are a DataGrid; its scroller is the container.
+    await expect(page.getByTestId("grid-row").first()).toBeVisible();
     const canScroll = await page
-      .locator(".table-wrap")
+      .locator(".grid__scroll, .table-wrap")
       .first()
       .evaluate((el) => el.scrollWidth > el.clientWidth);
     expect(canScroll).toBe(true);

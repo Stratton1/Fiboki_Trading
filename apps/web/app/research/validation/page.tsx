@@ -2,6 +2,8 @@
 
 import { ListPage, type Column } from "@/components/ListPage";
 import { FigureValue } from "@/components/FigureValue";
+import { ToneBadge } from "@/components/primitives";
+import { verdictTone } from "@/lib/tones";
 import type { ValidationRow } from "@/lib/types";
 
 /** RESEARCH · Validation: the ladder's verdict, and what was binding. */
@@ -11,14 +13,13 @@ export default function ValidationPage() {
     {
       key: "verdict",
       header: "Verdict",
+      // The tone is the verdict's own (lib/tones.ts): a REJECT is never green.
       cell: (row) => (
-        <span className={`badge badge--${row.available ? "ok" : "degraded"}`}>
-          {row.verdict.toUpperCase()}
-        </span>
+        <ToneBadge tone={verdictTone(row.verdict)} testId="verdict-badge" value={row.verdict} />
       ),
     },
-    { key: "passed", header: "Rungs passed", cell: (row) => <FigureValue figure={row.rungs_passed} showChip={false} /> },
-    { key: "total", header: "Rungs run", cell: (row) => <FigureValue figure={row.rungs_total} showChip={false} /> },
+    { key: "passed", header: "Rungs passed", numeric: true, cell: (row) => <FigureValue figure={row.rungs_passed} showChip={false} /> },
+    { key: "total", header: "Rungs run", numeric: true, cell: (row) => <FigureValue figure={row.rungs_total} showChip={false} /> },
     { key: "gates", header: "Gate set", cell: (row) => <span className="mono">{row.gate_set_version || "—"}</span> },
     { key: "binding", header: "Binding constraint", cell: (row) => row.binding_constraint || "—", wrap: true },
     { key: "detail", header: "Detail", cell: (row) => row.detail, wrap: true },

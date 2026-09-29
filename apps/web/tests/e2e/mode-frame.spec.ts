@@ -121,16 +121,33 @@ test.describe("live mode", () => {
     await expect(page.getByTestId("status-operator")).toHaveCount(0);
   });
 
-  test("every mutating dialog requires the typed phrase", async ({ page }) => {
+  test("friction follows the act in LIVE: PAUSE a reason, FLATTEN the word, promote REAL MONEY", async ({
+    page,
+  }) => {
+    // Report G W-08: LIVE PAUSE used to demand "REAL MONEY" typed as well,
+    // putting the emergency brake behind a typing test. PAUSE only reduces
+    // risk, so a reason is enough in every mode; FLATTEN needs "FLATTEN" in
+    // every mode; any act without its own phrase keeps "REAL MONEY" in LIVE.
     await mockShell(page);
     await withMode(page, liveBanner());
     await page.goto("/trading/risk");
     await page.getByTestId("kill-switch-arm").click();
     await page.getByTestId("confirm-choice-pause").click();
     await page.getByTestId("confirm-reason").fill("halting ahead of the release");
+    await expect(page.getByTestId("confirm-phrase")).toHaveCount(0);
+    await expect(page.getByTestId("confirm-submit")).toBeEnabled();
+
+    await page.getByTestId("confirm-choice-flatten").click();
     await expect(page.getByTestId("confirm-submit")).toBeDisabled();
     await page.getByTestId("confirm-phrase").fill("REAL MONEY");
+    await expect(page.getByTestId("confirm-submit")).toBeDisabled();
+    await page.getByTestId("confirm-phrase").fill("FLATTEN");
     await expect(page.getByTestId("confirm-submit")).toBeEnabled();
+    await page.getByTestId("confirm-cancel").click();
+
+    await page.goto("/trading/candidates");
+    await page.getByTestId("promote-ichimoku_kumo_trend").click();
+    await expect(page.getByTestId("confirm-phrase")).toHaveAttribute("data-phrase", "REAL MONEY");
   });
 });
 

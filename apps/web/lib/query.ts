@@ -1,9 +1,9 @@
 "use client";
 
 import { QueryClient, useQuery, type QueryClient as Client } from "@tanstack/react-query";
-import { useCallback, useSyncExternalStore } from "react";
+import { useCallback, useEffect, useId, useSyncExternalStore } from "react";
 import { ApiError, apiFetch } from "./api";
-import { asOfCandidates, noteAsOf } from "./as-of";
+import { payloadAsOf, registerAsOf, unregisterAsOf } from "./as-of";
 import { clockNow, subscribeClock } from "./clock";
 import { computeFreshness, type Freshness } from "./freshness";
 import { EMPTY_TOPIC, liveStore, useLive, type LiveState } from "./live-store";
@@ -77,9 +77,7 @@ export function makeQueryClient(): QueryClient {
         gcTime: 5 * 60_000,
         queryFn: async ({ queryKey, signal }) => {
           const path = String(queryKey[1]);
-          const data = await apiFetch<unknown>(path, { signal });
-          for (const asOf of asOfCandidates(data)) noteAsOf(asOf);
-          return data;
+          return apiFetch<unknown>(path, { signal });
         },
       },
     },
@@ -128,6 +126,28 @@ export function workerStaleAfter(state: LiveState): number | null {
   return state.connection.state === "live" && state.heartbeat ? state.heartbeat.workerStaleAfterS : null;
 }
 
+/**
+ * The platform's own verdict on the worker: the stream heartbeat's
+ * `worker_state` when connected, else the REST health report's
+ * `worker_heartbeat` check status. Null when neither has said.
+ */
+export function workerStateNow(state: LiveState): string | null {
+  if (state.connection.state === "live" && state.heartbeat) return state.heartbeat.workerState;
+  return state.restWorker?.state ?? null;
+}
+
+/**
+ * A maximum age the platform supplies with a payload (`source.max_age_s`),
+ * in ms. The API does not send one yet (report G §2.1 item 4 asks for it);
+ * when it does, it wins over the client's default.
+ */
+function serverMaxAgeMs(payload: unknown): number | undefined {
+  if (payload === null || typeof payload !== "object") return undefined;
+  const source = (payload as { source?: { max_age_s?: unknown } }).source;
+  const value = source?.max_age_s;
+  return typeof value === "number" && value > 0 ? value * 1_000 : undefined;
+}
+
 function subscribeLiveAndClock(listener: () => void) {
   const stopClock = subscribeClock(listener);
   const stopLive = liveStore.subscribe(listener);
@@ -146,7 +166,7 @@ const LOADING = { status: "loading", data: null, error: null } as const;
  */
 export function useApi<T>(
   path: string | null,
-  options: { refreshMs?: number } = {},
+  options: { refreshMs?: number; maxAgeMs?: number } = {},
 ): ApiHandle<T> {
   const route = path ? topicForPath(path) : undefined;
   const spec = route?.spec;
@@ -183,6 +203,7 @@ export function useApi<T>(
   const confirmedAt = streamFeeds ? topic.confirmedAt : null;
   const knownGoodAt =
     confirmedAt === null ? query.dataUpdatedAt : Math.max(query.dataUpdatedAt, confirmedAt);
+  const maxAgeMs = serverMaxAgeMs(query.data) ?? options.maxAgeMs;
 
   const getFreshness = useCallback((): Freshness => {
     const state = liveStore.getState();
@@ -199,8 +220,11 @@ export function useApi<T>(
       workerDependent: spec ? spec.workerDependent : false,
       workerAgeS: workerAgeNow(state, now),
       workerStaleAfterS: workerStaleAfter(state),
+      workerState: workerStateNow(state),
+      maxAgeMs,
     });
   }, [
+    maxAgeMs,
     knownGoodAt,
     streamFeeds,
     confirmedAt,
@@ -220,6 +244,20 @@ export function useApi<T>(
   const reload = useCallback(() => {
     void refetch();
   }, [refetch]);
+
+  // "Data as of" in the status bar is the oldest platform as-of ON SCREEN
+  // (lib/as-of.ts): register this view's while it is mounted.
+  const viewId = useId();
+  const platformAsOf = hasData
+    ? streamFeeds && topic.asOf
+      ? topic.asOf
+      : payloadAsOf(query.data)
+    : undefined;
+  useEffect(() => {
+    if (path === null || platformAsOf === undefined) unregisterAsOf(viewId);
+    else registerAsOf(viewId, path, platformAsOf);
+  }, [viewId, path, platformAsOf]);
+  useEffect(() => () => unregisterAsOf(viewId), [viewId]);
 
   let state: ViewState<T>;
   if (path === null) {

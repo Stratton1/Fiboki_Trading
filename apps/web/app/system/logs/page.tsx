@@ -1,8 +1,9 @@
 "use client";
 
 import { useApi } from "@/lib/query";
-import { ListPage, type Column } from "@/components/ListPage";
+import { GridPage } from "@/components/GridPage";
 import { AsyncBoundary } from "@/components/AsyncBoundary";
+import type { GridColumn } from "@/components/grid";
 import { formatTimestamp } from "@/lib/format";
 import type { AuditEntryRow, AuditIntegrityView, Envelope } from "@/lib/types";
 
@@ -30,42 +31,75 @@ function IntegrityBanner() {
   );
 }
 
+const OUTCOME_TONE: Record<string, "ok" | "degraded" | "down"> = {
+  allowed: "ok",
+  refused: "degraded",
+};
+
 /**
  * SYSTEM · Logs: the operator audit trail.
  *
  * Every mutating call — including the refusals — lands here, hash-chained. The
  * correlation id column joins a row to the server log line that produced it.
+ * Wave 3: a DataGrid; `?row=<sequence>` selects an entry.
  */
 export default function LogsPage() {
-  const columns: Column<AuditEntryRow>[] = [
-    { key: "seq", header: "#", cell: (row) => row.sequence },
-    { key: "at", header: "When", cell: (row) => formatTimestamp(row.at) },
-    { key: "action", header: "Action", cell: (row) => <span className="mono">{row.action}</span> },
-    { key: "actor", header: "Actor", cell: (row) => `${row.actor} (${row.actor_role})` },
+  const columns: GridColumn<AuditEntryRow>[] = [
+    { id: "seq", header: "#", kind: "number", value: (row) => row.sequence, width: 72, pin: true },
     {
-      key: "outcome",
+      id: "at",
+      header: "When",
+      kind: "time",
+      value: (row) => row.at,
+      cell: (row) => formatTimestamp(row.at),
+    },
+    {
+      id: "action",
+      header: "Action",
+      value: (row) => row.action,
+      cell: (row) => <span className="mono">{row.action}</span>,
+      width: 200,
+    },
+    { id: "actor", header: "Actor", value: (row) => `${row.actor} (${row.actor_role})`, width: 140 },
+    {
+      id: "outcome",
       header: "Outcome",
+      value: (row) => row.outcome,
       cell: (row) => (
-        <span
-          className={`badge badge--${row.outcome === "allowed" ? "ok" : row.outcome === "refused" ? "degraded" : "down"}`}
-        >
+        <span className={`badge badge--${OUTCOME_TONE[row.outcome] ?? "down"}`}>
           {row.outcome.toUpperCase()}
         </span>
       ),
+      width: 104,
     },
-    { key: "mode", header: "Mode", cell: (row) => row.execution_mode || "—" },
-    { key: "target", header: "Target", cell: (row) => row.target || "—" },
-    { key: "reason", header: "Reason", cell: (row) => row.reason, wrap: true },
-    { key: "cid", header: "Correlation", cell: (row) => <span className="mono">{row.correlation_id || "—"}</span> },
+    { id: "mode", header: "Mode", value: (row) => row.execution_mode || null, width: 88 },
+    { id: "target", header: "Target", value: (row) => row.target || null, width: 160 },
+    { id: "reason", header: "Reason", value: (row) => row.reason, wrap: true },
+    {
+      id: "cid",
+      header: "Correlation",
+      value: (row) => row.correlation_id || null,
+      cell: (row) => <span className="mono">{row.correlation_id || "—"}</span>,
+      width: 160,
+    },
+    {
+      id: "hash",
+      header: "Entry hash",
+      value: (row) => row.entry_hash,
+      cell: (row) => <span className="mono">{row.entry_hash}</span>,
+      hidden: true,
+      width: 200,
+    },
   ];
   return (
     <>
       <IntegrityBanner />
-      <ListPage<AuditEntryRow>
+      <GridPage<AuditEntryRow>
         title="Logs"
         intro="The append-only operator audit trail. Refusals are recorded as loudly as successes; an attempted disarm by the wrong role is exactly the row an incident review needs."
         path="/api/intelligence/audit?limit=200"
         label="audit entries"
+        gridId="audit"
         columns={columns}
         rowKey={(row) => `${row.sequence}`}
         emptyTitle="No operator actions yet"

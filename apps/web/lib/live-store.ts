@@ -46,6 +46,12 @@ export interface HeartbeatInfo {
   workerAgeS: number | null;
   /** The backend's stale threshold for the worker heartbeat, when supplied. */
   workerStaleAfterS: number | null;
+  /**
+   * The platform's own judgement of the worker (`ok`, `stale`, `absent`), from
+   * the same reading as the age. The status bar's tone comes from this, never
+   * from a client-side threshold.
+   */
+  workerState: string | null;
   mode: string;
   killSwitchActive: boolean;
 }
@@ -70,8 +76,10 @@ export interface LiveState {
   /**
    * The worker heartbeat from the last REST health report, for when the stream
    * is not connected. `ageS: null` means the platform says it never beat.
+   * `state` is the report's own `worker_heartbeat` check status (`ok`,
+   * `degraded`, `down`), or null when the report carries no such check.
    */
-  restWorker: { ageS: number | null; receivedAt: number } | null;
+  restWorker: { ageS: number | null; receivedAt: number; state: string | null } | null;
 }
 
 export const EMPTY_TOPIC: TopicInfo = {

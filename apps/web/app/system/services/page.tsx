@@ -35,7 +35,7 @@ export default function ServicesPage() {
         </span>
       ),
     },
-    { key: "latency", header: "Probe latency", cell: (row) => <FigureValue figure={row.latency} showChip={false} /> },
+    { key: "latency", numeric: true, header: "Probe latency", cell: (row) => <FigureValue figure={row.latency} showChip={false} /> },
     { key: "detail", header: "Detail", cell: (row) => row.detail, wrap: true },
   ];
   return (

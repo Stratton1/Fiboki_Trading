@@ -71,3 +71,29 @@ test("dialogs, popovers, tooltips and the split pane trigger none", async ({ pag
   await expect(page.getByTestId("inspector")).toBeVisible();
   expect(await violations(page)).toEqual([]);
 });
+
+test("the grid, the palette, the shortcut sheet and ⇧K trigger none", async ({ page }) => {
+  // The grid positions virtual rows and pinned columns through the CSSOM (a
+  // React style prop on the client), which CSP does not restrict; a
+  // server-rendered style="" attribute would be a violation.
+  await recordViolations(page);
+  await mockShell(page);
+  await page.goto("/trading/execution");
+  await expect(page.getByTestId("grid-row").first()).toBeVisible();
+  await page.getByTestId("grid-columns").click();
+  await page.getByTestId("grid-pin-trade_id").click();
+  await page.keyboard.press("Escape");
+  await page.getByTestId("grid-row").first().focus();
+  await page.keyboard.press("End");
+  await page.keyboard.press("ControlOrMeta+KeyK");
+  await expect(page.getByTestId("command-palette")).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(page.getByTestId("command-palette")).toHaveCount(0);
+  await page.keyboard.press("Shift+Slash");
+  await expect(page.getByTestId("shortcut-sheet")).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(page.getByTestId("shortcut-sheet")).toHaveCount(0);
+  await page.keyboard.press("Shift+KeyK");
+  await expect(page.getByTestId("confirm-dialog")).toBeVisible();
+  expect(await violations(page)).toEqual([]);
+});

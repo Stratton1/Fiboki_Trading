@@ -151,6 +151,34 @@ test.describe("source rules", () => {
     expect(offenders).toEqual([]);
   });
 
+  test("no component or page hard-codes a colour", async () => {
+    // charts.tsx drew LIVE in loss red (#ff4d4d) and the heatmap in red/green,
+    // invisible to scripts/contrast.mjs (report G W-10). Colour comes from the
+    // tokens in globals.css, through classes, or not at all.
+    const hex = /["'`]#(?:[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})["'`]/;
+    const functional = /["'`]\s*(?:rgba?|hsla?)\(/;
+    // The one exception, with its reason: a favicon is a data-URI SVG drawn
+    // outside the document, so it cannot read a CSS custom property.
+    const EXEMPT = new Set([join("components", "shell", "Mode.tsx")]);
+    const offenders: string[] = [];
+    for (const dir of ["app", "components"]) {
+      for (const file of sources(join(ROOT, dir))) {
+        if ([...EXEMPT].some((exempt) => file.endsWith(exempt))) continue;
+        const text = stripComments(readFileSync(file, "utf8"));
+        text.split("\n").forEach((line, index) => {
+          if (hex.test(line) || functional.test(line)) {
+            offenders.push(`${file.replace(ROOT, "")}:${index + 1}: ${line.trim()}`);
+          }
+        });
+      }
+    }
+    expect(offenders, "Use a token (var(--…)) through a class.").toEqual([]);
+    // Self-test: the patterns catch what the old charts did.
+    expect(hex.test('  broker_live: "#ff4d4d",')).toBe(true);
+    expect(functional.test("`rgba(255,77,77,${0.5})`")).toBe(true);
+    expect(hex.test('<a href="#main">')).toBe(false);
+  });
+
   test("the rules above would catch the patterns they ban", async () => {
     // Guard against a regex that silently matches nothing.
     const names = "backtest|paper";
@@ -213,6 +241,9 @@ test.describe("source rules", () => {
       "@tanstack/react-query": "server state and the ViewState contract (D-F3, Wave 2)",
       nuqs: "URL state for filters, selection and tabs; mounted per page (D-F3, Wave 2)",
       zustand: "the live store for high-frequency stream state (D-F3, Wave 2)",
+      "@tanstack/react-table": "DataGrid model: sort, filter, visibility (D-F4, Wave 3); lazy-loaded",
+      "@tanstack/react-virtual": "DataGrid row virtualisation (D-F4, Wave 3); lazy-loaded",
+      cmdk: "command palette (D-F4, Wave 3); loaded on first ⌘K",
     };
     const pkg = JSON.parse(readFileSync(join(ROOT, "package.json"), "utf8"));
     const runtime = Object.keys(pkg.dependencies).sort();

@@ -18,6 +18,16 @@ export interface ConfirmChoice {
   /** Server-computed consequences. Never written into this component. */
   consequences: string[];
   destructive?: boolean;
+  /**
+   * The typed phrase this CHOICE requires, which makes friction asymmetric
+   * (report G W-08, SECURITY_MODEL "friction scales with risk"):
+   *  - a string: that phrase, in every mode (FLATTEN closes every position);
+   *  - null: no phrase in any mode, even LIVE (PAUSE only reduces risk, and
+   *    the emergency brake must not sit behind a typing test);
+   *  - undefined: the dialog's own rule (`confirmPhrase`, else REAL MONEY in
+   *    LIVE).
+   */
+  phrase?: string | null;
 }
 
 /** The typed phrase every mutating dialog requires while the platform is LIVE. */

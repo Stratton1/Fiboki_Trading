@@ -20,7 +20,7 @@ export default function DataHealthPage() {
         </span>
       ),
     },
-    { key: "latency", header: "Latency", cell: (row) => <FigureValue figure={row.latency} showChip={false} /> },
+    { key: "latency", numeric: true, header: "Latency", cell: (row) => <FigureValue figure={row.latency} showChip={false} /> },
     { key: "detail", header: "Detail", cell: (row) => row.detail, wrap: true },
   ];
   return (

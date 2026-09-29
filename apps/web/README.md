@@ -30,7 +30,7 @@ npx tsc --noEmit   # types, including lib/api-contract.ts drift checks
 npx eslint .       # includes the `?? 0` ban
 npm run build
 npm run size       # per-route first-load JS budgets (size-limit, after build)
-npm run contrast   # WCAG contrast over every token pair in app/globals.css
+npm run contrast   # WCAG contrast over every token pair, and accent/P&L distinguishability
 npx playwright test
 FIBOKI_LIVE_API=1 npx playwright test live-api   # needs the API running
 ```
@@ -76,6 +76,34 @@ URL state (filters, selection, tabs) is nuqs, mounted per page
 (`components/UrlState.tsx`). Tests drive the stream with the scripted harness
 in `tests/e2e/sse.ts`.
 
+## Core components (Wave 3)
+
+- **DataGrid** (`components/grid/`, loaded on first use): TanStack Table 9 and
+  Virtual 3. Sort (no data always last), text filter, column visibility and
+  pinning, saved column sets in localStorage, a roving-tabindex row model
+  (↓/j, ↑/k, Home, End, PageUp/Down, Enter), selection kept by row key through
+  live updates, the unit in the header derived from the rows' own Figures,
+  CSV export with a unit and provenance column per figure. `?row=<key>`
+  selects a row. The trades, candidates, instruments and audit screens use it.
+- **Stat** (`components/Stat.tsx`): the stat tile, ▲/▼ glyph and sign decided
+  after rounding. **CaveatPopover**: caveats and reasons behind a focusable
+  button, never a `title`.
+- **Keyboard** (`components/shell/Hotkeys.tsx`, `ShellCommands.tsx`): ⌘K
+  palette (cmdk, lazy; go to, open by id, actions that only open dialogs),
+  `g` chords per section, `?` shortcut sheet, ⇧K OPENS the kill-switch dialog.
+- **Charts** (`components/charts.tsx`): tokens only (a source rule bans hex),
+  responsive width, a UTC time axis, gaps drawn as hatched gaps, arrow-key
+  readout and a "View data" table on every chart.
+- **Numbers** (`lib/format.ts`): fixed decimals per unit, thousands
+  separators, real minus, sign after rounding; price precision from the
+  instrument's pip size when the API supplies it.
+- **View states**: eight (loading, empty, absent, stale, disconnected, error,
+  forming, replay), each a `--state-*` token, glyph and outline
+  (`components/ui/ViewStateTag.tsx`, `/system/legend`).
+- **Kill-switch friction is asymmetric**: PAUSE needs a reason only, in every
+  mode including LIVE; FLATTEN needs the typed word FLATTEN in every mode;
+  disarm needs RE-ARM (`components/KillSwitchControl.tsx`).
+
 ## The rules this app exists to keep
 
 Each has a test. They are not style preferences; each one closes a specific way
@@ -105,11 +133,17 @@ the V1 frontend misled an operator.
 | Promotion caveats are ticked one by one; consequences are server-computed | `ConfirmDialog` acknowledgements; `.../promote/preflight`; `promote.spec.ts` |
 | A chart's provenance is derived from its rows (MIXED, or "unlabelled source"), never a fallback | `lib/provenance.ts`; `chart-provenance.spec.ts`; `source-rules.spec.ts` |
 | Every time is labelled UTC; `as_of` is shown | `lib/format.ts`; `FigureValue`; `SourceBadge`; `time-labels.spec.ts` |
+| The status bar's worker tone is the platform's verdict; "data as of" is the oldest view on screen, probes excluded | `lib/freshness.ts` `workerStatus`, `lib/as-of.ts`; `trust.spec.ts` |
+| A view that neither polls nor streams goes stale after five minutes | `lib/freshness.ts`; `trust.spec.ts` |
+| A badge's tone comes from its value (a REJECT is never green) | `lib/tones.ts`; `trust.spec.ts` |
+| No hex colour in a component; charts draw in tokens | `source-rules.spec.ts`; `trust.spec.ts` |
+| A grid keeps its selection through live updates; 10,000 rows stay a small DOM | `components/grid/`; `grid.spec.ts` |
+| No keystroke mutates: ⇧K and the palette only open dialogs | `components/shell/Hotkeys.tsx`; `keyboard.spec.ts` |
 | No heavyweight charting library; every runtime dependency reviewed; per-route byte budgets | `source-rules.spec.ts` (Plotly/mapbox ban incl. the lockfile, an explicit allow-list, first-load gzip ≤ 180 KB shell, ≤ 230 KB other routes); `.size-limit.mjs` |
 
 ## Charts
 
 `components/charts.tsx` provides line, bar, heatmap and distribution charts as
-hand-rolled inline SVG, in ~360 lines with no runtime dependency. V1 shipped the
+hand-rolled inline SVG with no runtime dependency. V1 shipped the
 full Plotly distribution (roughly 4.5 MB including `mapbox-gl`) to draw line
 charts. First-load JS is measured per route by `npm run size:report`.

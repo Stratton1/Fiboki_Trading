@@ -6,7 +6,7 @@ import { AttentionPanel } from "@/components/command/AttentionPanel";
 import { IncidentsPanel } from "@/components/command/IncidentsPanel";
 import { AsyncBoundary } from "@/components/AsyncBoundary";
 import { KillSwitchPanel } from "@/components/KillSwitch";
-import { LineChart } from "@/components/charts";
+import { LazyLineChart } from "@/components/LazyChart";
 import {
   CaveatList,
   Card,
@@ -141,7 +141,7 @@ export default function OverviewPage() {
                   </span>
                 ))}
               </p>
-              <LineChart series={envelope.data.equity_curve} />
+              <LazyLineChart series={envelope.data.equity_curve} />
               <CaveatList caveats={envelope.data.equity_curve.caveats} />
             </>
           )}

@@ -9,10 +9,23 @@ import {
 } from "@/lib/format";
 import { Popover } from "./ui/Popover";
 
+/** The outline that tells the hollow (simulated) chips apart without colour. */
+const OUTLINE: Record<Provenance, string> = {
+  backtest: "dashed",
+  walkforward: "solid",
+  out_of_sample: "solid-flagged",
+  holdout: "double",
+  paper: "filled",
+  shadow: "filled",
+  broker_demo: "filled-hatched",
+  broker_live: "filled-money",
+};
+
 /**
  * The chip that must appear beside every number (v2, shape grammar).
  *
- * Hollow = simulated: dashed BT, solid WF and OOS, double HOLD, all in one
+ * Hollow = simulated: dashed BT, solid WF, solid with a filled corner flag
+ * OOS (so WF and OOS differ in shape, report G W-13), double HOLD, all in one
  * neutral hue. Filled = executed: PAPER, SHADOW, DEMO (hatched) and LIVE (with
  * a £ glyph), in their execution mode's hue. Readable in greyscale.
  *
@@ -38,6 +51,7 @@ export function ProvenanceChip({
       data-testid="provenance-chip"
       data-provenance={provenance}
       data-shape={executed ? "filled" : "hollow"}
+      data-outline={OUTLINE[provenance]}
       title={title}
     >
       {provenance === "broker_live" ? (

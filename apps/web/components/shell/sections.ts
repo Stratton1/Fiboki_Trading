@@ -22,12 +22,15 @@ export interface Section {
   title: string;
   question: string;
   icon: LucideIcon;
+  /** The `g <chord>` key that goes to this section's first view. */
+  chord: string;
   links: { href: string; label: string }[];
 }
 
 export const SECTIONS: Section[] = [
   {
     id: "command",
+    chord: "c",
     title: "Command",
     question: "Is anything wrong, and what needs me now?",
     icon: House,
@@ -39,6 +42,7 @@ export const SECTIONS: Section[] = [
   },
   {
     id: "fleet",
+    chord: "f",
     title: "Fleet & Positions",
     question: "What is every bot doing and what is open?",
     icon: Crosshair,
@@ -46,6 +50,7 @@ export const SECTIONS: Section[] = [
   },
   {
     id: "lifecycle",
+    chord: "l",
     title: "Strategy Lifecycle",
     question: "What should be promoted, demoted or retired?",
     icon: ArrowUpDown,
@@ -53,6 +58,7 @@ export const SECTIONS: Section[] = [
   },
   {
     id: "research",
+    chord: "r",
     title: "Research Lab",
     question: "What have we tried and what does the evidence say?",
     icon: FlaskConical,
@@ -68,6 +74,7 @@ export const SECTIONS: Section[] = [
   },
   {
     id: "markets",
+    chord: "m",
     title: "Market Intelligence",
     question: "What is the market doing, and what did the agents conclude?",
     icon: Radar,
@@ -82,6 +89,7 @@ export const SECTIONS: Section[] = [
   },
   {
     id: "risk",
+    chord: "x",
     title: "Risk & Exposure",
     question: "How close are we to any limit?",
     icon: ShieldAlert,
@@ -92,6 +100,7 @@ export const SECTIONS: Section[] = [
   },
   {
     id: "data",
+    chord: "d",
     title: "Data Quality",
     question: "Can we trust the inputs?",
     icon: Database,
@@ -102,6 +111,7 @@ export const SECTIONS: Section[] = [
   },
   {
     id: "system",
+    chord: "s",
     title: "System & Incidents",
     question: "Is every process up, and what happened?",
     icon: Server,
@@ -116,6 +126,7 @@ export const SECTIONS: Section[] = [
   },
   {
     id: "journal",
+    chord: "j",
     title: "Journal",
     question: "What did we trade, why, and what did we learn?",
     icon: NotebookPen,
@@ -123,7 +134,10 @@ export const SECTIONS: Section[] = [
   },
 ];
 
-export const ALL_ROUTES = SECTIONS.flatMap((s) => s.links.map((l) => l.href));
+/** `g <key>` → the section's first view (plan §4: "g x chords per screen"). */
+export const CHORDS: Readonly<Record<string, { href: string; title: string }>> = Object.fromEntries(
+  SECTIONS.map((s) => [s.chord, { href: s.links[0]?.href ?? "/", title: s.title }]),
+);
 
 /** The section a path belongs to: exact match, else the longest route prefix. */
 export function sectionFor(pathname: string): Section | null {

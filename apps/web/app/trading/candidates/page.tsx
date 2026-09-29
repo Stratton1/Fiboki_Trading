@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ApiError, apiFetch } from "@/lib/api";
 import { capability } from "@/lib/auth";
 import { useApi } from "@/lib/query";
@@ -13,12 +13,9 @@ import {
   type ConfirmChoice,
 } from "@/components/ui/ConfirmDialog";
 import { FigureValue } from "@/components/FigureValue";
-import {
-  CaveatList,
-  PageHead,
-  SourceBadge,
-  TableWrap,
-} from "@/components/primitives";
+import { CaveatPopover } from "@/components/CaveatPopover";
+import { DataGrid, preloadGrid, type GridColumn } from "@/components/grid";
+import { CaveatList, PageHead, SourceBadge } from "@/components/primitives";
 import type {
   CandidateRow,
   Envelope,
@@ -40,9 +37,19 @@ import type {
  * sent true only when every one was ticked, with the ticked codes alongside.
  * The page used to send `acknowledge_caveats: true` unconditionally, signing
  * the acknowledgement on the operator's behalf.
+ *
+ * Wave 3: the list is a DataGrid. Why a candidate is not eligible is behind a
+ * focusable "why" popover, not a `title` (report G W-15), and Promote is
+ * `aria-disabled` rather than `disabled`, so it stays focusable and names the
+ * reason it cannot be pressed.
  */
+const CANDIDATES_PATH = "/api/trading/candidates";
+
 export default function CandidatesPage() {
-  const state = useApi<Page<CandidateRow>>("/api/trading/candidates");
+  const state = useApi<Page<CandidateRow>>(CANDIDATES_PATH);
+  useEffect(() => {
+    void preloadGrid();
+  }, []);
   const { mode: executionMode, mutationsAllowed } = useExecutionMode();
   const allowed = capability(useOperator(), "can_promote");
   const [target, setTarget] = useState<CandidateRow | null>(null);
@@ -106,6 +113,94 @@ export default function CandidatesPage() {
     }
   }
 
+  const blockedReason = (row: CandidateRow): string | null =>
+    !mutationsAllowed
+      ? "The execution mode is unknown or the workstation is disconnected; nothing can be promoted until it can be read."
+      : !allowed.allowed
+        ? (allowed.reason ?? "Your role cannot promote.")
+        : !row.eligible_for_ranking
+          ? `Not eligible: ${row.blocking_reasons.join(" ")}`
+          : null;
+
+  const columns: GridColumn<CandidateRow>[] = [
+    {
+      id: "strategy",
+      header: "Strategy",
+      value: (row) => `${row.name} ${row.strategy_id}`,
+      cell: (row) => (
+        <span className="grid__stack">
+          <strong>{row.name}</strong>
+          <span className="mono muted">{row.strategy_id}</span>
+        </span>
+      ),
+      width: 220,
+      pin: true,
+    },
+    { id: "family", header: "Family", value: (row) => row.family, width: 96 },
+    { id: "trades", header: "Trades", figure: (row) => row.trades, chip: true },
+    { id: "win_rate", header: "Win rate", figure: (row) => row.win_rate, chip: true },
+    {
+      id: "expectancy",
+      header: "Expectancy",
+      figure: (row) => row.expectancy_r,
+      signed: true,
+      chip: true,
+    },
+    { id: "net", header: "Net P&L", figure: (row) => row.net_pnl, signed: true, chip: true, width: 170 },
+    { id: "sharpe", header: "Sharpe", figure: (row) => row.sharpe, chip: true },
+    { id: "max_dd", header: "Max DD", figure: (row) => row.max_drawdown_pct, chip: true },
+    {
+      id: "eligible",
+      header: "Eligible",
+      value: (row) => (row.eligible_for_ranking ? "yes" : "no"),
+      cell: (row) => (
+        <span className="row gap-1">
+          <span
+            className={`badge badge--${row.eligible_for_ranking ? "ok" : "degraded"}`}
+            data-testid="candidate-eligible"
+          >
+            {row.eligible_for_ranking ? "YES" : "NO"}
+          </span>
+          <CaveatPopover
+            reasons={row.blocking_reasons}
+            title={`Why ${row.name} is not eligible`}
+            label="why"
+            accessibleName={`Why ${row.name} is not eligible for ranking`}
+            testId={`candidate-why-${row.strategy_id}`}
+          />
+        </span>
+      ),
+      width: 120,
+    },
+    {
+      id: "action",
+      header: "Action",
+      sortable: false,
+      filterable: false,
+      csv: false,
+      value: () => null,
+      cell: (row) => {
+        const reason = blockedReason(row);
+        return (
+          <Button
+            size="sm"
+            data-testid={`promote-${row.strategy_id}`}
+            aria-disabled={reason !== null}
+            aria-description={reason ?? `Requires the ${row.next_action_requires_role} role.`}
+            onClick={() => {
+              if (reason !== null) return;
+              setError(null);
+              setTarget(row);
+            }}
+          >
+            Promote
+          </Button>
+        );
+      },
+      width: 104,
+    },
+  ];
+
   return (
     <>
       <PageHead
@@ -129,86 +224,21 @@ export default function CandidatesPage() {
                 Promotion is disabled. {allowed.reason}
               </p>
             ) : null}
-            <TableWrap>
-              <table>
-                <thead>
-                  <tr>
-                    <th>Strategy</th>
-                    <th>Family</th>
-                    <th className="num">Trades</th>
-                    <th className="num">Win rate</th>
-                    <th className="num">Expectancy</th>
-                    <th className="num">Net P&L</th>
-                    <th className="num">Sharpe</th>
-                    <th className="num">Max DD</th>
-                    <th>Eligible</th>
-                    <th>Action</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {page.items.map((row) => (
-                    <tr key={row.strategy_id} data-testid="candidate-row">
-                      <td>
-                        <strong>{row.name}</strong>
-                        <br />
-                        <span className="mono muted">{row.strategy_id}</span>
-                      </td>
-                      <td>{row.family}</td>
-                      <td>
-                        <FigureValue figure={row.trades} />
-                      </td>
-                      <td>
-                        <FigureValue figure={row.win_rate} />
-                      </td>
-                      <td>
-                        <FigureValue figure={row.expectancy_r} colourSign />
-                      </td>
-                      <td>
-                        <FigureValue figure={row.net_pnl} colourSign />
-                      </td>
-                      <td>
-                        <FigureValue figure={row.sharpe} />
-                      </td>
-                      <td>
-                        <FigureValue figure={row.max_drawdown_pct} />
-                      </td>
-                      <td>
-                        <span
-                          className={`badge badge--${row.eligible_for_ranking ? "ok" : "degraded"}`}
-                          title={row.blocking_reasons.join("\n")}
-                        >
-                          {row.eligible_for_ranking ? "YES" : "NO"}
-                        </span>
-                      </td>
-                      <td>
-                        <Button
-                          size="sm"
-                          data-testid={`promote-${row.strategy_id}`}
-                          disabled={
-                            !row.eligible_for_ranking || !mutationsAllowed || !allowed.allowed
-                          }
-                          title={
-                            !mutationsAllowed
-                              ? "The execution mode is unknown; nothing can be promoted until it can be read."
-                              : !allowed.allowed
-                                ? (allowed.reason ?? undefined)
-                                : row.eligible_for_ranking
-                                ? `Requires the ${row.next_action_requires_role} role.`
-                                : row.blocking_reasons.join(" ")
-                          }
-                          onClick={() => {
-                            setError(null);
-                            setTarget(row);
-                          }}
-                        >
-                          Promote
-                        </Button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </TableWrap>
+            {!mutationsAllowed ? (
+              <p className="muted" data-testid="promote-mode-blocked" role="note">
+                Promotion is disabled: the execution mode is unknown or the workstation is
+                disconnected, so nothing can be promoted until the platform answers.
+              </p>
+            ) : null}
+            <DataGrid<CandidateRow>
+              id="candidates"
+              label="candidates"
+              rows={page.items}
+              columns={columns}
+              rowKey={(row) => row.strategy_id}
+              source={{ source: page.source, path: CANDIDATES_PATH }}
+              rowTestId="candidate-row"
+            />
 
             {page.items.some((row) => row.blocking_reasons.length > 0) ? (
               <div className="card">

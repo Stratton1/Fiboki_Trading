@@ -32,9 +32,9 @@ async function audit(page: Page, label: string) {
 
 async function settle(page: Page) {
   await expect(page.getByTestId("mode-banner")).not.toHaveAttribute("data-mode", "loading");
-  // Most panels settle to success, empty or error. One legitimately stays in
-  // its loading state (parameter-lab waits on a strategy list that fails here),
-  // and a loading panel must be accessible too, so this waits but does not fail.
+  // Panels settle to success, empty or error; a loading panel must be
+  // accessible too, so this waits but does not fail. (Parameter Lab used to
+  // wait forever on a failed strategy list; it now says so, trust.spec.ts.)
   await page
     .locator('[data-testid="state-loading"]')
     .first()
@@ -87,6 +87,39 @@ for (const theme of THEMES) {
       await page.getByTestId("display-settings-trigger").click();
       await expect(page.getByTestId("pref-density")).toBeVisible();
       await audit(page, `display popover (${theme})`);
+    });
+
+    test("data grid, its columns popover, and a chart's data table", async ({ page }) => {
+      await mockShell(page);
+      await page.goto("/trading/execution");
+      await expect(page.getByTestId("grid-row").first()).toBeVisible();
+      await page.getByTestId("grid-row").first().focus();
+      await page.keyboard.press("ArrowDown");
+      await audit(page, `grid (${theme})`);
+      await page.getByTestId("grid-columns").click();
+      await expect(page.getByTestId("grid-columns-popover")).toBeVisible();
+      await audit(page, `grid columns popover (${theme})`);
+      await page.keyboard.press("Escape");
+      await page.getByTestId("chart-data").locator("summary").click();
+      await audit(page, `chart data table (${theme})`);
+      await page.goto("/trading/candidates");
+      await expect(page.getByTestId("candidate-row").first()).toBeVisible();
+      await audit(page, `candidates grid (${theme})`);
+    });
+
+    test("command palette and shortcut sheet", async ({ page }) => {
+      await mockShell(page);
+      await page.goto("/");
+      await settle(page);
+      await page.keyboard.press("ControlOrMeta+KeyK");
+      await expect(page.getByTestId("command-palette")).toBeVisible();
+      await page.getByTestId("palette-input").fill("trd_0001");
+      await audit(page, `palette (${theme})`);
+      await page.keyboard.press("Escape");
+      await expect(page.getByTestId("command-palette")).toHaveCount(0);
+      await page.keyboard.press("Shift+Slash");
+      await expect(page.getByTestId("shortcut-sheet")).toBeVisible();
+      await audit(page, `shortcut sheet (${theme})`);
     });
 
     test("legend controls and inspector", async ({ page }) => {

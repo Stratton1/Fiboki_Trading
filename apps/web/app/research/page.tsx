@@ -3,7 +3,8 @@
 import Link from "next/link";
 import { useApi } from "@/lib/query";
 import { AsyncBoundary } from "@/components/AsyncBoundary";
-import { Card, PageHead, SourceBadge, Tile } from "@/components/primitives";
+import { Card, PageHead, SourceBadge, ToneBadge } from "@/components/primitives";
+import { verdictTone } from "@/lib/tones";
 import type { Page, StrategyRow, ValidationRow } from "@/lib/types";
 
 /** RESEARCH · Lab: the entry point to the research record. */
@@ -46,11 +47,11 @@ export default function ResearchLabPage() {
                 {page.items.map((row) => (
                   <li key={row.strategy_id}>
                     <span className="mono">{row.strategy_id}</span>{" "}
-                    <span
-                      className={`badge badge--${row.available ? "ok" : "degraded"}`}
-                    >
-                      {row.verdict}
-                    </span>{" "}
+                    <ToneBadge
+                      tone={verdictTone(row.verdict)}
+                      testId="verdict-badge"
+                      value={row.verdict}
+                    />{" "}
                     <span className="muted">{row.detail}</span>
                   </li>
                 ))}

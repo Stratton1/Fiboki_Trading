@@ -20,7 +20,7 @@ export default function WorkersPage() {
         </span>
       ),
     },
-    { key: "age", header: "Heartbeat age", cell: (row) => <FigureValue figure={row.heartbeat_age} /> },
+    { key: "age", numeric: true, header: "Heartbeat age", cell: (row) => <FigureValue figure={row.heartbeat_age} /> },
     { key: "detail", header: "Detail", cell: (row) => row.detail, wrap: true },
   ];
   return (

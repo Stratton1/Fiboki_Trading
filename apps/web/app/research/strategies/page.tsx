@@ -12,9 +12,9 @@ export default function StrategiesPage() {
     { key: "family", header: "Family", cell: (row) => row.family },
     { key: "tf", header: "Timeframes", cell: (row) => row.timeframes.join(", ") },
     { key: "universe", header: "Universe", cell: (row) => `${row.universe.length} instrument(s)` },
-    { key: "rules", header: "Rules", cell: (row) => <FigureValue figure={row.rule_count} showChip={false} /> },
-    { key: "params", header: "Parameters", cell: (row) => <FigureValue figure={row.parameter_count} showChip={false} /> },
-    { key: "complexity", header: "Complexity", cell: (row) => <FigureValue figure={row.complexity} showChip={false} /> },
+    { key: "rules", numeric: true, header: "Rules", cell: (row) => <FigureValue figure={row.rule_count} showChip={false} /> },
+    { key: "params", numeric: true, header: "Parameters", cell: (row) => <FigureValue figure={row.parameter_count} showChip={false} /> },
+    { key: "complexity", numeric: true, header: "Complexity", cell: (row) => <FigureValue figure={row.complexity} showChip={false} /> },
     { key: "hash", header: "Content hash", cell: (row) => <span className="mono">{row.content_hash}</span> },
   ];
   return (

@@ -117,6 +117,8 @@ test.describe("kill switch", () => {
     await page.getByTestId("kill-switch-arm").click();
     await page.getByTestId("confirm-choice-flatten").click();
     await page.getByTestId("confirm-reason").fill("data feed went stale mid-session");
+    // FLATTEN closes every position: the typed phrase is required in every mode.
+    await page.getByTestId("confirm-phrase").fill("FLATTEN");
     await page.getByTestId("confirm-submit").click();
 
     await expect(page.getByTestId("confirm-dialog")).toHaveCount(0);
@@ -127,6 +129,44 @@ test.describe("kill switch", () => {
     await expect(page.getByTestId("kill-switch-status")).toHaveAttribute("data-active", "true");
     await expect(page.getByTestId("kill-switch-confirming")).toHaveCount(0);
   });
+
+  test("friction is asymmetric: PAUSE needs a reason only, FLATTEN also the typed word", async ({
+    page,
+  }) => {
+    // Report G W-08/W-09, plan §3: the emergency brake is never behind a
+    // typing test; closing every position at market always is.
+    await page.goto("/trading/risk");
+    await page.getByTestId("kill-switch-arm").click();
+    await page.getByTestId("confirm-choice-pause").click();
+    await page.getByTestId("confirm-reason").fill("spread blowout on the open");
+    await expect(page.getByTestId("confirm-phrase")).toHaveCount(0);
+    await expect(page.getByTestId("confirm-submit")).toBeEnabled();
+
+    await page.getByTestId("confirm-choice-flatten").click();
+    await expect(page.getByTestId("confirm-phrase")).toHaveAttribute("data-phrase", "FLATTEN");
+    await expect(page.getByTestId("confirm-submit")).toBeDisabled();
+    await page.getByTestId("confirm-phrase").fill("flatten");
+    await expect(page.getByTestId("confirm-submit")).toBeDisabled();
+    await page.getByTestId("confirm-phrase").fill("FLATTEN");
+    await expect(page.getByTestId("confirm-submit")).toBeEnabled();
+  });
+
+  for (const mode of ["backtest", "demo"]) {
+    test(`FLATTEN requires the typed word in ${mode} mode too`, async ({ page }) => {
+      await page.route(`${API}/api/system/execution-mode`, (route) =>
+        route.fulfill({
+          json: modeBanner({ mode, provenance: mode === "demo" ? "broker_demo" : "backtest" }),
+        }),
+      );
+      await page.goto("/trading/risk");
+      await page.getByTestId("kill-switch-arm").click();
+      await page.getByTestId("confirm-choice-flatten").click();
+      await page.getByTestId("confirm-reason").fill("closing everything ahead of the release");
+      await expect(page.getByTestId("confirm-submit")).toBeDisabled();
+      await page.getByTestId("confirm-phrase").fill("FLATTEN");
+      await expect(page.getByTestId("confirm-submit")).toBeEnabled();
+    });
+  }
 
   test("cancelling posts nothing", async ({ page }) => {
     let calls = 0;

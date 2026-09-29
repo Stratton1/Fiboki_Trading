@@ -56,6 +56,9 @@ export function StaleBadge({
   }
   const disconnected = info.freshness === "disconnected";
   const error = info.refreshError;
+  // A view that neither polls nor streams is stale by AGE alone (report G
+  // W-05): nothing failed, it simply has not been re-read.
+  const aged = !polling && error === null && !disconnected;
   const detail = [
     `Last good data received ${formatTimestamp(info.asOf)}.`,
     info.sourceAsOf ? `The platform's as-of for it is ${formatTimestamp(info.sourceAsOf)}.` : "",
@@ -66,7 +69,9 @@ export function StaleBadge({
       ? `The latest refresh failed: ${error.message} (code ${error.code}` +
         `${error.status ? `, http ${error.status}` : ""}` +
         `${error.correlationId ? `, correlation ${error.correlationId}` : ""}).`
-      : "No refresh has completed since.",
+      : aged
+        ? "This view does not refresh on its own and is past its maximum age. Retry to read it again."
+        : "No refresh has completed since.",
   ]
     .filter(Boolean)
     .join(" ");
@@ -99,7 +104,7 @@ export function StaleBadge({
         <p>{detail}</p>
       </Popover>
       <span className={disconnected ? "line-through" : undefined} data-testid="state-stale-age">
-        last good {formatAge(ageSeconds)}
+        {aged ? "loaded" : "last good"} {formatAge(ageSeconds)}
       </span>
       {info.sourceAsOf ? <span>· as of {formatUtcTime(info.sourceAsOf)}</span> : null}
       {polling ? <span> · retrying</span> : null}

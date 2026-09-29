@@ -233,14 +233,72 @@ jobs:
       - name: pip-audit
         run: pip-audit --strict --desc
 
+  # ------------------------------------------------------------------ web
+  web:
+    # The operator workstation (apps/web). Every web gate that used to run
+    # only on a developer's machine (report G §1.5: "size-limit and axe in
+    # CI: not met"): types (app), lint (incl. the `?? 0` ban), the production
+    # build, per-route first-load budgets, the contrast and distinguishability
+    # check, and the whole Playwright suite (axe, CSP, source rules, visual
+    # baselines, keyboard, grid, stream) against that production build.
+    name: web (typecheck, lint, build, size, playwright)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: apps/web
+    env:
+      # The build bakes the API origin in; the suite mocks it at this origin.
+      NEXT_PUBLIC_FIBOKI_API: http://127.0.0.1:8000
+      NEXT_TELEMETRY_DISABLED: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: apps/web/package-lock.json
+      - name: Install (exactly the lockfile)
+        run: npm ci
+      - name: Typecheck
+        run: npm run typecheck
+      - name: Lint
+        run: npm run lint
+      - name: Contrast and distinguishability of the design tokens
+        run: npm run contrast
+      - name: Production build
+        run: npm run build
+      - name: First-load budgets (size-limit)
+        run: npm run size
+      - name: First-load report
+        if: always()
+        run: npm run size:report
+      - name: Install Chromium for Playwright
+        run: npx playwright install --with-deps chromium
+      - name: Playwright (desktop and mobile projects, production build)
+        run: npx playwright test --reporter=list,html
+        env:
+          CI: "1"
+          PLAYWRIGHT_HTML_OPEN: never
+      - name: Upload the Playwright report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: |
+            apps/web/playwright-report/
+            apps/web/test-results/
+          retention-days: 14
+          if-no-files-found: ignore
+
   # ----------------------------------------------------------------- gate
   gate:
     # ONE required status check. Branch protection points at this job, so a new
-    # job added above is automatically gating without anybody remembering to
-    # tick a box in a settings page.
+    # job added above is gating ONLY once it is listed in `needs` below and in
+    # the loop; both are checked by tests/unit/test_deploy_guards.py.
     name: gate
     if: always()
-    needs: [lint, typecheck, test, golden, live-flags, lockfile, audit]
+    needs: [lint, typecheck, test, golden, live-flags, lockfile, audit, web]
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
@@ -253,6 +311,7 @@ jobs:
           echo "live-flags=${{ needs.live-flags.result }}"
           echo "lockfile=${{ needs.lockfile.result }}"
           echo "audit=${{ needs.audit.result }}"
+          echo "web=${{ needs.web.result }}"
           for result in \
             "${{ needs.lint.result }}" \
             "${{ needs.typecheck.result }}" \

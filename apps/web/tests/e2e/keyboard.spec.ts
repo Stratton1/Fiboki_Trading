@@ -1,9 +1,11 @@
 import { expect, test, type Route } from "@playwright/test";
-import { API, killSwitchView, mockShell } from "./fixtures";
+import { API, killSwitchView, mockShell, principal } from "./fixtures";
 
 /**
  * Keyboard: ⌘⇧D cycles density, ⌘⇧L toggles the theme (Ctrl on Windows and
- * Linux); neither changes anything on the platform. Dialogs trap focus, hide
+ * Linux); neither changes anything on the platform. Wave 3: ⌘K opens the
+ * command palette, `g` then a letter goes to a screen, `?` lists every
+ * shortcut, and ⇧K OPENS the kill-switch dialog, never arms it. Dialogs trap focus, hide
  * the page behind them from assistive technology, and give focus back to the
  * control that opened them. Tooltips open on keyboard focus and on tap.
  */
@@ -323,5 +325,148 @@ test.describe("tooltips on touch", () => {
     const button = page.getByRole("button", { name: "Settings example" });
     await button.tap();
     await expect(page.locator('[data-testid="tooltip"][data-open]')).toHaveText("Settings example");
+  });
+});
+
+/** Every non-GET request the page makes, to prove a shortcut mutated nothing. */
+function recordMutations(page: import("@playwright/test").Page): string[] {
+  const mutations: string[] = [];
+  page.on("request", (request) => {
+    if (request.method() !== "GET") mutations.push(`${request.method()} ${request.url()}`);
+  });
+  return mutations;
+}
+
+test.describe("g chords", () => {
+  for (const [key, path] of [
+    ["l", "/trading/candidates"],
+    ["x", "/trading/risk"],
+    ["j", "/trading/execution"],
+    ["s", "/system/services"],
+    ["c", "/"],
+  ] as const) {
+    test(`g then ${key} goes to ${path}`, async ({ page }) => {
+      await page.goto(path === "/" ? "/system/legend" : "/");
+      await expect(page.getByTestId("mode-banner")).toHaveAttribute("data-mode", "paper");
+      await page.keyboard.press("g");
+      await page.keyboard.press(key);
+      await expect.poll(() => new URL(page.url()).pathname).toBe(path);
+    });
+  }
+
+  test("a chord typed into a field does nothing; a late second key does nothing", async ({
+    page,
+  }) => {
+    await page.clock.install();
+    await page.goto("/trading/execution");
+    await expect(page.getByTestId("grid-filter")).toBeVisible();
+    await page.getByTestId("grid-filter").focus();
+    await page.keyboard.type("gl");
+    await expect(page.getByTestId("grid-filter")).toHaveValue("gl");
+    await expect(page).toHaveURL(/\/trading\/execution$/);
+    await page.getByTestId("grid-filter").blur();
+    await page.keyboard.press("g");
+    await page.clock.fastForward(2_000);
+    await page.keyboard.press("l");
+    await page.waitForTimeout(300);
+    await expect(page).toHaveURL(/\/trading\/execution$/);
+  });
+});
+
+test.describe("command palette", () => {
+  for (const modifier of ["Meta", "Control"]) {
+    test(`${modifier}+K opens it; typing and Enter navigates`, async ({ page }) => {
+      await page.goto("/");
+      await page.keyboard.press(`${modifier}+KeyK`);
+      const palette = page.getByTestId("command-palette");
+      await expect(palette).toBeVisible();
+      await expect(page.getByTestId("palette-input")).toBeFocused();
+      await page.keyboard.type("Candidates");
+      await page.keyboard.press("Enter");
+      await expect(page).toHaveURL(/\/trading\/candidates$/);
+      await expect(palette).toHaveCount(0);
+    });
+  }
+
+  test("open by id: a trade id selects that row on the trades screen", async ({ page }) => {
+    await page.goto("/");
+    await page.keyboard.press("ControlOrMeta+KeyK");
+    await page.getByTestId("palette-input").fill("trd_0003");
+    await page.getByTestId("palette-open-trade").click();
+    await expect(page).toHaveURL(/\/trading\/execution\?row=trd_0003$/);
+    await expect(page.locator('[data-row-id="trd_0003"]')).toHaveAttribute("aria-selected", "true");
+  });
+
+  test("Escape closes it and returns focus", async ({ page }) => {
+    await page.goto("/");
+    const api = page.getByTestId("status-api");
+    await api.focus();
+    await page.keyboard.press("ControlOrMeta+KeyK");
+    await expect(page.getByTestId("command-palette")).toBeVisible();
+    await page.keyboard.press("Escape");
+    await expect(page.getByTestId("command-palette")).toHaveCount(0);
+    await expect(api).toBeFocused();
+  });
+
+  test("its kill-switch action only opens the dialog", async ({ page }) => {
+    const mutations = recordMutations(page);
+    await page.goto("/research");
+    await page.keyboard.press("ControlOrMeta+KeyK");
+    await page.getByTestId("palette-input").fill("halt");
+    await page.getByTestId("palette-action-kill-switch").click();
+    const dialog = page.getByTestId("confirm-dialog");
+    await expect(dialog).toBeVisible();
+    await expect(page.getByTestId("confirm-choice-pause")).toHaveAttribute("data-selected", "false");
+    await expect(page.getByTestId("confirm-choice-flatten")).toHaveAttribute("data-selected", "false");
+    await expect(page.getByTestId("confirm-submit")).toBeDisabled();
+    await page.keyboard.press("Escape");
+    await expect(dialog).toHaveCount(0);
+    expect(mutations).toEqual([]);
+  });
+});
+
+test.describe("? and ⇧K", () => {
+  test("? lists every shortcut and every chord", async ({ page }) => {
+    await page.goto("/");
+    await expect(page.getByTestId("mode-banner")).toHaveAttribute("data-mode", "paper");
+    await page.keyboard.press("Shift+Slash");
+    const sheet = page.getByTestId("shortcut-sheet");
+    await expect(sheet).toBeVisible();
+    await expect(sheet).toContainText("Open the kill-switch dialog. It never arms by itself");
+    for (const chord of ["c", "f", "l", "r", "m", "x", "d", "s", "j"]) {
+      await expect(page.getByTestId(`shortcut-chord-${chord}`)).toBeVisible();
+    }
+    await page.keyboard.press("Escape");
+    await expect(sheet).toHaveCount(0);
+  });
+
+  test("⇧K opens the kill-switch dialog from any screen and arms nothing", async ({ page }) => {
+    const mutations = recordMutations(page);
+    await page.goto("/research/strategies");
+    await expect(page.getByTestId("mode-banner")).toHaveAttribute("data-mode", "paper");
+    await page.keyboard.press("Shift+KeyK");
+    const dialog = page.getByTestId("confirm-dialog");
+    await expect(dialog).toBeVisible();
+    await expect(dialog).toContainText("Halt trading");
+    await expect(page.getByTestId("confirm-choice-pause")).toHaveAttribute("data-selected", "false");
+    await expect(page.getByTestId("confirm-submit")).toBeDisabled();
+    // Typing K into the reason is text, not another shortcut.
+    await page.getByTestId("confirm-reason").fill("Keep");
+    await page.keyboard.press("Shift+KeyK");
+    await expect(page.getByTestId("confirm-reason")).toHaveValue("KeepK");
+    await page.getByTestId("confirm-cancel").click();
+    await expect(dialog).toHaveCount(0);
+    expect(mutations).toEqual([]);
+  });
+
+  test("⇧K with a role that cannot arm says why and opens nothing", async ({ page }) => {
+    await page.route(`${API}/api/auth/me`, (route: Route) =>
+      route.fulfill({ json: principal({ role: "viewer", can_arm_kill_switch: false }) }),
+    );
+    await page.goto("/");
+    await expect(page.getByTestId("status-operator")).toHaveAttribute("data-role", "viewer");
+    await page.keyboard.press("Shift+KeyK");
+    await expect(page.getByTestId("toast")).toContainText("Kill switch:");
+    await expect(page.getByTestId("confirm-dialog")).toHaveCount(0);
   });
 });

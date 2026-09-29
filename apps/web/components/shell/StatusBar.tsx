@@ -4,13 +4,13 @@ import { useQueryClient } from "@tanstack/react-query";
 import { Activity, Clock, HeartPulse, LogOut, Radio, UserRound } from "lucide-react";
 import { useState } from "react";
 import { ApiError } from "@/lib/api";
-import { useLatestAsOf } from "@/lib/as-of";
+import { useOnScreenAsOf } from "@/lib/as-of";
 import { signOut } from "@/lib/auth";
 import { useClock } from "@/lib/clock";
-import { isStale, workerIsStale } from "@/lib/freshness";
+import { isStale, workerStatus } from "@/lib/freshness";
 import { formatAge, formatTimestamp, formatUtcTime } from "@/lib/format";
 import { useLive, type ConnectionInfo, type HeartbeatInfo } from "@/lib/live-store";
-import { workerAgeNow, workerStaleAfter } from "@/lib/query";
+import { workerAgeNow, workerStaleAfter, workerStateNow } from "@/lib/query";
 import { HEARTBEAT_OVERDUE_MS } from "@/lib/stream/router";
 import { StatusBadge } from "../primitives";
 import type { Tone } from "../ui/StatusPill";
@@ -23,8 +23,9 @@ import { useExecutionMode, useHealth, useOperator, type ModeKey } from "./platfo
  * The status bar: the facts an operator needs to trust the screen, always
  * visible (report E §6.4). Mode, stream state and lag, the worker heartbeat
  * age (counting up between heartbeats, so a dead worker is visible without
- * waiting for the next report), API health, the newest as-of the platform
- * has sent, the operator, and a UTC clock.
+ * waiting for the next report) toned by the PLATFORM's verdict on the worker
+ * (report G W-03), API health, the OLDEST platform as-of among the views on
+ * screen with probes excluded (report G W-04), the operator, and a UTC clock.
  *
  * Every entry says what it knows and nothing more: an API it cannot reach
  * reads "unreachable", a worker that never beat reads "never", and a stream
@@ -92,7 +93,8 @@ export function StatusBar() {
   const { mode, stale } = useExecutionMode();
   const health = useHealth();
   const operator = useOperator();
-  const asOf = useLatestAsOf();
+  const onScreen = useOnScreenAsOf();
+  const asOf = onScreen.oldest?.iso ?? null;
   const now = useClock();
   const inspector = useInspector();
   const connection = useLive((s) => s.connection);
@@ -118,16 +120,17 @@ export function StatusBar() {
 
   const workerAge = useLive((s) => workerAgeNow(s, now));
   const staleAfter = useLive(workerStaleAfter);
-  let workerTone: Tone = "unknown";
-  let workerText = "worker hb unknown";
-  if (workerAge === null) {
-    workerTone = "warn";
-    workerText = "worker hb never";
-  } else if (workerAge !== undefined) {
-    const dead = workerIsStale(workerAge, staleAfter);
-    workerTone = dead ? "critical" : "ok";
-    workerText = `worker hb ${formatAge(workerAge)}${dead ? " · stale" : ""}`;
-  }
+  const workerState = useLive(workerStateNow);
+  const streamLive = connection.state === "live" && heartbeat !== null;
+  const worker = workerStatus({
+    ageS: workerAge,
+    state: workerState,
+    staleAfterS: staleAfter,
+    // Over REST, the verdict is only as current as the health report.
+    reportStale: !streamLive && health.status === "success" && isStale(health.freshness),
+  });
+  const workerTone: Tone = worker.tone;
+  const workerText = `worker hb ${worker.text}`;
 
   const stream = streamText(connection, heartbeat, now);
 
@@ -137,6 +140,7 @@ export function StatusBar() {
   // The body is a live component, not a snapshot: opened before health has
   // loaded, it fills in when it does, and it follows every later update.
   const openHealth = () => inspector.open({ title: "Platform health", body: <HealthDetail /> });
+  const openAsOf = () => inspector.open({ title: "Data as of", body: <AsOfDetail /> });
 
   const onSignOut = async () => {
     setSigningOut(true);
@@ -177,10 +181,13 @@ export function StatusBar() {
         className="status-bar__item"
         data-testid="status-worker"
         data-tone={workerTone}
+        data-worker-state={workerState ?? undefined}
         data-age={workerAge === undefined || workerAge === null ? undefined : Math.floor(workerAge)}
+        title={worker.detail}
       >
         <HeartPulse size={12} aria-hidden="true" />
         {workerText}
+        <span className="sr-only">. {worker.detail}</span>
       </span>
       <button
         type="button"
@@ -193,9 +200,21 @@ export function StatusBar() {
         <Activity size={12} aria-hidden="true" />
         {apiText}
       </button>
-      <span className="status-bar__item" data-testid="status-as-of" data-as-of={asOf ?? undefined}>
-        {asOf ? `data as of ${formatUtcTime(asOf)}` : "no data as-of yet"}
-      </span>
+      <button
+        type="button"
+        className="status-bar__item"
+        data-testid="status-as-of"
+        data-as-of={asOf ?? undefined}
+        data-path={onScreen.oldest?.path}
+        onClick={openAsOf}
+        aria-label={
+          asOf
+            ? `Oldest data on screen is as of ${formatUtcTime(asOf)}. Show every view's as-of.`
+            : "No view on screen has a platform as-of. Show details."
+        }
+      >
+        {asOf ? `data as of ${formatUtcTime(asOf)}` : "no data as-of on screen"}
+      </button>
       {operator ? (
         <span className="status-bar__item" data-testid="status-operator" data-role={operator.role}>
           <UserRound size={12} aria-hidden="true" />
@@ -219,6 +238,42 @@ export function StatusBar() {
         {now > 0 ? formatUtcTime(Math.floor(now / 1_000) * 1_000) : "--:--:-- UTC"}
       </span>
     </footer>
+  );
+}
+
+/** Every view on screen and its platform as-of, oldest first (report G W-04). */
+function AsOfDetail() {
+  const { views, oldest, newest } = useOnScreenAsOf();
+  const sorted = [...views].sort((a, b) => {
+    if (a.ms === null) return 1;
+    if (b.ms === null) return -1;
+    return a.ms - b.ms;
+  });
+  return (
+    <div className="stack" data-testid="inspector-as-of">
+      <p className="muted">
+        The status bar shows the OLDEST platform as-of among the views on this screen. Probes
+        (health, execution mode, the signed-in operator) are excluded: a health check that ran a
+        moment ago says nothing about how old the data is.
+      </p>
+      {sorted.length === 0 ? (
+        <p className="muted">No view on this screen has received data yet.</p>
+      ) : (
+        <ul className="stack list-none ps-0">
+          {sorted.map((view, index) => (
+            <li key={`${view.path}:${index}`} className="row" data-oldest={view === oldest}>
+              <span className="mono">{view.path}</span>
+              <span className="muted">
+                {view.iso ? `as of ${formatTimestamp(view.iso)}` : "no as-of supplied by the platform"}
+              </span>
+            </li>
+          ))}
+        </ul>
+      )}
+      {newest ? (
+        <p className="muted">Newest as-of received on the stream: {formatTimestamp(newest)}.</p>
+      ) : null}
+    </div>
   );
 }
 

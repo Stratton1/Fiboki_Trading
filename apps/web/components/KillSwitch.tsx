@@ -1,20 +1,8 @@
 "use client";
 
-import { useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
-import { ApiError, apiFetch } from "@/lib/api";
-import { capability } from "@/lib/auth";
-import { awaitEcho } from "@/lib/echo";
-import { useApi } from "@/lib/query";
-import type {
-  Envelope,
-  KillSwitchDisarmPreflightView,
-  KillSwitchView,
-} from "@/lib/types";
 import { AsyncBoundary } from "./AsyncBoundary";
-import { useExecutionMode, useOperator } from "./shell/platform";
+import { useKillSwitchControl } from "./KillSwitchControl";
 import { Button } from "./ui/Button";
-import { ConfirmDialog, type ConfirmChoice } from "./ui/ConfirmDialog";
 
 /**
  * The kill switch, reachable in EVERY mode.
@@ -28,8 +16,10 @@ import { ConfirmDialog, type ConfirmChoice } from "./ui/ConfirmDialog";
  *    pre-selection, matching KillSwitch.activate() which refuses a default mode;
  *  - the consequences of each come from the API, computed for the current mode
  *    and the current number of open positions;
- *  - it goes through the one shared ConfirmDialog;
- *  - FLATTEN additionally requires typing the word FLATTEN;
+ *  - it goes through the one shared ConfirmDialog, with asymmetric friction
+ *    (components/KillSwitchControl.tsx): PAUSE needs a reason only, in every
+ *    mode including LIVE; FLATTEN additionally requires typing FLATTEN, in
+ *    every mode; disarm requires typing RE-ARM;
  *  - the disarm (re-arm trading) consequences are server-computed too, from
  *    GET /api/trading/preflight/kill-switch-disarm, fetched when the dialog
  *    opens so they describe the halt actually being lifted;
@@ -43,117 +33,18 @@ import { ConfirmDialog, type ConfirmChoice } from "./ui/ConfirmDialog";
  *    when the stream is not feeding it). After 5 s the dialog closes and the
  *    panel shows "confirming…" until the echo arrives. The panel only ever
  *    shows what the platform says the switch is.
+ *
+ * ⇧K opens the same arm dialog from anywhere (components/shell/Hotkeys.tsx);
+ * it never arms anything by itself.
  */
-
-const KILL_SWITCH_PATH = "/api/system/kill-switch";
-
-type Expectation = { label: string; holds: (view: KillSwitchView) => boolean };
 export function KillSwitchPanel({ compact = false }: { compact?: boolean }) {
-  const state = useApi<Envelope<KillSwitchView>>(KILL_SWITCH_PATH);
-  const client = useQueryClient();
-  const { mode: executionMode, mutationsAllowed } = useExecutionMode();
-  const allowed = capability(useOperator(), "can_arm_kill_switch");
-  const [dialog, setDialog] = useState<"arm" | "disarm" | null>(null);
-  const [busy, setBusy] = useState(false);
-  const [sent, setSent] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  // A change the platform accepted but has not yet echoed back.
-  const [unconfirmed, setUnconfirmed] = useState<Expectation | null>(null);
-
-  // Adjusted during render (not in an effect): once the platform shows the
-  // requested state, the "confirming…" marker goes in the same frame.
-  const current = state.status === "success" ? state.data.data : null;
-  if (unconfirmed && current && unconfirmed.holds(current)) setUnconfirmed(null);
-  const disarmPreflight = useApi<Envelope<KillSwitchDisarmPreflightView>>(
-    dialog === "disarm" ? "/api/trading/preflight/kill-switch-disarm" : null,
-  );
-
-  const disarmChoices: ConfirmChoice[] =
-    disarmPreflight.status === "success"
-      ? Object.entries(disarmPreflight.data.data.consequences).map(
-          ([id, consequences]) => ({
-            id,
-            title: id.toUpperCase(),
-            body: "Lift the halt and allow risk-adding orders again.",
-            consequences,
-          }),
-        )
-      : [];
-  const disarmNotice =
-    disarmPreflight.status === "loading"
-      ? "Loading the consequences of re-arming from the platform."
-      : null;
-  const disarmError =
-    disarmPreflight.status === "error"
-      ? `Could not load what re-arming would do: ${disarmPreflight.error.message} (${disarmPreflight.error.code}). Nothing can be confirmed without it.`
-      : null;
-
-  async function submit(choiceId: string, reason: string) {
-    setBusy(true);
-    setSent(false);
-    setError(null);
-    const expectation: Expectation =
-      dialog === "arm"
-        ? {
-            label: `armed (${choiceId.toUpperCase()})`,
-            holds: (view) => view.active && view.mode === choiceId,
-          }
-        : { label: "disarmed", holds: (view) => !view.active };
-    try {
-      if (dialog === "arm") {
-        await apiFetch("/api/system/kill-switch/arm", {
-          method: "POST",
-          body: JSON.stringify({ mode: choiceId, reason }),
-        });
-      } else {
-        await apiFetch("/api/system/kill-switch/disarm", {
-          method: "POST",
-          body: JSON.stringify({ reason }),
-        });
-      }
-    } catch (err) {
-      setError(
-        err instanceof ApiError
-          ? `${err.message} (${err.code})`
-          : "The request failed.",
-      );
-      setBusy(false);
-      return;
-    }
-    setSent(true);
-    const echoed = await awaitEcho<Envelope<KillSwitchView>>(client, KILL_SWITCH_PATH, (env) =>
-      expectation.holds(env.data),
-    );
-    if (!echoed) setUnconfirmed(expectation);
-    setBusy(false);
-    setSent(false);
-    setDialog(null);
-  }
-
-  const sentNotice = sent
-    ? "Sent. Waiting for the platform to confirm the change before closing."
-    : null;
+  const control = useKillSwitchControl();
+  const { state, blocked, unconfirmed } = control;
 
   return (
     <AsyncBoundary state={state} label="kill switch" onRetry={state.reload}>
       {(envelope) => {
         const view = envelope.data;
-        const armChoices: ConfirmChoice[] = [
-          {
-            id: "pause",
-            title: "PAUSE",
-            body: "Stop opening and increasing. Leave open positions alone.",
-            consequences: view.consequences.pause ?? [],
-          },
-          {
-            id: "flatten",
-            title: "FLATTEN",
-            body: "Stop everything AND close every open position.",
-            consequences: view.consequences.flatten ?? [],
-            destructive: true,
-          },
-        ];
-
         return (
           <div data-testid="kill-switch-panel">
             <div className="row mb-2.5">
@@ -173,9 +64,7 @@ export function KillSwitchPanel({ compact = false }: { compact?: boolean }) {
 
             {!compact && view.active ? (
               <p className="muted">
-                {view.blocks_new_risk
-                  ? "New and increasing risk is blocked."
-                  : null}{" "}
+                {view.blocks_new_risk ? "New and increasing risk is blocked." : null}{" "}
                 {view.requires_flatten
                   ? "Open positions are queued to be closed."
                   : "Open positions are untouched."}
@@ -197,11 +86,8 @@ export function KillSwitchPanel({ compact = false }: { compact?: boolean }) {
               <Button
                 variant="danger"
                 data-testid="kill-switch-arm"
-                disabled={!mutationsAllowed || !allowed.allowed}
-                onClick={() => {
-                  setError(null);
-                  setDialog("arm");
-                }}
+                disabled={blocked !== null}
+                onClick={() => control.open("arm")}
               >
                 {view.active ? "Change halt level" : "Arm kill switch"}
               </Button>
@@ -209,55 +95,23 @@ export function KillSwitchPanel({ compact = false }: { compact?: boolean }) {
                 <Button
                   variant="warn"
                   data-testid="kill-switch-disarm"
-                  disabled={!mutationsAllowed || !allowed.allowed}
-                  onClick={() => {
-                    setError(null);
-                    setDialog("disarm");
-                  }}
+                  disabled={blocked !== null}
+                  onClick={() => control.open("disarm")}
                 >
                   Disarm and re-arm trading
                 </Button>
               ) : null}
-              {!mutationsAllowed ? (
+              {blocked && blocked.reason !== "role" ? (
                 <span className="muted" data-testid="kill-switch-blocked">
-                  {executionMode === "loading"
-                    ? "Reading the execution mode before enabling this control."
-                    : executionMode === "unknown"
-                      ? "The execution mode is unknown, so the kill switch cannot be confirmed from here."
-                      : "The workstation is disconnected from the platform, so nothing can be confirmed from here."}
+                  {blocked.text}
                 </span>
-              ) : !allowed.allowed ? (
+              ) : blocked ? (
                 <span className="muted" data-testid="kill-switch-role-blocked">
-                  {allowed.reason}
+                  {blocked.text}
                 </span>
               ) : null}
             </div>
-
-            <ConfirmDialog
-              open={dialog === "arm"}
-              title="Halt trading"
-              executionMode={executionMode}
-              choices={armChoices}
-              confirmLabel="Halt trading"
-              busy={busy}
-              errorMessage={error}
-              notice={sentNotice}
-              onCancel={() => setDialog(null)}
-              onConfirm={submit}
-            />
-            <ConfirmDialog
-              open={dialog === "disarm"}
-              title="Re-arm trading"
-              executionMode={executionMode}
-              confirmPhrase="RE-ARM"
-              confirmLabel="Re-arm trading"
-              busy={busy}
-              errorMessage={error ?? disarmError}
-              notice={sentNotice ?? disarmNotice}
-              choices={disarmChoices}
-              onCancel={() => setDialog(null)}
-              onConfirm={submit}
-            />
+            {control.dialogs}
           </div>
         );
       }}

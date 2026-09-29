@@ -49,13 +49,15 @@ interface Platform {
 
 const PlatformContext = createContext<Platform | null>(null);
 
+export const MODE_PATH = "/api/system/execution-mode";
+
 /** REST poll intervals while the stream is not feeding these reads. */
 export const MODE_REFRESH_MS = 30_000;
 export const HEALTH_REFRESH_MS = 20_000;
 
 export function PlatformProvider({ children }: { children: ReactNode }) {
   const signingIn = usePathname() === LOGIN_PATH;
-  const modeHandle = useApi<Envelope<ExecutionModeBanner>>("/api/system/execution-mode", {
+  const modeHandle = useApi<Envelope<ExecutionModeBanner>>(MODE_PATH, {
     refreshMs: MODE_REFRESH_MS,
   });
   const health = useApi<HealthReport>(signingIn ? null : "/api/health", {
@@ -65,12 +67,19 @@ export function PlatformProvider({ children }: { children: ReactNode }) {
   const me = useApi<PrincipalView>(signingIn ? null : ME_PATH);
 
   // The worker heartbeat from REST, for freshness while the stream is down.
+  // The platform's own verdict rides along: the `worker_heartbeat` check.
   const workerAge = health.status === "success" ? health.data.worker_heartbeat_age_seconds : undefined;
+  const workerState =
+    health.status === "success"
+      ? (health.data.checks.find((check) => check.name === "worker_heartbeat")?.status ?? null)
+      : null;
   const healthAsOf = health.status === "success" ? health.asOf : null;
   useEffect(() => {
     if (workerAge === undefined || healthAsOf === null) return;
-    writeLive(() => ({ restWorker: { ageS: workerAge, receivedAt: Date.parse(healthAsOf) } }));
-  }, [workerAge, healthAsOf]);
+    writeLive(() => ({
+      restWorker: { ageS: workerAge, receivedAt: Date.parse(healthAsOf), state: workerState },
+    }));
+  }, [workerAge, workerState, healthAsOf]);
 
   const banner = modeHandle.status === "success" ? modeHandle.data.data : null;
   const mode: ModeKey =
