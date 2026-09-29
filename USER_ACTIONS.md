@@ -86,6 +86,19 @@ The decision that is yours: **which licensed vendor API, if any, sits beside the
 
 Neither has been tested against the live service, because no key exists in the build environment; the first live poll is the test. Separately, for macro vintages, register a free FRED API key and set `FIBOKI_FRED_API_KEY`; FRED's terms require the notice "This product uses the FRED® API but is not endorsed or certified by the Federal Reserve Bank of St. Louis." wherever FRED data is shown.
 
+**Update 2026-09-29: more free sources, each with its terms recorded.** Every source, its cost and what its terms allow is now in one table (`docs/v2/DATA_ARCHITECTURE.md` §14.4, from `fiboki.data.sources.describe_sources()`). What changes for you:
+
+- **Nothing to do for the BIS speeches feed**: `fiboki news record` now records thirteen feeds (the twelve bank feeds plus the BIS central bankers' speeches). BIS terms are non-commercial.
+- **GDELT (free, open, any use with a citation)**: set `FIBOKI_GDELT_ENABLED=true` to add six curated FX/gold/index/central-bank headline queries. Each poll takes about 30 s more, because GDELT allows one request every five seconds.
+- **Finnhub**: the free tier's 60 calls per minute is now enforced by the recorder itself. **The Finnhub economic calendar is premium-only** ("Premium Access Required" in Finnhub's own API schema). The code is built; it only works if you buy a plan that includes it. It is a comparison calendar either way, never the one used for blackouts.
+- **ForexFactory weekly calendar: your decision, and my recommendation is no.** Their notices say "The copying, republication or redistribution of FEED, in part or in whole, is explicitly prohibited", and no licence for the export exists. It is built, off, and only turns on with `FIBOKI_FF_CALENDAR_OPT_IN=true`. If you turn it on: personal comparison only, never share or commit the files. Its one real use is `calendar_diff`, which lists releases the feed has and our official calendar does not, so you can check them at the publisher.
+- **Retail positioning**: Myfxbook Community Outlook via its official API (`FIBOKI_MYFXBOOK_EMAIL`, `FIBOKI_MYFXBOOK_PASSWORD`; free, 100 requests a day, personal use; the API puts your password in the URL, so use a Myfxbook account with a password you use nowhere else). OANDA position and order books (`FIBOKI_OANDA_BOOKS_TOKEN`, `FIBOKI_OANDA_BOOKS_ENVIRONMENT=practice|live`, read-only) are built, but OANDA appears to have withdrawn those endpoints in 2024; your first poll will tell us.
+- **FRED cross-asset pack** (2y and 10y yields, broad dollar, VIX, WTI) needs the same `FIBOKI_FRED_API_KEY`. VIX is CBOE-copyrighted: personal research only.
+- **A licence question you should settle before anything is sold**: HistData states no licence, and Dukascopy's site terms forbid robots and building a database from the site. Both are marked `opt_in_unclear`. The Dukascopy downloader stays unbuilt until Dukascopy answers in writing.
+- **Not free, not built**: Reuters (LSEG licence) and AP (customer licence). Not built because the terms forbid it: Investing.com, TradingView's undocumented endpoints, scraping Myfxbook or ForexFactory pages.
+
+None of the new sources has been exercised against the live service from the build environment (no keys; GDELT refused this environment's shared address with 429). The calendars, positioning recorder and FRED pack have no `fiboki` CLI command yet.
+
 ---
 
 ## REQUIRED BEFORE BROKER DEMO
@@ -160,6 +173,71 @@ PAUSE and FLATTEN are distinct and implemented. Execute both against demo, time 
 Static spreads, zero default slippage, no weekend triple-swap, a static financing rate over a 25-year sample, fixed-date-only holiday calendars, and bars treated as mid when the source is bid. Each is documented in code. Either close them or accept them in writing before capital is at risk.
 
 ---
+
+## DESKTOP MIGRATION (MacBook to Mac desktop, local models on llama.cpp)
+
+Added 2026-09-29. Full procedure: `docs/v2/DEPLOYMENT.md` §2 and `docs/v2/OPERATIONS.md` §13.
+Everything here keeps the deployment in paper mode; none of it touches a live control.
+
+### M1. On the MacBook, before you leave it
+
+- [ ] Commit or push everything you want to keep (`git status` clean). `fiboki doctor` warns on a dirty tree.
+- [ ] `scripts/launchd-install.sh --unload` (or `scripts/dev-down.sh`), then `scripts/backup.sh`. Keep the `.tar.gz` **and** its `.sha256`.
+- [ ] Copy the migrated market-data store (`var/datastore`, with its `.fiboki-data-root` and `catalogue.db`) to an external disk, or re-run the backup with `--include-datastore`.
+- [ ] Put the contents of `~/.fiboki/env` (or whatever secrets you exported by hand) into your password manager. **Do not** copy `~/.zsh_history`, `.envrc` files or notes with keys in them to the new machine. If a secret was ever typed on a command line, rotate it on the desktop rather than carrying it over.
+
+### M2. On the desktop
+
+- [ ] `brew install python@3.11 node git sqlite llama.cpp`.
+- [ ] `git clone` the repository and check out the branch (do not copy `.venv/`, `node_modules/` or `.next/`: they are rebuilt).
+- [ ] `scripts/desktop-install.sh --check`, then `scripts/desktop-install.sh` until it prints no MISSING line.
+- [ ] Edit `~/.fiboki/env` (mode 600): `FIBOKI_OPERATORS` for Joe and Tom, each hash computed with `read -rs PW && printf '%s' "$PW" | shasum -a 256 && unset PW`; any news or macro API keys.
+- [ ] Copy the market-data store into `var/datastore`; `scripts/restore.sh <archive> --dry-run`, then `scripts/restore.sh <archive>`.
+- [ ] Download one model (M3) into `~/Models`, verify its SHA-256 against the Hugging Face page, `scripts/llama-server.sh --print`.
+- [ ] Ask for the one-line change in `fiboki.workers.research_runtime._build_provider` (`for_ollama` to `for_local_server`, `OPERATIONS.md` §13.4). Until it is made, the research worker cannot use llama.cpp and `fiboki doctor` says so.
+- [ ] Set the agent variables in `~/.fiboki/env` (`OPERATIONS.md` §13.4). Leave `FIBOKI_AGENT_CYCLES` off until the smoke test passes.
+- [ ] `.venv/bin/fiboki doctor` until nothing is FAIL; then `scripts/launchd-install.sh --load`.
+- [ ] System Settings: log in automatically, never sleep, restart after a power failure. LaunchAgents only run while you are logged in.
+- [ ] Rehearse a restore once (`OPERATIONS.md` §13.2) before you rely on the backups.
+- [ ] Known blocker to check first: the web build with `NEXT_PUBLIC_FIBOKI_API=""` (`OPERATIONS.md` §13.5).
+
+### M3. Which model for which Mac
+
+`scripts/llama-server.sh` picks the row for the machine's memory. The choice is a starting point
+made on three stated grounds only: an Apache-2.0 licence, a file small enough to leave room for
+the KV cache at a 16,384-token context plus the rest of Fiboki, and a native context of at least
+that length. **No benchmark was run and none is quoted.** Measure the model with
+`smoke_test_provider` and the offline eval harness before trusting it.
+
+| Mac memory | File (quantisation) | File size | Source |
+|---|---|---|---|
+| 32 GB | `Qwen3-14B-Q5_K_M.gguf` | 10.51 GB | [Qwen/Qwen3-14B-GGUF](https://huggingface.co/Qwen/Qwen3-14B-GGUF) |
+| 64 GB | `Qwen3-32B-Q5_K_M.gguf` | 23.21 GB | [Qwen/Qwen3-32B-GGUF](https://huggingface.co/Qwen/Qwen3-32B-GGUF) |
+| 128 GB | `Qwen3-32B-Q8_0.gguf` | 34.82 GB | [Qwen/Qwen3-32B-GGUF](https://huggingface.co/Qwen/Qwen3-32B-GGUF) |
+| 128 GB, alternative (not the script's default) | `gpt-oss-120b-MXFP4.gguf` | 63.39 GB | [ggml-org/gpt-oss-120b-GGUF](https://huggingface.co/ggml-org/gpt-oss-120b-GGUF), model card [openai/gpt-oss-120b](https://huggingface.co/openai/gpt-oss-120b) |
+
+Where each fact comes from:
+
+- File sizes and licences: the Hugging Face model API (`/api/models/<repo>?blobs=true`), read
+  2026-09-29. All four are Apache-2.0.
+- Qwen3 context: the Qwen3-14B-GGUF model card, "Context Length: 32,768 natively and 131,072
+  tokens with YaRN". A 16,384 context therefore needs no RoPE scaling.
+- Qwen3 thinking: the same card documents `/think` and `/no_think`; the script disables thinking
+  server-side with `--reasoning-budget 0` (llama.cpp PR #13771) so the JSON-schema grammar
+  constrains the answer itself. The card also advises against greedy decoding in thinking mode;
+  Fiboki decodes at temperature 0 for reproducibility, which is a property to measure, not assume.
+- gpt-oss-120b: its model card says it "fit[s] into a single 80GB GPU" with MXFP4 weights. It is
+  a reasoning model; whether `--reasoning-budget 0` and grammar-constrained output behave well
+  with it was **not** verified here, which is why it is not the default.
+- Server flags and endpoint shapes: the llama.cpp server README
+  ([tools/server/README.md](https://github.com/ggml-org/llama.cpp/blob/master/tools/server/README.md)):
+  `/props` (`default_generation_settings.n_ctx`, `model_path`, `build_info`), `/v1/models`
+  (`id` is the `--alias` or the `-m` path), `response_format` on `/v1/chat/completions`, and
+  `-c`, `-np`, `-fa`, `--alias`, `--reasoning-budget`. Minimum build b6325 (`-fa on`, PR #15434).
+
+macOS caps how much unified memory the GPU may wire, below the physical total; if llama-server
+fails to allocate, drop one tier (`LLAMA_SERVER_ARGS=--tier 32` on a 64 GB machine) rather than
+raising the limit.
 
 ## OPTIONAL
 

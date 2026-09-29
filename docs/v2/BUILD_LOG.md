@@ -617,3 +617,189 @@ Stored results: none invalidated. No document in `research/strategies/` declares
 for all five seeds the content hash, structure hash, serialised JSON, complexity score, exit-policy
 fingerprint and engine ledger hashes are pinned to their pre-change values and unchanged.
 `ENGINE_VERSION` unchanged, because no run without locks changes by a byte.
+
+## 2026-09-29: wider free data surface with recorded terms (uncommitted working tree)
+
+- **Source registry.** New `data/sources/registry.py`: 31 entries (25 implemented, 6 forbidden or
+  licence-only), each with `terms_url`, a quoted `terms_summary`, `terms_status`
+  (permitted / personal_only / opt_in_unclear / forbidden), key env, cadence, history depth,
+  point-in-time semantics and module. `describe_sources()` and `registry_markdown()`; the table in
+  DATA_ARCHITECTURE.md §14.4 is pinned to it by a test.
+- **Headlines.** BIS central bankers' speeches added to `OFFICIAL_FEEDS` (as `NewsSource.OTHER`;
+  the enum is a CHECK constraint in existing stores). GDELT DOC 2.0 client with six curated
+  queries, opt-in (`FIBOKI_GDELT_ENABLED`), one request per 5 s shared limiter, truncation at 250
+  logged in the poll log (`NewsRecorder` now merges a reader's `last_report`). Finnhub news clients
+  share a 60/min client-side limiter (`data/providers/ratelimit.py`).
+- **Calendars.** `data/providers/calendar_feed.py` (dated-event files in the `load_events_json`
+  shape, write-once, scheduled times only; `calendar_diff`), `finnhub.py` (premium-only
+  `/calendar/economic`; time treated as UTC on the schema sample's evidence), and
+  `forexfactory_feed.py` (opt-in, `opt_in_unclear`, JSON only). Official calendar untouched.
+- **Positioning.** New `data/positioning/`: append-only snapshot store with `as_of` on
+  `observed_at`, OANDA position/order books (GET-only, parsed-host check; endpoints possibly
+  withdrawn by OANDA in 2024), Myfxbook Community Outlook via the official API (session reuse,
+  100/day budget, credentials scrubbed), and a recorder.
+- **Macro.** `fred_pack.py`: `fred_cross_asset_daily` (DGS2, DGS10, DTWEXBGS, VIXCLS, DCOILWTICO)
+  through ALFRED, registered in `MACRO_DATASET_PACKS`.
+- **Settings.** ENV_REGISTRY gains `FIBOKI_GDELT_ENABLED`, `FIBOKI_FF_CALENDAR_OPT_IN`,
+  `FIBOKI_OANDA_BOOKS_TOKEN`, `FIBOKI_OANDA_BOOKS_ENVIRONMENT`, `FIBOKI_MYFXBOOK_EMAIL`,
+  `FIBOKI_MYFXBOOK_PASSWORD`.
+- **Tests.** `tests/unit/test_data_source_expansion.py` (26), `tests/unit/test_source_registry.py`
+  (8); `tests/unit/test_news_recorder.py` expectations updated for the thirteenth feed (rows 20 ->
+  22) and the `gdelt` off-reason. Fixtures: `news/bis_cbspeeches.rss` is a trimmed live copy;
+  every other new fixture is constructed.
+- **Not done.** No CLI commands for calendars, positioning or the pack (`cli.py` was another
+  item's), no API route for `describe_sources()`, no worker supervision of the positioning
+  recorder, no store migration to give GDELT and BIS their own `NewsSource` values. Nothing new
+  was exercised against a live service.
+
+Stored results: none invalidated. Existing headline stores gain BIS rows from their next poll
+onward; nothing already recorded changes. No engine, cost model or metric was touched.
+
+## 2026-09-29: desktop migration, llama.cpp provider, `fiboki doctor`, backup/restore (uncommitted working tree)
+
+- **What was wrong.** The desktop target (Mac, continuous, local models on llama.cpp) had no
+  llama.cpp provider: `LocalHTTPProvider` speaks Ollama's `/api/chat` and `/api/show`, which
+  llama-server does not serve. `scripts/desktop/Start Fiboki.command` exported `FIBOKI_LLM_URL`
+  (read by nothing, not in `ENV_REGISTRY`) and switched `FIBOKI_AGENT_CYCLES` on without
+  `FIBOKI_AGENT_LOCAL_MODEL` or `FIBOKI_AGENT_CYCLE_TARGET`, both of which make
+  `compose_research_runtime` raise, so detecting a model would have stopped the research worker.
+  There was no backup or restore command, no launchd unit for the API, web, news or model server,
+  and no check that a `.venv` or `node_modules` had been copied from another machine.
+- **llama.cpp provider** (`agents/providers.py`). `LlamaCppProvider(LocalHTTPProvider)`, built
+  by `LocalHTTPProvider.for_llama_cpp(base_url, model=None)`: model id from `/v1/models` (alias or
+  path, `aliases` honoured; a name the server does not serve is refused), per-slot
+  `default_generation_settings.n_ctx`, `model_path` and `build_info` from `/props`. Pinned by the
+  SHA-256 of the GGUF bytes (all shards of a split model), cached by path+size+mtime in memory
+  and optionally in a JSON file; a relative, missing or unreadable path is refused. Every
+  `generate` re-reads `/props` and refuses if the weights path or context changed. Schema output
+  as `response_format` `json_schema` from b4820, else `json_object`+`schema` (b2487+); a server
+  rejection of the `json_schema` form (HTTP error naming `response_format`) falls back once,
+  stickily. No client-side GBNF converter (reasoning in the class docstring). `name` stays
+  `"local"` so the offline eval still FAILs an unpinned local record. `for_local_server` picks
+  llama.cpp or Ollama by probing `/props`. Build numbers from the llama.cpp git history (PRs
+  #5978, #9527, #12168, #13771, #15434); endpoint shapes from `tools/server/README.md` and
+  `server-context.cpp`.
+- **Not changed, proposed.** `workers/research_runtime._build_provider` still calls
+  `for_ollama`; the one-line change to `for_local_server` is in `OPERATIONS.md` §13.4. The
+  brief's `FIBOKI_LLM_URL` was NOT introduced: `FIBOKI_AGENT_LOCAL_URL` is the declared variable
+  for the same thing, and a new name would need an `ENV_REGISTRY` entry (outside scope) to pass
+  `test_every_env_name_used_as_a_literal_in_src_is_declared`.
+- **`fiboki doctor`** (`cli.py`, delimited block). A group: `fiboki doctor [--json] [--no-hash]
+  [--only NAME] [--repo DIR]` and `fiboki doctor model`. Sixteen checks behind a `DoctorHost`
+  seam, OK/WARN/FAIL plus a fix, exit 1 on any FAIL, a crashing check reported as a FAIL row.
+  `fiboki system doctor` is unchanged.
+- **Scripts.** `desktop-install.sh` (idempotent, `--check`), `backup.sh`, `restore.sh`,
+  `llama-server.sh`, `launchd-install.sh`, `fiboki-service.sh` (per-service entrypoint: reads
+  `~/.fiboki/env`, then forces paper and unsets the live controls), and
+  `deploy/launchd/uk.fiboki.{api,worker,web,news,llama}.plist` templates. Launcher model detection
+  rewritten to the declared variables; cycles only with a target.
+- **Found, not fixed (outside scope).** `apps/web/next.config.ts` calls `new URL("")` when
+  `NEXT_PUBLIC_FIBOKI_API=""` (as `dev-up.sh` sets it); checked with Node, `next build` not run.
+  `dev-up.sh` exports `FIBOKI_INCIDENT_LOG` and `FIBOKI_API_PROXY_TARGET`, undeclared.
+- **Tests.** `tests/unit/test_agents_llama_cpp_provider.py` (29 + 1 skipped as root: recorded
+  `httpx.MockTransport`, the README `/props` and `/v1/models` shapes), `tests/unit/test_cli_doctor.py`
+  (24, fake host), `tests/unit/test_desktop_scripts.py` (23: real bash runs against temp dirs,
+  a stub `llama-server`, a local fake HTTP server for the launcher block). At 01:15Z:
+  `pytest tests/unit/test_layering.py tests/unit/test_cli.py tests/unit/test_agents_local_provider.py
+  tests/*/test_agents_*.py tests/unit/test_cli_doctor.py tests/unit/test_desktop_scripts.py
+  tests/unit/test_api_settings_hygiene.py tests/unit/test_deploy_guards.py
+  tests/integration/test_research_runtime.py` printed **666 passed, 1 skipped**. `ruff` clean on
+  every file touched; `scripts/check_live_flags.py` clean (334 files).
+- **Not exercised.** Anything needing macOS (launchctl, plutil, Homebrew, `sysctl hw.memsize`),
+  a real llama-server, a real model, `npm run build`, and a restore of a real deployment.
+
+Stored results: none invalidated. No engine, cost model, metric, gate or strategy was touched;
+the Ollama provider path is byte-for-byte unchanged.
+
+## 2026-09-29: backend asks for the frontend overhaul (uncommitted working tree)
+
+FRONTEND_OVERHAUL_PLAN.md §5, §6, §8; report E §6, §7.2.
+
+- **`GET /api/stream`** (`api/routers/stream.py`). One multiplexed SSE endpoint over
+  `sse-starlette==3.0.3`, the last release that co-installs with `fastapi==0.115.6` (3.0.4+
+  require `starlette>=0.49.1`; FastAPI pins `<0.42`). Envelope as the plan; snapshot per topic,
+  then deltas keyed by entity id and tombstones; per-topic seq from a per-process epoch-ms base;
+  500-event ring per topic with `Last-Event-ID` replay as a cut across topics, or a fresh snapshot
+  when aged out; 5 s heartbeat with `worker_heartbeat_age_s` from the table reader, mode, kill
+  switch and per-topic seq/as_of; `Cache-Control: no-cache`, `X-Accel-Buffering: no`, 15 s comment
+  keep-alive. Session cookie plus an Origin/Referer allow-list check; a revoked session ends the
+  stream at the next heartbeat. Health on a 15 s timer; kill switch replayed from the journal each
+  second; positions, fleet and risk through the REST readers; marks `absent` until a feed calls
+  `publish_mark` (coalesced to 4 Hz). The hub never starts a worker (tested).
+- **`GET /api/command/attention`** (`api/routers/command.py`). Server-ranked; weights pinned by a
+  test; unreadable sources become items; seed-fixture breaches are not raised.
+- **Incidents** (`api/routers/incidents.py`). Read model over `FIBOKI_ALERT_LOG` and the
+  kill-switch journal, deduplicated, stable ids, timeline. `POST .../{id}/ack` (reason >= 8) and
+  `.../note`, audited, admin-only because `tests/api/test_security.py` requires every mutating
+  route to be admin; operator access needs that policy changed deliberately.
+- **`GET /api/markets/overlays/{symbol}`**. Signals (paper telemetry), fills, levels, regime
+  segments (marketstate), calendar events, headlines (news store, read-only) and indicator series
+  computed only by `fiboki.indicators` (baseline Ichimoku, Fibonacci, ATR plus the seed
+  strategies' compiled indicators) with pane hints and dataset version ids. Backtest fills and a
+  stop-move history are reported unavailable: neither is persisted. `/api/markets/bars` carries
+  `v` and `volume_kind` when the dataset has non-zero volume.
+- **Disarm preflight** also served at `GET /api/system/kill-switch/disarm/preflight`, delegating
+  to the trading route, which stays as the alias for one release.
+- **Health.** The heartbeat check now uses the platform's reading (age >= threshold is stale), says
+  "unreadable" for an unreadable store, and a `paper_journal` check degrades on unreadable
+  sessions.
+- **Caveats.** `realism_caveats`/`figure` take `charged`; `Platform.session_charged_costs` reads
+  `summary.json`'s `cost_breakdown`. Used by the stream's fleet figures and the overlay fills.
+  `/api/trading/trades` rows still get the settings-only caveats until `trading._trade_view` passes
+  `charged` (one line; not in this change's file set).
+- **OpenAPI.** `/api/openapi.json` now carries `securitySchemes` and a per-operation
+  `x-fiboki-auth` derived from route dependencies; `scripts/gen-openapi.sh` writes
+  `apps/web/openapi.json` without a server.
+- **Tests.** `tests/api/test_stream.py`, `test_incidents.py`, `test_command_attention.py`,
+  `test_overlays.py`, `test_health_edges.py`, `test_openapi_and_preflight.py`,
+  `tests/unit/test_api_charged_caveats.py`.
+
+Stored results: none invalidated. No engine, indicator, strategy or risk code changed.
+`deploy/requirements.lock` does not yet list `sse-starlette`; regenerate it.
+
+## 2026-09-29: the agent event channel, shadow only (uncommitted working tree)
+
+- **What was missing.** AGENTIC_INTEGRATION_PLAN §5 Wave 3 row 3 (`query_news`) and Wave 4 rows 1
+  and 2 (tool-less `event_classifier` into a quarantined store; deterministic `EventVetoPolicy`
+  with a shadow evaluator). Headlines were recorded but nothing read them.
+- **Agents.** Capabilities `READ_NEWS_SNAPSHOT` and `WRITE_EVENT_ANNOTATION` (21 -> 23, both pass
+  the execution guard); write domain `research:event_annotation`; tools `query_news`
+  (point-in-time, refuses without `as_of`, <= 200 rows, <= 7 days, quoted data objects) and
+  `record_event_annotations` (closed schema, batch-bound citations, stamps observed_at /
+  available_at / model / digest / manifest / `event_annotation_v1`). `query_news` granted to
+  `market_regime_analyst` and `research_director`. New role `event_classifier`: one capability,
+  one tool, no read. `ToolContext` gains `news`, `events`, `clock`, `model_digest`,
+  `manifest_hash`. Workflow `run_event_scan` (fetch without a model, batches of <= 40, one
+  classifier call per batch, cost cap, fully audited).
+- **Contracts.** `core/contracts.py`: `EventAnnotation`, `VetoReason`, `VetoAssessment` (no free
+  text, prices, stops or sizes), `EventType`/`EventBucket` vocabularies, `SHADOW_REASON_PREFIXES`
+  and `RiskDecision.blocking_reasons` / `shadow_reasons`.
+- **marketstate/events.py (new).** Append-only `AnnotationStore` (`<state_dir>/events/
+  annotations.sqlite`, WAL, triggers), `instrument_buckets`, `EventVetoPolicy` (`event_veto_v1`,
+  disabled), `EventVetoSource` (point-in-time, fail-open with one alert per transition,
+  freshness from the `scan_log` heartbeat), `shadow_report` with the vol-spike and
+  calendar-only baselines.
+- **Gateway.** Twentieth check `event_veto` after `event_blackout`: blocks `RequestKind.OPEN`
+  only and only when enabled; otherwise records `event_veto_shadow:<...>`, which does not count
+  towards `allowed`. `ExecutionAttempt.reason` and telemetry `venue_error` carry blocking reasons
+  only; attempt rows stamp `event_veto_policy` (`not_wired` without a source).
+  `tests/unit/test_risk_gateway.py` count 19 -> 20.
+- **Runtime.** `FIBOKI_EVENT_SCAN_MINUTES` (declared; default 15, 0 = off) schedules the scan in
+  the research runtime when `FIBOKI_AGENT_CYCLES` is on; one `scan_log` row per scan.
+  `tests/integration/test_research_runtime.py` sets it to 0 so its ticks run only the nightly
+  cycle.
+- **CLI.** `fiboki events shadow-report --trades FILE` (read-only). `cli.py` had no other edits
+  when this block was added; a `doctor` block from another agent has since landed beside it.
+- **Pre-registration.** `research/preregistration/event_veto_v1.json` (draft; model pin and
+  decision date to fill at filing), pinned to the code by a test.
+- **Tests.** `tests/unit/test_event_veto_policy.py`, `tests/unit/test_event_veto_gateway.py`,
+  `tests/unit/test_agents_event_channel.py` (includes the injection test),
+  `tests/unit/test_events_cli.py`, `tests/integration/test_agents_event_scan.py`,
+  `tests/integration/test_event_scan_runtime.py`; count updates in the capability, role, tool
+  registry and gateway tests.
+- **Not done.** No worker passes an `EventVetoSource` into its `RiskContext` (`workers/runtime.py`
+  was out of scope), so the gateway shadow log is empty until one does. No real model has
+  classified a real headline.
+
+Stored results: none invalidated. No engine, cost model, metric, gate threshold or strategy
+changed; the new gateway check passes whenever no source is wired, which is every existing path.
