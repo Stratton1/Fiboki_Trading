@@ -15,7 +15,7 @@ beside a live computed number; nothing recomputed it and nothing invalidated it.
 """
 from __future__ import annotations
 
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from datetime import datetime
 from typing import TYPE_CHECKING, Any
 
@@ -31,6 +31,7 @@ __all__ = [
     "Figure",
     "Series",
     "SeriesPoint",
+    "charged_cost_components",
     "realism_caveats",
     "trust",
 ]
@@ -136,9 +137,46 @@ class Series(BaseModel):
 # --------------------------------------------------------------- caveats
 
 
-def _pnl_caveats(settings: Settings) -> list[Caveat]:
+#: The cost components a persisted session can prove it charged, keyed by the
+#: ``cost_breakdown`` field ``scripts/run_paper_session.py`` writes.
+_CHARGED_COMPONENT_FIELDS: dict[str, str] = {
+    "slippage": "slippage_cost",
+    "financing": "financing_cost",
+    "spread": "spread_cost",
+    "commission": "commission",
+}
+
+
+def charged_cost_components(cost_breakdown: Mapping[str, Any]) -> frozenset[str]:
+    """Which components a session's ``cost_breakdown`` shows were charged.
+
+    A component counts as charged when its total is a finite non-zero number.
+    Zero is ambiguous (not modelled, or modelled and nothing accrued), so it is
+    read as NOT charged: the caveat stays, which errs on the side of warning.
+    """
+    out: set[str] = set()
+    for component, key in _CHARGED_COMPONENT_FIELDS.items():
+        raw = cost_breakdown.get(key)
+        try:
+            value = float(raw) if raw is not None else 0.0
+        except (TypeError, ValueError):
+            continue
+        if value == value and value not in (float("inf"), float("-inf")) and value != 0.0:
+            out.add(component)
+    return frozenset(out)
+
+
+def _pnl_caveats(settings: Settings, charged: frozenset[str] = frozenset()) -> list[Caveat]:
+    """Realism caveats from the configuration in force.
+
+    ``charged`` names the components the record itself proves were charged
+    (see :func:`charged_cost_components`). A persisted paper session that paid
+    slippage and financing must not be labelled "slippage not modelled" just
+    because this API process was started with the default settings: the
+    caveat would be false about that row.
+    """
     out: list[Caveat] = []
-    if settings.slippage_model == "zero":
+    if settings.slippage_model == "zero" and "slippage" not in charged:
         out.append(
             Caveat(
                 code="slippage_not_modelled",
@@ -165,7 +203,7 @@ def _pnl_caveats(settings: Settings) -> list[Caveat]:
                 direction="optimistic",
             )
         )
-    if settings.financing_model == "none":
+    if settings.financing_model == "none" and "financing" not in charged:
         out.append(
             Caveat(
                 code="financing_not_modelled",
@@ -201,12 +239,18 @@ def realism_caveats(
     affects: str = "net_pnl",
     sample_size: int | None = None,
     min_sample: int = 80,
+    charged: frozenset[str] | None = None,
 ) -> tuple[Caveat, ...]:
     """Compute the qualifiers that actually apply to one figure.
 
     Driven by the configuration in force and by the figure's own provenance and
     sample size, so the text changes when the platform changes. Nothing here is
     a fixed string chosen by a page author.
+
+    ``charged`` is the set of cost components the underlying record proves it
+    charged (for a paper-journal row, :meth:`Platform.session_charged_costs`).
+    It only ever REMOVES a "not modelled" caveat that the record contradicts;
+    it never adds a claim the configuration does not support.
     """
     out: list[Caveat] = []
 
@@ -216,7 +260,7 @@ def realism_caveats(
         Provenance.OUT_OF_SAMPLE,
         Provenance.HOLDOUT,
     ):
-        out.extend(_pnl_caveats(settings))
+        out.extend(_pnl_caveats(settings, charged or frozenset()))
         out.append(
             Caveat(
                 code="simulated_execution",
@@ -242,7 +286,11 @@ def realism_caveats(
                 direction="optimistic",
             )
         )
-        out.extend(c for c in _pnl_caveats(settings) if c.code != "simulated_execution")
+        out.extend(
+            c
+            for c in _pnl_caveats(settings, charged or frozenset())
+            if c.code != "simulated_execution"
+        )
     elif provenance is Provenance.BROKER_DEMO:
         out.append(
             Caveat(
@@ -284,12 +332,14 @@ def figure(
     affects: str = "",
     estimated: bool = False,
     extra_caveats: Sequence[Caveat] = (),
+    charged: frozenset[str] | None = None,
 ) -> Figure:
     """Build a :class:`Figure`, attaching the caveats that genuinely apply."""
     caveats: tuple[Caveat, ...] = ()
     if settings is not None and affects:
         caveats = realism_caveats(
-            settings, provenance, affects=affects, sample_size=sample_size
+            settings, provenance, affects=affects, sample_size=sample_size,
+            charged=charged,
         )
     if extra_caveats:
         caveats = caveats + tuple(extra_caveats)

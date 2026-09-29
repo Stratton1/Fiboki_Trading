@@ -20,10 +20,16 @@ from datetime import UTC, datetime
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from fiboki.api.platform import Platform
+from fiboki.api.platform import HeartbeatReading, Platform
 from fiboki.api.settings import Settings
 
-__all__ = ["HealthCheck", "HealthReport", "build_health"]
+__all__ = [
+    "HealthCheck",
+    "HealthReport",
+    "build_health",
+    "heartbeat_check",
+    "paper_journal_check",
+]
 
 _ORDER = {"ok": 0, "degraded": 1, "down": 2}
 
@@ -53,6 +59,88 @@ class HealthReport(BaseModel):
     checks: tuple[HealthCheck, ...]
     #: Set when the report itself should not be trusted as a green light.
     advisory: str = ""
+
+
+#: Heartbeat reasons that mean "nothing has ever been written where we look".
+_NEVER_WRITTEN = {"no_path", "file_missing", "no_heartbeat_table", "no_rows"}
+
+
+def heartbeat_check(beat: HeartbeatReading, stale_after: float) -> tuple[str, str]:
+    """``(status, detail)`` for the worker heartbeat, from one reading.
+
+    The staleness rule is the platform's (``age >= stale_after`` is stale,
+    :func:`fiboki.api.platform.read_worker_heartbeat`); this function only
+    words it. A beat exactly at the threshold is therefore stale here too.
+    """
+    if beat.state == "absent":
+        if beat.reason == "unreadable":
+            return (
+                "down",
+                "The worker heartbeat store is unreadable, so worker liveness is "
+                f"UNKNOWN (not 'never started'). {beat.detail}",
+            )
+        if beat.reason in _NEVER_WRITTEN:
+            return (
+                "down",
+                "No worker heartbeat has ever been written. Nothing is evaluating "
+                f"signals in this deployment. [{beat.reason}] {beat.detail}",
+            )
+        return ("down", f"Worker liveness is unknown [{beat.reason}]: {beat.detail}")
+    age = beat.age_seconds if beat.age_seconds is not None else float("nan")
+    suffix = " (mtime fallback, not a heartbeat row)" if beat.reason == "mtime_fallback" else ""
+    if beat.state == "stale":
+        return (
+            "down",
+            f"Worker heartbeat is {age:.0f}s old (stale at {stale_after:.0f}s){suffix}.",
+        )
+    return ("ok", f"Worker beat {age:.0f}s ago{suffix}.")
+
+
+def paper_journal_check(platform: Platform) -> HealthCheck | None:
+    """A paper journal that exists but does not fully parse degrades health.
+
+    ``None`` when no journal exists at all: the seed fixture is then served and
+    the ``data_provenance`` check already says so.
+    """
+    try:
+        journal = platform.journal
+    except Exception as exc:  # pragma: no cover - reader never raises by contract
+        return HealthCheck(
+            name="paper_journal",
+            status="degraded",
+            detail=f"The paper journal could not be read ({type(exc).__name__}).",
+            critical=False,
+        )
+    if journal is None:
+        return None
+    if not journal.sessions:
+        return HealthCheck(
+            name="paper_journal",
+            status="degraded",
+            detail=(
+                f"A paper journal exists at {journal.root} but none of its "
+                f"{len(journal.errors)} session(s) could be read; trades, positions "
+                "and the account are UNAVAILABLE, not empty."
+            ),
+            critical=False,
+        )
+    if journal.errors:
+        names = ", ".join(name for name, _ in journal.errors)
+        return HealthCheck(
+            name="paper_journal",
+            status="degraded",
+            detail=(
+                f"{len(journal.errors)} paper session(s) could not be read and are "
+                f"excluded from every figure: {names}."
+            ),
+            critical=False,
+        )
+    return HealthCheck(
+        name="paper_journal",
+        status="ok",
+        detail=f"{len(journal.sessions)} paper session(s) read without error.",
+        critical=False,
+    )
 
 
 def build_health(platform: Platform, settings: Settings) -> HealthReport:
@@ -98,21 +186,13 @@ def build_health(platform: Platform, settings: Settings) -> HealthReport:
         )
     )
 
-    age = platform.worker_heartbeat_age_seconds()
-    stale = settings.worker_heartbeat_stale_seconds
-    if age is None:
-        worker_status, worker_detail = (
-            "down",
-            "No worker heartbeat has ever been written. Nothing is evaluating "
-            "signals in this deployment.",
-        )
-    elif age > stale:
-        worker_status, worker_detail = (
-            "down",
-            f"Worker heartbeat is {age:.0f}s old (stale after {stale:.0f}s).",
-        )
-    else:
-        worker_status, worker_detail = ("ok", f"Worker beat {age:.0f}s ago.")
+    # One reading, judged by the platform's own rule (age >= threshold is
+    # stale), so /api/health, /api/system/workers and the stream heartbeat can
+    # never disagree about the same beat. The detail is keyed on WHY the age is
+    # unknown: an unreadable store is not a store nobody ever wrote to.
+    beat = platform.worker_heartbeat()
+    age = beat.age_seconds
+    worker_status, worker_detail = heartbeat_check(beat, settings.worker_heartbeat_stale_seconds)
     checks.append(
         HealthCheck(
             name="worker_heartbeat",
@@ -121,6 +201,10 @@ def build_health(platform: Platform, settings: Settings) -> HealthReport:
             critical=True,
         )
     )
+
+    journal_check = paper_journal_check(platform)
+    if journal_check is not None:
+        checks.append(journal_check)
 
     intact, broken_at = platform.audit.verify_chain()
     checks.append(

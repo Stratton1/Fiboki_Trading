@@ -26,13 +26,23 @@ from fiboki.api.logging import (
 )
 from fiboki.api.platform import build_platform
 from fiboki.api.routers import auth as auth_router
+from fiboki.api.routers import command as command_router
+from fiboki.api.routers import incidents as incidents_router
 from fiboki.api.routers import intelligence as intelligence_router
 from fiboki.api.routers import lifecycle as lifecycle_router
 from fiboki.api.routers import markets as markets_router
 from fiboki.api.routers import research as research_router
+from fiboki.api.routers import stream as stream_router
 from fiboki.api.routers import system as system_router
 from fiboki.api.routers import trading as trading_router
-from fiboki.api.security import CSRF_HEADER, LoginRateLimiter, SessionStore
+from fiboki.api.security import (
+    CSRF_HEADER,
+    LoginRateLimiter,
+    SessionStore,
+    current_principal,
+    require_admin,
+    require_operator,
+)
 from fiboki.api.settings import Settings, load_settings
 
 log = logging.getLogger("fiboki.api")
@@ -71,10 +81,7 @@ def create_app(settings: Settings | None = None, *, configure_logs: bool = True)
     app = FastAPI(
         title="Fiboki V2 API",
         version="2.0.0",
-        description=(
-            "Every numeric field in every response carries a Provenance. There is "
-            "no endpoint that can enable live execution."
-        ),
+        description=API_DESCRIPTION,
         lifespan=lifespan,
         docs_url="/api/docs",
         openapi_url="/api/openapi.json",
@@ -155,15 +162,112 @@ def create_app(settings: Settings | None = None, *, configure_logs: bool = True)
     for module in (
         auth_router,
         system_router,
+        incidents_router,
         trading_router,
         lifecycle_router,
         research_router,
         markets_router,
         intelligence_router,
+        command_router,
+        stream_router,
     ):
         app.include_router(module.router)
 
+    install_openapi_auth(app, settings)
     return app
+
+
+API_DESCRIPTION = (
+    "Every numeric field in every response carries a Provenance. There is no "
+    "endpoint that can enable live execution.\n\n"
+    "**Authentication.** A session is an httpOnly cookie issued by "
+    "`POST /api/auth/login` (`sessionCookie`). Every mutating request "
+    "additionally needs the double-submit CSRF header (`csrfHeader`, equal to "
+    "the readable `fiboki_csrf` cookie) and an `Origin` (or `Referer`) on the "
+    "deployment's exact allow-list. `x-fiboki-auth` on each operation states "
+    "the requirement: `public` (no session), `session` (any signed-in role), "
+    "`operator` or `admin` (role plus CSRF plus Origin); login is `origin` "
+    "(allow-listed Origin, no session) and logout `csrf`. `GET /api/stream` is "
+    "`session`; it also refuses a present Origin/Referer that is not "
+    "allow-listed. Nothing here reads a credential from a URL."
+)
+
+
+#: Routes that check auth INSIDE the handler rather than through a dependency,
+#: so the dependency walk below cannot see it. Kept beside the walk so the
+#: published schema never calls one of them public.
+_INLINE_AUTH: dict[tuple[str, str], tuple[str, list[dict[str, list[str]]]]] = {
+    ("GET", "/api/auth/me"): ("session", [{"sessionCookie": []}]),
+    ("POST", "/api/auth/login"): ("origin", []),
+    ("POST", "/api/auth/logout"): ("csrf", [{"csrfHeader": []}]),
+}
+
+
+def _dependency_calls(dependant: Any) -> set[Any]:
+    out: set[Any] = set()
+    for sub in dependant.dependencies:
+        out.add(sub.call)
+        out |= _dependency_calls(sub)
+    return out
+
+
+def install_openapi_auth(app: FastAPI, settings: Settings) -> None:
+    """Publish the auth model in ``/api/openapi.json`` for type generation.
+
+    Derived from each route's real dependencies, not written by hand, so the
+    schema cannot claim a route is protected when it is not.
+    """
+    from fastapi.openapi.utils import get_openapi
+    from fastapi.routing import APIRoute
+
+    def build() -> dict[str, Any]:
+        if app.openapi_schema:
+            return app.openapi_schema
+        schema = get_openapi(
+            title=app.title,
+            version=app.version,
+            description=app.description,
+            routes=app.routes,
+        )
+        schemes = schema.setdefault("components", {}).setdefault("securitySchemes", {})
+        schemes["sessionCookie"] = {
+            "type": "apiKey",
+            "in": "cookie",
+            "name": settings.cookie_name,
+            "description": "httpOnly session cookie from POST /api/auth/login.",
+        }
+        schemes["csrfHeader"] = {
+            "type": "apiKey",
+            "in": "header",
+            "name": CSRF_HEADER,
+            "description": "Must equal the fiboki_csrf cookie. Mutating requests "
+            "also need an allow-listed Origin or Referer.",
+        }
+        for route in app.routes:
+            if not isinstance(route, APIRoute) or not route.include_in_schema:
+                continue
+            calls = _dependency_calls(route.dependant)
+            if require_admin in calls:
+                level, security = "admin", [{"sessionCookie": [], "csrfHeader": []}]
+            elif require_operator in calls:
+                level, security = "operator", [{"sessionCookie": [], "csrfHeader": []}]
+            elif current_principal in calls:
+                level, security = "session", [{"sessionCookie": []}]
+            else:
+                level, security = "public", []
+            for method in route.methods:
+                op = schema.get("paths", {}).get(route.path_format, {}).get(method.lower())
+                if op is None:
+                    continue
+                op_level, op_security = _INLINE_AUTH.get(
+                    (method, route.path_format), (level, security)
+                )
+                op["x-fiboki-auth"] = op_level
+                op["security"] = op_security
+        app.openapi_schema = schema
+        return schema
+
+    app.openapi = build  # type: ignore[method-assign]
 
 
 app = None  # populated by ASGI servers via the factory below

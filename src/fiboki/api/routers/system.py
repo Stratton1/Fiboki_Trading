@@ -27,6 +27,7 @@ from fiboki.api.health import HealthReport, build_health
 from fiboki.api.logging import current_correlation_id
 from fiboki.api.models import Envelope, ExecutionModeBanner, Page, SourceNote
 from fiboki.api.provenance import Figure
+from fiboki.api.routers.trading import KillSwitchDisarmPreflightView
 from fiboki.api.security import Principal, require_admin
 from fiboki.core.enums import Provenance
 from fiboki.risk.killswitch import KillSwitchMode
@@ -486,6 +487,25 @@ def disarm_kill_switch(
         source_ip=request.client.host if request.client else "",
     )
     return kill_switch(platform, settings)
+
+
+@router.get(
+    "/kill-switch/disarm/preflight",
+    response_model=Envelope[KillSwitchDisarmPreflightView],
+)
+def kill_switch_disarm_preflight(
+    platform: PlatformDep, settings: SettingsDep
+) -> Envelope[KillSwitchDisarmPreflightView]:
+    """Server-computed consequences of ``POST /api/system/kill-switch/disarm``.
+
+    The canonical path, beside the switch it describes. The earlier path
+    ``GET /api/trading/preflight/kill-switch-disarm`` serves the identical body
+    and is kept as an alias for one release. One implementation: this route
+    delegates, so the two can never disagree.
+    """
+    from fiboki.api.routers import trading as trading_router
+
+    return trading_router.kill_switch_disarm_preflight(platform, settings)
 
 
 @router.get("/kill-switch/history", response_model=Page[dict])

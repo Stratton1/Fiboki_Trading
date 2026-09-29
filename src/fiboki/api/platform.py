@@ -24,6 +24,7 @@ the main file's mtime can stay hours old while the worker beats every second.
 """
 from __future__ import annotations
 
+import json
 import logging
 import sqlite3
 import threading
@@ -513,6 +514,86 @@ class Platform:
             + (f"; {len(journal.errors)} unreadable session(s)" if journal.errors else "")
             + "."
         )
+
+    # ------------------------------------------------ read-only session files
+
+    def _session_dir(self, session_id: str) -> Path | None:
+        """The directory of a loaded session, or ``None``. Never a guessed path."""
+        journal = self.journal
+        if journal is None:
+            return None
+        for session in journal.sessions:
+            if session.session_id == session_id:
+                return session.path
+        return None
+
+    def session_summary(self, session_id: str) -> dict[str, Any] | None:
+        """The session's ``summary.json`` as written, read-only.
+
+        ``None`` when the session is unknown or the file cannot be parsed. The
+        reader has already refused a session whose summary does not parse, so
+        ``None`` here for a loaded session means it changed underneath us.
+        """
+        directory = self._session_dir(session_id)
+        if directory is None:
+            return None
+        try:
+            raw = json.loads((directory / "summary.json").read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            return None
+        return raw if isinstance(raw, dict) else None
+
+    def session_charged_costs(self, session_id: str) -> frozenset[str]:
+        """Cost components the session's summary says were actually charged.
+
+        Read from ``summary.json``'s ``cost_breakdown`` (a component counts as
+        charged when its total is non-zero). An absent breakdown is the empty
+        set, never "everything was charged".
+        """
+        from fiboki.api.provenance import charged_cost_components
+
+        summary = self.session_summary(session_id) or {}
+        breakdown = summary.get("cost_breakdown")
+        return charged_cost_components(breakdown if isinstance(breakdown, dict) else {})
+
+    def session_telemetry(self, session_id: str) -> list[dict[str, Any]]:
+        """The session's ``telemetry.jsonl`` gateway attempts, read-only.
+
+        A missing file is an empty list; an unparseable line is skipped (the
+        count of skipped lines is not needed by any caller today).
+        """
+        directory = self._session_dir(session_id)
+        if directory is None:
+            return []
+        path = directory / "telemetry.jsonl"
+        if not path.exists():
+            return []
+        out: list[dict[str, Any]] = []
+        try:
+            lines = path.read_text(encoding="utf-8").splitlines()
+        except OSError:
+            return []
+        for line in lines:
+            if not line.strip():
+                continue
+            try:
+                row = json.loads(line)
+            except ValueError:
+                continue
+            if isinstance(row, dict):
+                out.append(row)
+        return out
+
+    def kill_switch_replayed(self) -> Any:
+        """Kill-switch state replayed from the journal file NOW, read-only.
+
+        ``self.kill_switch.state`` is the state this process last replayed or
+        wrote; another process (a worker, a second API) appending to the same
+        journal is only visible through a fresh replay. Constructing a
+        :class:`KillSwitch` over the existing journal object reads its events
+        and writes nothing.
+        """
+        return KillSwitch(self.kill_switch.journal).state
 
     # ------------------------------------------------------------ trades
 

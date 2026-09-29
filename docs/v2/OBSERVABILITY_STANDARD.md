@@ -235,7 +235,8 @@ Every field is **measured at request time**:
 | `database` | yes | a real connection and a real `SELECT 1`, with latency |
 | `migration_revision` | no | reads `alembic_version`. `null` is reported as a **degradation**, not as fine |
 | `build_identity` | no | `FIBOKI_BUILD_SHA`; empty means "this process cannot say which commit it is running" |
-| `worker_heartbeat` | yes | age in seconds. **`null` (never beaten) is a different state from `0`** and is reported as `down` with *"Nothing is evaluating signals in this deployment"* |
+| `worker_heartbeat` | yes | age in seconds. **`null` (never beaten) is a different state from `0`** and is reported as `down` with *"Nothing is evaluating signals in this deployment"*. Staleness is the platform's rule, **age >= threshold**, so a beat exactly at the threshold is stale here, in `/api/system/workers` and in the stream heartbeat alike. An **unreadable** store says *unreadable, liveness UNKNOWN*, never *never written* |
+| `paper_journal` | no | present only when a paper journal exists. Any session that does not parse makes it `degraded` and names the session; a journal with no readable session says the record is *unavailable, not empty* |
 
 The report also carries the execution mode, uptime, Python version, and an `advisory` field set
 when the report itself should not be treated as a green light — for example when the session
@@ -253,6 +254,49 @@ produces that something from a fixed seed, and it is **labelled everywhere it su
 and health is **DEGRADED rather than OK**. Nothing in it pretends to be a measurement, and each
 generated trade still carries a real `Provenance` drawn from a realistic mix — because the whole
 point of the UI work is that a mixed-provenance table renders honestly.
+
+### 7.1 The live stream, incidents and the attention queue
+
+`GET /api/stream` (`api/routers/stream.py`, sse-starlette 3.0.3) is the workstation's one live
+feed. Contract, for the frontend and for anyone debugging it:
+
+- Envelope: `id: <topic>:<seq>`, `event: <topic>.<kind>`, `data: {topic, seq, kind, as_of,
+  source, data}`; kinds `snapshot | delta | tombstone | heartbeat`. Entities are the REST shapes
+  (a position is a `PositionRowView`, health is the `HealthReport`), so every number is the same
+  `Figure` REST returns, with the same named exceptions.
+- Snapshot per topic on subscribe; then deltas keyed by entity id (full upserts, idempotent) and
+  tombstones. A snapshot carries the topic's current seq, so **dedupe on `(event, id)`** and ignore
+  any event whose seq is not above the applied one.
+- Per-topic seq starting at a per-process base (epoch ms), so a restart forces a visible gap.
+  Ring buffer of 500 events per topic; `Last-Event-ID` is a cut across all topics (one hub, one
+  publication order) and the gap is replayed; a topic whose needed events aged out gets a fresh
+  snapshot.
+- Heartbeat every 5 s: `server_time`, `worker_heartbeat_age_s` (a Figure from the
+  `worker_heartbeat` table reader, `null` when nothing ever beat), `worker_state`, mode, kill
+  switch and every topic's `seq`/`as_of`/`source_kind`. **A connected stream over a dead worker
+  therefore shows stale** (§10 rule 1). A revoked session ends the stream at the next heartbeat.
+- Health is re-evaluated on the stream's 15 s timer, never per subscriber. Mode and kill switch
+  come from a fresh replay of the kill-switch journal each second, so an arm by another process
+  is seen within about a second. Positions, fleet and risk use the REST readers and are `absent`
+  or `seed` exactly as REST says. `marks` is `absent` until a price feed is composed into the API
+  (ARCHITECTURE.md §12); `publish_mark` coalesces to 4 Hz per instrument, latest wins.
+- **The stream never starts a worker.** It is an asyncio task inside the API process that reads
+  the stores workers write, and it runs only while someone is subscribed.
+  `tests/api/test_stream.py::test_the_stream_never_starts_a_worker` enforces it.
+
+Incidents (`GET /api/system/incidents`) are derived, read-only, from the alert log
+(`FIBOKI_ALERT_LOG`, the `FileChannel` JSONL) and the kill-switch journal: repeated alerts with
+one dedupe key fold into one incident (a 6 h silence starts a new one), a disarm resolves an arm,
+and each carries its timeline. Without `FIBOKI_ALERT_LOG` the list says so in a caveat, because
+an empty incident list is not a quiet system. Acknowledge and note are audited appends to
+`<state>/incident_annotations.jsonl`; an acknowledgement is not a resolution, and a recurrence
+re-opens the incident.
+
+`GET /api/command/attention` ranks kill switch, limit breaches, open incidents, stale workers,
+unhealthy checks, strategies awaiting review and warning-level record caveats, server-side:
+`score = SEVERITY_WEIGHT + CATEGORY_WEIGHT`, severity always dominating, then newest, then id.
+The weights are pinned by a test. A source that cannot be read becomes an item of its own.
+Breaches computed on the seed fixture are not raised.
 
 ## 8. Audit trails as observability
 
