@@ -4,8 +4,9 @@ V1's returned ``{"status": "ok", "version": "1.0.0"}`` from a literal and was
 green with the database stopped. Every field below is measured at request time:
 
 * **database** — a real connection and a real ``SELECT 1``.
-* **migration_revision** — read from ``alembic_version``. ``null`` means the
-  revision is unknown, which is reported as a degradation rather than as "fine".
+* **migration_revision** — the ledger's stamped ``schema_revision`` (V1's
+  ``alembic_version`` as fallback) compared with the revision this code would
+  create. ``null`` (unknown) and a mismatch are both degradations.
 * **build_sha** — injected at deploy. Empty is reported as unknown.
 * **worker_heartbeat_age_seconds** — ``null`` when a worker has never beaten,
   which is a different state from ``0`` and renders differently.
@@ -22,6 +23,14 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from fiboki.api.platform import HeartbeatReading, Platform
 from fiboki.api.settings import Settings
+
+
+def expected_schema_revision() -> str:
+    """What this build's ledger code would stamp (lazy import: api must not load
+    the research package at import time)."""
+    from fiboki.research.experiment import schema_revision
+
+    return schema_revision()
 
 __all__ = [
     "HealthCheck",
@@ -158,16 +167,32 @@ def build_health(platform: Platform, settings: Settings) -> HealthReport:
     )
 
     revision = platform.migration_revision()
+    expected = expected_schema_revision()
+    if revision is None:
+        revision_status, revision_detail = (
+            "degraded",
+            "No schema_revision (or alembic_version) row is readable. The schema "
+            "version of this deployment is unknown; the worker stamps it when it "
+            "opens the ledger.",
+        )
+    elif revision == expected:
+        revision_status, revision_detail = "ok", f"at revision {revision}"
+    elif revision.startswith("ledger_"):
+        revision_status, revision_detail = (
+            "degraded",
+            f"database at {revision}, this code expects {expected}: the ledger was "
+            "last opened by a different build (restart the worker after upgrading).",
+        )
+    else:
+        # A V1 alembic revision: known, but not this code's schema.
+        revision_status, revision_detail = "degraded", (
+            f"at V1 migration {revision}; the V2 ledger has not stamped this file yet."
+        )
     checks.append(
         HealthCheck(
             name="migration_revision",
-            status="ok" if revision else "degraded",
-            detail=(
-                f"at revision {revision}"
-                if revision
-                else "No alembic_version row is readable. The schema version of "
-                "this deployment is unknown."
-            ),
+            status=revision_status,
+            detail=revision_detail,
             critical=False,
         )
     )

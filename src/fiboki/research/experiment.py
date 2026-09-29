@@ -300,6 +300,70 @@ _TRIGGERS = (
 require_key_versions(Base.metadata)
 
 
+def schema_revision() -> str:
+    """The revision of the schema THIS CODE creates: a content hash of every
+    table, column (name, type, nullability, default) and trigger statement.
+
+    There is no alembic environment in V2: the ledger evolves by
+    ``create_all`` plus ``add_missing_columns``. The API's health check used
+    to read ``alembic_version``, which nothing here writes, so it reported
+    "schema version unknown" on every deployment forever. The ledger now
+    stamps this value into ``schema_revision`` on open (append-only: a new
+    row when it changes, never an update), and health compares the newest
+    stamp with what the running code expects. Deterministic by construction;
+    ``tests/unit/test_experiment_schema_revision.py`` pins it.
+    """
+    import hashlib
+
+    parts: list[str] = []
+    for table in sorted(Base.metadata.tables.values(), key=lambda x: x.name):
+        for column in table.columns:
+            default = column.server_default.arg if column.server_default is not None else None
+            parts.append(
+                f"{table.name}.{column.name}:{column.type!s}:{int(column.nullable)}:"
+                f"{getattr(default, 'text', default)}"
+            )
+    parts.extend(key_version_column(name) for name in KEY_COLUMNS)
+    parts.extend(" ".join(ddl.split()) for ddl in _TRIGGERS)
+    digest = hashlib.sha256("\n".join(parts).encode("utf-8")).hexdigest()
+    return f"ledger_{digest[:12]}"
+
+
+def _utcnow_iso() -> str:
+    from datetime import UTC, datetime
+
+    return datetime.now(UTC).isoformat(timespec="microseconds")
+
+
+SCHEMA_REVISION_TABLE = "schema_revision"
+_SCHEMA_REVISION_DDL = (
+    f"CREATE TABLE IF NOT EXISTS {SCHEMA_REVISION_TABLE} ("
+    "revision TEXT PRIMARY KEY, applied_at TEXT NOT NULL)"
+)
+
+
+def read_schema_revision(path: str | Path) -> str | None:
+    """The newest stamped revision in the ledger at ``path``, read-only.
+
+    ``None`` when the file, the table or a row is missing. Falls back to a
+    V1-era ``alembic_version`` table so a migrated ledger still reports.
+    """
+    import sqlite3
+
+    try:
+        with sqlite3.connect(f"file:{path}?mode=ro", uri=True, timeout=2.0) as conn:
+            try:
+                row = conn.execute(
+                    f"SELECT revision FROM {SCHEMA_REVISION_TABLE} "
+                    "ORDER BY applied_at DESC, rowid DESC LIMIT 1"
+                ).fetchone()
+            except sqlite3.OperationalError:
+                row = conn.execute("SELECT version_num FROM alembic_version").fetchone()
+    except Exception:
+        return None
+    return str(row[0]) if row else None
+
+
 # --------------------------------------------------------------------------
 # Domain objects
 # --------------------------------------------------------------------------
@@ -535,6 +599,19 @@ class ExperimentLedger:
             ExperimentRow.__tablename__,
             {key_version_column(name): unstamped_column_ddl(32) for name in KEY_COLUMNS},
         )
+        # Stamp the schema this code created (or found and extended). INSERT OR
+        # IGNORE: reopening under the same code writes nothing; new code
+        # appends a row and the history of revisions stays in the file.
+        self.schema_revision = schema_revision()
+        with self._engine.begin() as conn:
+            conn.execute(text(_SCHEMA_REVISION_DDL))
+            conn.execute(
+                text(
+                    f"INSERT OR IGNORE INTO {SCHEMA_REVISION_TABLE} (revision, applied_at) "
+                    "VALUES (:revision, :applied_at)"
+                ),
+                {"revision": self.schema_revision, "applied_at": _utcnow_iso()},
+            )
         self._session_factory = sessionmaker(bind=self._engine, future=True)
 
     # ------------------------------------------------------------ lifecycle

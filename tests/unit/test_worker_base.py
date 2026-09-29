@@ -219,6 +219,15 @@ def test_the_refused_worker_alerts_on_contention(store, db_path):
         )
         second.run(install_signals=False)
         assert AlertEvent.WORKER_LEASE_CONTENDED in channel.events()
+        # Retries under launchd get new pids; the incident is the (lease, holder).
+        alert = next(a for a in channel.sent if a.event is AlertEvent.WORKER_LEASE_CONTENDED)
+        assert alert.dedupe_key == "lease_contended:research:a@h:1"
+        third = ScriptedWorker(
+            [CycleResult.idle()], _config(), other, worker="c@h:3", dispatcher=dispatcher
+        )
+        third.run(install_signals=False)
+        keys = {a.dedupe_key for a in channel.sent if a.event is AlertEvent.WORKER_LEASE_CONTENDED}
+        assert keys == {"lease_contended:research:a@h:1"}, "same holder, same incident"
     finally:
         other.close()
 

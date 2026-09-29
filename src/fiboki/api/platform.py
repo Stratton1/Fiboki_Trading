@@ -678,16 +678,15 @@ class Platform:
         )
 
     def migration_revision(self) -> str | None:
-        """Read ``alembic_version`` from the database. ``None`` means unknown."""
+        """The ledger's newest stamped schema revision (``schema_revision``
+        table, written by :class:`fiboki.research.experiment.ExperimentLedger`
+        on open; a V1 ``alembic_version`` as fallback). ``None`` means unknown."""
+        from fiboki.research.experiment import read_schema_revision
+
         path = self._experiment_db
         if path is None:
             return None
-        try:
-            with sqlite3.connect(f"file:{path}?mode=ro", uri=True, timeout=2.0) as conn:
-                row = conn.execute("SELECT version_num FROM alembic_version").fetchone()
-        except Exception:
-            return None
-        return str(row[0]) if row else None
+        return read_schema_revision(path)
 
     def worker_heartbeat(self) -> HeartbeatReading:
         """Liveness from the worker's ``worker_heartbeat`` table, read-only."""

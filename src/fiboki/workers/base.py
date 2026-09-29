@@ -975,11 +975,16 @@ class Worker(abc.ABC):
             )
             print(f"FATAL: {exc}", file=sys.stderr, flush=True)
             if self.dispatcher is not None:
+                # One incident per (lease, holder): launchd retries a refused
+                # start every ThrottleInterval, and each retry has a new pid in
+                # its source, so without this key every retry was a new
+                # CRITICAL incident (four for one stale worker, 2026-09-29).
                 self.dispatcher.fire(
                     AlertEvent.WORKER_LEASE_CONTENDED,
                     f"a second {self.config.kind} worker tried to start while "
                     f"{exc.holder} holds the {exc.lease_name} lease",
                     source=self.worker_id,
+                    dedupe_key=f"lease_contended:{exc.lease_name}:{exc.holder}",
                     holder=exc.holder,
                     lease=exc.lease_name,
                 )
@@ -1047,6 +1052,7 @@ class Worker(abc.ABC):
                         AlertEvent.WORKER_LEASE_CONTENDED,
                         str(exc),
                         source=self.worker_id,
+                        dedupe_key=f"lease_lost:{self.config.kind}:{self.worker_id}",
                     )
                 return EXIT_FATAL
 
