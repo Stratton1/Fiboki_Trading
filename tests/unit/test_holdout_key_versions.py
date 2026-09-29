@@ -178,13 +178,21 @@ class TestUnstampedRows:
         """
         from sqlalchemy import text
 
+        from fiboki.validation.holdout import install_append_only_triggers
+
+        # A file written before the column existed also predates the
+        # append-only triggers, so the trigger is lifted to write that state
+        # and restored straight after (the same pattern as the experiment
+        # ledger's key-version tests).
         with registry._engine.begin() as conn:
+            conn.exec_driver_sql("DROP TRIGGER IF EXISTS holdout_consumption_no_update")
             conn.execute(
                 text(
                     "UPDATE holdout_consumption "
                     "SET strategy_content_hash_key_version = ''"
                 )
             )
+        install_append_only_triggers(registry._engine)
 
     def test_an_unstamped_row_is_refused_not_assumed(self, registry, document) -> None:
         registry.claim(DATASET, document.content_hash(), actor="joe")

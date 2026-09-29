@@ -44,7 +44,6 @@ appearing in reconciliation reports until a human or the venue resolves it.
 from __future__ import annotations
 
 import json
-import os
 from collections.abc import Iterable
 from dataclasses import asdict, dataclass, field, replace
 from enum import Enum
@@ -71,6 +70,7 @@ from fiboki.core.contracts import (
     RiskDecision,
     TradePlan,
 )
+from fiboki.core.durable import durable_append, read_payloads, touch_durable
 from fiboki.core.enums import Direction, ExecutionMode, OrderType
 from fiboki.risk.gateway import ExitContext, RiskContext, RiskGateway
 
@@ -274,33 +274,36 @@ class InMemoryIntentStore:
 
 
 class JsonlIntentStore:
-    """Append-only, fsynced JSON-lines store. Last line per client_ref wins.
+    """Append-only, durable, self-verifying JSON-lines store. Last line per client_ref wins.
 
     Append-only because the audit question is "what did we believe, when?", not
-    "what do we believe now". ``fsync`` on every write because the crash we are
-    defending against is exactly the one that eats the page cache.
+    "what do we believe now". Every write goes through
+    :func:`fiboki.core.durable.durable_append` -- a CRC-framed line, flushed
+    with ``F_FULLFSYNC`` on macOS (plain ``fsync`` does not reach the platter
+    there) and a directory ``fsync`` when the file is created -- because the
+    crash we are defending against is exactly the one that eats the page cache.
+
+    A torn final line (the process died mid-write) is quarantined to
+    ``<file>.torn-<ts>`` and reported CRITICAL on replay instead of making the
+    store unopenable. That is safe by construction: :meth:`write` returns only
+    after the flush and the PENDING intent is written BEFORE dispatch, so a
+    torn intent is one whose dispatch never started. Lines written before
+    framing existed are still read.
     """
 
     def __init__(self, path: str | Path) -> None:
         self.path = Path(path)
-        self.path.parent.mkdir(parents=True, exist_ok=True)
-        self.path.touch(exist_ok=True)
+        touch_durable(self.path)
         self._current: dict[str, OrderIntent] = {}
         self._replay()
 
     def _replay(self) -> None:
-        for line in self.path.read_text(encoding="utf-8").splitlines():
-            line = line.strip()
-            if not line:
-                continue
+        for line in read_payloads(self.path):
             intent = OrderIntent.from_json(line)
             self._current[intent.client_ref] = intent
 
     def write(self, intent: OrderIntent) -> None:
-        with self.path.open("a", encoding="utf-8") as fh:
-            fh.write(intent.to_json() + "\n")
-            fh.flush()
-            os.fsync(fh.fileno())
+        durable_append(self.path, intent.to_json())
         self._current[intent.client_ref] = intent
 
     def get(self, client_ref: str) -> OrderIntent | None:
@@ -310,11 +313,7 @@ class JsonlIntentStore:
         return tuple(self._current[k] for k in sorted(self._current))
 
     def history(self) -> tuple[OrderIntent, ...]:
-        out: list[OrderIntent] = []
-        for line in self.path.read_text(encoding="utf-8").splitlines():
-            if line.strip():
-                out.append(OrderIntent.from_json(line))
-        return tuple(out)
+        return tuple(OrderIntent.from_json(line) for line in read_payloads(self.path))
 
 
 # --------------------------------------------------------------------------

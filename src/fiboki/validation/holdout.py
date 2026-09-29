@@ -57,9 +57,11 @@ from sqlalchemy import (
     UniqueConstraint,
     create_engine,
     select,
+    text,
 )
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, sessionmaker
 
+from fiboki.core.durable import install_sqlite_pragmas
 from fiboki.core.enums import Provenance
 from fiboki.core.versioned_key import (
     UNSTAMPED,
@@ -73,6 +75,7 @@ from fiboki.strategy.dsl import strategy_key_version
 from fiboki.validation.evaluation import DateWindow
 
 __all__ = [
+    "APPEND_ONLY_MESSAGE",
     "HoldoutAlreadyConsumed",
     "HoldoutConsumption",
     "HoldoutError",
@@ -82,6 +85,7 @@ __all__ = [
     "HoldoutSegment",
     "HoldoutToken",
     "UnknownHoldout",
+    "install_append_only_triggers",
 ]
 
 DEFAULT_HOLDOUT_FRACTION = 0.20
@@ -201,6 +205,49 @@ class HoldoutConsumptionRow(Base):
         DateTime(timezone=True), nullable=True
     )
     note: Mapped[str] = mapped_column(Text, default="")
+
+
+class HoldoutOutcomeRow(Base):
+    """The result of a claim's one permitted evaluation. Written once.
+
+    Outcomes used to be written by UPDATE-ing the consumption row, which meant
+    the consumption table could not be made append-only. They now live here,
+    one row per token (UNIQUE), and both tables refuse UPDATE and DELETE at
+    the database (see :data:`_TRIGGERS`). A consumption row written before this
+    table existed may still carry ``outcome_json`` itself; it is read as-is.
+    """
+
+    __tablename__ = "holdout_outcome"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    token: Mapped[str] = mapped_column(String(64), unique=True, index=True)
+    outcome_json: Mapped[dict] = mapped_column(JSON)
+    recorded_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+
+
+#: Raised by the database itself on any UPDATE or DELETE of a claim or an
+#: outcome. ``DELETE FROM holdout_consumption`` used to reset the registry and
+#: hand every strategy a fresh look (audit F, P1-7 item 3).
+APPEND_ONLY_MESSAGE = "holdout registry is append-only: a spent look cannot be edited or removed"
+
+_TRIGGERS: tuple[str, ...] = tuple(
+    f"""
+    CREATE TRIGGER IF NOT EXISTS {table}_no_{op.lower()}
+    BEFORE {op} ON {table}
+    BEGIN
+        SELECT RAISE(ABORT, '{APPEND_ONLY_MESSAGE}');
+    END;
+    """
+    for table in ("holdout_consumption", "holdout_outcome")
+    for op in ("UPDATE", "DELETE")
+)
+
+
+def install_append_only_triggers(engine: Any) -> None:
+    """Create the UPDATE/DELETE triggers (idempotent)."""
+    with engine.begin() as conn:
+        for ddl in _TRIGGERS:
+            conn.execute(text(ddl))
 
 
 class HoldoutKeyRestatementRow(Base):
@@ -353,6 +400,10 @@ class HoldoutRegistry:
             self.db_path.parent.mkdir(parents=True, exist_ok=True)
             url = f"sqlite+pysqlite:///{self.db_path}"
         self._engine = create_engine(url, echo=echo, future=True)
+        # WAL, busy_timeout and synchronous=FULL on EVERY connection (audit F
+        # P2-14): a claim that fails with "database is locked" is a claim a
+        # campaign may retry around.
+        install_sqlite_pragmas(self._engine, synchronous="FULL")
         Base.metadata.create_all(self._engine)
         # A registry file written before the key-version column existed acquires it
         # here, with every existing row UNSTAMPED. ADD COLUMN, never UPDATE: the
@@ -365,6 +416,8 @@ class HoldoutRegistry:
                 key_version_column("strategy_content_hash"): unstamped_column_ddl(32),
             },
         )
+        # AFTER the ADD COLUMN above: DDL does not fire them, UPDATE and DELETE do.
+        install_append_only_triggers(self._engine)
         self._session_factory = sessionmaker(bind=self._engine, future=True)
 
     # ------------------------------------------------------------ lifecycle
@@ -514,7 +567,9 @@ class HoldoutRegistry:
             ).first()
             if row is None:
                 return None
-            return _consumption_from_row(row, self._restatements().get(row.token, UNSTAMPED))
+            return _consumption_from_row(
+                row, self._restatements().get(row.token, UNSTAMPED), self._outcomes().get(row.token)
+            )
 
     # -------------------------------------------------------- key versions
 
@@ -678,7 +733,10 @@ class HoldoutRegistry:
         )
 
     def record_outcome(self, token: HoldoutToken | str, outcome: dict[str, Any]) -> None:
-        """Attach the result of the one permitted evaluation to its claim."""
+        """Attach the result of the one permitted evaluation to its claim.
+
+        Appends a :class:`HoldoutOutcomeRow`; the claim row is never touched.
+        """
         key = token.token if isinstance(token, HoldoutToken) else str(token)
         with self._session_factory() as session:
             row = session.scalars(
@@ -686,19 +744,41 @@ class HoldoutRegistry:
             ).first()
             if row is None:
                 raise HoldoutError(f"unknown holdout token {key!r}")
-            if row.outcome_json is not None:
+            existing = session.scalars(
+                select(HoldoutOutcomeRow).where(HoldoutOutcomeRow.token == key)
+            ).first()
+            if row.outcome_json is not None or existing is not None:
                 raise HoldoutError(
                     f"holdout token {key!r} already carries an outcome; a second "
                     "outcome would mean a second evaluation."
                 )
-            row.outcome_json = dict(outcome)
-            row.outcome_recorded_at = datetime.now(tz=UTC)
-            session.commit()
+            session.add(
+                HoldoutOutcomeRow(
+                    token=key,
+                    outcome_json=dict(outcome),
+                    recorded_at=datetime.now(tz=UTC),
+                )
+            )
+            try:
+                session.commit()
+            except Exception:  # pragma: no cover - race: UNIQUE(token) refused it
+                session.rollback()
+                raise HoldoutError(
+                    f"holdout token {key!r} already carries an outcome; a second "
+                    "outcome would mean a second evaluation."
+                ) from None
+
+    def _outcomes(self) -> dict[str, HoldoutOutcomeRow]:
+        with self._session_factory() as session:
+            rows = session.scalars(select(HoldoutOutcomeRow)).all()
+            session.expunge_all()
+        return {r.token: r for r in rows}
 
     def consumptions(
         self, dataset_version_id: str | None = None
     ) -> list[HoldoutConsumption]:
         restated = self._restatements()
+        outcomes = self._outcomes()
         with self._session_factory() as session:
             stmt = select(HoldoutConsumptionRow).order_by(HoldoutConsumptionRow.id)
             if dataset_version_id is not None:
@@ -706,7 +786,9 @@ class HoldoutRegistry:
                     HoldoutConsumptionRow.dataset_version_id == str(dataset_version_id)
                 )
             return [
-                _consumption_from_row(r, restated.get(r.token, UNSTAMPED))
+                _consumption_from_row(
+                    r, restated.get(r.token, UNSTAMPED), outcomes.get(r.token)
+                )
                 for r in session.scalars(stmt).all()
             ]
 
@@ -726,9 +808,23 @@ def _segment_from_row(row: HoldoutSegmentRow) -> HoldoutSegment:
 
 
 def _consumption_from_row(
-    row: HoldoutConsumptionRow, restated: str = UNSTAMPED
+    row: HoldoutConsumptionRow,
+    restated: str = UNSTAMPED,
+    outcome_row: HoldoutOutcomeRow | None = None,
 ) -> HoldoutConsumption:
     stored = row.strategy_content_hash_key_version or UNSTAMPED
+    # An outcome lives in holdout_outcome; a claim written before that table
+    # existed may carry it inline. Never both: record_outcome refuses that.
+    outcome = (
+        dict(outcome_row.outcome_json)
+        if outcome_row is not None
+        else (dict(row.outcome_json) if row.outcome_json is not None else None)
+    )
+    recorded_at = (
+        _aware(outcome_row.recorded_at)
+        if outcome_row is not None
+        else (_aware(row.outcome_recorded_at) if row.outcome_recorded_at is not None else None)
+    )
     return HoldoutConsumption(
         key_version=resolve_key_version(stored, restated),
         key_version_restated=bool(not stored and restated),
@@ -740,9 +836,7 @@ def _consumption_from_row(
         actor=row.actor or "",
         code_version=row.code_version or "",
         claimed_at=_aware(row.claimed_at),
-        outcome=dict(row.outcome_json) if row.outcome_json is not None else None,
-        outcome_recorded_at=(
-            _aware(row.outcome_recorded_at) if row.outcome_recorded_at is not None else None
-        ),
+        outcome=outcome,
+        outcome_recorded_at=recorded_at,
         note=row.note or "",
     )

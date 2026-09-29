@@ -130,6 +130,17 @@ def make_context(
     **kwargs,
 ) -> RiskContext:
     p = plan or make_plan()
+    # The loss/exposure inputs are Optional on RiskContext and a missing one
+    # BLOCKS (audit F P1-4). This fixture describes a flat, fresh book, so it
+    # says so explicitly rather than relying on a benign default.
+    for name, value in (
+        ("open_risk_amount", 0.0),
+        ("correlated_exposure", 0.0),
+        ("daily_pnl", 0.0),
+        ("weekly_pnl", 0.0),
+        ("fx_quote_to_account", 1.0),
+    ):
+        kwargs.setdefault(name, value)
     return RiskContext(
         plan=p,
         snapshot=snapshot or make_snapshot(as_of=now),

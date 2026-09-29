@@ -5,16 +5,29 @@ lives in an httpOnly + Secure + SameSite cookie, and a CSRF token is issued
 alongside it as a readable cookie for double-submit.
 
 The operator directory is read from ``FIBOKI_OPERATORS`` as
-``user:role:sha256hex`` triples. Passwords are compared with
-:func:`hmac.compare_digest` against a stored hash, and a miss still performs the
-comparison so the response time does not distinguish an unknown user from a
-wrong password.
+``user:role:<hash>`` triples. ``<hash>`` is versioned by its prefix:
+
+* ``scrypt$<n>$<r>$<p>$<salt b64>$<key b64>``: salted scrypt (RFC 7914), the
+  format :func:`hash_password` writes. Generate one with
+  ``python -c "from fiboki.api.routers.auth import hash_password as h; print(h('...'))"``.
+* bare 64-character hex, or ``sha256$<hex>``: LEGACY unsalted SHA-256. Still
+  verified so no operator is locked out by an upgrade, but it is a weak hash
+  (one GPU guesses billions a second and identical passwords share a hash):
+  every successful legacy login logs a warning and ``docs/v2/SECURITY_MODEL.md``
+  says to rotate. Audit F P2-16.
+
+The final comparison is :func:`hmac.compare_digest`, and a miss still performs
+a full scrypt derivation against a dummy so the response time does not
+distinguish an unknown user from a wrong password.
 """
 from __future__ import annotations
 
+import base64
 import hashlib
 import hmac
+import logging
 import os
+import secrets
 from datetime import UTC, datetime
 
 from fastapi import APIRouter, Request, Response, status
@@ -35,7 +48,76 @@ from fiboki.api.security import (
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 
-_DUMMY_HASH = hashlib.sha256(b"fiboki-timing-equaliser").hexdigest()
+_log = logging.getLogger("fiboki.api.auth")
+
+#: scrypt cost. n=2**14, r=8 is ~16 MiB and tens of milliseconds per check:
+#: negligible for two operators, expensive for an offline guesser.
+SCRYPT_N = 2**14
+SCRYPT_R = 8
+SCRYPT_P = 1
+_SCRYPT_DKLEN = 32
+_SCRYPT_MAXMEM = 64 * 1024 * 1024
+SCRYPT_PREFIX = "scrypt$"
+LEGACY_PREFIX = "sha256$"
+
+
+def _b64(data: bytes) -> str:
+    return base64.urlsafe_b64encode(data).decode("ascii").rstrip("=")
+
+
+def _unb64(text: str) -> bytes:
+    return base64.urlsafe_b64decode(text + "=" * (-len(text) % 4))
+
+
+def _scrypt(password: str, salt: bytes, n: int, r: int, p: int) -> bytes:
+    return hashlib.scrypt(
+        password.encode("utf-8"), salt=salt, n=n, r=r, p=p,
+        dklen=_SCRYPT_DKLEN, maxmem=_SCRYPT_MAXMEM,
+    )
+
+
+def hash_password(password: str, *, salt: bytes | None = None) -> str:
+    """``scrypt$n$r$p$salt$key``: the format new directory entries should use.
+
+    Contains no ``:`` or ``,``, so it drops straight into ``FIBOKI_OPERATORS``.
+    """
+    if not password:
+        raise ValueError("refusing to hash an empty password")
+    salt = salt if salt is not None else secrets.token_bytes(16)
+    key = _scrypt(password, salt, SCRYPT_N, SCRYPT_R, SCRYPT_P)
+    return f"{SCRYPT_PREFIX}{SCRYPT_N}${SCRYPT_R}${SCRYPT_P}${_b64(salt)}${_b64(key)}"
+
+
+def is_legacy_hash(stored: str) -> bool:
+    """True for an unsalted SHA-256 entry, which should be rotated."""
+    return not stored.startswith(SCRYPT_PREFIX)
+
+
+def verify_password(password: str, stored: str) -> bool:
+    """Constant-time check of ``password`` against a versioned stored hash.
+
+    Unrecognised formats verify as ``False``; they never raise, so a typo in
+    the directory is a refused login, not a 500.
+    """
+    if stored.startswith(SCRYPT_PREFIX):
+        try:
+            n_text, r_text, p_text, salt_text, key_text = stored[len(SCRYPT_PREFIX):].split("$")
+            n, r, p = int(n_text), int(r_text), int(p_text)
+            salt, expected = _unb64(salt_text), _unb64(key_text)
+            supplied = hashlib.scrypt(
+                password.encode("utf-8"), salt=salt, n=n, r=r, p=p,
+                dklen=len(expected), maxmem=_SCRYPT_MAXMEM,
+            )
+        except (ValueError, TypeError):
+            return False
+        return hmac.compare_digest(supplied, expected)
+    legacy = stored[len(LEGACY_PREFIX):] if stored.startswith(LEGACY_PREFIX) else stored
+    supplied_hex = hashlib.sha256(password.encode("utf-8")).hexdigest()
+    return hmac.compare_digest(supplied_hex, legacy.lower())
+
+
+#: Verified on every miss so an unknown user costs the same as a known one.
+_DUMMY_HASH = hash_password("fiboki-timing-equaliser", salt=b"\x00" * 16)
 
 
 class LoginRequest(BaseModel):
@@ -57,7 +139,7 @@ class PrincipalView(BaseModel):
 
 
 def _directory() -> dict[str, tuple[str, str]]:
-    """``{username: (role, sha256_hex)}`` from ``FIBOKI_OPERATORS``."""
+    """``{username: (role, stored_hash)}`` from ``FIBOKI_OPERATORS``."""
     raw = os.environ.get("FIBOKI_OPERATORS", "").strip()
     out: dict[str, tuple[str, str]] = {}
     for entry in raw.split(","):
@@ -68,7 +150,11 @@ def _directory() -> dict[str, tuple[str, str]]:
         if len(parts) != 3:
             continue
         user, role, digest = parts
-        out[user.strip().lower()] = (role.strip().lower(), digest.strip().lower())
+        stored = digest.strip()
+        # Hex is case-insensitive; base64 in a scrypt entry is NOT.
+        if not stored.startswith(SCRYPT_PREFIX):
+            stored = stored.lower()
+        out[user.strip().lower()] = (role.strip().lower(), stored)
     return out
 
 
@@ -98,9 +184,14 @@ def login(
     limiter.check(username, source)
 
     entry = _directory().get(username)
-    supplied = hashlib.sha256(body.password.encode("utf-8")).hexdigest()
-    expected = entry[1] if entry else _DUMMY_HASH
-    ok = hmac.compare_digest(supplied, expected) and entry is not None
+    stored = entry[1] if entry else _DUMMY_HASH
+    ok = verify_password(body.password, stored) and entry is not None
+    if ok and is_legacy_hash(stored):
+        _log.warning(
+            "operator %s signed in with a LEGACY unsalted sha256 hash; rotate it to "
+            "scrypt (fiboki.api.routers.auth.hash_password)",
+            username,
+        )
 
     if not ok:
         limiter.record_failure(username, source)
@@ -123,6 +214,7 @@ def login(
         )
 
     limiter.record_success(username, source)
+    assert entry is not None  # ok implies it; stated for the type checker
     try:
         role = Role(entry[0])
     except ValueError:

@@ -292,7 +292,8 @@ def from_oanda_instrument(name: str) -> str:
 @dataclass(frozen=True, slots=True)
 class OandaConfig:
     account_id: str
-    api_token: str
+    #: Excluded from ``repr`` so a traceback or a logged config never carries it.
+    api_token: str = field(repr=False)
     base_url: str = f"https://{OANDA_PRACTICE_HOST}"
     mode: ExecutionMode = ExecutionMode.DEMO
     timeout: float = 10.0

@@ -17,18 +17,36 @@ The V1 failures this closes
 
 Delivery guarantees, stated honestly
 ------------------------------------
-This dispatcher is best-effort and in-process.  It does not persist an outbox,
-so an alert raised in the instant before a hard kill can be lost.  The
-mitigation is that the conditions that matter (a stale heartbeat, a divergent
-reconciliation) are *level*, not *edge*: the watchdog re-evaluates them on its
-next tick and fires again.  Anything that must not be lost belongs in a ledger,
-not in an alert.
+Below CRITICAL the dispatcher is best-effort and in-process: an alert raised in
+the instant before a hard kill can be lost.  The mitigation is that the
+conditions that matter (a stale heartbeat, a divergent reconciliation) are
+*level*, not *edge*: the watchdog re-evaluates them on its next tick and fires
+again.
+
+CRITICAL alerts to a REMOTE channel (webhook, Telegram) go through an
+:class:`AlertOutbox`: the row is written to SQLite (WAL, ``synchronous=FULL``)
+BEFORE the send is attempted and marked delivered only after the transport
+returned, so a failed or interrupted send is retried by
+:meth:`AlertDispatcher.retry_pending` (the watchdog calls it every tick).  That
+is at-least-once: a crash between the send and the mark re-sends, and a
+duplicate page is the accepted price.  Anything that must not be lost still
+belongs in a ledger, not in an alert.
+
+Transports
+----------
+The channels still take an injected transport so tests never open a socket.
+:func:`build_default_dispatcher` now injects :func:`httpx_transport` when the
+channel's environment is present (audit F, P1-9: before this, a configured
+Telegram channel raised on every send because nothing supplied a transport).
+Delivery errors are re-raised with the URL and token removed.
 """
 from __future__ import annotations
 
 import json
 import logging
 import os
+import re
+import sqlite3
 import threading
 import time
 from collections.abc import Callable, Iterable, Mapping, Sequence
@@ -37,25 +55,40 @@ from datetime import UTC, datetime
 from enum import Enum
 from pathlib import Path
 from typing import Any, Protocol, runtime_checkable
+from urllib.parse import urlsplit
 
+from fiboki.core.durable import (
+    TornTail,
+    configure_sqlite_connection,
+    durable_append,
+    frame_line,
+    read_payloads,
+    set_torn_tail_hook,
+)
+from fiboki.core.paths import resolve_paths
 from fiboki.obs import metrics as _metrics
+from fiboki.obs.health import DEFAULT_HEALTH_THRESHOLDS, HealthThresholds
 from fiboki.obs.logging import correlation_id
 
 __all__ = [
     "Alert",
     "AlertChannel",
+    "AlertDeliveryError",
     "AlertDispatcher",
     "AlertEvent",
+    "AlertOutbox",
     "ConsoleChannel",
     "FileChannel",
     "HeartbeatWatchdog",
     "MemoryChannel",
+    "OutboxChannel",
     "Severity",
     "TelegramChannel",
     "TelegramConfig",
     "WebhookChannel",
     "WebhookConfig",
     "default_severity",
+    "httpx_transport",
 ]
 
 _log = logging.getLogger("fiboki.obs.alerts")
@@ -129,6 +162,11 @@ class AlertEvent(str, Enum):
     SWEEP_NO_DATA_EXCEEDED = "sweep_no_data_exceeded"
     MIGRATION_DRIFT = "migration_drift"
     SPREAD_MODEL_DIVERGENCE = "spread_model_divergence"
+    #: A durable ledger (intents, kill switch, alerts) had a torn final record,
+    #: which was quarantined to ``<file>.torn-<ts>``. A crash happened mid-write.
+    LEDGER_TORN_TAIL = "ledger_torn_tail"
+    #: ``fiboki alerts test``: proves a channel delivers, on demand.
+    ALERT_TEST = "alert_test"
 
     # -- trade lifecycle -------------------------------------------------
     SIGNAL_GENERATED = "signal_generated"
@@ -165,6 +203,8 @@ _DEFAULT_SEVERITY: dict[AlertEvent, Severity] = {
     AlertEvent.SWEEP_NO_DATA_EXCEEDED: Severity.ERROR,
     AlertEvent.MIGRATION_DRIFT: Severity.ERROR,
     AlertEvent.SPREAD_MODEL_DIVERGENCE: Severity.WARNING,
+    AlertEvent.LEDGER_TORN_TAIL: Severity.CRITICAL,
+    AlertEvent.ALERT_TEST: Severity.WARNING,
     AlertEvent.SIGNAL_GENERATED: Severity.INFO,
     AlertEvent.ORDER_SUBMITTED: Severity.INFO,
     AlertEvent.ORDER_ACCEPTED: Severity.INFO,
@@ -213,6 +253,20 @@ class Alert:
 
     def to_json(self) -> str:
         return json.dumps(self.to_dict(), default=str, separators=(",", ":"))
+
+    @staticmethod
+    def from_dict(raw: Mapping[str, Any]) -> Alert:
+        """Inverse of :meth:`to_dict`, for the outbox."""
+        return Alert(
+            event=AlertEvent(raw["event"]),
+            message=str(raw.get("message", "")),
+            severity=Severity(raw.get("severity", Severity.WARNING.value)),
+            at=datetime.fromisoformat(str(raw["at"])),
+            source=str(raw.get("source", "")),
+            correlation_id=str(raw.get("correlation_id", "")),
+            dedupe_key=str(raw.get("dedupe_key", "")),
+            context=dict(raw.get("context") or {}),
+        )
 
     def render_text(self) -> str:
         head = f"[{self.severity.value.upper()}] {self.event.value}: {self.message}"
@@ -281,8 +335,14 @@ class ConsoleChannel:
 
 @dataclass
 class FileChannel:
-    """Append-only JSONL.  fsync'd, because the interesting alert is the last
-    one before the process died."""
+    """Append-only, self-verifying JSONL, durable on every send.
+
+    Durable because the interesting alert is the last one before the process
+    died: each line goes through :func:`fiboki.core.durable.durable_append`
+    (CRC32-framed, ``F_FULLFSYNC`` on macOS).  The framed line is still one
+    JSON object, so the incidents router and ``jq`` read it unchanged.
+    ``fsync=False`` keeps the framing but skips the flush, for tests.
+    """
 
     path: Path
     name: str = "file"
@@ -293,25 +353,82 @@ class FileChannel:
         self.path.parent.mkdir(parents=True, exist_ok=True)
 
     def send(self, alert: Alert) -> None:
+        if self.fsync:
+            durable_append(self.path, alert.to_json())
+            return
         with self.path.open("a", encoding="utf-8") as handle:
-            handle.write(alert.to_json() + "\n")
-            handle.flush()
-            if self.fsync:
-                os.fsync(handle.fileno())
+            handle.write(frame_line(alert.to_json()) + "\n")
 
     def read(self) -> list[dict[str, Any]]:
-        if not self.path.exists():
-            return []
-        return [
-            json.loads(line)
-            for line in self.path.read_text(encoding="utf-8").splitlines()
-            if line.strip()
-        ]
+        """Every verified alert. A torn last line is quarantined, never raised."""
+        return [json.loads(payload) for payload in read_payloads(self.path)]
 
 
 #: What a transport must look like.  ``httpx.post``-shaped, but injected so the
 #: test suite never opens a socket and CI never needs a credential.
 Transport = Callable[[str, dict[str, Any], Mapping[str, str], float], Any]
+
+
+class AlertDeliveryError(RuntimeError):
+    """A remote channel did not accept an alert. The message carries no secret."""
+
+
+_TELEGRAM_TOKEN_IN_URL = re.compile(r"/bot[^/\s\"']+/")
+
+
+class _RedactBotToken(logging.Filter):
+    """httpx logs every request URL at INFO, and a Telegram URL embeds the token."""
+
+    def filter(self, record: logging.LogRecord) -> bool:
+        message = record.getMessage()
+        redacted = _TELEGRAM_TOKEN_IN_URL.sub("/bot***/", message)
+        if redacted != message:
+            record.msg, record.args = redacted, None
+        return True
+
+
+_REDACTOR = _RedactBotToken()
+
+
+def _install_http_log_redaction() -> None:
+    for name in ("httpx", "httpcore"):
+        logger = logging.getLogger(name)
+        if _REDACTOR not in logger.filters:
+            logger.addFilter(_REDACTOR)
+
+
+def httpx_transport(client: Any = None) -> Transport:
+    """A :data:`Transport` over ``httpx``. Imported lazily; injected, never global.
+
+    ``client`` is an ``httpx.Client``; a test passes one built on
+    ``httpx.MockTransport`` so nothing leaves the process.  A non-2xx response
+    raises :class:`AlertDeliveryError` naming only the status and the host: a
+    Telegram URL embeds the bot token and a webhook URL is itself a secret.
+    """
+    import httpx
+
+    _install_http_log_redaction()
+    http = client if client is not None else httpx.Client()
+
+    def _post(url: str, payload: dict[str, Any], headers: Mapping[str, str], timeout: float) -> Any:
+        host = urlsplit(url).hostname or "?"
+        try:
+            response = http.post(url, json=payload, headers=dict(headers), timeout=timeout)
+        except httpx.HTTPError as exc:
+            raise AlertDeliveryError(f"{type(exc).__name__} posting to {host}") from None
+        if response.status_code >= 300:
+            raise AlertDeliveryError(f"HTTP {response.status_code} from {host}")
+        return response
+
+    return _post
+
+
+def _scrubbed(exc: BaseException, *secrets: str) -> AlertDeliveryError:
+    text = f"{type(exc).__name__}: {exc}"
+    for secret in secrets:
+        if secret:
+            text = text.replace(secret, "***")
+    return AlertDeliveryError(text)
 
 
 @dataclass(frozen=True, slots=True)
@@ -353,12 +470,18 @@ class WebhookChannel:
                 "(e.g. lambda url, payload, headers, timeout: httpx.post(...)); "
                 "this module deliberately does not import an HTTP client."
             )
-        self.transport(
-            self.config.url,
-            alert.to_dict(),
-            dict(self.config.headers),
-            self.config.timeout_seconds,
-        )
+        try:
+            self.transport(
+                self.config.url,
+                alert.to_dict(),
+                dict(self.config.headers),
+                self.config.timeout_seconds,
+            )
+        except AlertDeliveryError:
+            raise
+        except Exception as exc:
+            # A webhook URL is a credential: never let it reach a log line.
+            raise _scrubbed(exc, self.config.url) from None
 
 
 @dataclass(frozen=True, slots=True)
@@ -446,18 +569,206 @@ class TelegramChannel:
                 "TelegramChannel has no transport. Inject one at wiring time; "
                 "this module does not import an HTTP client and holds no credential."
             )
-        self.transport(
-            self.config.method_url(),
-            self.build_payload(alert),
-            {"Content-Type": "application/json"},
-            self.config.timeout_seconds,
-        )
+        try:
+            self.transport(
+                self.config.method_url(),
+                self.build_payload(alert),
+                {"Content-Type": "application/json"},
+                self.config.timeout_seconds,
+            )
+        except AlertDeliveryError:
+            raise
+        except Exception as exc:
+            # The method URL embeds the bot token.
+            raise _scrubbed(exc, self.config.bot_token) from None
 
 
 def _html_escape(value: Any) -> str:
     return (
         str(value).replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
     )
+
+
+# ---------------------------------------------------------------------------
+# Outbox: at-least-once delivery of CRITICAL alerts to remote channels
+# ---------------------------------------------------------------------------
+
+
+_OUTBOX_DDL = """
+CREATE TABLE IF NOT EXISTS alert_outbox (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    channel TEXT NOT NULL,
+    alert_json TEXT NOT NULL,
+    enqueued_at TEXT NOT NULL,
+    attempts INTEGER NOT NULL DEFAULT 0,
+    last_attempt_at TEXT,
+    next_attempt_at TEXT NOT NULL,
+    last_error TEXT NOT NULL DEFAULT '',
+    delivered_at TEXT
+)
+"""
+
+
+@dataclass(frozen=True, slots=True)
+class OutboxRow:
+    id: int
+    channel: str
+    alert: Alert
+    attempts: int
+    last_error: str
+
+
+class AlertOutbox:
+    """SQLite outbox. A row is written BEFORE the send and cleared after it.
+
+    This is an outbox, not a ledger: rows change state (attempts, delivered).
+    The record of what was alerted is the ``FileChannel`` log.  Retry backoff
+    doubles from ``base_backoff_seconds`` up to ``max_backoff_seconds``; there
+    is no give-up, because a CRITICAL alert nobody received is still owed.
+    """
+
+    def __init__(
+        self,
+        path: str | Path,
+        *,
+        base_backoff_seconds: float = 30.0,
+        max_backoff_seconds: float = 3600.0,
+        clock: Callable[[], datetime] = lambda: datetime.now(tz=UTC),
+    ) -> None:
+        self.path = Path(path)
+        self.path.parent.mkdir(parents=True, exist_ok=True)
+        self.base_backoff_seconds = base_backoff_seconds
+        self.max_backoff_seconds = max_backoff_seconds
+        self.clock = clock
+        self._lock = threading.Lock()
+        with self._connect() as conn:
+            conn.execute(_OUTBOX_DDL)
+
+    def _connect(self) -> sqlite3.Connection:
+        conn = sqlite3.connect(str(self.path), timeout=30.0, isolation_level=None)
+        configure_sqlite_connection(conn, synchronous="FULL")
+        return conn
+
+    def enqueue(self, channel: str, alert: Alert) -> int:
+        now = self.clock().isoformat()
+        with self._lock, self._connect() as conn:
+            cur = conn.execute(
+                "INSERT INTO alert_outbox (channel, alert_json, enqueued_at, next_attempt_at)"
+                " VALUES (?, ?, ?, ?)",
+                (channel, alert.to_json(), now, now),
+            )
+            return int(cur.lastrowid or 0)
+
+    def mark_delivered(self, row_id: int) -> None:
+        now = self.clock().isoformat()
+        with self._lock, self._connect() as conn:
+            conn.execute(
+                "UPDATE alert_outbox SET delivered_at = ?, attempts = attempts + 1,"
+                " last_attempt_at = ? WHERE id = ?",
+                (now, now, row_id),
+            )
+
+    def mark_failed(self, row_id: int, error: str) -> None:
+        now = self.clock()
+        with self._lock, self._connect() as conn:
+            row = conn.execute(
+                "SELECT attempts FROM alert_outbox WHERE id = ?", (row_id,)
+            ).fetchone()
+            attempts = int(row[0]) + 1 if row else 1
+            delay = min(
+                self.base_backoff_seconds * (2 ** (attempts - 1)), self.max_backoff_seconds
+            )
+            conn.execute(
+                "UPDATE alert_outbox SET attempts = ?, last_attempt_at = ?,"
+                " next_attempt_at = ?, last_error = ? WHERE id = ?",
+                (
+                    attempts,
+                    now.isoformat(),
+                    datetime.fromtimestamp(now.timestamp() + delay, tz=UTC).isoformat(),
+                    error[:500],
+                    row_id,
+                ),
+            )
+
+    def pending(self, *, due_only: bool = True) -> list[OutboxRow]:
+        now = self.clock().isoformat()
+        query = "SELECT id, channel, alert_json, attempts, last_error FROM alert_outbox"
+        query += " WHERE delivered_at IS NULL"
+        params: tuple[Any, ...] = ()
+        if due_only:
+            query += " AND next_attempt_at <= ?"
+            params = (now,)
+        with self._lock, self._connect() as conn:
+            rows = conn.execute(query + " ORDER BY id", params).fetchall()
+        return [
+            OutboxRow(int(r[0]), str(r[1]), Alert.from_dict(json.loads(r[2])), int(r[3]), str(r[4]))
+            for r in rows
+        ]
+
+    def counts(self) -> dict[str, int]:
+        with self._lock, self._connect() as conn:
+            undelivered = conn.execute(
+                "SELECT COUNT(*) FROM alert_outbox WHERE delivered_at IS NULL"
+            ).fetchone()[0]
+            delivered = conn.execute(
+                "SELECT COUNT(*) FROM alert_outbox WHERE delivered_at IS NOT NULL"
+            ).fetchone()[0]
+        return {"undelivered": int(undelivered), "delivered": int(delivered)}
+
+    def retry(self, channels: Mapping[str, AlertChannel]) -> tuple[int, int]:
+        """Re-send every due row whose channel is in ``channels``.
+
+        Returns ``(delivered, failed)``.  A row for a channel this process does
+        not have stays pending: it is owed by whichever process does.
+        """
+        delivered = failed = 0
+        for row in self.pending():
+            channel = channels.get(row.channel)
+            if channel is None:
+                continue
+            try:
+                channel.send(row.alert)
+            except Exception as exc:
+                self.mark_failed(row.id, f"{type(exc).__name__}: {exc}")
+                failed += 1
+                continue
+            self.mark_delivered(row.id)
+            delivered += 1
+        return delivered, failed
+
+
+@dataclass
+class OutboxChannel:
+    """Wraps a remote channel so its CRITICAL alerts are delivered at least once.
+
+    Below ``min_severity`` it is a plain pass-through.  At or above it, the
+    alert is enqueued durably first, then sent; a send that raises leaves the
+    row pending for :meth:`AlertOutbox.retry` and still raises, so the
+    dispatcher counts the failure exactly as before.
+    """
+
+    inner: AlertChannel
+    outbox: AlertOutbox
+    min_severity: Severity = Severity.CRITICAL
+    name: str = ""
+
+    def __post_init__(self) -> None:
+        self.name = self.name or getattr(self.inner, "name", type(self.inner).__name__)
+
+    def send(self, alert: Alert) -> None:
+        if alert.severity.rank < self.min_severity.rank:
+            self.inner.send(alert)
+            return
+        row_id = self.outbox.enqueue(self.name, alert)
+        try:
+            self.inner.send(alert)
+        except Exception as exc:
+            self.outbox.mark_failed(row_id, f"{type(exc).__name__}: {exc}")
+            raise
+        self.outbox.mark_delivered(row_id)
+
+    def retry(self) -> tuple[int, int]:
+        return self.outbox.retry({self.name: self.inner})
 
 
 # ---------------------------------------------------------------------------
@@ -566,6 +877,18 @@ class AlertDispatcher:
     def suppressed_counts(self) -> dict[str, int]:
         return dict(self._suppressed)
 
+    def retry_pending(self) -> tuple[int, int]:
+        """Re-send owed CRITICAL alerts on every :class:`OutboxChannel`.
+
+        Returns ``(delivered, failed)``.  The watchdog calls this every tick.
+        """
+        delivered = failed = 0
+        for channel in self.channels:
+            if isinstance(channel, OutboxChannel):
+                d, f = channel.retry()
+                delivered, failed = delivered + d, failed + f
+        return delivered, failed
+
     def reset_suppression(self) -> None:
         with self._lock:
             self._last_sent.clear()
@@ -579,6 +902,9 @@ def build_default_dispatcher(
     webhook_transport: Transport | None = None,
     telegram_transport: Transport | None = None,
     source: str = "",
+    http_client: Any = None,
+    outbox_path: Path | str | None = None,
+    install_ledger_hook: bool = True,
 ) -> AlertDispatcher:
     """Console + file always; webhook and Telegram only when configured.
 
@@ -586,19 +912,59 @@ def build_default_dispatcher(
     fails because a credential is missing -- the channel is simply absent, and
     :meth:`AlertDispatcher.channel_names` says so, which is what
     ``fiboki system doctor`` prints.
+
+    When a remote channel IS configured and no transport was passed, an
+    ``httpx`` transport is injected (``http_client`` lets a test supply one on
+    ``httpx.MockTransport``), and the channel is wrapped in an
+    :class:`OutboxChannel` over ``outbox_path`` (default: the resolved
+    ``<FIBOKI_STATE_DIR>/alerts_outbox.sqlite``) so CRITICAL alerts are
+    delivered at least once.  With ``install_ledger_hook`` a torn record in
+    any durable ledger raises ``LEDGER_TORN_TAIL`` through this dispatcher.
     """
     environ = env if env is not None else os.environ
     channels: list[AlertChannel] = [ConsoleChannel()]
     path = log_path or environ.get("FIBOKI_ALERT_LOG", "")
     if path:
         channels.append(FileChannel(Path(path)))
+    remote: list[AlertChannel] = []
     webhook = WebhookChannel.from_env(webhook_transport, env=environ)
     if webhook is not None:
-        channels.append(webhook)
+        if webhook.transport is None:
+            webhook.transport = httpx_transport(http_client)
+        remote.append(webhook)
     telegram = TelegramChannel.from_env(telegram_transport, env=environ)
     if telegram is not None:
-        channels.append(telegram)
-    return AlertDispatcher(channels, source=source)
+        if telegram.transport is None:
+            telegram.transport = httpx_transport(http_client)
+        remote.append(telegram)
+    if remote:
+        outbox = AlertOutbox(outbox_path or resolve_paths(environ).alert_outbox)
+        channels.extend(OutboxChannel(channel, outbox) for channel in remote)
+    dispatcher = AlertDispatcher(channels, source=source)
+    if install_ledger_hook:
+        set_torn_tail_hook("fiboki.obs.alerts", _torn_tail_alerter(dispatcher))
+    return dispatcher
+
+
+def _torn_tail_alerter(dispatcher: AlertDispatcher) -> Callable[[TornTail], Any]:
+    def _fire(torn: TornTail) -> None:
+        dispatcher.fire(
+            AlertEvent.LEDGER_TORN_TAIL,
+            (
+                f"{torn.path.name}: the last record was torn by a crash mid-write and "
+                f"has been quarantined ({torn.reason}). The ledger loaded without it. "
+                "Check the quarantined bytes: a torn intent is an order whose "
+                "dispatch never started, a torn kill-switch line is an activation "
+                "that never took effect."
+            ),
+            dedupe_key=f"ledger_torn_tail:{torn.path}",
+            force=True,
+            ledger=str(torn.path),
+            quarantine=str(torn.quarantine_path) if torn.quarantine_path else "FAILED",
+            bytes=torn.bytes_quarantined,
+        )
+
+    return _fire
 
 
 # ---------------------------------------------------------------------------
@@ -624,10 +990,23 @@ class HeartbeatView:
 
 @dataclass(frozen=True, slots=True)
 class WatchdogThresholds:
+    """The watchdog's view of :class:`fiboki.obs.health.HealthThresholds`.
+
+    Defaults come from :data:`DEFAULT_HEALTH_THRESHOLDS`; a deployment passes
+    ``WatchdogThresholds.from_health(settings.health)``.
+    """
+
     #: Older than this and the heartbeat is stale -- something is wrong.
-    stale_after_seconds: float = 120.0
+    stale_after_seconds: float = DEFAULT_HEALTH_THRESHOLDS.worker_stale_after_seconds
     #: Older than this and we stop calling it stale and call it dead.
-    down_after_seconds: float = 300.0
+    down_after_seconds: float = DEFAULT_HEALTH_THRESHOLDS.worker_down_after_seconds
+
+    @classmethod
+    def from_health(cls, thresholds: HealthThresholds) -> WatchdogThresholds:
+        return cls(
+            stale_after_seconds=thresholds.worker_stale_after_seconds,
+            down_after_seconds=thresholds.worker_down_after_seconds,
+        )
 
 
 class HeartbeatWatchdog:

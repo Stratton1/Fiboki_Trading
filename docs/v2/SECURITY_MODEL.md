@@ -59,6 +59,26 @@ process and `session_secret_is_ephemeral` is set to `True` — which means resta
 sessions. That is correct for a single-node development box and **is reported as a health
 warning** so nobody ships it that way. Default TTL is 12 hours.
 
+### Operator passwords
+
+`api/routers/auth.py`. The directory is `FIBOKI_OPERATORS=user:role:<hash>,...`, and `<hash>` is
+versioned by its prefix:
+
+- `scrypt$<n>$<r>$<p>$<salt>$<key>`: salted scrypt (n=2^14, r=8, p=1, 16-byte random salt, 32-byte
+  key, URL-safe base64). Generate one with
+  `python -c "from fiboki.api.routers.auth import hash_password as h; print(h('...'))"`.
+- a bare 64-character hex digest, or `sha256$<hex>`: the **legacy** unsalted SHA-256 format. It
+  still verifies, so an upgrade locks nobody out, but it is weak (identical passwords share a
+  hash; a GPU tries billions a second). **Rotate every legacy entry to scrypt.** Each successful
+  legacy sign-in logs a `LEGACY unsalted sha256` warning naming the operator.
+  `fiboki doctor` flags every legacy entry through `is_legacy_hash()`.
+
+A miss (unknown user) still runs a full scrypt derivation against a fixed dummy so timing does
+not reveal whether the user exists; a known user with a legacy hash answers faster than an
+unknown one, which is one more reason to rotate. A malformed entry verifies as `False`, never
+raises. `scripts/dev-up.sh` still ships a shared default password; that is a development
+convenience and must never reach a desktop that trades.
+
 **Nothing in this module reads a credential from a query string or a path parameter.** The
 session lives only in the httpOnly cookie. V1 is not recorded as having put tokens in URLs, but
 the property is stated so a future route cannot introduce one without contradicting a written
@@ -163,6 +183,15 @@ Everything dangerous is read in `api/settings.py` and nowhere else, once, at pro
 There is no setter for the execution mode; `api/routers/system.py` exposes it as data and
 refuses every request to change it. An unrecognised `FIBOKI_EXECUTION_MODE` is a **startup
 error**, not a silent fallback to paper, because a typo must not decide where orders go.
+
+Credential-bearing config types keep the secret out of their `repr`: `OandaConfig.api_token` is
+`field(repr=False)` and `TelegramConfig` exposes only `redacted()`. Alert delivery errors are
+re-raised with the webhook URL and the bot token removed, and a logging filter on the `httpx` and
+`httpcore` loggers rewrites `/bot<token>/` to `/bot***/`, because httpx logs every request URL at
+INFO and a Telegram URL embeds the token (`tests/unit/test_alert_delivery.py`).
+`tests/unit/test_secret_hygiene.py` also pins that no call in `src/` passes `compiled_in=` or
+`live_host_compiled_in=`: those parameters exist only so tests can prove the other controls still
+bind.
 
 No credential is committed. `.gitignore` excludes the data directories and local databases. V1
 committed `FIBOKEI_LIVE_EXECUTION_ENABLED: "true"` as a literal in `render.yaml`; V2 has no

@@ -29,6 +29,7 @@ from enum import Enum
 from typing import Any, Protocol, runtime_checkable
 
 __all__ = [
+    "DEFAULT_HEALTH_THRESHOLDS",
     "BrokerReachableCheck",
     "DataFreshnessCheck",
     "DatabaseCheck",
@@ -36,11 +37,57 @@ __all__ = [
     "HealthReport",
     "HealthResult",
     "HealthStatus",
+    "HealthThresholds",
     "MigrationCheck",
     "QueueDepthCheck",
     "WorkerHeartbeatCheck",
     "run_checks",
 ]
+
+
+@dataclass(frozen=True, slots=True)
+class HealthThresholds:
+    """How old a heartbeat or a bar may be before each surface says so.
+
+    ONE value. These numbers used to be written out separately in
+    ``cli.worker status`` (120/300), :class:`WorkerHeartbeatCheck` (120/300),
+    ``obs.alerts.WatchdogThresholds`` (120/300), ``api.settings``
+    (``FIBOKI_WORKER_STALE_SECONDS``) and ``LiveWorkerConfig`` (900), so the
+    CLI, the health page and the watchdog could disagree about the same worker.
+    :func:`fiboki.api.settings.load_settings` resolves the deployment's value
+    from the environment into ``Settings.health``; every other surface takes
+    :data:`DEFAULT_HEALTH_THRESHOLDS` or that resolved value.
+
+    These are OBSERVABILITY thresholds. The gateway's ``max_data_age_seconds``
+    (``risk/limits.py``) is a RISK limit and deliberately separate: blocking an
+    order and paging a human are different decisions.
+    """
+
+    #: A heartbeat older than this is stale: something is wrong.
+    worker_stale_after_seconds: float = 120.0
+    #: Older than this and the worker is called dead.
+    worker_down_after_seconds: float = 300.0
+    #: The live worker raises DATA_STALE when its newest bar is older than this.
+    data_stale_after_seconds: float = 900.0
+
+    def __post_init__(self) -> None:
+        values = {
+            "worker_stale_after_seconds": self.worker_stale_after_seconds,
+            "worker_down_after_seconds": self.worker_down_after_seconds,
+            "data_stale_after_seconds": self.data_stale_after_seconds,
+        }
+        bad = [k for k, v in values.items() if not v > 0]
+        if bad:
+            raise ValueError(f"health thresholds must be positive: {bad}")
+        if self.worker_down_after_seconds <= self.worker_stale_after_seconds:
+            raise ValueError(
+                "worker_down_after_seconds must exceed worker_stale_after_seconds; "
+                "otherwise a worker is called dead before it is ever called stale"
+            )
+
+
+#: The defaults. ``Settings.health`` is the deployment's resolved value.
+DEFAULT_HEALTH_THRESHOLDS = HealthThresholds()
 
 
 class HealthStatus(str, Enum):
@@ -271,10 +318,24 @@ class WorkerHeartbeatCheck:
     """
 
     heartbeats: Callable[[], Iterable[Any]]
-    stale_after_seconds: float = 120.0
-    down_after_seconds: float = 300.0
+    stale_after_seconds: float = DEFAULT_HEALTH_THRESHOLDS.worker_stale_after_seconds
+    down_after_seconds: float = DEFAULT_HEALTH_THRESHOLDS.worker_down_after_seconds
     expected_workers: Sequence[str] = ()
     name: str = "worker_heartbeat"
+
+    @classmethod
+    def from_thresholds(
+        cls,
+        heartbeats: Callable[[], Iterable[Any]],
+        thresholds: HealthThresholds = DEFAULT_HEALTH_THRESHOLDS,
+        **kwargs: Any,
+    ) -> WorkerHeartbeatCheck:
+        return cls(
+            heartbeats=heartbeats,
+            stale_after_seconds=thresholds.worker_stale_after_seconds,
+            down_after_seconds=thresholds.worker_down_after_seconds,
+            **kwargs,
+        )
 
     def __call__(self) -> HealthResult:
         views = list(self.heartbeats())

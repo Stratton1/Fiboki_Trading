@@ -26,13 +26,18 @@ Both modes:
     * and require an EXPLICIT operator deactivation. There is no timeout, no
       auto-reset and no "it clears when the market calms down". A switch that
       turns itself off is not a kill switch.
+
+One journal, re-read before every decision (audit F, P0-1): the operator's
+journal is ``fiboki.core.paths.resolve_paths(env).killswitch_journal``
+(:meth:`KillSwitch.from_paths`), the same file for the CLI, the API and every
+worker, and :meth:`KillSwitch.refresh` re-reads it whenever it changed, so an
+activation from another process binds this one's very next decision.
 """
 from __future__ import annotations
 
 import json
-import os
 import tempfile
-from collections.abc import Iterable, Sequence
+from collections.abc import Hashable, Iterable, Sequence
 from dataclasses import asdict, dataclass, field
 from enum import Enum
 from pathlib import Path
@@ -41,6 +46,8 @@ from typing import Any
 import pandas as pd
 
 from fiboki.core.contracts import Position
+from fiboki.core.durable import durable_append, read_payloads, touch_durable
+from fiboki.core.paths import FibokiPaths
 
 __all__ = [
     "FileKillSwitchJournal",
@@ -110,14 +117,34 @@ class KillSwitchEvent:
 class KillSwitchJournal:
     """Append-only store of activations and deactivations."""
 
+    #: Does an activation written here survive the process and reach every
+    #: other process? Only a durable journal may guard anything but a backtest.
+    durable: bool = False
+
     def append(self, event: KillSwitchEvent) -> None:  # pragma: no cover - interface
         raise NotImplementedError
 
     def events(self) -> list[KillSwitchEvent]:  # pragma: no cover - interface
         raise NotImplementedError
 
+    def fingerprint(self) -> Hashable:
+        """Cheap token that changes whenever the journal may have changed.
+
+        :meth:`KillSwitch.refresh` compares it before every decision and
+        replays only when it moved.
+        """
+        return None
+
 
 class InMemoryKillSwitchJournal(KillSwitchJournal):
+    """Process-local journal. Legitimate for BACKTEST and unit tests ONLY.
+
+    An activation written here is invisible to every other process, which is
+    why :class:`fiboki.risk.gateway.RiskGateway` refuses one outside BACKTEST.
+    """
+
+    durable = False
+
     def __init__(self) -> None:
         self._events: list[KillSwitchEvent] = []
 
@@ -127,33 +154,43 @@ class InMemoryKillSwitchJournal(KillSwitchJournal):
     def events(self) -> list[KillSwitchEvent]:
         return list(self._events)
 
+    def fingerprint(self) -> Hashable:
+        return ("memory", len(self._events))
+
 
 class FileKillSwitchJournal(KillSwitchJournal):
-    """JSON-lines journal, fsynced on every append.
+    """Self-verifying JSON-lines journal, made durable on every append.
 
-    The switch's state must survive the crash that made you hit it, so the
-    write is flushed and fsynced before the call returns. An unflushed kill
-    switch is not a kill switch.
+    The switch's state must survive the crash that made you hit it, so each
+    append goes through :func:`fiboki.core.durable.durable_append`: an
+    exclusive lock, a CRC-framed line, ``F_FULLFSYNC`` on macOS (plain
+    ``fsync`` elsewhere) and a directory ``fsync`` when the file is created.
+    An unflushed kill switch is not a kill switch.
+
+    A torn final line (a crash mid-append) is quarantined to
+    ``<file>.torn-<ts>`` and reported CRITICAL rather than raising, so the
+    switch can still be READ after the crash. Unframed lines written before
+    framing existed are still accepted.
     """
+
+    durable = True
 
     def __init__(self, path: str | Path) -> None:
         self.path = Path(path)
-        self.path.parent.mkdir(parents=True, exist_ok=True)
-        self.path.touch(exist_ok=True)
+        touch_durable(self.path)
 
     def append(self, event: KillSwitchEvent) -> None:
-        with self.path.open("a", encoding="utf-8") as fh:
-            fh.write(event.to_json() + "\n")
-            fh.flush()
-            os.fsync(fh.fileno())
+        durable_append(self.path, event.to_json())
 
     def events(self) -> list[KillSwitchEvent]:
-        out: list[KillSwitchEvent] = []
-        for line in self.path.read_text(encoding="utf-8").splitlines():
-            line = line.strip()
-            if line:
-                out.append(KillSwitchEvent.from_json(line))
-        return out
+        return [KillSwitchEvent.from_json(line) for line in read_payloads(self.path)]
+
+    def fingerprint(self) -> Hashable:
+        try:
+            st = self.path.stat()
+        except FileNotFoundError:
+            return ("missing",)
+        return (st.st_ino, st.st_size, st.st_mtime_ns)
 
 
 @dataclass(frozen=True, slots=True)
@@ -190,7 +227,23 @@ class KillSwitch:
 
     def __init__(self, journal: KillSwitchJournal | None = None) -> None:
         self.journal = journal or InMemoryKillSwitchJournal()
+        self._fingerprint: Hashable = self.journal.fingerprint()
         self._state = self._replay()
+
+    @classmethod
+    def at_path(cls, path: str | Path) -> KillSwitch:
+        """A switch over the durable journal at ``path``."""
+        return cls(FileKillSwitchJournal(path))
+
+    @classmethod
+    def from_paths(cls, paths: FibokiPaths) -> KillSwitch:
+        """THE operator kill switch: the journal every process resolves.
+
+        Built from :func:`fiboki.core.paths.resolve_paths`, which is what the
+        CLI, the API settings and the worker compositions use, so an
+        activation from any one of them is seen by all of them.
+        """
+        return cls.at_path(paths.killswitch_journal)
 
     # ------------------------------------------------------------- state
 
@@ -203,17 +256,44 @@ class KillSwitch:
                 state = KillSwitchState(False, None, None, None, None)
         return state
 
-    @property
-    def state(self) -> KillSwitchState:
+    def refresh(self) -> KillSwitchState:
+        """Re-read the journal if it changed since this instance last looked.
+
+        The check is a ``stat`` (inode, size, mtime), so it is cheap enough to
+        run before every decision, and it is what makes an activation written
+        by ANOTHER process (``fiboki killswitch pause`` in a terminal, the API)
+        bind this process's very next order. Before this existed the journal
+        was replayed once, in ``__init__``, and a running worker kept trading
+        through an activation until it was restarted.
+        """
+        current = self.journal.fingerprint()
+        if current != self._fingerprint:
+            self._state = self._replay()
+            self._fingerprint = current
         return self._state
 
     @property
+    def durable(self) -> bool:
+        return bool(getattr(self.journal, "durable", False))
+
+    @property
+    def state(self) -> KillSwitchState:
+        return self.refresh()
+
+    @property
     def active(self) -> bool:
-        return self._state.active
+        return self.refresh().active
 
     @property
     def mode(self) -> KillSwitchMode | None:
-        return self._state.mode
+        return self.refresh().mode
+
+    def _append(self, event: KillSwitchEvent) -> KillSwitchState:
+        self.journal.append(event)
+        # Replay rather than assume: the journal, not this object, is the state.
+        self._state = self._replay()
+        self._fingerprint = self.journal.fingerprint()
+        return self._state
 
     # -------------------------------------------------------- transitions
 
@@ -238,6 +318,8 @@ class KillSwitch:
             raise TypeError("KillSwitch.activate requires an explicit KillSwitchMode")
         if not operator or not reason:
             raise ValueError("Kill switch activation requires an operator and a reason")
+        # Another process may have escalated since this instance last looked.
+        self.refresh()
         if (
             self._state.active
             and self._state.mode is KillSwitchMode.FLATTEN
@@ -257,9 +339,7 @@ class KillSwitch:
             positions_open=positions_open,
             extra=dict(extra or {}),
         )
-        self.journal.append(ev)
-        self._state = KillSwitchState(True, mode, operator, reason, ts)
-        return self._state
+        return self._append(ev)
 
     def deactivate(
         self,
@@ -270,6 +350,7 @@ class KillSwitch:
         extra: dict[str, Any] | None = None,
     ) -> KillSwitchState:
         """Re-arm trading. Requires an explicit operator action; never automatic."""
+        self.refresh()
         if not self._state.active:
             raise ValueError("Kill switch is not active; nothing to deactivate")
         if not operator or not reason:
@@ -283,14 +364,17 @@ class KillSwitch:
             at=ts,
             extra=dict(extra or {}),
         )
-        self.journal.append(ev)
-        self._state = KillSwitchState(False, None, None, None, None)
-        return self._state
+        return self._append(ev)
 
     # ----------------------------------------------------------- queries
 
     def allows(self, kind: RequestKind) -> tuple[bool, str]:
-        """Does the switch permit a request of this kind? Returns ``(ok, reason)``."""
+        """Does the switch permit a request of this kind? Returns ``(ok, reason)``.
+
+        Refreshes from the journal first, so the answer reflects an activation
+        written by any process up to this call.
+        """
+        self.refresh()
         if not self._state.active:
             return True, "kill_switch_inactive"
         mode = self._state.mode
@@ -317,6 +401,7 @@ class KillSwitch:
         abandon positions by accident, and cannot be used to flatten while
         merely paused.
         """
+        self.refresh()
         if not self._state.active or self._state.mode is not KillSwitchMode.FLATTEN:
             return ()
         why = reason or f"kill_switch_flatten:{self._state.reason}"

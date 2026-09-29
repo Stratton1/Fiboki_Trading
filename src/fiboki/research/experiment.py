@@ -76,6 +76,7 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, sessionmaker
 
+from fiboki.core.durable import install_sqlite_pragmas
 from fiboki.core.versioned_key import (
     UNSTAMPED,
     add_missing_columns,
@@ -99,7 +100,9 @@ __all__ = [
     "LedgerError",
     "LedgerKeyVersionMismatch",
     "Outcome",
+    "TrialCount",
     "is_append_only_violation",
+    "trials_recorded_by",
 ]
 
 #: Every derived-key column on ``experiment``, mapped to the callable that says
@@ -441,6 +444,54 @@ class Experiment:
         }
 
 
+def trials_recorded_by(experiment: Experiment) -> tuple[int, str]:
+    """How many TRIALS one experiment row spent, and where that number came from.
+
+    In order of authority:
+
+    1. ``validation_report_json["raw_trial_count"]`` -- the ladder's own count
+       of the parameterisations it swept;
+    2. ``outputs["n_trials"]`` -- what a campaign recorded for the cell;
+    3. otherwise 1: the experiment was itself one look at the data.
+
+    A campaign SKIP (tagged ``skipped``) spent no compute here and counts 0,
+    for the same reason the campaign's own accounting excludes it.
+    """
+    if "skipped" in experiment.tags:
+        return 0, "skipped"
+    report = experiment.validation_report_json or {}
+    raw = int(report.get("raw_trial_count", 0) or 0)
+    if raw > 0:
+        return raw, "validation_report.raw_trial_count"
+    declared = int((experiment.outputs or {}).get("n_trials", 0) or 0)
+    if declared > 0:
+        return declared, "outputs.n_trials"
+    return 1, "one_look"
+
+
+@dataclass(frozen=True, slots=True)
+class TrialCount:
+    """The number of trials the ledger holds for a scope, with its working."""
+
+    n_trials: int
+    n_experiments: int
+    scope: dict[str, str]
+    by_source: dict[str, int]
+
+    @property
+    def known(self) -> bool:
+        """False when the ledger holds nothing for the scope: N is UNKNOWN, not 0."""
+        return self.n_experiments > 0
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "n_trials": int(self.n_trials),
+            "n_experiments": int(self.n_experiments),
+            "scope": dict(self.scope),
+            "by_source": dict(sorted(self.by_source.items())),
+        }
+
+
 # --------------------------------------------------------------------------
 # Repository
 # --------------------------------------------------------------------------
@@ -461,6 +512,9 @@ class ExperimentLedger:
             self.db_path.parent.mkdir(parents=True, exist_ok=True)
             url = f"sqlite+pysqlite:///{self.db_path}"
         self._engine = create_engine(url, echo=echo, future=True)
+        # WAL, busy_timeout and synchronous=FULL on EVERY connection (audit F
+        # P2-14): the API, campaigns and the agents contend for this file.
+        install_sqlite_pragmas(self._engine, synchronous="FULL")
 
         @event.listens_for(self._engine, "connect")
         def _enforce_foreign_keys(dbapi_conn, _record):  # pragma: no cover - trivial
@@ -794,6 +848,65 @@ class ExperimentLedger:
             return [
                 _from_row(r, restated.get(r.id)) for r in session.scalars(stmt).all()
             ]
+
+    def count_trials(
+        self,
+        *,
+        campaign_id: str | None = None,
+        structure_hash: str | None = None,
+        strategy_id: str | None = None,
+        dataset_version_id: str | None = None,
+    ) -> TrialCount:
+        """Trials recorded for a campaign and/or a strategy family. Read-only.
+
+        This is where a deflated Sharpe's ``N`` comes from. It is never taken
+        from a request payload, because the payload is composed by whoever
+        wants the number to look good (audit P1-2, invariant 24).
+
+        ``campaign_id`` matches rows tagged with it or whose outputs name it;
+        ``structure_hash`` is the strategy FAMILY (every reparameterisation of
+        one rule structure) and is key-version checked like any hash lookup, so
+        a ledger whose structure keys were derived differently raises
+        :class:`LedgerKeyVersionMismatch` rather than answering "0 trials".
+        Filters combine with AND. An empty result is reported as
+        ``known=False``: "the ledger holds nothing" is not "one trial".
+        """
+        if not any((campaign_id, structure_hash, strategy_id, dataset_version_id)):
+            raise ValueError(
+                "count_trials needs a scope; the whole ledger is not the search "
+                "that produced any one result"
+            )
+        rows = self.list(
+            structure_hash=structure_hash,
+            strategy_id=strategy_id,
+            dataset_version_id=dataset_version_id,
+        )
+        if campaign_id is not None:
+            cid = str(campaign_id)
+            rows = [
+                e
+                for e in rows
+                if cid in e.tags or str((e.outputs or {}).get("campaign_id", "")) == cid
+            ]
+        total = 0
+        by_source: dict[str, int] = {}
+        for experiment in rows:
+            n, source = trials_recorded_by(experiment)
+            total += n
+            by_source[source] = by_source.get(source, 0) + n
+        scope = {
+            k: str(v)
+            for k, v in (
+                ("campaign_id", campaign_id),
+                ("structure_hash", structure_hash),
+                ("strategy_id", strategy_id),
+                ("dataset_version_id", dataset_version_id),
+            )
+            if v is not None
+        }
+        return TrialCount(
+            n_trials=total, n_experiments=len(rows), scope=scope, by_source=by_source
+        )
 
     def children(self, experiment_id: str) -> builtins.list[Experiment]:
         # ``builtins.list`` spelled out: inside this class body the bare name

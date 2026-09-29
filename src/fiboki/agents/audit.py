@@ -50,6 +50,8 @@ from pathlib import Path
 from types import TracebackType
 from typing import IO, Any, Protocol, runtime_checkable
 
+from fiboki.core.durable import durable_append
+
 GENESIS_HASH = "0" * 64
 
 #: ``AuditRecord.model_id`` for an action no model took part in: a workflow
@@ -379,22 +381,16 @@ class JsonlAuditLedger(AuditLedger):
                 sequence=len(self._records),
                 previous_hash=self._records[-1].record_hash if self._records else GENESIS_HASH,
             )
-            line = (
-                json.dumps(sealed.payload(), sort_keys=True, separators=(",", ":")) + "\n"
-            ).encode("utf-8")
-            created = not self.path.exists()
-            # Append mode, flush and fsync: a crash mid-workflow must not lose the
-            # record of what the agent had already done.
-            with open(self.path, "ab") as handle:
-                handle.write(line)
-                handle.flush()
-                os.fsync(handle.fileno())
-            if created:
-                # The new directory entry must survive a crash too.
-                _fsync_directory(self.path.parent)
+            text = json.dumps(sealed.payload(), sort_keys=True, separators=(",", ":"))
+            # Append, then F_FULLFSYNC on macOS (plain fsync does not flush the
+            # drive cache there) and a directory fsync on create: a crash
+            # mid-workflow must not lose the record of what the agent had
+            # already done. UNFRAMED: the hash chain is this ledger's integrity
+            # check, and its readers (_catch_up, reload) parse bare JSON lines.
+            durable_append(self.path, text, frame=False)
             # Only a record that is durably on disk joins the in-memory chain.
             self._records.append(sealed)
-            self._offset += len(line)
+            self._offset += len((text + "\n").encode("utf-8"))
         return sealed
 
     def _catch_up(self) -> None:

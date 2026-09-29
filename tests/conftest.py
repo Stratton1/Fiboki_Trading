@@ -17,6 +17,21 @@ from tests.data_fixtures import make_bars, make_metadata
 _EPOCH = pd.Timestamp("2023-01-02 00:00", tz="UTC")
 
 
+@pytest.fixture(autouse=True)
+def _isolated_state_dir(tmp_path_factory: pytest.TempPathFactory, monkeypatch: pytest.MonkeyPatch) -> Path:
+    """Point ``FIBOKI_STATE_DIR`` at a fresh temporary directory for every test.
+
+    Without this a test that resolves the state directory from the environment
+    falls back to the relative ``./var`` and would read (or append to) the
+    operator's real ``var/killswitch.jsonl`` and other ledgers. Tests that
+    exercise the "unset" path call ``monkeypatch.delenv("FIBOKI_STATE_DIR")``
+    themselves; that still works because this fixture uses ``monkeypatch``.
+    """
+    state = tmp_path_factory.mktemp("fiboki_state")
+    monkeypatch.setenv("FIBOKI_STATE_DIR", str(state))
+    return state
+
+
 @pytest.fixture
 def trade_factory():
     """Build a closed :class:`Trade` with a deterministic entry/exit window.

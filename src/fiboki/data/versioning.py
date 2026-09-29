@@ -49,6 +49,7 @@ from sqlalchemy.orm import (
     sessionmaker,
 )
 
+from fiboki.core.durable import install_sqlite_pragmas
 from fiboki.core.enums import DataQuality, Timeframe
 from fiboki.data.schema import DatasetKind, PriceBasis
 
@@ -331,6 +332,9 @@ class DatasetCatalogue:
             self.db_path.parent.mkdir(parents=True, exist_ok=True)
             url = f"sqlite+pysqlite:///{self.db_path}"
         self._engine = create_engine(url, echo=echo, future=True)
+        # WAL, busy_timeout and synchronous=FULL on EVERY connection (audit F
+        # P2-14): the API, campaigns and the agents contend for this file.
+        install_sqlite_pragmas(self._engine, synchronous="FULL")
         Base.metadata.create_all(self._engine)
         self._session_factory = sessionmaker(bind=self._engine, future=True)
 
