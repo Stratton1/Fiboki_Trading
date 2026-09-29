@@ -1414,3 +1414,35 @@ it runs at signal time against the just-closed bar. Tests: the existing H1 case 
 overdue age; a new test pins the H4 3,545 s and 15,299 s cases as current and the unknown
 timeframe as the old behaviour. The staleness suites, paper-forward compose and integration
 tests: 129 passed.
+
+## 2026-09-30: K3 finished (nothing survived); sixth seed `tsmom_dual_horizon`; silent launcher; K4 running
+
+**K3 result** (`research/reports/campaign_k3_multi_instrument/`): 542 cells, 1,128 engine
+backtests, true N 7,376, deflation threshold 0.0298 per bar, wall clock 4,188 s, `survivors: []`,
+holdout unconsumed. Died at: rung 0 sanity 526 (420 on `min_trades` ≥ 400 with median observed
+68 and max 391; 106 on non-positive expectancy at defaults), rung 1: 2, rung 2 walk-forward: 12
+(Donchian GBPJPY and XAUUSD among them), rung 4 robustness: 1 (plateau ratio inf), rung 5
+deflation: 1 (Donchian mutant, DSR 0.0016). Reading: the ladder rarely got to test an edge
+because the rule families trade too seldom on H4 for the uncalibrated 400-trade bar; PLATFORM
+STATUS §3 says so. Stored K3 numbers are current under `engine_v3_realism`.
+
+**Sixth seed.** `tsmom_dual_horizon` (commit d2413fe), implemented by an Opus 5.5 subagent to a
+written spec and audited here; the audit changed two roster-wide tests the subagent had
+correctly refused to touch (both generalised, neither weakened) and nothing in the document.
+`run_discovery_campaign.py --seeds` added so one document can be campaigned without
+re-planning the roster. **K4** pre-registered (external prior 7,376; corrected once before
+compute, 87ad36c) and started 2026-09-30 00:2x UTC: `--plan-only` printed planned 1,120,
+true N 8,496.
+
+**Desktop.** Fiboki.app rebuilt as a silent LSUIElement bundle (1b2dac7) and verified from
+Finder on the MacBook: no Terminal, health detected, browser opened at the login page. Icon
+regenerated from the tokens, then re-coloured to the brand emerald on Joe's instruction
+(8846f52). Reinstalled from `~/fiboki`.
+
+**Online.** Verified: fiboki.uk still serves V1 (Vercel), api.fiboki.uk is V1 on Railway; V2 is
+online nowhere. The Vercel project `fiboki-trading` builds on every push to `main` and has
+failed every build since `main` became V2 ("Root Directory 'frontend' does not exist"), which
+is why V1 stays served. Decision needed (USER_ACTIONS C2): point the project at
+`legacy/v1/frontend`, disconnect it, or plan a V2 deployment (which needs a hosted API).
+
+Full suite after all of the above: 4,868 passed, 24 skipped (13:49).
