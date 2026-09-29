@@ -1,6 +1,8 @@
 # Fiboki V2 — Actions That Require You
 
-**Generated:** 19 September 2026, at the end of the V2 build programme.
+**Generated:** 19 September 2026, at the end of the V2 build programme. **Updated 29 September 2026** after the agentic-integration wave (see `docs/v2/AGENTIC_INTEGRATION_PLAN.md` §3 and `docs/v2/BUILD_LOG.md`).
+
+**Status line:** `v2/integration` on the Mac; full backend suite 3,923 passed; frontend 318 Playwright passed. The two decisions waiting on you are in `docs/v2/FRONTEND_OVERHAUL_PLAN.md` D-F5/D-F6 (Lightweight Charts over KLineChart; uPlot over Plotly) and P6 below (news API tier and FRED key). The first real-model agent run needs Ollama on the Mac (P7).
 
 Everything in this document is something the engineering programme could not do for you: it needs an account, a credential, a payment, a legal acceptance, a physical action, or a judgement that is yours rather than mine. Everything *else* has been built, and where an external dependency was missing I built the adapter, the interface, the fixtures and the tests so the platform is ready the day the dependency arrives.
 
@@ -56,7 +58,7 @@ What remains yours:
 
 1. **Before 2024 and other currencies.** The fixture is declared complete from 2024-01-01 to 2026-12-04 and for USD, EUR, GBP and JPY only. Outside that, blackout queries still answer "not in blackout", so a backtest over 2005-2023, or on AUD, CAD, CHF or NZD pairs, trades straight through FOMC and NFP. Extend it from official sources (central bank and statistics-office archives) in the same shape; commercial aggregators such as ForexFactory and Investing.com forbid automated extraction.
 2. **Refresh before the declared end.** Future dates are schedules and can move (the Fed marks each date tentative until the preceding meeting; the 2025 US appropriations lapse cancelled a month of NFP and CPI). Rebuild the file before 2026-12-04 and whenever a publisher revises its calendar.
-3. **Wire it in.** Paper sessions (`scripts/run_paper_session.py`) now refuse to replay a span the calendar does not cover unless `--allow-empty-calendar`, and `run_validation` refuses an empty or non-covering calendar unless `allow_empty_calendar=True`. But the paper runtime does not yet pass the calendar to the risk gateway's `event_blackout` check, and no validation caller (including campaigns) passes one yet. Until both are wired, the guard proves coverage and nothing is actually blacked out.
+3. **Wired in (2026-09-29).** `build_replay_session` and `discovery.campaign.run_cell` now load the official calendar by default and pass it to the risk gateway's `event_blackout` check and to validation; the evaluator cache key includes the calendar hash. A replay test proves an entry on the 2024-03-08 NFP bar is blocked. Consequence: every earlier ladder or campaign result for the five seed strategies ran with blackouts silently unenforced and is superseded by the next run. On H4 bars the 15-minute window (measured from bar open) rarely fires; that is a known limitation to revisit.
 4. **Impact choice.** Every fixture event is `high`, including UK labour and monthly GDP, which the recurring taxonomy rates `medium`. Lower them if you disagree.
 
 One trap still worth knowing: feeds return *revised* actuals for historical dates, not the print the market traded. The official fixture stores no figures at all, only scheduled times; any future feed with actuals is optimistic unless it preserves first prints.
@@ -72,6 +74,17 @@ This alone means every V1 research result is stale, independently of the engine 
 ### P5. Decide the account currency question
 
 The engine refuses to invent an exchange rate. If you run a GBP account against USD-quoted instruments you must supply a real GBP/USD series, or explicitly acknowledge the approximation in writing. The XAUUSD work so far used a USD account precisely to sidestep this. V1 reported USD P&L as GBP, an error that ranged 1.20–1.43 over the sample.
+
+### P6. Choose the licensed news API and start the headline recorder
+
+`fiboki news record --loop` records central-bank headlines from twelve official feeds today with no account at all. Its value, like the price recorder's, is proportional to elapsed time: a headline's first-seen instant cannot be reconstructed later. Start it now on the machine that stays on (`fiboki news status` exits 1 if it has stopped).
+
+The decision that is yours: **which licensed vendor API, if any, sits beside the official feeds.** The plan (D-A5) names two; both clients are built and both are off until a key is set.
+
+- **Finnhub (personal tier)**: `FIBOKI_FINNHUB_API_KEY`. General and forex news categories. Check that the personal tier's terms allow storing headlines for your own research; they are unlikely to allow redistribution.
+- **Marketaux**: `FIBOKI_MARKETAUX_API_KEY`. The token has to travel in the URL (their API design). The free plan's daily request cap is why the recorder calls it at most every 15 minutes by default; change `--marketaux-min-interval` to match the plan you buy.
+
+Neither has been tested against the live service, because no key exists in the build environment; the first live poll is the test. Separately, for macro vintages, register a free FRED API key and set `FIBOKI_FRED_API_KEY`; FRED's terms require the notice "This product uses the FRED® API but is not endorsed or certified by the Federal Reserve Bank of St. Louis." wherever FRED data is shown.
 
 ---
 
@@ -181,3 +194,20 @@ Compare the 0.618 level against randomly drawn levels between 0.5 and 0.7 on the
 ### F3. Extend the campaign across instruments and timeframes
 
 The 400-trade minimum was written for a 60-instrument campaign. A single instrument on a single timeframe mostly cannot clear it, which is why most K1 cells were rejected for having too little evidence rather than bad evidence. A genuine multi-instrument campaign is the next real research step — and it needs P4 (the full data store) first.
+
+### P7. Run the first real-model agent smoke test (Ollama on the Mac)
+
+Nothing in the agent layer has ever run against a real model; every workflow has been exercised with the offline `EchoProvider`. The provider, weights-pinning and audit stamping are built and tested with recorded responses. To close the gap:
+
+```bash
+ollama pull qwen2.5:7b-instruct      # or any 7B–30B instruct model you prefer
+cd ~/Documents/Claude/Projects/Fiboki
+.venv/bin/python -c "
+import json
+from fiboki.agents.providers import LocalHTTPProvider, ollama_http_client, smoke_test_provider
+p = LocalHTTPProvider.for_ollama('qwen2.5:7b-instruct', client=ollama_http_client())
+print(json.dumps(smoke_test_provider(p).as_dict(), indent=2))
+"
+```
+
+Expect `"ok": true` and a `model_digest` matching `ollama list`. Then set `FIBOKI_AGENT_CYCLES=true`, `FIBOKI_AGENT_PROVIDER=local` and the model name (table in `docs/v2/OPERATIONS.md`) and restart the research worker; the nightly research cycle and failure investigations will run on the local model with every step in `var/agents/audit.jsonl`. Run `fiboki.agents.evals.run_evals` over that ledger after the first night.

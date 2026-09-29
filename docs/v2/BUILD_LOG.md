@@ -380,3 +380,240 @@ Stored results: none affected. No engine, cost model, metric or gate changed. No
 data is stored (no credentials have ever existed), so the alignment default invalidates nothing;
 any future OANDA H4/D1 import made with `align_utc=False` would not be comparable with the
 UTC-anchored research frames.
+
+## 2026-09-28: pre-registered forecast record and deterministic scorer (uncommitted working tree)
+
+- **What was missing.** Agents could write prose but nothing an agent said about the market was
+  ever scored, so there was no way to tell whether any role or model is calibrated before its
+  output is trusted. Plan Wave 2 item "forecast record".
+- **Capabilities.** `WRITE_FORECAST` and `READ_FORECAST_SCORES` added (19 to 21); both pass
+  `assert_no_execution_capability` and the registry guard. New `WriteDomain.RESEARCH_FORECAST`.
+- **Tools.** `record_forecast` (quant_researcher, market_regime_analyst) and
+  `query_forecast_scores` (research_director, statistical_auditor). New public
+  `tools.order_vocabulary_hits`: the brief asked to reuse an existing cardinal-rule vocabulary
+  check in `tools.py`; none existed (the only vocabulary lists were the capability-name parser
+  and the critic's vague-phrase list), so this is new. `ToolContext.model_id` added, default
+  empty.
+- **Store.** `research/artefacts.py`: `Forecast` and `ForecastScore` artefacts, collections
+  `forecasts` and `forecast_scores` in the existing append-only table (no schema migration: the
+  payload is JSON).
+- **Scorer.** New `research/forecasts.py`: `ForecastPolicy`, `evaluate_forecast`,
+  `score_due_forecasts`, `aggregate_scores`, `scoreboard`, `n_forecasts_by_actor`. See
+  `docs/v2/AI_AGENT_ARCHITECTURE.md` §11 for the definitions.
+- **Tests changed.** `test_agents_roles.py`: `market_regime_analyst` removed from the read-only
+  set because it now writes forecasts; replaced by a test pinning its only write to
+  `WRITE_FORECAST`, plus a test that no forecasting role can read forecast scores.
+  `test_agents_tool_registry.py`: `RESEARCH_FORECAST` added to the allowed write domains and the
+  two tools to the required list. No capability-count test existed; one now exists in
+  `tests/unit/test_agents_forecasts.py` pinning the 21 names with the reason for the change.
+- **Still unwired.** No scheduled scoring run; `AgentSession` does not set `model_id`; scores do
+  not feed `ModelRouter`; role prompts are unchanged.
+
+Stored results: none affected. No engine, cost model, metric or gate changed; the two new
+collections start empty.
+
+## 2026-09-28: agents on a real local model, run manifest, offline evals (uncommitted working tree)
+
+- **What was missing.** `LocalHTTPProvider` had the Ollama wire format but no client, no
+  weights pinning, no structured output beyond `format: "json"`, and no guard against Ollama
+  silently truncating an over-long prompt. Audit records named a model but not its weights, and
+  nothing recorded which prompts and tool schemas a run was made under. Workflows had no start or
+  terminal record, and nothing evaluated a recorded run. Plan Wave 2 items "wire
+  `LocalHTTPProvider`", "run manifest hash" and "offline eval harness".
+- **Provider.** `providers.py`: `ollama_http_client()` (real `httpx.Client`, `retries=0`,
+  `trust_env=False`, 5 s connect / 300 s read), `LocalHTTPProvider.for_ollama(model, client=,
+  num_ctx=8192, seed=0)`, `model_fingerprint()` on every provider (`ModelFingerprint{model_id,
+  digest}`; Ollama: `/api/tags` manifest digest, else `/api/show`, else the modelfile weights
+  blob, else refuse; hosted: `digest=None`), `LLMRequest.json_schema` sent as Ollama `format` with
+  `$ref`s inlined, `num_ctx` sent and enforced, a 200 response carrying `error` treated as an
+  error, `smoke_test_provider() -> SmokeReport`. One POST per generation, no retry. The request
+  digest is unchanged when `json_schema` is unset.
+- **Audit.** `AuditRecord` gains optional `model_id`, `model_digest`, `manifest_hash`, hashed only
+  when not `None`, so every existing record verifies unchanged (tested against the explicit
+  legacy key set). `NO_MODEL = "none"` for actions no model took part in. `AuditedAction` accepts
+  the three. The locking code is untouched.
+- **Session.** Stamps all three on every record; `think` asks the provider for its fingerprint
+  inside the audited block (an unpinnable local model fails the step on the record, before
+  generating); `json_schema` pass-through; `default_budget(role_spec)` shared with the workflow
+  start record. **Behaviour fix:** the model call's tokens and cost are now written to the record
+  before the budget is charged. Previously a call refused by `BudgetExceeded` after generating was
+  recorded with cost 0 although the money was spent.
+- **Manifest.** New `agents/manifest.py`: `build_run_manifest() -> RunManifest(hash,
+  components)` over every role prompt, every tool's input/output schema, the capability enum,
+  numpy/pandas/scipy/pydantic versions and the git HEAD (read from `.git`, no subprocess).
+- **Workflows.** Both workflows are bracketed by `workflow:start` (manifest hash and components,
+  per-role session budgets) and `workflow:end` (written in a `finally`; outcome `error` if any
+  step failed or the run raised). The manifest is filed as a `run_manifest`-tagged research note
+  once per distinct hash. Tool-feeding steps pass their tool's input schema
+  (`WorkflowDeps.schema_constrained_output`, default on). `WorkflowResult.manifest_hash` added.
+- **Evals.** New package `agents/evals/`: `run_evals(ledger_path, store) -> EvalReport`,
+  `run_evals_on_records`, `write_eval_report`; six cases (critic cites evidence, no trade
+  instruction, provenance stamped, terminal record, budget respected, weights pinned); verdicts
+  PASS / FAIL / NOT_EVALUABLE / INVALID_ARTIFACT, worst wins, missing instrumentation never a pass.
+  `no_trade_instruction` imports `tools.order_vocabulary_hits` read-only for context but decides on
+  phrase-level patterns; see `AI_AGENT_ARCHITECTURE.md` §12 for why.
+- **Tests added.** `tests/unit/test_agents_local_provider.py` (21), `tests/unit/test_agents_manifest.py`
+  (13), `tests/integration/test_agents_run_manifest.py` (7), `tests/integration/test_agents_evals.py`
+  (31). No existing test changed.
+- **Still unwired.** Not run against a live Ollama server. `workers/runtime.py` does not yet build
+  the provider (another agent's file this wave). No scheduled eval run. `ToolContext.model_id`
+  still not set by the session.
+
+Smoke test on the Mac (commands only; not run here):
+
+```bash
+ollama pull qwen2.5:7b-instruct          # any model; the name below must match
+ollama list                               # the ID column is the first 12 hex of the digest
+cd ~/Documents/Claude/Projects/Fiboki
+.venv/bin/python -c "
+import json
+from fiboki.agents.providers import LocalHTTPProvider, ollama_http_client, smoke_test_provider
+provider = LocalHTTPProvider.for_ollama('qwen2.5:7b-instruct', client=ollama_http_client())
+print(json.dumps(smoke_test_provider(provider).as_dict(), indent=2))
+"
+```
+
+Expect `"ok": true` and a `model_digest` of `sha256:` followed by the `ollama list` ID.
+
+Stored results: none invalidated. No engine, cost model, metric or gate changed. Existing audit
+ledgers verify unchanged; their records read back with the three new fields as `None`, which the
+evals report as NOT_EVALUABLE. Each new manifest hash adds one research note.
+
+## 2026-09-29: calendar into the gateway and the campaign; research composition root (uncommitted working tree)
+
+- **What was wrong.** (1) `build_replay_session` built its `RiskContextBuilder` with no
+  `event_source`, so the gateway's `event_blackout` check ran on every paper order against an
+  empty tuple and could never fire (`summary.json`: `wired_into_gateway: false`).
+  (2) `discovery.campaign.run_cell` never passed `calendar=` to `run_validation`, so no campaign
+  cell ever applied a document's declared event blackout. (3) `EngineEvaluator`'s cache key
+  omitted the blackout source; `validation/run.py` worked round it with a per-calendar cache
+  subdirectory. (4) No process registered the research job handlers or ran the agent research
+  cycle (ARCHITECTURE §12).
+- **Calendar, paper.** `build_replay_session(calendar=None, allow_empty_calendar=False)` loads
+  `load_official_calendar()` by default, refuses (`CalendarError`) a replay whose span or
+  currencies it does not cover unless `allow_empty_calendar=True` (which still applies the
+  calendar where it has events), and wires it into `RiskContextBuilder.event_source`
+  (`calendar_event_source`; an unfixed-time event reports the point of its span nearest `now`)
+  and into the `PaperBroker` blackout source, the one the engine gets. An explicitly empty
+  calendar is never wired. `PaperSession.summary()["economic_calendar"]` reports what the gateway
+  was given; `wired_into_gateway` is read from the builder. `run_paper_session.py` passes its
+  calendar through, gains `--no-calendar`, and reads `wired_into_gateway` back from the session.
+- **Calendar, research.** `run_cell(calendar=None)` loads the official calendar (the runner loads
+  it once); `CampaignSpec.allow_empty_calendar` (default False, serialised) lifts the coverage
+  refusal. An explicitly empty calendar is forwarded as `None`.
+- **Cache key.** `EngineEvaluator.engine_fingerprint()` carries
+  `blackout = {kind, n_events, events_sha256}` when a source is set (absent otherwise, so
+  no-calendar hashes and cache entries are unchanged); a source that cannot be fingerprinted is
+  refused behind a cache (`UnfingerprintableBlackout`). The `run.py` subdirectory workaround and
+  `_calendar_digest` are removed; its tests stay green.
+- **Research runtime.** New `workers/research_runtime.py`: `ResearchRuntimeSettings.from_env`,
+  `compose_research_runtime(settings) -> ResearchRuntime` (research store, strategy registry,
+  `DataStoreBarSource`, every `jobs.HANDLERS` entry on the worker's orchestrator and on a private
+  cycle orchestrator, `EchoProvider` or `LocalHTTPProvider.for_ollama`, `JsonlAuditLedger` at
+  `<state_dir>/agents/audit.jsonl`, a claimed-before-run nightly `run_research_cycle`,
+  `run_failure_investigation` via `IncidentChannel` or `raise_incident`). Each run pins
+  `ToolContext.as_of` to its own start. `ResearchWorker.setup` composes it when
+  `FIBOKI_AGENT_CYCLES` is on; agent work runs inside `HeartbeatPulse`, which renews the lease and
+  writes a heartbeat every `pulse_seconds`. Seven `FIBOKI_*` variables declared in
+  `ENV_REGISTRY`.
+- **Tests.** New: `tests/integration/test_replay_calendar_blackout.py` (6: an entry on the
+  2024-03-08 13:30Z NFP bar is blocked with `event_blackout:2024-03-08T13:30:00+00:00`, the same
+  bars with no calendar are accepted, a quiet-day breakout is accepted, an uncovered replay is
+  refused), `tests/unit/test_engine_evaluator_blackout_key.py` (4),
+  `tests/unit/test_discovery_campaign_calendar.py` (5), `tests/integration/test_research_runtime.py`
+  (14). Changed: `test_calendar_guards.py` (the opt-out now records `wired_into_gateway: true`;
+  new `--no-calendar` test), `test_live_worker_runtime.py` (the 2009 XAUUSD slices pass
+  `allow_empty_calendar=True`).
+- **Still open.** Nothing starts the heartbeat watchdog or schedules reconciliation. Incident
+  alerts reach the investigator only in-process. The gateway's 15-minute window is measured from
+  a replay bar's OPEN stamp, so on H4 it sees only releases near a bar boundary; the seeds'
+  15 to 45 minute document blackouts have the same property on H4 (evaluated on the entry bar's
+  stamp). `run_paper_session.py` still builds `PaperConfig` with the default exit policy, not the
+  document's, so a document's own blackout does not apply in that script's paper replay.
+  `cli.py` still prints "no handlers registered" even when the flag composes them.
+
+Stored results: **superseded for every strategy that declares an event blackout, which is all
+five seeds.** Every earlier campaign or ladder result for them ran with no blackout (none was ever
+enforced through `run_cell`), so from now on a validation over bars that overlap the calendar
+(2024-01-01 to 2026-12-04) differs and the earlier ones are superseded, not regressions. A cell
+over bars entirely outside that span is now refused by default rather than silently run; with
+`allow_empty_calendar=True` its numbers are unchanged, because the calendar has no events there.
+Earlier paper replays likewise traded through every release. Evaluation-cache entries written
+under a calendar are recomputed once (new key); no-calendar entries remain valid.
+
+## 2026-09-28: point-in-time headline recorder and macro providers (uncommitted working tree)
+
+- **What was missing.** D-A5 (record news first, classify second) had nothing behind it, and
+  no macro source existed that could say when a value became knowable. A backtest reading a
+  macro number at its reference date, or a headline at its vendor timestamp, is look-ahead that
+  no bar-level test catches.
+- **Headlines.** New `data/news/` (`store`, `sources`, `recorder`). Append-only SQLite in
+  `<state_dir>/news/headlines.sqlite` (WAL; triggers refuse UPDATE, DELETE and a colliding
+  INSERT, which closes `INSERT OR REPLACE`). `observed_at` is our clock and the only
+  availability instant; `HeadlineStore.query(as_of, since, sources, currencies_hint)`.
+  Twelve official feeds from the six banks, every URL taken from the bank's own RSS index page
+  on 2026-09-28 (DATA_ARCHITECTURE.md §14.1). Finnhub and Marketaux clients, off without
+  `FIBOKI_FINNHUB_API_KEY` / `FIBOKI_MARKETAUX_API_KEY`. CLI `fiboki news record --once|--loop`,
+  `fiboki news status`.
+- **Macro.** New `providers/macro_base.py` (long-format frame, `AvailabilityBasis`, `as_of`,
+  superset holiday calendars, content-addressed `MacroDatasetStore`) and six first-party clients:
+  `alfred` (vintages; `FIBOKI_FRED_API_KEY`), `cftc_cot` (Friday 15:30 ET rule, CFTC 2025
+  backlog overrides, lapse windows unresolved), `ecb_sdmx`, `boe_iadb`, `ons` (archived versions
+  as vintages; release calendar recorded), `nyfed` (reference rates, repo). CLI
+  `fiboki macro describe|fetch`. Three variables declared in `ENV_REGISTRY`.
+- **Measured, not assumed.** A live `fiboki news record --once` at 22:55Z fetched all twelve
+  feeds (263 items, 256 unique); a second poll inserted 0. Live `macro fetch` succeeded for ECB,
+  CFTC, BoE, ONS (with archived versions) and NY Fed; ALFRED refused for want of a key. The ONS
+  archive stamps were found to precede some publications (05:07Z on a 07:00 BST release day), so
+  only on-the-hour or half-hour stamps are trusted.
+- **Not done.** No worker supervision of the recorder (belongs to `workers/`); no
+  `query_news` tool or `READ_NEWS_SNAPSHOT` capability; ALFRED, Finnhub and Marketaux never
+  exercised live. Seven days of continuous capture (the Wave 3 acceptance) has not started.
+- **Tests.** `tests/unit/test_news_recorder.py` (37), `tests/unit/test_macro_providers.py` (45),
+  recorded fixtures under `tests/fixtures/news` and `tests/fixtures/macro`.
+
+Stored results: none affected. Nothing reads these datasets yet; no engine, cost model, metric
+or gate changed.
+
+## 2026-09-29: bar-indexed entry locks in the DSL, engine and gateway (uncommitted working tree)
+
+- **What was missing.** AGENTIC_INTEGRATION_PLAN §5 Wave 3: "bar-indexed cooldown and stop-streak
+  locks declared in the DSL, enforced identically in engine, paper and gateway". The only cooldown
+  was `position_management.cooldown_bars_after_exit`, enforced by the position book at fill time on
+  the engine's loop counter, invisible to the gateway and forgotten by a restart.
+- **DSL.** Optional `locks` block on `StrategyDocument` (`cooldown_bars_after_close`,
+  `stop_streak{n_stops, lookback_bars, lock_bars, scope}`), bindable. Absent from the dump when
+  undeclared; an inert block is dropped on load. `SCHEMA_VERSION` NOT bumped (reasoning in
+  STRATEGY_STANDARD.md §4a). Complexity +1.0 per declared lock rule. The compiler refuses an
+  instrument-scoped streak that can never arm, and stamps `locks_declared` on signals of a
+  lock-declaring document.
+- **One implementation.** New `backtest/locks.py`: `SessionBarClock` (session-bar ordinals from
+  the timestamp, interbank weekend removed), `LockPolicy`, `LockBook.on_close / is_locked /
+  rebuild`, `LedgerLockView` (rebuilds from a ledger on every question), `closes_from_intents`.
+  Pattern after freqtrade `plugins/protections` (GPL-3.0, not copied), corrected to session bars
+  and always-on.
+- **Enforcement.** `ExitPolicy.locks` carries the policy (fingerprint key present only when
+  declared). `BacktestEngine` asks the lock book on the decision bar after scheduling a reversal
+  and before sizing; refusals are `rejections["instrument_lock"]` and `BacktestResult.lock_blocks`.
+  `RiskGateway` gains a nineteenth check, `instrument_lock`, reading `RiskGateway(locks=...)`,
+  fail-closed as described in PORTFOLIO_RISK_STANDARD.md §3. The position book, the paper adapter
+  and the venue manager are unchanged.
+- **Parity.** `tests/integration/test_lock_parity.py`: one lock-declaring document through the
+  engine, `PaperBroker` behind the gateway (also rebuilt from a ledger file at every bar), and
+  `VenuePositionManager.submit` over `SimulatedVenue`: identical trade and leg ledgers, and the
+  gateway refused exactly the bars the engine refused, including locks armed on a Friday that were
+  still in force after the weekend.
+- **Not done.** No worker wires a `LedgerLockView` into its gateway (`workers/` was out of scope),
+  so a lock-declaring document is refused on every paper/demo entry until one does; documents
+  without locks are unaffected. The intent ledger does not record exit reasons, so a stop streak
+  recovered from it alone is conservative. `risk/accounting.py` and
+  `tests/integration/test_risk_context_inputs.py` still say "eighteen" in prose.
+- **Tests.** `tests/unit/test_locks.py`, `tests/unit/test_dsl_locks.py`,
+  `tests/unit/test_gateway_instrument_lock.py`, `tests/integration/test_lock_parity.py`,
+  `tests/integration/test_locks_regression_pin.py`; `tests/unit/test_risk_gateway.py` check count
+  18 -> 19.
+
+Stored results: none invalidated. No document in `research/strategies/` declares locks (grepped);
+for all five seeds the content hash, structure hash, serialised JSON, complexity score, exit-policy
+fingerprint and engine ledger hashes are pinned to their pre-change values and unchanged.
+`ENGINE_VERSION` unchanged, because no run without locks changes by a byte.
