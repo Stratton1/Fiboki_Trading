@@ -292,10 +292,14 @@ class LiveWorkerConfig(WorkerConfig):
     #: Warn when one evaluation cycle takes longer than this fraction of the
     #: bar's timeframe. 0 disables the check.
     cycle_budget_fraction: float = 0.25
-    #: Bars older than this trigger DATA_STALE. THE observability threshold
-    #: (``HealthThresholds.data_stale_after_seconds``): the default is the
-    #: shared default and a composition root passes ``Settings.health``'s
-    #: value (``FIBOKI_DATA_STALE_SECONDS``). There is no second constant.
+    #: A bar OVERDUE by more than this triggers DATA_STALE: the newest closed
+    #: bar's age is measured from its close, so on an H4 feed it is up to 4 h
+    #: old in perfectly healthy operation. Stale means the next bar should
+    #: have arrived and has not: ``age > timeframe + data_stale_after_seconds``.
+    #: THE observability threshold (``HealthThresholds.data_stale_after_seconds``):
+    #: the default is the shared default and a composition root passes
+    #: ``Settings.health``'s value (``FIBOKI_DATA_STALE_SECONDS``). There is no
+    #: second constant.
     data_stale_after_seconds: float = DEFAULT_HEALTH_THRESHOLDS.data_stale_after_seconds
     #: Consecutive rejections of the same instrument before alerting.
     reject_alert_threshold: int = 3
@@ -844,14 +848,24 @@ class LiveWorker(Worker):
         )
 
     def _record_freshness(self, batch: BarBatch) -> None:
+        """DATA_STALE when the NEXT bar is overdue, not when the last one is old.
+
+        ``batch.ages`` are seconds since the newest closed bar's close. A bar
+        that closed 59 minutes ago on an H4 feed is the current bar, not a
+        stale one; the next close is due at ``timeframe`` and the feed is
+        stale once that is ``data_stale_after_seconds`` late. An unknown
+        timeframe (``""``) falls back to the bare threshold.
+        """
+        span = timeframe_seconds(batch.timeframe) or 0.0
+        limit = span + self.lconfig.data_stale_after_seconds
         stale: list[str] = []
         for instrument, age in batch.ages.items():
             _metrics.record_data_freshness(instrument, batch.timeframe or "?", age)
             if instrument in batch.market_closed:
                 # Closed, not stale: a Friday bar on a Sunday is expected.
                 continue
-            if age >= self.lconfig.data_stale_after_seconds:
-                stale.append(f"{instrument}={age:.0f}s")
+            if age >= limit:
+                stale.append(f"{instrument}={age:.0f}s (next bar {age - span:.0f}s overdue)")
         if stale:
             self._alert(
                 AlertEvent.DATA_STALE,

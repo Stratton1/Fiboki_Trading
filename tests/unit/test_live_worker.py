@@ -397,15 +397,45 @@ def test_live_mode_starts_only_when_explicitly_allowed(store):
 
 
 def test_stale_bars_raise_DATA_STALE(store):
+    """Stale means the NEXT bar is overdue by the threshold: on H1 with a 900 s
+    threshold, a bar that closed 4,600 s ago (next close 1,000 s late)."""
     channel = MemoryChannel()
     worker = build(
         store,
-        feed=Feed([BarBatch(ages={"EURUSD": 4000.0}, timeframe="H1")]),
+        feed=Feed([BarBatch(ages={"EURUSD": 4600.0}, timeframe="H1")]),
         dispatcher=AlertDispatcher([channel]),
         config=LiveWorkerConfig(max_cycles=1, data_stale_after_seconds=900),
     )
     worker.run_cycle()
     assert AlertEvent.DATA_STALE in channel.events()
+    alert = next(a for a in channel.sent if a.event is AlertEvent.DATA_STALE)
+    assert "EURUSD=4600s (next bar 1000s overdue)" in alert.message
+
+
+def test_the_current_bar_is_not_stale_on_a_slow_timeframe(store):
+    """The defect seen on the first forward paper cycle (2026-09-29 20:59 UTC):
+    an H4 bar that closed 3,545 s earlier was reported stale against a fixed
+    900 s threshold, which on H4 fires ~94% of the time. Bars younger than
+    timeframe + threshold are current; a bar with an unknown timeframe keeps
+    the bare threshold."""
+    channel = MemoryChannel()
+    worker = build(
+        store,
+        feed=Feed([BarBatch(ages={"XAUUSD": 3545.0, "EURUSD": 14400.0 + 899.0}, timeframe="H4")]),
+        dispatcher=AlertDispatcher([channel]),
+        config=LiveWorkerConfig(max_cycles=1, data_stale_after_seconds=900),
+    )
+    worker.run_cycle()
+    assert AlertEvent.DATA_STALE not in channel.events()
+    channel2 = MemoryChannel()
+    worker2 = build(
+        store,
+        feed=Feed([BarBatch(ages={"EURUSD": 901.0}, timeframe="")]),
+        dispatcher=AlertDispatcher([channel2]),
+        config=LiveWorkerConfig(max_cycles=1, data_stale_after_seconds=900),
+    )
+    worker2.run_cycle()
+    assert AlertEvent.DATA_STALE in channel2.events()
 
 
 def test_abandoning_a_cycle_says_a_position_may_exist(store):

@@ -1389,3 +1389,28 @@ worker kickstarted and verified reading it; the nightly cycle at 02:15 UTC is un
 is a hardware limit, not a defect: the platform's working set with a campaign running is above
 8 GB, which is why the plan puts it on the desktop. Agent quality remains unmeasured (one
 completed call is not a sample).
+
+## 2026-09-29 (later): forward paper trading started on OANDA practice; DATA_STALE measured as overdue
+
+Joe added the practice credentials to `~/.fiboki/env`. Verification before anything ran: the
+token had a stray `o` (66 characters, OANDA tokens are 65 hex-and-dash) and the account id
+had a mistyped middle digit; a read-only `GET /v3/accounts` on the practice host with the
+corrected token returned exactly one account, and the file was rewritten with the verified
+values (mode 600 kept; no value printed). `GET .../summary`: alias Primary, GBP, balance
+100,000 virtual, 0 open trades, margin rate 1/30, hedging off. `fiboki paper forward --check`:
+wiring `paper_forward_v1` OK, sha256 `51a084b5…`. `uk.fiboki.paper` loaded (pid 30563):
+startup reconciliation clean, 500 H4 mid candles for EURUSD, GBPUSD, XAUUSD, pricing sample
+200, journal at `~/fiboki/var/paper_forward/paper_forward_v1`, session at
+`var/paper/forward-paper_forward_v1`. This is the first time Fiboki has traded forward
+against live venue data; every fill is still the internal paper venue, and OANDA is read only.
+
+**Defect found on cycle 1.** `DATA_STALE` fired for all three markets at "3545 s": the age
+of the newest closed bar is measured from its close, so on H4 it is up to 14,400 s in healthy
+operation and the fixed 900 s threshold would fire about 94% of the time.
+`LiveWorker._record_freshness` now alerts when the NEXT bar is overdue by the threshold
+(`age > timeframe_seconds + data_stale_after_seconds`; unknown timeframe keeps the bare
+threshold) and says how late it is. The gateway's own `data_freshness` check is unaffected:
+it runs at signal time against the just-closed bar. Tests: the existing H1 case moved to an
+overdue age; a new test pins the H4 3,545 s and 15,299 s cases as current and the unknown
+timeframe as the old behaviour. The staleness suites, paper-forward compose and integration
+tests: 129 passed.
