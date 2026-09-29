@@ -32,6 +32,48 @@ Two gate sets, and the difference matters
 reports carry that version string, so nothing produced under it can ever be
 mistaken for a promotion decision. No other threshold is moved, ever.
 
+Account currency and FX (engine_v3_realism)
+-------------------------------------------
+``--account-ccy GBP`` (the default) is the operator's account currency and
+``run_validation``'s own default. Quote currencies are converted by
+:func:`fiboki.validation.run.build_research_fx_source`: daily rates from the
+store's validated D1 GBP crosses, or, where a cross has no D1, from its H4 (else
+H1) bars reduced to the last close of each UTC day and stamped at that bar's
+close; where the direct cross has no fresh rate (it starts later than the
+instrument), the product of the two USD legs, recorded as ``via_usd``. A cross
+missing at every timeframe REFUSES the run up front with the list of pairs to
+ingest. ``fx_coverage.json`` records each pair's derivation and, per series,
+how many bars (at bar open) convert directly, via USD, or not at all. ``--account-ccy USD`` keeps the K1/K2 conversion (the
+script's own ``FX_SERIES_FOR`` table over H4 bid closes) so an earlier campaign
+can be reproduced; it is not the research default.
+
+Economic calendar
+-----------------
+``--calendar official`` (the default) runs every cell against the committed
+official calendar under the policy "enforce where covered, record the rest":
+blackouts are applied on every bar inside the calendar's declared span for the
+currencies it carries, and are absent before its declared start and for
+currencies it does not carry. The covered fraction of bars per instrument is
+printed, written to ``calendar_coverage.json`` and written into the campaign
+notes, so the report says how much of each series ran with blackouts. The run
+is REFUSED when a series has bars after the calendar's declared end (an
+uncovered tail is not the declared design) or when the calendar carries none of
+an instrument's currencies (nothing would be enforced). ``allow_empty_calendar``
+is set only when some series is partly uncovered; it lifts ``run_validation``'s
+coverage refusal and nothing else, because the official calendar is still the
+blackout source. ``--calendar none`` runs with no calendar at all and says in
+the notes that no blackout was enforced.
+
+Engine version
+--------------
+``--engine-version-check`` refuses to run unless
+``fiboki.backtest.version.ENGINE_VERSION`` is ``engine_v3_realism`` (or the
+version given), so a stale checkout cannot produce a report under a new
+campaign id. The effective configuration (engine version, account currency, FX
+label, calendar coverage, construction policy, gate set) is the first block of
+``<out>/run.log``, which this script writes itself (appending, one block per
+invocation, so a resumed campaign keeps its whole transcript).
+
 Resume
 ------
 ``--out`` holds ``checkpoint.json``. Re-running the same command resumes: cells
@@ -42,15 +84,19 @@ the search rather than a result about a strategy.
 from __future__ import annotations
 
 import argparse
+import contextlib
 import json
 import sys
 import time
-from collections.abc import Sequence
+from collections.abc import Iterator, Sequence
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any
+from typing import Any, NamedTuple, TextIO
 
+import numpy as np
 import pandas as pd
 
+from fiboki.backtest.version import ENGINE_VERSION
 from fiboki.core.enums import Timeframe
 from fiboki.core.instruments import get as get_instrument
 from fiboki.core.money import SeriesFxSource
@@ -68,6 +114,12 @@ from fiboki.discovery.hypothesis import (
     HypothesisStatus,
     load_hypotheses,
 )
+from fiboki.marketstate.calendar import (
+    EconomicCalendar,
+    InMemoryEconomicCalendar,
+    instrument_currencies,
+    load_official_calendar,
+)
 from fiboki.research.experiment import (
     ActorKind,
     ExperimentDraft,
@@ -75,22 +127,33 @@ from fiboki.research.experiment import (
     Outcome,
 )
 from fiboki.strategy.dsl import StrategyDocument
+from fiboki.validation.engine_evaluator import research_construction_policy
 from fiboki.validation.gates import GATE_SET_V2, GateSet
 from fiboki.validation.holdout import HoldoutRegistry
 from fiboki.validation.report import ValidationReport
+from fiboki.validation.run import (
+    RESEARCH_ACCOUNT_CCY,
+    RESEARCH_CONSTRUCTION,
+    FxSourceUnavailable,
+    build_research_fx_source,
+    research_fx_pairs,
+)
 
-SEED_DIR = Path("research/strategies")
-HYPOTHESIS_DIR = Path("research/hypotheses")
+REPO = Path(__file__).resolve().parents[1]
+SEED_DIR = REPO / "research" / "strategies"
+HYPOTHESIS_DIR = REPO / "research" / "hypotheses"
 
-#: The account currency for the campaign. Every monetary figure is in it.
-ACCOUNT_CCY = "USD"
+#: The engine generation ``--engine-version-check`` requires by default.
+K3_ENGINE_VERSION = "engine_v3_realism"
 
-#: Quote currency -> the HistData series that converts it into USD.
+#: The account currency the legacy ``FX_SERIES_FOR`` table converts into. Only
+#: ``--account-ccy USD`` uses it; research runs in GBP.
+LEGACY_FX_ACCOUNT_CCY = "USD"
+
+#: Quote currency -> the HistData series that converts it into USD, for
+#: ``--account-ccy USD`` only (the K1/K2 conversion, kept so those campaigns can
+#: be reproduced).
 #:
-#: Nine of sixteen H4 series are quoted in something other than USD, and
-#: ``run_validation`` refuses to run those in a USD account without a real rate
-#: rather than applying a 1.0 that would mis-state every monetary figure by the
-#: exchange rate. These are the pairs that supply the rate.
 #: :class:`~fiboki.core.money.SeriesFxSource` derives the inverse itself, so
 #: ``USDJPY`` serves ``JPY -> USD`` as ``1 / USDJPY`` and no rate is inverted by
 #: hand. The rates are bid closes from the same HistData source as the bars, and
@@ -122,6 +185,11 @@ SWEEP_AXES: dict[str, tuple[str, ...]] = {
     "rsi_band_mean_reversion": ("rsi_period", "rsi_floor", "bb_num_std"),
 }
 
+#: Exit codes for the refusals, so a wrapper can tell them apart.
+EXIT_ENGINE_VERSION = 2
+EXIT_FX_REFUSED = 3
+EXIT_CALENDAR_REFUSED = 4
+
 
 def gate_set_for(mode: str) -> GateSet:
     if mode == "production":
@@ -132,10 +200,15 @@ def gate_set_for(mode: str) -> GateSet:
     )
 
 
+# --------------------------------------------------------------------------
+# FX
+# --------------------------------------------------------------------------
+
+
 def build_fx_source(
     store: DataStore, instruments: Sequence[str], timeframe: Timeframe
 ) -> tuple[SeriesFxSource | None, str, dict[str, Any]]:
-    """An FX source over the SAME ingested bars, or an honest refusal.
+    """The LEGACY USD-account FX source (``--account-ccy USD`` only).
 
     Returns ``(source, label, coverage)``. ``coverage`` names which pairs were
     loaded, which quote currencies each instrument needs, and -- the part that
@@ -148,7 +221,7 @@ def build_fx_source(
     needed: dict[str, list[str]] = {}
     for symbol in instruments:
         quote = get_instrument(symbol.upper()).quote.upper()
-        if quote != ACCOUNT_CCY:
+        if quote != LEGACY_FX_ACCOUNT_CCY:
             needed.setdefault(quote, []).append(symbol.upper())
     if not needed:
         return None, "", {"pairs_loaded": [], "needed_by_quote_ccy": {}}
@@ -215,6 +288,8 @@ def build_fx_source(
         + f"; bid closes, HistData {timeframe.value}, as-of backward)"
     )
     coverage = {
+        "account_ccy": LEGACY_FX_ACCOUNT_CCY,
+        "builder": "run_discovery_campaign.build_fx_source (legacy FX_SERIES_FOR)",
         "pairs_loaded": loaded,
         "needed_by_quote_ccy": {k: sorted(v) for k, v in sorted(needed.items())},
         "missing_series": missing,
@@ -222,6 +297,306 @@ def build_fx_source(
         "label": label,
     }
     return (SeriesFxSource(series=series) if series else None), label, coverage
+
+
+def research_fx_source(
+    store: DataStore,
+    instruments: Sequence[str],
+    timeframes: Sequence[Timeframe],
+    *,
+    account_ccy: str,
+    bars: Any,
+) -> tuple[SeriesFxSource | None, str, dict[str, Any], str]:
+    """The research FX source (:func:`build_research_fx_source`) and its coverage.
+
+    Returns ``(source, label, coverage, refusal)``. ``refusal`` is empty unless
+    the store lacks a cross the universe needs, in which case it is
+    :class:`FxSourceUnavailable`'s message (the pairs to ingest) and the
+    caller must not run.
+
+    ``coverage`` records, per instrument, the pairs that convert it and whether
+    its bars start before the first KNOWN rate of any of them or end after the
+    last rate plus ``max_staleness``; either would raise inside the engine, so
+    such an instrument is named here instead of erroring cell by cell. Gaps in
+    a series longer than ``max_staleness`` are counted per pair for the same
+    reason.
+    """
+    needed: dict[str, list[str]] = {}
+    for symbol in instruments:
+        quote = get_instrument(symbol).quote.upper()
+        if quote != account_ccy.upper():
+            needed.setdefault(quote, []).append(symbol)
+    coverage: dict[str, Any] = {
+        "account_ccy": account_ccy.upper(),
+        "builder": "fiboki.validation.run.build_research_fx_source (D1 closes as-of bar close)",
+        "needed_by_quote_ccy": {k: sorted(v) for k, v in sorted(needed.items())},
+    }
+    if not needed:
+        coverage.update(pairs_loaded={}, instruments_without_usable_coverage=[], label="")
+        return None, "", coverage, ""
+    try:
+        source, label = build_research_fx_source(
+            store, quote_currencies=tuple(needed), account_ccy=account_ccy
+        )
+    except FxSourceUnavailable as exc:
+        coverage.update(missing_pairs=list(exc.missing), refusal=str(exc), label="")
+        return None, "", coverage, str(exc)
+
+    staleness = source.max_staleness
+    loaded: dict[str, dict[str, Any]] = {}
+    for pair, series in sorted(source.series.items()):
+        gaps = series.index.to_series().diff().dropna()
+        loaded[pair] = {
+            **dict(source.lineage.get(pair, {})),
+            "observations": int(len(series)),
+            "first_known": str(series.index[0]),
+            "last_known": str(series.index[-1]),
+            "gaps_over_max_staleness": int((gaps > staleness).sum()),
+        }
+    fallback = dict(source.lineage.get("_fallback", {}))
+    routes: dict[str, dict[str, Any]] = {}
+    uncovered: list[dict[str, Any]] = []
+    for quote, symbols in sorted(needed.items()):
+        pairs = research_fx_pairs(quote, account_ccy)
+        legs = fallback.get(quote, {})
+        leg_pairs = tuple(legs.get("legs", ())) if legs.get("available") else ()
+        for symbol in symbols:
+            for tf in timeframes:
+                barset = bars(symbol, tf)
+                if barset is None or len(barset.frame) == 0:
+                    continue
+                index = barset.frame.index
+                direct_ok = _fresh(source, pairs, index, staleness)
+                via_ok = (
+                    _fresh(source, leg_pairs, index, staleness)
+                    if leg_pairs
+                    else np.zeros(len(index), dtype=bool)
+                )
+                via = ~direct_ok & via_ok
+                none = ~direct_ok & ~via_ok
+                row = {
+                    "quote_ccy": quote,
+                    "direct": list(pairs),
+                    "via_usd_legs": list(leg_pairs),
+                    "bars": int(len(index)),
+                    "bars_direct": int(direct_ok.sum()),
+                    "bars_via_usd": int(via.sum()),
+                    "bars_without_rate": int(none.sum()),
+                    "via_usd_first": str(index[via][0]) if via.any() else None,
+                    "via_usd_last": str(index[via][-1]) if via.any() else None,
+                }
+                routes[f"{symbol} {tf.value}"] = row
+                if none.any():
+                    uncovered.append(
+                        {
+                            "instrument": symbol,
+                            "timeframe": tf.value,
+                            "quote_ccy": quote,
+                            "pairs": list(pairs),
+                            "reason": (
+                                f"{row['bars_without_rate']:,} of {row['bars']:,} bars "
+                                f"(first {index[none][0]}, last {index[none][-1]}) have no "
+                                f"fresh {'/'.join(pairs)} rate"
+                                + (
+                                    f" and no fresh {'/'.join(leg_pairs)} fallback"
+                                    if leg_pairs
+                                    else " and no via_usd fallback"
+                                )
+                                + ". SeriesFxSource raises rather than extrapolate, so "
+                                "cells on this series will error where a trade needs a rate"
+                            ),
+                        }
+                    )
+    coverage.update(
+        pairs_loaded=loaded,
+        max_staleness=str(staleness),
+        fallback=fallback,
+        routes_at_bar_open=routes,
+        instruments_without_usable_coverage=uncovered,
+        label=label,
+    )
+    return source, label, coverage, ""
+
+
+def _fresh(
+    source: SeriesFxSource,
+    pairs: Sequence[str],
+    index: pd.DatetimeIndex,
+    staleness: pd.Timedelta,
+) -> np.ndarray:
+    """Per timestamp: does every pair in ``pairs`` have a rate no older than ``staleness``?
+
+    The same as-of rule as ``SeriesFxSource._asof`` (newest observation at or
+    before the timestamp), vectorised, evaluated at bar OPEN times.
+    """
+    ok = np.ones(len(index), dtype=bool)
+    for pair in pairs:
+        known = source.series[pair].index
+        pos = known.searchsorted(index, side="right") - 1
+        has = pos >= 0
+        age = np.full(len(index), np.inf)
+        age[has] = (index[has] - known[pos[has]]).total_seconds()
+        ok &= has & (age <= staleness.total_seconds())
+    return ok
+
+
+# --------------------------------------------------------------------------
+# Economic calendar
+# --------------------------------------------------------------------------
+
+
+class CalendarPlan(NamedTuple):
+    """How the campaign treats scheduled releases, decided before planning.
+
+    A NamedTuple, not a dataclass: ``scripts/build_research_ledger.py`` loads
+    this file by path without registering it in ``sys.modules``, and a
+    dataclass cannot be created in a module that is not registered there.
+    """
+
+    mode: str
+    calendar: EconomicCalendar
+    allow_empty_calendar: bool
+    summary: str
+    notes: str
+    coverage: dict[str, Any]
+    refusal: str = ""
+
+
+def calendar_plan(
+    mode: str,
+    instruments: Sequence[str],
+    timeframes: Sequence[Timeframe],
+    *,
+    bars: Any,
+    calendar: EconomicCalendar | None = None,
+) -> CalendarPlan:
+    """Resolve ``--calendar`` into a calendar, a flag, and the record of both.
+
+    ``official``: enforce where covered, record the rest (see the module
+    docstring). Per series: ``time_covered_fraction`` is the share of bars
+    inside the declared span; ``currencies_not_carried`` are the instrument's
+    currencies the calendar has no events for; ``fully_covered_fraction`` is
+    the time fraction when every currency is carried and 0 otherwise.
+    """
+    if mode == "none":
+        return CalendarPlan(
+            mode="none",
+            calendar=InMemoryEconomicCalendar.empty(),
+            allow_empty_calendar=True,
+            summary="none (--calendar none): event blackouts NOT enforced; allow_empty_calendar=True",
+            notes=(
+                "Economic calendar: NONE (--calendar none). Event blackouts were NOT "
+                "enforced in this run: every document's declared blackout was skipped "
+                "and every result trades straight through every scheduled release."
+            ),
+            coverage={"mode": "none", "blackouts_enforced": False},
+        )
+    if mode != "official":
+        raise ValueError(f"--calendar {mode!r}: expected 'official' or 'none'")
+
+    cal = calendar if calendar is not None else load_official_calendar()
+    cov = cal.coverage()
+    if not cov.is_populated:
+        return CalendarPlan(
+            mode="official",
+            calendar=cal,
+            allow_empty_calendar=False,
+            summary="official: EMPTY",
+            notes="",
+            coverage={"mode": "official", "calendar": cov.to_dict()},
+            refusal="the official calendar has no events; use --calendar none to run without one",
+        )
+    lo = cov.declared_start if cov.declared_start is not None else cov.first_event
+    hi = cov.declared_end if cov.declared_end is not None else cov.last_event
+    carried = set(cov.currencies)
+
+    rows: dict[str, dict[str, Any]] = {}
+    refusals: list[str] = []
+    partial = False
+    for symbol in instruments:
+        currencies = instrument_currencies(symbol)
+        not_carried = [c for c in currencies if c not in carried]
+        for tf in timeframes:
+            key = f"{symbol} {tf.value}"
+            barset = bars(symbol, tf)
+            if barset is None or len(barset.frame) == 0:
+                rows[key] = {"bars": 0, "note": "no bars; the cell will be retried, not run"}
+                continue
+            index = barset.frame.index
+            inside = int(((index >= lo) & (index <= hi)).sum())
+            n = int(len(index))
+            time_frac = inside / n
+            row = {
+                "bars": n,
+                "first_bar": str(index[0]),
+                "last_bar": str(index[-1]),
+                "bars_inside_declared_span": inside,
+                "bars_before_declared_start": int((index < lo).sum()),
+                "bars_after_declared_end": int((index > hi).sum()),
+                "time_covered_fraction": round(time_frac, 6),
+                "currencies": list(currencies),
+                "currencies_not_carried": not_carried,
+                "fully_covered_fraction": round(time_frac if not not_carried else 0.0, 6),
+            }
+            rows[key] = row
+            if row["bars_after_declared_end"]:
+                refusals.append(
+                    f"{key}: {row['bars_after_declared_end']} bar(s) after the calendar's "
+                    f"declared end {hi}; refresh the fixture or cut the series"
+                )
+            if currencies and len(not_carried) == len(currencies):
+                refusals.append(
+                    f"{key}: the calendar carries none of {list(currencies)}, so no "
+                    "blackout would be enforced at all; use --calendar none for it"
+                )
+            if time_frac < 1.0 or not_carried:
+                partial = True
+
+    summary = (
+        f"official: {cov.n_events} events, declared {lo} .. {hi}, currencies "
+        f"{', '.join(cov.currencies)}; policy enforce-where-covered; "
+        f"allow_empty_calendar={partial}"
+    )
+    per_series = "; ".join(
+        f"{k} {100 * r['time_covered_fraction']:.1f}% of {r['bars']:,} bars"
+        + (f" (not carried: {', '.join(r['currencies_not_carried'])})" if r["currencies_not_carried"] else "")
+        for k, r in rows.items()
+        if r.get("bars")
+    )
+    notes = (
+        f"Economic calendar: official fixture, {cov.n_events} events, declared span "
+        f"{lo} .. {hi}, currencies {', '.join(cov.currencies)}. Policy "
+        "enforce-where-covered: blackouts were enforced on bars inside the declared "
+        "span for the currencies the calendar carries and were ABSENT before "
+        f"{lo} and for currencies it does not carry"
+        + (
+            "; allow_empty_calendar=True lifted run_validation's coverage refusal only, "
+            "the official calendar remained the blackout source"
+            if partial
+            else "; every series is fully covered and the coverage refusal stayed on"
+        )
+        + f". Share of bars inside the declared span, per series: {per_series}."
+    )
+    return CalendarPlan(
+        mode="official",
+        calendar=cal,
+        allow_empty_calendar=partial,
+        summary=summary,
+        notes=notes,
+        coverage={
+            "mode": "official",
+            "policy": "enforce where covered; record the uncovered fraction",
+            "allow_empty_calendar": partial,
+            "calendar": cov.to_dict(),
+            "series": rows,
+        },
+        refusal="; ".join(refusals),
+    )
+
+
+# --------------------------------------------------------------------------
+# Bars, run.log
+# --------------------------------------------------------------------------
 
 
 def bars_from_store(store: DataStore):
@@ -247,8 +622,60 @@ def bars_from_store(store: DataStore):
     return source
 
 
+def _memoised(source: Any) -> Any:
+    """Read each series once for the pre-flight checks, then drop the cache."""
+    cache: dict[tuple[str, str], BarSet | None] = {}
+
+    def read(instrument: str, timeframe: Timeframe) -> BarSet | None:
+        key = (instrument.upper(), timeframe.value)
+        if key not in cache:
+            cache[key] = source(instrument, timeframe)
+        return cache[key]
+
+    return read
+
+
+class _Tee:
+    def __init__(self, *streams: TextIO) -> None:
+        self._streams = streams
+
+    def write(self, text: str) -> int:
+        for stream in self._streams:
+            stream.write(text)
+        return len(text)
+
+    def flush(self) -> None:
+        for stream in self._streams:
+            stream.flush()
+
+
+@contextlib.contextmanager
+def _run_log(path: Path) -> Iterator[None]:
+    """Everything printed goes to the console AND ``path`` (appended)."""
+    with path.open("a", encoding="utf-8") as handle, contextlib.redirect_stdout(
+        _Tee(sys.stdout, handle)
+    ):
+        yield
+
+
+def _construction_label() -> str:
+    fp = research_construction_policy().fingerprint()
+    return (
+        f"{fp['construction_version']} (run_validation default {RESEARCH_CONSTRUCTION!r}: "
+        f"allocator {fp['allocator']}, tier {fp['tier']}, lifecycle {fp['lifecycle']}, "
+        f"config_sha256 {str(fp['config_sha256'])[:12]}, correlation {fp['instrument_correlation']})"
+    )
+
+
+# --------------------------------------------------------------------------
+# main
+# --------------------------------------------------------------------------
+
+
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description=__doc__)
+    parser = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
     parser.add_argument("--data-root", required=True, type=Path)
     parser.add_argument("--out", default=Path("research/reports/campaign"), type=Path)
     parser.add_argument("--cache", default=None, type=Path)
@@ -262,6 +689,37 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--max-values-per-axis", type=int, default=2)
     parser.add_argument("--folds", type=int, default=4)
     parser.add_argument("--actor", default="script:run_discovery_campaign")
+    parser.add_argument(
+        "--account-ccy",
+        choices=(RESEARCH_ACCOUNT_CCY, LEGACY_FX_ACCOUNT_CCY),
+        default=RESEARCH_ACCOUNT_CCY,
+        help=(
+            "Account currency. GBP (default): FX from the store's D1 GBP crosses via "
+            "build_research_fx_source. USD: the legacy FX_SERIES_FOR table, for "
+            "reproducing K1/K2 only."
+        ),
+    )
+    parser.add_argument(
+        "--calendar",
+        choices=("official", "none"),
+        default="official",
+        help=(
+            "official (default): enforce blackouts where the official calendar covers "
+            "and record the covered fraction per series. none: no blackouts at all, "
+            "stated in the campaign notes."
+        ),
+    )
+    parser.add_argument(
+        "--engine-version-check",
+        nargs="?",
+        const=K3_ENGINE_VERSION,
+        default=None,
+        metavar="VERSION",
+        help=(
+            f"Refuse to run unless ENGINE_VERSION equals VERSION (default "
+            f"{K3_ENGINE_VERSION}), so a stale checkout cannot produce the report."
+        ),
+    )
     parser.add_argument(
         "--backfill-reports",
         default=None,
@@ -299,29 +757,130 @@ def main(argv: list[str] | None = None) -> int:
     )
     args = parser.parse_args(argv)
 
+    # Before any side effect: a stale engine must not even create the out dir.
+    if args.engine_version_check is not None and args.engine_version_check != ENGINE_VERSION:
+        print(
+            f"REFUSED: this checkout's engine is {ENGINE_VERSION!r} but the campaign "
+            f"requires {args.engine_version_check!r}. A report produced here would be "
+            "stamped with the wrong engine generation. Update the checkout.",
+            file=sys.stderr,
+        )
+        return EXIT_ENGINE_VERSION
+
     args.out.mkdir(parents=True, exist_ok=True)
+    with _run_log(args.out / "run.log"):
+        return _run(args)
+
+
+def _run(args: argparse.Namespace) -> int:
     store = DataStore(args.data_root)
+    try:
+        return _run_with_store(args, store)
+    finally:
+        store.close()
+
+
+def _run_with_store(args: argparse.Namespace, store: DataStore) -> int:
     gates = gate_set_for(args.gates)
     seeds = seed_documents(SEED_DIR)
     hypotheses = load_hypotheses(HYPOTHESIS_DIR)
+    account_ccy = str(args.account_ccy).upper()
 
     instruments = [s.upper() for s in args.instruments]
     timeframes = [Timeframe(t) for t in args.timeframes]
-    fx, fx_label, fx_coverage = build_fx_source(store, instruments, timeframes[0])
+    preflight_bars = _memoised(bars_from_store(store))
+
+    # --- FX
+    if account_ccy == LEGACY_FX_ACCOUNT_CCY:
+        fx, fx_label, fx_coverage = build_fx_source(store, instruments, timeframes[0])
+        fx_refusal = ""
+    else:
+        fx, fx_label, fx_coverage, fx_refusal = research_fx_source(
+            store, instruments, timeframes, account_ccy=account_ccy, bars=preflight_bars
+        )
     (args.out / "fx_coverage.json").write_text(
         json.dumps(fx_coverage, indent=2, default=str), encoding="utf-8"
     )
-    if fx is None:
-        print("fx: none needed -- every instrument is quoted in the account currency")
+
+    # --- calendar
+    cal = calendar_plan(args.calendar, instruments, timeframes, bars=preflight_bars)
+    del preflight_bars  # the runner reads the bars again; do not hold two copies
+    (args.out / "calendar_coverage.json").write_text(
+        json.dumps(cal.coverage, indent=2, default=str), encoding="utf-8"
+    )
+
+    # --- the effective configuration: the first block of run.log
+    check = (
+        f"required {args.engine_version_check}: ok"
+        if args.engine_version_check is not None
+        else "not checked (--engine-version-check not given)"
+    )
+    fx_line = (
+        f"REFUSED: {fx_refusal}"
+        if fx_refusal
+        else fx_label or f"none needed: every instrument is quoted in {account_ccy}"
+    )
+    print(f"==== run_discovery_campaign {datetime.now(tz=UTC).isoformat(timespec='seconds')} ====")
+    print(f"campaign_id: {args.campaign_id}")
+    print(f"engine_version: {ENGINE_VERSION} ({check})")
+    print(f"account_ccy: {account_ccy}")
+    print(f"fx_label: {fx_line}")
+    print(f"calendar: {cal.summary}")
+    covered = [r for r in cal.coverage.get("series", {}).values() if r.get("bars")]
+    if covered:
+        fractions = [r["time_covered_fraction"] for r in covered]
+        print(
+            f"calendar_coverage: {len(covered)} series, share of bars inside the declared "
+            f"span {100 * min(fractions):.1f}% .. {100 * max(fractions):.1f}% "
+            "(per series below and in calendar_coverage.json)"
+        )
     else:
-        print(f"fx: {fx_label}")
-        for pair, detail in sorted(fx_coverage["pairs_loaded"].items()):
-            print(
-                f"     {pair} serves {detail['quote_ccy_served']}->{ACCOUNT_CCY}, "
-                f"{detail['observations']:,} obs {detail['first'][:10]}..{detail['last'][:10]}"
+        print(f"calendar_coverage: {'n/a' if cal.mode == 'none' else 'no series read'}")
+    print(f"construction_policy: {_construction_label()}")
+    print(f"gate_set: {gates.version} (min_trades={gates.by_name('min_trades').threshold:g})")
+    print(f"universe: {len(instruments)} instrument(s) {' '.join(instruments)}; timeframes {' '.join(args.timeframes)}")
+    print(
+        f"budget: max_evaluations={args.max_evaluations} generations={args.generations} "
+        f"grid={args.max_grid_points}x{args.max_values_per_axis} folds={args.folds}"
+    )
+    print(f"external_prior_trials: {args.external_prior_trials}")
+    print(f"data_root: {args.data_root}")
+    print("====")
+
+    for pair, detail in sorted((fx_coverage.get("pairs_loaded") or {}).items()):
+        print(f"  fx {pair}: {json.dumps(detail, default=str)}")
+    for key, row in sorted((fx_coverage.get("routes_at_bar_open") or {}).items()):
+        print(
+            f"  fx route {key}: {row['bars_direct']:,} bars direct, {row['bars_via_usd']:,} via_usd"
+            + (
+                f" ({row['via_usd_first'][:10]}..{row['via_usd_last'][:10]})"
+                if row["bars_via_usd"]
+                else ""
             )
+            + f", {row['bars_without_rate']:,} without a rate"
+        )
     for row in fx_coverage.get("instruments_without_usable_coverage", ()):
-        print(f"     NO FX COVERAGE {row['instrument']}: {row['reason']}")
+        print(f"  NO FX COVERAGE {row['instrument']}: {row['reason']}")
+    for key, row in cal.coverage.get("series", {}).items():
+        if not row.get("bars"):
+            print(f"  calendar {key}: {row.get('note', '')}")
+            continue
+        print(
+            f"  calendar {key}: {row['bars']:,} bars {row['first_bar'][:10]}..{row['last_bar'][:10]}, "
+            f"{100 * row['time_covered_fraction']:.1f}% inside the declared span"
+            + (
+                f", not carried: {', '.join(row['currencies_not_carried'])}"
+                if row["currencies_not_carried"]
+                else ""
+            )
+        )
+
+    if fx_refusal:
+        print(f"REFUSED (fx): {fx_refusal}")
+        return EXIT_FX_REFUSED
+    if cal.refusal:
+        print(f"REFUSED (calendar): {cal.refusal}")
+        return EXIT_CALENDAR_REFUSED
 
     spec = CampaignSpec(
         campaign_id=args.campaign_id,
@@ -330,7 +889,7 @@ def main(argv: list[str] | None = None) -> int:
         hypotheses=hypotheses,
         actor=args.actor,
         actor_kind=ActorKind.AGENT,
-        account_ccy=ACCOUNT_CCY,
+        account_ccy=account_ccy,
         gate_set=gates,
         max_evaluations=args.max_evaluations,
         max_grid_points=args.max_grid_points,
@@ -341,22 +900,42 @@ def main(argv: list[str] | None = None) -> int:
         external_prior_trials=args.external_prior_trials,
         external_prior_trials_reason=args.external_prior_trials_reason,
         fx_label=fx_label,
+        allow_empty_calendar=cal.allow_empty_calendar,
         notes=(
             f"Phase K campaign {args.campaign_id} on "
             f"{len(instruments)} instrument(s) {', '.join(instruments)} "
             f"{', '.join(args.timeframes)}, {args.gates} gate set, "
-            f"{ACCOUNT_CCY} account, IG_REALISTIC profile, "
+            f"engine {ENGINE_VERSION}, "
+            f"{account_ccy} account, IG_REALISTIC profile, "
             + (
                 f"quote currencies converted by {fx_label}. "
                 if fx is not None
                 else "no FX conversion performed. "
             )
-            + "Every cell is deflated against the campaign's true trial count, "
+            + f"Portfolio construction {_construction_label()}. "
+            + cal.notes
+            + " Every cell is deflated against the campaign's true trial count, "
             "not against its own parameter sweep."
         ),
     )
 
     ledger = ExperimentLedger(args.out / "experiments.sqlite")
+    try:
+        return _plan_and_run(args, spec, store, ledger, fx, cal.calendar, seeds, hypotheses)
+    finally:
+        ledger.close()
+
+
+def _plan_and_run(
+    args: argparse.Namespace,
+    spec: CampaignSpec,
+    store: DataStore,
+    ledger: ExperimentLedger,
+    fx: SeriesFxSource | None,
+    calendar: EconomicCalendar,
+    seeds: Sequence[StrategyDocument],
+    hypotheses: Sequence[Any],
+) -> int:
     registry = HoldoutRegistry(args.out / "holdout.sqlite")
     hypothesis_store = HypothesisLedger(ledger)
     for hypothesis in hypotheses:
@@ -381,9 +960,9 @@ def main(argv: list[str] | None = None) -> int:
         report_dir=args.out,
         cache_dir=args.cache,
         fx=fx,
+        calendar=calendar,
     )
 
-    print(f"gate set: {gates.version} (min_trades={gates.by_name('min_trades').threshold:g})")
     print(f"seeds: {[d.strategy_id for d in seeds]}")
     print(f"hypotheses: {[h.hypothesis_id for h in hypotheses]}")
 
@@ -404,8 +983,6 @@ def main(argv: list[str] | None = None) -> int:
     if plan.external_prior_trial_count:
         print(f"  declared prior trials because: {plan.external_prior_trials_reason}")
     if args.plan_only:
-        store.close()
-        ledger.close()
         return 0
 
     report = runner.run(plan)
@@ -424,8 +1001,6 @@ def main(argv: list[str] | None = None) -> int:
     print(f"  -> {args.out / f'campaign_{spec.campaign_id}.json'}")
 
     _record_hypothesis_outcomes(hypothesis_store, report, spec, args.actor)
-    store.close()
-    ledger.close()
     return 0
 
 
@@ -496,6 +1071,7 @@ def backfill(ledger: ExperimentLedger, directory: Path, *, actor: str) -> int:
 def _digest(report: Any, elapsed: float) -> dict[str, Any]:
     return {
         "campaign_id": report.campaign_id,
+        "engine_version": ENGINE_VERSION,
         "gate_set": report.gate_set_version,
         "datasets": report.dataset_versions,
         "planned_trials": report.planned_trial_count,

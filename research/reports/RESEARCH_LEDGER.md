@@ -80,3 +80,138 @@ strategy (`xauusd_h4/<id>__production__ds_3c1473cbf.json`) -- not copies, so the
 cannot drift, and not the `__ds_45aeaa0e6` set, which that directory's README
 marks superseded and says must not be quoted. `rsi_band_mean_reversion` has no
 ladder run and is correctly shown as `not_validated`.
+
+---
+
+## Pre-registration: K3, `k3_multi_instrument_h4_engine_v3` (filed 2026-09-29, before any K3 compute)
+
+K3 re-runs K2's search under `engine_v3_realism`. It exists because every K1 and K2
+figure is superseded (PLATFORM_STATUS §3 and §4.1): the engine, the account currency, the
+sizing path and the blackout source have all changed since those campaigns ran. Nothing below
+may be edited after the first K3 cell runs; a change is a new campaign id.
+
+**What is fixed**
+
+| | |
+|---|---|
+| Campaign id | `k3_multi_instrument_h4_engine_v3` |
+| Universe | K2's 16 H4 series: AUDJPY AUDUSD DE40 EURGBP EURJPY EURUSD GBPJPY GBPUSD NZDUSD UK100 US500 USDCAD USDCHF USDJPY XAGUSD XAUUSD (AUDJPY, UK100 and XAGUSD are again in no seed's universe and will be skipped as `out_of_universe`) |
+| Seeds and hypotheses | unchanged since K2: the five documents in `research/strategies/` (content hashes 8483154d0f17, fd2a53ed9490, 75caa48f3c20, 78083597c616, 0a1f5a26c24d, checked against K2's run.log) and the five in `research/hypotheses/` |
+| Search | `--generations 1`, `--max-grid-points 8`, `--max-values-per-axis 2`, `--folds 4`, `SWEEP_AXES` as in the script, `--max-evaluations 100000` (K2's) |
+| Gates | production, `v2.0.0-audit` (`min_trades` 400). **Uncalibrated**: the E-1 gate calibration study (`research/preregistration/gate_calibration_e1.json`) has not run, so the gate set's false-discovery rate and power are unknown and a K3 verdict is conditional on them |
+| Account and FX | GBP; quote currencies converted by `build_research_fx_source`: daily rates from the GBP crosses (D1 where stored, otherwise the last H4 bar to close each UTC day, stamped at that close), and via USD (USDxxx and GBPUSD, each leg within 4 days) only where the direct cross has no fresh rate. The label, `fx_coverage.json` and run.log record each pair's derivation and, per series, how many bars convert directly, via USD, or not at all |
+| Calendar | `--calendar official`, policy "enforce where covered" (below) |
+| Construction | `run_validation`'s default, `construction_v2` via `research_construction_policy()` |
+| Holdout | one look, untouched by K1 and K2 on these series; K3 does not spend it unless a cell clears rungs 0 to 5 |
+
+**External prior trials: 4,026**
+
+    4,026 =   350  declared by K2 (166 planned by K1 + 184 in research/reports/xauusd_h4/)
+          +   326  K1's true trial count (166 planned + 160 ledger prior)
+          + 3,350  planned by K2
+
+K3's ledger is new and sees none of them, and the V2 store's dataset version ids differ from
+K1's and K2's, so they are declared by hand. **326 trials are counted twice** (K1 is inside the
+350 and is added again), K2 re-planned K1's 30 XAUUSD mutant cells, and K1/K2 ran on earlier
+engines; all three raise N and make the deflation harder, and are stated rather than netted off.
+The non-duplicated figure is 3,700 (K2's own true N). Not counted, as K2 argued: K2's aborted
+first attempt (141 cells, same plan, same bars). If K3's plan reproduces K2's 3,350 planned
+trials, K3's true N is about 7,376; the exact figure is whatever `--plan-only` prints, and it is
+fixed before the first evaluation.
+
+The bars are the same HistData series as K1/K2, migrated into `var/datastore` from the same V1
+store (`research/reports/v2_store_migration/README.md`, which verifies XAUUSD H4 at 26,837 bars;
+the other fifteen are asserted by provenance, not byte-compared here).
+
+**What changed since K2** (any one of these moves stored numbers)
+
+- `engine_v3_realism` (`fiboki.backtest.version.ENGINE_V3_REASONS`): FCA/ESMA leverage by
+  currency set; BID bars converted to `synthetic_mid` at half the typical spread (K2 traded BID
+  as mid); cost-inclusive `fixed_fractional_v2` sizing and the leverage clip; business-day
+  financing with triple days; per-asset-class minimum stops; Sharpe on daily 17:00 New York
+  equity (bar-return and Lo-adjusted figures beside it); UTC index required.
+- Research in GBP, FX from daily GBP-cross closes as-of bar close with 4-day staleness and a
+  recorded via-USD fallback before a cross starts (K2: USD account, H4 bid closes of the USD
+  pairs, 7-day staleness).
+- Event blackouts enforced from the official calendar where it covers (K1 and K2 enforced none).
+- Sizing through portfolio construction (`construction_v2`, equal risk, PROBATIONARY, regime
+  `unknown` x0.6, unmeasured correlation 0.30), identical to paper; K2 sized flat.
+- Walk-forward efficiency on log growth per day (P2-11) and the plateau ratio formula (P2-12).
+
+Because all of these change at once, a K2-to-K3 difference on a cell is not evidence about a
+strategy, and no attribution to a single change will be claimed.
+
+**Calendar policy, and why it is honest**
+
+The official calendar declares 2024-01-01 to 2026-12-04 and carries USD, EUR, GBP and JPY; the
+universe starts in 2000. `run_cell` already expresses "enforce where covered": with the official
+calendar as the blackout source and `allow_empty_calendar=True`, `run_validation` skips only its
+coverage refusal and the engine still applies every event the calendar holds
+(`tests/unit/test_discovery_campaign_calendar.py::test_the_opt_out_is_explicit_and_serialised`).
+So no change to `validation/run.py` or the calendar module was needed. The script adds the
+record and the limits: per series it writes the share of bars inside the declared span and the
+currencies the calendar does not carry to `calendar_coverage.json`, the head of run.log and the
+campaign notes; it sets `allow_empty_calendar` only when a series is partly uncovered; and it
+REFUSES a series with bars after the declared end or one whose currencies the calendar carries
+none of. One deviation from "lift the refusal only before the declared start", stated: AUD, CAD,
+CHF and NZD are never carried, so AUDUSD, NZDUSD, USDCAD, USDCHF and AUDJPY run with blackouts
+for their USD or JPY leg only. Refusing them would shrink the universe below K2's. With the data
+ending 2025-12-31, two years of each series are inside the span: roughly 8% of bars for the
+series that start in 2000 and 12 to 13% for those that start in 2009 or 2010. Blackouts are
+absent on the rest, and the report says so per series. Follow-up: a dated pre-2024 calendar (USER_ACTION_NOTE in
+`fiboki.marketstate.calendar`) and the four missing currencies.
+
+**FX preconditions, and how they were closed before any compute**
+
+The first draft of this entry named two blockers; both were closed the same day, before K3 ran:
+
+1. `var/datastore` holds H4 and H1 only (the V1 store has no D1). `build_research_fx_source` now
+   derives a daily rate from a pair's validated H4 bars (else H1) when no D1 dataset exists: the
+   last H4 bar to close in each UTC day, stamped at that bar's close, never its open
+   (`fiboki.core.money.daily_rates_from_intraday_closes`; look-ahead test in
+   `tests/unit/test_research_fx_intraday.py`). The label tags each such pair
+   `[derived:H4 last close per UTC day]` and `fx_coverage.json` carries the derivation.
+2. The GBP crosses start later than the series they convert (GBPJPY 2002-05-01, GBPCHF
+   2002-08-19, GBPCAD 2007-09-30, EURGBP 2002-03-03, against USDJPY, USDCHF and USDCAD from 2000
+   and EURJPY from 2002-03-03). Where the direct cross has no fresh rate, the conversion now uses
+   quote->USD times USD->GBP (for example 1/USDJPY x 1/GBPUSD), each leg within the 4-day
+   staleness guard, recorded as route `via_usd`
+   (`SeriesFxSource(fallback_via_pivot=True)`, golden arithmetic in
+   `tests/golden/test_golden_fx_via_usd.py`). The direct cross always wins when it has a fresh
+   rate. Consequence, stated: the early years of USDJPY, USDCHF, USDCAD (to 2007-09) and two
+   months of EURJPY are converted at an implied cross (two bid closes multiplied) rather than a
+   quoted one; the per-series count of `via_usd` bars is in `fx_coverage.json` and run.log.
+
+The pre-flight (`--plan-only`) still refuses (exit 3) if a pair is missing at every timeframe,
+and lists as `NO FX COVERAGE` any series with bars that neither route can convert.
+
+**Decision rule, fixed now.** The primary outcome is the number of cells that clear every rung
+under `v2.0.0-audit` at K3's true N. Zero survivors: the rule families have no demonstrated edge
+net of engine_v3 costs on this universe, as in K1 and K2. Any survivor: reported as a candidate
+only; it is not promoted before E-1 has calibrated the gates, and its holdout look is its one
+look.
+
+**Command** (on the Mac, from the repository root; the script writes
+`research/reports/campaign_k3_multi_instrument/run.log` itself, so do not `tee` into it):
+
+```
+.venv/bin/python research/run_discovery_campaign.py \
+    --data-root var/datastore \
+    --out research/reports/campaign_k3_multi_instrument \
+    --cache var/eval_cache_k3 \
+    --gates production \
+    --campaign-id k3_multi_instrument_h4_engine_v3 \
+    --instruments AUDJPY AUDUSD DE40 EURGBP EURJPY EURUSD GBPJPY GBPUSD \
+                  NZDUSD UK100 US500 USDCAD USDCHF USDJPY XAGUSD XAUUSD \
+    --timeframes H4 \
+    --max-evaluations 100000 \
+    --account-ccy GBP \
+    --calendar official \
+    --engine-version-check \
+    --external-prior-trials 4026 \
+    --external-prior-trials-reason "4026 = 350 declared by K2 (166 planned by K1 + 184 in research/reports/xauusd_h4/) + 326 K1 true trial count (166 planned + 160 ledger prior) + 3350 planned by K2, all on the same 16 HistData H4 series, migrated into var/datastore from the same V1 store under new dataset version ids, so this new ledger sees none of them. K1's 326 is counted twice and K2 re-planned K1's 30 XAUUSD mutant cells; K1 and K2 ran on earlier engines. Double counting raises N and is stated, not netted off. Not counted: K2's aborted first attempt (141 cells, same plan, same bars). See research/reports/RESEARCH_LEDGER.md, K3 pre-registration." \
+    --plan-only
+```
+
+Read `run.log`, `fx_coverage.json` and `calendar_coverage.json`; if the preconditions hold,
+re-run the identical command without `--plan-only`. Re-running resumes from `checkpoint.json`.

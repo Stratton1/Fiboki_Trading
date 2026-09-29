@@ -1239,3 +1239,87 @@ Tests, run 2026-09-29: `ruff check src/ tests/ scripts/` clean; full suite
 Not done (outside this change's files): `docs/v2/OPERATIONS.md` §13.6, `scripts/fiboki-service.sh`
 and the `uk.fiboki.paper.plist` comment still name `OANDA_PRACTICE_*` (the fallback keeps them
 working for one release); the paper-forward wiring still selects `limits_v1_paper`.
+
+## 2026-09-29: the discovery campaign script under `engine_v3_realism`; K3 pre-registered (uncommitted working tree)
+
+What was wrong: `research/run_discovery_campaign.py` still ran K1/K2's configuration. It
+hard-coded a USD account with its own H4 bid-close FX table while `run_validation` and
+`CampaignSpec` default to GBP; it had no calendar option, so a campaign over K2's universe (from
+2000) against the official calendar (from 2024-01-01) would have refused every cell; it did not
+record the engine version, construction policy or calendar coverage anywhere; and nothing stopped
+a stale checkout from producing a report under a new campaign id.
+
+What changed (script only; no change to `validation/run.py`, the calendar module or
+`discovery/campaign.py`):
+
+- `--account-ccy GBP|USD` (GBP default): GBP builds FX with `build_research_fx_source` over the
+  store's D1 GBP crosses and refuses (exit 3) listing the pairs to ingest; USD keeps the old
+  `FX_SERIES_FOR` table for reproducing K1/K2. `fx_coverage.json` records per pair the first and
+  last known rate and gaps over `max_staleness`, and per instrument any bars before the first or
+  after the last usable rate.
+- `--calendar official|none` (official default). Official is "enforce where covered":
+  the official calendar stays the blackout source, `allow_empty_calendar` is set only when a series
+  is partly uncovered (it lifts `run_validation`'s coverage refusal and nothing else), the share of
+  bars inside the declared span and the currencies not carried are written per series to
+  `calendar_coverage.json`, run.log and the campaign notes, and a series with bars after the
+  declared end or with no carried currency is refused (exit 4). None passes an empty calendar and
+  says in the notes that no blackout was enforced.
+- `--engine-version-check [VERSION]` refuses (exit 2, before creating `--out`) unless
+  `ENGINE_VERSION` is `engine_v3_realism` or the version given.
+- The script writes `<out>/run.log` itself (appending); each invocation opens with the effective
+  configuration: engine version, account currency, FX label, calendar and coverage range,
+  construction policy (`construction_v2`, `run_validation`'s default), gate set, universe, budget.
+  The notes carry the engine version, construction policy and calendar statement too.
+- Seed and hypothesis directories resolve from the script's location, not the working directory.
+  `CalendarPlan` is a NamedTuple because `scripts/build_research_ledger.py` loads the script by
+  path without registering it in `sys.modules`, where a dataclass cannot be created.
+
+K3 is pre-registered in `research/reports/RESEARCH_LEDGER.md` (campaign
+`k3_multi_instrument_h4_engine_v3`, external prior trials 4,026, the exact Mac command).
+
+Two FX blockers for K3 closed in the same change (`core/money.py`, `validation/run.py`
+`build_research_fx_source` only):
+
+- **No D1 in the store** (the migration stored H4 and H1). When a pair has no validated D1,
+  `build_research_fx_source` reduces its validated H4 (else H1) bars to one rate per UTC day with
+  `money.daily_rates_from_intraday_closes`: the last bar to close that day, stamped at that bar's
+  CLOSE (a bar closing at midnight belongs to the day it ends). D1 is still preferred. The label
+  tags the pair `[derived:H4 last close per UTC day]` and `source.lineage[pair]` records the
+  dataset version, source timeframe and derivation; the script copies it to `fx_coverage.json`.
+- **GBP crosses start after the instruments** (GBPJPY 2002, GBPCAD 2007 against USDJPY and USDCAD
+  from 2000). `SeriesFxSource(fallback_via_pivot=True)`: a LOADED direct pair that has no
+  observation yet or none within `max_staleness` falls back to quote->USD x USD->GBP, each leg
+  staleness-checked; the direct pair wins whenever it is fresh; if both fail the direct error is
+  raised with the pivot's appended. `rate_with_route()` returns the route per conversion
+  (`identity`, `direct`, `inverse`, `via_usd`) and `route_counts` tallies them (a diagnostic: a
+  cached evaluation makes no lookups). Off by default, so paper and every other caller are
+  unchanged; `build_research_fx_source` turns it on and loads the USD legs (USDxxx, GBPUSD) when
+  the store has them, recording in `lineage['_fallback']` and the label which fallbacks exist. The
+  script's `fx_coverage.json` now counts, per series and at bar open, bars converted directly, via
+  USD, or not at all, with the same as-of rule. The label text changed (`daily closes`, the
+  fallback clause), so every research evaluation cache key built on a GBP FX source moves.
+
+New tests: `tests/golden/test_golden_fx_via_usd.py` (5: JPY->GBP via USD before the cross
+starts, 30,000 JPY = 160.00 GBP by hand; the direct cross wins when fresh; a gap over the
+staleness guard falls back and returns; each leg's staleness is checked; the flag off keeps the
+old refusal), `tests/unit/test_research_fx_intraday.py` (8: the per-day reduction and midnight
+rule; look-ahead, no derived rate readable one second before its producing bar closes; D1
+preferred over H4, H1 used last; refusal still names the pair; the USD legs load and answer
+before a late cross; a missing leg leaves the direct route only), and a script test that
+`--plan-only` exits 0 on a store holding only H4 for the GBP crosses with a late GBPJPY.
+
+Tests, run 2026-09-29: new `tests/integration/test_run_discovery_campaign_script.py` (8: the
+run.log header, GBP account, FX label and report through `main()` with `--max-evaluations 2`; the
+per-series covered fraction recomputed from the stored bars; stale engine refused with nothing
+written; missing GBP cross refused naming GBPUSD; `--calendar none` notes; bars after the
+declared end refused; legacy USD account; one real-engine cell straddling 2024-01-01 reaching rung
+0 instead of a CalendarError; `--plan-only` exit 0 on H4-only late GBP crosses). `ruff check
+src/ tests/ research/run_discovery_campaign.py` clean. Every test module importing
+`fiboki.core.money`, `fiboki.validation.run` or `fiboki.discovery` (38 modules), the three new
+modules, `tests/unit/test_layering.py` and `tests/api/test_experiments_view_reads_the_ledger.py`
+(loads the script by path): 562 passed, 2 failed, both the same new test collected twice, on an
+assertion about label punctuation in the test itself; corrected, then
+`test_research_fx_intraday.py`, `test_golden_fx_via_usd.py` and `test_research_fx.py`: 30 passed.
+
+Stored results: none invalidated by this change (it is a runner); K1 and K2 were already
+superseded by `engine_v3_realism`.

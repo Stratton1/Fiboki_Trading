@@ -162,61 +162,149 @@ def build_research_fx_source(
     max_staleness: pd.Timedelta = DEFAULT_MAX_STALENESS,
     kind: Any = None,
 ) -> tuple[SeriesFxSource, str]:
-    """A :class:`SeriesFxSource` from the store's DAILY closes, and its label.
+    """A :class:`SeriesFxSource` of DAILY rates from the store, and its label.
 
-    Every series is the latest validated ``D1`` dataset of the pair, and each
-    close is indexed at the bar's CLOSE time (bar open + 1 day), not its open:
-    a daily bar stamped 2024-01-05 00:00 is not known until 2024-01-06 00:00,
-    and as-of lookup at 2024-01-05 10:00 must not read it. ``max_staleness`` is
-    four days (a weekend plus one holiday). The label names every pair and its
-    dataset version, because the source object cannot go into a JSON report.
+    Each pair is the latest validated ``D1`` dataset, each close indexed at the
+    bar's CLOSE time (bar open + 1 day), not its open: a daily bar stamped
+    2024-01-05 00:00 is not known until 2024-01-06 00:00, and as-of lookup at
+    2024-01-05 10:00 must not read it. When a pair has no ``D1`` dataset, its
+    validated ``H4`` (else ``H1``) bars are reduced to one rate per UTC day,
+    the last bar to close that day, stamped at that bar's close
+    (:func:`~fiboki.core.money.daily_rates_from_intraday_closes`); the label and
+    ``source.lineage`` say so. ``max_staleness`` is four days (a weekend plus
+    one holiday).
 
-    Refuses with :class:`FxSourceUnavailable`, listing EVERY missing pair at
-    once, rather than building a partial source that would fail cell by cell.
+    USD fallback: for every quote currency converted through a direct cross
+    (JPY->GBP via GBPJPY), the two USD legs (USDJPY and GBPUSD) are loaded as
+    well when the store has them, and the source is built with
+    ``fallback_via_pivot=True``: the direct cross answers whenever it has a
+    fresh rate, and only where it has none (it starts later than the
+    instrument, or has a gap over ``max_staleness``) is the product of the two
+    legs used, each leg staleness-checked, recorded as route ``via_usd``. A
+    missing USD leg is not a refusal; the direct cross is then the only route
+    and ``source.lineage['_fallback']`` records which fallbacks exist.
+
+    Refuses with :class:`FxSourceUnavailable`, listing EVERY missing primary
+    pair at once, rather than building a partial source that would fail cell
+    by cell.
 
     Known approximation: the store's FX bars are usually HistData BID closes,
     so each rate is a bid rather than a mid -- an error of half a spread on the
     conversion rate (about 0.005% on GBPUSD), not on the trade.
     """
+    from fiboki.core.money import daily_rates_from_intraday_closes, route_via
     from fiboki.data.schema import DatasetKind
 
     dkind = kind if kind is not None else DatasetKind.VALIDATED
+    account = account_ccy.upper()
     needed: dict[str, None] = {}
+    fallback_legs: dict[str, tuple[str, str]] = {}
     unroutable: list[str] = []
     for ccy in sorted({c.upper() for c in quote_currencies}):
         try:
-            for sym in research_fx_pairs(ccy, account_ccy):
-                needed.setdefault(sym, None)
+            pairs = research_fx_pairs(ccy, account)
         except FxSourceUnavailable as exc:
             unroutable.extend(exc.missing)
+            continue
+        for sym in pairs:
+            needed.setdefault(sym, None)
+        if len(pairs) == 1 and _PIVOT not in (ccy, account):
+            first, second = _pair_symbol(ccy, _PIVOT), _pair_symbol(_PIVOT, account)
+            if first is not None and second is not None:
+                fallback_legs[ccy] = (first, second)
     if unroutable:
         raise FxSourceUnavailable(unroutable, "no registered route exists")
+
+    def _load(sym: str) -> tuple[pd.Series, str, dict[str, Any]] | None:
+        for tf in (Timeframe.D1, Timeframe.H4, Timeframe.H1):
+            try:
+                frame, version = store.read_latest(sym, tf, kind=dkind)
+            except Exception:  # DatasetNotFound, or an unreadable dataset
+                continue
+            if frame is None or len(frame) == 0:
+                continue
+            vid = str(getattr(version, "version_id", version))
+            if tf is Timeframe.D1:
+                known_at = frame.index + pd.Timedelta(days=1)
+                series = pd.Series(frame["close"].to_numpy(dtype=float), index=known_at, name=sym)
+                derivation = "D1 closes stamped at bar close (open + 1 day)"
+                tag = f"{sym}@{vid}"
+            else:
+                series = daily_rates_from_intraday_closes(frame, tf.minutes, name=sym)
+                derivation = (
+                    f"derived from {tf.value} closes: the last {tf.value} bar to close in "
+                    "each UTC day, stamped at that bar's close"
+                )
+                tag = f"{sym}@{vid}[derived:{tf.value} last close per UTC day]"
+            return series, tag, {
+                "dataset_version_id": vid,
+                "source_timeframe": tf.value,
+                "derivation": derivation,
+                "first_known": str(series.index[0]),
+                "last_known": str(series.index[-1]),
+                "observations": int(len(series)),
+            }
+        return None
+
     series: dict[str, pd.Series] = {}
-    versions: list[str] = []
+    lineage: dict[str, dict[str, Any]] = {}
+    tags: list[str] = []
     missing: list[str] = []
     for sym in needed:
-        try:
-            frame, version = store.read_latest(sym, Timeframe.D1, kind=dkind)
-        except Exception:  # DatasetNotFound, or an unreadable dataset
+        loaded = _load(sym)
+        if loaded is None:
             missing.append(sym)
             continue
-        if frame is None or len(frame) == 0:
-            missing.append(sym)
-            continue
-        known_at = frame.index + pd.Timedelta(days=1)
-        series[sym] = pd.Series(
-            frame["close"].to_numpy(dtype=float), index=known_at, name=sym
-        )
-        versions.append(f"{sym}@{getattr(version, 'version_id', version)}")
+        series[sym], tag, lineage[sym] = loaded
+        tags.append(tag)
     if missing:
-        raise FxSourceUnavailable(missing)
+        raise FxSourceUnavailable(
+            missing,
+            "a validated D1 dataset is preferred; H4 or H1 bars of the same pair are "
+            "accepted and reduced to daily closes",
+        )
+    fallback_state: dict[str, Any] = {}
+    fallback_tags: list[str] = []
+    for ccy, legs in sorted(fallback_legs.items()):
+        absent = []
+        for sym in legs:
+            if sym in series:
+                continue
+            loaded = _load(sym)
+            if loaded is None:
+                absent.append(sym)
+                continue
+            series[sym], tag, lineage[sym] = loaded
+            fallback_tags.append(tag)
+        fallback_state[ccy] = {
+            "route": route_via(_PIVOT),
+            "legs": list(legs),
+            "available": not absent,
+            "missing_legs": absent,
+        }
+    lineage["_fallback"] = fallback_state
+    available = sorted(c for c, v in fallback_state.items() if v["available"])
     label = (
-        f"SeriesFxSource({account_ccy.upper()}; D1 closes as-of bar close; "
+        f"SeriesFxSource({account}; daily closes as-of bar close; "
         f"max_staleness={max_staleness}; pivot={_PIVOT}; "
-        + ", ".join(versions)
+        + ", ".join(tags)
+        + (
+            f"; fallback {route_via(_PIVOT)} where the direct cross has no fresh rate for "
+            + ", ".join(available)
+            + (" using " + ", ".join(fallback_tags) if fallback_tags else "")
+            if available
+            else ("; no via_usd fallback" if fallback_state else "")
+        )
         + ")"
     )
-    return SeriesFxSource(series=series, max_staleness=max_staleness, pivot=_PIVOT), label
+    source = SeriesFxSource(
+        series=series,
+        max_staleness=max_staleness,
+        pivot=_PIVOT,
+        fallback_via_pivot=True,
+        lineage=lineage,
+    )
+    return source, label
 
 
 def research_mid_frame(
