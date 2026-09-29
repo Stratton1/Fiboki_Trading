@@ -1,6 +1,6 @@
 """The four dead risk inputs, end to end, and the daily stop actually blocking.
 
-``RiskGateway`` names eighteen checks on every decision. Four of them --
+``RiskGateway`` names nineteen checks on every decision. Four of them --
 ``daily_loss``, ``weekly_loss``, ``max_correlated_exposure`` and the volatility
 targeting that reads ``PortfolioSnapshot.realised_portfolio_vol`` -- had no
 production data source. They ran, they were named in the audit trail, and they

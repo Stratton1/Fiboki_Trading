@@ -12,7 +12,7 @@ tree asserting that no other module constructs an ``Order`` at all.
 
 Three properties matter more than the individual checks:
 
-**Every check is named.** ``RiskDecision.checks_run`` lists all eighteen check
+**Every check is named.** ``RiskDecision.checks_run`` lists all nineteen check
 names on every decision, allowed or blocked. An audit can prove which rules ran
 rather than trusting that they did.
 
@@ -34,6 +34,7 @@ from typing import Any, Protocol
 
 import pandas as pd
 
+from fiboki.backtest.locks import LockSource, LockStateUnavailable
 from fiboki.core.contracts import ExecutionTelemetry, RiskDecision, TradePlan
 from fiboki.core.enums import ExecutionMode, StrategyLifecycle
 from fiboki.core.instruments import Instrument
@@ -41,6 +42,7 @@ from fiboki.core.instruments import get as get_instrument
 from fiboki.portfolio.construction import PortfolioSnapshot
 from fiboki.risk.killswitch import KillSwitch, RequestKind
 from fiboki.risk.limits import DEFAULT_LIMITS, LimitSet
+from fiboki.strategy.dsl import LOCKS_DECLARED_FEATURE
 
 __all__ = [
     "AttemptRecorder",
@@ -322,6 +324,7 @@ class RiskGateway:
         "abnormal_spread",
         "broker_health",
         "event_blackout",
+        "instrument_lock",
         "max_per_trade_risk",
         "max_account_risk",
         "max_instrument_exposure",
@@ -340,10 +343,17 @@ class RiskGateway:
         kill_switch: KillSwitch | None = None,
         recorder: AttemptRecorder | None = None,
         limits: LimitSet = DEFAULT_LIMITS,
+        locks: LockSource | None = None,
     ) -> None:
         self.kill_switch = kill_switch or KillSwitch()
         self.recorder: AttemptRecorder = recorder or InMemoryAttemptRecorder()
         self.default_limits = limits
+        #: Where entry-lock state comes from. Like the kill switch it is held by
+        #: the gateway rather than passed per call, and like the kill switch it
+        #: must survive a restart: the intended source is
+        #: :class:`fiboki.backtest.locks.LedgerLockView` over the durable trade
+        #: (or intent) ledger, which rebuilds the state on every question.
+        self.locks = locks
 
     # ------------------------------------------------------------ evaluate
 
@@ -600,6 +610,47 @@ class RiskGateway:
                 continue
             if abs(ev - ctx.now) <= window:
                 self._block(f"event_blackout:{ev.isoformat()}")
+
+    def _check_instrument_lock(self, ctx: RiskContext, limits: LimitSet) -> None:
+        """Entry locks declared by strategy documents. Fail-closed.
+
+        Asked on the signal's DECISION bar (``plan.signal.bar_time``), not on
+        ``ctx.now``: the backtester asks on the bar that produced the signal, and
+        asking on the wall clock a few seconds later would put the two on
+        different bars exactly at a lock's boundary.
+
+        Three ways to block, each named:
+
+        * ``instrument_lock_state_unavailable`` -- the signal's own document
+          declares locks and this gateway has no lock source, or the source
+          cannot read its ledger, or it has no policy for the strategy. A
+          lock-declaring strategy never trades unlocked because a deployment
+          forgot to wire the lock state;
+        * ``instrument_lock:<code>`` -- a lock is in force.
+
+        A gateway with no lock source passes a signal whose document declares
+        no locks: there is nothing it could be locked by, because no lock-
+        declaring strategy can trade through such a gateway to arm one.
+        """
+        signal = ctx.plan.signal
+        declared = float(signal.features.get(LOCKS_DECLARED_FEATURE, 0.0)) > 0.0
+        if self.locks is None:
+            if declared:
+                self._block("instrument_lock_state_unavailable:no_lock_source")
+            return
+        try:
+            lock = self.locks.lock_for(
+                signal.instrument,
+                signal.strategy_id,
+                signal.bar_time,
+                declared=declared,
+                timeframe=signal.timeframe,
+            )
+        except LockStateUnavailable as exc:
+            self._block(f"instrument_lock_state_unavailable:{exc}")
+            return
+        if lock is not None:
+            self._block(f"instrument_lock:{lock.code}")
 
     def _check_max_per_trade_risk(self, ctx: RiskContext, limits: LimitSet) -> None:
         pct = self._pct_of_equity(ctx.plan.risk_amount, ctx.equity)

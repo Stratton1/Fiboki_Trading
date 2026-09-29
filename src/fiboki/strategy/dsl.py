@@ -34,8 +34,10 @@ from pydantic import (
     BaseModel,
     ConfigDict,
     Field,
+    SerializerFunctionWrapHandler,
     computed_field,
     field_validator,
+    model_serializer,
     model_validator,
 )
 
@@ -350,6 +352,50 @@ class EventRestriction(BaseModel):
     avoid_rollover_hour: bool = True
 
 
+class StopStreakLock(BaseModel):
+    """After ``n_stops`` stop-outs within ``lookback_bars`` bars, stand aside.
+
+    Only a hit on the unmoved protective stop is a stop-out. A take-profit, a
+    time stop, a reversal, a trailing stop and a breakeven stop are not.
+    ``scope`` says what is counted and what is locked: ``instrument`` (this
+    strategy on one instrument), ``strategy`` (this strategy everywhere) or
+    ``global`` (every strategy sharing the book).
+    """
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    n_stops: Annotated[int, Field(ge=2)] | ParamRef
+    lookback_bars: Annotated[int, Field(ge=1)] | ParamRef
+    lock_bars: Annotated[int, Field(ge=1)] | ParamRef
+    scope: Literal["instrument", "strategy", "global"] = "instrument"
+
+
+class LockSpec(BaseModel):
+    """Entry locks, counted in SESSION BARS of the strategy's timeframe.
+
+    Enforced identically by the backtest engine and by the risk gateway, on the
+    bar that produces the signal; see :mod:`fiboki.backtest.locks`. Declaring a
+    lock changes the content hash, because it changes which trades exist. An
+    INERT block (no cooldown, no streak) is dropped on load, so it cannot be used
+    to mint a new hash for an unchanged strategy.
+    """
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    cooldown_bars_after_close: Annotated[int, Field(ge=0)] | ParamRef = 0
+    stop_streak: StopStreakLock | None = None
+
+    def is_inert(self) -> bool:
+        cooldown = literal_number(self.cooldown_bars_after_close)
+        return self.stop_streak is None and cooldown is not None and cooldown == 0
+
+
+#: The feature key a compiled signal carries when its document declares locks.
+#: The risk gateway reads it so that a lock-declaring strategy is REFUSED by a
+#: gateway that has no lock state, rather than trading unlocked.
+LOCKS_DECLARED_FEATURE = "locks_declared"
+
+
 class MutationRecord(BaseModel):
     """How this document was derived from its parent, for lineage auditing."""
 
@@ -406,6 +452,10 @@ class StrategyDocument(BaseModel):
     position_management: PositionManagement = Field(default_factory=PositionManagement)
     sessions: SessionRestriction | None = None
     events: EventRestriction = Field(default_factory=EventRestriction)
+    #: Optional entry locks. ABSENT (not null) in the serialised form when
+    #: undeclared, so every document written before this field existed dumps,
+    #: hashes and fingerprints byte-for-byte as it did.
+    locks: LockSpec | None = None
 
     parameters: dict[str, ParameterSpec] = Field(default_factory=dict)
     #: The parameter values this document was BOUND with, or ``None`` for an
@@ -436,6 +486,19 @@ class StrategyDocument(BaseModel):
         """
         if isinstance(data, dict) and "complexity_score" in data:
             data = {k: v for k, v in data.items() if k != "complexity_score"}
+        if isinstance(data, dict) and "locks" in data and _locks_inert(data["locks"]):
+            # An inert block and an absent one are the same strategy, so they
+            # must be the same document and the same content hash. Otherwise
+            # ``"locks": {}`` would mint a fresh hash for an unchanged strategy,
+            # and a fresh hash is a fresh look at the holdout.
+            data = {k: v for k, v in data.items() if k != "locks"}
+        return data
+
+    @model_serializer(mode="wrap")
+    def _omit_absent_locks(self, handler: SerializerFunctionWrapHandler) -> Any:
+        data = handler(self)
+        if isinstance(data, dict) and self.locks is None:
+            data.pop("locks", None)
         return data
 
     @field_validator("schema_version")
@@ -653,6 +716,15 @@ class StrategyDocument(BaseModel):
             score += 1.0
         if self.position_management.allow_pyramiding:
             score += 1.0
+        if self.locks is not None:
+            # A lock is another rule that decides which trades exist, and its
+            # counts are knobs a search can turn. Absent locks add nothing, so
+            # every document without them scores exactly as before.
+            cooldown = literal_number(self.locks.cooldown_bars_after_close)
+            if cooldown is None or cooldown > 0:
+                score += 1.0
+            if self.locks.stop_streak is not None:
+                score += 1.0
         return round(score, 3)
 
     # -------------------------------------------------------------- hash
@@ -701,6 +773,26 @@ class StrategyDocument(BaseModel):
         return cls.model_validate(json.loads(blob))
 
 
+def _locks_inert(value: Any) -> bool:
+    """True when a ``locks`` value, in any input form, declares nothing."""
+    if value is None:
+        return True
+    if isinstance(value, LockSpec):
+        return value.is_inert()
+    if isinstance(value, dict):
+        if value.get("stop_streak") is not None:
+            return False
+        cooldown = value.get("cooldown_bars_after_close", 0)
+        return (
+            not is_ref(cooldown)
+            and isinstance(cooldown, int | float)
+            and not isinstance(cooldown, bool)
+            and cooldown == 0
+            and set(value) <= {"cooldown_bars_after_close", "stop_streak"}
+        )
+    return False
+
+
 def _collect_refs(node: Any, out: set[str]) -> None:
     """Names referenced anywhere in a DUMPED document.
 
@@ -746,11 +838,13 @@ def _canonicalise(node: Any, key: str | None = None) -> Any:
 
 
 __all__ = [
+    "LOCKS_DECLARED_FEATURE",
     "MIN_HYPOTHESIS_CHARS",
     "SCHEMA_VERSION",
     "BindingError",
     "EventRestriction",
     "InfeasibleBindingError",
+    "LockSpec",
     "MutationRecord",
     "OutOfDomainError",
     "ParamRef",
@@ -759,6 +853,7 @@ __all__ = [
     "RuleSet",
     "SessionRestriction",
     "StopModel",
+    "StopStreakLock",
     "StrategyDocument",
     "StrategyFamily",
     "TakeProfitLeg",

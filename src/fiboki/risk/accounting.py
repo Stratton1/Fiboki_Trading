@@ -2,7 +2,7 @@
 
 The defect this module closes
 -----------------------------
-``risk/gateway.py`` runs eighteen named checks and names every one of them in
+``risk/gateway.py`` runs nineteen named checks and names every one of them in
 ``RiskDecision.checks_run``, allowed or blocked. Four of those checks were
 reading fields that nothing in the tree ever populated:
 

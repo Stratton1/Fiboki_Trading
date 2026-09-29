@@ -35,6 +35,7 @@ from fiboki.core.instruments import Instrument
 from fiboki.core.instruments import get as get_instrument
 from fiboki.indicators.base import Indicator
 from fiboki.strategy.dsl import (
+    LOCKS_DECLARED_FEATURE,
     StopModel,
     StrategyDocument,
     TakeProfitLeg,
@@ -363,7 +364,14 @@ class CompiledStrategy:
         raise CompilationError(f"unhandled take-profit kind {leg.kind!r}")  # pragma: no cover
 
     def _features(self, ctx: EvalContext) -> dict[str, float]:
-        """A small, deterministic snapshot for post-hoc analysis."""
+        """A small, deterministic snapshot for post-hoc analysis.
+
+        A document that declares locks also stamps
+        :data:`~fiboki.strategy.dsl.LOCKS_DECLARED_FEATURE`. The risk gateway
+        reads it: a lock-declaring signal reaching a gateway with no lock state
+        is refused instead of trading unlocked. Documents without locks carry
+        exactly the features they always did.
+        """
         out: dict[str, float] = {}
         for ind in self.indicators:
             col = ind.output_columns[0]
@@ -371,6 +379,8 @@ class CompiledStrategy:
                 value = ctx.frame[col].iat[-1]
                 if value is not None and math.isfinite(float(value)):
                     out[col] = float(value)
+        if self.document.locks is not None:
+            out[LOCKS_DECLARED_FEATURE] = 1.0
         return out
 
 
@@ -438,6 +448,8 @@ def compile_strategy(doc: StrategyDocument) -> CompiledStrategy:
                 "required indicator produces"
             )
 
+    _validate_locks(doc)
+
     indicator_warmup = max((i.warmup_period for i in indicators), default=1)
     rule_lookback = max((r.max_lookback() for r in doc.all_rules()), default=0)
     warmup = int(indicator_warmup + rule_lookback + 1)
@@ -449,6 +461,40 @@ def compile_strategy(doc: StrategyDocument) -> CompiledStrategy:
         warmup_period=warmup,
         content_hash=doc.content_hash(),
     )
+
+
+def _validate_locks(doc: StrategyDocument) -> None:
+    """Refuse a lock block that is well-formed but can never do anything.
+
+    The schema checks each number on its own. What it cannot see is the
+    interaction: with one position per instrument, stop-outs on an instrument
+    are at least ``cooldown + 1`` session bars apart (a close on bar ``c`` is
+    followed by a signal on bar ``c + cooldown`` at the earliest, filling and
+    stopping out one bar later), so an instrument-scoped streak of ``n`` stops
+    needs a lookback of at least ``(n - 1) * (cooldown + 1) + 1`` bars. A shorter
+    lookback declares a protection that can never arm -- a statement in the
+    document that is false about the strategy it describes.
+    """
+    locks = doc.locks
+    if locks is None or locks.stop_streak is None:
+        return
+    streak = locks.stop_streak
+    n_stops = int(bound_number(streak.n_stops, "locks.stop_streak.n_stops"))
+    lookback = int(bound_number(streak.lookback_bars, "locks.stop_streak.lookback_bars"))
+    bound_number(streak.lock_bars, "locks.stop_streak.lock_bars")
+    cooldown = int(
+        bound_number(locks.cooldown_bars_after_close, "locks.cooldown_bars_after_close")
+    )
+    if streak.scope != "instrument" or doc.position_management.max_concurrent_positions != 1:
+        return
+    needed = (n_stops - 1) * (cooldown + 1) + 1
+    if lookback < needed:
+        raise CompilationError(
+            f"{doc.strategy_id}: locks.stop_streak can never arm. {n_stops} "
+            f"stop-outs on one instrument, one position at a time, with a "
+            f"{cooldown}-bar cooldown, span at least {needed} session bars; the "
+            f"declared lookback is {lookback}."
+        )
 
 
 def _rule_operands(doc: StrategyDocument) -> tuple[IndicatorOperand, ...]:

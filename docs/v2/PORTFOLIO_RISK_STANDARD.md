@@ -166,7 +166,7 @@ persist it.
 
 ### Three properties that matter more than the individual checks
 
-**Every check is named.** `RiskDecision.checks_run` lists all eighteen names on every decision,
+**Every check is named.** `RiskDecision.checks_run` lists all nineteen names on every decision,
 allowed or blocked. An audit can *prove* which rules ran rather than trusting that they did.
 `_verify_coverage` compares the list that ran against `CHECKS` after the fact, and a check that
 somehow did not run appends `check_did_not_run:<name>`, which blocks.
@@ -189,7 +189,7 @@ intervene.
 caller assembles `RiskContext`. That is what makes it exhaustively testable and what stops a
 check from silently succeeding because a network call timed out.
 
-### The eighteen checks, in order
+### The nineteen checks, in order
 
 | # | Check | Blocks when |
 |---:|---|---|
@@ -201,16 +201,57 @@ check from silently succeeding because a network call timed out.
 | 6 | `abnormal_spread` | spread above `max_spread_multiple` × the instrument's typical |
 | 7 | `broker_health` | health score below `min_broker_health`, or unknown |
 | 8 | `event_blackout` | inside `event_blackout_minutes` either side of a flagged release |
-| 9 | `max_per_trade_risk` | this trade's risk-to-stop exceeds the per-trade cap |
-| 10 | `max_account_risk` | summed open risk-to-stop across the book exceeds the cap |
-| 11 | `max_instrument_exposure` | gross notional in one instrument exceeds the cap |
-| 12 | `max_strategy_exposure` | gross notional attributable to one strategy exceeds the cap |
-| 13 | `max_currency_exposure` | net notional in one currency leg exceeds the cap |
-| 14 | `max_correlated_exposure` | gross notional across positions correlated above `correlation_threshold` exceeds the cap |
-| 15 | `daily_loss` | realised loss today exceeds the daily cap |
-| 16 | `weekly_loss` | realised loss this week exceeds the weekly cap |
-| 17 | `total_drawdown` | drawdown from peak exceeds the total cap |
-| 18 | `margin_utilisation` | margin used exceeds the cap |
+| 9 | `instrument_lock` | an entry lock declared by a strategy document is in force on the signal's decision bar; or the signal's document declares locks and the lock state cannot be established (see below) |
+| 10 | `max_per_trade_risk` | this trade's risk-to-stop exceeds the per-trade cap |
+| 11 | `max_account_risk` | summed open risk-to-stop across the book exceeds the cap |
+| 12 | `max_instrument_exposure` | gross notional in one instrument exceeds the cap |
+| 13 | `max_strategy_exposure` | gross notional attributable to one strategy exceeds the cap |
+| 14 | `max_currency_exposure` | net notional in one currency leg exceeds the cap |
+| 15 | `max_correlated_exposure` | gross notional across positions correlated above `correlation_threshold` exceeds the cap |
+| 16 | `daily_loss` | realised loss today exceeds the daily cap |
+| 17 | `weekly_loss` | realised loss this week exceeds the weekly cap |
+| 18 | `total_drawdown` | drawdown from peak exceeds the total cap |
+| 19 | `margin_utilisation` | margin used exceeds the cap |
+
+### `instrument_lock`: strategy-declared entry locks
+
+A strategy document may declare `locks` (`STRATEGY_STANDARD.md` §4a): a cooldown after a close
+and a stop-streak lock, both counted in **session bars** of the strategy's timeframe, weekends
+excluded. The rule is implemented once, in `backtest/locks.py`, and asked the same question in
+two places: `BacktestEngine` asks it before queuing an entry, and this check asks it before an
+order exists. Both ask about the signal's **decision bar** (`plan.signal.bar_time`), never
+`ctx.now`, so the two cannot disagree at a lock's boundary.
+
+The gateway reads lock state from `RiskGateway(locks=...)`, held like the kill switch rather than
+passed per call. The intended source is `LedgerLockView`, which **rebuilds the lock book from the
+durable ledger on every question** and holds no state of its own, so a restart cannot forget a
+lock: the answer is a pure function of the ledger and the bar. Two ledgers can feed it:
+
+- the **trade (position) ledger** -- exact for both rules, because it records the exit reason;
+- the **order-intent ledger**, via `closes_from_intents` -- exact for cooldowns; a close whose
+  reason the intent does not record counts as a stop-out, so a stop streak recovered from here
+  can only be more restrictive than the truth.
+
+Fail-closed, stated precisely. Compiled signals from a lock-declaring document carry the feature
+`locks_declared`. Such a signal is refused, as `instrument_lock_state_unavailable:<why>`, when the
+gateway has no lock source, when the source cannot read its ledger, when no policy is registered
+for the strategy, or when the signal's timeframe is not the one the policy is counted in. A
+source that cannot read its ledger also refuses signals that declare nothing, because a
+book-wide (`global`) lock may be in force that it cannot see. A gateway with **no** source passes
+a signal that declares nothing: no lock-declaring strategy can trade through it, so nothing can
+have armed a lock. A lock never blocks an exit; `instrument_lock` is not in `EXIT_CHECKS`.
+
+`tests/integration/test_lock_parity.py` drives one lock-declaring document through the engine,
+through `PaperBroker` behind this gateway (also with the gateway rebuilt from a ledger file at
+every bar), and through `VenuePositionManager.submit` over `SimulatedVenue`, and asserts
+identical ledgers and that the gateway refused exactly the bars the engine refused.
+
+**Not wired in production.** No worker constructs a `LedgerLockView` today (`workers/` is outside
+this change). Until one does, a lock-declaring document is refused on every entry in paper and
+demo -- the safe failure -- and documents without locks are unaffected. When wiring it, ask the
+lock BEFORE `VenuePositionManager.precheck_entry`: the precheck consumes a sequence number when
+it refuses, and doing that for a signal the engine never sequenced decorrelates the fill model's
+price path from the backtest's.
 
 ### Exits run a smaller set, deliberately
 
@@ -339,7 +380,8 @@ An automatic drawdown-triggered flatten does not exist at this snapshot.
 | `Order` constructed only downstream of a `RiskDecision` | AST test, single call site | enforced |
 | Gateway called before `Order` is built | AST test, source-order assertion | enforced |
 | Close path consults the gateway | AST test on `ExecutionService.close` | enforced |
-| All 18 checks ran | `_verify_coverage` on every decision | enforced |
+| All 19 checks ran | `_verify_coverage` on every decision | enforced |
+| Strategy-declared entry locks agree with the backtest | `tests/integration/test_lock_parity.py`; lock state rebuilt from the ledger per question | enforced in the gateway and engine; **no worker wires a lock source yet**, so lock-declaring documents are refused in paper/demo |
 | A raising check blocks | `except Exception` → `check_error:` | enforced |
 | Unknown input blocks | `None` handling in each check | enforced |
 | Every attempt recorded, allowed or blocked | `evaluate` records before returning | enforced |

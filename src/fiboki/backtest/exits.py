@@ -53,6 +53,7 @@ from typing import TYPE_CHECKING, Any, Protocol
 
 import pandas as pd
 
+from fiboki.backtest.locks import LockPolicy, LockScope, StopStreakRule
 from fiboki.backtest.version import ENGINE_VERSION
 
 if TYPE_CHECKING:  # pragma: no cover - typing only, never an import at runtime
@@ -67,6 +68,7 @@ __all__ = [
     "TrailKind",
     "TrailSpec",
     "exit_policy_from_document",
+    "lock_policy_from_document",
 ]
 
 
@@ -355,6 +357,14 @@ class ExitPolicy:
     cooldown_bars_after_exit: int = 0
     reversal: ReversalMode = ReversalMode.IGNORE
     events: EventBlackout | None = None
+    #: The document's entry locks. Carried here so that every path which derives
+    #: its execution vocabulary from a document -- the engine, the validation
+    #: evaluator, the agents' backtest job -- gets them without being told to.
+    #: NOT read by :class:`~fiboki.backtest.position.PositionBook`: a lock is a
+    #: decision-bar rule, enforced by ``BacktestEngine`` before an entry is
+    #: queued and by ``RiskGateway``'s ``instrument_lock`` check before an order
+    #: exists. See :mod:`fiboki.backtest.locks`.
+    locks: LockPolicy | None = None
 
     def __post_init__(self) -> None:
         total = sum(self.allocations)
@@ -398,6 +408,9 @@ class ExitPolicy:
             "cooldown_bars_after_exit": int(self.cooldown_bars_after_exit),
             "reversal": self.reversal.value,
             "events": None if self.events is None else self.events.fingerprint(),
+            # Present ONLY when a lock is declared, so every fingerprint stored
+            # before locks existed is byte-identical to the one computed now.
+            **({"locks": self.locks.fingerprint()} if self.locks is not None else {}),
         }
 
 
@@ -495,7 +508,36 @@ def exit_policy_from_document(document: StrategyDocument) -> ExitPolicy:
         ),
         reversal=reversal,
         events=events if events.active else None,
+        locks=lock_policy_from_document(document),
     )
+
+
+def lock_policy_from_document(document: StrategyDocument) -> LockPolicy | None:
+    """The document's ``locks`` block as engine data, or ``None`` when absent.
+
+    Lives beside :func:`exit_policy_from_document` so that this module stays the
+    one place in ``backtest/`` that reads the DSL. Refuses a reference that
+    survived binding, for the same reason every other builder here does.
+    """
+    spec = document.locks
+    if spec is None:
+        return None
+    streak = None
+    if spec.stop_streak is not None:
+        s = spec.stop_streak
+        streak = StopStreakRule(
+            n_stops=int(_bound_number("locks.stop_streak.n_stops", s.n_stops)),
+            lookback_bars=int(_bound_number("locks.stop_streak.lookback_bars", s.lookback_bars)),
+            lock_bars=int(_bound_number("locks.stop_streak.lock_bars", s.lock_bars)),
+            scope=LockScope(s.scope),
+        )
+    policy = LockPolicy(
+        cooldown_bars_after_close=int(
+            _bound_number("locks.cooldown_bars_after_close", spec.cooldown_bars_after_close)
+        ),
+        stop_streak=streak,
+    )
+    return policy if policy.active else None
 
 
 def _trail_from_model(model: Any) -> TrailSpec:

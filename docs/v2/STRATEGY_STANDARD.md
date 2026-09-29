@@ -38,6 +38,7 @@ all — which is also what makes the agent sandbox boundary meaningful.
 | `regime`, `setup`, `confirmation`, `filters`, `invalidation` | no | additional rule stages |
 | `take_profits` | no | a **list** of legs with allocation fractions |
 | `trailing`, `position_management`, `sessions`, `events` | no | |
+| `locks` | no | entry locks: `cooldown_bars_after_close`, `stop_streak`; see §4a. **Absent** from the serialised form when undeclared |
 | `parameters` | no | name → `ParameterSpec` with an explicit sweep **domain** |
 | `parent_strategy_ids`, `mutation` | no | lineage |
 | `notes`, `author` | no | |
@@ -46,7 +47,9 @@ all — which is also what makes the agent sandbox boundary meaningful.
 documents is greppable, and refused as an input so a hand-edited file cannot claim a complexity
 it does not have. `StrategyRegistry.load_directory` compares the raw value to catch exactly such
 an edit. The formula: 1.0 per rule (nested rules counted), 0.5 per tunable parameter, 0.5 per
-take-profit leg beyond the first, 1.0 for a trailing model, 1.0 for pyramiding. **Higher means
+take-profit leg beyond the first, 1.0 for a trailing model, 1.0 for pyramiding, and 1.0 for each
+declared entry lock (a non-zero cooldown, a stop streak). A document without locks scores exactly
+what it scored before locks existed. **Higher means
 more ways to overfit**, and that is the whole reason it is measured.
 
 ## 3. The mandatory hypothesis, and the evidence against
@@ -111,6 +114,86 @@ A `Signal` constructed from a document is validated again at the contract bounda
 take-profits on the correct side. V1 allowed a wrong-sided stop and relied on a downstream
 sanitiser — which then had to be removed, leaving a contradictory test committed in the tree that
 nobody saw go red because the suite would not run.
+
+## 4a. Entry locks (`locks`)
+
+An optional block that refuses NEW entries for a while after something has happened. Pattern
+after freqtrade `plugins/protections` (GPL-3.0, not copied), corrected in the two places where
+freqtrade's design lets a number be believed that should not be:
+
+```json
+"locks": {
+  "cooldown_bars_after_close": 3,
+  "stop_streak": {"n_stops": 2, "lookback_bars": 30, "lock_bars": 12, "scope": "instrument"}
+}
+```
+
+| Field | Meaning |
+|---|---|
+| `cooldown_bars_after_close` (int ≥ 0, default 0) | after a position of this strategy on an instrument closes on session bar `c`, signals on bars `c .. c+N-1` are refused; the first permitted signal is on `c+N` and fills at the next open. Every close arms it, whatever the exit reason |
+| `stop_streak.n_stops` (int ≥ 2) | stop-outs needed to arm the lock |
+| `stop_streak.lookback_bars` (int ≥ 1) | counted over the session bars `(now - lookback, now]` |
+| `stop_streak.lock_bars` (int ≥ 1) | signals on the arming bar and the next `lock_bars - 1` bars are refused |
+| `stop_streak.scope` | `instrument` (this strategy's stops on one instrument, locks it there), `strategy` (this strategy's stops anywhere, locks it everywhere), `global` (every strategy's stops in the book, locks every strategy) |
+
+Every field accepts a `{"$param": ...}` reference and is bound like any other.
+
+**Counted in session bars, not minutes.** freqtrade counts a lock in wall-clock minutes, so a
+four-candle H1 lock set on Friday at 21:00 expires on Saturday at 01:00, across a weekend with no
+candles. Here a lock is counted on `backtest/locks.SessionBarClock`, a pure function of the
+timestamp that removes the interbank weekend (Friday 22:00 to Sunday 22:00 UTC): the same lock
+expires on Monday at 01:00, four real bars later. Because the clock depends only on the timestamp,
+a restarted process holding nothing but a ledger of timestamps computes the same indices.
+
+**Always on, everywhere.** freqtrade leaves protections off in backtests unless asked. Here
+there is no switch: `exit_policy_from_document` carries the locks on `ExitPolicy.locks`, so the
+engine, the validation evaluator and the agents' backtest job all enforce them without being told
+to; the risk gateway's `instrument_lock` check enforces the same rule for paper, demo and live
+(`PORTFOLIO_RISK_STANDARD.md` §3). Both ask about the signal's **decision bar**.
+
+**Only a stop-out is a stop-out.** `stop_streak` counts exits at the unmoved protective stop
+(`stop_loss`). A take-profit, a time stop, a reversal, a trailing stop and a breakeven stop are
+not counted. A close whose reason the ledger does not record (the order-intent ledger) counts as a
+stop-out, so recovery from that ledger can only be more restrictive than the truth. A streak is
+**consumed** by the lock it arms: the stops that armed one lock do not count toward the next.
+
+**A lock refuses new risk and nothing else.** It never blocks an exit, a scale-out, a protective
+amendment or a reversal's closing leg; the engine asks it after scheduling a reversal's close.
+
+**It changes the content hash, on purpose.** A document with locks is a different strategy --
+it holds a different set of trades -- so it has a different content hash, a separate holdout
+look and its own research-memory entry. Three things keep that from becoming a loophole:
+
+- a document **without** locks dumps, hashes, fingerprints and backtests byte-for-byte as it did
+  before the field existed (`locks` is absent from the dump, not `null`), pinned for all five seed
+  documents by `tests/integration/test_locks_regression_pin.py`;
+- an **inert** block (`{}`, a zero cooldown and no streak) is dropped on load, so it cannot mint a
+  new hash -- and a new holdout look -- for an unchanged strategy;
+- `SCHEMA_VERSION` is **not** bumped. Bumping it would move every content hash in existence;
+  adding an optional field whose absence leaves every dump unchanged moves none, and no stored key
+  can have been computed from a document with locks because the previous schema refused the field
+  (`extra="forbid"`). `strategy_key_version()` therefore still describes every stored key.
+
+**The compiler refuses a streak that can never arm.** With one position per instrument, stop-outs
+are at least `cooldown + 1` bars apart, so an instrument-scoped streak of `n` stops needs a lookback
+of at least `(n - 1) * (cooldown + 1) + 1` bars.
+
+**Approximations, stated.** The calendar models the weekend only: exchange holidays and the daily
+maintenance breaks of index and energy CFDs count as session bars. A slot counts as in session
+when at least half of it is open (exact on H1 and below; on H4 the Friday 20:00 and Sunday 20:00
+slots count; on D1 Sunday does not). A bar stamped inside a closed slot shares the previous open
+slot's index, which holds a lock one bar longer, never shorter. A `global` streak depends on every
+strategy sharing the book, so a single-strategy backtest reproduces it exactly only for a book
+running one strategy.
+
+**How it relates to `position_management.cooldown_bars_after_exit`.** That older field is
+enforced by the position book at FILL time, counted on the engine's timeline index, and a reversal
+does not arm it. It is unchanged. `locks.cooldown_bars_after_close` is decided on the signal bar,
+counted in session bars, enforced by the gateway as well as the engine, and survives a restart. By
+construction, on a single-instrument run with no latency and no weekend in the window, both refuse
+an entry that would fill on the same bars; they are still not ledger-identical, because the older
+field refuses an order that was already queued (consuming a fill-model sequence number) and the
+new one refuses before an order exists. This equivalence is argued, not tested.
 
 ## 5. Parameters carry their own domains
 

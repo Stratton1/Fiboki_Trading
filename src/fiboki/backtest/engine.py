@@ -64,6 +64,18 @@ The rest of the exit vocabulary — trailing stops, breakeven, time stops,
 cooldown, reversal, event blackouts — lives in
 :mod:`fiboki.backtest.exits` as an :class:`~fiboki.backtest.exits.ExitPolicy`
 and is documented there.
+
+Entry locks
+-----------
+A document's ``locks`` block travels on ``ExitPolicy.locks`` and is enforced
+HERE, on the decision bar, by :class:`~fiboki.backtest.locks.LockBook`: every
+closed position is reported to it, and a signal whose instrument is locked is
+refused before it is sized or queued, recorded as ``instrument_lock`` in
+``rejections`` and in :attr:`BacktestResult.lock_blocks`. The risk gateway's
+``instrument_lock`` check asks the same module the same question on the same
+bar, rebuilt from the trade ledger, which is how paper and live agree with this.
+A run whose policy declares no locks never constructs a lock book and is
+byte-identical to a run before locks existed.
 """
 from __future__ import annotations
 
@@ -80,6 +92,11 @@ from fiboki.backtest.exits import (
     BlackoutSource,
     ExitPolicy,
     ReversalMode,
+)
+from fiboki.backtest.locks import (
+    LockBook,
+    LockRegistration,
+    timeframe_for_interval,
 )
 from fiboki.backtest.position import (
     BarSlice,
@@ -357,6 +374,10 @@ class BacktestResult:
     #: out three times contributes three legs and one ``Trade``.
     exit_legs: list[ExitLeg] = field(default_factory=list)
     exit_policy_fingerprint: dict[str, object] = field(default_factory=dict)
+    #: One row per signal refused by an entry lock: the decision bar, the
+    #: instrument, the strategy and the lock's code. Empty for a run whose
+    #: policy declares no locks.
+    lock_blocks: list[dict[str, object]] = field(default_factory=list)
 
     # Columns whose values define the ledger. UUIDs are excluded on purpose:
     # they are random by construction and would defeat the determinism test
@@ -616,6 +637,20 @@ class BacktestEngine:
             for col in frame.columns:
                 self._series[sym][str(col)] = frame[col].to_numpy(dtype=np.float64)
 
+        # Entry locks count SESSION bars of one timeframe. It is read off the
+        # data here and each signal is held to it below; a lock counted in bars
+        # of a guessed size would be a lock of a guessed length.
+        self.lock_registration: LockRegistration | None = None
+        locks = self.exit_policy.locks
+        if locks is not None and locks.active:
+            frames = {timeframe_for_interval(self._intervals[s]) for s in self.symbols}
+            if len(frames) != 1:
+                raise ValueError(
+                    "entry locks need one timeframe per run; these frames have bar "
+                    f"sizes {sorted(t.value for t in frames)}"
+                )
+            self.lock_registration = LockRegistration(locks, frames.pop())
+
         needed = self.exit_policy.needs_series
         if needed:
             for sym in self.symbols:
@@ -652,6 +687,13 @@ class BacktestEngine:
         )
         self.book = book
         policy = self.exit_policy
+        lock_book = (
+            LockBook(default=self.lock_registration)
+            if self.lock_registration is not None
+            else None
+        )
+        self.lock_book = lock_book
+        lock_blocks: list[dict[str, object]] = []
         peak_equity = book.balance
         signals_seen = 0
         orders_submitted = 0
@@ -675,7 +717,10 @@ class BacktestEngine:
             # -- 1/2/3. financing, reversals, entries at the open, exits.
             #    Every one of these is decided in ``backtest/position.py``, by
             #    the same object the paper adapter drives.
-            book.advance(view)
+            advanced = book.advance(view)
+            if lock_book is not None:
+                for trade in advanced.trades:
+                    lock_book.on_close(trade)
 
             # -- 4. mark to market on the bar's close
             unrealised, exposure = book.mark_to_market(view)
@@ -738,6 +783,30 @@ class BacktestEngine:
                 if scheduled and policy.reversal is ReversalMode.CLOSE_ONLY:
                     book.bump("reversal_close_only")
                     continue
+
+                # Entry locks, AFTER the reversal is scheduled: a lock refuses
+                # new risk and never stands in the way of an exit.
+                if lock_book is not None:
+                    reg = self.lock_registration
+                    if reg is not None and signal.timeframe != reg.timeframe.value:
+                        raise ValueError(
+                            f"signal timeframe {signal.timeframe} on a "
+                            f"{reg.timeframe.value} run: entry locks would be counted "
+                            "in bars of the wrong size"
+                        )
+                    lock = lock_book.is_locked(signal.instrument, signal.strategy_id, ts)
+                    if lock is not None:
+                        book.bump("instrument_lock")
+                        lock_blocks.append(
+                            {
+                                "bar_time": ts,
+                                "instrument": signal.instrument,
+                                "strategy_id": signal.strategy_id,
+                                "direction": signal.direction.value,
+                                "lock": lock.code,
+                            }
+                        )
+                        continue
 
                 rate = self._rate(instr.quote, ts)
                 size = self.sizer.size_for(signal, instr, account, rate)
@@ -803,6 +872,7 @@ class BacktestEngine:
             orders_submitted=orders_submitted,
             exit_legs=book.exit_legs,
             exit_policy_fingerprint=self.exit_policy.fingerprint(),
+            lock_blocks=lock_blocks,
         )
 
     # -------------------------------------------------------------- helpers
