@@ -19,6 +19,13 @@ package calls a handler directly.
 
 Model calls are recorded too, through :meth:`AgentSession.think`, so the
 ledger shows the prompt that produced the tool call that produced the artefact.
+
+Provenance on every record: a session stamps ``manifest_hash`` (the run
+manifest it was opened under, if any) and ``model_id`` / ``model_digest`` on
+every record it writes.  For a model call these name the model asked and its
+weights digest; for a tool call they name the model of this session's most
+recent thought, whose output the call acted on, or
+:data:`~fiboki.agents.audit.NO_MODEL` if the session has not thought yet.
 """
 from __future__ import annotations
 
@@ -29,7 +36,14 @@ from typing import Any
 
 from pydantic import BaseModel, ValidationError
 
-from fiboki.agents.audit import ActionKind, AuditedAction, AuditLedger, AuditRecord, Outcome
+from fiboki.agents.audit import (
+    NO_MODEL,
+    ActionKind,
+    AuditedAction,
+    AuditLedger,
+    AuditRecord,
+    Outcome,
+)
 from fiboki.agents.capabilities import Capability, CapabilityResolver, PermissionDenied
 from fiboki.agents.providers import (
     LLMRequest,
@@ -90,6 +104,23 @@ class SessionBudget:
         self.model_calls += 1
         self.cost_usd = round(self.cost_usd + cost_usd, 10)
 
+    def declaration(self) -> dict[str, Any]:
+        """The limits, as data, for a workflow's start record."""
+        return {
+            "max_tool_calls": self.max_tool_calls,
+            "max_model_calls": self.max_model_calls,
+            "max_cost_usd": self.max_cost_usd,
+        }
+
+
+def default_budget(role_spec: RoleSpec) -> SessionBudget:
+    """The budget a session for this role gets when none is passed.
+
+    One definition, used by :class:`AgentSession` and by the workflow start
+    record that declares the limits the offline evals check against.
+    """
+    return SessionBudget(max_tool_calls=role_spec.max_tool_calls)
+
 
 @dataclass(frozen=True, slots=True)
 class ThoughtResult:
@@ -121,6 +152,7 @@ class AgentSession:
         router: ModelRouter | None = None,
         workflow_id: str | None = None,
         budget: SessionBudget | None = None,
+        manifest_hash: str | None = None,
     ) -> None:
         self.agent_id = agent_id
         self.role_spec: RoleSpec = get_role(role)
@@ -129,11 +161,15 @@ class AgentSession:
         self.ledger = ledger
         self.router = router
         self.workflow_id = workflow_id
-        self.budget = budget or SessionBudget(max_tool_calls=self.role_spec.max_tool_calls)
+        self.budget = budget or default_budget(self.role_spec)
+        self.manifest_hash = manifest_hash
         # The tool context carries the agent's identity so research records are
         # attributed without the handler having to be told twice.
         self.context = replace(context, agent_id=agent_id, role=self.role_spec.role.value)
         self.last_action_id: str | None = None
+        #: The model (and its weights digest) of this session's latest thought.
+        self.last_model_id: str = NO_MODEL
+        self.last_model_digest: str | None = None
 
     # -- introspection ----------------------------------------------------
 
@@ -178,6 +214,9 @@ class AgentSession:
             parent_action_id=parent_action_id or self.last_action_id,
             workflow_id=self.workflow_id,
             capability=spec.capability.value if spec else "",
+            model_id=self.last_model_id,
+            model_digest=self.last_model_digest,
+            manifest_hash=self.manifest_hash,
         ) as action:
             if spec is None:
                 raise ToolNotInRole(
@@ -253,12 +292,19 @@ class AgentSession:
         json_only: bool = True,
         parent_action_id: str | None = None,
         budget_usd: float = 0.25,
+        json_schema: Mapping[str, Any] | None = None,
     ) -> ThoughtResult:
         """Ask the model, record the exchange, and parse JSON if asked for.
 
         Parsing uses ``json.loads`` via the sandbox; model output is never
         evaluated.  A parse failure is returned as data, not raised, so a
         workflow records the bad output rather than hiding it.
+
+        The provider is asked for its model fingerprint inside the audited
+        block, so a model whose weights cannot be pinned fails the step on the
+        record instead of running unpinned.  ``json_schema`` asks a provider
+        that supports it to constrain decoding to that schema; the output is
+        still parsed and validated downstream exactly as before.
         """
         if self.router is None:
             raise RuntimeError(
@@ -273,6 +319,7 @@ class AgentSession:
             temperature=0.0,
             json_only=json_only,
             metadata={"step": step or self.role_spec.role.value, "agent_id": self.agent_id},
+            json_schema=json_schema if json_only else None,
         )
         started = time.perf_counter()
         decision = self.router.select(
@@ -302,12 +349,19 @@ class AgentSession:
             model=decision.model,
             model_version=decision.capabilities.version,
             provider=decision.provider.name,
+            model_id=decision.model,
+            manifest_hash=self.manifest_hash,
         ) as action:
+            fingerprint = decision.provider.model_fingerprint(decision.model)
+            action.model_id = fingerprint.model_id
+            action.model_digest = fingerprint.digest
             response = decision.provider.generate(request, decision.model)
-            self.budget.charge_model(response.cost_usd)
+            # Account for the call BEFORE charging the budget: if the charge
+            # refuses, the money was still spent and the record must say so.
             action.prompt_tokens = response.prompt_tokens
             action.completion_tokens = response.completion_tokens
             action.cost_usd = response.cost_usd
+            self.budget.charge_model(response.cost_usd)
             action.outputs = {
                 "text": response.text,
                 "finish_reason": response.finish_reason,
@@ -315,6 +369,8 @@ class AgentSession:
             }
         assert action.record is not None
         self.last_action_id = action.record.action_id
+        self.last_model_id = action.record.model_id or NO_MODEL
+        self.last_model_digest = action.record.model_digest
 
         payload: Any = None
         parse_error = ""
@@ -348,6 +404,7 @@ def open_session(
     workflow_id: str | None = None,
     registry: ToolRegistry | None = None,
     grant: bool = True,
+    manifest_hash: str | None = None,
 ) -> AgentSession:
     """Open a session, granting exactly the role's capabilities and no more.
 
@@ -366,6 +423,7 @@ def open_session(
         registry=registry,
         router=router,
         workflow_id=workflow_id,
+        manifest_hash=manifest_hash,
     )
 
 
@@ -375,5 +433,6 @@ __all__ = [
     "SessionBudget",
     "ThoughtResult",
     "ToolNotInRole",
+    "default_budget",
     "open_session",
 ]

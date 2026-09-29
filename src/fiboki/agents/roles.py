@@ -151,6 +151,7 @@ possible answer leads to the same action is not worth the compute.
             "query_experiment_history",
             "query_strategy",
             "compare_candidates",
+            "query_forecast_scores",
         ),
         task_class=TaskClass.SUMMARISATION,
     ),
@@ -183,6 +184,7 @@ are not using the prior.
             "search_web",
             "fetch_research",
             "create_hypothesis",
+            "record_forecast",
         ),
         task_class=TaskClass.HYPOTHESIS_GENERATION,
     ),
@@ -273,6 +275,7 @@ cheapest test that can kill the idea, and run it first.
             "run_walkforward",
             "run_ablation",
             "run_sensitivity",
+            "query_forecast_scores",
         ),
         task_class=TaskClass.EXPERIMENT_DESIGN,
         max_tool_calls=60,
@@ -348,7 +351,7 @@ conclude that anything should be traded, only what state the market is in.
 A regime label is a summary, not a fact about the future. Report the underlying
 numbers alongside the label so a reader can disagree with the classification.
 """,
-        tools=("query_regime", "query_market_data", "query_data_quality"),
+        tools=("query_regime", "query_market_data", "query_data_quality", "record_forecast"),
         task_class=TaskClass.CLASSIFICATION,
     ),
     RoleSpec(

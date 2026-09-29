@@ -52,6 +52,18 @@ from typing import IO, Any, Protocol, runtime_checkable
 
 GENESIS_HASH = "0" * 64
 
+#: ``AuditRecord.model_id`` for an action no model took part in: a workflow
+#: boundary, or a tool call a session made before it had asked any model.
+#: Distinct from ``None``, which means the field was never recorded.
+NO_MODEL = "none"
+
+#: Provenance fields that are hashed only when present.  See AuditRecord.
+_OPTIONAL_PROVENANCE: tuple[str, ...] = ("model_id", "model_digest", "manifest_hash")
+
+
+def _optional_str(value: Any) -> str | None:
+    return None if value is None else str(value)
+
 
 class Outcome(str, Enum):
     """What happened.  ``DENIED`` is as important a record as ``OK``."""
@@ -120,6 +132,17 @@ class AuditRecord:
     wall_ms: float = 0.0
     error: str = ""
     capability: str = ""
+    #: Provenance of the run, added in Wave 2.  ``None`` means "not recorded"
+    #: (every record written before the fields existed) and is left OUT of the
+    #: hashed payload, so those records still hash to what they always did.
+    #: ``model_id`` is the model that produced this action, or :data:`NO_MODEL`
+    #: for an action no model was involved in; ``model_digest`` pins its
+    #: weights where the provider can; ``manifest_hash`` is the
+    #: :class:`~fiboki.agents.manifest.RunManifest` hash of the prompts, tool
+    #: schemas and library versions in force.
+    model_id: str | None = None
+    model_digest: str | None = None
+    manifest_hash: str | None = None
 
     action_id: str = field(default_factory=lambda: f"act_{uuid.uuid4().hex[:16]}")
     recorded_at: datetime = field(default_factory=_now)
@@ -156,6 +179,10 @@ class AuditRecord:
             "error": self.error,
             "previous_hash": self.previous_hash,
         }
+        for key in _OPTIONAL_PROVENANCE:
+            value = getattr(self, key)
+            if value is not None:
+                data[key] = value
         if with_hash:
             data["record_hash"] = self.record_hash
         return data
@@ -199,6 +226,9 @@ class AuditRecord:
             wall_ms=float(raw.get("wall_ms", 0.0)),
             error=str(raw.get("error", "")),
             capability=str(raw.get("capability", "")),
+            model_id=_optional_str(raw.get("model_id")),
+            model_digest=_optional_str(raw.get("model_digest")),
+            manifest_hash=_optional_str(raw.get("manifest_hash")),
             action_id=str(raw["action_id"]),
             recorded_at=datetime.fromisoformat(str(raw["recorded_at"])),
             sequence=int(raw.get("sequence", -1)),
@@ -533,8 +563,16 @@ class AuditedAction:
         model_version: str = "",
         provider: str = "",
         capability: str = "",
+        model_id: str | None = None,
+        model_digest: str | None = None,
+        manifest_hash: str | None = None,
     ) -> None:
         self._ledger = ledger
+        #: Settable inside the block: the digest may only be known once the
+        #: provider has been asked for its fingerprint.
+        self.model_id = model_id
+        self.model_digest = model_digest
+        self.manifest_hash = manifest_hash
         self._base: dict[str, Any] = {
             "agent_id": agent_id,
             "role": role,
@@ -582,6 +620,9 @@ class AuditedAction:
                 completion_tokens=self.completion_tokens,
                 cost_usd=self.cost_usd,
                 wall_ms=round((time.perf_counter() - self._started) * 1000.0, 4),
+                model_id=self.model_id,
+                model_digest=self.model_digest,
+                manifest_hash=self.manifest_hash,
                 **self._base,
             )
         )
@@ -600,6 +641,7 @@ def _outcome_for(exc: BaseException) -> Outcome:
 
 __all__ = [
     "GENESIS_HASH",
+    "NO_MODEL",
     "ActionKind",
     "AuditChainForkError",
     "AuditLedger",

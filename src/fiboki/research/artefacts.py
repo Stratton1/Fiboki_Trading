@@ -37,7 +37,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 from sqlalchemy import DateTime, String, Text, select, text
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -261,6 +261,128 @@ class ResearchNote(_Record):
     supersedes: str | None = None
 
 
+#: The closed claim vocabulary of a forecast. None of it can read as an order:
+#: it names where price will be relative to where it was, not what to do.
+ForecastDirection = Literal["higher", "lower", "range"]
+#: Absolute realised move in units of ATR at the start of the horizon.
+MagnitudeBucket = Literal["<0.5atr", "0.5-1atr", "1-2atr", ">2atr"]
+#: ``range`` is a DIRECTIONAL claim that landed inside the range band: scored
+#: as the claimed event not occurring, never as a push. See
+#: :mod:`fiboki.research.forecasts`.
+ForecastOutcome = Literal["hit", "miss", "range", "not_evaluable"]
+
+
+def _require_aware(value: datetime, name: str) -> None:
+    if value.tzinfo is None or value.utcoffset() is None:
+        raise ValueError(f"{name} must be timezone-aware UTC, got {value!r}")
+
+
+class Forecast(_Record):
+    """A pre-registered, scoreable claim about one instrument over one horizon.
+
+    Written by an agent BEFORE the horizon starts, scored by
+    :func:`fiboki.research.forecasts.score_due_forecasts` after it ends, and
+    never edited: the store is append-only by trigger. It is not a signal and
+    nothing downstream of the research store reads it as one; its only
+    consumer is the scorer.
+
+    ``atr_period`` and ``range_band_atr`` are stamped from the forecast policy
+    at write time, so the unit a forecast is scored in is fixed with the claim
+    rather than read from whatever the policy says on scoring day.
+    ``provenance`` records whether the forecast was written before its horizon
+    started (``forward``) or reconstructed after it (``backfill``); only forward
+    forecasts are evidence about a model (plan decision D-A3).
+    """
+
+    forecast_id: str = Field(default_factory=lambda: _rid("fc"))
+    instrument: str = Field(min_length=3, max_length=32)
+    timeframe: Literal["H1", "H4", "D1"]
+    horizon_start: datetime
+    horizon_end: datetime
+    direction: ForecastDirection
+    magnitude_bucket: MagnitudeBucket | None = None
+    probability: float = Field(ge=0.5, le=0.95)
+    invalid_if: str = Field(min_length=20)
+    evidence_ids: tuple[str, ...] = Field(min_length=1)
+    reason: str = Field(min_length=20)
+    model_id: str = ""
+    provenance: Literal["forward", "backfill"]
+    atr_period: int = Field(ge=1)
+    range_band_atr: float = Field(gt=0.0)
+    policy_version: str = Field(min_length=1)
+
+    @model_validator(mode="after")
+    def _horizon_is_a_real_interval(self) -> Forecast:
+        _require_aware(self.horizon_start, "horizon_start")
+        _require_aware(self.horizon_end, "horizon_end")
+        if self.horizon_end <= self.horizon_start:
+            raise ValueError("horizon_end must be strictly after horizon_start")
+        return self
+
+
+class ForecastScore(_Record):
+    """The deterministic verdict on one :class:`Forecast`.
+
+    ``score_id`` is DERIVED from ``forecast_id`` (:meth:`id_for`), so the
+    store's primary key makes a second score for the same forecast impossible
+    rather than merely unlikely: re-running the scorer, or two scorers racing,
+    cannot double-count a forecast.
+
+    A forecast whose bars are missing is ``not_evaluable`` with a reason and no
+    Brier or log score; it is recorded, never skipped.
+    """
+
+    score_id: str
+    forecast_id: str
+    instrument: str
+    timeframe: str
+    forecaster: str = ""
+    forecaster_role: str = ""
+    model_id: str = ""
+    provenance: Literal["forward", "backfill"]
+    claimed_direction: ForecastDirection
+    claimed_magnitude_bucket: MagnitudeBucket | None = None
+    probability: float = Field(ge=0.5, le=0.95)
+    outcome: ForecastOutcome
+    realised_direction: ForecastDirection | None = None
+    realised_move_atr: float | None = None
+    realised_magnitude_bucket: MagnitudeBucket | None = None
+    magnitude_hit: bool | None = None
+    atr_at_start: float | None = None
+    start_price: float | None = None
+    end_price: float | None = None
+    start_bar_closed_at: datetime | None = None
+    end_bar_closed_at: datetime | None = None
+    dataset_version_id: str = ""
+    brier: float | None = None
+    log_score: float | None = None
+    not_evaluable_reason: str = ""
+    scorer_version: str = Field(min_length=1)
+
+    @staticmethod
+    def id_for(forecast_id: str) -> str:
+        return f"fscore_{forecast_id}"
+
+    @model_validator(mode="after")
+    def _consistent(self) -> ForecastScore:
+        if self.score_id != self.id_for(self.forecast_id):
+            raise ValueError(
+                f"score_id must be {self.id_for(self.forecast_id)!r}: one forecast, "
+                "one score, enforced by the primary key"
+            )
+        if self.outcome == "not_evaluable":
+            if not self.not_evaluable_reason:
+                raise ValueError("a not_evaluable score must say why")
+            if self.brier is not None or self.log_score is not None:
+                raise ValueError("a not_evaluable score carries no Brier or log score")
+        else:
+            if self.brier is None or self.log_score is None:
+                raise ValueError("an evaluable score must carry Brier and log score")
+            if self.realised_direction is None or self.realised_move_atr is None:
+                raise ValueError("an evaluable score must carry the realised move")
+        return self
+
+
 ANY_RECORD = (
     Hypothesis
     | StrategyProposal
@@ -269,6 +391,8 @@ ANY_RECORD = (
     | ValidationReportRecord
     | Critique
     | ResearchNote
+    | Forecast
+    | ForecastScore
 )
 
 
@@ -284,6 +408,8 @@ _COLLECTIONS: dict[str, tuple[type[BaseModel], str]] = {
     "validation_reports": (ValidationReportRecord, "report_id"),
     "critiques": (Critique, "critique_id"),
     "notes": (ResearchNote, "note_id"),
+    "forecasts": (Forecast, "forecast_id"),
+    "forecast_scores": (ForecastScore, "score_id"),
 }
 
 
@@ -530,6 +656,13 @@ class ResearchStore:
     def add_note(self, record: ResearchNote) -> ResearchNote:
         return self._add("notes", record)  # type: ignore[return-value]
 
+    def add_forecast(self, record: Forecast) -> Forecast:
+        return self._add("forecasts", record)  # type: ignore[return-value]
+
+    def add_forecast_score(self, record: ForecastScore) -> ForecastScore:
+        """File a score. A second score for the same forecast raises ValueError."""
+        return self._add("forecast_scores", record)  # type: ignore[return-value]
+
     def record_experiment(self, draft: ExperimentDraft):
         """Append a row to the PLATFORM experiment ledger.
 
@@ -565,6 +698,15 @@ class ResearchStore:
 
     def get_validation_report(self, record_id: str) -> ValidationReportRecord:
         return self.get("validation_reports", record_id)  # type: ignore[return-value]
+
+    def get_forecast(self, record_id: str) -> Forecast:
+        return self.get("forecasts", record_id)  # type: ignore[return-value]
+
+    def forecasts(self) -> tuple[Forecast, ...]:
+        return tuple(r for r in self.list("forecasts") if isinstance(r, Forecast))
+
+    def forecast_scores(self) -> tuple[ForecastScore, ...]:
+        return tuple(r for r in self.list("forecast_scores") if isinstance(r, ForecastScore))
 
     def list(self, collection: str) -> tuple[BaseModel, ...]:
         """Insertion-stable, time-ordered view of one collection."""
@@ -682,7 +824,12 @@ __all__ = [
     "BacktestRecord",
     "Critique",
     "ExperimentDesign",
+    "Forecast",
+    "ForecastDirection",
+    "ForecastOutcome",
+    "ForecastScore",
     "Hypothesis",
+    "MagnitudeBucket",
     "Objection",
     "ResearchNote",
     "ResearchStore",

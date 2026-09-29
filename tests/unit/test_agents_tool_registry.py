@@ -41,6 +41,8 @@ REQUIRED_TOOLS = (
     "run_sensitivity",
     "search_web",
     "fetch_research",
+    "record_forecast",
+    "query_forecast_scores",
 )
 
 #: Words that would betray an execution tool hiding in the registry.
@@ -89,6 +91,7 @@ def test_every_mutating_tool_writes_only_to_research_or_the_queue() -> None:
         WriteDomain.RESEARCH_EXPERIMENT,
         WriteDomain.RESEARCH_CRITIQUE,
         WriteDomain.RESEARCH_NOTE,
+        WriteDomain.RESEARCH_FORECAST,
         WriteDomain.JOB_QUEUE,
     }
     for tool in REGISTRY.all():

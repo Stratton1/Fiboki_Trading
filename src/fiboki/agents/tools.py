@@ -32,6 +32,7 @@ implementation.  No test touches a network.
 from __future__ import annotations
 
 import math
+import re
 from collections.abc import Mapping
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
@@ -57,6 +58,7 @@ from fiboki.marketstate.regime import RegimeAxis, RegimeClassifier, RegimeError
 from fiboki.research.artefacts import (
     Critique,
     ExperimentDesign,
+    Forecast,
     Hypothesis,
     Objection,
     ResearchNote,
@@ -65,6 +67,14 @@ from fiboki.research.artefacts import (
     SuccessCriterion,
 )
 from fiboki.research.experiment import ActorKind, ExperimentDraft, Outcome
+from fiboki.research.forecasts import (
+    FORECAST_POLICY,
+    SCORER_VERSION,
+    ForecastAggregate,
+    claim_incoherence,
+    classify_provenance,
+    scoreboard,
+)
 from fiboki.strategy.dsl import StrategyDocument
 from fiboki.strategy.registry import StrategyRegistry
 from fiboki.validation.gates import GATE_SET_V2
@@ -87,6 +97,7 @@ class WriteDomain(str, Enum):
     RESEARCH_EXPERIMENT = "research:experiment"
     RESEARCH_CRITIQUE = "research:critique"
     RESEARCH_NOTE = "research:note"
+    RESEARCH_FORECAST = "research:forecast"
     JOB_QUEUE = "queue:jobs"
 
 
@@ -372,6 +383,11 @@ class ToolContext:
     date gets ``as_of``.  ``None`` means "now, unpinned": tools see whatever the
     sources hold, exactly as before the pin existed.  Workflows that reason
     about a point in history should always set it.
+
+    ``model_id`` names the model whose output is driving the tool calls, so a
+    forecast can be attributed to a model as well as a role.  Empty means "not
+    recorded", and forecast scorecards report it as ``(unrecorded)`` rather
+    than guessing.  Setting it is the session's job, as with ``agent_id``.
     """
 
     research: ResearchStore
@@ -385,6 +401,7 @@ class ToolContext:
     role: str = "unknown"
     default_queue: str = "research"
     as_of: datetime | None = None
+    model_id: str = ""
 
     def __post_init__(self) -> None:
         if self.as_of is None:
@@ -2198,6 +2215,269 @@ def _file_research_note(ctx: ToolContext, inputs: FileResearchNoteIn) -> FileRes
 
 
 # ---------------------------------------------------------------------------
+# FORECASTS -- a pre-registered claim, scored later by a deterministic scorer
+# ---------------------------------------------------------------------------
+
+#: Words that read as an instruction to trade. Agent prose that feeds a record
+#: other people read (a forecast's reason and invalidation condition) must not
+#: contain them: the cardinal rule says a research output is never phrased as
+#: an instruction to trade, and this is where that sentence is checked rather
+#: than asked for. Deliberately conservative, like the sandbox's code scan: a
+#: false positive costs a rewrite ("sell-off" -> "decline"), a false negative
+#: costs a forecast that reads as an order.
+_ORDER_VOCABULARY = re.compile(
+    r"\b(?:"
+    r"buy|buys|buying|bought|sell|sells|selling|sold|"
+    r"long|longs|short|shorts|shorting|"
+    r"enter|enters|entering|entry|entries|exit|exits|exiting|"
+    r"size|sizes|sized|sizing|"
+    r"stop[\s_-]?loss(?:es)?|take[\s_-]?profit"
+    r")\b",
+    re.IGNORECASE,
+)
+
+#: Research phrases that contain an order word but are not orders. Stripped
+#: before the scan, the same residue approach the critic's vague-phrase check
+#: uses. Kept short on purpose: every entry is a hole in the check.
+_ORDER_VOCABULARY_EXEMPT = (
+    "short-term",
+    "short term",
+    "long-term",
+    "long term",
+    "sample size",
+    "effect size",
+)
+
+
+def order_vocabulary_hits(text: str) -> tuple[str, ...]:
+    """The order words ``text`` contains, lower-cased and sorted. Empty if none.
+
+    Public so any agent-output check (the eval harness, a debate turn) can apply
+    the same vocabulary rather than growing a second, divergent list.
+    """
+    residue = text.lower()
+    for phrase in _ORDER_VOCABULARY_EXEMPT:
+        residue = residue.replace(phrase, " ")
+    return tuple(sorted({m.group(0) for m in _ORDER_VOCABULARY.finditer(residue)}))
+
+
+class RecordForecastIn(_In):
+    instrument: str = Field(min_length=3, max_length=32)
+    timeframe: Literal["H1", "H4", "D1"] = Field(
+        default="D1",
+        description="Bars the forecast is scored on; ATR is measured on the same bars.",
+    )
+    horizon_start: str | None = Field(
+        default=None,
+        description=(
+            "Defaults to your pinned clock. A later value is clamped to it; an "
+            "earlier one is refused, because a forecast cannot start before it "
+            "was written."
+        ),
+    )
+    horizon_end: str
+    direction: Literal["higher", "lower", "range"] = Field(
+        description=(
+            "Where the close at horizon_end will be relative to the close at "
+            "horizon_start, in ATR(14) units measured at horizon_start: higher "
+            "(>= +0.5 ATR), lower (<= -0.5 ATR) or range (in between). Only the "
+            "two endpoints are compared."
+        ),
+    )
+    magnitude_bucket: Literal["<0.5atr", "0.5-1atr", "1-2atr", ">2atr"] | None = None
+    probability: float = Field(
+        ge=0.5,
+        le=0.95,
+        description=(
+            "Your probability that the stated direction occurs. Below 0.5 you are "
+            "forecasting a different outcome: state that one instead. Above 0.95 "
+            "is not a calibrated research claim."
+        ),
+    )
+    invalid_if: str = Field(min_length=20, max_length=1000)
+    evidence_ids: tuple[str, ...] = Field(min_length=1, max_length=50)
+    reason: str = Field(min_length=20, max_length=2000)
+
+
+class RecordForecastOut(_Out):
+    forecast_id: str
+    instrument: str
+    timeframe: str
+    horizon_start: str
+    horizon_end: str
+    horizon_start_clamped: bool
+    provenance: Literal["forward", "backfill"]
+    policy_version: str
+
+
+def _record_forecast(ctx: ToolContext, inputs: RecordForecastIn) -> RecordForecastOut:
+    """File a pre-registered forecast. Refuses anything that cannot be scored honestly."""
+    policy = FORECAST_POLICY
+    if ctx.as_of is None:
+        raise ToolExecutionError(
+            "record_forecast needs a pinned clock (ToolContext.as_of). An unpinned "
+            "forecast has no defined start, so it cannot be scored honestly; the "
+            "workflow must pin the agent's clock before asking for forecasts"
+        )
+    if not _instrument_known(inputs.instrument):
+        raise ToolExecutionError(
+            f"forecast names unregistered instrument {inputs.instrument!r}; only "
+            "instruments in core/instruments.py can be scored"
+        )
+    if inputs.timeframe not in policy.allowed_timeframes:  # pragma: no cover - Literal
+        raise ToolExecutionError(f"timeframe {inputs.timeframe!r} is not scoreable")
+    pin = pd.Timestamp(ctx.as_of)
+    clamped = False
+    if inputs.horizon_start is None:
+        start = pin
+    else:
+        start = _utc(inputs.horizon_start, "horizon_start")
+        if start > pin:
+            start, clamped = pin, True
+        elif start < pin:
+            raise ToolExecutionError(
+                f"horizon_start {start.isoformat()} is before the pinned clock "
+                f"{pin.isoformat()}. A forecast that starts before it was written is "
+                "scored partly on bars its author could already see; that is a "
+                "backdated fill, not a forecast"
+            )
+    end = _utc(inputs.horizon_end, "horizon_end")
+    if end <= start:
+        raise ToolExecutionError(
+            f"horizon_end {end.isoformat()} must be after horizon_start {start.isoformat()}"
+        )
+    span = (end - start).to_pytimedelta()
+    if span > policy.max_horizon:
+        raise ToolExecutionError(
+            f"horizon of {span} exceeds the policy maximum of {policy.max_horizon} "
+            f"({policy.version}); a claim that far out cannot be scored inside the "
+            "evaluation cycle"
+        )
+    bar_minutes = _tf(inputs.timeframe).minutes
+    if span.total_seconds() < bar_minutes * 60:
+        raise ToolExecutionError(
+            f"horizon of {span} is shorter than one {inputs.timeframe} bar; no bar "
+            "could close inside it, so it could never be evaluated"
+        )
+    incoherent = claim_incoherence(inputs.direction, inputs.magnitude_bucket)
+    if incoherent:
+        raise ToolExecutionError(f"incoherent claim: {incoherent}")
+    for name in ("invalid_if", "reason"):
+        hits = order_vocabulary_hits(getattr(inputs, name))
+        if hits:
+            raise ToolExecutionError(
+                f"{name} contains order vocabulary {list(hits)}. A forecast states "
+                "where price will be, never what to do about it; rephrase as an "
+                "observation about price"
+            )
+    evidence = tuple(e.strip() for e in inputs.evidence_ids)
+    if any(not e for e in evidence):
+        raise ToolExecutionError("evidence_ids contains an empty id")
+    if len(set(evidence)) != len(evidence):
+        raise ToolExecutionError("evidence_ids contains duplicates")
+
+    start_dt = start.to_pydatetime()
+    recorded_at = datetime.now(tz=UTC)
+    record = ctx.research.add_forecast(
+        Forecast(
+            instrument=inputs.instrument.upper(),
+            timeframe=inputs.timeframe,
+            horizon_start=start_dt,
+            horizon_end=end.to_pydatetime(),
+            direction=inputs.direction,
+            magnitude_bucket=inputs.magnitude_bucket,
+            probability=inputs.probability,
+            invalid_if=inputs.invalid_if,
+            evidence_ids=evidence,
+            reason=inputs.reason,
+            model_id=ctx.model_id,
+            provenance=classify_provenance(recorded_at, start_dt, policy),
+            atr_period=policy.atr_period,
+            range_band_atr=policy.range_band_atr,
+            policy_version=policy.version,
+            created_at=recorded_at,
+            created_by=ctx.agent_id,
+            role=ctx.role,
+        )
+    )
+    return RecordForecastOut(
+        forecast_id=record.forecast_id,
+        instrument=record.instrument,
+        timeframe=record.timeframe,
+        horizon_start=record.horizon_start.isoformat(),
+        horizon_end=record.horizon_end.isoformat(),
+        horizon_start_clamped=clamped,
+        provenance=record.provenance,
+        policy_version=record.policy_version,
+    )
+
+
+class QueryForecastScoresIn(_In):
+    group_by: Literal["role", "model", "actor"] = "role"
+    provenance: Literal["forward", "backfill", "all"] = "forward"
+
+
+class QueryForecastScoresOut(_Out):
+    group_by: str
+    provenance: str
+    aggregates: tuple[ForecastAggregate, ...]
+    n_forecasts: int
+    n_scored: int
+    n_awaiting_score: int
+    n_forecasts_by_actor: dict[str, int]
+    n_forecasts_by_role: dict[str, int]
+    as_of_applied: bool
+    effective_as_of: str | None = None
+    scorer_version: str
+    policy_version: str
+    caveats: tuple[str, ...]
+
+
+def _query_forecast_scores(
+    ctx: ToolContext, inputs: QueryForecastScoresIn
+) -> QueryForecastScoresOut:
+    board = scoreboard(
+        ctx.research,
+        group_by=inputs.group_by,
+        provenance=inputs.provenance,
+        as_of=ctx.as_of,
+    )
+    caveats = [
+        "A forecast scorecard measures calibration of endpoint calls in ATR units; it "
+        "says nothing about whether any strategy would have made money.",
+        "Brier 0.25 is what always saying 0.5 scores; a group must beat it to show skill.",
+        f"Groups with fewer than {FORECAST_POLICY.min_n_for_comparison} evaluable "
+        "forecasts are marked sufficient=false: do not rank them.",
+        "n_forecasts_by_actor counts every forecast filed, scored or not. Each is a "
+        "trial; add them to external_trial_count when a forecast-derived idea is tested.",
+    ]
+    if inputs.provenance != "forward":
+        caveats.append(
+            "Backfilled forecasts were written after their horizon started; the model "
+            "may have seen the outcome. They are not evidence of skill (plan D-A3)."
+        )
+    if any(a.group == "(unrecorded)" for a in board.aggregates):
+        caveats.append(
+            "Some forecasts carry no model id; their group is '(unrecorded)', not a model."
+        )
+    return QueryForecastScoresOut(
+        group_by=inputs.group_by,
+        provenance=inputs.provenance,
+        aggregates=board.aggregates,
+        n_forecasts=board.n_forecasts,
+        n_scored=board.n_scored,
+        n_awaiting_score=board.n_awaiting_score,
+        n_forecasts_by_actor=board.n_forecasts_by_actor,
+        n_forecasts_by_role=board.n_forecasts_by_role,
+        as_of_applied=ctx.as_of is not None,
+        effective_as_of=ctx.as_of.isoformat() if ctx.as_of is not None else None,
+        scorer_version=SCORER_VERSION,
+        policy_version=FORECAST_POLICY.version,
+        caveats=tuple(caveats),
+    )
+
+
+# ---------------------------------------------------------------------------
 # JOB SUBMISSION TOOLS -- the agent queues work; a worker runs it
 # ---------------------------------------------------------------------------
 
@@ -2357,7 +2637,7 @@ def build_registry() -> ToolRegistry:
     """Construct the complete tool registry.
 
     Read this function as the answer to "what can an autonomous agent in Fiboki
-    actually DO".  Twelve read tools, six research-domain writes, five job
+    actually DO".  Thirteen read tools, seven research-domain writes, five job
     submissions, two external interfaces.  No execution.
     """
     registry = ToolRegistry()
@@ -2467,6 +2747,15 @@ def build_registry() -> ToolRegistry:
         "quality verdict. Detects; never repairs.",
         QueryDataQualityIn, QueryDataQualityOut, Capability.READ_DATA_QUALITY, _query_data_quality,
     )
+    add(
+        "query_forecast_scores",
+        "Read the deterministic scorecards of agents' pre-registered forecasts, grouped "
+        "by role, model or actor: hit rate, Brier score, log score and calibration "
+        "buckets, plus how many forecasts each actor has filed (every one is a trial). "
+        "Forward forecasts only by default; backfills are not evidence of skill.",
+        QueryForecastScoresIn, QueryForecastScoresOut,
+        Capability.READ_FORECAST_SCORES, _query_forecast_scores,
+    )
 
     # -- external (interface only) ---------------------------------------
     add(
@@ -2530,6 +2819,17 @@ def build_registry() -> ToolRegistry:
         FileResearchNoteIn, FileResearchNoteOut, Capability.WRITE_RESEARCH_NOTE,
         _file_research_note,
         write_domain=WriteDomain.RESEARCH_NOTE, budget=_WRITE_BUDGET,
+    )
+    add(
+        "record_forecast",
+        "Pre-register a forecast BEFORE its horizon: whether the close at horizon_end "
+        "will be higher, lower or in range relative to the close at horizon_start, in "
+        "ATR units, with your probability (0.5 to 0.95), what would invalidate it and "
+        "the evidence ids it rests on. A deterministic scorer marks it after the "
+        "horizon ends. It is a scored claim about price, not a signal: nothing reads "
+        "it to trade, and order vocabulary is refused. Needs a pinned clock.",
+        RecordForecastIn, RecordForecastOut, Capability.WRITE_FORECAST, _record_forecast,
+        write_domain=WriteDomain.RESEARCH_FORECAST, budget=_WRITE_BUDGET,
     )
 
     # -- queued jobs ------------------------------------------------------
@@ -2596,4 +2896,5 @@ __all__ = [
     "WebSearchProvider",
     "WriteDomain",
     "build_registry",
+    "order_vocabulary_hits",
 ]

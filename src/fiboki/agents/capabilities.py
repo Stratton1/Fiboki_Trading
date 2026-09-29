@@ -51,6 +51,11 @@ class Capability(str, Enum):
     READ_EXECUTION_TELEMETRY = "read:execution_telemetry"
     READ_AUDIT_LEDGER = "read:audit_ledger"
     READ_EXTERNAL_WEB = "read:external_web"
+    #: Forecast scorecards. Deliberately NOT folded into READ_EXPERIMENTS: the
+    #: roles that forecast hold READ_EXPERIMENTS, and a forecaster that can read
+    #: its own scorecard can learn to game it (hedge towards 0.5, forecast only
+    #: what it already knows). Only roles that do not forecast hold this.
+    READ_FORECAST_SCORES = "read:forecast_scores"
 
     # -- writing to the RESEARCH domain, and nowhere else -----------------
     WRITE_HYPOTHESIS = "write:hypothesis"
@@ -59,6 +64,9 @@ class Capability(str, Enum):
     WRITE_EXPERIMENT_DESIGN = "write:experiment_design"
     WRITE_CRITIQUE = "write:critique"
     WRITE_RESEARCH_NOTE = "write:research_note"
+    #: A pre-registered, scoreable claim about price relative to price. Lands in
+    #: the append-only research store; nothing downstream reads it as a signal.
+    WRITE_FORECAST = "write:forecast"
 
     # -- asking a deterministic worker to do something --------------------
     SUBMIT_JOB = "submit:job"

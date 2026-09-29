@@ -21,24 +21,41 @@ which is why it is testable at all.  A step whose model output does not parse,
 or whose tool call is refused, is recorded as a failed step and the workflow
 carries on to the next one -- a research cycle that hides its own failures is
 the thing this architecture exists to prevent.
+
+Every workflow run is bracketed in the ledger.  It opens with a
+``workflow:start`` record carrying the :class:`~fiboki.agents.manifest.RunManifest`
+hash and components and the per-session budgets in force, and it closes with a
+``workflow:end`` record, written in a ``finally`` so that a run that raises
+still has a terminal record.  The manifest is also filed once per distinct
+hash as a research note tagged ``run_manifest``, so the store can say which
+prompts and schemas a hash stood for after the process that computed it has
+gone.
 """
 from __future__ import annotations
 
 import json
 import uuid
-from collections.abc import Mapping, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, field
 from typing import Any
 
 from pydantic import BaseModel
 
-from fiboki.agents.audit import AuditLedger
+from fiboki.agents.audit import NO_MODEL, ActionKind, AuditLedger, AuditRecord, Outcome
 from fiboki.agents.capabilities import CapabilityResolver
+from fiboki.agents.manifest import RunManifest, build_run_manifest
 from fiboki.agents.orchestrator import JobRecord, JobStatus, Orchestrator
 from fiboki.agents.providers import ModelRouter
-from fiboki.agents.roles import AgentRole
-from fiboki.agents.session import AgentSession, open_session
-from fiboki.agents.tools import ToolContext, ToolRegistry
+from fiboki.agents.roles import AgentRole, all_roles
+from fiboki.agents.session import AgentSession, default_budget, open_session
+from fiboki.agents.tools import REGISTRY, ToolContext, ToolRegistry
+from fiboki.research.artefacts import ResearchNote
+
+#: Tag on the research note that files a run manifest.
+MANIFEST_NOTE_TAG = "run_manifest"
+#: ``AuditRecord.tool`` of the records that bracket a workflow run.
+WORKFLOW_START = "workflow:start"
+WORKFLOW_END = "workflow:end"
 
 
 @dataclass(frozen=True, slots=True)
@@ -69,6 +86,7 @@ class WorkflowResult:
     critique_id: str | None = None
     note_id: str | None = None
     job_records: list[JobRecord] = field(default_factory=list)
+    manifest_hash: str | None = None
 
     @property
     def ok(self) -> bool:
@@ -101,9 +119,18 @@ class WorkflowDeps:
     orchestrator: Orchestrator
     registry: ToolRegistry | None = None
     queue: str = "research"
+    #: A precomputed manifest.  ``None`` builds one per run, which is cheap
+    #: and cannot go stale; pass one only to share it across many runs.
+    manifest: RunManifest | None = None
+    #: Ask providers that support it to constrain each step's output to the
+    #: JSON schema of the tool it feeds.  The output is validated by the tool
+    #: either way; this only makes a small local model likelier to comply.
+    schema_constrained_output: bool = True
 
 
-def _session(deps: WorkflowDeps, role: AgentRole, workflow_id: str) -> AgentSession:
+def _session(
+    deps: WorkflowDeps, role: AgentRole, workflow_id: str, manifest_hash: str | None = None
+) -> AgentSession:
     return open_session(
         agent_id=f"{role.value}@{workflow_id}",
         role=role,
@@ -113,7 +140,124 @@ def _session(deps: WorkflowDeps, role: AgentRole, workflow_id: str) -> AgentSess
         router=deps.router,
         workflow_id=workflow_id,
         registry=deps.registry,
+        manifest_hash=manifest_hash,
     )
+
+
+def _schema_for(deps: WorkflowDeps, tool: str) -> dict[str, Any] | None:
+    if not deps.schema_constrained_output:
+        return None
+    return (deps.registry or REGISTRY).get(tool).input_model.model_json_schema()
+
+
+# ---------------------------------------------------------------------------
+# Run bracketing: manifest, start record, terminal record
+# ---------------------------------------------------------------------------
+
+
+def _persist_manifest(deps: WorkflowDeps, manifest: RunManifest) -> str | None:
+    """File the manifest as a research note, once per distinct hash.
+
+    Returns the note id (existing or new).  The body holds component digests
+    and versions only, never the prompt text itself.
+    """
+    store = deps.context.research
+    for note in store.search_notes(tags=(MANIFEST_NOTE_TAG,), limit=10_000):
+        if note.links.get("manifest_hash") == manifest.hash:
+            return note.note_id
+    note = store.add_note(
+        ResearchNote(
+            title=f"Run manifest {manifest.hash[:16]}",
+            body=json.dumps(manifest.as_dict(), sort_keys=True, indent=1),
+            tags=(MANIFEST_NOTE_TAG,),
+            links={"manifest_hash": manifest.hash},
+            created_by="workflow",
+            role="workflow",
+        )
+    )
+    return note.note_id
+
+
+def _declared_budgets() -> dict[str, dict[str, Any]]:
+    return {spec.role.value: default_budget(spec).declaration() for spec in all_roles()}
+
+
+def _begin(
+    deps: WorkflowDeps, workflow: str, wid: str, params: Mapping[str, Any]
+) -> RunManifest:
+    manifest = deps.manifest or build_run_manifest(registry=deps.registry)
+    note_id = _persist_manifest(deps, manifest)
+    deps.ledger.append(
+        AuditRecord(
+            agent_id=f"workflow@{wid}",
+            role="workflow",
+            kind=ActionKind.WORKFLOW_STEP,
+            tool=WORKFLOW_START,
+            inputs={"workflow": workflow, "params": dict(params)},
+            outputs={
+                "manifest": manifest.as_dict(),
+                "manifest_note_id": note_id,
+                "session_budgets": _declared_budgets(),
+            },
+            reason=f"start {workflow}",
+            outcome=Outcome.OK,
+            workflow_id=wid,
+            model_id=NO_MODEL,
+            manifest_hash=manifest.hash,
+        )
+    )
+    return manifest
+
+
+def _end(deps: WorkflowDeps, workflow: str, out: WorkflowResult, error: str = "") -> None:
+    failed = list(out.failed_steps)
+    if error:
+        outcome, detail = Outcome.ERROR, error
+    elif failed:
+        outcome, detail = Outcome.ERROR, f"failed steps: {failed}"
+    else:
+        outcome, detail = Outcome.OK, ""
+    deps.ledger.append(
+        AuditRecord(
+            agent_id=f"workflow@{out.workflow_id}",
+            role="workflow",
+            kind=ActionKind.WORKFLOW_STEP,
+            tool=WORKFLOW_END,
+            inputs={"workflow": workflow},
+            outputs={
+                "steps": [{"step": s.step, "ok": s.ok} for s in out.steps],
+                "failed_steps": failed,
+                "total_cost_usd": out.total_cost_usd(),
+                "summary": out.summary(),
+            },
+            reason=f"end {workflow}",
+            outcome=outcome,
+            error=detail,
+            workflow_id=out.workflow_id,
+            model_id=NO_MODEL,
+            manifest_hash=out.manifest_hash,
+            cost_usd=0.0,
+        )
+    )
+
+
+def _bracketed(
+    deps: WorkflowDeps,
+    workflow: str,
+    wid: str,
+    params: Mapping[str, Any],
+    body: Callable[[WorkflowResult], None],
+) -> WorkflowResult:
+    """Run ``body`` between a start record and a terminal record."""
+    out = WorkflowResult(workflow_id=wid)
+    out.manifest_hash = _begin(deps, workflow, wid, params).hash
+    try:
+        body(out)
+    except BaseException as exc:
+        _end(deps, workflow, out, error=f"{type(exc).__name__}: {exc}")
+        raise
+    _end(deps, workflow, out)
+    return out
 
 
 def _as_mapping(payload: Any, step: str) -> Mapping[str, Any]:
@@ -148,11 +292,46 @@ def run_research_cycle(
     sharper experiment than a fresh document with none.
     """
     wid = workflow_id or f"wf_{uuid.uuid4().hex[:12]}"
-    out = WorkflowResult(workflow_id=wid)
     overrides = dict(backtest_overrides or {})
+    params = {
+        "seed_strategy_id": seed_strategy_id,
+        "instrument": instrument,
+        "timeframe": timeframe,
+        "question": question,
+        "backtest_overrides": overrides,
+    }
+    return _bracketed(
+        deps,
+        "research_cycle",
+        wid,
+        params,
+        lambda out: _research_cycle(
+            deps,
+            out,
+            seed_strategy_id=seed_strategy_id,
+            instrument=instrument,
+            timeframe=timeframe,
+            question=question,
+            overrides=overrides,
+        ),
+    )
+
+
+def _research_cycle(
+    deps: WorkflowDeps,
+    out: WorkflowResult,
+    *,
+    seed_strategy_id: str,
+    instrument: str,
+    timeframe: str,
+    question: str,
+    overrides: Mapping[str, Any],
+) -> None:
+    wid = out.workflow_id
+    mh = out.manifest_hash
 
     # -- 1. Research Director: frame the question ------------------------
-    director = _session(deps, AgentRole.RESEARCH_DIRECTOR, wid)
+    director = _session(deps, AgentRole.RESEARCH_DIRECTOR, wid, mh)
     brief: dict[str, Any] = {}
     try:
         thought = director.think(
@@ -176,12 +355,13 @@ def run_research_cycle(
         )
 
     # -- 2. Quant Researcher: record a falsifiable hypothesis -------------
-    researcher = _session(deps, AgentRole.QUANT_RESEARCHER, wid)
+    researcher = _session(deps, AgentRole.QUANT_RESEARCHER, wid, mh)
     try:
         thought = researcher.think(
             _hypothesis_prompt(brief, instrument, timeframe),
             reason="state a falsifiable hypothesis before any test is run",
             step="hypothesis",
+            json_schema=_schema_for(deps, "create_hypothesis"),
         )
         if thought.parse_error:
             raise ValueError(thought.parse_error)
@@ -206,12 +386,13 @@ def run_research_cycle(
         )
 
     # -- 3. Strategy Engineer / Mutation Agent: propose a variant ---------
-    mutator = _session(deps, AgentRole.STRATEGY_MUTATION_AGENT, wid)
+    mutator = _session(deps, AgentRole.STRATEGY_MUTATION_AGENT, wid, mh)
     try:
         thought = mutator.think(
             _mutation_prompt(seed_strategy_id, out.hypothesis_id),
             reason="propose one named mutation with a stated prediction",
             step="mutation",
+            json_schema=_schema_for(deps, "mutate_strategy"),
         )
         if thought.parse_error:
             raise ValueError(thought.parse_error)
@@ -234,7 +415,7 @@ def run_research_cycle(
                         error=f"{type(exc).__name__}: {exc}")
         )
 
-    auditor = _session(deps, AgentRole.STATISTICAL_AUDITOR, wid)
+    auditor = _session(deps, AgentRole.STATISTICAL_AUDITOR, wid, mh)
 
     # -- 4. Statistical Auditor: pre-register the experiment --------------
     if out.hypothesis_id and out.strategy_id:
@@ -243,6 +424,7 @@ def run_research_cycle(
                 _experiment_prompt(out.hypothesis_id, out.strategy_id, instrument, timeframe),
                 reason="pre-register windows, folds and success criteria",
                 step="experiment_design",
+                json_schema=_schema_for(deps, "design_experiment"),
             )
             if thought.parse_error:
                 raise ValueError(thought.parse_error)
@@ -348,7 +530,7 @@ def run_research_cycle(
         )
 
     # -- 7. Adversarial Quant Critic: try to disprove it ------------------
-    critic = _session(deps, AgentRole.ADVERSARIAL_QUANT_CRITIC, wid)
+    critic = _session(deps, AgentRole.ADVERSARIAL_QUANT_CRITIC, wid, mh)
     report_payload: dict[str, Any] = {}
     if out.validation_report_id:
         read, error = critic.try_call(
@@ -362,6 +544,7 @@ def run_research_cycle(
             _critique_prompt(out.strategy_id, report_payload),
             reason="attempt to disprove the candidate",
             step="critique",
+            json_schema=_schema_for(deps, "record_critique"),
         )
         if thought.parse_error:
             raise ValueError(thought.parse_error)
@@ -386,12 +569,13 @@ def run_research_cycle(
         )
 
     # -- 8. Research Librarian: file it -----------------------------------
-    librarian = _session(deps, AgentRole.RESEARCH_LIBRARIAN, wid)
+    librarian = _session(deps, AgentRole.RESEARCH_LIBRARIAN, wid, mh)
     try:
         thought = librarian.think(
             _filing_prompt(out, report_payload),
             reason="file the cycle into institutional memory",
             step="filing",
+            json_schema=_schema_for(deps, "file_research_note"),
         )
         if thought.parse_error:
             raise ValueError(thought.parse_error)
@@ -425,7 +609,6 @@ def run_research_cycle(
             StepOutcome("filing", AgentRole.RESEARCH_LIBRARIAN.value, False,
                         error=f"{type(exc).__name__}: {exc}")
         )
-    return out
 
 
 # ---------------------------------------------------------------------------
@@ -445,9 +628,20 @@ def run_failure_investigation(
     so the worst it can produce is a wrong diagnosis in the ledger.
     """
     wid = workflow_id or f"wf_{uuid.uuid4().hex[:12]}"
-    out = WorkflowResult(workflow_id=wid)
+    return _bracketed(
+        deps,
+        "failure_investigation",
+        wid,
+        {"backtest_id": backtest_id},
+        lambda out: _failure_investigation(deps, out, backtest_id=backtest_id),
+    )
+
+
+def _failure_investigation(deps: WorkflowDeps, out: WorkflowResult, *, backtest_id: str) -> None:
     out.backtest_id = backtest_id
-    investigator = _session(deps, AgentRole.FAILURE_INVESTIGATOR, wid)
+    investigator = _session(
+        deps, AgentRole.FAILURE_INVESTIGATOR, out.workflow_id, out.manifest_hash
+    )
 
     evidence: dict[str, Any] = {}
     for tool, inputs, label in (
@@ -483,7 +677,6 @@ def run_failure_investigation(
             StepOutcome("diagnosis", AgentRole.FAILURE_INVESTIGATOR.value, False,
                         error=f"{type(exc).__name__}: {exc}")
         )
-    return out
 
 
 # ---------------------------------------------------------------------------
@@ -778,6 +971,9 @@ def echo_script_for(steps: Sequence[str], payloads: Mapping[str, Any]) -> dict[s
 
 
 __all__ = [
+    "MANIFEST_NOTE_TAG",
+    "WORKFLOW_END",
+    "WORKFLOW_START",
     "StepOutcome",
     "WorkflowDeps",
     "WorkflowResult",

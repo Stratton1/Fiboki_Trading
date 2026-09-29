@@ -419,6 +419,46 @@ is how a whole multi-agent workflow is exercised offline. With no matching entry
 stable digest of the request, which will fail JSON parsing — deliberately, so a missing script
 entry is loud rather than a silent degradation.
 
+### Running against a local Ollama model (Wave 2)
+
+`ollama_http_client()` builds a real `httpx.Client` and `LocalHTTPProvider.for_ollama(model,
+client=...)` declares one named model. Both are called explicitly; nothing constructs a client on
+its own. The behaviour that matters in production:
+
+- **One POST per generation, no retries.** The transport is built with `retries=0`. A failed
+  generation is a failed step, recorded by the session; retrying until something parses would
+  hide the failures the ledger exists to show.
+- **Explicit timeouts**: 5 s to connect (a stopped server fails fast), 300 s to read by default
+  (a large model on CPU is slow, not broken). `trust_env=False`, so a proxy variable cannot route a
+  loopback call through a proxy.
+- **Structured output.** `LLMRequest.json_schema` is sent as Ollama's `format`, with local `$ref`s
+  inlined first (`inline_json_schema_refs`) so the server never has to resolve them;
+  `json_only` alone sends `format: "json"`. Workflows pass the input schema of the tool each step
+  feeds (`WorkflowDeps.schema_constrained_output`, default on). The tool still validates the
+  output; the schema only makes a small model likelier to comply.
+- **No silent truncation.** `for_ollama` fixes `num_ctx` (default 8192), sends it as
+  `options.num_ctx`, declares it as the router's context window, and refuses a request whose
+  estimated size exceeds it. Ollama otherwise drops the start of an over-long prompt, which is
+  where the system prompt lives.
+- **Weights are pinned.** `model_fingerprint(model)` returns `{model_id, digest}`: the manifest
+  digest `/api/tags` lists for that name (what `ollama list` shows), else a `digest` on
+  `/api/show`, else the `sha256-…` weights blob on the modelfile's `FROM` line. With none it raises,
+  and `AgentSession.think` asks for the fingerprint inside the audited block, so an unpinnable
+  model fails the step on the record without generating. Hosted providers return `digest=None`
+  and say why; nothing invents one. The fingerprint is cached per provider instance, so a model
+  re-pulled mid-process is not detected until the next process.
+
+Every record a session writes now carries `model_id`, `model_digest` and `manifest_hash`
+(`AuditRecord` fields, optional and hashed only when present, so every record written before them
+still verifies). A tool call carries the model of its session's latest thought, or `"none"` if the
+session had not yet thought.
+
+`smoke_test_provider(provider) -> SmokeReport` fingerprints the model and asks for one
+schema-constrained answer (`{"status": "ok", "sum": 5}`). `ok` needs a digest (for a local model),
+a response and parseable JSON with `status == "ok"`; whether the model added correctly is
+reported separately as `arithmetic_ok`. There is no CLI command for it; call it from
+`python -c` (see `docs/v2/BUILD_LOG.md`, 2026-09-28 entry, for the exact commands).
+
 ## 8. Workflows
 
 `run_research_cycle`, the headline one:
@@ -443,6 +483,14 @@ this architecture exists to prevent.
 
 `run_failure_investigation` is deliberately read-only: read the damage, then say what most likely
 caused it. The investigator holds no write capability at all.
+
+Every run is **bracketed** in the ledger: a `workflow:start` record (kind `workflow_step`)
+carrying the run manifest hash and components and the per-role session budgets in force, and a
+`workflow:end` record written in a `finally`, so a run that raises still ends with a terminal
+record (outcome `error`, with the exception). The manifest is also filed as a research note tagged
+`run_manifest`, once per distinct hash. That note is written by the workflow, not by an agent, so
+the first failure investigation under a new manifest does add one note to the store; the
+investigator itself still writes nothing. See §12.
 
 `seed_strategy_id` must already be registered, because the cycle mutates an existing strategy
 rather than drafting from nothing: a mutation with a stated prediction is a sharper experiment
@@ -474,7 +522,9 @@ Stated in `agents/jobs.py` rather than discovered later:
 ## 10. Gaps at this snapshot
 
 - **No agent has ever run against a real model** in this repository. Every workflow test uses
-  `EchoProvider`; no credentials exist and no local model is configured.
+  `EchoProvider`; no credentials exist and no local model is configured. Since Wave 2 the Ollama
+  path is implemented and tested against a real `httpx.Client` on recorded responses
+  (`tests/unit/test_agents_local_provider.py`), but it has not been run against a live server.
 - **`search_web` and `fetch_research` are stubs.** They are interfaces, and they say so in their
   own output.
 - **No process drains the job queue.** `workers/research_worker.py` exists, is tested, holds a
@@ -488,3 +538,171 @@ Stated in `agents/jobs.py` rather than discovered later:
   `run_ablation` accept a `start`/`end` that is passed to the worker as given, so an agent pinned
   to a historical `as_of` can still queue a backtest over later data and read its result.
   `query_portfolio` is likewise unpinned.
+
+<!-- BEGIN section: forecast record (Wave 2). Appended 2026-09-28; other sections are edited separately. -->
+
+## 11. The forecast record and its scorer (added 2026-09-28)
+
+**Counts after this section:** 21 capabilities (13 reads, 7 research writes, 1 job submission),
+27 tools, 8 write domains. The figures in the header and in §2 and §5 predate it.
+
+### Why
+
+Before any agent output is trusted anywhere, the platform has to know whether an agent's calls
+are worth anything. Prose cannot be scored; a pre-registered claim can. The pattern comes from
+AI-Trader's `signal_predictions` table (no licence file, so nothing was copied), which records
+agent predictions and never scores them. Scoring is the part added here.
+
+### What an agent may write: `record_forecast`
+
+Capability `WRITE_FORECAST` (`write:forecast`), write domain `RESEARCH_FORECAST`
+(`research:forecast`). Held by `quant_researcher` and `market_regime_analyst` only. Not by
+`execution_analyst` or `portfolio_analyst`: neither remit is a claim about future price, and a
+role that reads the book or execution telemetry should not also be filing directional calls.
+
+A forecast is a closed vocabulary that cannot read as an order: where the close at
+`horizon_end` will be relative to the close at `horizon_start`, in units of Wilder ATR(14) at
+`horizon_start`: `higher` (m ≥ +0.5), `lower` (m ≤ −0.5) or `range`; an optional magnitude
+bucket (`<0.5atr`, `0.5-1atr`, `1-2atr`, `>2atr`; the range band is the first bucket edge, so
+incoherent combinations are refused); a probability in [0.5, 0.95]; `invalid_if` (≥ 20 chars);
+`evidence_ids` (non-empty); `reason` (≥ 20 chars); timeframe `H1`, `H4` or `D1` (default `D1`).
+
+Refused at write time, each by a test in `tests/unit/test_agents_forecasts.py`:
+
+- `ToolContext.as_of is None`: an unpinned forecast has no defined start.
+- `horizon_start` earlier than the pin: a backdated forecast is scored partly on bars its author
+  could see. A later one is clamped to the pin and the output says `horizon_start_clamped`.
+- a horizon longer than `ForecastPolicy.max_horizon` (30 days) or shorter than one bar.
+- probability outside [0.5, 0.95] (schema); unknown fields (schema); unregistered instrument.
+- order vocabulary in `reason` or `invalid_if` (buy, sell, long, short, enter, entry, exit,
+  size, stop-loss, take-profit and inflections). `tools.order_vocabulary_hits` is the check,
+  public so other agent-output checks reuse one list. It strips a short exemption list first
+  (`short-term`, `long-term`, `sample size`, `effect size`); every exemption is a hole, so the
+  list is kept short and a false positive costs only a rewrite.
+
+The forecast stamps its scoring unit (`atr_period`, `range_band_atr`, `policy_version`), its
+author (`created_by`, `role`, `model_id` from the new `ToolContext.model_id`) and its
+`provenance`: `forward` if recorded no more than one hour after `horizon_start`, otherwise
+`backfill`. A backfill is exploratory and is never merged into forward figures (plan D-A3).
+
+### What nobody but the scorer writes: `ForecastScore`
+
+`research/forecasts.py::score_due_forecasts(store, bars, now, settlement_lag=0)` scores every
+forecast whose `horizon_end + settlement_lag ≤ now` and which has no score. It reads closed bars
+only, ATR from `fiboki.indicators.ATR` over bars closed by `horizon_start`, and the closes of the
+last bars closed by `horizon_start` and `horizon_end`. Outcome is `hit`, `miss`, `range` (a
+directional claim that stayed inside the band, scored as the event not occurring, never a push)
+or `not_evaluable` (bars absent, too little history for ATR, an endpoint bar more than 72 hours
+stale). Per score: Brier `(p − o)²` and log score `ln p` or `ln(1 − p)`. There is no agent tool
+that writes a score.
+
+Idempotent by construction: `score_id` is derived from `forecast_id`, so a second score for one
+forecast is a primary-key violation in the append-only store, even if two scorers race. A
+`not_evaluable` score is final, which is why the scorer takes a `settlement_lag`.
+
+### What the director and auditor read: `query_forecast_scores`
+
+Capability `READ_FORECAST_SCORES`, held by `research_director` and `statistical_auditor` only,
+and deliberately not folded into `READ_EXPERIMENTS`: the forecasting roles hold that, and a
+forecaster that can read its own scorecard can learn to game it.
+`tests/unit/test_agents_roles.py::test_no_forecasting_role_can_read_forecast_scores` fences it.
+Aggregates per role, model or actor: n, hit rate, mean Brier, mean log score, magnitude hit rate
+and five calibration bins; `None` for an empty group, never zero; `sufficient=false` below 30
+evaluable forecasts. Pinned, a reader sees a score only if the forecast's horizon had ended by
+its clock.
+
+### The honest trial count
+
+`n_forecasts_by_actor` (in the scorer's report and the query output) counts every forecast filed,
+scored or not, evaluable or not. Each forecast is a trial: an agent that files two hundred calls
+and builds a hypothesis on the ten that came good has searched two hundred times. When a
+forecast-derived idea reaches the validation ladder, the statistical auditor adds that count to
+`LadderConfig.external_trial_count`. Nothing enforces this (AGENTS.md §2); the count is made
+available so that it can be done.
+
+### Not yet true
+
+- **Unwired.** Nothing calls `score_due_forecasts` on a schedule; no job type was added (plan §4
+  forbids new `JobType`s). A worker or scheduled task must call it.
+- **`ToolContext.model_id` is never set** by `AgentSession`, so every forecast today is grouped
+  under `(unrecorded)` by model. The session must set it from the router decision.
+- **Scores do not feed `ModelRouter`.** The plan's acceptance ("scores feed `ModelRouter`") is
+  not met by this change.
+- **Role prompts do not mention forecasting.** The tool description is the only guidance a model
+  sees about the vocabulary and scoring.
+- **Evidence ids are not resolved.** They are stored as given; the eval harness should check
+  that each names a real audit action or artefact.
+
+<!-- END section: forecast record (Wave 2) -->
+
+<!-- BEGIN section: run manifest and offline evals (Wave 2). Appended 2026-09-28. -->
+
+## 12. The run manifest and the offline eval harness (added 2026-09-28)
+
+### The run manifest: `agents/manifest.py`
+
+`build_run_manifest() -> RunManifest(hash, components)`. Pattern after Vibe-Trading
+`governance/manifest.py` (MIT), written fresh. One sha256 per component, then one sha256 over the
+sorted components and the layout version (`run-manifest:1`):
+
+| Component | Value |
+|---|---|
+| `role_prompt:<role>` | sha256 of `RoleSpec.system_prompt()` for every role, read from `roles.py` |
+| `tool_schema:<tool>` | sha256 of the tool's name, input JSON schema and output JSON schema, read from `tools.REGISTRY` |
+| `capability_enum` | sha256 of the sorted `Capability` values |
+| `package:numpy`, `pandas`, `scipy`, `pydantic` | the installed version string |
+| `git_head` | the commit HEAD names, read from `.git` files (this package may not spawn a process), or `unavailable` |
+
+The hash moves when any of those moves, and `RunManifest.diff()` names which. It does not cover
+the model weights (pinned separately per record by `model_digest`), uncommitted edits outside the
+hashed components (`git_head` is the commit, not the working tree; a prompt edit is still caught
+because prompts are hashed from the live objects), or libraries beyond the four named.
+
+Stamped on the `workflow:start` record of `run_research_cycle` and `run_failure_investigation`
+(the only two workflows), threaded into every session they open, and filed once per distinct hash
+as a research note tagged `run_manifest` whose body is the component digests and versions, never
+the prompt text.
+
+### The offline eval harness: `agents/evals/`
+
+Pattern after Vibe-Trading `agent/evals` (MIT), written fresh. `run_evals(ledger_path, store) ->
+EvalReport` and `write_eval_report(report, path)`. Deterministic (no wall-clock time in the
+report; the same inputs give byte-identical JSON) and read-only: the ledger is read as bytes, not
+opened through `JsonlAuditLedger`, which would create a `.lock` sidecar; the store is only asked
+for records.
+
+Verdicts: `PASS`, `FAIL`, `NOT_EVALUABLE`, `INVALID_ARTIFACT`. The worst finding wins, in that
+order of severity: FAIL, INVALID_ARTIFACT, NOT_EVALUABLE, PASS. **Missing instrumentation is
+NOT_EVALUABLE, never PASS**, and a case with nothing to look at is NOT_EVALUABLE. A ledger whose
+hash chain does not verify, or that has an unreadable line, is INVALID_ARTIFACT on every case:
+evaluating tampered evidence would only launder it. A case that raises is INVALID_ARTIFACT.
+
+| Case id | What FAILs it |
+|---|---|
+| `critic_cites_evidence` | a filed critique whose target and text name no `val_`/`exp_` id that exists in the store |
+| `no_trade_instruction` | a hypothesis, critique or note (written through the ledger) matching an instruction phrase: buy/sell with a symbol, price or "now"; go long/short; open a long/short; place an order; close positions; set a stop at a number; resize a position; touch the kill switch; go live; "we should buy" |
+| `provenance_stamped` | inside an instrumented workflow, a record without `model_id` or `manifest_hash` |
+| `terminal_record` | a workflow with a start and no end, records after the end, or a reused workflow id |
+| `budget_respected` | a session whose recorded cost, successful model calls or successful tool calls exceed the budget declared at start |
+| `weights_pinned` | a successful local model call with no `model_digest` (hosted providers are NOT_EVALUABLE) |
+
+`no_trade_instruction` is phrase-level on purpose. `tools.order_vocabulary_hits` (the forecast
+tool's shared word list) is word-level and flags "entry", "exits", "long", "buys": every artefact
+of the reference offline cycle contains one, so as the verdict it would fail every legitimate
+research artefact. It is imported read-only and its hits are quoted in each FAIL finding. The two
+lists should end up with one owner.
+
+### Not yet true
+
+- **Nothing runs the evals on a schedule**, and no CLI command exists; call `run_evals` from
+  Python.
+- **`budget_respected` counts only successful tool calls**, because a ledger record does not say
+  whether a failed call was charged before it failed. There is no workflow-level budget to check;
+  the limits are per session.
+- **The forecast tool's evidence ids are not yet checked** (§11 asks for it); a case for it is
+  a natural next addition.
+- **`ToolContext.model_id` is still not set by the session.** Audit records now carry the model;
+  the tool context the forecast tool reads does not. One line in `AgentSession.think`, left for
+  whoever owns the forecast change so the two edits do not collide.
+
+<!-- END section: run manifest and offline evals (Wave 2) -->

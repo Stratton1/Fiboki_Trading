@@ -56,8 +56,9 @@ def test_no_role_can_submit_a_job_unless_it_is_the_auditor() -> None:
 
 
 def test_read_only_roles_hold_no_write_capability() -> None:
+    # MARKET_REGIME_ANALYST left this set when it gained record_forecast
+    # (agentic plan, Wave 2 "forecast record"). Its one write is pinned below.
     read_only = {
-        AgentRole.MARKET_REGIME_ANALYST,
         AgentRole.EXECUTION_ANALYST,
         AgentRole.PORTFOLIO_ANALYST,
         AgentRole.DATA_QUALITY_ANALYST,
@@ -68,6 +69,22 @@ def test_read_only_roles_hold_no_write_capability() -> None:
         spec = get_role(role)
         assert not any(c.is_write for c in spec.capabilities), role
         assert Capability.SUBMIT_JOB not in spec.capabilities, role
+
+
+def test_the_regime_analyst_can_write_forecasts_and_nothing_else() -> None:
+    """Its only write is a scored claim in the research store: no other domain,
+    no job queue, and it cannot read the scorecard it is judged by."""
+    spec = get_role(AgentRole.MARKET_REGIME_ANALYST)
+    writes = {c for c in spec.capabilities if not c.is_read}
+    assert writes == {Capability.WRITE_FORECAST}
+    assert Capability.READ_FORECAST_SCORES not in spec.capabilities
+
+
+def test_no_forecasting_role_can_read_forecast_scores() -> None:
+    """A forecaster that can read its own scorecard can learn to game it."""
+    for spec in all_roles():
+        if Capability.WRITE_FORECAST in spec.capabilities:
+            assert Capability.READ_FORECAST_SCORES not in spec.capabilities, spec.role
 
 
 def test_the_portfolio_analyst_cannot_read_market_data_or_write_anything() -> None:
