@@ -215,3 +215,5 @@ look.
 
 Read `run.log`, `fx_coverage.json` and `calendar_coverage.json`; if the preconditions hold,
 re-run the identical command without `--plan-only`. Re-running resumes from `checkpoint.json`.
+
+**K3 addendum (2026-09-29, before the run):** the dry run on the Mac's `var/datastore` showed 4 to 145 bars per series between 2000-05-30 and 2006-01-03 with no fresh GBP rate on either route (the H4-derived GBP crosses in that store begin on 2006-01-03, and pre-2006 HistData has holiday gaps longer than the 4-day staleness guard). Rather than invent a rate, K3 runs with `--bars-from 2006-01-04T00:00:00Z`, a recorded campaign-level trim written to run.log and the campaign notes. Consequence: about 6 of 26 years are excluded for the seven series that start in 2000 to 2002; the dataset version ids are unchanged. Pre-2006 data was also the segment with the most V1 store defects.

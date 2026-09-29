@@ -599,8 +599,15 @@ def calendar_plan(
 # --------------------------------------------------------------------------
 
 
-def bars_from_store(store: DataStore):
-    """A :class:`~fiboki.discovery.campaign.BarSource` over a data root."""
+def bars_from_store(store: DataStore, *, bars_from: pd.Timestamp | None = None):
+    """A :class:`~fiboki.discovery.campaign.BarSource` over a data root.
+
+    ``bars_from`` trims every series to bars at or after that UTC instant. It is
+    a recorded, campaign-level decision (written to run.log and the campaign
+    notes), used when the earliest years have no usable FX coverage: dropping
+    bars is honest, inventing a rate is not. The dataset version id is kept, so
+    the trim is visible as a start-date difference, never as a different dataset.
+    """
 
     def source(instrument: str, timeframe: Timeframe) -> BarSet | None:
         try:
@@ -612,6 +619,15 @@ def bars_from_store(store: DataStore):
             return None
         if frame is None or len(frame) == 0:
             return None
+        if bars_from is not None:
+            before = len(frame)
+            frame = frame.loc[frame.index >= bars_from]
+            print(
+                f"  trim {instrument} {timeframe.value}: bars_from={bars_from.isoformat()} "
+                f"dropped {before - len(frame):,} of {before:,} bars"
+            )
+            if len(frame) == 0:
+                return None
         return BarSet(
             instrument=instrument.upper(),
             timeframe=timeframe,
@@ -683,6 +699,14 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--campaign-id", default="k1_xauusd_h4")
     parser.add_argument("--instruments", nargs="+", default=["XAUUSD"])
     parser.add_argument("--timeframes", nargs="+", default=["H4"])
+    parser.add_argument(
+        "--bars-from",
+        default=None,
+        help=(
+            "Trim every series to bars at or after this UTC instant (ISO 8601). A "
+            "recorded campaign-level decision for years with no usable FX coverage."
+        ),
+    )
     parser.add_argument("--generations", type=int, default=1)
     parser.add_argument("--max-evaluations", type=int, default=400)
     parser.add_argument("--max-grid-points", type=int, default=8)
@@ -788,7 +812,10 @@ def _run_with_store(args: argparse.Namespace, store: DataStore) -> int:
 
     instruments = [s.upper() for s in args.instruments]
     timeframes = [Timeframe(t) for t in args.timeframes]
-    preflight_bars = _memoised(bars_from_store(store))
+    bars_from = pd.Timestamp(args.bars_from, tz="UTC") if args.bars_from else None
+    if bars_from is not None and bars_from.tzinfo is None:
+        bars_from = bars_from.tz_localize("UTC")
+    preflight_bars = _memoised(bars_from_store(store, bars_from=bars_from))
 
     # --- FX
     if account_ccy == LEGACY_FX_ACCOUNT_CCY:
@@ -838,6 +865,7 @@ def _run_with_store(args: argparse.Namespace, store: DataStore) -> int:
         print(f"calendar_coverage: {'n/a' if cal.mode == 'none' else 'no series read'}")
     print(f"construction_policy: {_construction_label()}")
     print(f"gate_set: {gates.version} (min_trades={gates.by_name('min_trades').threshold:g})")
+    print(f"bars_from: {bars_from.isoformat() if bars_from is not None else 'none (full series)'}")
     print(f"universe: {len(instruments)} instrument(s) {' '.join(instruments)}; timeframes {' '.join(args.timeframes)}")
     print(
         f"budget: max_evaluations={args.max_evaluations} generations={args.generations} "
@@ -902,7 +930,9 @@ def _run_with_store(args: argparse.Namespace, store: DataStore) -> int:
         fx_label=fx_label,
         allow_empty_calendar=cal.allow_empty_calendar,
         notes=(
-            f"Phase K campaign {args.campaign_id} on "
+            (f"bars_from={bars_from.isoformat()} (series trimmed; recorded decision). "
+             if bars_from is not None else "")
+            + f"Phase K campaign {args.campaign_id} on "
             f"{len(instruments)} instrument(s) {', '.join(instruments)} "
             f"{', '.join(args.timeframes)}, {args.gates} gate set, "
             f"engine {ENGINE_VERSION}, "
@@ -953,7 +983,10 @@ def _plan_and_run(
 
     runner = CampaignRunner(
         spec,
-        bars=bars_from_store(store),
+        bars=bars_from_store(
+            store,
+            bars_from=pd.Timestamp(args.bars_from, tz="UTC") if args.bars_from else None,
+        ),
         ledger=ledger,
         registry=registry,
         checkpoint=CampaignCheckpoint(args.out / "checkpoint.json"),
