@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  Fiboki V2 desktop service: llama.cpp's llama-server on 127.0.0.1:8080 (scripts/llama-server.sh).
+
+  TEMPLATE. Do not copy by hand: scripts/launchd-install.sh substitutes
+  __FIBOKI_ROOT__ (the repository) and writes the result to
+  ~/Library/LaunchAgents/uk.fiboki.llama.plist.
+
+  * Runs scripts/fiboki-service.sh llama, which reads ~/.fiboki/env, forces
+    FIBOKI_EXECUTION_MODE=paper and unsets every live control. No live
+    control is set anywhere in this file.
+  * A LaunchAgent: it runs as the operator and stops at logout.
+  * KeepAlive restarts a crash (non-zero exit) but not a clean exit;
+    ThrottleInterval turns a crash loop into a slow retry.
+  * Logs go to var/logs/ inside the repository.
+  * Exits 1 without downloading anything if the model file is missing; the
+    log (var/logs/llama.err.log) carries the exact download command.
+-->
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>uk.fiboki.llama</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>/bin/bash</string>
+        <string>__FIBOKI_ROOT__/scripts/fiboki-service.sh</string>
+        <string>llama</string>
+    </array>
+
+    <key>WorkingDirectory</key>
+    <string>__FIBOKI_ROOT__</string>
+
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>FIBOKI_EXECUTION_MODE</key>
+        <string>paper</string>
+    </dict>
+
+    <key>RunAtLoad</key>
+    <true/>
+
+    <key>KeepAlive</key>
+    <dict>
+        <key>SuccessfulExit</key>
+        <false/>
+    </dict>
+
+    <key>ThrottleInterval</key>
+    <integer>60</integer>
+
+    <key>ExitTimeOut</key>
+    <integer>30</integer>
+
+    <key>ProcessType</key>
+    <string>Standard</string>
+
+    <key>StandardOutPath</key>
+    <string>__FIBOKI_ROOT__/var/logs/llama.log</string>
+    <key>StandardErrorPath</key>
+    <string>__FIBOKI_ROOT__/var/logs/llama.err.log</string>
+</dict>
+</plist>

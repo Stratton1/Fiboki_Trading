@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  Fiboki V2 desktop service: the operator workstation (next start) on localhost:3000.
+
+  TEMPLATE. Do not copy by hand: scripts/launchd-install.sh substitutes
+  __FIBOKI_ROOT__ (the repository) and writes the result to
+  ~/Library/LaunchAgents/uk.fiboki.web.plist.
+
+  * Runs scripts/fiboki-service.sh web, which reads ~/.fiboki/env, forces
+    FIBOKI_EXECUTION_MODE=paper and unsets every live control. No live
+    control is set anywhere in this file.
+  * A LaunchAgent: it runs as the operator and stops at logout.
+  * KeepAlive restarts a crash (non-zero exit) but not a clean exit;
+    ThrottleInterval turns a crash loop into a slow retry.
+  * Logs go to var/logs/ inside the repository.
+-->
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>uk.fiboki.web</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>/bin/bash</string>
+        <string>__FIBOKI_ROOT__/scripts/fiboki-service.sh</string>
+        <string>web</string>
+    </array>
+
+    <key>WorkingDirectory</key>
+    <string>__FIBOKI_ROOT__</string>
+
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>FIBOKI_EXECUTION_MODE</key>
+        <string>paper</string>
+    </dict>
+
+    <key>RunAtLoad</key>
+    <true/>
+
+    <key>KeepAlive</key>
+    <dict>
+        <key>SuccessfulExit</key>
+        <false/>
+    </dict>
+
+    <key>ThrottleInterval</key>
+    <integer>30</integer>
+
+    <key>ExitTimeOut</key>
+    <integer>20</integer>
+
+    <key>ProcessType</key>
+    <string>Standard</string>
+
+    <key>StandardOutPath</key>
+    <string>__FIBOKI_ROOT__/var/logs/web.log</string>
+    <key>StandardErrorPath</key>
+    <string>__FIBOKI_ROOT__/var/logs/web.err.log</string>
+</dict>
+</plist>

@@ -53,6 +53,8 @@ machine might want the output.
 | `system` | `health` | The real health checks (§4) |
 | | `doctor` | Diagnose a broken local setup. **Run this first** |
 | | `metrics` | Render the Prometheus exposition text |
+| `doctor` | (none) | Desktop readiness: toolchain, pins, `.venv`, `node_modules` platform, git, env vs `ENV_REGISTRY`, data root, ledgers, heartbeat, news, calendar, local model and digest, disk, ports, launchd. OK/WARN/FAIL with the fix; `--json`; exit 1 on any FAIL (§13) |
+| | `model` | The local model server, the model it serves and its weights digest |
 | `broker` | `status` | Venue reachability and health |
 | | `reconcile` | Reconcile an intent store against the venue, keyed on broker reference |
 | `killswitch` | `pause` / `flatten` / `status` | §5 |
@@ -107,8 +109,8 @@ deterministic job handler (the CLI's "no handlers" warning is then stale), runs 
 | `FIBOKI_AGENT_CYCLE_TARGET` | (none) | `strategy_id:INSTRUMENT:TIMEFRAME`; required when on. |
 | `FIBOKI_AGENT_CYCLE_UTC` | `02:15` | UTC time of the nightly cycle. |
 | `FIBOKI_AGENT_PROVIDER` | `echo` | `echo` (offline double: every model step fails and is recorded, a wiring check only) or `local`. |
-| `FIBOKI_AGENT_LOCAL_MODEL` | (none) | Exact Ollama model name; required for `local`. |
-| `FIBOKI_AGENT_LOCAL_URL` | `http://127.0.0.1:11434` | Ollama base URL. |
+| `FIBOKI_AGENT_LOCAL_MODEL` | (none) | Exact Ollama model name, or the llama-server `--alias`; required for `local`. |
+| `FIBOKI_AGENT_LOCAL_URL` | `http://127.0.0.1:11434` | Local model server base URL (Ollama; llama-server is `http://127.0.0.1:8080`). llama.cpp needs the one-line runtime change in §13.4. |
 | `FIBOKI_STRATEGIES_DIR` | `research/strategies` | Documents registered at start. |
 | `FIBOKI_DATA_ROOT` | (none) | Required when on: the bars the queued backtests read. |
 
@@ -192,6 +194,21 @@ provenance, or whose rows disagree with it, is refused and listed, never assumed
 account, drawdown and daily-loss figures are `null` rather than a made-up balance, and health
 is **DEGRADED rather than OK**. A journal that exists but none of whose sessions parse is
 `absent`, not seed: nothing is served.
+
+### Live stream, incidents and the attention queue
+
+- `GET /api/stream` is the workstation's live feed (Server-Sent Events, session cookie
+  required). It only reads; it never starts a worker. Behind a proxy, keep response buffering off
+  (the API sends `X-Accel-Buffering: no`). To check it by hand while signed in:
+  `curl -N -b cookies.txt https://<api>/api/stream?topics=mode,health`.
+- Set `FIBOKI_ALERT_LOG` (for example `~/.fiboki/alerts.jsonl`) for both the worker and the API.
+  Without it, alerts are not persisted and `/api/system/incidents` lists only kill-switch
+  incidents, with a caveat saying so. Acknowledgements and notes (admin only for now) go to
+  `<FIBOKI_STATE_DIR>/incident_annotations.jsonl` and the operator audit trail; back that file up
+  with the rest of the state directory.
+- `GET /api/command/attention` is the Command screen's ranked queue. Its order is the ranking.
+- `scripts/gen-openapi.sh` writes `apps/web/openapi.json` from the code (no server needed) for
+  frontend type generation; the running API serves the same schema at `/api/openapi.json`.
 
 ## 5. The kill switch
 
@@ -302,8 +319,11 @@ reference, which is then persisted.
 
 ## 9. Backup and restore
 
-**There is no backup command and no restore command.** This is a gap, stated rather than papered
-over, and it is on `ROADMAP.md`.
+**`scripts/backup.sh` and `scripts/restore.sh` exist as of 2026-09-29** (runbook: §13.2). They
+have been exercised against temporary directories in `tests/unit/test_desktop_scripts.py`
+(backup, checksum verification, refusal over a newer `var/`, forced restore, restore onto an
+empty machine, a damaged archive), not yet against a real deployment. The procedure below is
+what they automate, and still applies when the scripts cannot be used.
 
 What exists is a set of files that are individually append-only or content-addressed, which
 makes a file-level copy a valid backup provided nothing is mid-write. Everything mutable lives
@@ -405,7 +425,8 @@ Stated so this document is not read as describing a running system.
 - **No live worker can be started.** The CLI refuses it by design until the wiring exists.
 - **No scheduled reconciliation.** `fiboki broker reconcile` is manual; nothing runs it on
   startup or on a timer.
-- **No backup or restore command**, and no rehearsed restore.
+- **Backup and restore are scripted but not rehearsed on a real deployment** (§13.2). Do the
+  rehearsal on the desktop before relying on it.
 - **No market data in this repository.** `data/` is empty and the migration has never been run
   against the real 7.2 GB V1 store here.
 - **No broker credentials.** The OANDA adapter is proved against recorded fixtures and has never
@@ -413,3 +434,182 @@ Stated so this document is not read as describing a running system.
 - **No strategy has been validated end to end** against real data, so no candidate exists and no
   holdout has been consumed.
 - **No lifecycle transitions and no demotion monitors.** See `STRATEGY_STANDARD.md` §9.
+
+## 13. Desktop runbooks
+
+Added 2026-09-29 for the Mac desktop deployment (`DEPLOYMENT.md` §2). What was run to back each
+statement is in `BUILD_LOG.md` under the same date; anything marked *not exercised* was not.
+
+### 13.1 Install (a fresh desktop)
+
+1. Homebrew, then `brew install python@3.11 node git sqlite llama.cpp`.
+2. `git clone` the repository (do not copy a tree without `.git/`), check out the branch.
+3. `scripts/desktop-install.sh --check`, read it, then `scripts/desktop-install.sh`. It is
+   idempotent; re-run it until it prints no MISSING line.
+4. Edit `~/.fiboki/env` (created mode 600 with a fresh `FIBOKI_SESSION_SECRET`): add
+   `FIBOKI_OPERATORS`, computing each hash without leaving the password in shell history:
+   `read -rs PW && printf '%s' "$PW" | shasum -a 256 && unset PW`.
+5. Copy the market-data store (`DEPLOYMENT.md` §2.1) and restore the state archive (§13.2).
+6. `.venv/bin/fiboki doctor`. Fix every FAIL in the order printed.
+7. `scripts/launchd-install.sh` (writes, does not load), review the five files in
+   `~/Library/LaunchAgents/uk.fiboki.*.plist`, then `scripts/launchd-install.sh --load`.
+8. `.venv/bin/fiboki doctor` again: `launchd` should read `running` for all five, the ports
+   should be "owned by Fiboki", the worker heartbeat should be seconds old.
+
+*Not exercised:* steps 1, 7 and 8 need macOS; the scripts' macOS-only branches (launchctl,
+plutil, Homebrew paths) were not run.
+
+### 13.2 Backup and restore
+
+```bash
+scripts/launchd-install.sh --unload                 # quiesce writers (recommended)
+scripts/backup.sh [--dest /Volumes/Backup] [--include-datastore]
+scripts/launchd-install.sh --load
+```
+
+The archive `fiboki-backup-<UTC>.tar.gz` holds `var/` (without `var/datastore` and `var/logs`
+unless `--include-datastore`), any ledger or paper root that lives outside `var/`, and
+`~/.fiboki` **without** `env`. SQLite databases are copied with SQLite's online backup API;
+`SHA256SUMS` lists every file; `MANIFEST.json` records time, host, commit and what was
+excluded; `<archive>.sha256` sits beside it. Keep `~/.fiboki/env` in a password manager.
+
+```bash
+scripts/launchd-install.sh --unload
+scripts/restore.sh ARCHIVE --dry-run                # verify only
+scripts/restore.sh ARCHIVE                          # refuses over a newer var/ ...
+scripts/restore.sh ARCHIVE --force                  # ... unless you mean it
+.venv/bin/fiboki doctor && scripts/launchd-install.sh --load
+```
+
+Restore refuses a damaged archive, an unsafe member, a file that fails its checksum, a `var/`
+holding anything modified after the backup (without `--force`), and a running API or worker.
+It deletes nothing: the old `var/` becomes `var.pre-restore-<UTC>`, replaced `~/.fiboki` files
+move to `~/.fiboki/pre-restore-<UTC>/`, and a datastore the archive does not carry is moved
+across from the old `var/`. Then run the three verifications in §9 (both hash chains and a
+dataset checksum); a restore that passes them restored the record, not just the files.
+
+**Rehearse it** on the desktop once: back up, restore into a scratch clone, run `fiboki doctor`
+and the §9 checks. Until then the restore is tested only against temporary directories.
+
+### 13.3 Upgrade
+
+```bash
+cd ~/Fiboki
+scripts/backup.sh                                   # always, before an upgrade
+git fetch && git status                             # nothing uncommitted
+git pull --ff-only
+scripts/desktop-install.sh                          # re-syncs pins, node_modules, web build
+.venv/bin/fiboki doctor
+for s in api worker web news; do launchctl kickstart -k gui/$(id -u)/uk.fiboki.$s; done
+```
+
+If the upgrade changed `pyproject.toml` pins, run the golden tests
+(`.venv/bin/python -m pytest -m golden -q`) before trusting any new number, and read the
+BUILD_LOG entry for whether stored results were invalidated. `uk.fiboki.llama` does not need a
+restart for a Fiboki upgrade; restart it only to change the model or llama.cpp itself.
+
+### 13.4 llama.cpp
+
+**Install and start.**
+
+```bash
+brew install llama.cpp                   # build >= b6325; scripts/llama-server.sh checks
+scripts/llama-server.sh --print          # which tier, model file and command; starts nothing
+```
+
+The script never downloads. If the model file is missing it prints the `hf download` and `curl`
+commands for the exact file, and where to read its published SHA-256. Download, then compare
+`shasum -a 256 <file>` with the SHA-256 on the file's Hugging Face page: it is the same digest
+Fiboki records for every model call, so this check ties the audit trail to the published weights.
+Then `launchctl kickstart gui/$(id -u)/uk.fiboki.llama` (or run the script in a terminal). To
+pin a different tier or file, put `LLAMA_SERVER_ARGS=--tier 64` or
+`LLAMA_SERVER_ARGS=--model /Users/you/Models/x.gguf` in `~/.fiboki/env`.
+
+**Which server features Fiboki relies on, and since which build.** Read from the llama.cpp git
+history (first `b` tag containing each change), not recalled:
+
+| Feature | Build | Source |
+|---|---|---|
+| `response_format: {"type": "json_object", "schema": ...}` on `/v1/chat/completions` (server compiles the schema to GBNF) | b2487 | PR #5978 |
+| `response_format: {"type": "json_schema", "json_schema": {"schema": ...}}` accepted | b3782 | PR #9527 |
+| ...and actually honoured: builds in between could accept it and ignore it (issues #10732, #11988) | b4820 | PR #12168 |
+| `--reasoning-budget 0` disables thinking | b5488 | PR #13771 |
+| `-fa on\|off\|auto` | b6325 | PR #15434 |
+
+The provider reads `build_info` from `/props` and sends the `json_schema` form only from b4820;
+below that, or when the server does not report its build, it sends the `json_object` + `schema`
+form, which every build since b2487 honours and current master still accepts. If a server rejects
+the `json_schema` form outright (an HTTP error naming `response_format`, so nothing was
+generated), the provider falls back to the `json_object` form once and stays there. There is no
+client-side JSON-Schema-to-GBNF converter: the fallback uses the server's own converter.
+
+**Check it.**
+
+```bash
+.venv/bin/fiboki doctor model            # server, model id, n_ctx, GGUF sha256 (cached after the first run)
+.venv/bin/python -c "
+import json
+from fiboki.agents.providers import LocalHTTPProvider, ollama_http_client, smoke_test_provider
+p = LocalHTTPProvider.for_llama_cpp('http://127.0.0.1:8080', client=ollama_http_client())
+print(json.dumps(smoke_test_provider(p).as_dict(), indent=2))
+"
+```
+
+Expect `"ok": true` and a `model_digest` equal to `shasum -a 256` of the file. The first
+fingerprint hashes the whole GGUF file; `fiboki doctor` caches the digest in
+`~/.fiboki/gguf-digests.json`, keyed by path, size and modification time.
+
+**Point the research worker at it.** In `~/.fiboki/env`:
+
+```
+FIBOKI_AGENT_PROVIDER=local
+FIBOKI_AGENT_LOCAL_URL=http://127.0.0.1:8080
+FIBOKI_AGENT_LOCAL_MODEL=<the --alias scripts/llama-server.sh prints>
+FIBOKI_AGENT_CYCLES=true
+FIBOKI_AGENT_CYCLE_TARGET=<strategy_id:INSTRUMENT:TIMEFRAME>
+```
+
+**Required code change, not yet made.** `fiboki.workers.research_runtime._build_provider` still
+builds `LocalHTTPProvider.for_ollama(...)`, which speaks Ollama's `/api/chat` and `/api/show`;
+llama-server serves neither, so every model step would fail (recorded as failed, not silently).
+The change is one line:
+
+```python
+    return LocalHTTPProvider.for_local_server(
+        settings.local_model, client=ollama_http_client(), base_url=settings.local_url
+    )
+```
+
+`for_local_server` asks the server (`GET /props`) whether it is llama.cpp and otherwise builds
+exactly the Ollama provider as before. Two consequences to accept with it: the provider now
+contacts the server when the worker starts, so a model server that is down at start stops the
+worker (launchd retries it) instead of failing each step later; and without a
+`digest_cache_path` argument the worker re-hashes the GGUF file once per process start.
+`fiboki doctor` reports FAIL on the local-model row while `FIBOKI_AGENT_PROVIDER=local` points at
+llama.cpp and this line is unchanged.
+
+**Change the model.** Stop `uk.fiboki.llama`, change `LLAMA_SERVER_ARGS` and
+`FIBOKI_AGENT_LOCAL_MODEL`, start it, run `fiboki doctor model`, then restart
+`uk.fiboki.worker`. A running provider refuses to generate if `/props` reports a different
+weights path or context from the one it pinned, so a model swapped underneath a running worker
+fails loudly rather than being recorded under the old digest. Every audit record carries the
+digest, so runs before and after the change stay distinguishable.
+
+**Known approximations.** The prompt-size refusal uses the provider's 4-characters-per-token
+estimate, not the model's tokenizer. Fiboki decodes at temperature 0 with a fixed seed and one
+server slot for reproducibility; the Qwen3 model card recommends against greedy decoding in
+thinking mode and suggests sampling settings for non-thinking mode, so output quality at
+temperature 0 is a property to measure with the eval harness, not assume.
+
+### 13.5 Known issues found during the desktop work
+
+- `apps/web/next.config.ts` builds its Content-Security-Policy from
+  `new URL(process.env.NEXT_PUBLIC_FIBOKI_API ?? "http://127.0.0.1:8000")`. `scripts/dev-up.sh`
+  (and `scripts/fiboki-service.sh web`, which mirrors it) set `NEXT_PUBLIC_FIBOKI_API=""` for the
+  same-origin proxy; `"" ?? x` is `""`, and `new URL("")` throws. Checked with Node; `next build`
+  itself was not run here. Expect the web build or first request to fail until the config treats
+  an empty value as same-origin. `scripts/desktop-install.sh` reports a failed build as MISSING
+  rather than hiding it.
+- `scripts/dev-up.sh` exports `FIBOKI_INCIDENT_LOG` and `FIBOKI_API_PROXY_TARGET`, which are not
+  in `ENV_REGISTRY`; `fiboki doctor` lists them as unknown (WARN in paper, a startup error in
+  demo/live).

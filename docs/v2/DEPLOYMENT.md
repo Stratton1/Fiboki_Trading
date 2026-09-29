@@ -24,43 +24,96 @@ Everything in `deploy/` follows from that one rule: separate units, separate exi
 separate restart policies, a single-writer lease, and a supervisor that can tell you the process
 is gone.
 
-## 2. Mac, the primary target
+## 2. Mac desktop, the primary target
+
+**Rewritten 2026-09-29** for the move from the MacBook to the Mac desktop, where Fiboki runs
+continuously under `launchd` with local models served by llama.cpp. Everything below is paper
+mode: no script, template or unit in this section sets or can set a live control, and
+`scripts/fiboki-service.sh` forces `FIBOKI_EXECUTION_MODE=paper` and unsets the live controls
+*after* reading the operator's env file, so a line in that file cannot arm anything.
+
+### 2.1 What moves, what is rebuilt, what must not be copied
+
+| Item | Action | Why |
+|---|---|---|
+| The repository | **Clone** on the desktop (`git clone`, then check out the branch), or copy the tree *with* `.git/` | The build SHA is stamped from git; a tree without history is an unrecorded code state (`fiboki doctor` warns) |
+| `data/` and the migrated store (`var/datastore`, or wherever `FIBOKI_DATA_ROOT` points) | **Copy** (rsync or an external disk) | Content-addressed and marked; it must arrive with its `.fiboki-data-root` marker and `catalogue.db`, never be re-marked by hand |
+| `var/` (everything else: experiment ledger, research store, agent audit ledger, news and event stores, paper journal, kill-switch state, alerts) | **Back up on the MacBook, restore on the desktop** with `scripts/backup.sh` / `scripts/restore.sh` | SQLite files are snapshotted with SQLite's online backup API and every file is checksummed; a plain `cp` of a live WAL database is not a backup |
+| `~/.fiboki/` (`state.db`, digest cache) | Travels inside the same archive (`fiboki_home/`) | Leases and heartbeats; a stale lease row expires on its own |
+| `~/.fiboki/env` | **Recreate** on the desktop (`scripts/desktop-install.sh` writes a new one with a fresh session secret), then re-enter operators and keys by hand | It holds secrets and is deliberately excluded from every archive |
+| `.venv/` | **Rebuild** (`scripts/desktop-install.sh`) | A venv records the absolute path of the interpreter that built it; a copied one points at a MacBook path. `fiboki doctor` fails it |
+| `apps/web/node_modules/` and `apps/web/.next/` | **Rebuild** (`npm ci`, `npm run build`, both done by the install script) | Native binaries (`@next/swc-*`) are per platform; `fiboki doctor` detects a tree built elsewhere |
+| GGUF model files | **Download on the desktop** into `~/Models` (or copy from the MacBook) | Large and machine-independent; the provider pins them by SHA-256 either way |
+| Shell history, `.envrc`, notes containing keys or passwords | **Do not copy** | A secret typed into a shell (`export FIBOKI_SESSION_SECRET=...`) lives on in `~/.zsh_history`. Enter secrets only into `~/.fiboki/env` with an editor; compute password hashes with `read -rs` (see `USER_ACTIONS.md`) |
+
+### 2.2 Install
 
 ```bash
-make -f deploy/Makefile setup            # venv, deps under constraints, lockfile, doctor
-fiboki system doctor                     # fix whatever it prints, in order
-
-cp deploy/launchd/com.fiboki.research-worker.plist ~/Library/LaunchAgents/
-$EDITOR ~/Library/LaunchAgents/com.fiboki.research-worker.plist   # replace CHANGEME paths
-launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.fiboki.research-worker.plist
-
-fiboki worker status                     # heartbeat age and lease holder
+git clone <repo> ~/Fiboki && cd ~/Fiboki && git checkout v2/integration
+scripts/desktop-install.sh --check        # report only: what is missing, nothing changed
+scripts/desktop-install.sh                # idempotent: venv at the exact pins, npm ci, build,
+                                          # var/ layout, ~/.fiboki/env (600), launcher, doctor
+scripts/restore.sh ~/FibokiBackups/fiboki-backup-<UTC>.tar.gz   # the MacBook's state
+.venv/bin/fiboki doctor                   # every row OK or an understood WARN
+scripts/launchd-install.sh --load         # api, worker, web, news, llama
 ```
 
-Inspect and stop:
+The install script never installs Homebrew packages for you (it prints the `brew install`
+line), never deletes a `.venv` (it refuses a foreign one and prints the rebuild command) and never
+creates or marks a data root.
+
+### 2.3 Services
+
+Five LaunchAgents, templates in `deploy/launchd/uk.fiboki.{api,worker,web,news,llama}.plist`,
+installed by `scripts/launchd-install.sh` (which substitutes the repository path and writes to
+`~/Library/LaunchAgents`). Each runs `scripts/fiboki-service.sh <name>`:
+
+| Label | Runs | Port | Log |
+|---|---|---|---|
+| `uk.fiboki.api` | uvicorn `fiboki.api.app:asgi_factory` | 127.0.0.1:8000 | `var/logs/api.log` |
+| `uk.fiboki.worker` | `fiboki worker run research --nice 10` | none | `var/logs/worker.log` |
+| `uk.fiboki.web` | `next start` (needs `npm run build`) | 3000 | `var/logs/web.log` |
+| `uk.fiboki.news` | `fiboki news record --loop --interval 300` | none | `var/logs/news.log` |
+| `uk.fiboki.llama` | `scripts/llama-server.sh` | 127.0.0.1:8080 | `var/logs/llama.log` |
 
 ```bash
-launchctl print  gui/$(id -u)/com.fiboki.research-worker
-launchctl bootout gui/$(id -u)/com.fiboki.research-worker
+launchctl print    gui/$(id -u)/uk.fiboki.worker      # state, pid, last exit code
+launchctl kickstart -k gui/$(id -u)/uk.fiboki.worker  # restart one
+scripts/launchd-install.sh --unload                   # stop all five
 ```
 
-Three decisions in that plist are worth knowing:
+Decisions in the templates, each deliberate:
 
-- It is a **LaunchAgent, not a LaunchDaemon**, so it runs as the operator with the operator's
-  data directory and stops at logout. *A research worker that survives logout on a laptop is a
-  research worker that drains the battery in a bag.*
-- `KeepAlive` uses `SuccessfulExit=false`, so a crash is restarted and a clean exit is not.
-  Exit 75 (another holder has the lease) is not a success, so it *would* be restarted —
-  `ThrottleInterval` makes that a slow retry rather than a spin, and `fiboki worker status`
-  tells you who holds the lease.
-- `ExitTimeOut` must exceed `WorkerConfig.shutdown_grace_seconds` (default 30 s; the unit files
-  allow 45 s). Otherwise the supervisor `SIGKILL`s a worker that is shutting down correctly —
-  which is the ungraceful shutdown the grace period exists to avoid, now with a half-written job
-  record behind it.
+- **LaunchAgents, not LaunchDaemons**: they run as the operator with the operator's files and
+  stop at logout. For unattended running, set the desktop to log in automatically and not to
+  sleep (System Settings, Energy); do not promote these to daemons.
+- `KeepAlive` uses `SuccessfulExit=false`: a crash is restarted, a clean exit is not.
+  `ThrottleInterval` (30 to 60 s) turns a crash loop into a slow retry. Exit 75 on the worker
+  (another holder has the lease) is retried slowly; `fiboki worker status` names the holder.
+- The worker's `ExitTimeOut` (45 s) exceeds `WorkerConfig.shutdown_grace_seconds` (30 s).
+- `uk.fiboki.worker` supersedes `deploy/launchd/com.fiboki.research-worker.plist`. Do not load
+  both; `fiboki doctor` warns if both are loaded.
+- The worker composes its model provider at start. If llama-server is still loading a large
+  model, the worker's first start can fail and is retried after the throttle interval.
 
-The worker runs at `nice 10` with `ProcessType Background` and `LowPriorityIO` so a 10,000-cell
-sweep does not make the machine unusable, and `workers/scheduler.py` additionally backs off on
-memory pressure and caps parallelism to one job on battery.
+### 2.4 Local models
+
+`scripts/llama-server.sh` picks a model for the machine's memory (32, 64 or 128 GB tiers; table
+and sources in `USER_ACTIONS.md`, "Desktop migration"), refuses a llama.cpp build older than
+b6325, **never downloads a model** (it prints the exact command), and starts llama-server on
+127.0.0.1:8080 with an absolute model path, one slot, a 16,384-token context, flash attention
+on and thinking disabled. The research agents reach it through
+`LocalHTTPProvider.for_llama_cpp`, which discovers the model from `/v1/models` and `/props` and
+pins it by the SHA-256 of the GGUF file. Runbook: `docs/v2/OPERATIONS.md` §13.
+
+### 2.5 The desktop launcher
+
+`scripts/desktop/install-launcher.sh` puts `Fiboki.app` and `Start Fiboki.command` on the
+Desktop. The launcher runs `scripts/dev-up.sh` in a Terminal window: use it *instead of* the
+launchd services for an interactive session, not alongside them (both bind ports 8000 and 3000).
+Its model detection recognises llama.cpp by `/props`, exports the declared
+`FIBOKI_AGENT_LOCAL_URL` / `FIBOKI_AGENT_LOCAL_MODEL`, and only switches agent cycles on when
+`FIBOKI_AGENT_CYCLE_TARGET` is set.
 
 ## 3. Linux server
 

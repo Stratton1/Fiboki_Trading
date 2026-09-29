@@ -2001,6 +2001,934 @@ def data_root_env() -> Path | None:
 # ===========================================================================
 
 
+# ===========================================================================
+# BEGIN doctor (desktop readiness: `fiboki doctor`)
+# Self-contained block: its own sub-app, host seam, checks and commands.
+# Nothing above this line depends on it. `fiboki system doctor` is unchanged;
+# this is the wider desktop check (toolchain, services, ports, local model).
+# ===========================================================================
+
+doctor_app = typer.Typer(
+    help="Desktop readiness: toolchain, data, services, ports and the local model.",
+    invoke_without_command=True,
+)
+app.add_typer(doctor_app, name="doctor")
+
+#: The launchd labels scripts/launchd-install.sh installs.
+DOCTOR_LAUNCHD_LABELS: tuple[str, ...] = tuple(
+    f"uk.fiboki.{name}" for name in ("api", "worker", "web", "news", "llama")
+)
+#: Ports the desktop services bind: API, web, llama-server.
+DOCTOR_PORTS: dict[int, str] = {8000: "api", 3000: "web", 8080: "llama-server"}
+#: Pins the charter calls out by name: a drift in any of these is a FAIL.
+DOCTOR_NAMED_PINS: tuple[str, ...] = ("numpy", "pandas", "scipy", "click")
+_DOCTOR_LLAMA_URL = "http://127.0.0.1:8080"
+_DOCTOR_OLLAMA_URL = "http://127.0.0.1:11434"
+
+
+class DoctorStatus:
+    """The three verdicts. Plain strings so ``--json`` needs no encoder."""
+
+    OK = "OK"
+    WARN = "WARN"
+    FAIL = "FAIL"
+    ALL = ("OK", "WARN", "FAIL")
+
+
+@dataclass
+class DoctorCheck:
+    """One check that was actually performed, what it saw, and the fix."""
+
+    name: str
+    status: str
+    detail: str
+    fix: str = ""
+    data: dict[str, Any] | None = None
+
+    def as_dict(self) -> dict[str, Any]:
+        return {
+            "name": self.name,
+            "status": self.status,
+            "detail": self.detail,
+            "fix": self.fix,
+            "data": self.data or {},
+        }
+
+
+class DoctorHost:
+    """Everything the doctor touches outside Python, behind one seam.
+
+    Tests replace this with a fake; the real one runs short, read-only
+    commands with a timeout and never raises for a missing binary.
+    """
+
+    def __init__(self, repo: Path | None = None, env: Mapping[str, str] | None = None) -> None:
+        self.repo = (repo or repo_root()).resolve()
+        self.env: dict[str, str] = dict(os.environ if env is None else env)
+        self.system = platform.system()
+        self.machine = platform.machine()
+        self.python_version: tuple[int, int, int] = tuple(sys.version_info[:3])  # type: ignore[assignment]
+        self.executable = sys.executable
+        self.prefix = sys.prefix
+        self.uid = os.getuid() if hasattr(os, "getuid") else 0
+
+    def run(self, argv: Sequence[str], timeout: float = 10.0) -> tuple[int, str]:
+        import subprocess
+
+        try:
+            proc = subprocess.run(
+                list(argv), capture_output=True, text=True, timeout=timeout, check=False
+            )
+        except FileNotFoundError:
+            return 127, ""
+        except (subprocess.TimeoutExpired, OSError) as exc:
+            return 124, str(exc)
+        return proc.returncode, (proc.stdout or "") + (proc.stderr or "")
+
+    def dist_version(self, name: str) -> str | None:
+        from importlib import metadata
+
+        try:
+            return metadata.version(name)
+        except metadata.PackageNotFoundError:
+            return None
+
+    def disk_free(self, path: Path) -> int:
+        import shutil
+
+        probe = path
+        while not probe.exists() and probe != probe.parent:
+            probe = probe.parent
+        return shutil.disk_usage(probe).free
+
+    def port_open(self, port: int) -> bool:
+        import socket
+
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+            sock.settimeout(0.5)
+            return sock.connect_ex(("127.0.0.1", port)) == 0
+
+    def http_client(self) -> Any:
+        from fiboki.agents.providers import ollama_http_client
+
+        return ollama_http_client(timeout=600.0, connect_timeout=2.0)
+
+    def now(self) -> Any:
+        from datetime import UTC, datetime
+
+        return datetime.now(tz=UTC)
+
+
+def _doctor_guard(name: str, fn: Callable[[DoctorHost], list[DoctorCheck]], host: DoctorHost
+                  ) -> list[DoctorCheck]:
+    """A check that crashes is a FAIL with its exception, never a missing row."""
+    try:
+        return fn(host)
+    except Exception as exc:  # the report must survive any single broken check
+        return [DoctorCheck(name, DoctorStatus.FAIL, f"check crashed: {type(exc).__name__}: {exc}",
+                            "Report this; the check itself is broken, not necessarily the system.")]
+
+
+def _doctor_paths(host: DoctorHost) -> dict[str, tuple[Path, str]]:
+    """Resolve state paths the way the desktop services do (scripts/fiboki-service.sh).
+
+    Each value is ``(path, source)`` where source is ``env`` or ``desktop default``.
+    """
+    env = host.env
+
+    def pick(name: str, default: Path) -> tuple[Path, str]:
+        raw = env.get(name, "").strip()
+        return (Path(raw).expanduser(), "env") if raw else (default, "desktop default")
+
+    state_dir, state_src = pick("FIBOKI_STATE_DIR", host.repo / "var")
+    home = Path(env.get("FIBOKI_HOME") or (Path.home() / ".fiboki")).expanduser()
+    return {
+        "state_dir": (state_dir, state_src),
+        "home": (home, "env" if env.get("FIBOKI_HOME") else "desktop default"),
+        "data_root": pick("FIBOKI_DATA_ROOT", state_dir / "datastore"),
+        "experiment_db": pick("FIBOKI_EXPERIMENT_DB", state_dir / "experiments.sqlite"),
+        "paper_root": pick("FIBOKI_PAPER_ROOT", state_dir / "paper"),
+        "state_db": pick("FIBOKI_STATE_DB", home / "state.db"),
+        "news_store": (state_dir / "news" / "headlines.sqlite", state_src),
+    }
+
+
+def _read_pins(repo: Path) -> dict[str, str]:
+    import tomllib
+
+    project = tomllib.loads((repo / "pyproject.toml").read_text(encoding="utf-8"))["project"]
+    pins: dict[str, str] = {}
+    for spec in project.get("dependencies", []):
+        name, sep, version = str(spec).partition("==")
+        if sep:
+            pins[name.strip().lower()] = version.strip()
+    return pins
+
+
+def _check_python(host: DoctorHost) -> list[DoctorCheck]:
+    out: list[DoctorCheck] = []
+    major, minor, micro = host.python_version
+    ok = (major, minor) in ((3, 11), (3, 12))
+    out.append(DoctorCheck(
+        "python", DoctorStatus.OK if ok else DoctorStatus.FAIL,
+        f"{major}.{minor}.{micro} at {host.executable}",
+        "" if ok else "pyproject requires >=3.11,<3.13. Run scripts/desktop-install.sh, which "
+        "builds .venv from Homebrew python@3.11.",
+    ))
+    pins = _read_pins(host.repo)
+    drift, missing = [], []
+    for name, want in sorted(pins.items()):
+        got = host.dist_version(name)
+        if got is None:
+            missing.append(name)
+        elif got != want:
+            drift.append(f"{name} {got} != {want}")
+    named = {n: host.dist_version(n) for n in DOCTOR_NAMED_PINS}
+    bad = drift or missing
+    detail = "; ".join(drift + [f"MISSING {m}" for m in missing]) or (
+        f"{len(pins)} exact pins match ("
+        + ", ".join(f"{n} {v}" for n, v in named.items()) + ")"
+    )
+    out.append(DoctorCheck(
+        "pins", DoctorStatus.FAIL if bad else DoctorStatus.OK, detail,
+        "" if not bad else ".venv/bin/pip install -e '.[dev]' -c deploy/constraints.txt "
+        "(scripts/desktop-install.sh does this). A drifted numerical pin changes stored results.",
+        {"pins": pins, "installed": {n: host.dist_version(n) for n in pins}},
+    ))
+    return out
+
+
+def _check_venv(host: DoctorHost) -> list[DoctorCheck]:
+    venv = host.repo / ".venv"
+    cfg = venv / "pyvenv.cfg"
+    if not (venv / "bin" / "python").exists() or not cfg.exists():
+        return [DoctorCheck(".venv", DoctorStatus.FAIL, f"{venv} missing or incomplete",
+                            "scripts/desktop-install.sh (a .venv is rebuilt, never copied).")]
+    values: dict[str, str] = {}
+    for line in cfg.read_text(encoding="utf-8").splitlines():
+        key, sep, value = line.partition("=")
+        if sep:
+            values[key.strip()] = value.strip()
+    home = Path(values.get("home", ""))
+    version = values.get("version_info") or values.get("version") or "?"
+    problems: list[str] = []
+    if not home.exists():
+        problems.append(f"its base interpreter {home} does not exist (copied from another machine?)")
+    if not version.startswith(("3.11", "3.12")):
+        problems.append(f"built with Python {version}")
+    running_in = Path(host.prefix).resolve() == venv.resolve()
+    detail = f"python {version}, base {home}" + ("" if running_in else "; doctor is NOT running from it")
+    if problems:
+        return [DoctorCheck(".venv", DoctorStatus.FAIL, "; ".join(problems),
+                            f"mv {venv} {venv}.broken && scripts/desktop-install.sh")]
+    if not running_in:
+        return [DoctorCheck(".venv", DoctorStatus.WARN, detail,
+                            f"Run the doctor as {venv}/bin/fiboki doctor so pins are read from the venv.")]
+    return [DoctorCheck(".venv", DoctorStatus.OK, detail)]
+
+
+def _parse_semver(text: str) -> tuple[int, int, int] | None:
+    import re
+
+    match = re.search(r"(\d+)\.(\d+)\.(\d+)", text)
+    return tuple(int(g) for g in match.groups()) if match else None  # type: ignore[return-value]
+
+
+def _check_node(host: DoctorHost) -> list[DoctorCheck]:
+    rc_node, node_out = host.run(["node", "--version"])
+    rc_npm, npm_out = host.run(["npm", "--version"])
+    if rc_node != 0 or rc_npm != 0:
+        return [DoctorCheck("node/npm", DoctorStatus.FAIL,
+                            f"node rc={rc_node} npm rc={rc_npm}", "brew install node")]
+    node_v = _parse_semver(node_out)
+    required = None
+    next_pkg = host.repo / "apps" / "web" / "node_modules" / "next" / "package.json"
+    if next_pkg.exists():
+        engines = json.loads(next_pkg.read_text(encoding="utf-8")).get("engines") or {}
+        required = str(engines.get("node") or "") or None
+    detail = f"node {node_out.strip()}, npm {npm_out.strip()}"
+    if required and node_v is not None:
+        floor = _parse_semver(required)
+        if floor is not None and required.strip().startswith(">=") and node_v < floor:
+            return [DoctorCheck("node/npm", DoctorStatus.FAIL,
+                                f"{detail}; next requires node {required}", "brew upgrade node")]
+        detail += f" (next requires {required})"
+    return [DoctorCheck("node/npm", DoctorStatus.OK, detail)]
+
+
+def _expected_swc(system: str, machine: str) -> set[str]:
+    arch = {"arm64": "arm64", "aarch64": "arm64", "x86_64": "x64", "AMD64": "x64"}.get(machine, machine)
+    if system == "Darwin":
+        return {f"swc-darwin-{arch}"}
+    if system == "Linux":
+        return {f"swc-linux-{arch}-gnu", f"swc-linux-{arch}-musl"}
+    if system == "Windows":
+        return {f"swc-win32-{arch}-msvc"}
+    return set()
+
+
+def _check_node_modules(host: DoctorHost) -> list[DoctorCheck]:
+    web = host.repo / "apps" / "web"
+    modules = web / "node_modules"
+    if not modules.is_dir():
+        return [DoctorCheck("web node_modules", DoctorStatus.FAIL, f"{modules} missing",
+                            "cd apps/web && npm ci")]
+    next_dir = modules / "@next"
+    present = sorted(p.name for p in next_dir.iterdir() if p.name.startswith("swc-")) if next_dir.is_dir() else []
+    expected = _expected_swc(host.system, host.machine)
+    data = {"swc_present": present, "swc_expected": sorted(expected)}
+    if present and expected and not (set(present) & expected):
+        return [DoctorCheck(
+            "web node_modules", DoctorStatus.FAIL,
+            f"built for another platform: {', '.join(present)}; this is {host.system} {host.machine}",
+            "node_modules is not portable. cd apps/web && rm -rf node_modules && npm ci", data)]
+    if not present:
+        return [DoctorCheck("web node_modules", DoctorStatus.WARN,
+                            "no @next/swc-* native binary (next falls back to a slower path)",
+                            "cd apps/web && npm ci", data)]
+    lock = web / "package-lock.json"
+    stamp = modules / ".package-lock.json"
+    if lock.exists() and stamp.exists() and lock.stat().st_mtime > stamp.stat().st_mtime:
+        return [DoctorCheck("web node_modules", DoctorStatus.WARN,
+                            "package-lock.json is newer than the installed tree",
+                            "cd apps/web && npm ci", data)]
+    return [DoctorCheck("web node_modules", DoctorStatus.OK, f"native: {', '.join(present)}", data=data)]
+
+
+def _check_git(host: DoctorHost) -> list[DoctorCheck]:
+    rc, branch = host.run(["git", "-C", str(host.repo), "rev-parse", "--abbrev-ref", "HEAD"])
+    if rc != 0:
+        return [DoctorCheck("git", DoctorStatus.WARN, f"not a git checkout ({host.repo})",
+                            "Clone the repository rather than copying a tree; the build SHA is "
+                            "stamped from git.")]
+    _, head = host.run(["git", "-C", str(host.repo), "rev-parse", "--short", "HEAD"])
+    _, status = host.run(["git", "-C", str(host.repo), "status", "--porcelain"])
+    dirty = [line for line in status.splitlines() if line.strip()]
+    detail = f"{branch.strip()} @ {head.strip()}" + (f", {len(dirty)} uncommitted change(s)" if dirty else ", clean")
+    return [DoctorCheck(
+        "git", DoctorStatus.WARN if dirty else DoctorStatus.OK, detail,
+        "Commit or discard local changes before a migration, or results carry an unrecorded code state."
+        if dirty else "",
+        {"branch": branch.strip(), "head": head.strip(), "dirty": len(dirty)},
+    )]
+
+
+def _check_env(host: DoctorHost) -> list[DoctorCheck]:
+    from fiboki.api.settings import ENV_REGISTRY, warn_unknown_env
+    from fiboki.core.enums import ExecutionMode
+
+    out: list[DoctorCheck] = []
+    raw_mode = host.env.get("FIBOKI_EXECUTION_MODE", "paper").strip().lower() or "paper"
+    try:
+        mode = ExecutionMode(raw_mode)
+    except ValueError:
+        return [DoctorCheck("environment", DoctorStatus.FAIL,
+                            f"FIBOKI_EXECUTION_MODE={raw_mode!r} is not a mode",
+                            "export FIBOKI_EXECUTION_MODE=paper")]
+    unknown = warn_unknown_env(host.env)
+    missing = sorted(
+        v.name for v in ENV_REGISTRY if mode in v.required_in_modes and not host.env.get(v.name)
+    )
+    strict = mode in (ExecutionMode.DEMO, ExecutionMode.LIVE)
+    if missing or (unknown and strict):
+        status = DoctorStatus.FAIL
+    elif unknown:
+        status = DoctorStatus.WARN
+    else:
+        status = DoctorStatus.OK
+    parts = [f"mode {mode.value}"]
+    if unknown:
+        parts.append(f"unknown: {', '.join(unknown)}")
+    if missing:
+        parts.append(f"missing in {mode.value}: {', '.join(missing)}")
+    out.append(DoctorCheck(
+        "environment", status, "; ".join(parts),
+        "" if status == DoctorStatus.OK else "Unknown FIBOKI_* names are settings silently left at "
+        "their default (a startup error in demo/live). Remove them or declare them in "
+        "fiboki.api.settings.ENV_REGISTRY.",
+        {"unknown": unknown, "missing_in_mode": missing, "mode": mode.value},
+    ))
+    live_flag = host.env.get("FIBOKI_LIVE_EXECUTION_ENABLED", "").strip().lower()
+    armed = bool(host.env.get("FIBOKI_LIVE_RUNTIME_ARMED") or host.env.get("FIBOKI_OANDA_LIVE_RUNTIME"))
+    live = live_flag in {"1", "true", "yes", "on"} or armed or mode is ExecutionMode.LIVE
+    out.append(DoctorCheck(
+        "live controls", DoctorStatus.FAIL if live else DoctorStatus.OK,
+        "a live control is set in this environment" if live else "none set (desktop runs paper)",
+        "Unset FIBOKI_LIVE_EXECUTION_ENABLED, FIBOKI_LIVE_RUNTIME_ARMED and "
+        "FIBOKI_OANDA_LIVE_RUNTIME. The desktop deployment is paper only." if live else "",
+    ))
+    return out
+
+
+def _check_data_root(host: DoctorHost) -> list[DoctorCheck]:
+    root, source = _doctor_paths(host)["data_root"]
+    from fiboki.data.store import ROOT_MARKER, DataStore
+
+    if not root.is_dir():
+        return [DoctorCheck("data root", DoctorStatus.FAIL, f"{root} ({source}) does not exist",
+                            "scripts/migrate-store.sh, or restore a backup that includes the datastore")]
+    if not (root / ROOT_MARKER).exists():
+        return [DoctorCheck("data root", DoctorStatus.FAIL, f"{root} ({source}) has no {ROOT_MARKER}",
+                            "Point FIBOKI_DATA_ROOT at the MIGRATED store; never mark a directory "
+                            "by hand to silence this.")]
+    if not os.access(root, os.R_OK | os.X_OK):
+        return [DoctorCheck("data root", DoctorStatus.FAIL, f"{root} is not readable", f"chmod u+rx {root}")]
+    inventory = DataStore(root).inventory()
+    if inventory.empty:
+        return [DoctorCheck("data root", DoctorStatus.WARN, f"{root} is marked but holds no dataset",
+                            "scripts/migrate-store.sh")]
+    per_instrument = {
+        str(k): int(v) for k, v in inventory.groupby("instrument")["rows"].sum().sort_index().items()
+    }
+    top = ", ".join(f"{k} {v:,}" for k, v in list(per_instrument.items())[:6])
+    more = "" if len(per_instrument) <= 6 else f", +{len(per_instrument) - 6} more"
+    return [DoctorCheck(
+        "data root", DoctorStatus.OK,
+        f"{root}: {len(per_instrument)} instruments, {sum(per_instrument.values()):,} bars ({top}{more})",
+        data={"root": str(root), "bars_per_instrument": per_instrument},
+    )]
+
+
+def _sqlite_ro(path: Path) -> Any:
+    import sqlite3
+
+    return sqlite3.connect(f"file:{path}?mode=ro", uri=True, timeout=5.0)
+
+
+def _check_ledger(host: DoctorHost) -> list[DoctorCheck]:
+    path, source = _doctor_paths(host)["experiment_db"]
+    if not path.exists() or path.stat().st_size == 0:
+        return [DoctorCheck("experiment ledger", DoctorStatus.FAIL, f"{path} ({source}) missing or empty",
+                            ".venv/bin/python scripts/build_research_ledger.py, or restore a backup")]
+    with _sqlite_ro(path) as conn:
+        tables = {r[0] for r in conn.execute("SELECT name FROM sqlite_master WHERE type='table'")}
+        count = conn.execute("SELECT COUNT(*) FROM experiment").fetchone()[0] if "experiment" in tables else None
+    if count is None:
+        return [DoctorCheck("experiment ledger", DoctorStatus.FAIL, f"{path} has no experiment table",
+                            "This is not an experiment ledger; check FIBOKI_EXPERIMENT_DB.")]
+    return [DoctorCheck("experiment ledger", DoctorStatus.OK if count else DoctorStatus.WARN,
+                        f"{path}: {count} experiments", "" if count else
+                        ".venv/bin/python scripts/build_research_ledger.py", {"experiments": count})]
+
+
+def _check_paper(host: DoctorHost) -> list[DoctorCheck]:
+    root, source = _doctor_paths(host)["paper_root"]
+    if not root.is_dir():
+        return [DoctorCheck("paper journal", DoctorStatus.WARN, f"{root} ({source}) does not exist",
+                            "Until a paper session is persisted here the trading pages serve the "
+                            "labelled seed fixture. scripts/run_paper_session.py writes one.")]
+    sessions = [p for p in root.iterdir() if p.is_dir() and not p.name.startswith(".")
+                and ((p / "summary.json").exists() or (p / "trades.csv").exists())]
+    return [DoctorCheck("paper journal", DoctorStatus.OK if sessions else DoctorStatus.WARN,
+                        f"{root}: {len(sessions)} session(s)",
+                        "" if sessions else "scripts/run_paper_session.py writes one.",
+                        {"sessions": len(sessions)})]
+
+
+def _check_heartbeat(host: DoctorHost) -> list[DoctorCheck]:
+    path, source = _doctor_paths(host)["state_db"]
+    stale_after = float(host.env.get("FIBOKI_WORKER_STALE_SECONDS") or 120)
+    if not path.exists():
+        return [DoctorCheck("worker heartbeat", DoctorStatus.FAIL,
+                            f"{path} ({source}) does not exist: no worker has ever beaten",
+                            "Start the research worker (launchctl kickstart gui/$(id -u)/uk.fiboki.worker).")]
+    from fiboki.workers.base import WorkerStore
+
+    store = WorkerStore.sqlite_at(path, create=False)
+    try:
+        views = store.heartbeats(now=host.now())
+    finally:
+        store.close()
+    if not views:
+        return [DoctorCheck("worker heartbeat", DoctorStatus.FAIL, "no heartbeat row: age unknown, not 0",
+                            "Start the research worker.")]
+    freshest = min(views, key=lambda v: v.age_seconds)
+    status = DoctorStatus.OK if freshest.age_seconds <= stale_after else DoctorStatus.FAIL
+    return [DoctorCheck(
+        "worker heartbeat", status,
+        f"{freshest.worker_id} beat {freshest.age_seconds:.0f}s ago (stale after {stale_after:.0f}s)",
+        "" if status == DoctorStatus.OK else "Check `launchctl print gui/$(id -u)/uk.fiboki.worker` "
+        "and var/logs/worker.log; exit 75 means another holder has the lease.",
+        {v.worker_id: round(v.age_seconds, 1) for v in views},
+    )]
+
+
+def _check_news(host: DoctorHost) -> list[DoctorCheck]:
+    path, _ = _doctor_paths(host)["news_store"]
+    if not path.exists():
+        return [DoctorCheck("news store", DoctorStatus.WARN, f"{path} does not exist",
+                            "Optional. Load uk.fiboki.news or run `fiboki news record --once`.")]
+    from datetime import UTC, datetime
+
+    with _sqlite_ro(path) as conn:
+        row = conn.execute("SELECT MAX(started_at) FROM poll_log").fetchone()
+    last = None
+    if row and row[0]:
+        # The store writes fixed-width UTC text (fiboki.data.news.store.to_utc_text).
+        last = datetime.strptime(str(row[0]), "%Y-%m-%dT%H:%M:%S.%fZ").replace(tzinfo=UTC)
+    if last is None:
+        return [DoctorCheck("news store", DoctorStatus.WARN, f"{path}: no poll has ever run",
+                            "fiboki news record --once")]
+    age = (host.now() - last).total_seconds()
+    status = DoctorStatus.OK if age <= 900 else DoctorStatus.WARN
+    return [DoctorCheck("news store", status, f"last poll {last.isoformat()} ({age:.0f}s ago)",
+                        "" if status == DoctorStatus.OK else "The recorder has stopped: "
+                        "launchctl kickstart -k gui/$(id -u)/uk.fiboki.news",
+                        {"last_poll": last.isoformat(), "age_seconds": round(age, 1)})]
+
+
+def _check_calendar(host: DoctorHost) -> list[DoctorCheck]:
+    from fiboki.marketstate.calendar import load_official_calendar
+
+    cov = load_official_calendar().coverage()
+    end = cov.declared_end if cov.declared_end is not None else cov.last_event
+    if end is None:
+        return [DoctorCheck("calendar coverage", DoctorStatus.FAIL, "the official calendar is empty",
+                            "USER_ACTIONS P3: extend the economic calendar.")]
+    now = host.now()
+    days = (end.to_pydatetime() - now).total_seconds() / 86400.0
+    if days < 0:
+        status, fix = DoctorStatus.FAIL, (
+            "Coverage ends in the past: blackout queries after it answer 'not in blackout', i.e. "
+            "trade through events. USER_ACTIONS P3.")
+    elif days < 30:
+        status, fix = DoctorStatus.WARN, "Coverage ends within 30 days. USER_ACTIONS P3."
+    else:
+        status, fix = DoctorStatus.OK, ""
+    return [DoctorCheck("calendar coverage", status,
+                        f"declared to {end} ({cov.n_events} events, {', '.join(cov.currencies)})",
+                        fix, {"declared_end": str(end)})]
+
+
+def _runtime_drives_llama_cpp() -> bool:
+    """Whether the research runtime builds a provider that can talk to llama-server."""
+    import inspect
+
+    from fiboki.workers import research_runtime
+
+    source = inspect.getsource(research_runtime._build_provider)
+    return "for_local_server" in source or "for_llama_cpp" in source
+
+
+def _local_model_report(host: DoctorHost, *, hash_weights: bool) -> DoctorCheck:
+    from fiboki.agents.providers import (
+        LlamaCppProvider,
+        LocalHTTPProvider,
+        ProviderError,
+        ProviderUnavailable,
+    )
+
+    env = host.env
+    wanted = env.get("FIBOKI_AGENT_PROVIDER", "echo").strip().lower() == "local"
+    configured = env.get("FIBOKI_AGENT_LOCAL_URL", "").strip()
+    model = env.get("FIBOKI_AGENT_LOCAL_MODEL", "").strip() or None
+    urls = [configured] if configured else [_DOCTOR_LLAMA_URL, _DOCTOR_OLLAMA_URL]
+    optional = "" if wanted else " (optional while FIBOKI_AGENT_PROVIDER is not local)"
+    cache = _doctor_paths(host)["home"][0] / "gguf-digests.json"
+    client = host.http_client()
+    try:
+        unreachable: list[str] = []
+        for url in urls:
+            try:
+                provider = LocalHTTPProvider.for_local_server(
+                    model, client=client, base_url=url, digest_cache_path=cache
+                )
+            except ProviderUnavailable as exc:
+                unreachable.append(f"{url}: {exc}")
+                continue
+            except ProviderError as exc:
+                return DoctorCheck(
+                    "local model", DoctorStatus.FAIL if wanted else DoctorStatus.WARN,
+                    f"{url}: {exc}",
+                    "Make FIBOKI_AGENT_LOCAL_MODEL name the model the server has loaded" + optional,
+                )
+            spec = provider.models()[0]
+            backend = "llama.cpp" if isinstance(provider, LlamaCppProvider) else "ollama"
+            data: dict[str, Any] = {"url": url, "backend": backend, "model": spec.model,
+                                    "context": spec.context_window, "version": spec.version}
+            where = f"{backend} at {url}: {spec.model} (n_ctx {spec.context_window})"
+            if backend == "llama.cpp" and not hash_weights:
+                return DoctorCheck("local model", DoctorStatus.WARN,
+                                   f"{where}; digest not computed (--no-hash)",
+                                   "Run once without --no-hash; the digest is then cached by "
+                                   "path, size and mtime.", data)
+            try:
+                fp = provider.model_fingerprint(spec.model)
+            except ProviderError as exc:
+                return DoctorCheck("local model", DoctorStatus.FAIL,
+                                   f"{where}: cannot be pinned: {exc}",
+                                   "Start llama-server with an absolute -m path "
+                                   "(scripts/llama-server.sh does).", data)
+            data.update(digest=fp.digest, source=fp.source)
+            status, fix = DoctorStatus.OK, ""
+            if wanted and model is None:
+                status, fix = DoctorStatus.FAIL, f"export FIBOKI_AGENT_LOCAL_MODEL={spec.model}"
+            elif wanted and backend == "llama.cpp" and not _runtime_drives_llama_cpp():
+                status, fix = DoctorStatus.FAIL, (
+                    "fiboki.workers.research_runtime._build_provider still hardcodes "
+                    "LocalHTTPProvider.for_ollama, which cannot talk to llama-server. Apply the "
+                    "one-line change in docs/v2/OPERATIONS.md (llama.cpp runbook).")
+            return DoctorCheck("local model", status, f"{where} {fp.digest}", fix, data)
+        return DoctorCheck(
+            "local model", DoctorStatus.FAIL if wanted else DoctorStatus.WARN,
+            "no local model server answered: " + "; ".join(unreachable),
+            "scripts/llama-server.sh, or launchctl kickstart gui/$(id -u)/uk.fiboki.llama" + optional,
+        )
+    finally:
+        close = getattr(client, "close", None)
+        if callable(close):
+            close()
+
+
+def _check_local_model(host: DoctorHost, *, hash_weights: bool = True) -> list[DoctorCheck]:
+    return [_local_model_report(host, hash_weights=hash_weights)]
+
+
+def _check_disk(host: DoctorHost) -> list[DoctorCheck]:
+    paths = _doctor_paths(host)
+    seen: dict[str, int] = {}
+    for label, path in (("repo", host.repo), ("data root", paths["data_root"][0])):
+        seen[label] = host.disk_free(path)
+    worst = min(seen.values())
+    gib = 1024 ** 3
+    status = DoctorStatus.FAIL if worst < 5 * gib else DoctorStatus.WARN if worst < 20 * gib else DoctorStatus.OK
+    return [DoctorCheck(
+        "disk free", status, ", ".join(f"{k} {v / gib:.1f} GiB" for k, v in seen.items()),
+        "" if status == DoctorStatus.OK else "Free space: SQLite ledgers and the news store are "
+        "append-only, and a full disk fails a write mid-record.",
+        {k: v for k, v in seen.items()},
+    )]
+
+
+def _port_owner(host: DoctorHost, port: int) -> tuple[int, str] | None:
+    rc, out = host.run(["lsof", "-nP", f"-iTCP:{port}", "-sTCP:LISTEN", "-Fp"])
+    if rc == 127:
+        raise FileNotFoundError("lsof")
+    pids = [int(line[1:]) for line in out.splitlines() if line.startswith("p") and line[1:].isdigit()]
+    if not pids:
+        return None
+    _, command = host.run(["ps", "-o", "command=", "-p", str(pids[0])])
+    return pids[0], command.strip()
+
+
+def _is_fiboki_process(host: DoctorHost, command: str) -> bool:
+    return str(host.repo) in command or any(
+        marker in command for marker in ("fiboki.api.app", "llama-server", "next-server", "next start")
+    )
+
+
+def _check_ports(host: DoctorHost) -> list[DoctorCheck]:
+    out: list[DoctorCheck] = []
+    for port, role in DOCTOR_PORTS.items():
+        name = f"port {port} ({role})"
+        try:
+            owner = _port_owner(host, port)
+        except FileNotFoundError:
+            busy = host.port_open(port)
+            out.append(DoctorCheck(name, DoctorStatus.WARN if busy else DoctorStatus.OK,
+                                   "in use; owner unknown (lsof unavailable)" if busy else "free"))
+            continue
+        if owner is None:
+            out.append(DoctorCheck(name, DoctorStatus.OK, "free"))
+        elif _is_fiboki_process(host, owner[1]):
+            out.append(DoctorCheck(name, DoctorStatus.OK, f"owned by Fiboki: pid {owner[0]} {owner[1][:120]}"))
+        else:
+            out.append(DoctorCheck(name, DoctorStatus.FAIL, f"held by pid {owner[0]}: {owner[1][:120]}",
+                                   f"Stop pid {owner[0]} or the {role} service cannot bind {port}."))
+    return out
+
+
+def _check_launchd(host: DoctorHost) -> list[DoctorCheck]:
+    if host.system != "Darwin":
+        return [DoctorCheck("launchd", DoctorStatus.WARN, f"not macOS ({host.system}); services not checked")]
+    states: dict[str, str] = {}
+    for label in (*DOCTOR_LAUNCHD_LABELS, "com.fiboki.research-worker"):
+        rc, out = host.run(["launchctl", "print", f"gui/{host.uid}/{label}"])
+        if rc != 0:
+            states[label] = "not loaded"
+            continue
+        state = "loaded"
+        for line in out.splitlines():
+            text = line.strip()
+            if text.startswith("state = "):
+                state = text.split("=", 1)[1].strip()
+            elif text.startswith("last exit code = "):
+                state += f", last exit {text.split('=', 1)[1].strip()}"
+        states[label] = state
+    legacy = states.pop("com.fiboki.research-worker")
+    missing = [lbl for lbl, st in states.items() if st == "not loaded"]
+    not_running = [lbl for lbl, st in states.items() if st != "not loaded" and not st.startswith("running")]
+    status = DoctorStatus.OK
+    fix = ""
+    if legacy != "not loaded" and states.get("uk.fiboki.worker") != "not loaded":
+        status, fix = DoctorStatus.WARN, (
+            "Both com.fiboki.research-worker and uk.fiboki.worker are loaded; the lease lets only "
+            "one work. launchctl bootout gui/$(id -u)/com.fiboki.research-worker")
+    elif missing or not_running:
+        status, fix = DoctorStatus.WARN, "scripts/launchd-install.sh --load (see docs/v2/OPERATIONS.md)"
+    detail = "; ".join(f"{lbl.removeprefix('uk.fiboki.')}: {st}" for lbl, st in states.items())
+    return [DoctorCheck("launchd", status, detail, fix, {**states, "com.fiboki.research-worker": legacy})]
+
+
+DOCTOR_CHECKS: tuple[tuple[str, Callable[[DoctorHost], list[DoctorCheck]]], ...] = (
+    ("python", _check_python),
+    (".venv", _check_venv),
+    ("node/npm", _check_node),
+    ("web node_modules", _check_node_modules),
+    ("git", _check_git),
+    ("environment", _check_env),
+    ("data root", _check_data_root),
+    ("experiment ledger", _check_ledger),
+    ("paper journal", _check_paper),
+    ("worker heartbeat", _check_heartbeat),
+    ("news store", _check_news),
+    ("calendar coverage", _check_calendar),
+    ("local model", _check_local_model),
+    ("disk free", _check_disk),
+    ("ports", _check_ports),
+    ("launchd", _check_launchd),
+)
+
+
+def run_doctor(host: DoctorHost, *, hash_weights: bool = True,
+               only: Sequence[str] | None = None) -> list[DoctorCheck]:
+    """Every desktop check, in a fixed order.  Pure except for ``host``."""
+    results: list[DoctorCheck] = []
+    for name, fn in DOCTOR_CHECKS:
+        if only and name not in only:
+            continue
+        if fn is _check_local_model:
+            results.extend(_doctor_guard(name, lambda h: _check_local_model(h, hash_weights=hash_weights), host))
+        else:
+            results.extend(_doctor_guard(name, fn, host))
+    return results
+
+
+def _doctor_payload(checks: Sequence[DoctorCheck]) -> dict[str, Any]:
+    counts = {s: sum(1 for c in checks if c.status == s) for s in DoctorStatus.ALL}
+    return {"ok": counts["FAIL"] == 0, "counts": counts, "checks": [c.as_dict() for c in checks]}
+
+
+def _render_doctor(checks: Sequence[DoctorCheck]) -> None:
+    colour = {DoctorStatus.OK: "green", DoctorStatus.WARN: "yellow", DoctorStatus.FAIL: "red"}
+    table = Table(title="fiboki doctor (desktop)", show_lines=False)
+    table.add_column("status", width=6)
+    table.add_column("check", style="cyan")
+    table.add_column("observed", overflow="fold")
+    table.add_column("fix", overflow="fold")
+    for check in checks:
+        table.add_row(Text(check.status, style=colour[check.status]), check.name,
+                      check.detail, check.fix)
+    console.print(table)
+    counts = _doctor_payload(checks)["counts"]
+    console.print(f"{counts['OK']} OK, {counts['WARN']} WARN, {counts['FAIL']} FAIL")
+
+
+@doctor_app.callback(invoke_without_command=True)
+def doctor(
+    ctx: typer.Context,
+    as_json: bool = typer.Option(False, "--json"),
+    no_hash: bool = typer.Option(False, "--no-hash", help="Do not hash the GGUF weights file."),
+    only: list[str] = typer.Option([], "--only", help="Run only the named check(s)."),
+    repo: Path | None = typer.Option(None, "--repo", help="Repository root (default: this checkout)."),
+) -> None:
+    """Check this machine can run Fiboki continuously. Exit 1 on any FAIL.
+
+    Every row is a check that was performed; WARN is something that works but
+    should be fixed, FAIL is something that will not work.
+    """
+    if ctx.invoked_subcommand is not None:
+        return
+    host = DoctorHost(repo=repo)
+    checks = run_doctor(host, hash_weights=not no_hash, only=only or None)
+    payload = _doctor_payload(checks)
+    _emit(payload, as_json=as_json, render=lambda: _render_doctor(checks))
+    if not payload["ok"]:
+        raise typer.Exit(EXIT_FAIL)
+
+
+@doctor_app.command("model")
+def doctor_model(
+    as_json: bool = typer.Option(False, "--json"),
+    no_hash: bool = typer.Option(False, "--no-hash", help="Do not hash the GGUF weights file."),
+) -> None:
+    """The local model server, the model it serves and its weights digest."""
+    check = _doctor_guard("local model", lambda h: _check_local_model(h, hash_weights=not no_hash),
+                          DoctorHost())[0]
+    payload = _doctor_payload([check])
+    _emit(payload, as_json=as_json, render=lambda: _render_doctor([check]))
+    if not payload["ok"]:
+        raise typer.Exit(EXIT_FAIL)
+
+
+# ===========================================================================
+# END doctor
+# ===========================================================================
+
+
+# ===========================================================================
+# BEGIN events (Wave 4: the agent event channel, shadow evaluation only)
+# Self-contained block. Nothing here can enable the veto: the policy is a
+# source constant (marketstate/events.py) and this command only READS.
+# ===========================================================================
+
+events_app = typer.Typer(
+    help="Agent event channel: shadow evaluation of the (default-off) event veto.",
+    no_args_is_help=True,
+)
+app.add_typer(events_app, name="events")
+
+_SHADOW_TRADE_KEYS = ("trade_id", "instrument", "entry_time", "net_pnl", "max_adverse_excursion")
+
+
+def _load_shadow_trades(path: Path) -> list[Any]:
+    """A JSON array or JSON-lines file of trade-ledger rows."""
+    from types import SimpleNamespace
+
+    import pandas as pd
+
+    text = path.read_text(encoding="utf-8").strip()
+    if not text:
+        return []
+    try:
+        rows = json.loads(text) if text.startswith("[") else [
+            json.loads(line) for line in text.splitlines() if line.strip()
+        ]
+    except json.JSONDecodeError as exc:
+        _fail(f"{path} is not JSON or JSON lines: {exc}", EXIT_MISUSE)
+    out: list[Any] = []
+    for i, row in enumerate(rows):
+        missing = [k for k in _SHADOW_TRADE_KEYS if k not in row]
+        if missing:
+            _fail(f"{path} row {i} lacks {missing}; need {list(_SHADOW_TRADE_KEYS)}", EXIT_MISUSE)
+        entry = pd.Timestamp(row["entry_time"])
+        if entry.tzinfo is None:
+            _fail(f"{path} row {i}: entry_time {row['entry_time']!r} has no timezone", EXIT_MISUSE)
+        out.append(
+            SimpleNamespace(
+                trade_id=str(row["trade_id"]),
+                instrument=str(row["instrument"]).upper(),
+                entry_time=entry,
+                net_pnl=float(row["net_pnl"]),
+                max_adverse_excursion=float(row["max_adverse_excursion"]),
+            )
+        )
+    return out
+
+
+@events_app.command("shadow-report")
+def events_shadow_report(
+    trades: Path = typer.Option(..., "--trades", help="JSON array or JSON lines of trade-ledger rows."),
+    state_dir: Path | None = typer.Option(None, "--state-dir", help="Default: $FIBOKI_STATE_DIR or ./var."),
+    bars_timeframe: str | None = typer.Option(
+        None, "--bars-timeframe",
+        help="Load bars at this timeframe from FIBOKI_DATA_ROOT for the vol-spike baseline.",
+    ),
+    no_calendar: bool = typer.Option(False, "--no-calendar", help="Skip the calendar-only baseline."),
+    as_json: bool = typer.Option(False, "--json"),
+) -> None:
+    """Would-have-vetoed per trade, vs the vol-spike and calendar-only baselines.
+
+    Reads the quarantined annotation store read-only. Exit 1 when the store is
+    missing. An insufficient sample (fewer vetoed trades than the pre-registered
+    floor) is reported, not failed: it is the expected state for months.
+    """
+    from fiboki.marketstate.events import (
+        AnnotationStore,
+        AnnotationStoreError,
+        default_annotation_store_path,
+        shadow_report,
+    )
+
+    base = state_dir if state_dir is not None else Path(os.environ.get("FIBOKI_STATE_DIR") or "var")
+    path = default_annotation_store_path(base)
+    try:
+        store = AnnotationStore(path, read_only=True)
+    except AnnotationStoreError as exc:
+        _fail(f"{exc}; the event scan has not written anything yet")
+    try:
+        annotations = store.annotations()
+    finally:
+        store.close()
+    rows = _load_shadow_trades(trades)
+    bars: dict[str, Any] = {}
+    if bars_timeframe is not None:
+        root = data_root()
+        if root is None:
+            _fail("--bars-timeframe needs FIBOKI_DATA_ROOT", EXIT_MISUSE)
+        from fiboki.data.store import DataStore
+
+        ds = DataStore(root)
+        for sym in sorted({t.instrument for t in rows}):
+            try:
+                bars[sym], _version = ds.read_latest(sym, bars_timeframe)
+            except Exception as exc:  # absence is reported, never filled in
+                _warn(f"no bars for {sym} {bars_timeframe}: {exc}; vol baseline NOT_EVALUATED")
+    calendar = None
+    if not no_calendar:
+        from fiboki.marketstate.calendar import load_official_calendar
+
+        calendar = load_official_calendar()
+    report = shadow_report(annotations, rows, bars=bars or None, calendar=calendar)
+
+    def _stats(g: Any) -> dict[str, Any]:
+        return {
+            "n": g.n,
+            "total_net_pnl": g.total_net_pnl,
+            "net_expectancy": g.net_expectancy,
+            "mean_adverse_excursion": g.mean_adverse_excursion,
+        }
+
+    payload = {
+        "store": str(path),
+        "policy": dict(report.policy),
+        "n_trades": report.n_trades,
+        "n_annotations": report.n_annotations,
+        "sufficient": report.sufficient,
+        "min_affected_trades": report.min_affected_trades,
+        "channels": [
+            {
+                "name": c.name,
+                "version": c.version,
+                "blocked": _stats(c.blocked),
+                "kept": _stats(c.kept),
+                "not_evaluated": c.not_evaluated,
+                "expectancy_kept_minus_blocked": c.expectancy_kept_minus_blocked,
+            }
+            for c in report.channels
+        ],
+        "caveats": list(report.caveats),
+    }
+
+    def _render() -> None:
+        console.print(
+            f"{report.n_trades} trades, {report.n_annotations} annotations, policy "
+            f"{report.policy['event_veto_policy']} (enabled={report.policy['event_veto_enabled']})"
+        )
+        table = Table("channel", "blocked n", "blocked E[net]", "kept n", "kept E[net]",
+                      "not evaluated")
+        for c in report.channels:
+            table.add_row(
+                c.name, str(c.blocked.n), str(c.blocked.net_expectancy), str(c.kept.n),
+                str(c.kept.net_expectancy), str(c.not_evaluated),
+            )
+        console.print(table)
+        if not report.sufficient:
+            _warn(
+                f"fewer than {report.min_affected_trades} would-be-vetoed trades: below the "
+                "pre-registered floor, read nothing into this comparison"
+            )
+        for c in report.caveats:
+            console.print(f"  - {c}")
+
+    _emit(payload, as_json=as_json, render=_render)
+
+
+# ===========================================================================
+# END events
+# ===========================================================================
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     """Entry point that RETURNS a code instead of raising ``SystemExit``.
 
