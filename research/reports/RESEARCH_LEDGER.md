@@ -251,3 +251,13 @@ compute; the first draft of this paragraph said "4,026 plus K3's true N".)
 and with the document's own evidence-against; it would not be evidence about D1 TSMOM. One or
 more cells clearing rungs 0 to 5 would be the first in this repository, and the holdout is
 spent only once on the single best cell by DSR, chosen before the look.
+
+**K4 result (2026-09-30, `research/reports/campaign_k4_tsmom/`).** Planned 1,120, true N
+8,496 as printed by `--plan-only` and used by the run. 80 cells (ten instruments in the
+document's universe; six skipped `out_of_universe`), every one dead at rung 0: 47 on
+`min_trades` (observed median 315, min 91, max 397, required 400) and 33 on non-positive
+expectancy at the declared defaults. `survivors: []`, holdout unconsumed. Two honest readings,
+both stated: the sign-of-returns family trades four to five times as often on H4 as the K3
+families (median 315 against 68) and still does not reach the uncalibrated 400 bar; and where it
+does trade enough, its default expectancy on H4 is not positive net of costs. Neither is
+evidence about the D1 bet, which the store cannot yet test. No threshold is being moved.
