@@ -88,3 +88,19 @@ SSE endpoint with envelopes and ring buffer; server-computed consequences (done 
 ## 9. Not verified yet
 
 OKLCH values need a contrast check and CVD simulation before sign-off; SSE through the Next rewrite must be shown not to buffer (fallback: one reverse proxy in front of both, or EventSource direct to the API origin with CORS credentials); stream topics beyond mode, kill switch and health depend on the composition root that does not yet exist (ARCHITECTURE §12), so until then those topics are labelled `absent`, exactly as REST does today.
+
+---
+
+## 10. Revision 1.1 (2026-09-29): status and additions from the audit
+
+**Shipped:** Wave 0 (`c40c886`), Wave 1 (`666f33e`), Wave 2 (`b5dcfdf`), Wave 3 plus the trust defects from report G §1.2 and the CI web job (this commit). Playwright 478 passed; contrast 268/268; every route within budget (shell 176 KB of 180).
+
+**Decisions confirmed by Joe:** best available charts, own overlay layer. Lightweight Charts for price, uPlot and owned SVG/canvas for analytics (D-F5/D-F6 stand). Kill-switch friction is asymmetric: PAUSE reason-only, FLATTEN typed, disarm and promote full ceremony.
+
+**Additions adopted from report G:**
+- Chart workstation feature list C1–C18 (G §2.4): multi-timeframe sync with link groups, crosshair sync to analytics, signal/fill/level overlays with the provenance grammar, regime bands, session shading, calendar and headline markers, **replay ("time machine") where every step asks the backend for state as-of that bar**, a "why did this trade happen" inspector reading the allocation ledger (now recorded per trade in both engine and paper) and the gateway attempt row, server-side audited drawings (Fibonacci levels as drawings only), forming-bar and gap rendering, PNG snapshot for the Journal. Backend: `/api/markets/overlays` exists; add `as_of` replay and `/api/markets/drawings`.
+- Eight view states (empty, absent, stale, disconnected, loading, error, forming, replay) with tokens (done) and a number-rendering spec (done).
+- Agent Desk screen (Wave 4e) and a phone/tablet ops view for the kill switch over LAN (Wave 4f).
+- Revised estimate: 150–170 frontend days and 22–28 backend days for the full scope; the next two waves are 4c-1 (chart core, 12 days) and 4a Risk & Exposure v2 (6 days).
+
+**Verify on the Mac:** SSE through the Next rewrite does not buffer; `uk.fiboki.web` serves the production build; visual baselines are Linux-only.

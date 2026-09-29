@@ -227,3 +227,27 @@ Before you finish, ask: **would this change let a number be believed that should
 If the answer is yes or maybe, the change is wrong however much else it improves. Every V1 defect
 in `docs/v2/V1_FORENSIC_BASELINE.md` pushed in the same direction — towards flattering results —
 and no individual one of them looked like a mistake at the time.
+
+## 7. Rules revised on 2026-09-29 (supersede any older statement, including the Claude Project instructions)
+
+These replace V1-era statements that were still steering agents. Each has an enforcing test or a named gap.
+
+| Old statement | Current rule | Enforced by |
+|---|---|---|
+| "12 strategy bots under a common framework" | Strategies are DSL documents under `research/strategies/` (five seeds today). Adding one requires `is_reparameterisation` to be false and a written reason it is different. | `strategy/registry.py`, holdout key-version tests |
+| "Minimum 80 trades for primary ranking" | Promotion requires the versioned gate set in `validation/gates.py`; ranking is on DSR, PBO, SPA/StepM, WFE, OOS hit and plateau, never on headline profit. Thresholds change only through a pre-registered calibration study (E-1). | `tests/unit/test_validation_gates.py` |
+| "KLineChart for charts, Plotly for analytics" | TradingView Lightweight Charts for price; uPlot plus owned SVG/canvas for analytics; no Plotly, no KLineChart; no indicator maths in the browser. | `apps/web/tests/e2e/source-rules.spec.ts` (dependency allow-list, byte budgets) |
+| "SQLite in dev / PostgreSQL in prod; Vercel / Railway / Render" | Local-first on Joe's Mac: SQLite (WAL) plus parquet under one `FIBOKI_STATE_DIR`/data root; services under launchd; no cloud dependency in research or execution. | `deploy/launchd/*`, `tests/unit/test_deploy_guards.py` |
+| "fibokei_token cookie; SWR; 60/67 instruments" | `fiboki_session` cookie; TanStack Query; 41 registered instruments (`core/instruments.py`). | `tests/api`, `tests/golden/test_golden_retail_leverage.py` |
+| (new) One path resolver | Every persisted path is resolved by `core/paths.resolve_paths`; no module, CLI option or script may default a path on its own. | `tests/unit/test_core_paths.py` |
+| (new) A safety input never defaults to a benign value | Every gateway input is `Optional`; `None` blocks in DEMO and LIVE; PAPER may excuse only with an explicit, recorded flag. | `tests/unit/test_risk_context_explicit_inputs.py` (AST) |
+| (new) Durable means F_FULLFSYNC on Darwin and torn tails are quarantined, never fatal | `core/durable.py` is the only append path for intents, kill switch, audit and alerts. | `tests/unit/test_durable.py`, `test_intent_store_durable.py` |
+| (new) Trial counts come from the ledger | `n_trials` and `external_trial_count` derive from the experiment ledger; a payload may only raise them. | `tests/integration/test_agents_validation_dsr.py` |
+| (new) Engine inputs are UTC mid bars | The engine refuses non-UTC indices and non-mid `price_basis`; conversions are fingerprinted. | `tests/unit/test_price_basis_and_utc.py` |
+| (new) Regulatory constants carry citations and golden tests | Leverage caps by the ESMA/FCA currency set; per-asset minimum stops. | `tests/golden/test_golden_retail_leverage.py` |
+| (new) Every composition root is a reviewed, hashed file | Paper and live workers start only from a committed wiring file whose sha256 is stamped on every attempt row; `fiboki worker run live` refuses. | `tests/unit/test_paper_forward_compose.py`, `test_cli.py` |
+| (new) Local models only; every call pinned | The agent backend is llama.cpp or Ollama on loopback; model id + GGUF/manifest digest + manifest hash on every audit record; remote providers only for research roles and only when explicitly configured. | `tests/unit/test_agents_llama_cpp_provider.py`, `test_agents_local_provider.py` |
+| (new) Agent influence is a signed tier, not a toggle | `core/tier.py`: T0 observe, T1 annotate (shadow, default), T2 veto entries, T3 dampen size, T4 author candidates. A policy may be enabled only at or above its tier; raising a tier needs a reviewed constant change and a signed record. The never-list is unchanged: order origination, upsizing, risk-limit changes, kill-switch disarm, execution-mode changes, holdout selection. | `tests/unit/test_agent_tier.py`, `test_conviction_channel.py`, `test_event_veto_gateway.py` |
+| (new) Research and paper size identically | Portfolio construction runs in both the engine (`portfolio/engine_policy.py`) and the paper runtime, byte-identical by test; the vol target never scales above 1.0. | `tests/integration/test_construction_parity.py` |
+| (new) No scraped aggregator data enters a decision path | ForexFactory's feed is opt-in, off by default, comparison-only; Investing.com and undocumented endpoints are not built. | `tests/unit/test_source_registry.py` |
+| "18/19 checks" | Say "the checks in `RiskGateway.CHECKS`" rather than a number in prose. | `tests/unit/test_risk_gateway.py` pins the count |

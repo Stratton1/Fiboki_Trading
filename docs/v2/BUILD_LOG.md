@@ -803,3 +803,439 @@ Stored results: none invalidated. No engine, indicator, strategy or risk code ch
 
 Stored results: none invalidated. No engine, cost model, metric, gate threshold or strategy
 changed; the new gateway check passes whenever no source is wired, which is every existing path.
+
+## 2026-09-29: safety findings from the backend audit (P0-1, P1-4, P1-6, P1-9, P2-14, P2-16, P2-20, P2-21) (uncommitted working tree)
+
+- **One path resolver (P0-1, B-06).** New `core/paths.py`: pure `resolve_paths(env, *, cwd=None)
+  -> FibokiPaths` (state dir, kill-switch journal, intent/audit/API-audit ledgers, holdout and
+  experiment dbs, news/events stores, heartbeat db, paper root, alert log, alert outbox).
+  `api/settings.load_settings` builds `Settings.paths` from it; `killswitch_path` and
+  `audit_path` read it. The CLI killswitch commands lost their `~/.fiboki/killswitch.jsonl`
+  default, print the absolute journal, and warn when `FIBOKI_STATE_DIR` is unset or `--journal`
+  is not the journal gateways read. The flatten message no longer claims a worker will act.
+- **Kill switch refresh (P0-1, B-07).** `KillSwitch.refresh()` re-reads the journal when its
+  (inode, size, mtime) changed; called from `allows()`, `state`/`active`/`mode`, `activate`,
+  `deactivate` and `flatten_orders`. `KillSwitch.at_path` / `from_paths`. `RiskGateway(mode=...)`
+  refuses an in-memory journal for any mode but BACKTEST; `mode=None` (legacy, what
+  `workers/runtime.py:1025` still does) is backstopped: a risk-adding order in SHADOW/DEMO/LIVE is
+  blocked `kill_switch_journal_not_durable:<mode>`, and every attempt row stamps
+  `kill_switch_journal: durable|in_memory`. Cross-process test: a subprocess CLI pause blocks an
+  already-built gateway's next evaluate.
+- **Explicit risk inputs (P1-4, B-09).** `RiskContext.open_risk_amount`, `correlated_exposure`,
+  `daily_pnl`, `weekly_pnl`, `fx_quote_to_account` are `float | None = None`. A missing one blocks
+  `<check>_input_missing:<field>`; PAPER may pass only with `RiskGateway(paper_allows_missing_inputs=True)`,
+  and attempt rows record `missing_inputs` and the permission. AST test: every `RiskContext(` in
+  src passes all five. Test fixtures now state their zeros.
+- **Durable ledgers (P1-6, B-08).** New `core/durable.py`: `durable_append` (exclusive flock,
+  `F_FULLFSYNC` on Darwin, directory fsync on create), CRC32 spliced into each JSON object as its
+  first key (still valid JSON for existing readers), torn-tail quarantine to `<file>.torn-<ts>`
+  with named hooks, `DurableLogCorrupt` for mid-file damage, legacy lines accepted. Used by
+  `JsonlIntentStore`, `FileKillSwitchJournal`, `FileChannel`, and the agent audit ledger's append
+  (unframed there: its readers were out of scope and its hash chain already verifies records).
+- **Alerts leave the machine (P1-9, B-15/B-16).** `build_default_dispatcher` injects an httpx
+  transport for Telegram/webhook when configured, wraps them in `OutboxChannel` over
+  `<state_dir>/alerts_outbox.sqlite` (CRITICAL at-least-once, retried by `retry_pending`), scrubs
+  URL/token from delivery errors, filters `/bot<token>/` out of httpx/httpcore logs, and installs
+  a `LEDGER_TORN_TAIL` hook. New events `LEDGER_TORN_TAIL` (critical) and `ALERT_TEST`. New CLI
+  `fiboki alerts test [--critical]` and `fiboki watchdog run` (Worker subclass: lease `watchdog`,
+  heartbeat, evaluates heartbeats and retries the outbox every cycle).
+- **SQLite (P2-14, B-35).** `install_sqlite_pragmas` (WAL, busy_timeout 30000, synchronous FULL,
+  every connection) on the holdout, experiment and dataset-catalogue engines. Holdout: UPDATE and
+  DELETE triggers on `holdout_consumption` and a new append-only `holdout_outcome` table
+  (`record_outcome` no longer UPDATEs the claim; legacy inline outcomes are still read and still
+  final).
+- **Secrets and thresholds (P2-16, P2-20, P2-21).** `OandaConfig.api_token` is `repr=False`.
+  Operator passwords: `scrypt$n$r$p$salt$key` via `hash_password`; bare-hex and `sha256$` legacy
+  entries still verify and log a rotation warning. `obs.health.HealthThresholds` is the single
+  value, resolved into `Settings.health` (`FIBOKI_WORKER_DOWN_SECONDS`, `FIBOKI_DATA_STALE_SECONDS`
+  declared); `WorkerHeartbeatCheck`, `WatchdogThresholds`, `fiboki worker status` and `system
+  health` derive from it. AST test: no `compiled_in=` / `live_host_compiled_in=` in src.
+- **Not done (outside this brief's files).** `workers/runtime.py` (another workstream) now
+  passes `KillSwitch.from_paths(...)` and `mode=PAPER` in `build_replay_session`, but its
+  `RiskContextBuilder` still substitutes 0.0 for a missing P&L ledger or correlation matrix and
+  defaults `market_open=True`; `entrypoints/paper_forward.py` builds its gateway with the
+  resolved file journal but without `mode=`. `workers/live_worker.py` `data_stale_after_seconds` and the
+  doctor heartbeat check still carry their own numbers. `workers/base.py` applies pragmas to one
+  pooled connection. `core.contracts.SHADOW_REASON_PREFIXES` has no prefix for an excused
+  missing input, so it is recorded in the attempt row, not in `decision.reasons`. `fiboki doctor`
+  does not yet flag legacy password hashes.
+
+Stored results: none invalidated. No engine, cost model, metric or gate changed. Existing
+ledgers stay readable. Behaviour change for callers: a `RiskContext` built without the five
+inputs now blocks, and a DEMO/LIVE/SHADOW open through a gateway without a durable kill switch
+now blocks.
+
+## 2026-09-29: paper trading forward on OANDA practice prices; durable job ledger (P1-8, P1-10, P1-15, P2-4, P2-17, P2-18) (uncommitted working tree)
+
+- **Paper forward (P1-15).** New `src/fiboki/entrypoints/` (rank 115 in `test_layering.py`,
+  imported only by `cli.py`). `paper_forward.compose(settings, wiring) -> LiveWorker` reads the
+  committed `entrypoints/wiring/paper_forward_v1.json` (schema `fiboki.paper_forward.wiring/1`:
+  Donchian seed by bound content hash `66d6a844...`, EURUSD/GBPUSD/XAUUSD H4, `limits_v1_paper`,
+  `OANDA_REALISTIC`, official calendar, feed-history correlation, ledger dir, `allowed_modes`
+  exactly `["paper"]`) and composes: `OandaPollingBarFeed` over the new real transport, the new
+  pricing spread source, `VenuePositionManager` over the shared `PositionBook`, the new instant-fill
+  `ForwardPaperVenue` (`entrypoints/paper_venue.py`: fills at the feed's last close +/- the
+  profile half spread; the book's next-open fill stays the ledger of record), `ExecutionService`
+  (PAPER, `JsonlIntentStore`), `RiskGateway` with the durable kill-switch journal at
+  `settings.killswitch_path`, and `LiveWorker` (startup and 900 s reconciliation, heartbeat,
+  lease `paper-forward`). The wiring's sha256 is stamped on every attempt row
+  (`attempts.jsonl`) and journal line. Journals under `<state_dir>/paper_forward/<version>/`;
+  one continuous paper session under `<paper_root>/forward-<version>/` in the format
+  `api/paper_journal.py` reads. Restarts carry balance, peak equity and closed trades; open
+  positions are journalled and alerted as abandoned. `fiboki paper forward --wiring <path>
+  [--check|--once|--max-cycles]`; `fiboki worker run live` still refuses.
+- **Real transport.** `broker/http_transport.HttpxTransport`: one `httpx.Client` with
+  `HTTPTransport(retries=0)`, no redirects, per-request timeout, `https` plus a PARSED-hostname
+  allow-list, no stored headers, token-free `repr`. `bearer_token_from_env` names the variable,
+  never the value. AST test: constructed only under `entrypoints/` and in `cli.py`.
+  `RecordedTransport` stays the test double.
+- **Live spread (P2-4).** `broker/oanda_pricing.OandaPricingSpreadSource`: `GET
+  /v3/accounts/{id}/pricing` once per bar (the one `@retry_idempotent_read` method, `_get_pricing`),
+  `spread_source(instrument, now) = ask - bid`, `nan` when unsampled, stale (> 120 s), not
+  tradeable or crossed. Practice host only.
+- **Durable orchestrator (P1-8).** `agents/orchestrator.Orchestrator(path=...)` /
+  `Orchestrator.durable(state_dir)` keeps the job ledger in SQLite (WAL, busy_timeout 30 s,
+  synchronous FULL): specs, status, attempts, a JSON result record, `idempotency_key UNIQUE`.
+  `Orchestrator()` keeps the same tables in memory. `run_next` claims in one `BEGIN IMMEDIATE`;
+  `bind_lease(holder, fence)` fences claims and completions with the worker lease token
+  (`FencedOut` for a zombie); `recover_abandoned()` returns RUNNING jobs of a dead worker to their
+  retry policy. Payloads must be JSON (refused otherwise, so a handler sees the same recorded
+  input before and after a restart). Same public API; every existing orchestrator test passes.
+- **Pulse (P1-10).** `ResearchWorker._run_one` runs under `HeartbeatPulse` at
+  `min(pulse_seconds, lease_ttl/3)`; `Worker.pulse()` renews and beats between jobs in a cycle;
+  `ResearchWorker.resume` binds the ledger to the lease and recovers abandoned jobs.
+- **launchd (P2-17, P2-18).** `deploy/launchd/uk.fiboki.paper.plist` (`ProcessType Standard`,
+  `ExitTimeOut 45`), not in the installer's default list. `scripts/fiboki-service.sh paper` runs
+  the committed wiring under `caffeinate -is -w $$`. Legacy `com.fiboki.research-worker.plist`
+  deleted. `scripts/dev-up.sh` refuses to start when `launchctl list | grep uk.fiboki` finds a
+  loaded service (skipped when `launchctl` is absent).
+
+Tests, run 2026-09-29 ~03:43Z: `pytest tests/unit/test_orchestrator_durable.py
+test_research_worker_pulse.py test_http_transport.py test_oanda_pricing_spread.py
+test_paper_forward_compose.py test_paper_forward_deploy.py tests/integration/test_paper_forward_e2e.py
+tests/unit/test_layering.py test_no_gateway_bypass.py test_retry_scope.py test_cli.py
+test_deploy_guards.py test_api_settings_hygiene.py` -> 209 passed. Every test file importing
+`fiboki.workers`, `fiboki.broker` or the orchestrator (57 files) -> 1132 passed, 1 skipped,
+2 failed (`test_agents_jobs.py`, caveat text and DSR; files another agent is changing under
+P1-2). `ruff check` clean on every file touched here.
+
+Not done (outside this brief's files): `cli.py` `worker run research` still builds
+`Orchestrator()` (in memory); it should pass `path=<state_dir>/jobs.sqlite`. `deploy/README.md`
+still documents the deleted legacy plist. The OANDA credentials are read as
+`OANDA_PRACTICE_TOKEN` / `OANDA_PRACTICE_ACCOUNT_ID` because `api/settings.ENV_REGISTRY` (not
+owned here) declares every `FIBOKI_*` name. `fiboki doctor`'s launchd check does not list
+`uk.fiboki.paper`. Not exercised: a real OANDA practice request (no credentials here), launchd
+and caffeinate (Linux).
+
+Stored results: none invalidated. No engine, cost model, metric or gate changed.
+
+## 2026-09-29: sizing through portfolio construction, the conviction channel, agent influence tiers
+
+Joe's request: "the agent should know/decide size based on confidence, leverage, open positions,
+open trades, strategy". Delivered as: the deterministic system decides size from all of those;
+the agent contributes a schema-bound, expiring verdict that a versioned, default-off, down-only
+policy may use to make a size smaller, and only at a signed tier that the reviewed ceiling does
+not yet allow.
+
+- **P1-11 closed: construction is wired.** `workers/runtime.SignalEvaluator` now allocates every
+  bar's signals together with `PortfolioConstructor` against the venue's own book
+  (`RiskContextBuilder.snapshot`, which now measures open risk per instrument), then calls
+  `size_trade` once per accepted candidate with `risk_fraction = tier base risk` and
+  `portfolio_weight = weight`. `SizingPolicy.risk_fraction` became a ceiling on the tier base.
+- **construction_v2** (`portfolio/construction.py`): `StrategyTier` base risk 0.25 / 0.75 / 1.5 /
+  2.0% and concurrency caps 2 / 4 / 6 / 8 (RISK_GOVERNANCE Governor 1); drawdown throttle as a
+  step function x0.6 / x0.3 (Probationary suspended) / PAUSE 15% / FLATTEN 20% (Governor 3);
+  correlation-aware open-risk budget 3% (unmeasured pairs 0.30) and total risk cap 6% (Governor
+  2); `vol_target_max_scale` 1.5 -> 1.0 and refused above 1.0; a final `tier_cap` clamps every
+  weight to <= 1.0 so final risk <= tier base (property test); `coarse_regime` maps the
+  five-axis marketstate key onto the regime scalars (under v1 every real regime fell to
+  "unknown" 0.6); each candidate uses its own instrument's regime; `Allocation.trace` records
+  every step including those at 1.0; every result and every gateway attempt row is stamped
+  (`StampingRecorder`).
+- **Conviction channel:** `core.contracts.ConvictionReading`; `ConvictionPolicy` v1 (disabled;
+  disagreement strength 2 -> 0.75, strength 1 -> 0.9, everything else 1.0; floor >= 0.5 and
+  `max_factor <= 1.0` asserted); `_step_conviction` appended to the pipeline; `ShadowFactor` rows
+  with `Provenance.SHADOW` on every allocation; `ConvictionAdapter` in the runtime is the only
+  construction site (AST-tested along with single consumption and no path into sizing, the
+  gateway or execution).
+- **Agent influence tiers:** `core/tier.py` (T0..T4, HMAC-signed `<state_dir>/agent_tier.json`,
+  absent = T1, tampered = T1 plus alert, reviewed ceiling `MAX_AUTHORISED_TIER` = T1, no tier
+  permits upsizing); `fiboki agents tier status|set` (set: operator, reason, real secret, refuses
+  above the ceiling, audited to `agent_tier_audit.jsonl`); conviction applies only at T3+, the
+  event veto blocks only at T2+ (`TierGatedVetoSource`), otherwise shadow plus one alert.
+- **Thesis debate:** `build_market_brief` (deterministic, content-hashed, stable evidence ids),
+  `ThesisStore` (append-only SQLite), `record_debate_turn`, `get_debate`, `record_conviction`;
+  capabilities `WRITE_DEBATE_TURN`, `WRITE_CONVICTION` (25 total), write domains
+  `research:debate`, `research:conviction` (11), roles `thesis_advocate`, `thesis_arbiter` (15),
+  33 tools; `run_thesis_debate` with `offline_thesis_script`; `thesis_debate_due` predicate.
+- **Budgets:** per-role context budgets (G §3.4.3) enforced before the request and rendered into
+  the system prompt (so versioned in the run manifest); sessions bound prompt tokens,
+  completion tokens and model seconds as well as USD (P2-22); `ToolContext.model_id` / digest /
+  manifest hash set from the router's choice after every thought.
+- **Kill switch:** `build_replay_session` builds its gateway with `mode=PAPER` and
+  `KillSwitch.from_paths(resolve_paths(os.environ))` (the operator's durable journal) unless a
+  gateway or kill switch is passed.
+
+Tests, run 2026-09-29 (commands and counts in the agent report): new
+`tests/unit/test_agent_tier.py`, `test_construction_policy.py`, `test_conviction_channel.py`,
+`tests/golden/test_golden_construction.py`, `tests/integration/test_runtime_sizing_path.py`,
+`test_agents_thesis_debate.py`. Updated with reasons: `test_portfolio_construction.py` (two tests
+whose premise was the 1.5x vol scale-up), pinned counts in `test_agents_forecasts.py`,
+`test_agents_roles.py`, `test_agents_tool_registry.py`.
+
+Not done: the backtest engine does not mirror construction (B-24), so **paper and backtest size
+differently** for the same signal; nothing schedules `run_thesis_debate`
+(`workers/research_runtime.py`); `entrypoints/paper_forward.py` (another agent's file) builds
+`SignalEvaluator` without `snapshot=builder.snapshot`, `strategy=builder.strategy_view` or a
+regime source, so it allocates against an unmeasured book; the tier does not gate agent writes;
+no drawdown hysteresis; RISK_GOVERNANCE's upward multipliers are deliberately not implemented.
+
+Stored results: **paper sessions sized before this change are not comparable** with sessions
+after it (sizes now 0.25% x weight for every strategy instead of the flat `risk_fraction`).
+Backtest and research results are unaffected (the engine did not change). The run manifest hash
+moves for every role (the context-budget line is in every system prompt).
+
+## 2026-09-29: realism corrections from the backend audit; `engine_v3_realism` (P1-1, P1-2, P1-3, P1-5, P1-16, P2-1, P2-2, P2-6, P2-7, P2-9, P2-11, P2-12, P2-13, P3-1..4, P3-9, E-1) (uncommitted working tree)
+
+**Stored results superseded.** `ENGINE_VERSION` moves from `engine_v2_exit_vocabulary` to
+`engine_v3_realism`; `backtest/version.ENGINE_V3_REASONS` lists every reason. Every change below
+can move a stored number; none is a refactor.
+
+- **P1-1 leverage** (`core/instruments.py`): FCA PS19/18 / ESMA 2018/796 caps by the currency set
+  {USD, EUR, JPY, GBP, CAD, CHF}. AUDUSD, NZDUSD 30 -> 20; EURGBP, EURJPY, GBPJPY, EURCHF, CADJPY,
+  CHFJPY, GBPCAD, GBPCHF, EURCAD, CADCHF 20 -> 30 (and `FX_MAJOR` now means the regulatory
+  major); XAGUSD 20 -> 10; HK50 20 -> 10. Golden over all 41 instruments.
+- **P1-3 price basis** (`backtest/engine.py`, `validation/run.py`, `validation/engine_evaluator.py`):
+  the engine refuses `bid`/`ask`/`last` frames and records `price_basis` per instrument in the data
+  fingerprint (`assumed_mid` for an unlabelled frame; `BacktestConfig.assume_mid=False` refuses
+  one). `run_validation` converts BID bars with `bid_to_mid` at the registered typical spread and
+  the lineage enters the engine fingerprint and cache keys; ASK is refused.
+- **P1-16 sizing** (`backtest/engine.py`, `portfolio/sizing.py`): `fixed_fractional_v2` is the
+  default in both sizers: risk per unit = stop + spread + 2 x E[slippage] (`stop_out_cost_per_unit`,
+  `sim/profiles.expected_slippage_price`), cost profile named or IG_REALISTIC by default in both,
+  recorded in `TradePlan.sizing_basis` and in every result's `config_fingerprint["sizing"]`. The
+  gateway's `max_per_trade_risk` reads `plan.risk_amount`, which now includes the costs (verified
+  by `tests/golden/test_golden_sizing_v2.py`). `FixedFractionalSizer` clips a requested
+  `max_leverage` to the instrument's cap, as `SizingPolicy.leverage_for` always did.
+- **P2-7 financing** (`backtest/position.py`): `financing_nights` weights business-day rollovers,
+  triple on Wednesday for FX and metals, Friday for indices, energy and equities, nothing on
+  Saturday or Sunday, every night for crypto; the `nights_between` docstring corrected. Shared by
+  the paper broker through `PositionBook`, so paper financing changes identically.
+- **P2-9 min stop** (`sim/profiles.py`): `MinStopRule` per asset class; IG_REALISTIC 4 pips on FX
+  (unchanged) and 3 x typical spread elsewhere, SEVERE_STRESS 10 pips / 6x; profile fingerprint
+  `profile_v2`.
+- **P2-13 Sharpe** (`backtest/metrics.py`): `sharpe` on 17:00-New-York daily equity;
+  `sharpe_lo_adjusted` (Lo 2002, Newey-West lag cap), `sharpe_bar_based` (the old figure).
+- **P3-4**: the engine requires a UTC index.
+- **P1-5 GBP research** (`validation/engine_evaluator.py`, `validation/run.py`,
+  `discovery/campaign.py`, `core/money.py`): `EvaluatorConfig`, `run_validation` and
+  `CampaignSpec` default to GBP. `build_research_fx_source` builds a `SeriesFxSource` from the
+  store's validated D1 GBP crosses (closes indexed at bar close; one USD triangulation leg; refusal
+  lists every instrument to ingest); `run_validation(fx_store=...)` and a `CampaignRunner` over
+  `store_bar_source` build it automatically. `SeriesFxSource.max_staleness` 7 -> 4 days (P3-3).
+- **P1-2 agent DSR** (`agents/jobs.py`, `research/experiment.py`): `N` from
+  `ExperimentLedger.count_trials` (family and campaign, payload may only raise it, unknown is
+  `NOT_EVALUATED`); null variance from Lo's (2002) `(1 - g3 SR + (g4-1)/4 SR^2)/(T-1)`.
+  `register_research_handlers(experiments=...)`.
+- **P2-11 WFE** (`validation/ladder.py`): log growth per day where the evaluation records
+  `opening_equity` (the engine evaluator now does); per-fold basis recorded.
+- **P2-12 plateau** (`stats/stability.py`): `(s + |s|) / (m_excl + |s|)`; the old figure kept as
+  `point_plateau_ratio_inclusive`. Threshold unchanged (1.25 == neighbours keep 60%).
+- **P2-1, P2-2** (`risk/limits.py`, `risk/gateway.py` two functions): new sets
+  `limits_v2_default`, `limits_v2_paper`, `limits_v2_conservative` with the blackout
+  `[decision - 15m, decision + max(30m, one bar)]` measured from the signal bar's close, and
+  margin utilisation after the trade. v1 sets and their fingerprints are byte-identical.
+- **P2-6** (`sim/fills.py`): `FxSessionCalendar` anchored to 17:00 America/New_York.
+- **P3-1** (`marketstate/features.py`): demeaned, blockwise rolling OLS (einsum, so a row does not
+  depend on how many rows follow it).
+- **P3-2** (`stats/bootstrap.py`, `spa.py`, `stress.py`): every `rng` required; `None` refused.
+- **P3-9** (`data/store.py`): `end_inclusive`; `end` kept as an alias.
+- **E-1**: `research/preregistration/gate_calibration_e1.json` (draft, unfiled) and
+  `scripts/gate_power_study.py` (synthetic process only; the two evidence processes raise
+  `NotImplementedError`). No gate threshold changed.
+
+Stored results superseded:
+
+1. Every backtest record stamped `engine_v2_exit_vocabulary` or unstamped (sizing, financing,
+   leverage caps, minimum stops); `ResearchStore.sweep_superseded_backtests` marks them.
+2. Every research result computed on HistData (BID) frames: about half a spread per round trip,
+   directionally flattering to longs.
+3. Every stored `Metrics.sharpe` (definition changed to daily equity).
+4. Every stored `ValidationReport`: walk-forward efficiency (basis), plateau ratio (definition),
+   and every result computed in USD (not comparable with GBP paper figures).
+5. Every DSR stored by the agent `validation_handler` (invalid, audit P1-2).
+6. Every discovery campaign report and ledger row produced under a USD account.
+7. Every `EngineEvaluator` cache entry (keys move automatically: engine fingerprint, profile
+   fingerprint v2, `sizing_policy`, `price_basis`).
+8. Paper sessions sized or financed before this change are not comparable with sessions after it
+   (`SizingPolicy()` is now v2; paper financing uses the same book).
+9. Stored market-state trend features (`trend_slope/r2/tstat`) on long high-priced series where
+   the cancellation was material.
+   Not superseded: risk decisions under v1 limit sets; any statistic from a seeded caller (P3-2);
+   anything using `FxSessionCalendar` (no production caller passes it).
+
+Regression pins updated deliberately, with the reason in the diff:
+`tests/golden/test_golden_pnl.py` (two financing goldens: Wednesday triple, 2.64 -> 4.40 GBP and
+5.28 -> 8.80 GBP), `tests/integration/test_locks_regression_pin.py` (five ledger/leg hashes and the
+five exit-policy fingerprints, which embed `ENGINE_VERSION`; trade counts, rejections and signals
+unchanged), and v1-arithmetic sizing tests now select `fixed_fractional_v1` explicitly.
+
+Tests, run 2026-09-29: `ruff check src/ tests/ scripts/gate_power_study.py` clean; 156 test modules
+importing the touched packages plus `tests/golden` and `tests/unit/test_layering.py`: 3697 passed,
+23 skipped, 0 failed.
+
+Not done (files outside this change): `workers/runtime.py` and the API still select the v1 limit
+sets; `workers/research_runtime.py` does not pass `experiments=` so the agent DSR is
+`NOT_EVALUATED` in production; `agents/tools.StoreBarSource.load` does not convert BID bars, so
+agent backtests on HistData frames are now refused by the engine; agent backtest/validation
+payloads still default to USD; `backtest/locks.py` counts sessions on a fixed 22:00 UTC weekend;
+the `parameter_plateau` rationale in `validation/gates.py` still describes the old ratio;
+P2-3 (regime per plan instrument) and P2-10 (IG vs OANDA profile) untouched.
+
+## 2026-09-29: round 4 integration, cross-agent leftovers closed (uncommitted working tree)
+
+Closes the "Not done" list above and the api agent's `charged=` note.
+
+- **Durable research jobs** (`cli.py`): `fiboki worker run research` opens
+  `Orchestrator(path=<FIBOKI_STATE_DIR>/jobs.sqlite)` (`research_jobs_ledger_path`), not an
+  in-memory ledger, so queued jobs, attempts and idempotency keys survive a launchd restart.
+- **Doctor** (`cli.py`): the launchd check lists `uk.fiboki.paper` (optional: "not loaded" is not
+  a warning, loaded-and-not-running is); a new `operator hashes` check flags legacy unsalted
+  SHA-256 entries in `FIBOKI_OPERATORS` via `auth.is_legacy_hash` (names users, never hashes);
+  the heartbeat check reads `Settings.health` through the new
+  `api.settings.health_thresholds_from_env` (also used by `load_settings`: one parser).
+- **One limit-set source** (`risk/limits.default_limit_set(mode)`): BACKTEST/PAPER
+  `limits_v2_paper`, SHADOW/DEMO `limits_v2_default`, LIVE `limits_v2_conservative`.
+  `workers/runtime.py` (builder and `build_replay_session` defaults) and the API
+  (`api/platform.py`, one line: the hard-coded `limits_v1_paper` was there, not in the routers,
+  and every router reads `platform.limits`) select through it. The paper-forward wiring still
+  names `limits_v1_paper` explicitly: that file is reviewed and sha-stamped, so it was left.
+- **No benign defaults** (`workers/runtime.RiskContextBuilder`): no P&L ledger -> `daily_pnl` /
+  `weekly_pnl` `None`; no correlation matrix -> `correlated_exposure` `None`; no market-open
+  source -> `market_open` `None` (blocks). The replay sources market-open from its own data
+  (`replay_market_open_source`: a bar at `now`), so fills still follow the engine's calendar.
+  PAPER compositions (replay and paper forward) build the gateway with
+  `paper_allows_missing_inputs=True`; the replay summary records it and `limits_version`.
+  `open_risk` is priced with the evaluator's sizing rule (`fixed_fractional_v2`: stop distance +
+  spread + 2 E[slippage]), the same definition as `TradePlan.risk_amount`.
+  `event_source_horizon_minutes` widens the calendar source to the v2 window
+  (`bar + max(pre, bar)` ahead), so a v2 blackout is not hidden by a 15-minute source.
+- **Paper forward** (`entrypoints/paper_forward.py`): `SignalEvaluator` gets
+  `snapshot=builder.snapshot`, `strategy=builder.strategy_view`, `regime=builder.regime_source`
+  (none wired: "unknown"); the gateway is `mode=PAPER`; the builder carries the evaluator's
+  sizing policy; `data_stale_after_seconds` comes from `Settings.health`. Credentials are
+  `FIBOKI_OANDA_PRACTICE_TOKEN` / `FIBOKI_OANDA_PRACTICE_ACCOUNT_ID` (declared in
+  `ENV_REGISTRY`); the old `OANDA_PRACTICE_*` names are read for one release when the new ones
+  are unset, with a warning naming the variable (never the value).
+- **Research runtime** (`workers/research_runtime.py`): the research store's
+  `ExperimentLedger` is passed as `experiments=` to every handler, so the agent DSR is
+  evaluable. Thesis debates are scheduled per instrument per `FIBOKI_THESIS_DEBATE_TIMEFRAME`
+  (`H4` default, or `D1`) close via `thesis_debate_due`, when agent cycles are on and
+  `FIBOKI_THESIS_DEBATE_INSTRUMENTS` is set (empty by default: opt-in, a new model workload per
+  bar is not switched on by an upgrade). Claimed before running, not fired on first start, a
+  missed run of many closes runs once; store `<FIBOKI_STATE_DIR>/agents/thesis.sqlite`.
+- **Agent bars and currency** (`agents/tools.py`, `agents/jobs.py`): `DataStoreBarSource` and
+  `InMemoryBarSource` convert BID frames with `validation.run.research_mid_frame` (lineage on
+  `frame.attrs["price_lineage"]`); payloads default to `GBP` (`jobs.DEFAULT_ACCOUNT_CCY`). A GBP
+  default without FX would have dead-lettered every USD-quoted default backtest, so both bar
+  sources expose `fx_source(account_ccy, quote_ccy)` (THE research
+  `build_research_fx_source` over their D1 crosses) and `jobs._fx_source` tries it first; the
+  1.0 approximation still needs `fx_approximation_acknowledged`, and a refusal names the pairs
+  to ingest. This goes beyond "currency default" in `jobs.py` by one parameter; it is what makes
+  the default coherent. Test fixtures gained a flat GBPUSD D1 series (`gbp_fx_frames`).
+- **Live worker** (`workers/live_worker.py`): `data_stale_after_seconds` defaults to
+  `DEFAULT_HEALTH_THRESHOLDS.data_stale_after_seconds`; no second 900.
+- **Locks** (`backtest/locks.py`): the session clock is anchored to Friday 17:00 to Sunday
+  17:00 America/New_York from `sim.fills.FxSessionCalendar` (per-week closures, so DST and the
+  two changeover weekends are exact); lock fingerprint calendar id
+  `session_bars:interbank_weekend:fri17-sun17_america_new_york`. Winter results are unchanged.
+- **Gates** (`validation/gates.py`): the `parameter_plateau` rationale states
+  `(s + |s|) / (m + |s|)`. The rationale is part of `GATE_SET_V2.fingerprint()`, so the gate-set
+  fingerprint moved; reports computed under the old plateau definition were already superseded.
+- **API** (`api/routers/trading.py`): `/api/trading/trades` rows pass `charged` from the row's
+  paper session (`Platform.session_charged_costs`), so a caveat the record contradicts is dropped.
+- **Tests** (`tests/conftest.py`): an autouse fixture points `FIBOKI_STATE_DIR` at a temporary
+  directory for every test; no test reads `./var/killswitch.jsonl`.
+- **Docs**: `deploy/README.md` (installer-based launchd, `uk.fiboki.paper`, legacy plist removed,
+  exit 75's two meanings); `AGENTIC_INTEGRATION_PLAN.md` §2 D-A4 addendum (ForexFactory opt-in,
+  comparison only, terms flagged).
+
+Stored results superseded: paper replays (limit set v2, cost-inclusive open risk feeding the
+construction budgets, market-open now sourced); any lock-bearing backtest or paper decision
+whose lock spanned a daylight-saving week (exit-policy fingerprints of lock-declaring documents
+move with the calendar id); agent backtests run under the USD default (not comparable with GBP
+research); every agent validation whose DSR was NOT_EVALUATED for want of the ledger.
+Not superseded: v1-limit decisions, documents without locks (pins unchanged), winter lock timing.
+
+## 2026-09-29: research sizes as paper sizes; the engine allocates through portfolio construction (audit F B-24) (uncommitted working tree)
+
+Paper sized every bar's signals through portfolio construction; the backtest engine still used a
+flat `risk_fraction`. A research figure and a paper figure for the same signal on the same book
+therefore disagreed on size, P&L and drawdown by construction.
+
+- **The seam.** `backtest` (rank 50) may not import `portfolio` (rank 60), so the engine declares
+  a `ConstructionPolicy` Protocol (`ConstructionRequest` in, `AllocationDecision` out) and
+  `portfolio/engine_policy.BacktestConstructionPolicy` satisfies it. `BacktestConfig.construction`
+  defaults to `None` at the ENGINE (the flat path, byte-identical to every existing pin, and
+  fingerprinted `construction=none`), because an engine-level default would need the upward
+  import. Every validation entry point defaults to the paper runtime's policy instead
+  (`validation.engine_evaluator.research_construction_policy`; `EngineEvaluator.construction`,
+  `run_validation(construction=...)`). No `ENGINE_VERSION` bump: the policy's fingerprint
+  (construction version, a digest of every `ConstructionConfig` number, allocator, tier, sources)
+  is in `BacktestConfig.fingerprint()` and so in every result and every evaluation cache key.
+- **The engine** offers each decision bar's signals that survive the reversal and lock filters to
+  the policy together, against its own book (margin marked as `PaperBroker` marks it; open risk
+  cost-inclusive under the sizer's profile, as the runtime now measures it; its own equity curve
+  for realised vol), then sizes each accepted one ONCE with the existing sizer at
+  `risk_fraction = base_risk_pct / 100`, `portfolio_weight = weight`
+  (`FixedFractionalSizer.allocated`; `portfolio_weight` evaluated in `size_trade`'s order, and
+  exactly 1.0 by default). Every decision is a row of `BacktestResult.allocation_ledger` (compact
+  JSON: tier, base risk, weight, every step's factor and detail, size, outcome) and each trade row
+  links to its decision (`trade_allocations()`, an `allocation` column on `ledger_frame()`).
+  Refusals are counted as `allocation_dropped`.
+- **No conviction in a backtest**, by construction (plan D-A3): no engine, config, request or
+  policy field can carry one, `CandidateSignal(conviction=None)` is a literal (AST-tested), the
+  step reads `missing` at factor 1.0 even with the conviction policy enabled.
+- **Stated in the fingerprint:** regime `unknown` (x0.6) unless a regime source is supplied (the
+  engine has none), lifecycle PAPER, health 1.0, tier PROBATIONARY, instrument correlation
+  unmeasured (0.30) unless a matrix is supplied, instrument vol not computed under equal risk (only
+  volatility parity reads it).
+- **Parity** (`tests/integration/test_construction_parity.py`): the engine, the runtime's own
+  `SignalEvaluator` + `RiskContextBuilder.snapshot` over a `PaperBroker`, and `build_replay_session`
+  end to end (worker, gateway with widened loss limits and every attempt asserted allowed,
+  execution service) produce byte-identical size-and-reason, trade and leg ledgers on two
+  instruments over 1,500 bars; de-risk, severe, PAUSE and FLATTEN-required each fire, in order, on
+  the same bar on all three paths.
+- **Pins:** `test_locks_regression_pin.py` unchanged (the `None` path). New
+  `tests/golden/test_golden_construction_engine.py` pins the five seed documents under the
+  default policy (trade counts and signals seen equal to the flat pins; every size moves; the flat
+  run's `max_concurrent` refusals become `allocation_dropped`) with one trade worked by hand
+  (0.25% x 0.6 of 100,000 = 150.00 over 9.10437 per unit = 16 units, flat path 109).
+
+Stored results superseded (sizing-dependent metrics only: P&L scale, drawdown, ruin, gates on
+them; not hit rate or trade counts except where construction refused an entry): every stored
+`ValidationReport`, discovery campaign report and ladder evaluation produced before this change,
+and every `EngineEvaluator` cache entry (its key moves automatically). See VALIDATION_STANDARD §10.
+
+Caveats: a replay session measures correlation over the whole replayed window (look-ahead) while
+the engine uses the unmeasured default unless handed a matrix; a locked signal is refused before
+allocation in the engine and after it by paper's gateway; the replay runtime schedules no
+reversals; `agents/jobs.py` builds a `BacktestConfig` without construction (flat path) and is
+outside this change; the runtime still calls its own copies of the snapshot arithmetic
+(`workers/` outside this change), held together by the parity test. Allocation costs about 5 ms
+per signal on a 3,200-bar run, mostly the realised-vol estimate the runtime also makes.
+
+Tests, run 2026-09-29: `ruff check src/ tests/` clean; the 69 test modules importing
+`fiboki.backtest`, `fiboki.validation` or `fiboki.portfolio` (three of them new) plus
+`tests/unit/test_layering.py`: 1370 passed, 0 failed; the parity suites
+(`test_construction_parity`, `test_paper_backtest_parity`, `test_venue_position_manager`,
+`test_lock_parity`, `test_seed_binding_parity`, `test_runtime_sizing_path`,
+`test_locks_regression_pin`): all passed.
+
+Tests, run 2026-09-29: `ruff check src/ tests/ scripts/` clean; full suite
+`FIBOKEI_WORKER_EXTERNAL=true .venv/bin/python -m pytest -q -p no:cacheprovider -m "not network"
+--timeout=300`: 4802 passed, 24 skipped, 0 failed (17m25s).
+
+Not done (outside this change's files): `docs/v2/OPERATIONS.md` §13.6, `scripts/fiboki-service.sh`
+and the `uk.fiboki.paper.plist` comment still name `OANDA_PRACTICE_*` (the fallback keeps them
+working for one release); the paper-forward wiring still selects `limits_v1_paper`.

@@ -43,6 +43,7 @@ The evidence on LLM trading performance (report D) is the load-bearing finding: 
 | D-A6 | Local-first models (Ollama) with pinned weights hash; remote providers allowed for research roles only, cost-capped per session (USD 0.25 today). | Providers existed, none wired. | Reproducibility; report D §5.4. |
 | D-A7 | Dukascopy bulk pulls are paused until its licence is clarified in writing; HistData and OANDA candles are the price sources. | Dukascopy provider in use. | Report D §4.5 (website terms forbid bots and database construction). |
 | D-A8 | The two operators' capital arrangement is a legal question to settle before any shared or pooled trading. | Not raised. | Report D §3.4 (perimeter). |
+| D-A4 addendum (2026-09-29) | The ForexFactory weekly feed (`fiboki.data.providers.forexfactory_feed`) is OPT-IN (`FIBOKI_FF_CALENDAR_OPT_IN=true`) and OFF by default. When on, it is a COMPARISON source only: its snapshots are written with `terms_status: opt_in_unclear` beside the official calendar and are never the gateway's or the venue's event source. Its terms prohibit copying the feed and state no licence for the export, which is why it is flagged, not adopted. | No aggregator feed in the tree. | D-A4 stands: the official publisher schedules remain the only calendar of record. |
 
 ---
 
@@ -160,3 +161,21 @@ LLM order authority; LLM sizing; LLM-set risk limits; LLM kill-switch control; L
 - **Prompt injection through headlines.** Mitigated by a tool-less classifier, schema-only outputs, quarantined store, deterministic consumer. Residual: a wrong annotation, which can only block an entry.
 - **Operator anchoring on fluent prose.** Mitigated by labelling every agent note "commentary, not a signal" and linking every claim to its run and dataset.
 - **Scope creep toward LLM decisions after a good month.** Mitigated by this document and the AST tests. The decision to widen any channel requires the same pre-registration as the original.
+
+---
+
+## 9. Revision 1.1 (2026-09-29): status, audit findings and additions
+
+**Shipped since §3** (commit ids on `v2/integration`): real local provider with pinned weights, run manifest, offline evals, forecast record and scorer (`936d65b`); research composition root and calendar into gateway/campaigns (`145e004`); headline recorder and PIT macro providers (`892c958`); bar-indexed locks (`f4e1835`); event channel with veto policy in shadow, llama.cpp provider (`2b840cd`); source registry, Finnhub, GDELT, positioning (`f4f1131`); doctor, desktop install, backup/restore, launchd (`a6ca037`); round 4: kill-switch single path and durability, research-integrity fixes under `engine_v3_realism`, portfolio construction wired in paper and engine with a parity test, conviction channel, agent influence tiers, thesis debate, forward paper trader, durable job ledger (this commit). Wave 2 and most of Wave 3 are therefore complete; Wave 4 is built and running in shadow; Wave 5 (forward evaluation) starts when a real model runs.
+
+**Audit corrections adopted** (report F P1-2, P1-11, P2-22/23; report G §3): the plan's A2 acceptance "first real-model run" is still unmet (needs the Mac); budgets are now tokens and seconds as well as USD; construction was unwired when this plan was written and is now the sizing path in both engine and paper.
+
+**Additions from report G adopted into the plan:**
+
+- **Tier ladder (§3.7 of G)** is implemented as `core/tier.py` and is the answer to "can the agent decide size": the agent expresses conviction; policy maps it to a bounded factor; the tier decides whether the factor is applied. T1 today. The path to more agent influence is: T2 veto (pre-registered event study passes) → T3 dampen (debate study passes) → T4 author candidates (S0–S9 pipeline) → a future, separately pre-registered "scale within [floor, cap]" tier that would allow a factor above 1.0 only inside the tier's base risk and the gateway's caps. Nothing on the never-list moves.
+- **Agent-authored candidates (G §3.5)**: S0 brief → S1 hypothesis with evidence against → S2 grammar-constrained DSL → S3 compile, complexity and novelty gates → S4 smoke backtest on a development slice → S5 automatic trial accounting and weekly quota → S6 ladder → S7 different-family critic → S8 human review in the Agent Desk → S9 lifecycle with an "agent-authored" provenance badge. Next agent wave.
+- **llama.cpp runtime (G §3.4)**: one llama-server per model under launchd, four queues (event, bar-close, research, maintenance) with admission control on slots and memory, per-role context budgets versioned in the manifest (done), grammar-constrained JSON from pydantic schemas with local `$ref` inlining (done for Ollama; llama.cpp json_schema done), static prefix first for KV reuse with slot pinning (next), bake-off harness before any routing change (next), episodic structured run summaries as the only agent-to-agent memory (next), drift and injection canaries (next).
+- **Agent Desk** (G §3.6): runs, claims with evidence links, forecasts with calibration, shadow ledgers with days-until-decision, candidates and models. Frontend Wave 4e; backend read models next.
+- **D-A4 addendum**: ForexFactory feed is opt-in, off by default and comparison-only; the official calendar remains the only decision input.
+
+**Open questions unchanged:** OANDA spread-bet API confirmation; Dukascopy written terms; whose capital is traded.

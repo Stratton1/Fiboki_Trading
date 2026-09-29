@@ -32,6 +32,10 @@ Your options are to leave V1 running as-is, take it down, or put a holding page 
 
 ---
 
+### C4. Rotate both operator passwords (added 2026-09-29)
+
+Operator entries in `FIBOKI_OPERATORS` were unsalted SHA-256 and the dev launcher gave joe and tom the same default. Passwords are now stored as `scrypt$...`; legacy entries still verify but `fiboki doctor` flags them. Generate new hashes with `.venv/bin/python -c "from fiboki.api.routers.auth import hash_password as h; print(h('<new password>'))"` (see docs/v2/SECURITY_MODEL.md), put them in `~/.fiboki/env`, and remove `FIBOKI_DEV_PASSWORD` from anything committed.
+
 ## REQUIRED BEFORE PAPER TRADING
 
 ### P1. Open an OANDA practice account and resolve two unknowns
