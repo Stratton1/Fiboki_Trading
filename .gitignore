@@ -81,3 +81,9 @@ _*.db*
 _*.db-journal
 *.db-journal
 _*probe*
+
+# Build and test caches (never source)
+.hypothesis/
+apps/web/tsconfig.tsbuildinfo
+_agent_briefs/
+.coverage.vm.*
