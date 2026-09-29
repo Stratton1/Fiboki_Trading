@@ -57,9 +57,24 @@ for name in "${NAMES[@]}"; do
   mv "$dest.tmp" "$dest"
   echo "wrote    $dest"
   if [ "$LOAD" -eq 1 ]; then
-    launchctl bootout "$DOMAIN/uk.fiboki.$name" 2>/dev/null || true
+    label="uk.fiboki.$name"
+    if launchctl print "$DOMAIN/$label" >/dev/null 2>&1; then
+      launchctl bootout "$DOMAIN/$label" 2>/dev/null || true
+      # bootout returns before the service is gone: the worker finishes its
+      # current cycle on SIGTERM, and bootstrapping the same label while it is
+      # still being torn down fails with "Bootstrap failed: 5". Wait for it.
+      waited=0
+      while launchctl print "$DOMAIN/$label" >/dev/null 2>&1; do
+        if [ "$waited" -ge 90 ]; then
+          echo "$label is still stopping after ${waited}s; not reloaded (retry with --load once it has exited)" >&2
+          exit 1
+        fi
+        sleep 1; waited=$((waited + 1))
+      done
+      [ "$waited" -gt 0 ] && echo "stopped  $label (after ${waited}s)"
+    fi
     launchctl bootstrap "$DOMAIN" "$dest"
-    echo "loaded   uk.fiboki.$name   (launchctl print $DOMAIN/uk.fiboki.$name)"
+    echo "loaded   $label   (launchctl print $DOMAIN/$label)"
   fi
 done
 

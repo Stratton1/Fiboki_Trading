@@ -69,7 +69,7 @@ def test_the_service_wrapper_runs_the_committed_wiring_with_a_sleep_assertion() 
     assert "caffeinate -is -w $$" in case, "held for the life of the exec'd process"
     assert case.index("caffeinate -is") < case.index('exec "$ROOT/.venv/bin/fiboki"')
     # Paper is forced AFTER the env file is read, for this service as for the others.
-    assert text.index('. "$ENV_FILE"') < text.index("export FIBOKI_EXECUTION_MODE=paper")
+    assert text.index('done < "$ENV_FILE"') < text.index("export FIBOKI_EXECUTION_MODE=paper")
 
 
 def _stub(bin_dir: Path, name: str, body: str) -> None:

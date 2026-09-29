@@ -158,11 +158,47 @@ def test_launchd_install_substitutes_the_repo_into_five_valid_plists(tmp_path: P
 
 def test_the_service_wrapper_forces_paper_after_reading_the_env_file() -> None:
     text = (SCRIPTS / "fiboki-service.sh").read_text()
-    sourced = text.index('. "$ENV_FILE"')
+    read = text.index('done < "$ENV_FILE"')
     forced = text.index("export FIBOKI_EXECUTION_MODE=paper")
     unset = text.index("unset FIBOKI_LIVE_EXECUTION_ENABLED FIBOKI_LIVE_RUNTIME_ARMED")
-    assert sourced < forced and sourced < unset
+    assert read < forced and read < unset
+    # Never sourced: scrypt hashes contain `$` and would be expanded away.
+    assert '. "$ENV_FILE"' not in text and 'source "$ENV_FILE"' not in text
     assert _run(["bash", str(SCRIPTS / "fiboki-service.sh"), "bogus"]).returncode == 2
+
+
+def test_the_service_wrapper_reads_env_values_without_expansion(tmp_path: Path) -> None:
+    """The reader block of fiboki-service.sh, run on its own against a file with
+    `$`-laden and quoted values: every value comes through verbatim, malformed
+    keys are skipped, and a value trying to force live mode is still overridden
+    by the paper-only block that follows it."""
+    text = (SCRIPTS / "fiboki-service.sh").read_text()
+    block = text[text.index('ENV_FILE="${FIBOKI_HOME'):text.index("# ---- desktop defaults")]
+    env = tmp_path / "env"
+    env.write_text(
+        "# comment\n"
+        "\n"
+        "FIBOKI_OPERATORS='joe:scrypt$16384$8$1$abc$def'\n"
+        'FIBOKI_SESSION_SECRET="s3cr$et=with=equals"\n'
+        "PLAIN=$HOME/unexpanded\n"
+        "bad-key=ignored\n"
+        "FIBOKI_EXECUTION_MODE=live\n"
+    )
+    script = (
+        "set -euo pipefail\n"
+        f"{block}\n"
+        'printf "%s\\n" "$FIBOKI_OPERATORS" "$FIBOKI_SESSION_SECRET" "$PLAIN" '
+        '"${FIBOKI_EXECUTION_MODE}" "${bad_key:-unset}"\n'
+    )
+    run = subprocess.run(
+        ["bash", "-c", script], capture_output=True, text=True,
+        env={"HOME": str(tmp_path), "FIBOKI_HOME": str(tmp_path), "PATH": os.environ["PATH"]},
+    )
+    assert run.returncode == 0, run.stderr
+    assert run.stdout.splitlines() == [
+        "joe:scrypt$16384$8$1$abc$def", "s3cr$et=with=equals", "$HOME/unexpanded", "paper", "unset",
+    ]
+    assert "ignoring malformed line" in run.stderr and "bad-key" in run.stderr
 
 
 # ------------------------------------------------------- backup and restore
