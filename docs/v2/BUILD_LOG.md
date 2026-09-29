@@ -1373,3 +1373,19 @@ figure in the commit message.
 
 Stored results: none affected. Docs: `DEPLOYMENT.md` §2.5, §2.6 (new), `OPERATIONS.md` §13.3,
 `USER_ACTIONS.md` (C1, C4, M2, P7 marked done with evidence; status line).
+
+**First real-model workflow, and the 8 GB constraint (same evening).** The runtime worker's
+audit ledger (`~/fiboki/var/agents/audit.jsonl`) holds the first agent workflow ever run against
+a real model: `wf_event_scan_20260929T1230Z`, role `event_classifier`, provider `local`,
+`model_digest sha256:359d7dd4...` (qwen3:4b), `query_news` then `record_event_annotations`
+with `quarantined: true`. Of five model calls, one completed (4,024 prompt tokens, 133
+completion, 39.6 s) and four timed out at the 300 s read timeout. Cause, from `vm_stat` and
+`sysctl vm.swapusage` on the MacBook: 8 GB unified memory, ~5 GB wired while the model is
+loaded (weights are wired for Metal), swap 14.8 of 15.4 GB in use, 13% free; K3, Chrome, the
+four services and the Claude app share the remainder, so the runner is evicted between calls.
+The 5 GB drop in free disk that `fiboki doctor` reported was the swap file growing, not Fiboki.
+Operator change on this machine: `FIBOKI_EVENT_SCAN_MINUTES=60` (was 15) in `~/.fiboki/env`,
+worker kickstarted and verified reading it; the nightly cycle at 02:15 UTC is unchanged. This
+is a hardware limit, not a defect: the platform's working set with a campaign running is above
+8 GB, which is why the plan puts it on the desktop. Agent quality remains unmeasured (one
+completed call is not a sample).
