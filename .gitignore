@@ -87,3 +87,4 @@ _*probe*
 apps/web/tsconfig.tsbuildinfo
 _agent_briefs/
 .coverage.vm.*
+scripts/desktop/Fiboki.icns

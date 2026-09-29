@@ -93,6 +93,20 @@ else
 fi
 echo
 
+# If the platform is installed as launchd services, they own the processes:
+# show their state and open the workstation instead of starting a second copy.
+if command -v launchctl >/dev/null 2>&1 && launchctl list 2>/dev/null | grep -q 'uk\.fiboki'; then
+  echo "Fiboki runs as launchd services on this Mac:"
+  launchctl list 2>/dev/null | grep 'uk\.fiboki' | awk '{printf "  %-28s pid=%s exit=%s\n", $3, $1, $2}'
+  echo
+  echo "  status : .venv/bin/fiboki doctor"
+  echo "  logs   : $ROOT/var/logs/"
+  echo "  stop   : scripts/launchd-install.sh --unload"
+  open "http://localhost:3000" 2>/dev/null || true
+  read -r -p "Press return to close this window (services keep running)." _
+  exit 0
+fi
+
 scripts/dev-up.sh
 
 # dev-up.sh prints the URL and returns once the processes are up; keep the
