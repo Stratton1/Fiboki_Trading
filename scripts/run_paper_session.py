@@ -14,15 +14,19 @@ a REAL seed document from ``research/strategies``, compiled through
 ``fiboki.strategy.compiler``, so the signals are the platform's own and not a
 stand-in written for this script.
 
-Economic calendar guard
------------------------
+Economic calendar
+-----------------
 Before replaying, the committed official calendar
 (``fiboki.marketstate.calendar.load_official_calendar``) must cover the replay's
 span and the instrument's currencies, or the script refuses with
-``USER_ACTION_NOTE``. ``--allow-empty-calendar`` is the explicit opt-out and is
-recorded in ``summary.json``. KNOWN GAP: the calendar is CHECKED here but not
-yet wired into the risk gateway (``build_replay_session`` takes no event
-source), so the gateway's ``event_blackout`` check still sees no events.
+``USER_ACTION_NOTE``. The same calendar is then WIRED into the risk gateway's
+event source and the paper venue's blackout source by ``build_replay_session``,
+so the gateway's ``event_blackout`` check blocks new entries around scheduled
+releases. ``--allow-empty-calendar`` lifts only the coverage refusal (the
+calendar is still applied wherever it has events); ``--no-calendar`` replays
+with no event source at all. Both are recorded in ``summary.json`` under
+``economic_calendar``, whose ``wired_into_gateway`` is read back from the
+assembled session rather than asserted.
 
 PAPER ONLY. ``build_replay_session`` constructs its ``ExecutionService`` with
 ``ExecutionMode.PAPER`` and a ``PaperBroker``; there is no argument here that
@@ -78,6 +82,8 @@ from fiboki.data.schema import DatasetKind  # noqa: E402
 from fiboki.data.store import DataStore  # noqa: E402
 from fiboki.marketstate.calendar import (  # noqa: E402
     CalendarError,
+    EconomicCalendar,
+    InMemoryEconomicCalendar,
     instrument_currencies,
     load_official_calendar,
 )
@@ -187,8 +193,14 @@ def _write_csv(path: Path, records: list[Any]) -> int:
     return len(rows)
 
 
-def _calendar_guard(symbol: str, ohlc: pd.DataFrame, *, allow_empty: bool) -> dict[str, Any]:
-    """Refuse to replay blind through scheduled events unless explicitly allowed."""
+def _calendar_guard(
+    symbol: str, ohlc: pd.DataFrame, *, allow_empty: bool, no_calendar: bool = False
+) -> dict[str, Any]:
+    """Refuse to replay blind through scheduled events unless explicitly allowed.
+
+    ``wired_into_gateway`` here is the INTENT; :func:`main` overwrites it with
+    what the assembled session actually reports.
+    """
     calendar = load_official_calendar()
     cov = calendar.coverage()
     record: dict[str, Any] = {
@@ -199,8 +211,13 @@ def _calendar_guard(symbol: str, ohlc: pd.DataFrame, *, allow_empty: bool) -> di
         "replay_start": ohlc.index[0].isoformat(),
         "replay_end": ohlc.index[-1].isoformat(),
         "allow_empty_calendar": allow_empty,
-        "wired_into_gateway": False,
+        "no_calendar": no_calendar,
+        "wired_into_gateway": not no_calendar,
     }
+    if no_calendar:
+        record["covered"] = False
+        print("  WARNING --no-calendar: the gateway will see no scheduled events")
+        return record
     try:
         calendar.assert_populated(
             start=ohlc.index[0], end=ohlc.index[-1], currencies=instrument_currencies(symbol)
@@ -244,7 +261,16 @@ def main(argv: list[str] | None = None) -> int:
         action="store_true",
         help=(
             "Replay even when the official economic calendar does not cover the "
-            "replay span or the instrument's currencies. Recorded in summary.json."
+            "replay span or the instrument's currencies. The calendar is still "
+            "applied where it has events. Recorded in summary.json."
+        ),
+    )
+    parser.add_argument(
+        "--no-calendar",
+        action="store_true",
+        help=(
+            "Replay with NO economic-calendar event source: the gateway's "
+            "event_blackout check sees nothing. Recorded in summary.json."
         ),
     )
     args = parser.parse_args(argv)
@@ -259,7 +285,12 @@ def main(argv: list[str] | None = None) -> int:
     if args.bars:
         ohlc = ohlc.iloc[: args.bars]
 
-    args.calendar_guard = _calendar_guard(symbol, ohlc, allow_empty=args.allow_empty_calendar)
+    args.calendar_guard = _calendar_guard(
+        symbol, ohlc, allow_empty=args.allow_empty_calendar, no_calendar=args.no_calendar
+    )
+    calendar: EconomicCalendar = (
+        InMemoryEconomicCalendar.empty() if args.no_calendar else load_official_calendar()
+    )
 
     document = StrategyDocument.from_json(
         (REPO / "research" / "strategies" / f"{args.strategy}.json").read_text(
@@ -296,6 +327,10 @@ def main(argv: list[str] | None = None) -> int:
             timeframe=timeframe.value,
             warmup=source.warmup_period,
             limits=PAPER_LIMITS,
+            calendar=calendar,
+            # The guard above has already refused an uncovered replay unless
+            # one of the two opt-outs was given; the session re-checks.
+            allow_empty_calendar=args.allow_empty_calendar or args.no_calendar,
             worker_config=LiveWorkerConfig(
                 max_cycles=len(ohlc),
                 idle_sleep_seconds=0.0,
@@ -307,6 +342,9 @@ def main(argv: list[str] | None = None) -> int:
         )
         exit_code = session.worker.run(install_signals=False)
         summary = session.summary()
+        args.calendar_guard["wired_into_gateway"] = bool(
+            summary["economic_calendar"]["wired_into_gateway"]
+        )
         telemetry = session.telemetry()
         trades = list(session.broker.trades)
         open_positions = list(session.broker.book.open)
@@ -390,8 +428,13 @@ def _report(
         "losses": n_trades - wins,
         "win_rate_pct": round(100.0 * wins / n_trades, 2) if n_trades else None,
         "open_positions_at_end": n_open,
-        "economic_calendar": getattr(args, "calendar_guard", None),
-        **summary,
+        **{k: v for k, v in summary.items() if k != "economic_calendar"},
+        # The guard's record (what was checked) with the session's own report
+        # (what the gateway was actually given) nested under it.
+        "economic_calendar": {
+            **(getattr(args, "calendar_guard", None) or {}),
+            "session": summary.get("economic_calendar"),
+        },
     }
     (args.out / "summary.json").write_text(
         json.dumps(payload, indent=2, default=str), encoding="utf-8"

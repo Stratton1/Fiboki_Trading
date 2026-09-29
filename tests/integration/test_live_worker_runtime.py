@@ -130,6 +130,13 @@ class BreakoutSource:
 
 
 def _session(frame: pd.DataFrame, *, store: WorkerStore, max_cycles: int, **kwargs):
+    # The real XAUUSD H4 slices start in 2009 and the official calendar is
+    # dated from 2024-01-01, so the session would (rightly) refuse them. These
+    # tests are about the assembly, not about event blackouts: they opt out of
+    # the COVERAGE refusal explicitly, and the calendar is still applied
+    # wherever it has events. tests/integration/test_replay_calendar_blackout.py
+    # is where the blackout itself is proved.
+    kwargs.setdefault("allow_empty_calendar", True)
     return build_replay_session(
         frames={"XAUUSD": frame},
         signal_source=BreakoutSource(),

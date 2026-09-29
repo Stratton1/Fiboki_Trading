@@ -897,11 +897,17 @@ def worker_run(
     from fiboki.agents.orchestrator import Orchestrator
 
     orchestrator = Orchestrator()
-    _warn(
-        "this orchestrator has no handlers registered, so the worker will idle. "
-        "Handlers are registered by the application wiring; this path exists so the "
-        "process, lease and heartbeat can be exercised standalone."
-    )
+    if os.environ.get("FIBOKI_AGENT_CYCLES", "").strip().lower() in {"1", "true", "yes", "on"}:
+        _warn(
+            "FIBOKI_AGENT_CYCLES is on: the worker composes the agent research "
+            "runtime and registers the deterministic job handlers in setup()."
+        )
+    else:
+        _warn(
+            "this orchestrator has no handlers registered, so the worker will idle. "
+            "Set FIBOKI_AGENT_CYCLES=true to compose the research runtime; this "
+            "path exists so the process, lease and heartbeat can be exercised standalone."
+        )
     worker = ResearchWorker(orchestrator, store, config, dispatcher=dispatcher)
     console.print(
         Panel(
@@ -1656,6 +1662,343 @@ def calendar_check(
     _emit(payload, as_json=as_json, render=_render)
     if unknown and not in_blackout:
         raise typer.Exit(EXIT_FAIL)
+
+
+# ===========================================================================
+# BEGIN news + macro (Wave 3: point-in-time text and macro data)
+# Self-contained block: its own sub-apps, helpers and commands. Nothing above
+# this line depends on it.
+# ===========================================================================
+
+news_app = typer.Typer(
+    help="Headline recorder: append-only central-bank and vendor headlines.",
+    no_args_is_help=True,
+)
+macro_app = typer.Typer(
+    help="Point-in-time macro providers: describe, fetch, as-of views.",
+    no_args_is_help=True,
+)
+app.add_typer(news_app, name="news")
+app.add_typer(macro_app, name="macro")
+
+_NEWS_STATE_ENV = "FIBOKI_STATE_DIR"
+
+
+def _news_store_path(state_dir: Path | None) -> Path:
+    from fiboki.data.news import default_store_path
+
+    base = state_dir if state_dir is not None else Path(os.environ.get(_NEWS_STATE_ENV) or "var")
+    return default_store_path(base)
+
+
+def _http_client() -> Any:
+    """The one real HTTP client for news and macro fetches (proxy from the environment)."""
+    import httpx
+
+    return httpx.Client(timeout=30.0, follow_redirects=True)
+
+
+@news_app.command("record")
+def news_record(
+    once: bool = typer.Option(False, "--once", help="Poll every source once and exit."),
+    loop: bool = typer.Option(False, "--loop", help="Poll on a fixed cadence until SIGTERM/SIGINT."),
+    interval: float = typer.Option(300.0, "--interval", help="Seconds between polls (--loop)."),
+    state_dir: Path | None = typer.Option(None, "--state-dir", help="Default: $FIBOKI_STATE_DIR or ./var."),
+    no_vendors: bool = typer.Option(False, "--no-vendors", help="Official feeds only, even if vendor keys are set."),
+    marketaux_min_interval: float = typer.Option(900.0, "--marketaux-min-interval", help="Seconds between Marketaux calls (plan quota)."),
+    as_json: bool = typer.Option(False, "--json"),
+) -> None:
+    """Record headlines. observed_at is this process's UTC clock at each poll.
+
+    Exit 0 when the poll(s) ran, even if some feeds failed (failures are in the
+    poll log and printed); exit 1 when EVERY enabled source failed in the last
+    poll, because that is a recorder recording nothing.
+    """
+    import signal
+    from datetime import UTC, datetime
+
+    from fiboki.data.news import HeadlineStore, NewsRecorder, run_loop
+    from fiboki.data.news.sources import vendor_clients_from_env
+
+    if once == loop:
+        _fail("choose exactly one of --once or --loop", EXIT_MISUSE)
+    if interval < 30:
+        _fail("--interval below 30 s is impolite to the publishers; refusing", EXIT_MISUSE)
+    path = _news_store_path(state_dir)
+    client = _http_client()
+    extra: list[Any] = []
+    disabled: dict[str, str] = {}
+    if no_vendors:
+        disabled = {"finnhub": "--no-vendors", "marketaux": "--no-vendors"}
+    else:
+        extra, disabled = vendor_clients_from_env(
+            client, marketaux_min_interval_s=marketaux_min_interval
+        )
+    store = HeadlineStore(path)
+    recorder = NewsRecorder.official(store, client, extra_readers=extra, disabled=disabled)
+    last: dict[str, Any] = {}
+
+    def _report(result: Any) -> None:
+        last["result"] = result
+        d = result.to_dict()
+        if as_json:
+            console.print_json(json.dumps(d, default=str))
+            return
+        console.print(
+            f"{d['started_at']}  new={d['new']} fetched={d['fetched']} dup={d['duplicate']} "
+            f"revised={d['revised']} rejected={d['rejected']} errors={len(d['errors'])}"
+        )
+        for key, why in d["errors"].items():
+            _warn(f"{key}: {why}")
+
+    def _now() -> datetime:
+        return datetime.now(tz=UTC)
+
+    try:
+        if once:
+            _report(recorder.poll_once(_now()))
+        else:
+            stop = {"flag": False}
+
+            def _stop(*_: Any) -> None:
+                stop["flag"] = True
+
+            signal.signal(signal.SIGTERM, _stop)
+            signal.signal(signal.SIGINT, _stop)
+            console.print(f"recording to {path} every {interval:.0f}s; SIGTERM to stop")
+            run_loop(recorder, interval_s=interval, clock=_now,
+                     should_stop=lambda: stop["flag"], on_poll=_report)
+    finally:
+        store.close()
+        client.close()
+    result = last.get("result")
+    if result is not None:
+        attempted = [v for v in result.per_feed.values() if "fetched" in v or "error" in v]
+        if attempted and all("error" in v for v in attempted):
+            raise typer.Exit(EXIT_FAIL)
+
+
+@news_app.command("status")
+def news_status(
+    state_dir: Path | None = typer.Option(None, "--state-dir", help="Default: $FIBOKI_STATE_DIR or ./var."),
+    gap_threshold: float = typer.Option(900.0, "--gap-threshold", help="Seconds between polls that count as a gap."),
+    as_json: bool = typer.Option(False, "--json"),
+) -> None:
+    """Rows, per-source counts, last observed_at, feed health and capture gaps.
+
+    Exit 1 when there is no store, no poll has ever run, or the last poll is
+    older than --gap-threshold: a recorder that stopped is not healthy.
+    """
+    from datetime import UTC, datetime, timedelta
+
+    from fiboki.data.news import HeadlineStore, gaps_in_polls
+
+    path = _news_store_path(state_dir)
+    if not path.exists():
+        _fail(f"no headline store at {path}; run `fiboki news record --once` first")
+    with HeadlineStore(path) as store:
+        st = store.status()
+    polls = st["polls"]
+    now = datetime.now(tz=UTC)
+    threshold = timedelta(seconds=gap_threshold)
+    starts = [p[0] for p in polls]
+    gaps = gaps_in_polls(starts, threshold=threshold, until=now)
+    feed_health: dict[str, dict[str, Any]] = {}
+    for started, _finished, outcome in polls:
+        for key, res in (outcome.get("per_feed") or {}).items():
+            row = feed_health.setdefault(key, {"last_ok": None, "last_error": None, "error": None})
+            if "error" in res:
+                row["last_error"], row["error"] = started.isoformat(), res["error"]
+            elif "fetched" in res:
+                row["last_ok"], row["error"] = started.isoformat(), None
+            elif "disabled" in res:
+                row["disabled"] = res["disabled"]
+    last_poll = starts[-1] if starts else None
+    stale = last_poll is None or (now - last_poll) > threshold
+    payload = {
+        "store": str(path),
+        "rows": st["rows"],
+        "revisions": st["revisions"],
+        "per_source": st["per_source"],
+        "polls": len(polls),
+        "first_poll": None if not starts else starts[0].isoformat(),
+        "last_poll": None if last_poll is None else last_poll.isoformat(),
+        "stale": stale,
+        "gap_threshold_s": gap_threshold,
+        "gaps": gaps,
+        "feeds": feed_health,
+        "feed_sources": st["feeds"],
+    }
+
+    def _render() -> None:
+        console.print(f"[bold]{st['rows']}[/bold] headlines ({st['revisions']} revisions) in {path}")
+        console.print(f"polls {len(polls)}  first {payload['first_poll']}  last {payload['last_poll']}")
+        table = Table("source", "rows", "first observed_at", "last observed_at")
+        for src, row in st["per_source"].items():
+            table.add_row(src, str(row["rows"]), row["first_observed_at"], row["last_observed_at"])
+        console.print(table)
+        ft = Table("feed", "last ok", "last error", "state")
+        for key, row in sorted(feed_health.items()):
+            state = row.get("disabled") or ("FAILING: " + row["error"] if row["error"] else "ok")
+            ft.add_row(key, str(row["last_ok"]), str(row["last_error"]), state)
+        console.print(ft)
+        for g in gaps:
+            _warn(f"gap {g['from']} .. {g['to']} ({g['seconds']:.0f}s)")
+        if stale:
+            err_console.print("[bold red]✗[/bold red] recorder is not running (last poll older than threshold)")
+        else:
+            _ok("recorder polled within the threshold")
+
+    _emit(payload, as_json=as_json, render=_render)
+    if stale:
+        raise typer.Exit(EXIT_FAIL)
+
+
+@macro_app.command("describe")
+def macro_describe(
+    name: str | None = typer.Argument(None, help="Provider name; omit for all."),
+    as_json: bool = typer.Option(False, "--json"),
+) -> None:
+    """Source, licence, attribution, point-in-time semantics and limitations."""
+    from fiboki.data.providers import MACRO_PROVIDERS
+
+    names = sorted(MACRO_PROVIDERS) if name is None else [name]
+    for n in names:
+        if n not in MACRO_PROVIDERS:
+            _fail(f"unknown macro provider {n!r}; known: {sorted(MACRO_PROVIDERS)}", EXIT_MISUSE)
+    descriptors = {n: MACRO_PROVIDERS[n]().descriptor for n in names}
+    _emit(
+        {n: d.to_dict() for n, d in descriptors.items()},
+        as_json=as_json,
+        render=lambda: [console.print(d.render() + "\n") for d in descriptors.values()],
+    )
+
+
+def _macro_date(raw: str | None, what: str) -> Any:
+    from datetime import date
+
+    if raw is None:
+        return None
+    try:
+        return date.fromisoformat(raw)
+    except ValueError:
+        _fail(f"{what} {raw!r} is not YYYY-MM-DD", EXIT_MISUSE)
+
+
+@macro_app.command("fetch")
+def macro_fetch(
+    provider: str = typer.Argument(..., help="alfred | cftc_cot | ecb_sdmx | boe_iadb | ons | nyfed"),
+    series: list[str] = typer.Option(..., "--series", help=(
+        "alfred: FRED id; cftc_cot: contract code; ecb_sdmx: FLOW/KEY; boe_iadb: IADB code; "
+        "ons: CDID/DATASET; nyfed: sofr|bgcr|tgcr|effr|obfr|repo. Repeatable where the source allows.")),
+    start: str | None = typer.Option(None, "--start", help="YYYY-MM-DD (required: boe_iadb, nyfed)."),
+    end: str | None = typer.Option(None, "--end", help="YYYY-MM-DD (required: nyfed)."),
+    include_previous: int = typer.Option(0, "--include-previous", help="ons: archived versions to fetch."),
+    as_of: str | None = typer.Option(None, "--as-of", help="ISO UTC instant: print the point-in-time view."),
+    data_root: Path | None = typer.Option(None, "--data-root", help="Default: $FIBOKI_DATA_ROOT. Omit both to fetch without storing."),
+    as_json: bool = typer.Option(False, "--json"),
+) -> None:
+    """Fetch one dataset, write it content-addressed, optionally show an as-of view."""
+    from fiboki.data.providers import (
+        AlfredProvider,
+        BoeIadbProvider,
+        CftcCotProvider,
+        EcbSdmxProvider,
+        MacroDatasetStore,
+        NyFedMarketsProvider,
+        OnsTimeseriesProvider,
+    )
+    from fiboki.data.providers.base import ProviderError
+
+    s0, e0 = _macro_date(start, "--start"), _macro_date(end, "--end")
+    client = _http_client()
+    try:
+        if provider == "alfred":
+            if len(series) != 1:
+                _fail("alfred takes exactly one --series", EXIT_MISUSE)
+            ds = AlfredProvider.from_env(client).fetch(series[0])
+        elif provider == "cftc_cot":
+            ds = CftcCotProvider(http_client=client).fetch(tuple(series), since=s0)
+        elif provider == "ecb_sdmx":
+            if len(series) != 1 or "/" not in series[0]:
+                _fail("ecb_sdmx takes one --series FLOW/KEY, e.g. EXR/D.USD.EUR.SP00.A", EXIT_MISUSE)
+            flow, key = series[0].split("/", 1)
+            ds = EcbSdmxProvider(http_client=client).fetch(flow, key, start_period=start, end_period=end)
+        elif provider == "boe_iadb":
+            if s0 is None:
+                _fail("boe_iadb needs --start", EXIT_MISUSE)
+            ds = BoeIadbProvider(http_client=client).fetch(tuple(series), start=s0, end=e0)
+        elif provider == "ons":
+            if len(series) != 1 or "/" not in series[0]:
+                _fail("ons takes one --series CDID/DATASET, e.g. D7G7/MM23", EXIT_MISUSE)
+            cdid, dataset = series[0].split("/", 1)
+            ds = OnsTimeseriesProvider(http_client=client).fetch(
+                cdid, dataset, include_previous=include_previous > 0,
+                max_previous=include_previous or None,
+            )
+        elif provider == "nyfed":
+            if s0 is None or e0 is None or len(series) != 1:
+                _fail("nyfed takes one --series plus --start and --end", EXIT_MISUSE)
+            ny = NyFedMarketsProvider(http_client=client)
+            ds = ny.fetch_repo(start=s0, end=e0) if series[0] == "repo" else ny.fetch(series[0], start=s0, end=e0)
+        else:
+            _fail(f"unknown macro provider {provider!r}", EXIT_MISUSE)
+    except ProviderError as exc:
+        _fail(f"{type(exc).__name__}: {exc}")
+    finally:
+        client.close()
+
+    root = data_root if data_root is not None else data_root_env()
+    stored: dict[str, Any] = {"stored": False, "reason": "no --data-root and no FIBOKI_DATA_ROOT"}
+    if root is not None:
+        try:
+            vid, where, created = MacroDatasetStore(root).write(ds)
+        except Exception as exc:
+            _fail(f"could not store: {exc}")
+        stored = {"stored": True, "version_id": vid, "path": str(where), "created": created}
+    view = None
+    if as_of is not None:
+        view = ds.as_of(_utc_arg(as_of, "--as-of"))
+    payload = {
+        "provider": ds.provider,
+        "dataset_key": ds.dataset_key,
+        "version_id": ds.version_id,
+        "rows": len(ds.frame),
+        "availability": ds.frame["availability_basis"].value_counts().to_dict(),
+        "report": ds.report,
+        "attribution": ds.descriptor.attribution,
+        **stored,
+        "as_of": None if view is None else {
+            "instant": as_of,
+            "rows": len(view),
+            "latest": view.tail(10)[["series_id", "period", "value", "available_at"]]
+            .astype(str).to_dict(orient="records"),
+        },
+    }
+
+    def _render() -> None:
+        console.print(f"[bold]{ds.provider}[/bold] {ds.dataset_key}  {ds.version_id}  rows={len(ds.frame)}")
+        console.print(f"availability  {payload['availability']}")
+        console.print(f"attribution   {ds.descriptor.attribution}")
+        if stored["stored"]:
+            _ok(f"stored at {stored['path']} ({'new' if stored['created'] else 'already present'})")
+        else:
+            _warn(f"not stored: {stored['reason']}")
+        if view is not None:
+            console.print(f"as of {as_of}: {len(view)} current values")
+            console.print(view.tail(10)[["series_id", "period", "value", "available_at"]].to_string(index=False))
+
+    _emit(payload, as_json=as_json, render=_render)
+
+
+def data_root_env() -> Path | None:
+    """``FIBOKI_DATA_ROOT`` if set (the same rule as ``data_root()`` above)."""
+    return data_root()
+
+
+# ===========================================================================
+# END news + macro
+# ===========================================================================
 
 
 def main(argv: Sequence[str] | None = None) -> int:

@@ -92,7 +92,9 @@ __all__ = [
     "EngineEvaluator",
     "EvaluationCache",
     "EvaluatorConfig",
+    "UnfingerprintableBlackout",
     "WindowedStrategyRunner",
+    "blackout_fingerprint",
     "frame_digest",
 ]
 
@@ -221,6 +223,39 @@ def frame_digest(frame: pd.DataFrame) -> str:
     cols = [c for c in ("open", "high", "low", "close") if c in frame.columns]
     arr = np.ascontiguousarray(frame[cols].to_numpy(dtype=np.float64))
     return hashlib.sha256(arr.tobytes() + frame.index.asi8.tobytes()).hexdigest()
+
+
+class UnfingerprintableBlackout(ValueError):
+    """A blackout source whose content cannot be hashed was given a cache."""
+
+
+def blackout_fingerprint(source: Any) -> dict[str, Any] | None:
+    """Content fingerprint of a blackout source, for provenance and cache keys.
+
+    ``None`` means no source. An economic calendar (anything with
+    ``all_events()``) is hashed over its events' canonical JSON, so two
+    calendars with the same events share a fingerprint and a calendar that
+    gains, loses or moves one event does not. A source that exposes neither
+    ``all_events()`` nor ``fingerprint()`` is reported as ``unhashable``;
+    :class:`EngineEvaluator` refuses to put such a source behind a cache,
+    because two different ones would then share cache entries.
+    """
+    if source is None:
+        return None
+    kind = type(source).__name__
+    all_events = getattr(source, "all_events", None)
+    if callable(all_events):
+        rows = [e.to_dict() for e in all_events()]
+        blob = json.dumps(rows, sort_keys=True, default=str)
+        return {
+            "kind": kind,
+            "n_events": len(rows),
+            "events_sha256": hashlib.sha256(blob.encode("utf-8")).hexdigest(),
+        }
+    custom = getattr(source, "fingerprint", None)
+    if callable(custom):
+        return {"kind": kind, "fingerprint": custom()}
+    return {"kind": kind, "content": "unhashable"}
 
 
 class EvaluationCache:
@@ -385,8 +420,16 @@ class EngineEvaluator:
     #: "not in blackout" for every bar in history, so supplying an empty one is
     #: the same as supplying none. See
     #: ``fiboki.marketstate.calendar.USER_ACTION_NOTE``.
+    #:
+    #: The source's CONTENT is part of :meth:`engine_fingerprint`, and so of
+    #: :meth:`engine_config_hash` and every cache key: the same strategy on the
+    #: same bars under a different calendar is a different question, and
+    #: before this was keyed the cache would serve one calendar's answer for
+    #: another's (``validation/run.py`` worked round it with a per-calendar
+    #: cache subdirectory).
     blackout: BlackoutSource | None = None
 
+    _blackout_fingerprint: dict[str, Any] | None = field(init=False, default=None, repr=False)
     _frame_digest: str = field(init=False, default="", repr=False)
     _bound: dict[str, StrategyDocument] = field(init=False, default_factory=dict, repr=False)
     _compiled: dict[str, CompiledStrategy] = field(init=False, default_factory=dict, repr=False)
@@ -418,6 +461,18 @@ class EngineEvaluator:
             )
         self._frame_digest = frame_digest(self.frame)
         self._engine_fingerprint = self._base_config("fingerprint_probe").fingerprint()
+        self._blackout_fingerprint = blackout_fingerprint(self.blackout)
+        if (
+            self.cache is not None
+            and self._blackout_fingerprint is not None
+            and self._blackout_fingerprint.get("content") == "unhashable"
+        ):
+            raise UnfingerprintableBlackout(
+                f"blackout source {type(self.blackout).__name__} exposes neither "
+                "all_events() nor fingerprint(), so its content cannot enter the "
+                "cache key; two different sources would share cached answers. "
+                "Give it a fingerprint() or run without a cache."
+            )
 
     # ------------------------------------------------------------ plumbing
 
@@ -462,6 +517,10 @@ class EngineEvaluator:
         out = {k: v for k, v in self._engine_fingerprint.items() if k != "strategy_id"}
         out["evaluator"] = self.config.to_dict()
         out["fx_source"] = self.fx_label
+        # Only present when a source is set, so a no-calendar evaluation keeps
+        # the hash (and the cache entries) it always had.
+        if self._blackout_fingerprint is not None:
+            out["blackout"] = dict(self._blackout_fingerprint)
         return out
 
     def engine_config_hash(self) -> str:

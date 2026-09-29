@@ -40,9 +40,33 @@ session would prove nothing. :class:`RiskContextBuilder` therefore takes an
 explicit ``clock``, and :func:`build_replay_session` passes the feed's own bar
 clock. That is a deliberate, named substitution — not a limit quietly widened
 until the refusals stopped.
+
+The economic calendar, and what the gateway sees of it
+------------------------------------------------------
+:func:`build_replay_session` wires the committed official calendar
+(:func:`fiboki.marketstate.calendar.load_official_calendar`) into
+:attr:`RiskContextBuilder.event_source` by default, so the gateway's
+``event_blackout`` check has scheduled releases to compare against, and hands
+the same calendar to the paper venue as its blackout source (the one the
+engine is given), so a document exit policy that declares an event blackout
+consults the same events in paper as in a backtest. A replay the calendar
+cannot vouch for (span or currencies) is REFUSED with ``CalendarError`` unless
+``allow_empty_calendar=True``; with that flag the calendar is still applied
+wherever it has events. The only way to run with no event source at all is to
+pass an explicitly empty calendar with ``allow_empty_calendar=True``.
+:meth:`PaperSession.summary` reports which of these happened.
+
+A stated limitation: the gateway compares event times against the context
+builder's clock, which in a replay is the delivered bar's OPEN stamp, and
+applies ``LimitSet.event_blackout_minutes`` (15 minutes in ``PAPER_LIMITS``).
+On an H4 series a release that falls inside a bar but more than 15 minutes
+from its open stamp is therefore not seen by the gateway. The strategy-level
+blackout in the exit policy (evaluated on the entry bar, with the document's
+own margins) is the check that bites on long bars.
 """
 from __future__ import annotations
 
+import math
 from collections.abc import Callable, Iterable, Mapping, Sequence
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
@@ -61,6 +85,12 @@ from fiboki.core.enums import ExecutionMode, StrategyLifecycle
 from fiboki.core.instruments import Instrument
 from fiboki.core.instruments import get as get_instrument
 from fiboki.core.money import FxRateSource, IdentityFxSource
+from fiboki.marketstate.calendar import (
+    EconomicCalendar,
+    ImpactLevel,
+    instrument_currencies,
+    load_official_calendar,
+)
 from fiboki.obs import metrics as _metrics
 from fiboki.obs.logging import get_logger
 from fiboki.portfolio.construction import CorrelationMatrix, PortfolioSnapshot
@@ -82,12 +112,14 @@ from fiboki.risk.gateway import (
 from fiboki.risk.killswitch import RequestKind
 from fiboki.risk.limits import PAPER_LIMITS, LimitSet
 from fiboki.sim.fills import Bar
+from fiboki.validation.engine_evaluator import blackout_fingerprint
 from fiboki.workers.base import WorkerStore
 from fiboki.workers.live_worker import BarBatch, LiveWorker, LiveWorkerConfig
 
 __all__ = [
     "MANAGED_EXIT_EXPOSURE",
     "MANAGED_EXIT_POSITIONS",
+    "CalendarWiring",
     "FrameReplayFeed",
     "LifecycleTimer",
     "MarketStateFeed",
@@ -96,6 +128,7 @@ __all__ = [
     "SignalEvaluator",
     "SignalSource",
     "build_replay_session",
+    "calendar_event_source",
     "publish_managed_exit_exposure",
 ]
 
@@ -698,6 +731,127 @@ class RiskContextBuilder:
 
 
 # ---------------------------------------------------------------------------
+# The economic calendar, as the gateway's event source
+# ---------------------------------------------------------------------------
+
+
+def calendar_event_source(
+    calendar: EconomicCalendar,
+    *,
+    horizon_minutes: float,
+    min_impact: ImpactLevel | str = ImpactLevel.HIGH,
+) -> Callable[[str, pd.Timestamp], tuple[pd.Timestamp, ...]]:
+    """``(instrument, now) -> event times`` for :attr:`RiskContextBuilder.event_source`.
+
+    Returns the relevant events (the instrument's currencies, at or above
+    ``min_impact``) whose span lies within ``horizon_minutes`` of ``now``. The
+    gateway owns the threshold and applies ``|event - now| <= window`` itself;
+    ``horizon_minutes`` only needs to be at least that window, so the source
+    never hides an event the gateway would have blocked on.
+
+    An event with no fixed release time (a Bank of Japan meeting) spans
+    ``[event_time, window_end]``. The gateway takes one timestamp per event,
+    so the one reported is the point of that span nearest to ``now``: inside
+    the span that is ``now`` itself, which blocks, and outside it the nearer
+    end, which is exactly the distance the blackout is defined on.
+    """
+    minutes = max(0, int(math.ceil(float(horizon_minutes))))
+
+    def source(instrument: str, now: pd.Timestamp) -> tuple[pd.Timestamp, ...]:
+        ts = pd.Timestamp(now)
+        ts = ts.tz_localize("UTC") if ts.tzinfo is None else ts.tz_convert("UTC")
+        near = calendar.events_near(
+            instrument,
+            ts,
+            minutes_before=minutes,
+            minutes_after=minutes,
+            min_impact=min_impact,
+        )
+        return tuple(min(max(ts, e.event_time), e.span_end) for e in near)
+
+    return source
+
+
+@dataclass(frozen=True, slots=True)
+class CalendarWiring:
+    """What a paper session was given for scheduled events, as recorded fact."""
+
+    source: str
+    wired_into_gateway: bool
+    wired_into_venue: bool
+    allow_empty_calendar: bool
+    covered: bool
+    n_events: int
+    fingerprint: Mapping[str, Any] | None
+    gateway_window_minutes: float
+    min_impact: str = ImpactLevel.HIGH.value
+    coverage_error: str = ""
+
+    def as_row(self) -> dict[str, Any]:
+        return {
+            "source": self.source,
+            "wired_into_gateway": self.wired_into_gateway,
+            "wired_into_venue": self.wired_into_venue,
+            "allow_empty_calendar": self.allow_empty_calendar,
+            "covered": self.covered,
+            "n_events": self.n_events,
+            "fingerprint": None if self.fingerprint is None else dict(self.fingerprint),
+            "gateway_window_minutes": self.gateway_window_minutes,
+            "min_impact": self.min_impact,
+            "coverage_error": self.coverage_error,
+        }
+
+
+def _resolve_calendar(
+    calendar: EconomicCalendar | None,
+    frames: Mapping[str, pd.DataFrame],
+    *,
+    allow_empty_calendar: bool,
+    limits: LimitSet,
+) -> tuple[EconomicCalendar | None, CalendarWiring]:
+    """Load the default calendar, check it covers the replay, decide the wiring.
+
+    Refuses (raises ``CalendarError``) when the calendar does not span the
+    frames or know every instrument's currencies, unless
+    ``allow_empty_calendar``. A calendar with no events is never wired: an
+    event source that can only ever answer "nothing scheduled" would read as
+    a live check in the summary while blocking nothing.
+    """
+    label = "explicit"
+    if calendar is None:
+        calendar = load_official_calendar()
+        label = "fiboki.marketstate.calendar.load_official_calendar"
+    starts = [f.index[0] for f in frames.values() if len(f.index)]
+    ends = [f.index[-1] for f in frames.values() if len(f.index)]
+    currencies = sorted({c for sym in frames for c in instrument_currencies(sym)})
+    covered, error = True, ""
+    try:
+        calendar.assert_populated(
+            start=min(starts) if starts else None,
+            end=max(ends) if ends else None,
+            currencies=currencies,
+        )
+    except Exception as exc:
+        if not allow_empty_calendar:
+            raise
+        covered, error = False, str(exc).splitlines()[0]
+    n_events = len(calendar.all_events())
+    wired = n_events > 0
+    wiring = CalendarWiring(
+        source=label,
+        wired_into_gateway=wired,
+        wired_into_venue=wired,
+        allow_empty_calendar=allow_empty_calendar,
+        covered=covered,
+        n_events=n_events,
+        fingerprint=blackout_fingerprint(calendar),
+        gateway_window_minutes=float(limits.event_blackout_minutes),
+        coverage_error=error,
+    )
+    return (calendar if wired else None), wiring
+
+
+# ---------------------------------------------------------------------------
 # The lifecycle timer
 # ---------------------------------------------------------------------------
 
@@ -756,6 +910,7 @@ class PaperSession:
     context_builder: RiskContextBuilder
     market_state: MarketStateFeed | None = None
     lifecycle: LifecycleTimer | None = None
+    calendar: CalendarWiring | None = None
 
     def telemetry(self) -> list[dict[str, Any]]:
         """Every attempt the gateway recorded, allowed or blocked, as rows."""
@@ -803,6 +958,13 @@ class PaperSession:
                 else self.context_builder.last_windows.weekly_pnl
             ),
             "realised_portfolio_vol": self.context_builder.realised_vol(),
+            # What the gateway's event_blackout check had to compare against.
+            # Derived from the builder, not asserted: a session with no event
+            # source says so here however it was configured.
+            "economic_calendar": {
+                **({} if self.calendar is None else self.calendar.as_row()),
+                "wired_into_gateway": self.context_builder.event_source is not None,
+            },
         }
 
 
@@ -827,6 +989,8 @@ def build_replay_session(
     dispatcher: Any = None,
     default_lifecycle: StrategyLifecycle = StrategyLifecycle.PAPER,
     correlation: CorrelationMatrix | None = None,
+    calendar: EconomicCalendar | None = None,
+    allow_empty_calendar: bool = False,
 ) -> PaperSession:
     """Assemble a PAPER runtime end to end over stored bars.
 
@@ -836,12 +1000,23 @@ def build_replay_session(
     The worker refuses to start unless the execution service is in a mode its
     config authorises, and that default is paper only. Nothing here can widen
     it; widening it is an edit to ``allowed_modes``, reviewed, in the config.
+
+    ``calendar`` defaults to the committed official calendar and is wired into
+    the gateway's event source and the venue's blackout source. A replay it
+    does not cover raises ``CalendarError`` unless ``allow_empty_calendar``;
+    see the module docstring for the explicit way to run with none.
     """
     fx = fx or IdentityFxSource()
+    events, calendar_wiring = _resolve_calendar(
+        calendar, frames, allow_empty_calendar=allow_empty_calendar, limits=limits
+    )
     feed = FrameReplayFeed(
         frames, timeframe=timeframe, warmup=warmup, series=exit_series
     )
-    broker = PaperBroker(config=paper_config, fx=fx)
+    # The venue gets the SAME calendar the engine is given in validation, so a
+    # document exit policy that declares an event blackout blocks the same
+    # entries in paper as in a backtest.
+    broker = PaperBroker(config=paper_config, fx=fx, blackout=events)
     for symbol, frame in frames.items():
         if len(frame.index) > 2:
             deltas = frame.index.to_series().diff().dropna()
@@ -893,6 +1068,13 @@ def build_replay_session(
         limits=limits,
         mode=ExecutionMode.PAPER,
         regime_source=(market_state.regime if market_state is not None else None),
+        # THE EVENT SOURCE. Without it the gateway's event_blackout check ran
+        # on every order against an empty tuple and could never fire.
+        event_source=(
+            calendar_event_source(events, horizon_minutes=limits.event_blackout_minutes)
+            if events is not None
+            else None
+        ),
         default_lifecycle=default_lifecycle,
         # THE FOUR FORMERLY-DEAD INPUTS. Each check below ran, was named in the
         # audit trail, and read a zero it could never breach. They now read the
@@ -974,6 +1156,7 @@ def build_replay_session(
         context_builder=builder,
         market_state=market_state,
         lifecycle=lifecycle,
+        calendar=calendar_wiring,
     )
 
 

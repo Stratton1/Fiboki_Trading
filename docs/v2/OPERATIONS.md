@@ -96,6 +96,33 @@ entrypoint that owns that wiring.
 registered and will idle. That path exists so the process, the lease and the heartbeat can be
 exercised on their own; handlers are registered by the application wiring.
 
+**Agent research cycles (off by default).** Set `FIBOKI_AGENT_CYCLES=on` and the research worker
+composes the research runtime at start (`workers/research_runtime.py`): it registers every
+deterministic job handler (the CLI's "no handlers" warning is then stale), runs one
+`run_research_cycle` per night and runs a failure investigation for each queued incident.
+
+| Variable | Default | Meaning |
+|---|---|---|
+| `FIBOKI_AGENT_CYCLES` | `false` | Compose the runtime. Strict boolean. |
+| `FIBOKI_AGENT_CYCLE_TARGET` | (none) | `strategy_id:INSTRUMENT:TIMEFRAME`; required when on. |
+| `FIBOKI_AGENT_CYCLE_UTC` | `02:15` | UTC time of the nightly cycle. |
+| `FIBOKI_AGENT_PROVIDER` | `echo` | `echo` (offline double: every model step fails and is recorded, a wiring check only) or `local`. |
+| `FIBOKI_AGENT_LOCAL_MODEL` | (none) | Exact Ollama model name; required for `local`. |
+| `FIBOKI_AGENT_LOCAL_URL` | `http://127.0.0.1:11434` | Ollama base URL. |
+| `FIBOKI_STRATEGIES_DIR` | `research/strategies` | Documents registered at start. |
+| `FIBOKI_DATA_ROOT` | (none) | Required when on: the bars the queued backtests read. |
+
+The worker refuses to start if the flag is on and the target, the seed or the data root is
+missing. The audit chain is `<FIBOKI_STATE_DIR>/agents/audit.jsonl`; the last claimed nightly
+slot is in `<FIBOKI_STATE_DIR>/agents/schedule.json`. A slot is claimed **before** it runs, so a
+cycle that crashes the worker is not retried that night; the first start after enabling the flag
+records the current slot and waits for the next one. While a cycle runs the worker renews its
+lease and writes a `working` heartbeat every `pulse_seconds` (15 s), so a long local-model cycle
+does not read as a dead worker. Incidents: `ResearchRuntime.raise_incident(backtest_id)` queues
+one investigation per backtest per UTC day; strategy-degraded/halted/quarantined alerts raised
+in the research worker's own process queue one automatically when they carry a `backtest_id`.
+Alerts from other processes do not reach it.
+
 ### Resource behaviour on a laptop
 
 `workers/scheduler.py` admits work as a function of *observed* resource state, not a fixed
@@ -245,6 +272,15 @@ fails**. Read the binding constraint, not the verdict.
 
 Set `LadderConfig.external_trial_count` to the honest size of the campaign. Nothing can enforce
 this for you; the report records the value you used.
+
+**Economic calendar.** Campaign cells and paper replays run against the committed official
+calendar by default, and a cell or replay it does not cover (before 2024-01-01, after its
+declared end, or a currency other than USD, EUR, GBP, JPY) is **refused**. The opt-outs are
+explicit and recorded: `CampaignSpec.allow_empty_calendar=True` or
+`run_paper_session.py --allow-empty-calendar` lifts the refusal and still applies the calendar
+where it has events; `run_paper_session.py --no-calendar` (or an explicitly empty calendar with
+the flag) runs with no event source. `summary.json`'s `economic_calendar.session` says what the
+gateway was actually given.
 
 ## 8. Broker operations
 

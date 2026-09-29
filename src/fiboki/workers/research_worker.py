@@ -44,6 +44,22 @@ is the PROCESS that calls :meth:`Orchestrator.run_next` on a set of queues.
 The division is: the orchestrator decides what a job is and when it may run;
 the worker decides which machine runs it, when it stops, and what it records
 about itself while doing so.
+
+Agent research cycles (``FIBOKI_AGENT_CYCLES``)
+-----------------------------------------------
+With the flag on, :meth:`ResearchWorker.setup` composes
+:class:`fiboki.workers.research_runtime.ResearchRuntime` onto THIS worker's
+orchestrator (so the deterministic handlers are registered where the loop
+drains) and each cycle first asks it for due work: the nightly research cycle
+and any queued failure investigation. With the flag off nothing is composed
+and the worker behaves exactly as before.
+
+An agent cycle with a real model runs for minutes, far longer than the lease
+TTL, and the base loop only beats and renews BETWEEN cycles. So the agent work
+runs inside :class:`HeartbeatPulse`, a thread that renews the lease and writes
+a ``working`` heartbeat every ``pulse_seconds`` until the work returns. Without
+it a long cycle would read as a dead worker and, worse, let a second worker
+take the lease mid-cycle.
 """
 from __future__ import annotations
 
@@ -65,8 +81,10 @@ from fiboki.obs.alerts import AlertDispatcher, AlertEvent
 from fiboki.obs.logging import bind, get_logger, new_correlation_id
 from fiboki.workers.base import (
     CycleResult,
+    LeaseLost,
     Worker,
     WorkerConfig,
+    WorkerState,
     WorkerStore,
 )
 
@@ -74,6 +92,7 @@ __all__ = [
     "CellOutcome",
     "CellStatus",
     "CheckpointStore",
+    "HeartbeatPulse",
     "NoDataFractionExceeded",
     "ResearchWorker",
     "ResearchWorkerConfig",
@@ -626,6 +645,61 @@ class ResearchWorkerConfig(WorkerConfig):
     #: Small, so SIGTERM is honoured promptly even under a full queue.
     jobs_per_cycle: int = 1
     idle_sleep_seconds: float = 2.0
+    #: Seconds between heartbeats (and lease renewals) while a long agent
+    #: cycle runs. Must be well under ``lease_ttl_seconds``.
+    pulse_seconds: float = 15.0
+
+
+class HeartbeatPulse:
+    """Keeps a worker's heartbeat and lease alive while one long step runs.
+
+    Used as a context manager around work that cannot return to the loop for
+    minutes. The pulse thread only renews the lease and writes the heartbeat;
+    it never touches the work. If the lease is lost the pulse records it and
+    asks the worker to stop: the in-flight step cannot be interrupted from
+    here, and the next loop iteration's own renewal then exits the worker.
+    """
+
+    def __init__(self, worker: Worker, *, interval: float, detail: str) -> None:
+        if interval <= 0:
+            raise ValueError("a heartbeat pulse needs a positive interval")
+        self.worker = worker
+        self.interval = interval
+        self.detail = detail
+        self.beats = 0
+        self.lease_lost = ""
+        self._stop = threading.Event()
+        self._thread: threading.Thread | None = None
+
+    def _run(self) -> None:
+        while not self._stop.wait(self.interval):
+            try:
+                self.worker.lease.renew()
+                self.worker.heartbeat.write(
+                    WorkerState.WORKING, fence=self.worker.lease.fence, detail=self.detail
+                )
+                self.beats += 1
+            except LeaseLost as exc:
+                self.lease_lost = str(exc)
+                _log.critical("lease lost during a long step", extra={"error": str(exc)})
+                self.worker.request_stop("lease lost during agent work")
+                return
+            except Exception as exc:  # the pulse must never kill the process
+                _log.error(
+                    "heartbeat pulse failed", extra={"error": f"{type(exc).__name__}: {exc}"}
+                )
+
+    def __enter__(self) -> HeartbeatPulse:
+        self._thread = threading.Thread(
+            target=self._run, name=f"pulse-{self.worker.worker_id}", daemon=True
+        )
+        self._thread.start()
+        return self
+
+    def __exit__(self, *exc: object) -> None:
+        self._stop.set()
+        if self._thread is not None:
+            self._thread.join(timeout=max(5.0, self.interval * 2))
 
 
 class ResearchWorker(Worker):
@@ -641,15 +715,49 @@ class ResearchWorker(Worker):
         orchestrator: Orchestrator,
         store: WorkerStore,
         config: ResearchWorkerConfig | None = None,
+        *,
+        agent_runtime: Any = None,
+        environ: Mapping[str, str] | None = None,
         **kwargs: Any,
     ) -> None:
         super().__init__(config or ResearchWorkerConfig(), store, **kwargs)
         self.orchestrator = orchestrator
         self.processed: list[JobRecord] = []
+        #: A composed :class:`~fiboki.workers.research_runtime.ResearchRuntime`,
+        #: or ``None``. Left ``None`` here, :meth:`setup` composes one from the
+        #: environment when ``FIBOKI_AGENT_CYCLES`` is on.
+        self.agent_runtime = agent_runtime
+        self._environ = environ
+        self.agent_results: list[Any] = []
+        self.last_pulse: HeartbeatPulse | None = None
 
     @property
     def rconfig(self) -> ResearchWorkerConfig:
         return self.config  # type: ignore[return-value]
+
+    def setup(self) -> None:
+        """Compose the agent research runtime when the flag asks for it.
+
+        Imported here, not at module top, so a default research worker never
+        imports the agent workflows at all. A misconfiguration raises: a flag
+        that is on but cannot be honoured is a startup error, not an idle
+        worker that looks healthy.
+        """
+        if self.agent_runtime is not None:
+            return
+        from fiboki.workers.research_runtime import research_runtime_from_env
+
+        self.agent_runtime = research_runtime_from_env(
+            self.orchestrator, environ=self._environ, dispatcher=self.dispatcher
+        )
+        if self.agent_runtime is not None:
+            _log.info(
+                "agent research runtime composed",
+                extra={
+                    "handlers": [t.value for t in self.orchestrator.handled_types()],
+                    "schedule": [s.name for s in self.agent_runtime.schedule],
+                },
+            )
 
     def resume(self) -> None:
         """Nothing to reclaim: the orchestrator's ledger already holds every
@@ -662,6 +770,9 @@ class ResearchWorker(Worker):
             _metrics.record_queue_depth(queue, depth)
 
     def run_cycle(self) -> CycleResult:
+        agent = self._run_agent_work()
+        if agent is not None:
+            return agent
         done = 0
         detail = ""
         for queue in self.rconfig.queues:
@@ -679,6 +790,24 @@ class ResearchWorker(Worker):
         if done == 0:
             return CycleResult.idle("no runnable jobs")
         return CycleResult.worked(done, detail)
+
+    def _run_agent_work(self) -> CycleResult | None:
+        """Due agent work, under a heartbeat pulse. ``None`` when there is none."""
+        runtime = self.agent_runtime
+        if runtime is None or self.stopping or not runtime.has_work():
+            return None
+        pulse = HeartbeatPulse(
+            self, interval=self.rconfig.pulse_seconds, detail="agent research work running"
+        )
+        self.last_pulse = pulse
+        with pulse:
+            results = runtime.tick(should_stop=lambda: self.stopping)
+        self.agent_results.extend(results)
+        if not results:
+            return None
+        return CycleResult.worked(
+            len(results), "; ".join(r.summary() for r in results)[:4000]
+        )
 
     def _run_one(self, queue: str) -> JobRecord | None:
         correlation = new_correlation_id("job")

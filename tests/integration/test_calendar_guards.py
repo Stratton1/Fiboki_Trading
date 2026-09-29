@@ -129,10 +129,21 @@ def test_paper_session_refuses_an_uncovered_currency(paper_script) -> None:
 
 
 def test_paper_session_opt_out_is_recorded(paper_script) -> None:
+    """``--allow-empty-calendar`` lifts the coverage refusal, not the wiring:
+    the calendar still reaches the gateway wherever it has events."""
     record = paper_script._calendar_guard("XAUUSD", _bars("2015-01-01"), allow_empty=True)
     assert record["covered"] is False
     assert record["allow_empty_calendar"] is True
+    assert record["wired_into_gateway"] is True
+
+
+def test_paper_session_no_calendar_is_recorded_as_unwired(paper_script) -> None:
+    record = paper_script._calendar_guard(
+        "XAUUSD", _bars("2015-01-01"), allow_empty=False, no_calendar=True
+    )
+    assert record["no_calendar"] is True
     assert record["wired_into_gateway"] is False
+    assert record["covered"] is False
 
 
 def test_paper_session_covered_replay_passes(paper_script) -> None:

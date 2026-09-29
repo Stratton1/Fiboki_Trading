@@ -31,6 +31,15 @@ conservatisms, both in the direction that makes a false discovery HARDER:
 * skipped rediscoveries are not counted, because they spent no compute HERE --
   their trials are already in the prior count if they are in the ledger.
 
+Economic calendar
+-----------------
+Every cell runs against the committed official calendar by default (see
+:func:`run_cell`), so a document's declared event blackout is enforced in
+research exactly as it is in the engine. Until this was wired no calendar ever
+reached a campaign cell, which means every earlier campaign result for a
+document that declares a blackout was produced WITHOUT that blackout and is
+superseded.
+
 Resume
 ------
 A campaign of several hundred evaluations takes hours, and a process that dies
@@ -60,6 +69,7 @@ from fiboki.discovery.hypothesis import Hypothesis, HypothesisLedger
 from fiboki.discovery.mutation import MutationEngine, MutationProposal, mutation_lineage
 from fiboki.discovery.novelty import NoveltyIndex, NoveltyVerdict
 from fiboki.discovery.report import CampaignReport, CellResult, SkippedCell, deflation_threshold
+from fiboki.marketstate.calendar import EconomicCalendar, load_official_calendar
 from fiboki.research.experiment import ActorKind, ExperimentDraft, ExperimentLedger, Outcome
 from fiboki.strategy.dsl import StrategyDocument, strategy_key_version
 from fiboki.validation.evaluation import ParameterGrid
@@ -198,6 +208,17 @@ class CampaignSpec:
     itself is passed to the runner and cannot go in a JSON report.
     """
 
+    allow_empty_calendar: bool = False
+    """Run cells whose bars or currencies the economic calendar does not cover.
+
+    Off by default: every cell runs against the official calendar
+    (:func:`~fiboki.marketstate.calendar.load_official_calendar`) and a cell it
+    cannot vouch for is REFUSED rather than validated as if no scheduled
+    release ever happened. On, the calendar is still applied wherever it has
+    events; only the coverage refusal is lifted. Serialised, so a report says
+    which of the two it was produced under.
+    """
+
     notes: str = ""
 
     def __post_init__(self) -> None:
@@ -239,6 +260,7 @@ class CampaignSpec:
             "external_prior_trials": int(self.external_prior_trials),
             "external_prior_trials_reason": self.external_prior_trials_reason,
             "fx_label": self.fx_label,
+            "allow_empty_calendar": bool(self.allow_empty_calendar),
             "notes": self.notes,
         }
 
@@ -493,6 +515,7 @@ def run_cell(
     cache_dir: str | Path | None = None,
     fx: FxRateSource | None = None,
     fx_label: str = "",
+    calendar: EconomicCalendar | None = None,
 ) -> CellOutcome:
     """The production validator: the real engine, through the real ladder.
 
@@ -501,8 +524,21 @@ def run_cell(
     currency already equals the account currency, and raises otherwise -- so
     passing ``None`` for a JPY-quoted instrument in a USD account is a refusal,
     not a silent 1.0.
+
+    ``calendar`` is the blackout source. ``None`` means the committed official
+    calendar, loaded here, so a document's declared event blackout is enforced
+    by default. Before this, no calendar reached ``run_validation`` from a
+    campaign and every blackout was silently skipped. ``run_validation`` then
+    refuses a cell the calendar does not cover unless
+    ``spec.allow_empty_calendar``. To run with no calendar at all, pass
+    ``InMemoryEconomicCalendar.empty()`` with ``spec.allow_empty_calendar``:
+    an explicit empty calendar is forwarded as ``None``, which
+    ``run_validation`` logs loudly for any document that declares a blackout.
     """
     try:
+        source = calendar if calendar is not None else load_official_calendar()
+        if not source.all_events():
+            source = None
         run = run_validation(
             document=cell.document,
             bars=bars.frame,
@@ -527,6 +563,8 @@ def run_cell(
             experiment_id=experiment_id,
             actor=spec.actor,
             notes=notes,
+            calendar=source,
+            allow_empty_calendar=bool(spec.allow_empty_calendar),
         )
     except Exception as exc:
         return CellOutcome(error=f"{type(exc).__name__}: {exc}")
@@ -564,6 +602,7 @@ class CampaignRunner:
         novelty: NoveltyIndex | None = None,
         cache_dir: str | Path | None = None,
         fx: FxRateSource | None = None,
+        calendar: EconomicCalendar | None = None,
     ) -> None:
         if fx is not None and not spec.fx_label.strip():
             raise ValueError(
@@ -583,15 +622,24 @@ class CampaignRunner:
         self.novelty = novelty or NoveltyIndex(ledger)
         self.hypotheses = HypothesisLedger(ledger)
         self.cache_dir = cache_dir
+        #: Loaded lazily, once per runner, by the default validator; see
+        #: :func:`run_cell` for what ``None`` means.
+        self.calendar = calendar
         self._validator = validator or (
             lambda **kw: run_cell(
                 cache_dir=self.cache_dir,
                 fx=self.fx,
                 fx_label=self.spec.fx_label,
+                calendar=self._calendar(),
                 **kw,
             )
         )
         self._bar_cache: dict[tuple[str, str], BarSet | None] = {}
+
+    def _calendar(self) -> EconomicCalendar:
+        if self.calendar is None:
+            self.calendar = load_official_calendar()
+        return self.calendar
 
     # ----------------------------------------------------------------- plan
 

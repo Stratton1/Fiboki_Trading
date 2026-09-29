@@ -21,10 +21,10 @@ What this module refuses to let a caller do
   ``calendar`` must be populated, span the bars and know the instrument's
   currencies, or the run refuses with
   ``fiboki.marketstate.calendar.USER_ACTION_NOTE``, unless the caller passes
-  ``allow_empty_calendar=True``. KNOWN GAP: with ``calendar=None`` (every
-  current caller, including ``discovery.campaign.run_cell``) no blackout is
-  applied at all; a document that declares one gets a logged WARNING, not a
-  refusal, because refusing would stop every existing campaign.
+  ``allow_empty_calendar=True``. With ``calendar=None`` no blackout is
+  applied at all and a document that declares one gets a logged WARNING;
+  ``discovery.campaign.run_cell`` now loads the official calendar by default,
+  so a campaign reaches this path only by an explicit opt-out.
 
 What it does NOT do
 -------------------
@@ -34,8 +34,6 @@ and the record of it is the point.
 """
 from __future__ import annotations
 
-import hashlib
-import json
 import logging
 from collections.abc import Iterable, Mapping
 from dataclasses import dataclass, field
@@ -67,11 +65,6 @@ _log = logging.getLogger(__name__)
 def _declares_calendar_blackout(document: StrategyDocument) -> bool:
     ev = document.events
     return int(ev.block_minutes_before) > 0 or int(ev.block_minutes_after) > 0
-
-
-def _calendar_digest(calendar: EconomicCalendar) -> str:
-    blob = json.dumps([e.to_dict() for e in calendar.all_events()], sort_keys=True)
-    return hashlib.sha256(blob.encode("utf-8")).hexdigest()[:16]
 
 
 @dataclass(frozen=True, slots=True)
@@ -168,11 +161,8 @@ def run_validation(
             document.strategy_id,
             extra={"strategy_id": document.strategy_id, "instrument": symbol},
         )
-    if calendar is not None and cache_dir is not None:
-        # The evaluation cache key does not include the blackout source, so a
-        # calendar run must never share a directory with a no-calendar run (or
-        # with a different calendar): it would be served the other's answers.
-        cache_dir = Path(cache_dir) / f"calendar-{_calendar_digest(calendar)}"
+    # No per-calendar cache subdirectory: EngineEvaluator puts the calendar's
+    # content fingerprint into engine_config_hash and so into every cache key.
 
     config = EvaluatorConfig(
         instrument=symbol,

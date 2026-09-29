@@ -343,10 +343,23 @@ arrangement and marks what is not yet there.
 
 Recorded here so the diagram above is not read as a description of a running system.
 
-- **No application wiring.** The processes exist; nothing composes them. Nothing registers the
-  research job handlers, so `fiboki worker run research` idles and says so. Nothing starts the
-  heartbeat watchdog. Nothing schedules reconciliation. `fiboki worker run live` refuses by
-  design until an entrypoint owns its risk wiring.
+- **Application wiring: research side composed behind a flag; the rest still missing.**
+  `workers/research_runtime.compose_research_runtime` is the research composition root: research
+  store, strategy registry, bar source, every deterministic job handler (on the worker's
+  orchestrator and on a private one the agent workflows drain), a configured provider (`echo` or
+  a local Ollama model), the JSONL audit ledger at `<state_dir>/agents/audit.jsonl`, a nightly
+  `run_research_cycle` at a configured UTC time, and `run_failure_investigation` for an incident
+  that names a backtest. `ResearchWorker.setup` composes it when `FIBOKI_AGENT_CYCLES` is on;
+  off (the default), `fiboki worker run research` idles exactly as before and its CLI warning
+  still says so. Still missing: nothing starts the heartbeat watchdog; nothing schedules
+  reconciliation; incident alerts reach the investigator only in-process (an alert raised by the
+  paper or live worker does not cross to the research worker); `fiboki worker run live` refuses
+  by design until an entrypoint owns its risk wiring.
+- **Economic calendar wired.** `build_replay_session` gives the risk gateway an event source and
+  the paper venue a blackout source from the official calendar by default, and
+  `discovery.campaign.run_cell` passes it to `run_validation`; the evaluator's cache key includes
+  the calendar's content. Limitation: the gateway window (15 minutes in `PAPER_LIMITS`) is
+  measured from a replay bar's open stamp, so on H4 it sees only releases near a bar boundary.
 - ~~**No import-direction test.**~~ Closed: `tests/unit/test_layering.py` now exists, parses
   every module under `src/fiboki/` and enforces the declared rank order. It found no
   violations on its first run.
