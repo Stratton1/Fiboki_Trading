@@ -286,3 +286,48 @@ export async function failAll(page: Page, path = "**/api/**") {
     }),
   );
 }
+
+/** GET /api/auth/me: the signed-in operator (PrincipalView, not an envelope). */
+export function principal(overrides: Record<string, unknown> = {}) {
+  return {
+    user_id: "joe",
+    display_name: "Joe",
+    role: "admin",
+    expires_at: "2026-09-29T12:00:00Z",
+    can_arm_kill_switch: true,
+    can_promote: true,
+    ...overrides,
+  };
+}
+
+/** The live-mode banner payload, exactly as the API describes real money. */
+export function liveBanner(overrides: Record<string, unknown> = {}) {
+  return modeBanner({
+    mode: "live",
+    provenance: "broker_live",
+    touches_broker: true,
+    touches_real_money: true,
+    severity: "danger",
+    headline: "LIVE: orders are reaching a real-money account",
+    detail: "Every control on this page moves real capital.",
+    live_execution_compiled_in: true,
+    ...overrides,
+  });
+}
+
+/**
+ * The shell's own reads (health for the status bar, the operator) on top of
+ * mockApi, so a test sees a fully answered shell rather than "unreachable".
+ */
+export async function mockShell(page: Page, options: { operator?: boolean } = {}) {
+  await mockApi(page);
+  await page.route(`${API}/api/health`, (route: Route) => route.fulfill({ json: healthReport() }));
+  await page.route(`${API}/api/auth/me`, (route: Route) =>
+    options.operator === false
+      ? route.fulfill({
+          status: 401,
+          json: { code: "not_authenticated", detail: "No session.", correlation_id: "cid-me", context: {} },
+        })
+      : route.fulfill({ json: principal() }),
+  );
+}

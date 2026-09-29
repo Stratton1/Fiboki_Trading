@@ -91,7 +91,7 @@ export function ListPage<T>({
                 </tbody>
               </table>
             </TableWrap>
-            <p className="muted" style={{ marginTop: 8 }}>
+            <p className="muted mt-2">
               Showing {page.items.length} of {page.total}.
             </p>
           </>

@@ -7,12 +7,40 @@ import type { Figure, Provenance } from "./types";
  * absent case explicitly. There is deliberately no `formatFigure(f) ?? "0"`
  * convenience; that shortcut IS the V1 bug.
  */
-export function formatFigure(figure: Figure): string | null {
+export function formatFigure(
+  figure: Figure,
+  options: { signed?: boolean } = {},
+): string | null {
   if (figure.value === null) return null;
-  return formatNumber(figure.value, figure.unit);
+  return options.signed
+    ? formatSigned(figure.value, figure.unit)
+    : formatNumber(figure.value, figure.unit);
 }
 
+/** U+2212, the typographic minus. A hyphen is the wrong width in tabular figures. */
+export const MINUS = "\u2212";
+
+/**
+ * A number in its unit, with a real minus sign for negatives. Negative zero
+ * renders as zero: "−£0.00" would claim a loss the data does not contain.
+ */
 export function formatNumber(value: number, unit: string): string {
+  const v = Object.is(value, -0) ? 0 : value;
+  const text = formatMagnitude(v, unit);
+  return text.startsWith("-") ? `${MINUS}${text.slice(1)}` : text;
+}
+
+/**
+ * A signed quantity such as P&L: an explicit "+" on gains, a real minus on
+ * losses, and no sign on an exact zero (which renders only when the API
+ * returned 0; null never reaches here).
+ */
+export function formatSigned(value: number, unit: string): string {
+  const text = formatNumber(value, unit);
+  return value > 0 ? `+${text}` : text;
+}
+
+function formatMagnitude(value: number, unit: string): string {
   switch (unit) {
     case "GBP":
       return new Intl.NumberFormat("en-GB", {
@@ -56,6 +84,30 @@ export const PROVENANCE_LABEL: Record<Provenance, string> = {
   shadow: "SHADOW",
   broker_demo: "DEMO",
   broker_live: "LIVE",
+};
+
+/** Chip text (report E §4.4). The long label stays in titles and popovers. */
+export const PROVENANCE_SHORT: Record<Provenance, string> = {
+  backtest: "BT",
+  walkforward: "WF",
+  out_of_sample: "OOS",
+  holdout: "HOLD",
+  paper: "PAPER",
+  shadow: "SHADOW",
+  broker_demo: "DEMO",
+  broker_live: "LIVE",
+};
+
+/** Whether a provenance records an execution (filled chip) or a simulation (hollow). */
+export const PROVENANCE_EXECUTED: Record<Provenance, boolean> = {
+  backtest: false,
+  walkforward: false,
+  out_of_sample: false,
+  holdout: false,
+  paper: true,
+  shadow: true,
+  broker_demo: true,
+  broker_live: true,
 };
 
 export const PROVENANCE_HELP: Record<Provenance, string> = {
@@ -115,5 +167,19 @@ export function signClass(value: number | null): string {
   if (value === null) return "";
   if (value > 0) return "pos";
   if (value < 0) return "neg";
-  return "";
+  return "flat";
+}
+
+/** HH:MM:SS in UTC, labelled, for the status bar clock and as-of stamps. */
+export function formatUtcTime(iso: string | number | Date): string {
+  const date = typeof iso === "string" ? parseUtc(iso) : new Date(iso);
+  if (Number.isNaN(date.getTime())) return "—";
+  const text = new Intl.DateTimeFormat("en-GB", {
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: false,
+    timeZone: "UTC",
+  }).format(date);
+  return `${text} UTC`;
 }

@@ -3,11 +3,13 @@
 import { useState } from "react";
 import { ApiError, apiFetch, useApi } from "@/lib/api";
 import { AsyncBoundary } from "@/components/AsyncBoundary";
+import { useExecutionMode } from "@/components/shell/platform";
+import { Button } from "@/components/ui/Button";
 import {
   ConfirmDialog,
   type Acknowledgement,
   type ConfirmChoice,
-} from "@/components/ConfirmDialog";
+} from "@/components/ui/ConfirmDialog";
 import { FigureValue } from "@/components/FigureValue";
 import {
   CaveatList,
@@ -18,7 +20,6 @@ import {
 import type {
   CandidateRow,
   Envelope,
-  ExecutionModeBanner,
   Page,
   PromotePreflightView,
 } from "@/lib/types";
@@ -40,7 +41,7 @@ import type {
  */
 export default function CandidatesPage() {
   const state = useApi<Page<CandidateRow>>("/api/trading/candidates");
-  const mode = useApi<Envelope<ExecutionModeBanner>>("/api/system/execution-mode");
+  const { mode: executionMode, mutationsAllowed } = useExecutionMode();
   const [target, setTarget] = useState<CandidateRow | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -50,8 +51,6 @@ export default function CandidatesPage() {
       ? `/api/trading/candidates/${encodeURIComponent(target.strategy_id)}/promote/preflight`
       : null,
   );
-
-  const executionMode = mode.status === "success" ? mode.data.data.mode : "unknown";
 
   const view = preflight.status === "success" ? preflight.data.data : null;
   const promotable = view !== null && view.eligible;
@@ -128,12 +127,12 @@ export default function CandidatesPage() {
                   <tr>
                     <th>Strategy</th>
                     <th>Family</th>
-                    <th>Trades</th>
-                    <th>Win rate</th>
-                    <th>Expectancy</th>
-                    <th>Net P&L</th>
-                    <th>Sharpe</th>
-                    <th>Max DD</th>
+                    <th className="num">Trades</th>
+                    <th className="num">Win rate</th>
+                    <th className="num">Expectancy</th>
+                    <th className="num">Net P&L</th>
+                    <th className="num">Sharpe</th>
+                    <th className="num">Max DD</th>
                     <th>Eligible</th>
                     <th>Action</th>
                   </tr>
@@ -174,14 +173,16 @@ export default function CandidatesPage() {
                         </span>
                       </td>
                       <td>
-                        <button
-                          type="button"
+                        <Button
+                          size="sm"
                           data-testid={`promote-${row.strategy_id}`}
-                          disabled={!row.eligible_for_ranking}
+                          disabled={!row.eligible_for_ranking || !mutationsAllowed}
                           title={
-                            row.eligible_for_ranking
-                              ? `Requires the ${row.next_action_requires_role} role.`
-                              : row.blocking_reasons.join(" ")
+                            !mutationsAllowed
+                              ? "The execution mode is unknown; nothing can be promoted until it can be read."
+                              : row.eligible_for_ranking
+                                ? `Requires the ${row.next_action_requires_role} role.`
+                                : row.blocking_reasons.join(" ")
                           }
                           onClick={() => {
                             setError(null);
@@ -189,7 +190,7 @@ export default function CandidatesPage() {
                           }}
                         >
                           Promote
-                        </button>
+                        </Button>
                       </td>
                     </tr>
                   ))}
@@ -204,7 +205,7 @@ export default function CandidatesPage() {
                   {page.items.flatMap((row) =>
                     row.blocking_reasons.map((reason) => (
                       <li key={`${row.strategy_id}:${reason}`}>
-                        <span className="mono">{row.strategy_id}</span> — {reason}
+                        <span className="mono">{row.strategy_id}</span>: {reason}
                       </li>
                     )),
                   )}

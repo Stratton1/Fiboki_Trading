@@ -4,12 +4,13 @@ import { useState } from "react";
 import { ApiError, apiFetch, useApi } from "@/lib/api";
 import type {
   Envelope,
-  ExecutionModeBanner,
   KillSwitchDisarmPreflightView,
   KillSwitchView,
 } from "@/lib/types";
 import { AsyncBoundary } from "./AsyncBoundary";
-import { ConfirmDialog, type ConfirmChoice } from "./ConfirmDialog";
+import { useExecutionMode } from "./shell/platform";
+import { Button } from "./ui/Button";
+import { ConfirmDialog, type ConfirmChoice } from "./ui/ConfirmDialog";
 
 /**
  * The kill switch, reachable in EVERY mode.
@@ -27,11 +28,14 @@ import { ConfirmDialog, type ConfirmChoice } from "./ConfirmDialog";
  *  - FLATTEN additionally requires typing the word FLATTEN;
  *  - the disarm (re-arm trading) consequences are server-computed too, from
  *    GET /api/trading/preflight/kill-switch-disarm, fetched when the dialog
- *    opens so they describe the halt actually being lifted.
+ *    opens so they describe the halt actually being lifted;
+ *  - while the execution mode is unknown (the platform has never answered),
+ *    neither control can be opened: this workstation cannot say where an
+ *    order would go, so it confirms nothing (plan §3, report E §4.4).
  */
 export function KillSwitchPanel({ compact = false }: { compact?: boolean }) {
   const state = useApi<Envelope<KillSwitchView>>("/api/system/kill-switch");
-  const mode = useApi<Envelope<ExecutionModeBanner>>("/api/system/execution-mode");
+  const { mode: executionMode, mutationsAllowed } = useExecutionMode();
   const [dialog, setDialog] = useState<"arm" | "disarm" | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -39,7 +43,6 @@ export function KillSwitchPanel({ compact = false }: { compact?: boolean }) {
     dialog === "disarm" ? "/api/trading/preflight/kill-switch-disarm" : null,
   );
 
-  const executionMode = mode.status === "success" ? mode.data.data.mode : "unknown";
   const disarmChoices: ConfirmChoice[] =
     disarmPreflight.status === "success"
       ? Object.entries(disarmPreflight.data.data.consequences).map(
@@ -110,7 +113,7 @@ export function KillSwitchPanel({ compact = false }: { compact?: boolean }) {
 
         return (
           <div data-testid="kill-switch-panel">
-            <div className="row" style={{ marginBottom: 10 }}>
+            <div className="row mb-2.5">
               <span
                 className={`badge badge--${view.active ? "down" : "ok"}`}
                 data-testid="kill-switch-status"
@@ -137,29 +140,36 @@ export function KillSwitchPanel({ compact = false }: { compact?: boolean }) {
             ) : null}
 
             <div className="row">
-              <button
-                type="button"
-                className="btn--danger"
+              <Button
+                variant="danger"
                 data-testid="kill-switch-arm"
+                disabled={!mutationsAllowed}
                 onClick={() => {
                   setError(null);
                   setDialog("arm");
                 }}
               >
                 {view.active ? "Change halt level" : "Arm kill switch"}
-              </button>
+              </Button>
               {view.active ? (
-                <button
-                  type="button"
-                  className="btn--warn"
+                <Button
+                  variant="warn"
                   data-testid="kill-switch-disarm"
+                  disabled={!mutationsAllowed}
                   onClick={() => {
                     setError(null);
                     setDialog("disarm");
                   }}
                 >
                   Disarm and re-arm trading
-                </button>
+                </Button>
+              ) : null}
+              {!mutationsAllowed ? (
+                <span className="muted" data-testid="kill-switch-blocked">
+                  {executionMode === "loading"
+                    ? "Reading the execution mode before enabling this control."
+                    : "The execution mode is unknown, so the kill switch cannot be confirmed from here."}
+                </span>
               ) : null}
             </div>
 

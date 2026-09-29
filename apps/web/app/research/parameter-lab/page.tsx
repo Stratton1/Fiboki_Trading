@@ -40,14 +40,13 @@ export default function ParameterLabPage() {
 
       <AsyncBoundary state={strategies} label="strategies" onRetry={strategies.reload}>
         {(page) => (
-          <div className="row" style={{ marginBottom: 14 }}>
-            <label style={{ margin: 0 }} htmlFor="strategy-select">
+          <div className="row mb-3.5">
+            <label className="m-0" htmlFor="strategy-select">
               Strategy
             </label>
             <select
               id="strategy-select"
               data-testid="strategy-select"
-              style={{ width: "auto" }}
               value={chosen ?? ""}
               onChange={(e) => setSelected(e.target.value)}
             >

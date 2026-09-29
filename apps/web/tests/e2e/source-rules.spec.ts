@@ -164,11 +164,68 @@ test.describe("source rules", () => {
 
   test("no charting library is bundled", async () => {
     // V1 shipped ~4.5MB of Plotly, including mapbox-gl, to draw line charts.
+    // Checked in package.json AND the lockfile, so a transitive copy fails too.
+    const banned = ["plotly.js", "react-plotly.js", "mapbox-gl", "chart.js", "d3", "echarts"];
     const pkg = JSON.parse(readFileSync(join(ROOT, "package.json"), "utf8"));
     const deps = Object.keys({ ...pkg.dependencies, ...pkg.devDependencies });
-    for (const banned of ["plotly.js", "react-plotly.js", "mapbox-gl", "chart.js", "d3", "echarts"]) {
-      expect(deps, `${banned} must not be a dependency`).not.toContain(banned);
+    for (const name of banned) {
+      expect(deps, `${name} must not be a dependency`).not.toContain(name);
     }
-    expect(Object.keys(pkg.dependencies)).toEqual(["next", "react", "react-dom"]);
+    const lock = JSON.parse(readFileSync(join(ROOT, "package-lock.json"), "utf8"));
+    const installed = Object.keys(lock.packages ?? {}).map((key) =>
+      key.replace(/^.*node_modules\//, ""),
+    );
+    for (const name of banned) {
+      expect(installed, `${name} must not be installed, even transitively`).not.toContain(name);
+    }
+  });
+
+  test("runtime dependencies are an explicit allow-list", async () => {
+    // Replaces "exactly three dependencies" (report E §3.7, plan D-F7). Each
+    // entry is a reviewed decision; adding a runtime dependency means adding
+    // it here, in the same change, and staying inside the byte budgets below.
+    const ALLOWED: Record<string, string> = {
+      next: "framework (D-F1)",
+      react: "framework (D-F1)",
+      "react-dom": "framework (D-F1)",
+      "@base-ui/react": "accessible primitives under components/ui (D-F2)",
+      "lucide-react": "icons, tree-shaken",
+      "@fontsource-variable/inter": "self-hosted UI font, OFL (D-F9)",
+      "@fontsource-variable/jetbrains-mono": "self-hosted mono font, OFL (D-F9)",
+      "react-resizable-panels": "SplitPane (D-F8)",
+    };
+    const pkg = JSON.parse(readFileSync(join(ROOT, "package.json"), "utf8"));
+    const runtime = Object.keys(pkg.dependencies).sort();
+    expect(runtime, "every runtime dependency must be on the allow-list").toEqual(
+      Object.keys(ALLOWED).sort(),
+    );
+  });
+
+  test("every route's first-load JavaScript is within its gzip budget", async () => {
+    // Shell and Overview <= 180 KiB; every other route <= 230 KiB for now.
+    // Measured from the production build this suite serves (the prerendered
+    // HTML's module scripts, gzipped one by one); `npm run size` enforces the
+    // same budgets through size-limit.
+    const { measureRoutes } = await import("../../scripts/first-load.mjs");
+    const rows: { route: string; jsGzip: number; budgetKb: number }[] = measureRoutes();
+
+    // No route escapes measurement: every app page must appear.
+    const pages: string[] = [];
+    const walk = (dir: string, prefix: string) => {
+      for (const entry of readdirSync(dir)) {
+        const full = join(dir, entry);
+        if (statSync(full).isDirectory()) walk(full, `${prefix}/${entry}`);
+        else if (entry === "page.tsx") pages.push(prefix === "" ? "/" : prefix);
+      }
+    };
+    walk(join(ROOT, "app"), "");
+    expect(rows.map((r) => r.route).sort()).toEqual(pages.sort());
+
+    const over = rows
+      .filter((r) => r.jsGzip / 1024 > r.budgetKb)
+      .map((r) => `${r.route}: ${(r.jsGzip / 1024).toFixed(1)} KiB > ${r.budgetKb} KiB`);
+    expect(over, "first-load JS over budget").toEqual([]);
+    const shell = rows.find((r) => r.route === "/");
+    expect(shell?.budgetKb).toBe(180);
   });
 });

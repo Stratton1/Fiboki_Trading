@@ -1,6 +1,7 @@
 "use client";
 
 import { useApi } from "@/lib/api";
+import { useHealth } from "@/components/shell/platform";
 import { AsyncBoundary } from "@/components/AsyncBoundary";
 import { KillSwitchPanel } from "@/components/KillSwitch";
 import { LineChart } from "@/components/charts";
@@ -17,7 +18,6 @@ import { ProvenanceChip } from "@/components/ProvenanceChip";
 import { formatAge, formatTimestamp } from "@/lib/format";
 import type {
   Envelope,
-  HealthReport,
   PortfolioView,
   RiskStateView,
 } from "@/lib/types";
@@ -32,7 +32,8 @@ import type {
  * from a quiet one.
  */
 export default function OverviewPage() {
-  const health = useApi<HealthReport>("/api/health", { refreshMs: 20_000 });
+  // Shared with the status bar: one /api/health poll for the whole shell.
+  const health = useHealth();
   const portfolio = useApi<Envelope<PortfolioView>>("/api/trading/portfolio");
   const risk = useApi<Envelope<RiskStateView>>("/api/trading/risk");
 
@@ -47,7 +48,7 @@ export default function OverviewPage() {
         <AsyncBoundary state={health} label="platform health" onRetry={health.reload}>
           {(report) => (
             <div data-testid="health-panel">
-              <div className="row" style={{ marginBottom: 10 }}>
+              <div className="row mb-2.5">
                 <StatusBadge status={report.status} />
                 <span className="muted">
                   build {report.build_sha ?? "unknown"} · mode {report.execution_mode} ·
@@ -121,7 +122,7 @@ export default function OverviewPage() {
               <p className="muted">
                 Trade record by provenance:{" "}
                 {Object.entries(envelope.data.provenance_mix).map(([key, count]) => (
-                  <span key={key} style={{ marginRight: 10 }}>
+                  <span key={key} className="mr-2.5 inline-flex items-center gap-1">
                     <ProvenanceChip provenance={key as never} /> {count}
                   </span>
                 ))}

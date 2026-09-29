@@ -1,8 +1,13 @@
 "use client";
 
 import { useEffect, useState, type ReactNode } from "react";
-import type { ApiError, AsyncState } from "@/lib/api";
-import { formatAge, formatTimestamp } from "@/lib/format";
+import type { AsyncState } from "@/lib/api";
+import { Button } from "./ui/Button";
+import { EmptyState } from "./ui/EmptyState";
+import { Skeleton } from "./ui/Skeleton";
+import { StaleBadge, type Freshness } from "./ui/StaleBadge";
+
+export { StaleBadge, type Freshness } from "./ui/StaleBadge";
 
 /** Data older than this many poll intervals is stale even with no error. */
 export const STALE_AFTER_INTERVALS = 3;
@@ -19,12 +24,6 @@ export function useNow(active: boolean, tickMs = 1000): number {
     return () => clearInterval(timer);
   }, [active, tickMs]);
   return now;
-}
-
-export interface Freshness {
-  stale: boolean;
-  ageSeconds: number;
-  refreshError: ApiError | null;
 }
 
 /**
@@ -47,46 +46,6 @@ export function useFreshness<T>(
     ageSeconds,
     refreshError: state.refreshError,
   };
-}
-
-/**
- * The marker for "these numbers are the last good ones, not current ones".
- * It replaces nothing: the data stays on screen beside it.
- */
-export function StaleBadge({
-  freshness,
-  asOf,
-  polling,
-  onRetry,
-}: {
-  freshness: Freshness;
-  asOf: string;
-  polling: boolean;
-  onRetry?: () => void;
-}) {
-  const error = freshness.refreshError;
-  const title = [
-    `Last good data received ${formatTimestamp(asOf)}.`,
-    error
-      ? `The latest refresh failed: ${error.message} (code ${error.code}` +
-        `${error.status ? `, http ${error.status}` : ""}` +
-        `${error.correlationId ? `, correlation ${error.correlationId}` : ""}).`
-      : "No refresh has completed since.",
-  ].join(" ");
-  return (
-    <span className="stale-badge" data-testid="state-stale" role="status" title={title}>
-      <span className="badge badge--degraded">STALE</span>
-      <span>
-        last good {formatAge(freshness.ageSeconds)}
-        {polling ? " · retrying" : ""}
-      </span>
-      {!polling && onRetry ? (
-        <button type="button" onClick={onRetry} data-testid="state-stale-retry">
-          Retry
-        </button>
-      ) : null}
-    </span>
-  );
 }
 
 /**
@@ -126,9 +85,9 @@ export function AsyncBoundary<T>({
     return (
       <div className="state state--loading" data-testid="state-loading" role="status">
         <div className="state__title">Loading {label}…</div>
-        <div className="skeleton" style={{ width: "72%" }} />
-        <div className="skeleton" style={{ width: "54%" }} />
-        <div className="skeleton" style={{ width: "63%" }} />
+        <Skeleton className="w-[72%]" />
+        <Skeleton className="w-[54%]" />
+        <Skeleton className="w-[63%]" />
       </div>
     );
   }
@@ -155,11 +114,11 @@ export function AsyncBoundary<T>({
             : ""}
         </div>
         {onRetry ? (
-          <p>
-            <button type="button" onClick={onRetry} data-testid="state-error-retry">
+          <div className="state__actions">
+            <Button onClick={onRetry} data-testid="state-error-retry">
               Retry
-            </button>
-          </p>
+            </Button>
+          </div>
         ) : null}
       </div>
     );
@@ -178,19 +137,14 @@ export function AsyncBoundary<T>({
 
   if (isEmpty?.(state.data)) {
     return (
-      <div
-        className="state state--empty"
-        data-testid="state-empty"
+      <EmptyState
+        title={emptyTitle}
+        badge={badge}
         data-as-of={state.asOf}
         data-stale={stale}
       >
-        {badge}
-        <div className="state__title">
-          <span>{emptyTitle}</span>
-          <span className="badge badge--unknown">EMPTY</span>
-        </div>
-        <div className="state__body">{emptyBody}</div>
-      </div>
+        {emptyBody}
+      </EmptyState>
     );
   }
 

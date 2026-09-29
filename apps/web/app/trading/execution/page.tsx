@@ -58,14 +58,13 @@ export default function ExecutionPage() {
     >
       {(page) => (
         <>
-          <div className="row" style={{ marginBottom: 12 }}>
-            <label style={{ margin: 0 }} htmlFor="prov-filter">
+          <div className="row mb-3">
+            <label className="m-0" htmlFor="prov-filter">
               Filter by provenance
             </label>
             <select
               id="prov-filter"
               data-testid="provenance-filter"
-              style={{ width: "auto" }}
               value={filter}
               onChange={(e) => setFilter(e.target.value as Provenance | "all")}
             >

@@ -75,8 +75,8 @@ function ChartFrame({
   children: React.ReactNode;
 }) {
   return (
-    <figure className="chart" style={{ margin: 0 }} data-testid="chart">
-      <figcaption className="row" style={{ marginBottom: 6 }}>
+    <figure className="chart" data-testid="chart">
+      <figcaption className="row mb-1.5">
         <strong>{title}</strong>
         <ProvenanceLabelChip label={provenance} />
         {unit ? <span className="muted">({unit})</span> : null}

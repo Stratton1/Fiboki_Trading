@@ -26,7 +26,7 @@ export default function ResearchLabPage() {
                 {page.items.map((row) => (
                   <div className="tile" key={row.strategy_id}>
                     <div className="tile__label">{row.family}</div>
-                    <div className="tile__value" style={{ fontSize: 15 }}>
+                    <div className="tile__value text-md">
                       <Link href="/research/strategies">{row.name}</Link>
                     </div>
                     <div className="tile__help">{row.hypothesis || "No hypothesis recorded."}</div>

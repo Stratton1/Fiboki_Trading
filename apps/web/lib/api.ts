@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { asOfCandidates, noteAsOf } from "./as-of";
 import type { ApiErrorBody } from "./types";
 
 export const API_BASE =
@@ -184,6 +185,7 @@ export function useApi<T>(
     apiFetch<T>(path)
       .then((data) => {
         if (!cancelled && mounted.current) {
+          for (const asOf of asOfCandidates(data)) noteAsOf(asOf);
           setState({
             status: "success",
             data,

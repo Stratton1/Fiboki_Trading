@@ -14,8 +14,7 @@ function IntegrityBanner() {
     <AsyncBoundary state={state} label="audit integrity" onRetry={state.reload}>
       {(envelope) => (
         <div
-          className={`state state--${envelope.data.intact ? "empty" : "error"}`}
-          style={{ marginBottom: 14 }}
+          className={`state state--${envelope.data.intact ? "empty" : "error"} mb-3.5`}
           data-testid="audit-integrity"
         >
           <div className="state__title">

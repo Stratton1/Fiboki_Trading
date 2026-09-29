@@ -1,37 +1,40 @@
 import type { Metadata, Viewport } from "next";
-import { ModeBanner } from "@/components/ModeBanner";
-import { Nav } from "@/components/Nav";
+import "@fontsource-variable/inter";
+import "@fontsource-variable/jetbrains-mono";
+import { Shell } from "@/components/shell/Shell";
+import { PREPAINT_SCRIPT } from "@/lib/prepaint";
 import "./globals.css";
 
+// No `title` here: the shell renders it from the execution mode ("[PAPER]
+// Fiboki", "● LIVE Fiboki"), so a second <title> must not compete with it.
 export const metadata: Metadata = {
-  title: "Fiboki Workstation",
-  description:
-    "Operator workstation for the Fiboki V2 research and trading platform.",
+  applicationName: "Fiboki",
+  description: "Operator workstation for the Fiboki V2 research and trading platform.",
 };
 
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",
+  colorScheme: "dark light",
 };
 
 /**
- * The banner is rendered here, ONCE, outside the scrolling content, so it is
- * present on every page and cannot scroll away. No page opts out and no page
- * re-implements it; that is how V1 ended up with 14 of 19 pages that never read
- * the execution mode at all.
+ * The shell (mode banner, frame, rail, status bar) is rendered here, once,
+ * around every page. The inline script applies the operator's theme and
+ * density before first paint; `suppressHydrationWarning` is for exactly the
+ * attributes it sets on <html>.
  */
 export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en-GB">
+    <html lang="en-GB" suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: PREPAINT_SCRIPT }} />
+      </head>
       <body>
-        <ModeBanner />
-        <div className="shell">
-          <Nav />
-          <main className="content">{children}</main>
-        </div>
+        <Shell>{children}</Shell>
       </body>
     </html>
   );
