@@ -362,3 +362,16 @@ def test_a_call_refused_by_the_budget_still_records_what_it_cost() -> None:
     assert record.outcome is Outcome.ERROR
     assert record.cost_usd > session.budget.max_cost_usd  # spent, and on the record
     assert record.prompt_tokens > 0
+
+
+def test_ollama_payload_disables_thinking_and_strips_a_leading_think_block():
+    """Qwen3-class models think before answering; under ``format`` the thinking can
+    consume the output budget and leave the JSON empty (seen on the first real
+    smoke test, 2026-09-29). The request now says ``think: false`` and a leading
+    closed think block is stripped; an unclosed one is left for the parser to reject."""
+    from fiboki.agents.providers import _strip_think_block
+
+    assert _strip_think_block('<think>\nreasoning\n</think>\n{"a": 1}') == '{"a": 1}'
+    assert _strip_think_block('{"a": 1}') == '{"a": 1}'
+    unclosed = "<think>still going"
+    assert _strip_think_block(unclosed) == unclosed

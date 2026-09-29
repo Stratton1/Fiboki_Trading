@@ -338,6 +338,19 @@ class EchoProvider(LLMProvider):
         )
 
 
+_THINK_RE = re.compile(r"^\s*<think>.*?</think>\s*", re.DOTALL)
+
+
+def _strip_think_block(text: str) -> str:
+    """Drop one leading ``<think>...</think>`` block, leaving the answer.
+
+    Only a LEADING block is removed and only when it is closed: an unclosed
+    block means the model ran out of tokens while thinking, and that text is
+    returned as-is so the caller's JSON parse fails loudly on it.
+    """
+    return _THINK_RE.sub("", text, count=1)
+
+
 def _approx_tokens(text: str) -> int:
     """Deterministic token estimate: 4 characters per token, rounded up."""
     return (len(text) + 3) // 4
@@ -608,6 +621,13 @@ class LocalHTTPProvider(LLMProvider):
             "model": model,
             "stream": False,
             "options": options,
+            # Reasoning models (Qwen3, DeepSeek-R1 families) emit a hidden
+            # "thinking" pass before the answer. Under ``format`` that pass can
+            # consume the whole output budget and leave ``content`` empty, so
+            # thinking is switched off: every Fiboki role wants a schema-bound
+            # answer, and the reasoning belongs in the JSON's own fields.
+            # Servers that predate the field ignore it (Ollama < 0.9).
+            "think": False,
             "messages": [
                 {"role": "system", "content": request.system},
                 {"role": "user", "content": request.prompt},
@@ -626,6 +646,9 @@ class LocalHTTPProvider(LLMProvider):
         if body.get("error"):
             raise ProviderError(f"{self.base_url}{self.path}: {str(body['error'])[:400]}")
         text = str(((body.get("message") or {}).get("content")) or body.get("response") or "")
+        # A server that ignored ``think: false`` may still prefix the answer
+        # with a <think>...</think> block; the JSON is what follows it.
+        text = _strip_think_block(text)
         prompt_tokens = int(body.get("prompt_eval_count") or _approx_tokens(request.prompt))
         completion_tokens = int(body.get("eval_count") or _approx_tokens(text))
         return LLMResponse(
