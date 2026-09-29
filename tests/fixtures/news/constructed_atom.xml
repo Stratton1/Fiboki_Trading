@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- CONSTRUCTED fixture (Atom 1.0, RFC 4287 shape). None of the six central banks serves Atom today. -->
+<feed xmlns="http://www.w3.org/2005/Atom">
+  <title>Example statistics office</title>
+  <id>urn:example:feed</id>
+  <updated>2026-09-28T10:00:00Z</updated>
+  <entry>
+    <title>  Labour market overview:   September 2026 </title>
+    <link rel="alternate" href="https://example.org/releases/lmo-2026-09"/>
+    <id>urn:example:lmo-2026-09</id>
+    <published>2026-09-28T06:00:00Z</published>
+    <summary>Headline unemployment rate.</summary>
+  </entry>
+  <entry>
+    <title>Entry with no link but an id</title>
+    <id>urn:example:no-link</id>
+    <updated>2026-09-28T07:00:00+01:00</updated>
+  </entry>
+  <entry>
+    <link href="https://example.org/untitled"/>
+    <id>urn:example:untitled</id>
+  </entry>
+</feed>

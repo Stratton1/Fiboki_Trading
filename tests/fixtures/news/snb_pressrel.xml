@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss xmlns:atom="http://www.w3.org/2005/Atom" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:dcterms="http://purl.org/dc/terms/" version="2.0">
+  <channel>
+    <atom:link href="https://www.snb.ch/en/news-publications/media-releases" rel="self" type="application/rss+xml" />
+    <title>Press releases: general topics</title>
+    <link>https://www.snb.ch/en/news-publications/media-releases</link>
+    <description>Swiss National Bank (SNB): Press releases - general topics</description>
+    <dc:publisher>SNB</dc:publisher>
+    <dc:date>2026-09-28T22:35:01Z</dc:date>
+    <dc:rights>Copyright © Swiss National Bank, Zurich (Switzerland) 2026</dc:rights>
+    <dcterms:created>2026-09-28T22:35:01Z</dcterms:created>
+    <dcterms:license>https://www.snb.ch/en/srv/disclaimer</dcterms:license>
+    <item>
+      <title>2026-09-24 - Monetary policy assessment of 24 September 2026</title>
+      <link>https://www.snb.ch/en/publications/communication/press-releases-restricted/pre_20260924</link>
+      <guid>https://www.snb.ch/en/publications/communication/press-releases-restricted/pre_20260924</guid>
+      <dc:date>2026-09-24T07:30:00Z</dc:date>
+      <dc:language>en</dc:language>
+    </item>
+    <item>
+      <title>2026-09-22 - Swiss balance of payments and international investment position</title>
+      <link>https://www.snb.ch/en/publications/communication/press-releases/2026/pre_20260922</link>
+      <guid>https://www.snb.ch/en/publications/communication/press-releases/2026/pre_20260922</guid>
+      <dc:date>2026-09-22T07:00:00Z</dc:date>
+      <dc:language>en</dc:language>
+    </item>
+    <item>
+      <title>2026-09-14 - 2026 Carl Menger Award</title>
+      <link>https://www.snb.ch/en/publications/communication/press-releases/2026/pre_20260914</link>
+      <guid>https://www.snb.ch/en/publications/communication/press-releases/2026/pre_20260914</guid>
+      <dc:date>2026-09-14T16:30:00Z</dc:date>
+      <dc:language>en</dc:language>
+    </item>
+    
+  </channel>
+</rss>

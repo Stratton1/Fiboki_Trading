@@ -445,3 +445,142 @@ it to a supplied calendar and `scripts/run_paper_session.py` applies it by defau
 (`--allow-empty-calendar` opts out and is recorded). Two gaps remain and are stated rather than
 hidden: the paper runtime does not yet feed the calendar to the risk gateway's `event_blackout`
 check, and no validation caller passes a calendar yet.
+
+## 14. Point-in-time text and macro data
+
+Added 2026-09-28 (Wave 3, D-A5). Packages: `src/fiboki/data/news/` and six macro providers
+under `src/fiboki/data/providers/`, sharing `providers/macro_base.py`. Tests:
+`tests/unit/test_news_recorder.py`, `tests/unit/test_macro_providers.py`. No LLM anywhere in
+either.
+
+The governing sentence: **a number or a headline is usable in a backtest only from the instant
+it could have been known, and that instant is stored beside it, never inferred from its
+reference date.** Both halves of this section store two times and keep them apart.
+
+### 14.1 The headline recorder
+
+```
+<state_dir>/news/headlines.sqlite      WAL, synchronous=FULL, append-only by trigger
+  headline            id, source (enum), source_item_id, url, url_hash, title, summary,
+                      vendor_published_at (nullable), observed_at (UTC, ours), raw_json,
+                      content_hash, feed_key;  UNIQUE (source, url_hash)
+  headline_revision   later content seen for an existing (source, url): appended, never merged
+  feed_source         every configured feed URL, where it was found, when it was retrieved
+  poll_log            one row per poll with per-feed outcomes (the evidence for gaps)
+```
+
+- **Availability is `observed_at`, set by our clock at the poll.** `vendor_published_at` is
+  informational. `HeadlineStore.query(as_of, since, sources, currencies_hint)` filters on
+  `observed_at` alone and has no "latest" mode.
+- **Append-only in the database, not in the code.** Triggers refuse `UPDATE` and `DELETE` on
+  every table, and a `BEFORE INSERT` trigger refuses a colliding insert, because SQLite's
+  `INSERT OR REPLACE` deletes without firing delete triggers.
+- **Dedupe** is `(source, url_hash)`; the URL hash lower-cases scheme and host and drops the
+  fragment, nothing else (a false merge loses a headline). The same URL from two sources is two
+  rows. A retitled item goes to `headline_revision`; `query` serves the first-seen row.
+- **Restart safety**: one transaction per poll; a crash loses that poll's inserts, and the next
+  poll re-inserts them with a later `observed_at`. Wrong only in the safe direction.
+- **Bootstrap burst, stated**: the first poll stamps every item currently in each feed with the
+  first poll's instant. Items published before the recorder started carry `observed_at` far
+  after `vendor_published_at`; they are genuinely unseen until then and must not be read as news
+  at that instant by an event study. The archive is valid from its first poll forward.
+- **CLI**: `fiboki news record --once|--loop --interval 300`, `fiboki news status` (exit 1 when
+  no poll has run within `--gap-threshold`, default 900 s). Supervision under the worker
+  supervisor is not wired (`workers/` belongs to another item).
+
+Official feeds (discovered on each bank's own RSS index page, fetched and parsed
+2026-09-28T22:40Z; none guessed):
+
+| Source | Feed key | URL | Format |
+|---|---|---|---|
+| Fed | `fed_press_monetary` | https://www.federalreserve.gov/feeds/press_monetary.xml | RSS 2.0 |
+| Fed | `fed_press_all` | https://www.federalreserve.gov/feeds/press_all.xml | RSS 2.0 |
+| Fed | `fed_speeches` | https://www.federalreserve.gov/feeds/speeches_and_testimony.xml | RSS 2.0 |
+| ECB | `ecb_press` | https://www.ecb.europa.eu/rss/press.html | RSS 2.0 |
+| ECB | `ecb_blog` | https://www.ecb.europa.eu/rss/blog.html | RSS 2.0 |
+| BoE | `boe_news` | https://www.bankofengland.co.uk/rss/news | RSS 2.0 |
+| BoE | `boe_speeches` | https://www.bankofengland.co.uk/rss/speeches | RSS 2.0 |
+| BoJ | `boj_whatsnew` | https://www.boj.or.jp/en/rss/whatsnew.xml | RSS 2.0 |
+| SNB | `snb_pressrel` | https://www.snb.ch/public/rss/en/pressrel | RSS 2.0 |
+| SNB | `snb_mopo` | https://www.snb.ch/public/rss/en/mopo | RSS 2.0 |
+| RBA | `rba_media` | https://www.rba.gov.au/rss/rss-cb-media-releases.xml | RSS 1.0 / RDF (RSS-CB) |
+| RBA | `rba_speeches` | https://www.rba.gov.au/rss/rss-cb-speeches.xml | RSS 1.0 / RDF (RSS-CB) |
+
+The BoJ's `https://www.boj.or.jp/en/rss/index.htm` returns 404 and the SNB's
+`.../digital-services/rss` page moved to `.../rss-calendar-feeds`; the URLs above come from the
+pages that do exist. XML with an `<!ENTITY` declaration is refused before parsing.
+
+Vendors are optional and off without a key: Finnhub `GET /api/v1/news?category=forex|general`
+(`FIBOKI_FINNHUB_API_KEY`, sent as `X-Finnhub-Token`, never in the URL) and Marketaux
+`GET /v1/news/all` (`FIBOKI_MARKETAUX_API_KEY`; the API requires it as a query parameter, so
+every error message is scrubbed of it). Marketaux polls at most every 900 s by default to stay
+inside a daily request quota. Neither has been exercised against the live API: no key exists
+here, and their fixtures are constructed from the documented response shapes.
+
+### 14.2 Point-in-time macro providers
+
+Every macro observation is a row of a long-format frame (`macro_base.MACRO_COLUMNS`):
+`series_id, period, period_start, value, available_at, superseded_at, availability_basis,
+vintage, attributes`. `macro_base.as_of(frame, D)` returns, per `(series, period)`, the latest
+row with `available_at <= D` that was not superseded by `D`. That is the only sanctioned read.
+
+`AvailabilityBasis`: `VINTAGE` (source vintages), `SOURCE_TIMESTAMP` (the source stamps its own
+publication instant), `RELEASE_OVERRIDE` (a published exception), `RELEASE_RULE` (a documented
+schedule, stamped conservatively), `FIRST_SEEN` (our fetch time; valid forward only) and
+`UNRESOLVED` (no `available_at`; never served). **Every approximation stamps later, never
+earlier**: holiday sets are supersets of the true closures, because an extra holiday can only
+delay a stamp.
+
+| Provider | Endpoint | `available_at` | Basis |
+|---|---|---|---|
+| `alfred` | `api.stlouisfed.org/fred/series/observations` with `realtime_start=1776-07-04`, `realtime_end=9999-12-31` | 00:00 America/Chicago on `realtime_start + 1`; superseded 00:00 Chicago on `realtime_end + 2` | VINTAGE |
+| `cftc_cot` | `publicreporting.cftc.gov/resource/gpe5-46if.json` (TFF; legacy and disaggregated also mapped) | Friday after the as-of date, 15:30 ET; next business day if a federal holiday falls between; CFTC backlog table 2025 and first 2018-19 report as overrides; 2013 and 2018-19 lapse windows UNRESOLVED | RELEASE_RULE / OVERRIDE / UNRESOLVED |
+| `ecb_sdmx` | `data-api.ecb.europa.eu/service/data/{flow}/{key}?format=csvdata` | `EXR` daily: 17:00 Europe/Berlin on the date (ECB: "around 16:00 CET"); anything else FIRST_SEEN | RELEASE_RULE / FIRST_SEEN |
+| `boe_iadb` | `bankofengland.co.uk/boeapps/database/_iadb-fromshowcolumns.asp` (CSV) | `IUDSOIA`: 12:00 London next London business day (09:00 publication, republication by midday); `IUDBEDR`: 12:00 London on the date; others FIRST_SEEN | RELEASE_RULE / FIRST_SEEN |
+| `ons` | `www.ons.gov.uk/<topic>/timeseries/<cdid>/<dataset>/data` and `.../previous/vN/data` | observation `updateDate` date resolved to a trustworthy archived-version instant, else 09:30 London; archived versions give vintages; `nextRelease` recorded | SOURCE_TIMESTAMP / RELEASE_RULE |
+| `nyfed` | `markets.newyorkfed.org/api/rates/{secured,unsecured}/{type}/search.json`, `/api/rp/results/search.json` | rates: 15:00 ET next SIFMA-superset business day (after the 14:30 revision window); repo: `lastUpdated` | RELEASE_RULE / SOURCE_TIMESTAMP |
+
+Rules verified against the source on 2026-09-28: the CFTC rule reproduces all six 2026
+exceptions on the published schedule and keeps Monday-holiday weeks on Friday (a test pins
+twelve dates); the ONS versions table was measured and **archive stamps are not always
+publication instants** (2018-2021 stamps such as 05:07Z precede a 07:00 BST release), so only
+on-the-hour or half-hour stamps are trusted as instants, and irregular ones can only move the
+09:30 rule later.
+
+Storage: `MacroDatasetStore(<data root>)` writes `macro/<provider>/<dataset>/<version_id>/`
+(`data.parquet`, `_dataset.json` with descriptor, lineage and fetch report). `version_id` is
+`versioning.compute_version_id(content_checksum, lineage)`; fetch time is not identity, so two
+fetches of rule-stamped data with identical content share an id, while FIRST_SEEN data differs
+per fetch because its `available_at` does. Macro datasets are not registered in
+`DatasetCatalogue`, whose schema requires a `Timeframe` and a `PriceBasis` that a macro series
+does not have; registering one there would mean inventing both. The root must be a marked data
+root. CLI: `fiboki macro describe [name]`, `fiboki macro fetch <provider> --series ... [--as-of]`.
+
+Licences and attribution (each in its provider's `describe()`):
+
+| Provider | Licence | Required notice |
+|---|---|---|
+| ALFRED | FRED API Terms of Use, https://fred.stlouisfed.org/docs/api/terms_of_use.html; third-party "Copyright" series need the owner's permission | "This product uses the FRED® API but is not endorsed or certified by the Federal Reserve Bank of St. Louis." |
+| CFTC | public domain, acknowledgement requested, https://www.cftc.gov/WebPolicy/index.htm | "Source: U.S. Commodity Futures Trading Commission, Commitments of Traders." |
+| ECB | ESCB free reuse with citation, no modification, https://www.ecb.europa.eu/stats/ecb_statistics/governance_and_quality_framework/html/usage_policy.en.html | "Source: ECB statistics." |
+| BoE | OGL v3.0 except third-party exchange-rate series, https://www.bankofengland.co.uk/legal | OGL notice; SONIA copyright wording |
+| ONS | OGL v3.0, https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/ | "Source: Office for National Statistics licensed under the Open Government Licence v3.0." |
+| NY Fed | Terms of Use, https://www.newyorkfed.org/privacy/termsofuse | the prescribed notice plus the non-affiliation disclaimer |
+
+### 14.3 Known limitations, stated
+
+- **ALFRED is untested against the live API**: no key exists here; its fixture is constructed.
+  Real-time periods are dates, so a vintage is up to a day late.
+- **COT**: ad-hoc federal closures and any future appropriations lapse are not in the rule and
+  would make a stamp early until added as overrides or unresolved windows. Corrections overwrite
+  Socrata rows. Override release times are assumed 15:30 ET (the CFTC published dates only).
+- **ECB, BoE and COT have no vintages**: a revision overwrites the value at source; only two
+  stored versions of our own record it. Non-EXR ECB series and unregistered IADB series are
+  FIRST_SEEN and have no usable history before our first fetch.
+- **ONS** uses the website's JSON view, which is not a versioned API; the retired
+  `api.ons.gov.uk` and the no-longer-updated CMD dataset API are not used. A non-standard ONS
+  release later than 09:30 on the day would be stamped early.
+- **NY Fed** first prints before the 14:30 ET revision window are not recoverable.
+- **Headlines** are recorded, not classified; there is no currency tagging of vendor items
+  (`currencies_hint` narrows only the central-bank sources). The `query_news` tool and
+  `READ_NEWS_SNAPSHOT` capability (Wave 3, row 3) are not built by this item.

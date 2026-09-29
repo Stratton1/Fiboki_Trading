@@ -1,0 +1,109 @@
+{
+ "years": [
+  {
+   "date": "2025",
+   "value": "3.4",
+   "label": "2025",
+   "year": "2025",
+   "month": "",
+   "quarter": "",
+   "sourceDataset": "MM23",
+   "updateDate": "2026-01-21T00:00:00.000Z"
+  }
+ ],
+ "quarters": [],
+ "months": [
+  {
+   "date": "2026 APR",
+   "value": "2.8",
+   "label": "2026 APR",
+   "year": "2026",
+   "month": "April",
+   "quarter": "",
+   "sourceDataset": "MM23",
+   "updateDate": "2026-05-19T23:00:00.000Z"
+  },
+  {
+   "date": "2026 MAY",
+   "value": "2.8",
+   "label": "2026 MAY",
+   "year": "2026",
+   "month": "May",
+   "quarter": "",
+   "sourceDataset": "MM23",
+   "updateDate": "2026-06-16T23:00:00.000Z"
+  },
+  {
+   "date": "2026 JUN",
+   "value": "2.6",
+   "label": "2026 JUN",
+   "year": "2026",
+   "month": "June",
+   "quarter": "",
+   "sourceDataset": "MM23",
+   "updateDate": "2026-07-21T23:00:00.000Z"
+  },
+  {
+   "date": "2026 JUL",
+   "value": "2.9",
+   "label": "2026 JUL",
+   "year": "2026",
+   "month": "July",
+   "quarter": "",
+   "sourceDataset": "MM23",
+   "updateDate": "2026-08-18T23:00:00.000Z"
+  }
+ ],
+ "sourceDatasets": [],
+ "relatedDatasets": [
+  {
+   "uri": "/economy/inflationandpriceindices/datasets/consumerpriceindices"
+  }
+ ],
+ "relatedDocuments": [
+  {
+   "uri": "/economy/inflationandpriceindices/bulletins/consumerpriceinflation/latest"
+  }
+ ],
+ "relatedData": [
+  {
+   "uri": "/economy/inflationandpriceindices/timeseries/chzq"
+  }
+ ],
+ "versions": [
+  {
+   "uri": "/economy/inflationandpriceindices/timeseries/d7g7/mm23/previous/v128",
+   "updateDate": "2026-07-22T06:00:00.000Z",
+   "correctionNotice": "",
+   "label": "v128"
+  },
+  {
+   "uri": "/economy/inflationandpriceindices/timeseries/d7g7/mm23/previous/v129",
+   "updateDate": "2026-08-19T06:00:00.000Z",
+   "correctionNotice": "",
+   "label": "v129"
+  }
+ ],
+ "type": "timeseries",
+ "uri": "/economy/inflationandpriceindices/timeseries/d7g7/mm23/previous/v130",
+ "description": {
+  "title": "CPI ANNUAL RATE 00: ALL ITEMS 2015=100",
+  "contact": {
+   "email": "cpi@ons.gov.uk",
+   "name": "Consumer Price Inflation team",
+   "telephone": "Consumer Price Inflation Enquiries: +44 1633 456900. Consumer Price Inflation recorded message (available after 8am on release day): +44 808 196 1267"
+  },
+  "releaseDate": "2026-08-18T23:00:00.000Z",
+  "nextRelease": "16 September 2026",
+  "datasetId": "MM23",
+  "datasetUri": "/economy/inflationandpriceindices/datasets/consumerpriceindices",
+  "cdid": "D7G7",
+  "unit": "%",
+  "preUnit": "",
+  "source": "",
+  "date": "2026 JUL",
+  "number": "2.9",
+  "keyNote": "Change over 12 months  ",
+  "sampleSize": "0"
+ }
+}

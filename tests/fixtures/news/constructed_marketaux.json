@@ -1,0 +1,5 @@
+{"meta": {"found": 2, "returned": 2, "limit": 3, "page": 1},
+ "data": [
+  {"uuid": "0b0e7a3c-0000-4000-8000-000000000001", "title": "Euro area inflation data due", "description": "Constructed fixture in the documented Marketaux /v1/news/all shape.", "keywords": "", "snippet": "", "url": "https://example.com/mx/euro-1", "image_url": "", "language": "en", "published_at": "2026-09-28T09:15:00.000000Z", "source": "example.com", "relevance_score": null, "entities": [], "similar": []},
+  {"uuid": "0b0e7a3c-0000-4000-8000-000000000002", "title": "Dollar index flat", "description": null, "keywords": "", "snippet": "Dollar flat.", "url": "https://example.com/mx/usd-1", "image_url": "", "language": "en", "published_at": "2026-09-28T09:20:00.000000Z", "source": "example.com", "relevance_score": null, "entities": [], "similar": []}
+ ]}

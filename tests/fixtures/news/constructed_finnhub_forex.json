@@ -1,0 +1,5 @@
+[
+ {"category": "forex", "datetime": 1790596800, "headline": "Sterling edges higher ahead of BoE minutes", "id": 7301001, "image": "", "related": "", "source": "Example Wire", "summary": "Constructed fixture in the documented Finnhub /news shape.", "url": "https://example.com/news/sterling-1"},
+ {"category": "forex", "datetime": 1790600400, "headline": "Yen steady as BoJ minutes published", "id": 7301002, "image": "", "related": "", "source": "Example Wire", "summary": "", "url": "https://example.com/news/yen-1"},
+ {"category": "forex", "datetime": 1790600400, "headline": "", "id": 7301003, "image": "", "related": "", "source": "Example Wire", "summary": "no headline: rejected", "url": "https://example.com/news/blank"}
+]
