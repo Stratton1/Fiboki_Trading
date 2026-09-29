@@ -223,9 +223,15 @@ class TelemetryRow(BaseModel):
 # -------------------------------------------------------------- trades
 
 
-def _trade_view(row: Any, settings: Any) -> TradeRowView:
+def _trade_view(
+    row: Any, settings: Any, charged: frozenset[str] | None = None
+) -> TradeRowView:
+    """One trade row. ``charged`` is the cost components the row's paper
+    session PROVES it charged (``Platform.session_charged_costs``); it only
+    removes a "not modelled" caveat the record contradicts. ``None`` (a seed
+    fixture row, or no session) leaves the settings-only caveats."""
     p = row.provenance
-    pnl_caveats = realism_caveats(settings, p, affects="net_pnl")
+    pnl_caveats = realism_caveats(settings, p, affects="net_pnl", charged=charged)
     # Journal rows carry their own account currency, size unit and as-of;
     # fixture rows default to GBP and lots. A USD P&L is never labelled GBP.
     ccy = getattr(row, "account_ccy", "GBP")
@@ -302,8 +308,18 @@ def trades(
                 direction="unknown",
             ),
         )
+    charged_by_session: dict[str, frozenset[str]] = {}
+
+    def _charged(row: Any) -> frozenset[str] | None:
+        session_id = getattr(row, "session_id", None)
+        if not session_id:
+            return None
+        if session_id not in charged_by_session:
+            charged_by_session[session_id] = platform.session_charged_costs(session_id)
+        return charged_by_session[session_id]
+
     return Page(
-        items=[_trade_view(r, settings) for r in rows],
+        items=[_trade_view(r, settings, _charged(r)) for r in rows],
         total=total,
         offset=offset,
         limit=limit,

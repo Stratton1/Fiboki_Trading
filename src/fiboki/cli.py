@@ -168,6 +168,17 @@ def _load_script(name: str) -> Any:
     return module
 
 
+def research_jobs_ledger_path(env: Mapping[str, str] | None = None) -> Path:
+    """The research worker's durable job ledger: ``<FIBOKI_STATE_DIR>/jobs.sqlite``.
+
+    Resolved by :func:`fiboki.core.paths.resolve_paths`, the same rule the API
+    and the other workers use, so every process opens the same file.
+    """
+    from fiboki.core.paths import resolve_paths
+
+    return resolve_paths(os.environ if env is None else env).state_dir / "jobs.sqlite"
+
+
 def _open_store(create: bool = True) -> Any:
     from fiboki.workers.base import WorkerStore
 
@@ -896,7 +907,12 @@ def worker_run(
     )
     from fiboki.agents.orchestrator import Orchestrator
 
-    orchestrator = Orchestrator()
+    # DURABLE job ledger (<state_dir>/jobs.sqlite): queued jobs, attempts,
+    # results and idempotency keys survive a restart and are visible to the
+    # API. An in-memory ledger here lost every queued job on each launchd
+    # restart and let a resubmitted idempotency key run twice.
+    jobs_path = research_jobs_ledger_path()
+    orchestrator = Orchestrator(path=jobs_path)
     if os.environ.get("FIBOKI_AGENT_CYCLES", "").strip().lower() in {"1", "true", "yes", "on"}:
         _warn(
             "FIBOKI_AGENT_CYCLES is on: the worker composes the agent research "
@@ -914,6 +930,7 @@ def worker_run(
             f"worker_id: [bold]{worker.worker_id}[/bold]\n"
             f"lease:     {config.lease_name}\n"
             f"state db:  {state_db_path()}\n"
+            f"jobs db:   {jobs_path}\n"
             f"alerts:    {', '.join(dispatcher.channel_names())}",
             title=f"fiboki {kind} worker",
         )
@@ -926,8 +943,12 @@ def worker_run(
 
 @worker_app.command("status")
 def worker_status(
-    stale_after: float = typer.Option(120.0, "--stale-after"),
-    down_after: float = typer.Option(300.0, "--down-after"),
+    stale_after: float | None = typer.Option(
+        None, "--stale-after", help="Default: Settings.health (FIBOKI_WORKER_STALE_SECONDS)."
+    ),
+    down_after: float | None = typer.Option(
+        None, "--down-after", help="Default: Settings.health (FIBOKI_WORKER_DOWN_SECONDS)."
+    ),
     release: str | None = typer.Option(
         None, "--release", help="Force-expire this lease. OPERATOR ACTION."
     ),
@@ -941,6 +962,11 @@ def worker_status(
     """
     from fiboki.workers.base import force_release, summarise_leases
 
+    thresholds = _health_thresholds()
+    if stale_after is None:
+        stale_after = thresholds.worker_stale_after_seconds
+    if down_after is None:
+        down_after = thresholds.worker_down_after_seconds
     store = _open_store()
     if release:
         if force_release(store, release):
@@ -1024,7 +1050,7 @@ def _build_health_checks() -> list[Any]:
     store = _open_store()
     return [
         DatabaseCheck(probe=store.ping),
-        WorkerHeartbeatCheck(heartbeats=store.heartbeats),
+        WorkerHeartbeatCheck.from_thresholds(store.heartbeats, _health_thresholds()),
         QueueDepthCheck(depths=lambda: {}),
     ]
 
@@ -1404,30 +1430,79 @@ def broker_reconcile(
 # ---------------------------------------------------------------------------
 
 
-def _journal(path: Path) -> Any:
-    from fiboki.risk.killswitch import FileKillSwitchJournal, KillSwitch
+def _health_thresholds() -> Any:
+    """THE heartbeat thresholds (``Settings.health``), from the environment."""
+    from fiboki.api.settings import load_settings
 
-    return KillSwitch(FileKillSwitchJournal(path))
+    return load_settings().health
+
+
+def _killswitch_journal(override: Path | None) -> tuple[Path, Any]:
+    """The journal to use, and the resolved paths it was checked against.
+
+    There is no CLI default of its own any more: the journal is the one
+    :func:`fiboki.core.paths.resolve_paths` gives every process for this
+    environment. ``--journal`` still exists for forensic use and says loudly
+    when it is not the journal gateways read.
+    """
+    from fiboki.core.paths import resolve_paths
+
+    paths = resolve_paths(os.environ, cwd=Path.cwd())
+    resolved = paths.killswitch_journal
+    if override is None:
+        return resolved, paths
+    return (override.expanduser().resolve(), paths)
+
+
+def _journal_notes(path: Path, paths: Any) -> None:
+    console.print(f"journal: {path}")
+    if path.resolve() != paths.killswitch_journal.resolve():
+        _warn(
+            f"--journal is NOT the journal the API and gateways resolve "
+            f"({paths.killswitch_journal}). Nothing that trades reads this file."
+        )
+    elif not paths.state_dir_from_env:
+        _warn(
+            "FIBOKI_STATE_DIR is not set, so this journal was resolved from the current "
+            f"directory ({Path.cwd()}). A process started in another directory resolves a "
+            "different one. Export FIBOKI_STATE_DIR (the desktop services do)."
+        )
+
+
+def _journal(path: Path) -> Any:
+    from fiboki.risk.killswitch import KillSwitch
+
+    return KillSwitch.at_path(path)
 
 
 @killswitch_app.command("pause")
 def killswitch_pause(
-    journal: Path = typer.Option(Path("~/.fiboki/killswitch.jsonl"), "--journal"),
+    journal: Path | None = typer.Option(
+        None, "--journal", help="Forensic override. Default: the resolved journal."
+    ),
     reason: str = typer.Option(..., "--reason", help="Required. It goes in the journal."),
     operator: str = typer.Option("operator", "--operator", help="Who decided. Journalled."),
 ) -> None:
     """Block NEW risk. Existing positions and their exits are untouched."""
     from fiboki.risk.killswitch import KillSwitchMode
 
-    switch = _journal(journal.expanduser())
+    path, paths = _killswitch_journal(journal)
+    switch = _journal(path)
     switch.activate(KillSwitchMode.PAUSE, reason=reason, operator=operator)
     _ok(f"kill switch PAUSED: {reason}")
-    _warn("opens are blocked; closes and reductions still run. Use `status` to confirm.")
+    _journal_notes(path, paths)
+    _warn(
+        "opens are blocked from the next decision of every gateway that reads this "
+        "journal (it is re-read before each one); closes and reductions still run. "
+        "Use `status` to confirm."
+    )
 
 
 @killswitch_app.command("flatten")
 def killswitch_flatten(
-    journal: Path = typer.Option(Path("~/.fiboki/killswitch.jsonl"), "--journal"),
+    journal: Path | None = typer.Option(
+        None, "--journal", help="Forensic override. Default: the resolved journal."
+    ),
     reason: str = typer.Option(..., "--reason"),
     operator: str = typer.Option("operator", "--operator", help="Who decided. Journalled."),
 ) -> None:
@@ -1435,30 +1510,40 @@ def killswitch_flatten(
 
     This command records the decision.  The flatten orders themselves are
     produced by the execution service, which is the only thing permitted to
-    construct an order -- so running this without a live worker records the
-    intent and closes nothing, and says so.
+    construct an order -- so running this without a worker records the intent
+    and closes nothing, and says so.
     """
     from fiboki.risk.killswitch import KillSwitchMode
 
-    switch = _journal(journal.expanduser())
+    path, paths = _killswitch_journal(journal)
+    switch = _journal(path)
     switch.activate(KillSwitchMode.FLATTEN, reason=reason, operator=operator)
     _ok(f"kill switch FLATTEN recorded: {reason}")
+    _journal_notes(path, paths)
     _warn(
-        "this records the decision. Positions are closed by the live worker's next cycle "
-        "through the execution service. If no worker is running, NOTHING HAS BEEN CLOSED — "
-        "check `fiboki worker status` right now."
+        "this records the decision. Every gateway reading this journal refuses new risk "
+        "from its next decision. Positions are closed ONLY by a running worker whose "
+        "execution service reads this journal. If none is running, NOTHING HAS BEEN "
+        "CLOSED: check `fiboki worker status` right now."
     )
 
 
 @killswitch_app.command("status")
 def killswitch_status(
-    journal: Path = typer.Option(Path("~/.fiboki/killswitch.jsonl"), "--journal"),
+    journal: Path | None = typer.Option(
+        None, "--journal", help="Forensic override. Default: the resolved journal."
+    ),
     as_json: bool = typer.Option(False, "--json"),
 ) -> None:
     """Show the current kill-switch state and its history."""
-    path = journal.expanduser()
+    path, paths = _killswitch_journal(journal)
     if not path.exists():
-        _ok("no kill-switch journal: the switch has never been activated")
+        payload_missing = {"active": False, "journal": str(path), "events": 0}
+        if as_json:
+            console.print_json(json.dumps(payload_missing))
+            return
+        _ok(f"no kill-switch journal at {path}: the switch has never been activated here")
+        _journal_notes(path, paths)
         return
     switch = _journal(path)
     # ``state``, ``active`` and ``mode`` are PROPERTIES on KillSwitch, not
@@ -1472,6 +1557,8 @@ def killswitch_status(
         "blocks_new_risk": bool(getattr(state, "blocks_new_risk", False)),
         "requires_flatten": bool(getattr(state, "requires_flatten", False)),
         "events": len(history),
+        "journal": str(path),
+        "journal_is_resolved": path.resolve() == paths.killswitch_journal.resolve(),
     }
 
     def _render() -> None:
@@ -1479,16 +1566,143 @@ def killswitch_status(
         console.print(
             Panel(
                 f"active: [bold]{payload['active']}[/bold]\n"
-                f"mode: {payload['mode'] or '—'}\n"
+                f"mode: {payload['mode'] or '-'}\n"
                 f"blocks new risk: {payload['blocks_new_risk']}\n"
                 f"requires flatten: {payload['requires_flatten']}\n"
-                f"journal events: {payload['events']}",
+                f"journal events: {payload['events']}\n"
+                f"journal: {payload['journal']}",
                 title="kill switch",
                 border_style=style,
             )
         )
+        _journal_notes(path, paths)
 
     _emit(payload, as_json=as_json, render=_render)
+
+
+# ---------------------------------------------------------------------------
+# alerts and watchdog
+# ---------------------------------------------------------------------------
+
+alerts_app = typer.Typer(help="Alert channels: prove delivery on demand.", no_args_is_help=True)
+watchdog_app = typer.Typer(help="The heartbeat watchdog process.", no_args_is_help=True)
+app.add_typer(alerts_app, name="alerts")
+app.add_typer(watchdog_app, name="watchdog")
+
+
+@alerts_app.command("test")
+def alerts_test(
+    critical: bool = typer.Option(
+        False, "--critical", help="Send at CRITICAL, exercising the durable outbox."
+    ),
+    as_json: bool = typer.Option(False, "--json"),
+) -> None:
+    """Send a test alert through every configured channel and report each one.
+
+    Exits non-zero when any channel failed, or when no REMOTE channel
+    (webhook, Telegram) is configured: an alert that only reaches this
+    terminal and a log file does not reach the operator.
+    """
+    from fiboki.obs.alerts import AlertEvent, Severity, build_default_dispatcher
+
+    dispatcher = build_default_dispatcher(source="alerts-test")
+    names = dispatcher.channel_names()
+    alert = dispatcher.fire(
+        AlertEvent.ALERT_TEST,
+        "Fiboki test alert. If you can read this on your phone, this channel works.",
+        severity=Severity.CRITICAL if critical else Severity.WARNING,
+        force=True,
+        host=platform.node(),
+    )
+    failed = {name: error for name, _a, error in dispatcher.delivery_failures}
+    remote = [n for n in names if n in {"webhook", "telegram"}]
+    payload = {
+        "sent": alert is not None,
+        "severity": alert.severity.value if alert is not None else None,
+        "channels": {n: ("failed: " + failed[n]) if n in failed else "ok" for n in names},
+        "remote_channels": remote,
+    }
+
+    def _render() -> None:
+        for name, outcome in payload["channels"].items():
+            (_ok if outcome == "ok" else _warn)(f"{name}: {outcome}")
+        if not remote:
+            _warn(
+                "no remote channel is configured (FIBOKI_TELEGRAM_BOT_TOKEN + "
+                "FIBOKI_TELEGRAM_CHAT_ID, or FIBOKI_ALERT_WEBHOOK_URL): alerts do not "
+                "leave this machine."
+            )
+
+    _emit(payload, as_json=as_json, render=_render)
+    if failed or not remote:
+        raise typer.Exit(EXIT_FAIL)
+
+
+@watchdog_app.command("run")
+def watchdog_run(
+    interval: float = typer.Option(30.0, "--interval", help="Seconds between evaluations."),
+    once: bool = typer.Option(False, "--once", help="Run a single evaluation and exit."),
+    max_cycles: int = typer.Option(0, "--max-cycles", help="0 = run forever."),
+    lease_ttl: float = typer.Option(120.0, "--lease-ttl"),
+) -> None:
+    """Run the heartbeat watchdog as a supervised worker PROCESS.
+
+    It holds the ``watchdog`` lease (so a second copy exits 75), writes its own
+    heartbeat, and every cycle evaluates every worker heartbeat against
+    ``Settings.health``, fires WORKER_DOWN / HEARTBEAT_STALE, and retries the
+    CRITICAL-alert outbox. Run it under launchd next to the workers it watches:
+    a watchdog inside the process it watches dies with it.
+    """
+    from fiboki.obs.alerts import HeartbeatWatchdog, WatchdogThresholds, build_default_dispatcher
+    from fiboki.workers.base import (
+        CycleResult,
+        Worker,
+        WorkerConfig,
+        expected_workers_from_env,
+        watchdog_views,
+    )
+
+    store = _open_store()
+    dispatcher = build_default_dispatcher(source="watchdog")
+    thresholds = _health_thresholds()
+    watchdog = HeartbeatWatchdog(
+        dispatcher,
+        lambda: watchdog_views(store),
+        thresholds=WatchdogThresholds.from_health(thresholds),
+        interval_seconds=interval,
+        expected_workers=expected_workers_from_env(),
+    )
+
+    class _WatchdogWorker(Worker):
+        def run_cycle(self) -> CycleResult:
+            fired = watchdog.evaluate()
+            delivered, failed = dispatcher.retry_pending()
+            detail = f"alerts={len(fired)} outbox_delivered={delivered} outbox_failed={failed}"
+            if fired or delivered or failed:
+                return CycleResult.worked(jobs=len(fired), detail=detail)
+            return CycleResult.idle(detail)
+
+    config = WorkerConfig(
+        kind="watchdog",
+        idle_sleep_seconds=interval,
+        busy_sleep_seconds=interval,
+        lease_ttl_seconds=lease_ttl,
+        max_cycles=1 if once else max_cycles,
+    )
+    worker = _WatchdogWorker(config, store, dispatcher=dispatcher)
+    console.print(
+        Panel(
+            f"worker_id: [bold]{worker.worker_id}[/bold]\n"
+            f"state db:  {state_db_path()}\n"
+            f"stale/down: {thresholds.worker_stale_after_seconds:.0f}s / "
+            f"{thresholds.worker_down_after_seconds:.0f}s\n"
+            f"expected:  {', '.join(watchdog.expected_workers) or '(none: set FIBOKI_EXPECTED_WORKERS)'}\n"
+            f"alerts:    {', '.join(dispatcher.channel_names())}",
+            title="fiboki watchdog",
+        )
+    )
+    code = worker.run()
+    raise typer.Exit(EXIT_LEASE_HELD if code == EXIT_LEASE_HELD else code)
 
 
 # ---------------------------------------------------------------------------
@@ -2014,10 +2228,13 @@ doctor_app = typer.Typer(
 )
 app.add_typer(doctor_app, name="doctor")
 
-#: The launchd labels scripts/launchd-install.sh installs.
+#: The launchd labels scripts/launchd-install.sh installs (deploy/launchd/).
 DOCTOR_LAUNCHD_LABELS: tuple[str, ...] = tuple(
-    f"uk.fiboki.{name}" for name in ("api", "worker", "web", "news", "llama")
+    f"uk.fiboki.{name}" for name in ("api", "worker", "web", "news", "llama", "paper")
 )
+#: Installed only on request (not in the installer's default list): reported,
+#: but "not loaded" is not a warning. Loaded and not running still is.
+DOCTOR_LAUNCHD_OPTIONAL: frozenset[str] = frozenset({"uk.fiboki.paper"})
 #: Ports the desktop services bind: API, web, llama-server.
 DOCTOR_PORTS: dict[int, str] = {8000: "api", 3000: "web", 8080: "llama-server"}
 #: Pins the charter calls out by name: a drift in any of these is a FAIL.
@@ -2360,6 +2577,50 @@ def _check_env(host: DoctorHost) -> list[DoctorCheck]:
     return out
 
 
+def _check_operator_hashes(host: DoctorHost) -> list[DoctorCheck]:
+    """Flag operator entries still on the legacy unsalted SHA-256 hash.
+
+    Reads ``FIBOKI_OPERATORS`` (user:role:hash) and classifies each hash with
+    :func:`fiboki.api.routers.auth.is_legacy_hash`. Never prints a hash.
+    """
+    from fiboki.api.routers.auth import is_legacy_hash
+
+    raw = host.env.get("FIBOKI_OPERATORS", "").strip()
+    if not raw:
+        return [DoctorCheck("operator hashes", DoctorStatus.WARN,
+                            "FIBOKI_OPERATORS is not set: nobody can sign in",
+                            "Add user:role:scrypt$... entries to ~/.fiboki/env (see "
+                            "docs/v2/SECURITY_MODEL.md).")]
+    users: list[str] = []
+    legacy: list[str] = []
+    malformed = 0
+    for entry in raw.split(","):
+        parts = entry.strip().split(":")
+        if not entry.strip():
+            continue
+        if len(parts) != 3:
+            malformed += 1
+            continue
+        user = parts[0].strip().lower()
+        users.append(user)
+        if is_legacy_hash(parts[2].strip()):
+            legacy.append(user)
+    problems: list[str] = []
+    if legacy:
+        problems.append(f"legacy unsalted sha256 hash for: {', '.join(sorted(legacy))}")
+    if malformed:
+        problems.append(f"{malformed} malformed entr{'y' if malformed == 1 else 'ies'} (ignored at login)")
+    if problems:
+        return [DoctorCheck(
+            "operator hashes", DoctorStatus.WARN, "; ".join(problems),
+            "Rotate to scrypt: python -c \"from fiboki.api.routers.auth import hash_password as h; "
+            "print(h(input()))\" and replace the entry in ~/.fiboki/env.",
+            {"operators": len(users), "legacy": sorted(legacy), "malformed": malformed},
+        )]
+    return [DoctorCheck("operator hashes", DoctorStatus.OK, f"{len(users)} operator(s), all scrypt",
+                        data={"operators": len(users), "legacy": [], "malformed": 0})]
+
+
 def _check_data_root(host: DoctorHost) -> list[DoctorCheck]:
     root, source = _doctor_paths(host)["data_root"]
     from fiboki.data.store import ROOT_MARKER, DataStore
@@ -2426,8 +2687,12 @@ def _check_paper(host: DoctorHost) -> list[DoctorCheck]:
 
 
 def _check_heartbeat(host: DoctorHost) -> list[DoctorCheck]:
+    from fiboki.api.settings import health_thresholds_from_env
+
     path, source = _doctor_paths(host)["state_db"]
-    stale_after = float(host.env.get("FIBOKI_WORKER_STALE_SECONDS") or 120)
+    # Settings.health: the SAME threshold `fiboki worker status`, the health
+    # page and the watchdog use (FIBOKI_WORKER_STALE_SECONDS, validated).
+    stale_after = health_thresholds_from_env(host.env).worker_stale_after_seconds
     if not path.exists():
         return [DoctorCheck("worker heartbeat", DoctorStatus.FAIL,
                             f"{path} ({source}) does not exist: no worker has ever beaten",
@@ -2656,7 +2921,8 @@ def _check_launchd(host: DoctorHost) -> list[DoctorCheck]:
                 state += f", last exit {text.split('=', 1)[1].strip()}"
         states[label] = state
     legacy = states.pop("com.fiboki.research-worker")
-    missing = [lbl for lbl, st in states.items() if st == "not loaded"]
+    missing = [lbl for lbl, st in states.items()
+               if st == "not loaded" and lbl not in DOCTOR_LAUNCHD_OPTIONAL]
     not_running = [lbl for lbl, st in states.items() if st != "not loaded" and not st.startswith("running")]
     status = DoctorStatus.OK
     fix = ""
@@ -2666,7 +2932,11 @@ def _check_launchd(host: DoctorHost) -> list[DoctorCheck]:
             "one work. launchctl bootout gui/$(id -u)/com.fiboki.research-worker")
     elif missing or not_running:
         status, fix = DoctorStatus.WARN, "scripts/launchd-install.sh --load (see docs/v2/OPERATIONS.md)"
-    detail = "; ".join(f"{lbl.removeprefix('uk.fiboki.')}: {st}" for lbl, st in states.items())
+    detail = "; ".join(
+        f"{lbl.removeprefix('uk.fiboki.')}: {st}"
+        + (" (optional)" if lbl in DOCTOR_LAUNCHD_OPTIONAL and st == "not loaded" else "")
+        for lbl, st in states.items()
+    )
     return [DoctorCheck("launchd", status, detail, fix, {**states, "com.fiboki.research-worker": legacy})]
 
 
@@ -2677,6 +2947,7 @@ DOCTOR_CHECKS: tuple[tuple[str, Callable[[DoctorHost], list[DoctorCheck]]], ...]
     ("web node_modules", _check_node_modules),
     ("git", _check_git),
     ("environment", _check_env),
+    ("operator hashes", _check_operator_hashes),
     ("data root", _check_data_root),
     ("experiment ledger", _check_ledger),
     ("paper journal", _check_paper),
@@ -2926,6 +3197,255 @@ def events_shadow_report(
 
 # ===========================================================================
 # END events
+# ===========================================================================
+
+
+# ===========================================================================
+# paper forward: the reviewed entrypoint (fiboki/entrypoints/paper_forward.py)
+# ===========================================================================
+
+paper_app = typer.Typer(
+    help="PAPER trading forward on live OANDA practice prices, from a committed wiring file.",
+    no_args_is_help=True,
+)
+app.add_typer(paper_app, name="paper")
+
+
+@paper_app.command("forward")
+def paper_forward(
+    wiring: Path = typer.Option(
+        ..., "--wiring", help="The committed, versioned wiring file (entrypoints/wiring/)."
+    ),
+    once: bool = typer.Option(False, "--once", help="Run a single cycle and exit."),
+    max_cycles: int = typer.Option(0, "--max-cycles", help="0 = run forever."),
+    check: bool = typer.Option(
+        False, "--check", help="Load and validate the wiring, print its hash, start nothing."
+    ),
+) -> None:
+    """Trade PAPER forward in time. Nothing reaches a broker.
+
+    Everything the worker trades with comes from ``--wiring``: the strategy (by
+    content hash), instruments, timeframe, limit set, cost profile, calendar and
+    ledger location. The wiring's sha256 is stamped on every risk-gateway
+    attempt. ``fiboki worker run live`` still refuses: a market-facing worker is
+    never assembled from flags, only from a reviewed wiring file, and this one
+    is PAPER only (``allowed_modes = ["paper"]``, enforced when it is loaded).
+    """
+    from fiboki.entrypoints.paper_forward import WiringError, compose_runtime, load_wiring
+    from fiboki.workers.base import EXIT_LEASE_HELD as LEASE_CODE
+
+    path = wiring.expanduser()
+    if not path.exists():
+        _fail(f"wiring file {path} does not exist", EXIT_MISUSE)
+    try:
+        wired = load_wiring(path)
+    except WiringError as exc:
+        _fail(f"wiring refused: {exc}", EXIT_MISUSE)
+        return
+    if check:
+        _ok(f"wiring {wired.version} OK  sha256={wired.sha256}")
+        return
+
+    from fiboki.api.settings import load_settings
+    from fiboki.broker.http_transport import MissingCredential
+    from fiboki.marketstate.calendar import CalendarError
+    from fiboki.obs.alerts import build_default_dispatcher
+
+    settings = load_settings()
+    if settings.execution_mode.value != "paper":
+        _fail(
+            f"FIBOKI_EXECUTION_MODE is {settings.execution_mode.value!r}; paper forward "
+            "runs only with FIBOKI_EXECUTION_MODE=paper",
+            EXIT_MISUSE,
+        )
+    store = _open_store()
+    dispatcher = build_default_dispatcher(source="paper-forward")
+    try:
+        runtime = compose_runtime(
+            settings, wired, store=store, dispatcher=dispatcher, max_cycles=1 if once else max_cycles
+        )
+    except (WiringError, MissingCredential, CalendarError) as exc:
+        _fail(str(exc), EXIT_FAIL)
+        return
+    worker = runtime.worker
+    console.print(
+        Panel(
+            f"worker_id: [bold]{worker.worker_id}[/bold]\n"
+            f"wiring:    {wired.path}\n"
+            f"sha256:    {wired.sha256}\n"
+            f"strategy:  {', '.join(f'{s.strategy_id}@{s.content_hash[:12]}' for s in wired.strategies)}\n"
+            f"markets:   {', '.join(wired.instruments)} {wired.timeframe.value}\n"
+            f"limits:    {wired.limits_version}   profile: {wired.broker_profile}\n"
+            f"journal:   {runtime.journal.ledger_dir}\n"
+            f"session:   {runtime.journal.session_dir}\n"
+            f"state db:  {state_db_path()}\n"
+            f"alerts:    {', '.join(dispatcher.channel_names())}",
+            title="fiboki paper forward (PAPER ONLY)",
+        )
+    )
+    code = worker.run()
+    if code == LEASE_CODE:
+        raise typer.Exit(EXIT_LEASE_HELD)
+    raise typer.Exit(code)
+
+
+# ===========================================================================
+# agents tier: the signed record of how far agent output may reach
+# ===========================================================================
+
+agents_app = typer.Typer(help="Agent layer controls that are operator acts.", no_args_is_help=True)
+agents_tier_app = typer.Typer(
+    help="Agent influence tier (core/tier.py): status, and set (signed, audited).",
+    no_args_is_help=True,
+)
+agents_app.add_typer(agents_tier_app, name="tier")
+app.add_typer(agents_app, name="agents")
+
+
+def _tier_paths() -> tuple[Path, Path, Any]:
+    """The tier record and its audit trail, under the resolved state directory."""
+    from fiboki.core.paths import resolve_paths
+    from fiboki.core.tier import default_tier_audit_path, default_tier_path
+
+    paths = resolve_paths(os.environ, cwd=Path.cwd())
+    return default_tier_path(paths.state_dir), default_tier_audit_path(paths.state_dir), paths
+
+
+@agents_tier_app.command("status")
+def agents_tier_status(as_json: bool = typer.Option(False, "--json")) -> None:
+    """The tier in force, where it came from, and what it permits.
+
+    Exit 1 when a record exists but cannot be honoured (bad signature,
+    unreadable, or no FIBOKI_SESSION_SECRET to verify it): the tier then falls
+    back to T1 (shadow only), and the operator should know.
+    """
+    from fiboki.api.settings import load_settings
+    from fiboki.core.tier import read_tier
+
+    record_path, audit_path, paths = _tier_paths()
+    settings = load_settings()
+    secret = None if settings.session_secret_is_ephemeral else settings.session_secret
+    reading = read_tier(record_path, secret)
+    tier = reading.tier
+    payload = {
+        **reading.stamp(),
+        "detail": reading.detail,
+        "operator": reading.operator,
+        "recorded_at": reading.recorded_at,
+        "record_path": str(record_path),
+        "audit_path": str(audit_path),
+        "state_dir_from_env": paths.state_dir_from_env,
+        "permits": {
+            "shadow_writes": tier.permits_shadow_writes,
+            "event_veto": tier.permits_veto,
+            "conviction_dampen": tier.permits_dampen,
+            "author_candidates": tier.permits_candidates,
+            "upsizing": tier.permits_upsizing,
+        },
+    }
+
+    def _render() -> None:
+        console.print(f"agent tier: [bold]{tier.value}[/bold]  (source: {reading.source})")
+        if reading.requested is not None and reading.requested is not tier:
+            _warn(f"record asks for {reading.requested.value}; effective {tier.value}: "
+                  f"{reading.detail}")
+        if reading.operator:
+            console.print(f"recorded by {reading.operator} at {reading.recorded_at}")
+        console.print(f"ceiling (reviewed source constant): {reading.ceiling.value}")
+        console.print(
+            f"event veto may block: {tier.permits_veto}   "
+            f"conviction may dampen: {tier.permits_dampen}   upsizing: never"
+        )
+        console.print(f"record: {record_path}")
+        if not paths.state_dir_from_env:
+            _warn("FIBOKI_STATE_DIR is not set; the record was resolved from the current directory")
+
+    _emit(payload, as_json=as_json, render=_render)
+    if reading.needs_alert and reading.source != "clamped":
+        raise typer.Exit(EXIT_FAIL)
+
+
+@agents_tier_app.command("set")
+def agents_tier_set(
+    tier_value: str = typer.Option(..., "--tier", help="t0_observe .. t4_author_candidates"),
+    operator: str = typer.Option(..., "--operator", help="Required. Who decided. Signed."),
+    reason: str = typer.Option(..., "--reason", help="Required. Why. Signed and audited."),
+) -> None:
+    """Record a new tier, HMAC-signed with FIBOKI_SESSION_SECRET, and audit it.
+
+    Raising above the reviewed ceiling (``core.tier.MAX_AUTHORISED_TIER``) is
+    refused: that needs a reviewed commit first. Lowering is always allowed.
+    Every set, including the previous reading, is appended to the audit trail.
+    """
+    from datetime import UTC, datetime
+
+    from fiboki.api.settings import load_settings
+    from fiboki.core.tier import (
+        MAX_AUTHORISED_TIER,
+        AgentInfluenceTier,
+        TierError,
+        append_tier_audit,
+        read_tier,
+        sign_tier_record,
+        write_tier_record,
+    )
+
+    try:
+        tier = AgentInfluenceTier(tier_value.strip().lower())
+    except ValueError:
+        _fail(
+            f"{tier_value!r} is not a tier; one of "
+            f"{[t.value for t in AgentInfluenceTier]}",
+            EXIT_MISUSE,
+        )
+        return
+    settings = load_settings()
+    if settings.session_secret_is_ephemeral:
+        _fail(
+            "FIBOKI_SESSION_SECRET is unset: a record signed with a per-process key could "
+            "never be verified by the worker or the API. Set it, then retry.",
+            EXIT_MISUSE,
+        )
+    if tier.level > MAX_AUTHORISED_TIER.level:
+        _fail(
+            f"{tier.value} is above the reviewed ceiling {MAX_AUTHORISED_TIER.value}. Raising "
+            "agent influence needs a reviewed commit that raises core.tier.MAX_AUTHORISED_TIER "
+            "(after the pre-registered shadow evaluation) AND this signed record.",
+            EXIT_MISUSE,
+        )
+    record_path, audit_path, _paths = _tier_paths()
+    previous = read_tier(record_path, settings.session_secret)
+    try:
+        record = sign_tier_record(
+            operator=operator, tier=tier, reason=reason, secret=settings.session_secret,
+            at=datetime.now(tz=UTC),
+        )
+    except TierError as exc:
+        _fail(str(exc), EXIT_MISUSE)
+        return
+    write_tier_record(record_path, record)
+    append_tier_audit(
+        audit_path,
+        {
+            "action": "set",
+            "at": record.recorded_at,
+            "operator": record.operator,
+            "reason": record.reason,
+            "tier": record.tier.value,
+            "previous": {**previous.stamp(), "operator": previous.operator},
+            "record_path": str(record_path),
+            "signature_prefix": record.signature[:12],
+        },
+    )
+    _ok(
+        f"agent tier recorded: {record.tier.value} by {record.operator} "
+        f"(was {previous.tier.value}, source {previous.source})"
+    )
+    console.print(f"record: {record_path}\naudit:  {audit_path}")
+
+
+# ===========================================================================
+# END agents tier
 # ===========================================================================
 
 

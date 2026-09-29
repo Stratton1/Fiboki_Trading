@@ -46,7 +46,7 @@ from fiboki.broker.mode_guard import (
 from fiboki.core import instruments as instrument_registry
 from fiboki.core.enums import ExecutionMode, Provenance
 from fiboki.risk.killswitch import FileKillSwitchJournal, KillSwitch
-from fiboki.risk.limits import LIMIT_SETS, LimitSet, get_limit_set
+from fiboki.risk.limits import LimitSet, default_limit_set
 
 log = logging.getLogger("fiboki.api.platform")
 
@@ -292,9 +292,10 @@ class Platform:
         self.mode_guard = ModeGuard(
             authorisation_store=LiveAuthorisationStore(settings.live_authorisation_path)
         )
-        self.limits: LimitSet = get_limit_set(
-            "limits_v1_paper" if "limits_v1_paper" in LIMIT_SETS else "limits_v1_default"
-        )
+        # THE set the gateway enforces in this mode (risk.limits.default_limit_set),
+        # the same function every composition root calls: what the API displays
+        # is what is in force. Every router reads this attribute.
+        self.limits: LimitSet = default_limit_set(settings.execution_mode)
         self.instruments = instrument_registry
 
         self._strategy_registry: Any | None = None

@@ -51,8 +51,10 @@ What it is not
 Not a quote stream. ``stale_price`` is fed the bar's close time because there
 is no separate tick timestamp; the same approximation
 :class:`~fiboki.workers.runtime.RiskContextBuilder` documents for paper.
-Not a spread source: a live deployment must give the builder the venue's
-quoted spread (``spread_source``), which this module does not provide.
+Not a spread source: the venue's quoted spread reaches the builder's
+``spread_source`` from :class:`fiboki.broker.oanda_pricing.OandaPricingSpreadSource`,
+sampled once per bar right after this feed polls (the paper-forward entrypoint,
+``fiboki/entrypoints/paper_forward.py``, does both in that order).
 
 Pattern after freqtrade ``worker.py`` (boundary-aligned throttling with a
 post-candle offset) and ``exchange/exchange.py`` (dropping the forming candle

@@ -94,6 +94,11 @@ evaluator and risk-context builder, and *"a live worker assembled from command l
 live worker whose risk configuration nobody reviewed."* It is started from the application
 entrypoint that owns that wiring.
 
+**Paper trading forward has that entrypoint.** `fiboki paper forward --wiring <file>` assembles
+a PAPER-only market-facing worker from a committed, versioned wiring file
+(`src/fiboki/entrypoints/wiring/paper_forward_v1.json`) and runs it in the foreground. The
+runbook is §13.6. `fiboki worker run live` still refuses.
+
 `fiboki worker run research` invoked standalone warns that the orchestrator has no handlers
 registered and will idle. That path exists so the process, the lease and the heartbeat can be
 exercised on their own; handlers are registered by the application wiring.
@@ -214,8 +219,8 @@ is **DEGRADED rather than OK**. A journal that exists but none of whose sessions
 
 ```bash
 fiboki killswitch status
-fiboki killswitch pause   --reason "spreads blowing out on the ECB release" --actor joe
-fiboki killswitch flatten --reason "unexplained divergence in reconciliation" --actor joe
+fiboki killswitch pause   --reason "spreads blowing out on the ECB release" --operator joe
+fiboki killswitch flatten --reason "unexplained divergence in reconciliation" --operator joe
 ```
 
 `--reason` is **required**; it goes in the journal.
@@ -232,8 +237,35 @@ tells you to confirm with `status`.
 
 **There is no deactivate command and no timeout.** Disarming requires an explicit operator
 action through the API, and the switch never clears itself: *a switch that turns itself off is
-not a kill switch.* The journal is fsynced on every append and state is recovered from it on
-startup, because the switch's state must survive the crash that made you hit it.
+not a kill switch.*
+
+**Which journal.** There is one: `<FIBOKI_STATE_DIR>/killswitch.jsonl`, resolved by
+`fiboki.core.paths.resolve_paths` in the CLI, the API settings and any gateway built with
+`KillSwitch.from_paths(...)`. The CLI prints the absolute path it wrote and warns when
+`FIBOKI_STATE_DIR` is unset (the default `var` is relative to the current directory, so a
+terminal elsewhere resolves a different file) or when `--journal` names a file nothing trades
+from. Every gateway re-reads the journal (a `stat`, then a replay only if it changed) before each
+decision, so an activation binds a running process's very next order without a restart. A
+`RiskGateway` declared for any mode but BACKTEST refuses an in-memory journal at construction.
+In the current working tree the paper replay runtime (`workers/runtime.build_replay_session`)
+builds its gateway with `KillSwitch.from_paths(...)` and `mode=PAPER`, and the forward paper
+entrypoint opens the same resolved journal; every attempt row stamps `kill_switch_journal`, so a
+composition that slips back to memory is visible.
+
+The journal is appended with `F_FULLFSYNC` on macOS (plain `fsync` elsewhere), CRC-framed, and a
+line torn by a crash is moved to `killswitch.jsonl.torn-<timestamp>` with a CRITICAL
+`ledger_torn_tail` alert rather than making the switch unreadable. The intent ledger, the agent
+audit ledger (flush only; its hash chain is its integrity check) and the alert log use the same
+helper (`fiboki.core.durable`). Unframed lines written before this change are still read.
+
+**Alerts and the watchdog.** `fiboki alerts test [--critical]` sends a test alert through every
+configured channel and exits 1 if any failed or if no remote channel (Telegram, webhook) is
+configured. CRITICAL alerts to a remote channel go through `<FIBOKI_STATE_DIR>/alerts_outbox.sqlite`
+and are retried until delivered. `fiboki watchdog run` is the heartbeat watchdog as a supervised
+process (lease `watchdog`, its own heartbeat, exit 75 if another copy holds the lease): run it
+under launchd beside the workers, with `FIBOKI_EXPECTED_WORKERS` set, so a worker that never
+started is also reported. Staleness thresholds come from one value, `Settings.health`
+(`FIBOKI_WORKER_STALE_SECONDS`, `FIBOKI_WORKER_DOWN_SECONDS`, `FIBOKI_DATA_STALE_SECONDS`).
 
 `FLATTEN` closing orders are dispatched through the **normal** ordering path, so they are
 recorded, idempotent and recoverable like any other order — not a side channel.
@@ -422,9 +454,11 @@ with `killswitch status` and with a reconcile.
 
 Stated so this document is not read as describing a running system.
 
-- **No live worker can be started.** The CLI refuses it by design until the wiring exists.
-- **No scheduled reconciliation.** `fiboki broker reconcile` is manual; nothing runs it on
-  startup or on a timer.
+- **No live worker can be started.** The CLI refuses it by design. The one market-facing worker
+  that can run is PAPER forward (§13.6), which reads OANDA practice prices and writes to no
+  broker.
+- **Reconciliation is scheduled only inside a running worker.** Paper forward reconciles at
+  startup (fail closed) and every 15 minutes; `fiboki broker reconcile` is otherwise manual.
 - **Backup and restore are scripted but not rehearsed on a real deployment** (§13.2). Do the
   rehearsal on the desktop before relying on it.
 - **No market data in this repository.** `data/` is empty and the migration has never been run
@@ -613,3 +647,88 @@ temperature 0 is a property to measure with the eval harness, not assume.
 - `scripts/dev-up.sh` exports `FIBOKI_INCIDENT_LOG` and `FIBOKI_API_PROXY_TARGET`, which are not
   in `ENV_REGISTRY`; `fiboki doctor` lists them as unknown (WARN in paper, a startup error in
   demo/live).
+
+### 13.6 Paper forward (OANDA practice prices, paper fills)
+
+Added 2026-09-29 (audit F, P1-15, P2-4, P2-17, P2-18). What this runs, in one line: the Donchian
+seed as written, on EURUSD, GBPUSD and XAUUSD H4, priced from OANDA **practice** candles and
+quotes, filled by a **paper** venue, sized once, gated by the risk gateway, with every attempt
+stamped with the wiring file's sha256. Nothing is sent to any broker; OANDA is only read.
+
+**Once.** Create an OANDA practice (fxTrade Practice) account and a personal access token for
+it. Then, in `~/.fiboki/env` (chmod 600; never in the repository):
+
+```bash
+FIBOKI_OANDA_PRACTICE_TOKEN=<the practice token>
+FIBOKI_OANDA_PRACTICE_ACCOUNT_ID=<101-004-XXXXXXX-001>
+```
+
+These two names are read once at start and never logged. A live (fxTrade) token cannot be
+used by mistake: the market-data host is asserted, by parsed hostname, to be
+`api-fxpractice.oanda.com`, and the HTTP transport is built with that host as its only allowed
+host.
+
+**Check, then run once in the foreground:**
+
+```bash
+.venv/bin/fiboki paper forward --wiring src/fiboki/entrypoints/wiring/paper_forward_v1.json --check
+scripts/fiboki-service.sh paper          # foreground; Ctrl-C stops it cleanly
+```
+
+`--check` validates the wiring and prints its sha256 without touching the network. The first
+start refuses (exit 1, reason printed) if a token is missing, the strategy document on disk no
+longer hashes to the wired `content_hash`, or the official economic calendar does not cover the
+next 14 days (it is declared to 2026-12-04; refresh it before then).
+
+**Supervised:**
+
+```bash
+scripts/launchd-install.sh --services paper --load
+launchctl print gui/$(id -u)/uk.fiboki.paper        # state
+tail -f var/logs/paper.log                          # structured log
+.venv/bin/fiboki worker status                      # heartbeat + lease "paper-forward"
+```
+
+The service is not in the installer's default list on purpose: it starts only when asked.
+`scripts/launchd-install.sh --services paper --unload` stops it.
+
+**Where things land.** `<FIBOKI_STATE_DIR>/paper_forward/paper_forward_v1/`: `journal.jsonl`
+(every bar, pricing sample, venue fill, book entry, venue instruction, closed trade, restart),
+`trades.jsonl` (the P&L ledger the daily and weekly loss limits read, across restarts),
+`attempts.jsonl` (every gateway attempt, allowed or blocked, with `wiring_sha256`) and
+`intents.jsonl` (the fsynced order intents). `<FIBOKI_PAPER_ROOT>/forward-paper_forward_v1/`
+holds `summary.json`, `trades.csv` and `positions.csv`, rewritten after every bar, which the
+trading pages read as one continuous PAPER account.
+
+**Kill switch.** Use the journal the process watches, `<FIBOKI_STATE_DIR>/killswitch.jsonl`
+(the API's). `fiboki killswitch pause` blocks new entries from the next decision; existing
+positions keep being managed. `fiboki killswitch flatten` closes every paper position within
+about 30 seconds (it does not wait for the next bar), through the execution service, at the
+last closed bar's price. The CLI writes the resolved journal, `<FIBOKI_STATE_DIR>/killswitch.jsonl`,
+so run it with the same `FIBOKI_STATE_DIR` the service uses (`scripts/fiboki-service.sh`
+defaults it to `<repo>/var`); `fiboki killswitch status` shows which file it read.
+
+**Sleep (P2-18).** The plist is `ProcessType Standard`, and the service wrapper holds
+`caffeinate -is -w <pid>` for the life of the process: `-i` stops idle sleep, `-s` stops system
+sleep **on AC power only**. Neither stops a closed MacBook lid from sleeping the machine (unless
+it is in clamshell mode with power and an external display), and a sleeping Mac polls nothing:
+the feed wakes late, the bar is delivered late, and the gateway's freshness check refuses stale
+bars rather than trading them. Check with `pmset -g assertions | grep caffeinate` and
+`pmset -g` (look at `sleep` and `displaysleep`). On a desktop Mac set "Prevent automatic
+sleeping when the display is off" in System Settings, Energy.
+
+**Restarts (read before trusting a number).** The book and the paper venue live in memory. A
+restart carries forward the realised balance, the peak equity (so the drawdown limit does not
+reset) and every closed trade (so the loss windows do not reset). Positions open at the last
+bar are **abandoned**: journalled as `positions_abandoned_at_restart`, alerted at WARNING, and
+their unrealised P&L is not carried. Keep restarts rare; each one is visible in `summary.json`
+(`restarts`, `abandoned_at_restart`).
+
+**What the numbers are.** The ledger of record is the position book, which fills entries at the
+next bar's open through the fill simulator exactly as a backtest does, and charges the
+`OANDA_REALISTIC` profile's spreads. The paper venue's instant fill at the signal bar's close is
+recorded beside it (`venue_fill` rows) so the gap is measured. The live OANDA quoted spread is
+used by the gateway's `abnormal_spread` check (and journalled per bar), not charged. FX is not
+converted (all three instruments are USD-quoted, the account is USD). The regime is `unknown`
+(no market-state engine is wired), which the sizing policy treats as a reason to size down.
+

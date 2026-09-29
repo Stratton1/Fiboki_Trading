@@ -56,20 +56,24 @@ wherever it has events. The only way to run with no event source at all is to
 pass an explicitly empty calendar with ``allow_empty_calendar=True``.
 :meth:`PaperSession.summary` reports which of these happened.
 
-A stated limitation: the gateway compares event times against the context
-builder's clock, which in a replay is the delivered bar's OPEN stamp, and
-applies ``LimitSet.event_blackout_minutes`` (15 minutes in ``PAPER_LIMITS``).
-On an H4 series a release that falls inside a bar but more than 15 minutes
-from its open stamp is therefore not seen by the gateway. The strategy-level
-blackout in the exit policy (evaluated on the entry bar, with the document's
-own margins) is the check that bites on long bars.
+The limit set in force is :func:`fiboki.risk.limits.default_limit_set`
+(``limits_v2_paper`` for a replay). Under a v2 set the gateway anchors the
+blackout at the signal bar's CLOSE and reaches at least one bar ahead, and
+:func:`event_source_horizon_minutes` widens the event source to match, so a
+release inside a long bar is seen. (Under the v1 sets the window was measured
+from the bar's OPEN stamp and an H4 release more than 15 minutes from it was
+missed; a caller that passes a v1 set explicitly still gets that behaviour.)
 """
 from __future__ import annotations
 
+import contextlib
 import math
+import os
+import sqlite3
 from collections.abc import Callable, Iterable, Mapping, Sequence
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from datetime import UTC, datetime
+from pathlib import Path
 from typing import Any
 
 import pandas as pd
@@ -80,11 +84,20 @@ from fiboki.broker.execution_service import (
     IntentStore,
 )
 from fiboki.broker.paper import PaperBroker, PaperConfig
-from fiboki.core.contracts import AccountState, Signal, TradePlan
+from fiboki.core.contracts import (
+    AccountState,
+    ConvictionReading,
+    Signal,
+    TradePlan,
+    VetoAssessment,
+)
 from fiboki.core.enums import ExecutionMode, StrategyLifecycle
 from fiboki.core.instruments import Instrument
 from fiboki.core.instruments import get as get_instrument
 from fiboki.core.money import FxRateSource, IdentityFxSource
+from fiboki.core.paths import FibokiPaths, resolve_paths
+from fiboki.core.tier import TierReading
+from fiboki.data.news.store import to_utc_text
 from fiboki.marketstate.calendar import (
     EconomicCalendar,
     ImpactLevel,
@@ -93,7 +106,15 @@ from fiboki.marketstate.calendar import (
 )
 from fiboki.obs import metrics as _metrics
 from fiboki.obs.logging import get_logger
-from fiboki.portfolio.construction import CorrelationMatrix, PortfolioSnapshot
+from fiboki.portfolio.construction import (
+    AllocationResult,
+    CandidateSignal,
+    ConstructionConfig,
+    CorrelationMatrix,
+    PortfolioConstructor,
+    PortfolioSnapshot,
+    StrategyTier,
+)
 from fiboki.portfolio.sizing import SizingPolicy, size_trade
 from fiboki.risk.accounting import (
     PnlWindows,
@@ -103,14 +124,15 @@ from fiboki.risk.accounting import (
     realised_portfolio_vol,
 )
 from fiboki.risk.gateway import (
+    EventVetoProvider,
     MarketView,
     RiskContext,
     RiskGateway,
     StrategyView,
     VenueView,
 )
-from fiboki.risk.killswitch import RequestKind
-from fiboki.risk.limits import PAPER_LIMITS, LimitSet
+from fiboki.risk.killswitch import KillSwitch, RequestKind
+from fiboki.risk.limits import LimitSet, default_limit_set
 from fiboki.sim.fills import Bar
 from fiboki.validation.engine_evaluator import blackout_fingerprint
 from fiboki.workers.base import WorkerStore
@@ -120,6 +142,7 @@ __all__ = [
     "MANAGED_EXIT_EXPOSURE",
     "MANAGED_EXIT_POSITIONS",
     "CalendarWiring",
+    "ConvictionAdapter",
     "FrameReplayFeed",
     "LifecycleTimer",
     "MarketStateFeed",
@@ -127,10 +150,20 @@ __all__ = [
     "RiskContextBuilder",
     "SignalEvaluator",
     "SignalSource",
+    "StampingRecorder",
+    "TierGatedVetoSource",
     "build_replay_session",
     "calendar_event_source",
+    "conviction_rows_from_sqlite",
+    "event_source_horizon_minutes",
     "publish_managed_exit_exposure",
+    "replay_market_open_source",
 ]
+
+#: ``alert(message, context)``: the composition root adapts this to its
+#: dispatcher. Every agent-channel gating decision that a config asked for and
+#: the tier refused is announced through it, once per transition.
+AlertSink = Callable[[str, Mapping[str, Any]], None]
 
 _log = get_logger("fiboki.workers.runtime")
 
@@ -325,12 +358,33 @@ SignalSource = Callable[[str, pd.DataFrame, pd.Timestamp], Sequence[Signal]]
 
 
 class SignalEvaluator:
-    """Turns signals into :class:`TradePlan` objects. The ONE sizing call.
+    """Turns signals into :class:`TradePlan` objects. Allocates, then sizes ONCE.
 
     The execution service explicitly does not re-size and neither does the
     worker: V1 sized the same signal three times — in the bot, in the router and
     in the IG adapter — and the ledger disagreed with the broker. Everything
     downstream of here carries ``plan.size`` unchanged.
+
+    What decides the size (audit F P1-11: this used to call ``size_trade`` at
+    a flat ``risk_fraction`` and the portfolio constructor ran nowhere):
+
+    1. every signal on the bar becomes a :class:`CandidateSignal` carrying its
+       strategy's lifecycle and health (``strategy``), evidence tier
+       (``tier_source``, default PROBATIONARY), its own instrument's regime
+       (``regime``), an instrument volatility estimate and, if wired, the
+       latest agent conviction (``conviction``);
+    2. :class:`PortfolioConstructor` allocates the whole batch against the
+       book (``snapshot``): tier base risk x lifecycle x health x confidence x
+       correlation x concentration x vol target x margin x drawdown throttle x
+       regime x correlated-risk budget x conviction, then the total weight
+       budget, the 6% total risk cap and the final down-only tier cap;
+    3. :func:`size_trade` runs once per accepted candidate with
+       ``risk_fraction = tier base risk`` and ``portfolio_weight = weight``.
+       The configured ``policy.risk_fraction`` is a CEILING on the tier base.
+
+    Every allocation result is kept in :attr:`allocations`, and the stamp of
+    the allocation behind each plan in :attr:`plan_stamps`, so an attempt row
+    can say why a plan was the size it was (see :class:`StampingRecorder`).
     """
 
     def __init__(
@@ -342,6 +396,14 @@ class SignalEvaluator:
         policy: SizingPolicy,
         history: Callable[[str], pd.DataFrame],
         account_ccy: str = "GBP",
+        constructor: PortfolioConstructor | None = None,
+        snapshot: Callable[[pd.Timestamp], PortfolioSnapshot] | None = None,
+        regime: Callable[[str], str] | None = None,
+        strategy: Callable[[str], StrategyView] | None = None,
+        tier_source: Callable[[str], StrategyTier] | None = None,
+        conviction: ConvictionAdapter | None = None,
+        agent_tier: TierReading | None = None,
+        alert: AlertSink | None = None,
     ) -> None:
         self.source = source
         self.account = account
@@ -349,12 +411,115 @@ class SignalEvaluator:
         self.policy = policy
         self.history = history
         self.account_ccy = account_ccy
+        ceiling = policy.risk_fraction * 100.0
+        if constructor is None:
+            constructor = PortfolioConstructor(
+                "equal_risk",
+                ConstructionConfig(risk_ceiling_pct=ceiling),
+                agent_tier=agent_tier,
+            )
+        else:
+            current = constructor.config.risk_ceiling_pct
+            constructor.config = replace(
+                constructor.config,
+                risk_ceiling_pct=ceiling if current is None else min(current, ceiling),
+            )
+            if agent_tier is not None:
+                constructor.agent_tier = agent_tier
+        self.constructor = constructor
+        self.snapshot = snapshot
+        self.regime = regime
+        self.strategy = strategy
+        self.tier_source = tier_source
+        self.conviction = conviction
+        self.alert = alert
         self.signals_seen = 0
         self.unsized: list[tuple[str, str]] = []
+        self.allocations: list[AllocationResult] = []
+        #: ``plan_id -> stamp``: the allocation behind each plan, as data.
+        self.plan_stamps: dict[str, dict[str, Any]] = {}
+        self._alerted_gate = False
+        self._announce_gating()
+
+    # -- the tier gate, announced ----------------------------------------
+
+    def _announce_gating(self) -> None:
+        """Config asked for the conviction channel; the tier held it in shadow."""
+        if not self.constructor.conviction_gated_by_tier or self._alerted_gate:
+            return
+        self._alerted_gate = True
+        tier = self.constructor.agent_tier
+        message = (
+            "conviction policy is enabled in config but the agent tier "
+            f"({tier.tier.value}, source {tier.source}) does not permit dampening; "
+            "it runs in SHADOW only"
+        )
+        context = {
+            "conviction_policy": self.constructor.config.conviction.version,
+            **tier.stamp(),
+        }
+        _log.warning(message, extra=context)
+        if self.alert is not None:
+            try:
+                self.alert(message, context)
+            except Exception:  # an alert channel failing must not change sizing
+                _log.exception("conviction gate alert sink raised")
+
+    # -- candidate assembly ----------------------------------------------
+
+    def _vol(self, symbol: str) -> float:
+        """Annualised close-to-close volatility of the bars seen so far.
+
+        Used only by the volatility-parity allocator (the default equal-risk
+        allocator ignores it). Falls back to 10% when fewer than 20 returns
+        exist, which is the ``CandidateSignal`` default.
+        """
+        try:
+            closes = self.history(symbol)["close"].astype(float)
+        except Exception:
+            return 0.10
+        rets = closes.pct_change().dropna().tail(250)
+        if len(rets) < 20:
+            return 0.10
+        index = closes.index
+        periods = 252.0
+        if isinstance(index, pd.DatetimeIndex) and len(index) > 2:
+            step = pd.Series(index).diff().dropna().median()
+            if step > pd.Timedelta(0):
+                periods = max(1.0, (pd.Timedelta(days=365.25) / step) * (5.0 / 7.0))
+        vol = float(rets.std(ddof=1)) * math.sqrt(periods)
+        return vol if math.isfinite(vol) and vol > 0 else 0.10
+
+    def _candidate(self, signal: Signal, symbol: str, now: pd.Timestamp) -> CandidateSignal:
+        view = self.strategy(signal.strategy_id) if self.strategy is not None else None
+        lifecycle = (
+            view.lifecycle
+            if view is not None and view.lifecycle is not None
+            else StrategyLifecycle.PAPER
+        )
+        health = 1.0 if view is None else max(0.0, min(1.0, float(view.health)))
+        tier = (
+            self.tier_source(signal.strategy_id)
+            if self.tier_source is not None
+            else StrategyTier.PROBATIONARY
+        )
+        return CandidateSignal(
+            signal=signal,
+            annualised_vol=self._vol(symbol),
+            health=health,
+            lifecycle=lifecycle,
+            tier=tier,
+            regime=self.regime(symbol) if self.regime is not None else None,
+            conviction=(
+                self.conviction.reading(symbol, now) if self.conviction is not None else None
+            ),
+        )
+
+    # -- the call the worker makes ---------------------------------------
 
     def evaluate(self, instruments: Sequence[str], batch: BarBatch) -> Iterable[TradePlan]:
         account = self.account()
-        plans: list[TradePlan] = []
+        pending: list[tuple[str, Signal, Instrument, float, pd.Timestamp]] = []
         for symbol in instruments:
             bar = batch.frames.get(symbol)
             if bar is None:
@@ -365,25 +530,283 @@ class SignalEvaluator:
                 rate = float(
                     self.fx.rate(instrument.quote, self.account_ccy, bar.timestamp)
                 )
-                outcome = size_trade(
-                    signal=signal,
-                    instrument=instrument,
-                    account=account,
-                    fx_quote_to_account=rate,
-                    policy=self.policy,
-                    account_ccy=self.account_ccy,
+                pending.append((symbol, signal, instrument, rate, bar.timestamp))
+        if not pending:
+            return []
+
+        now = max(ts for *_rest, ts in pending)
+        candidates = [self._candidate(sig, sym, now) for sym, sig, *_rest in pending]
+        snapshot = (
+            self.snapshot(now)
+            if self.snapshot is not None
+            else PortfolioSnapshot(account=account, as_of=now)
+        )
+        result = self.constructor.allocate(candidates, snapshot)
+        self.allocations.append(result)
+
+        plans: list[TradePlan] = []
+        for symbol, signal, instrument, rate, _ts in pending:
+            allocation = result.allocation_for(signal.signal_id)
+            if allocation is None or allocation.dropped or allocation.weight <= 0:
+                reason = (
+                    "allocation:missing"
+                    if allocation is None
+                    else f"allocation:{allocation.drop_reason or 'zero_weight'}"
                 )
-                if not outcome.sized:
-                    # Not dropped silently: a signal that could not be sized is
-                    # as much a fact as one that was.
-                    self.unsized.append((symbol, str(outcome.reason)))
-                    _log.info(
-                        "signal not sized",
-                        extra={"instrument": symbol, "reason": str(outcome.reason)},
-                    )
-                    continue
-                plans.append(outcome.require())
+                # Not dropped silently: a signal refused a risk budget is as
+                # much a fact as one that was sized.
+                self.unsized.append((symbol, reason))
+                _log.info(
+                    "signal not allocated",
+                    extra={"instrument": symbol, "reason": reason},
+                )
+                continue
+            # THE ONE SIZING CALL. The tier base risk is the risk fraction and
+            # the allocation weight (<= 1.0) scales it; size_trade decides the
+            # units once and nothing downstream re-derives them.
+            outcome = size_trade(
+                signal=signal,
+                instrument=instrument,
+                account=account,
+                fx_quote_to_account=rate,
+                policy=replace(self.policy, risk_fraction=allocation.base_risk_pct / 100.0),
+                portfolio_weight=allocation.weight,
+                account_ccy=self.account_ccy,
+            )
+            if not outcome.sized:
+                self.unsized.append((symbol, str(outcome.reason)))
+                _log.info(
+                    "signal not sized",
+                    extra={"instrument": symbol, "reason": str(outcome.reason)},
+                )
+                continue
+            plan = outcome.require()
+            self.plan_stamps[plan.plan_id] = {
+                **dict(result.stamp),
+                "signal_id": signal.signal_id,
+                "strategy_tier": allocation.candidate.tier.value,
+                "base_risk_pct": allocation.base_risk_pct,
+                "portfolio_weight": allocation.weight,
+                "allocated_risk_pct": allocation.risk_pct,
+                "allocation_reasons": [str(r) for r in allocation.reasons],
+            }
+            plans.append(plan)
         return plans
+
+
+# ---------------------------------------------------------------------------
+# The conviction channel's ONE construction site
+# ---------------------------------------------------------------------------
+
+
+#: ``(instrument, at) -> row``: the latest conviction AVAILABLE at ``at``.
+ConvictionRows = Callable[[str, pd.Timestamp], Mapping[str, Any] | None]
+
+
+class ConvictionAdapter:
+    """The ONLY place a :class:`ConvictionReading` is constructed.
+
+    It reads the latest verdict filed for an instrument by the thesis debate
+    (``agents.workflows.run_thesis_debate`` -> ``record_conviction``), BY ID and
+    point-in-time (only rows whose ``available_at <= at``), and turns it into
+    the contract ``_step_conviction`` consumes. ``tests/unit/
+    test_conviction_channel.py`` walks the AST and fails if a second
+    construction site appears anywhere under ``src/``.
+
+    Fail-neutral by design: an unreadable store, a malformed row or a reading
+    the contract refuses yields ``None``, which the policy maps to exactly 1.0.
+    An LLM outage or a corrupt row can therefore never change a size, which is
+    the opposite of the regime scalar's "unknown reduces size" and deliberately
+    so (``B_tradingagents.md`` §6.3(c)).
+    """
+
+    def __init__(self, rows: ConvictionRows) -> None:
+        self.rows = rows
+        self.read_errors = 0
+
+    def reading(self, instrument: str, at: pd.Timestamp) -> ConvictionReading | None:
+        try:
+            row = self.rows(instrument.upper(), pd.Timestamp(at))
+        except Exception as exc:  # a store fault must not become a size change
+            self.read_errors += 1
+            _log.warning(
+                "conviction store unreadable; treating as absent (factor 1.0)",
+                extra={"instrument": instrument, "error": f"{type(exc).__name__}: {exc}"},
+            )
+            return None
+        if row is None:
+            return None
+        try:
+            available = _utc_ts(row["available_at"])
+            brief_as_of = _utc_ts(row["as_of"])
+            return ConvictionReading(
+                instrument=str(row["instrument"]).upper(),
+                stance=str(row["stance"]),
+                strength=int(row["strength"]),
+                # Point-in-time: usable from the later of the brief's clock and
+                # the instant the verdict was filed.
+                as_of=max(available, brief_as_of),
+                valid_until=_utc_ts(row["valid_until"]),
+                artefact_id=str(row["conviction_id"]),
+                policy_version=str(row["policy_version"]),
+            )
+        except Exception as exc:
+            self.read_errors += 1
+            _log.warning(
+                "conviction row refused by the contract; treating as absent",
+                extra={"instrument": instrument, "error": f"{type(exc).__name__}: {exc}"},
+            )
+            return None
+
+
+def _utc_ts(value: Any) -> pd.Timestamp:
+    ts = pd.Timestamp(value)
+    return ts.tz_localize("UTC") if ts.tzinfo is None else ts.tz_convert("UTC")
+
+
+#: Column contract with ``agents.tools.ThesisStore``'s ``conviction`` table.
+#: Pinned by ``tests/integration/test_thesis_debate.py`` (write with the store,
+#: read with this function).
+_CONVICTION_COLUMNS = (
+    "conviction_id",
+    "instrument",
+    "stance",
+    "strength",
+    "as_of",
+    "available_at",
+    "valid_until",
+    "policy_version",
+)
+
+
+def conviction_rows_from_sqlite(path: str | Path) -> ConvictionRows:
+    """Read the thesis store's ``conviction`` table READ-ONLY, point-in-time.
+
+    Opened with ``mode=ro`` per query, so this process can never write the
+    agent store, and a missing file is "no conviction" rather than an error.
+    ``workers`` could import ``agents`` by rank, but the execution composition
+    reading a table by its column contract keeps the agent package out of the
+    paper worker's import graph.
+    """
+    db = Path(path)
+    query = (
+        f"SELECT {', '.join(_CONVICTION_COLUMNS)} FROM conviction "
+        "WHERE instrument = ? AND available_at <= ? "
+        "ORDER BY available_at DESC, conviction_id DESC LIMIT 1"
+    )
+
+    def rows(instrument: str, at: pd.Timestamp) -> Mapping[str, Any] | None:
+        if not db.exists():
+            return None
+        conn = sqlite3.connect(f"file:{db}?mode=ro", uri=True)
+        try:
+            found = conn.execute(
+                query, (instrument, to_utc_text(_utc_ts(at).to_pydatetime()))
+            ).fetchone()
+        finally:
+            conn.close()
+        return None if found is None else dict(zip(_CONVICTION_COLUMNS, found, strict=True))
+
+    return rows
+
+
+# ---------------------------------------------------------------------------
+# The event veto, held behind the agent tier
+# ---------------------------------------------------------------------------
+
+
+class TierGatedVetoSource:
+    """Wraps an :class:`EventVetoProvider` so it can only BLOCK at tier T2+.
+
+    The gateway blocks when ``verdict.enabled and verdict.veto``. Below T2 this
+    wrapper reports ``enabled=False`` on every verdict, whatever the policy
+    config says, so the gateway records ``event_veto_shadow:<code>`` and passes:
+    the channel runs in shadow. When config asked for enforcement and the tier
+    refused, an alert is raised once. It never changes ``veto`` or
+    ``available``: the shadow record is identical to the enforced one.
+    """
+
+    def __init__(
+        self,
+        inner: EventVetoProvider,
+        tier: TierReading,
+        *,
+        alert: AlertSink | None = None,
+    ) -> None:
+        self.inner = inner
+        self.tier = tier
+        self.alert = alert
+        self.gated = bool(inner.enabled and not tier.tier.permits_veto)
+        if self.gated:
+            message = (
+                "event veto policy is enabled in config but the agent tier "
+                f"({tier.tier.value}, source {tier.source}) does not permit vetoes; "
+                "it runs in SHADOW only"
+            )
+            context = {"event_veto_policy": inner.policy_version, **tier.stamp()}
+            _log.warning(message, extra=context)
+            if alert is not None:
+                try:
+                    alert(message, context)
+                except Exception:
+                    _log.exception("event veto gate alert sink raised")
+
+    @property
+    def enabled(self) -> bool:
+        return bool(self.inner.enabled and self.tier.tier.permits_veto)
+
+    @property
+    def policy_version(self) -> str:
+        return f"{self.inner.policy_version}@{self.tier.tier.value}"
+
+    def assess(self, instrument: str, at: datetime) -> VetoAssessment:
+        verdict = self.inner.assess(instrument, at)
+        if verdict.enabled and not self.tier.tier.permits_veto:
+            return replace(verdict, enabled=False)
+        return verdict
+
+
+# ---------------------------------------------------------------------------
+# Stamping the sizing decision onto every attempt row
+# ---------------------------------------------------------------------------
+
+
+class StampingRecorder:
+    """Adds the allocation stamp and the agent tier to every attempt row.
+
+    The gateway records an attempt per plan (``ExecutionAttempt``) with the
+    plan's ``portfolio_weight`` and ``risk_amount`` but not WHY the plan was
+    that size. This wraps the gateway's recorder: for a plan this runtime
+    sized, it merges the evaluator's :attr:`SignalEvaluator.plan_stamps`
+    entry (construction and conviction policy versions, strategy tier, base
+    risk, allocated risk, the reasons); for every row, including exits, it
+    merges the agent tier. It delegates everything else to the wrapped
+    recorder, so ``attempts`` and any persistence behave exactly as before.
+    """
+
+    def __init__(
+        self,
+        inner: Any,
+        stamps: Mapping[str, Mapping[str, Any]],
+        tier: TierReading,
+    ) -> None:
+        self._inner = inner
+        self._stamps = stamps
+        self._tier = tier
+
+    def record(self, attempt: Any) -> None:
+        extra = dict(getattr(attempt, "extra", {}) or {})
+        extra.update(self._tier.stamp())
+        stamp = self._stamps.get(getattr(attempt, "plan_id", ""))
+        if stamp is not None:
+            extra["sizing"] = dict(stamp)
+        # A non-dataclass attempt is recorded untouched rather than dropped.
+        with contextlib.suppress(TypeError):
+            attempt = replace(attempt, extra=extra)
+        self._inner.record(attempt)
+
+    def __getattr__(self, name: str) -> Any:
+        return getattr(self._inner, name)
 
 
 # ---------------------------------------------------------------------------
@@ -431,18 +854,40 @@ class RiskContextBuilder:
 
     Each was ``0.0`` and each fed a check that ran, was named in the audit
     trail, and could not fire. ``fiboki.risk.accounting`` holds the arithmetic;
-    this class holds the wiring. All four sources are OPTIONAL and default to
-    the old behaviour, so an existing caller is unchanged -- but a session built
-    by :func:`build_replay_session` gets all four, and
-    :attr:`risk_inputs_live` reports which of them are real on every context so
-    a decision record can never be read as enforcing a limit it had no data for.
+    this class holds the wiring. A session built by
+    :func:`build_replay_session` gets all four, and :attr:`risk_inputs_live`
+    reports which of them are real on every context so a decision record can
+    never be read as enforcing a limit it had no data for.
+
+    No benign defaults (round 4)
+    ----------------------------
+    A missing source is a MISSING input, never a zero or a ``True``:
+
+    * no ``pnl_ledger`` (and no static value pinned) -> ``daily_pnl`` and
+      ``weekly_pnl`` are ``None``;
+    * no ``correlation`` -> ``correlated_exposure`` is ``None``;
+    * no ``market_open_source`` (and no static flag pinned) ->
+      ``market.market_open`` is ``None``, which ``market_state`` blocks on.
+
+    The gateway decides what a gap means: it blocks in SHADOW/DEMO/LIVE, and
+    in PAPER only a gateway built with ``paper_allows_missing_inputs=True``
+    lets the order through, with the gap on the attempt row. That permission
+    belongs to the composition root, never to this class.
+
+    ``open_risk`` is measured with the SAME cost-inclusive definition a new
+    plan's ``risk_amount`` uses (``sizing_policy``; ``fixed_fractional_v2`` by
+    default): stop distance plus the policy's spread and two expected
+    slippages, so ``max_account_risk`` adds like to like.
     """
 
     adapter: Any
     clock: Callable[[], pd.Timestamp]
     fx: FxRateSource
     account_ccy: str = "GBP"
-    limits: LimitSet = PAPER_LIMITS
+    #: ``None``: :func:`fiboki.risk.limits.default_limit_set` for ``mode``,
+    #: resolved in ``__post_init__`` (the one source of truth for which set is
+    #: in force).
+    limits: LimitSet | None = None
     mode: ExecutionMode = ExecutionMode.PAPER
     #: ``instrument -> spread in PRICE units``. Defaults to the adapter's
     #: execution profile.
@@ -461,7 +906,10 @@ class RiskContextBuilder:
     #: the wall clock). This is what ``data_freshness`` and ``stale_price``
     #: measure their age from; the gateway owns the threshold.
     last_bar_times: dict[str, pd.Timestamp] = field(default_factory=dict)
-    market_open: bool = True
+    #: A STATIC flag, for a caller (or test) that pins one. ``None``, the
+    #: default, with no :attr:`market_open_source` means "unknown", and the
+    #: gateway's ``market_state`` check blocks on unknown.
+    market_open: bool | None = None
     #: ``(instrument, now) -> is the session open``. When set it replaces the
     #: static :attr:`market_open` flag, so ``market_state`` blocks on a weekend
     #: as "market_closed" rather than every check reading the weekend as stale.
@@ -470,11 +918,11 @@ class RiskContextBuilder:
     #: as the mid ONLY when the adapter keeps no bar of its own (a real venue
     #: adapter does not; the paper broker does).
     last_closes: dict[str, float] = field(default_factory=dict)
-    #: STATIC fallbacks, used only when ``pnl_ledger`` is absent. Retained so
-    #: an existing caller that set them by hand keeps working, and so a test can
-    #: pin a value without building a trade history.
-    daily_pnl: float = 0.0
-    weekly_pnl: float = 0.0
+    #: STATIC values, used only when ``pnl_ledger`` is absent, so a test can
+    #: pin a value without building a trade history. ``None`` (the default) is
+    #: "not supplied": the loss checks see a missing input, not a flat day.
+    daily_pnl: float | None = None
+    weekly_pnl: float | None = None
 
     # -- the four formerly-dead inputs ----------------------------------
     #: Realised P&L over clock-derived UTC day and week windows. When present it
@@ -491,6 +939,17 @@ class RiskContextBuilder:
     vol_min_observations: int = 20
     #: Last computed windows, for the worker's summary and for tests.
     last_windows: PnlWindows | None = None
+    #: The agent event-veto source, normally a :class:`TierGatedVetoSource`.
+    #: ``None``: not wired, and every attempt row says ``not_wired``.
+    event_veto: EventVetoProvider | None = None
+    #: The sizing rule new plans are sized under. ``open_risk`` prices each open
+    #: position's risk-to-stop with the same rule, so the book and the plan are
+    #: added in the same units. Pass the evaluator's policy.
+    sizing_policy: SizingPolicy = field(default_factory=SizingPolicy)
+
+    def __post_init__(self) -> None:
+        if self.limits is None:
+            self.limits = default_limit_set(self.mode)
 
     def observe(self, batch: BarBatch) -> None:
         """Record when each instrument last produced a closed bar."""
@@ -618,6 +1077,9 @@ class RiskContextBuilder:
                 if self.regime_source is not None and positions
                 else "unknown"
             ),
+            # MEASURED, so the construction's correlated and total open-risk
+            # budgets run against the book rather than reporting "unmeasured".
+            open_risk_by_instrument=self.open_risk_by_instrument(now),
         )
 
     def realised_vol(self) -> float:
@@ -672,18 +1134,41 @@ class RiskContextBuilder:
             "realised_portfolio_vol": self.equity_curve is not None,
         }
 
-    def open_risk(self, now: pd.Timestamp) -> float:
-        total = 0.0
+    def _position_cost_per_unit(self, pos: Any, instrument: Instrument) -> float:
+        """The sizing rule's stop-out cost for an OPEN position, price units.
+
+        Mirrors :func:`fiboki.backtest.engine.stop_out_cost_per_unit`, which a
+        new plan's ``risk_amount`` includes under ``fixed_fractional_v2``: the
+        profile's full spread at the entry hour and entry price plus two
+        expected slippages. ``0`` under ``fixed_fractional_v1``.
+        """
+        profile = self.sizing_policy.resolved_cost_profile
+        if profile is None:
+            return 0.0
+        entry_time = pd.Timestamp(pos.entry_time)
+        spread = profile.spread_price(instrument, int(entry_time.hour), float(pos.entry_price))
+        return float(spread + 2.0 * profile.expected_slippage_price(instrument))
+
+    def open_risk_by_instrument(self, now: pd.Timestamp) -> dict[str, float]:
+        """Risk to stop per instrument, ACCOUNT currency. ``open_risk`` sums it.
+
+        Cost-inclusive under the builder's :attr:`sizing_policy`, the same
+        definition as ``TradePlan.risk_amount``.
+        """
+        out: dict[str, float] = {}
         for pos in self.adapter.positions():
             instrument = get_instrument(pos.instrument)
             rate = float(self.fx.rate(instrument.quote, self.account_ccy, now))
-            total += (
-                abs(pos.entry_price - pos.stop_loss)
+            out[pos.instrument] = out.get(pos.instrument, 0.0) + (
+                (abs(pos.entry_price - pos.stop_loss) + self._position_cost_per_unit(pos, instrument))
                 * pos.size
                 * instrument.contract_size
                 * rate
             )
-        return total
+        return out
+
+    def open_risk(self, now: pd.Timestamp) -> float:
+        return float(sum(self.open_risk_by_instrument(now).values()))
 
     # -- the call the worker makes --------------------------------------
 
@@ -694,6 +1179,8 @@ class RiskContextBuilder:
         snapshot = self.snapshot(now)
         windows = self.windows(now)
         limits = self.limits
+        assert limits is not None  # resolved in __post_init__
+        # No correlation matrix is a MISSING input (None), not "uncorrelated".
         correlated = (
             correlated_exposure(
                 plan.instrument,
@@ -702,12 +1189,13 @@ class RiskContextBuilder:
                 correlation=self.correlation,
             )
             if self.correlation is not None
-            else 0.0
+            else None
         )
         extra: dict[str, Any] = {
             "estimated_spread": self.spread_source is None,
             "risk_inputs_live": self.risk_inputs_live(),
             "realised_portfolio_vol": snapshot.realised_portfolio_vol,
+            "open_risk_basis": self.sizing_policy.basis,
         }
         if windows is not None:
             extra["pnl_window"] = windows.as_row()
@@ -727,6 +1215,7 @@ class RiskContextBuilder:
             daily_pnl=self.daily_pnl if windows is None else windows.daily_pnl,
             weekly_pnl=self.weekly_pnl if windows is None else windows.weekly_pnl,
             extra=extra,
+            event_veto=self.event_veto,
         )
 
 
@@ -770,6 +1259,52 @@ def calendar_event_source(
         return tuple(min(max(ts, e.event_time), e.span_end) for e in near)
 
     return source
+
+
+def event_source_horizon_minutes(limits: LimitSet, bar_minutes: float = 0.0) -> float:
+    """How far from ``now`` an event source must look so the gateway sees every event.
+
+    v1 sets: the symmetric ``event_blackout_minutes``. v2 sets
+    (``asymmetric_blackout``): the gateway's window is
+    ``[decision - post, decision + max(pre, bar)]`` with ``decision`` up to one
+    bar after ``now`` (the signal bar's close), so the source must reach
+    ``bar + max(pre, bar)`` ahead and ``post`` behind. A source narrower than
+    that hides an event the gateway would have blocked on.
+    """
+    if not limits.asymmetric_blackout:
+        return float(limits.event_blackout_minutes)
+    bar = max(0.0, float(bar_minutes))
+    pre = float(limits.event_blackout_pre_minutes or 0.0)
+    post = float(limits.event_blackout_post_minutes or 0.0)
+    return max(post, bar + max(pre, bar))
+
+
+def replay_market_open_source(
+    builder: RiskContextBuilder,
+) -> Callable[[str, pd.Timestamp], bool]:
+    """A REPLAY's market-open source: the data itself.
+
+    The instrument is open at ``now`` when the replay delivered a closed bar
+    for it at ``now``. The venue's session calendar decides FILLS (an order
+    queued on Friday's last bar fills at Sunday's open, as in the engine);
+    blocking the decision on it here would break that parity. Anything the
+    data does not show at ``now`` is reported closed rather than assumed open.
+    """
+
+    def source(symbol: str, now: pd.Timestamp) -> bool:
+        seen = builder.last_bar_times.get(symbol)
+        return seen is not None and pd.Timestamp(seen) == pd.Timestamp(now)
+
+    return source
+
+
+def _median_bar_minutes(frames: Mapping[str, pd.DataFrame]) -> float:
+    widest = 0.0
+    for frame in frames.values():
+        if len(frame.index) > 2:
+            delta = frame.index.to_series().diff().dropna().median()
+            widest = max(widest, float(pd.Timedelta(delta).total_seconds()) / 60.0)
+    return widest
 
 
 @dataclass(frozen=True, slots=True)
@@ -845,7 +1380,12 @@ def _resolve_calendar(
         covered=covered,
         n_events=n_events,
         fingerprint=blackout_fingerprint(calendar),
-        gateway_window_minutes=float(limits.event_blackout_minutes),
+        gateway_window_minutes=(
+            float(limits.event_blackout_minutes)
+            if not limits.asymmetric_blackout
+            else float(max(limits.event_blackout_pre_minutes or 0.0,
+                           limits.event_blackout_post_minutes or 0.0))
+        ),
         coverage_error=error,
     )
     return (calendar if wired else None), wiring
@@ -958,12 +1498,38 @@ class PaperSession:
                 else self.context_builder.last_windows.weekly_pnl
             ),
             "realised_portfolio_vol": self.context_builder.realised_vol(),
+            # The limit set in force and whether this PAPER gateway was given
+            # the explicit permission to pass an order with a missing input.
+            "limits_version": getattr(self.context_builder.limits, "version", None),
+            "paper_allows_missing_inputs": bool(
+                getattr(self.gateway, "paper_allows_missing_inputs", False)
+            ),
             # What the gateway's event_blackout check had to compare against.
             # Derived from the builder, not asserted: a session with no event
             # source says so here however it was configured.
             "economic_calendar": {
                 **({} if self.calendar is None else self.calendar.as_row()),
                 "wired_into_gateway": self.context_builder.event_source is not None,
+            },
+            # How sizes were decided, as recorded fact: the construction and
+            # conviction policy versions, the agent tier in force, and how many
+            # signals the allocator refused (``unsized`` counts them with the
+            # sizing refusals; ``allocation_dropped`` separates them).
+            "sizing": {
+                **self.evaluator.constructor.stamp(),
+                "allocations": len(self.evaluator.allocations),
+                "allocation_dropped": sum(
+                    1 for _sym, why in self.evaluator.unsized if why.startswith("allocation:")
+                ),
+                "conviction_shadow_rows": sum(
+                    len(r.shadow) for r in self.evaluator.allocations
+                ),
+                "event_veto_wired": self.context_builder.event_veto is not None,
+                "open_risk_basis": self.context_builder.sizing_policy.basis,
+                "kill_switch_journal": (
+                    "durable" if getattr(self.gateway.kill_switch, "durable", False)
+                    else "in_memory"
+                ),
             },
         }
 
@@ -980,7 +1546,7 @@ def build_replay_session(
     warmup: int = 0,
     exit_series: Mapping[str, pd.DataFrame] | None = None,
     gateway: RiskGateway | None = None,
-    limits: LimitSet = PAPER_LIMITS,
+    limits: LimitSet | None = None,
     intent_store: IntentStore | None = None,
     market_state_engine: Any = None,
     lifecycle_service: Any = None,
@@ -991,11 +1557,40 @@ def build_replay_session(
     correlation: CorrelationMatrix | None = None,
     calendar: EconomicCalendar | None = None,
     allow_empty_calendar: bool = False,
+    kill_switch: KillSwitch | None = None,
+    paths: FibokiPaths | None = None,
+    construction: ConstructionConfig | None = None,
+    allocator: str = "equal_risk",
+    agent_tier: TierReading | None = None,
+    tier_source: Callable[[str], StrategyTier] | None = None,
+    conviction_source: ConvictionRows | None = None,
+    event_veto: EventVetoProvider | None = None,
+    alert: AlertSink | None = None,
 ) -> PaperSession:
     """Assemble a PAPER runtime end to end over stored bars.
 
-    market data -> market state -> strategy -> sizing -> risk gateway ->
-    execution service -> paper venue -> telemetry.
+    market data -> market state -> strategy -> PORTFOLIO CONSTRUCTION ->
+    sizing -> risk gateway -> execution service -> paper venue -> telemetry.
+
+    Sizing (audit F P1-11): every bar's signals are allocated together by
+    :class:`PortfolioConstructor` (``construction``, default construction_v2,
+    ``allocator``) against the venue's own book, and each accepted candidate
+    is sized once at ``risk_fraction = its tier's base risk`` (``tier_source``,
+    default PROBATIONARY for every strategy) times its weight (<= 1.0).
+    ``sizing_policy.risk_fraction`` is a ceiling on the tier base.
+
+    The agent channels: ``agent_tier`` (default: T1, shadow only) gates both.
+    ``conviction_source`` (e.g. :func:`conviction_rows_from_sqlite`) feeds
+    :class:`ConvictionAdapter`; ``event_veto`` is wrapped in
+    :class:`TierGatedVetoSource`. ``alert`` hears about any channel a config
+    enabled and the tier held in shadow.
+
+    The kill switch: when ``gateway`` is not given, the gateway is built with
+    the OPERATOR's durable journal, ``KillSwitch.from_paths(paths)`` with
+    ``paths`` defaulting to ``resolve_paths(os.environ)`` (the same file the
+    CLI and the API resolve), and ``mode=PAPER``, which refuses an in-memory
+    journal. Pass ``kill_switch`` to use another durable journal (a test's
+    temporary one).
 
     The worker refuses to start unless the execution service is in a mode its
     config authorises, and that default is paper only. Nothing here can widen
@@ -1007,6 +1602,9 @@ def build_replay_session(
     see the module docstring for the explicit way to run with none.
     """
     fx = fx or IdentityFxSource()
+    # THE limit set in force for paper (limits_v2_paper), from the one function
+    # every composition root and the API read.
+    limits = limits if limits is not None else default_limit_set(ExecutionMode.PAPER)
     events, calendar_wiring = _resolve_calendar(
         calendar, frames, allow_empty_calendar=allow_empty_calendar, limits=limits
     )
@@ -1022,7 +1620,21 @@ def build_replay_session(
             deltas = frame.index.to_series().diff().dropna()
             broker.set_bar_interval(symbol, deltas.median())
 
-    gateway = gateway or RiskGateway(limits=limits)
+    tier = agent_tier or TierReading.default("not_supplied")
+    if gateway is None:
+        switch = kill_switch or KillSwitch.from_paths(
+            paths if paths is not None else resolve_paths(os.environ)
+        )
+        # PAPER composition: the explicit, recorded permission for an order to
+        # pass with a missing loss/exposure input (every attempt row carries
+        # ``missing_inputs`` and ``paper_allows_missing_inputs``). A DEMO or LIVE
+        # composition never passes it.
+        gateway = RiskGateway(
+            limits=limits,
+            kill_switch=switch,
+            mode=ExecutionMode.PAPER,
+            paper_allows_missing_inputs=True,
+        )
     execution = ExecutionService(
         adapter=broker,
         gateway=gateway,
@@ -1037,15 +1649,6 @@ def build_replay_session(
     def _history(symbol: str) -> pd.DataFrame:
         frame = feed.frames[symbol]
         return frame.iloc[: feed.cursor]
-
-    evaluator = SignalEvaluator(
-        source=signal_source,
-        account=broker.account,
-        fx=fx,
-        policy=sizing_policy,
-        history=_history,
-        account_ccy=paper_config.account_ccy,
-    )
 
     def _equity_curve() -> pd.Series:
         """The venue's own equity curve, one row per bar. Feeds vol targeting."""
@@ -1071,11 +1674,18 @@ def build_replay_session(
         # THE EVENT SOURCE. Without it the gateway's event_blackout check ran
         # on every order against an empty tuple and could never fire.
         event_source=(
-            calendar_event_source(events, horizon_minutes=limits.event_blackout_minutes)
+            calendar_event_source(
+                events,
+                horizon_minutes=event_source_horizon_minutes(
+                    limits, _median_bar_minutes(frames)
+                ),
+            )
             if events is not None
             else None
         ),
         default_lifecycle=default_lifecycle,
+        # open_risk priced with the rule the evaluator sizes new plans under.
+        sizing_policy=sizing_policy,
         # THE FOUR FORMERLY-DEAD INPUTS. Each check below ran, was named in the
         # audit trail, and read a zero it could never breach. They now read the
         # venue's own closed trades, the venue's own equity curve and a
@@ -1094,10 +1704,43 @@ def build_replay_session(
         ),
         equity_curve=_equity_curve,
     )
+    # The market-open input is SOURCED (from the replayed data), never a
+    # default True.
+    builder.market_open_source = replay_market_open_source(builder)
     if lifecycle_service is not None:
         builder.strategy_source = _lifecycle_strategy_source(
             lifecycle_service, default_lifecycle
         )
+    if event_veto is not None:
+        builder.event_veto = TierGatedVetoSource(event_veto, tier, alert=alert)
+
+    # THE SIZING PATH. The constructor sees the same book the gateway will
+    # (builder.snapshot), the same lifecycle view (builder.strategy_view) and
+    # each candidate's own instrument regime.
+    evaluator = SignalEvaluator(
+        source=signal_source,
+        account=broker.account,
+        fx=fx,
+        policy=sizing_policy,
+        history=_history,
+        account_ccy=paper_config.account_ccy,
+        constructor=PortfolioConstructor(
+            allocator, construction or ConstructionConfig(), agent_tier=tier
+        ),
+        snapshot=builder.snapshot,
+        regime=(market_state.regime if market_state is not None else None),
+        strategy=builder.strategy_view,
+        tier_source=tier_source,
+        conviction=(
+            ConvictionAdapter(conviction_source) if conviction_source is not None else None
+        ),
+        agent_tier=tier,
+        alert=alert,
+    )
+    # Every attempt row, allowed or blocked, carries the agent tier, and a
+    # plan this runtime sized carries its allocation stamp.
+    if not isinstance(gateway.recorder, StampingRecorder):
+        gateway.recorder = StampingRecorder(gateway.recorder, evaluator.plan_stamps, tier)
 
     lifecycle = (
         LifecycleTimer(lifecycle_service, lifecycle_inputs)

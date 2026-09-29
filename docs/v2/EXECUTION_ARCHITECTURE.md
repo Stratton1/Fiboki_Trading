@@ -364,6 +364,57 @@ threshold. The provider now requests `dailyAlignment=0&alignmentTimezone=UTC` by
 v20 otherwise aligns H4 and D candles to 17:00 New York, which is not the bar the research frames
 contain. `tests/unit/test_polling_feed.py`, `tests/integration/test_live_feed_wiring.py`.
 
+## 5c. Paper forward: the composition root (2026-09-29)
+
+`fiboki/entrypoints/paper_forward.py` is the first reviewed place that assembles a market-facing
+worker (audit F, P1-15). `compose(settings, wiring) -> LiveWorker` reads a committed wiring file
+(`entrypoints/wiring/paper_forward_v1.json`, schema `fiboki.paper_forward.wiring/1`) and refuses
+anything it cannot vouch for: `mode`/`allowed_modes` other than exactly `paper`, a market-data
+host whose PARSED hostname is not `api-fxpractice.oanda.com` (the live host is named in the
+error), more than one strategy document, a document whose `bind_defaults()` content hash differs
+from the wired one, an instrument outside the document's universe or quoted in a currency other
+than the account's (v1 converts nothing), an unknown key, and an official calendar that does not
+cover the next `min_coverage_days`. The file's sha256 is stamped on every gateway attempt row
+(`attempts.jsonl`) and every journal line.
+
+What it composes, in the order a bar flows:
+
+1. `HttpxTransport` (`broker/http_transport.py`), the one real `Transport`: one request per call,
+   `retries=0`, no redirects, a per-request timeout on connect/read/write/pool, and an allow-list
+   of PARSED hostnames (practice only here). Reads are retried above it by
+   `retry_idempotent_read`; writes never are. The token arrives in headers per call and is kept
+   nowhere. An AST test allows `HttpxTransport(` only under `entrypoints/` and in `cli.py`.
+2. `OandaPollingBarFeed` over that transport, sharing one `RateLimiter` with the pricing reads.
+3. `OandaPricingSpreadSource` (`broker/oanda_pricing.py`): `GET /v3/accounts/{id}/pricing`
+   sampled once per bar right after the poll; `spread_source(instrument, now)` returns top-of-book
+   `ask - bid`, or `nan` (blocks as `spread_unknown`) when never sampled, older than
+   `max_quote_age_s`, not tradeable, or crossed. `abnormal_spread` now divides a QUOTED spread by
+   the registry's typical spread (P2-4). Practice host only, hard error otherwise.
+4. `VenuePositionManager.on_bar` on the shared `PositionBook` (fill simulator with the wiring's
+   `broker_profile`, the document's exit policy, the official calendar as blackout source),
+   BEFORE the strategy sees the bar, then correlation refreshed from the feed's history.
+5. `SignalEvaluator` over a `ForwardSignalSource` (the compiled, content-hashed document,
+   indicators prepared over the feed history; the same frame supplies the exit policy's series).
+6. `ManagedExecution.submit`: schedule the reversal an opposite signal implies, refuse an entry
+   the book would refuse (`precheck_entry`), then `VenuePositionManager.submit` = gateway,
+   fsynced PENDING intent (`JsonlIntentStore`), dispatch, adopt.
+7. `ForwardPaperVenue` (`entrypoints/paper_venue.py`): fills a market order instantly at the
+   feed's last close plus or minus the profile's half spread for that hour; holds one stop and one
+   limit; never triggers them itself (every exit is the book's, pushed as a close); `orders()` is
+   always empty because nothing rests. Its `account()` is the MODELLED account. The P&L of record
+   is the book's, which fills at the next bar's open as a backtest does; the venue's fill is
+   journalled beside it.
+8. `LiveWorker` (`allowed_modes=("paper",)`): startup reconciliation (fail closed), periodic
+   reconciliation every 900 s, heartbeat and lease `paper-forward`. The position reconciler
+   passed to it suppresses exactly one false positive: `unmanaged_at_venue` for a broker
+   reference the manager itself adopted and whose modelled entry is due next bar.
+
+The kill switch is the durable file journal at `settings.killswitch_path`, re-read before every
+decision; FLATTEN closes positions from `wait_until_due` (within `max_block_s`), not at the next
+bar, through `ExecutionService.close`. Restart semantics are in `OPERATIONS.md` §13.6: the book
+and venue are in memory; balance, peak equity and closed trades carry across restarts; positions
+open at the last bar are recorded as abandoned.
+
 ## 6. Execution-mode isolation
 
 `core/enums.ExecutionMode` is ordered by increasing danger: `BACKTEST`, `PAPER`, `SHADOW`,
@@ -453,19 +504,18 @@ because a typo must not decide where orders go.
 
 ## 7. Known gaps at this snapshot
 
-- **Nothing drives any of this in anger.** `workers/live_worker.py` exists and is tested, and
-  `fiboki worker run live` **deliberately refuses** to start it: the live worker needs a wired
-  execution service, feed, evaluator and risk-context builder, and *"a live worker assembled from
-  command line flags is a live worker whose risk configuration nobody reviewed."* The application
-  entrypoint that owns that wiring is not written.
-- **Reconciliation is scheduled only inside `LiveWorker`** (§5). Nothing constructs a live
-  worker outside a test, so in any running deployment it still does not happen.
-- **The live feed is implemented but not composed** (§5b). Composition needs, in one reviewed
-  entrypoint: a real HTTP `Transport` (none exists in `src/`; only `RecordedTransport`), the
-  adapter's `RateLimiter` shared with the feed, `feed.attach(builder)`, a live `spread_source` on
-  the builder (the profile fallback returns unknown against a venue adapter, so `abnormal_spread`
-  blocks), `SignalEvaluator(history=feed.history)`, and something that drives
-  `VenuePositionManager.on_bar` from the same batch.
+- **Only PAPER is driven.** `fiboki paper forward --wiring <file>` runs the §5c composition;
+  `fiboki worker run live` still **refuses**, and no wiring can widen `allowed_modes`. No DEMO
+  composition exists: the OANDA order adapter is not in any running path.
+- **Reconciliation is scheduled only inside a running `LiveWorker`** (§5): in practice, the
+  paper-forward process.
+- **Paper-forward limitations, stated:** one strategy document per process (one exit policy per
+  book, as per backtest run); identity FX only; no market-state engine (regime `unknown`); the
+  book and venue are in memory, so a restart abandons open paper positions (journalled, alerted);
+  the gateway's `event_blackout` is measured from the decision time, a few seconds after a bar
+  closes; the orchestrator the CLI's research worker builds is still in memory unless it is
+  constructed with `Orchestrator(path=...)` (the ledger is durable; `cli.py` does not yet pass the
+  path).
 - **No OANDA credentials** in this environment, so the adapter is proved against recorded
   fixtures and has never spoken to the venue. The two OANDA unknowns — whether v20 can place
   orders on a spread-betting sub-account, and how the candle endpoint compares to the account's

@@ -41,6 +41,8 @@ class AgentRole(str, Enum):
     FAILURE_INVESTIGATOR = "failure_investigator"
     RESEARCH_LIBRARIAN = "research_librarian"
     EVENT_CLASSIFIER = "event_classifier"
+    THESIS_ADVOCATE = "thesis_advocate"
+    THESIS_ARBITER = "thesis_arbiter"
 
 
 #: Prepended to every role prompt.  One paragraph, stated once, stated plainly.
@@ -67,6 +69,51 @@ does not support a conclusion, say what it does support instead.
 """
 
 
+#: Version of the per-role context budgets below. Rendered into every role's
+#: system prompt, so the run manifest (which hashes every prompt) changes when
+#: a budget changes.
+CONTEXT_BUDGET_VERSION = "context_budget_v1"
+
+
+@dataclass(frozen=True, slots=True)
+class ContextBudget:
+    """Tokens a role may send and receive per model call. Enforced before the request.
+
+    From ``research/reports/G_frontend_plans_audit.md`` §3.4.3. ``input_tokens``
+    covers the system prompt plus the prompt (estimated at 4 characters per
+    token, the same estimate the router uses); ``output_tokens`` caps
+    ``max_tokens``. A request over the input budget is refused on the record
+    before any model is asked; a larger ``max_tokens`` is clamped.
+    """
+
+    input_tokens: int
+    output_tokens: int
+    version: str = CONTEXT_BUDGET_VERSION
+
+    def __post_init__(self) -> None:
+        if self.input_tokens <= 0 or self.output_tokens <= 0:
+            raise ValueError("context budgets must be positive")
+
+    def describe(self) -> str:
+        return (
+            f"CONTEXT BUDGET ({self.version}): input at most {self.input_tokens} tokens "
+            f"per request, output at most {self.output_tokens} tokens."
+        )
+
+
+#: G §3.4.3: research roles 12k in / 2k out.
+RESEARCH_BUDGET = ContextBudget(12_000, 2_000)
+FAILURE_INVESTIGATOR_BUDGET = ContextBudget(8_000, 1_500)
+THESIS_ADVOCATE_BUDGET = ContextBudget(8_000, 1_000)
+THESIS_ARBITER_BUDGET = ContextBudget(10_000, 400)
+#: DEVIATION from G §3.4.3 (1.5k in / 200 out). That figure assumes ONE headline
+#: per call (map-reduce); the shipped event scan classifies batches of up to 40
+#: headlines per call and asks for up to 4,096 tokens, and 200 output tokens
+#: cannot hold 40 annotations. Sized to the batch design instead; adopting G's
+#: figure means running the scan with ``batch_size=1``.
+EVENT_CLASSIFIER_BUDGET = ContextBudget(4_000, 4_096)
+
+
 @dataclass(frozen=True, slots=True)
 class RoleSpec:
     """One specialist agent's remit, limits, tools and capabilities."""
@@ -80,6 +127,7 @@ class RoleSpec:
     task_class: TaskClass
     max_tool_calls: int = 30
     budget_usd: float = 0.25
+    context_budget: ContextBudget = RESEARCH_BUDGET
 
     @property
     def capabilities(self) -> frozenset[Capability]:
@@ -108,6 +156,7 @@ class RoleSpec:
         lines += [
             "",
             f"CAPABILITIES HELD: {', '.join(sorted(c.value for c in self.capabilities))}",
+            self.context_budget.describe(),
             "",
             CARDINAL_RULE.strip(),
             "",
@@ -122,6 +171,11 @@ class RoleSpec:
             "tools": list(self.tools),
             "capabilities": sorted(c.value for c in self.capabilities),
             "task_class": self.task_class.value,
+            "context_budget": {
+                "input_tokens": self.context_budget.input_tokens,
+                "output_tokens": self.context_budget.output_tokens,
+                "version": self.context_budget.version,
+            },
         }
 
 
@@ -456,6 +510,7 @@ are claiming.
         ),
         task_class=TaskClass.FAILURE_INVESTIGATION,
         max_tool_calls=50,
+        context_budget=FAILURE_INVESTIGATOR_BUDGET,
     ),
     RoleSpec(
         role=AgentRole.RESEARCH_LIBRARIAN,
@@ -517,6 +572,73 @@ Cite every headline you classify by its id. When unsure, use event_type
         task_class=TaskClass.CLASSIFICATION,
         max_tool_calls=10,
         budget_usd=0.05,
+        context_budget=EVENT_CLASSIFIER_BUDGET,
+    ),
+    # The thesis debate (B_tradingagents.md §6.3). ONE advocate spec with the
+    # stance supplied by the workflow, rather than a role per side. It reads
+    # the deterministic brief and files claims; it holds no other read and no
+    # other write. The brief is injected into its prompt, so it never needs a
+    # tool loop to see it.
+    RoleSpec(
+        role=AgentRole.THESIS_ADVOCATE,
+        title="Thesis Advocate",
+        remit="""
+Argue ONE side of a market thesis for one instrument, on the side you are
+assigned (the stance is given at the end of your prompt). Your evidence is the
+deterministic market brief you are shown and, in round 2, your opponent's
+claims. Make at most five claims. Each claim cites the brief's evidence ids it
+rests on and names its falsifier: the observation that would kill it.
+""",
+        limits="""
+You cite only evidence ids that appear in the brief; a claim citing anything
+else is refused whole. You state no price level, no stop, no size and no
+probability, and you never phrase a claim as an instruction: describe the
+market ("the close is more likely higher", "USD strength persists"), never an
+action. Generic caution is not a claim and is refused. You do not decide
+anything: an arbiter weighs both sides against the brief, and even its verdict
+can at most make a position SMALLER.
+""",
+        method="""
+Prefer two well-evidenced claims to five thin ones. A claim whose falsifier
+could never be observed inside the brief's timeframe is not falsifiable. In
+round 2, rebut the opponent's strongest claim by its id rather than restating
+your own.
+""",
+        tools=("build_market_brief", "record_debate_turn"),
+        task_class=TaskClass.CRITIQUE,
+        max_tool_calls=6,
+        budget_usd=0.05,
+        context_budget=THESIS_ADVOCATE_BUDGET,
+    ),
+    RoleSpec(
+        role=AgentRole.THESIS_ARBITER,
+        title="Thesis Arbiter",
+        remit="""
+Weigh a two-sided thesis debate AGAINST THE BRIEF ITSELF, not only against the
+transcript, and return one verdict: stance long, short or none, an ordinal
+strength (0 no view, 1 moderate, 2 strong), the evidence ids that decided it
+and what observations would invalidate it. "none" with strength 0 is a real
+and often correct answer.
+""",
+        limits="""
+Your verdict is a research artefact that expires within one bar of the
+brief's timeframe. It carries no price, stop, size or probability, and it
+cannot originate or enlarge anything: the only system that reads it may reduce
+a position the deterministic strategy already chose, never increase one, and
+it is switched off unless an operator has signed for it. Do not reward the
+more confident or longer side; reward the side whose cited evidence survives
+checking against the brief.
+""",
+        method="""
+Check every decisive claim's evidence ids against the brief's values yourself.
+A claim whose evidence does not say what the claim says is void. If both sides
+survive, the answer is "none".
+""",
+        tools=("build_market_brief", "get_debate", "record_conviction"),
+        task_class=TaskClass.CRITIQUE,
+        max_tool_calls=6,
+        budget_usd=0.05,
+        context_budget=THESIS_ARBITER_BUDGET,
     ),
 )
 
@@ -575,9 +697,11 @@ validate_role_bundles()
 
 __all__ = [
     "CARDINAL_RULE",
+    "CONTEXT_BUDGET_VERSION",
     "EPISTEMIC_STANDARD",
     "ROLES",
     "AgentRole",
+    "ContextBudget",
     "RoleSpec",
     "all_roles",
     "capabilities_for",

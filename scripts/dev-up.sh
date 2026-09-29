@@ -5,6 +5,24 @@ cd "$(dirname "$0")/.."
 ROOT="$(pwd)"
 export PATH="/opt/homebrew/bin:$PATH"
 
+# ---- Refuse to fight launchd (audit F, P2-17). With the desktop services
+#      loaded, the `pkill` lines below would kill launchd's supervised API and
+#      worker, launchd would restart them, and two supervisors would contend
+#      for one lease indefinitely. Stop the services first
+#      (scripts/launchd-install.sh --unload) or use them instead of this script.
+#      No launchctl (Linux, CI): nothing to check.
+if command -v launchctl >/dev/null 2>&1; then
+  LOADED="$(launchctl list 2>/dev/null | grep 'uk\.fiboki' || true)"
+  if [ -n "$LOADED" ]; then
+    echo "REFUSING TO START: Fiboki launchd services are loaded:" >&2
+    echo "$LOADED" >&2
+    echo "dev-up would kill them and launchd would restart them against this copy." >&2
+    echo "Stop them first:  scripts/launchd-install.sh --unload" >&2
+    echo "(or leave them running and open http://localhost:3000)" >&2
+    exit 1
+  fi
+fi
+
 DEV_PASSWORD="${FIBOKI_DEV_PASSWORD:-fiboki-dev}"
 HASH="$(printf '%s' "$DEV_PASSWORD" | shasum -a 256 | cut -d' ' -f1)"
 

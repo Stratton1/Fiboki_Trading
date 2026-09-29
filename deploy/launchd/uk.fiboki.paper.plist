@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  Fiboki V2 desktop service: PAPER trading forward on OANDA practice prices
+  (fiboki paper forward, wired by src/fiboki/entrypoints/wiring/paper_forward_v1.json).
+
+  TEMPLATE. Do not copy by hand: scripts/launchd-install.sh substitutes
+  __FIBOKI_ROOT__ (the repository) and writes the result to
+  ~/Library/LaunchAgents/uk.fiboki.paper.plist. It is NOT in the installer's
+  default service list; install it explicitly, naming the paper service and
+  asking the installer to load it (the exact command is in
+  docs/v2/OPERATIONS.md, "Paper forward").
+
+  * Runs scripts/fiboki-service.sh paper, which reads ~/.fiboki/env (where
+    FIBOKI_OANDA_PRACTICE_TOKEN and FIBOKI_OANDA_PRACTICE_ACCOUNT_ID live), forces
+    FIBOKI_EXECUTION_MODE=paper and unsets every live control. No live control
+    and no credential is set anywhere in this file.
+  * ProcessType Standard, not Background (audit F, P2-18): macOS throttles
+    Background QoS, and a process that must wake at every bar boundary cannot
+    be throttled. The service script also holds a `caffeinate -is` assertion
+    for the life of the process; see docs/v2/OPERATIONS.md for what that does
+    and does not prevent (a closed laptop lid still sleeps).
+  * KeepAlive restarts a crash (non-zero exit) but not a clean exit. Exit 75
+    (another holder has the paper-forward lease, OR startup reconciliation
+    found a divergence only an operator can resolve) is retried slowly by
+    ThrottleInterval rather than in a loop.
+  * ExitTimeOut (45 s) exceeds WorkerConfig.shutdown_grace_seconds (30 s).
+  * Logs go to var/logs/ inside the repository.
+-->
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>uk.fiboki.paper</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>/bin/bash</string>
+        <string>__FIBOKI_ROOT__/scripts/fiboki-service.sh</string>
+        <string>paper</string>
+    </array>
+
+    <key>WorkingDirectory</key>
+    <string>__FIBOKI_ROOT__</string>
+
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>FIBOKI_EXECUTION_MODE</key>
+        <string>paper</string>
+    </dict>
+
+    <key>RunAtLoad</key>
+    <true/>
+
+    <key>KeepAlive</key>
+    <dict>
+        <key>SuccessfulExit</key>
+        <false/>
+    </dict>
+
+    <key>ThrottleInterval</key>
+    <integer>60</integer>
+
+    <key>ExitTimeOut</key>
+    <integer>45</integer>
+
+    <key>ProcessType</key>
+    <string>Standard</string>
+
+    <key>StandardOutPath</key>
+    <string>__FIBOKI_ROOT__/var/logs/paper.log</string>
+    <key>StandardErrorPath</key>
+    <string>__FIBOKI_ROOT__/var/logs/paper.err.log</string>
+</dict>
+</plist>

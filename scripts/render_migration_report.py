@@ -25,8 +25,7 @@ def _findings(row: dict) -> str:
     detail: list[str] = []
     for defect in before.get("defects") or []:
         counts[defect["severity"]] += 1
-        detail.append(f"{defect['code']}×{defect['count']:,}")
-    order = {s: i for i, s in enumerate(SEVERITY_ORDER)}
+        detail.append(f"{defect['code']} x {defect['count']:,}")
     detail.sort(key=lambda t: t)
     prefix = " ".join(
         f"{s[:4].upper()}:{counts[s]}" for s in SEVERITY_ORDER if counts[s]
@@ -55,7 +54,7 @@ def render(manifest_path: Path) -> str:
                 for t in rec["removed_timestamps"]
             ]
             repair = (
-                f"**drop_non_positive** −{row['rows_removed']} row(s) at "
+                f"**drop_non_positive** -{row['rows_removed']} row(s) at "
                 f"{', '.join(removed)}"
             )
         lines.append(

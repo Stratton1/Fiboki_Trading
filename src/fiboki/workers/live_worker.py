@@ -88,6 +88,7 @@ from typing import Any, Protocol, runtime_checkable
 from fiboki.core.enums import Timeframe
 from fiboki.obs import metrics as _metrics
 from fiboki.obs.alerts import AlertEvent, Severity
+from fiboki.obs.health import DEFAULT_HEALTH_THRESHOLDS
 from fiboki.obs.logging import bind, get_logger, new_correlation_id
 from fiboki.workers.base import (
     EXIT_FATAL,
@@ -291,8 +292,11 @@ class LiveWorkerConfig(WorkerConfig):
     #: Warn when one evaluation cycle takes longer than this fraction of the
     #: bar's timeframe. 0 disables the check.
     cycle_budget_fraction: float = 0.25
-    #: Bars older than this trigger DATA_STALE.
-    data_stale_after_seconds: float = 900.0
+    #: Bars older than this trigger DATA_STALE. THE observability threshold
+    #: (``HealthThresholds.data_stale_after_seconds``): the default is the
+    #: shared default and a composition root passes ``Settings.health``'s
+    #: value (``FIBOKI_DATA_STALE_SECONDS``). There is no second constant.
+    data_stale_after_seconds: float = DEFAULT_HEALTH_THRESHOLDS.data_stale_after_seconds
     #: Consecutive rejections of the same instrument before alerting.
     reject_alert_threshold: int = 3
     #: Run the lifecycle monitors every N cycles. Never zero for the same reason

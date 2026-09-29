@@ -97,6 +97,25 @@ def ema_crossover_document(
     return StrategyDocument.model_validate(payload)
 
 
+def gbp_fx_frames(
+    rate: float = 1.25, start: str = "2023-06-01", end: str = "2027-06-01"
+) -> dict[tuple[str, str], pd.DataFrame]:
+    """A flat GBPUSD D1 series, so a GBP-account agent job on a USD-quoted
+    instrument has THE research FX route (``build_research_fx_source``) to
+    convert with. Agent job payloads default to GBP, the operator's account
+    currency; a test fixture supplies the cross rather than a guessed 1.0."""
+    idx = pd.date_range(start=start, end=end, freq="1D", tz="UTC", name="timestamp")
+    frame = pd.DataFrame(
+        {"open": rate, "high": rate, "low": rate, "close": rate, "volume": 1},
+        index=idx,
+    )
+    return {
+        ("GBPUSD", Timeframe.D1.value): canonical_frame(
+            frame, instrument="GBPUSD", timeframe=Timeframe.D1, price_basis=PriceBasis.MID
+        )
+    }
+
+
 def trending_bars(
     *,
     instrument: str = "EURUSD",
@@ -144,6 +163,7 @@ class Harness:
         instrument: str = "EURUSD",
         timeframe: Timeframe = Timeframe.H1,
         register_handlers: bool = True,
+        with_fx: bool = True,
     ) -> None:
         from fiboki.agents.audit import AuditLedger
         from fiboki.agents.jobs import register_research_handlers
@@ -155,7 +175,9 @@ class Harness:
         self.frame = bars if bars is not None else trending_bars(
             instrument=instrument, timeframe=timeframe
         )
-        self.bars = InMemoryBarSource({(instrument, timeframe.value): self.frame})
+        self.bars = InMemoryBarSource(
+            {(instrument, timeframe.value): self.frame, **(gbp_fx_frames() if with_fx else {})}
+        )
         self.clock = ManualClock()
         self.orchestrator = Orchestrator(clock=self.clock)
         if register_handlers:

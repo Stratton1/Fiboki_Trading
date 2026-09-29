@@ -164,9 +164,9 @@ def _rowify(obj: Any) -> dict[str, Any]:
     for key, value in source.items():
         if key.startswith("_"):
             continue
-        if hasattr(value, "value") and not isinstance(value, (str, int, float)):
+        if hasattr(value, "value") and not isinstance(value, str | int | float):
             out[key] = value.value
-        elif isinstance(value, (list, tuple, dict, set)):
+        elif isinstance(value, list | tuple | dict | set):
             out[key] = json.dumps(value, default=str)
         elif isinstance(value, pd.Timestamp):
             out[key] = value.isoformat()

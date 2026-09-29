@@ -84,7 +84,6 @@ from fiboki.workers.base import (
     LeaseLost,
     Worker,
     WorkerConfig,
-    WorkerState,
     WorkerStore,
 )
 
@@ -674,10 +673,7 @@ class HeartbeatPulse:
     def _run(self) -> None:
         while not self._stop.wait(self.interval):
             try:
-                self.worker.lease.renew()
-                self.worker.heartbeat.write(
-                    WorkerState.WORKING, fence=self.worker.lease.fence, detail=self.detail
-                )
+                self.worker.pulse(self.detail)
                 self.beats += 1
             except LeaseLost as exc:
                 self.lease_lost = str(exc)
@@ -730,6 +726,10 @@ class ResearchWorker(Worker):
         self._environ = environ
         self.agent_results: list[Any] = []
         self.last_pulse: HeartbeatPulse | None = None
+        #: The pulse around the most recent deterministic job (``_run_one``).
+        self.last_job_pulse: HeartbeatPulse | None = None
+        #: Jobs :meth:`resume` found abandoned RUNNING by a dead predecessor.
+        self.recovered: tuple[JobRecord, ...] = ()
 
     @property
     def rconfig(self) -> ResearchWorkerConfig:
@@ -760,12 +760,53 @@ class ResearchWorker(Worker):
             )
 
     def resume(self) -> None:
-        """Nothing to reclaim: the orchestrator's ledger already holds every
-        job's state, and a job left RUNNING by a crashed predecessor is
-        re-queued by its own retry policy.  Recorded here explicitly so the
-        absence is a decision rather than an oversight."""
+        """Re-claim what a dead predecessor left half-done, from the DURABLE ledger.
+
+        Holding the lease is the proof that no other live worker is running
+        jobs, so this is the one moment it is safe to act on a RUNNING row. The
+        ledger is bound to this worker's lease first, so every claim from here
+        on carries the fencing token and a zombie predecessor that wakes up
+        later cannot record over us. Then every job still marked RUNNING is
+        returned to its own retry policy (counted as a failed attempt, re-queued
+        with backoff, or dead-lettered when attempts are exhausted).
+
+        With an in-memory orchestrator there is nothing to recover and this is
+        a no-op beyond the binding; with ``Orchestrator(path=...)`` the queue,
+        the idempotency keys and the abandoned jobs all come back after a
+        restart (audit F, P1-8).
+        """
+        bind = getattr(self.orchestrator, "bind_lease", None)
+        if callable(bind):
+            bind(self.worker_id, lambda: self.lease.fence)
+        recover = getattr(self.orchestrator, "recover_abandoned", None)
+        recovered = tuple(recover(reason="research worker restarted") or ()) if callable(
+            recover
+        ) else ()
+        for record in recovered:
+            _log.warning(
+                "job abandoned by a previous worker returned to its retry policy",
+                extra={
+                    "job_id": record.job_id,
+                    "job_type": record.spec.job_type.value,
+                    "status": record.status.value,
+                    "attempts": record.attempt_count,
+                },
+            )
+            if record.status is JobStatus.DEAD_LETTER and self.dispatcher is not None:
+                self.dispatcher.fire(
+                    AlertEvent.JOB_DEAD_LETTERED,
+                    f"job {record.job_id} ({record.spec.job_type.value}) was abandoned "
+                    f"mid-run {record.attempt_count} time(s) and is dead-lettered: "
+                    f"{record.error}",
+                    source=self.worker_id,
+                    job_id=record.job_id,
+                )
+        self.recovered = recovered
         depths = {q: len(self.orchestrator.pending(q)) for q in self.rconfig.queues}
-        _log.info("research worker resuming", extra={"queue_depths": depths})
+        _log.info(
+            "research worker resuming",
+            extra={"queue_depths": depths, "recovered_abandoned": len(recovered)},
+        )
         for queue, depth in depths.items():
             _metrics.record_queue_depth(queue, depth)
 
@@ -780,6 +821,11 @@ class ResearchWorker(Worker):
             while done < self.rconfig.jobs_per_cycle:
                 if self.stopping:
                     break
+                if done:
+                    # BETWEEN jobs: the loop only renews between CYCLES, so a
+                    # cycle of several jobs would otherwise run its later jobs
+                    # on a lease the earlier ones used up.
+                    self.pulse(f"between jobs ({done} done this cycle)")
                 record = self._run_one(queue)
                 if record is None:
                     break
@@ -791,13 +837,22 @@ class ResearchWorker(Worker):
             return CycleResult.idle("no runnable jobs")
         return CycleResult.worked(done, detail)
 
+    def pulse_interval(self) -> float:
+        """Seconds between beats while a job runs: at most a third of the lease TTL.
+
+        ``pulse_seconds`` is the operator's setting; it is capped so that a
+        short lease (a test, or a tightened deployment) is still renewed at
+        least twice before it could expire.
+        """
+        return max(0.05, min(self.rconfig.pulse_seconds, self.config.lease_ttl_seconds / 3.0))
+
     def _run_agent_work(self) -> CycleResult | None:
         """Due agent work, under a heartbeat pulse. ``None`` when there is none."""
         runtime = self.agent_runtime
         if runtime is None or self.stopping or not runtime.has_work():
             return None
         pulse = HeartbeatPulse(
-            self, interval=self.rconfig.pulse_seconds, detail="agent research work running"
+            self, interval=self.pulse_interval(), detail="agent research work running"
         )
         self.last_pulse = pulse
         with pulse:
@@ -813,7 +868,18 @@ class ResearchWorker(Worker):
         correlation = new_correlation_id("job")
         with bind(correlation_id=correlation, queue=queue):
             started = time.monotonic()
-            record = self.orchestrator.run_next(queue)
+            # UNDER THE PULSE. A deterministic job (a ladder run, a sweep cell)
+            # takes minutes against a 60 s lease: without this the lease
+            # expired mid-job, a second supervised worker could take it, and
+            # the heartbeat aged into "down" while the worker was busy
+            # (audit F, P1-10). The pulse starts before the claim, so even the
+            # claim itself never runs on an expired lease.
+            pulse = HeartbeatPulse(
+                self, interval=self.pulse_interval(), detail=f"running a {queue} job"
+            )
+            self.last_job_pulse = pulse
+            with pulse:
+                record = self.orchestrator.run_next(queue)
             if record is None:
                 return None
             job_type = record.spec.job_type.value

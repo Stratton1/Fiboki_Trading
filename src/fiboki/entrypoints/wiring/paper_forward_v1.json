@@ -1,0 +1,46 @@
+{
+  "schema": "fiboki.paper_forward.wiring/1",
+  "version": "paper_forward_v1",
+  "description": "PAPER forward trading of the Donchian breakout seed, as written (declared defaults, no sweep), on EURUSD, GBPUSD and XAUUSD H4, priced from OANDA PRACTICE candles and quotes. Nothing reaches a broker: orders fill at a paper venue. The seed has NOT passed the validation ladder; this run measures how the document behaves forward, it does not endorse it. Every attempt row carries this file's sha256; changing any value here is a reviewed commit and a new sha.",
+  "mode": "paper",
+  "allowed_modes": ["paper"],
+  "venue": {
+    "kind": "paper_forward",
+    "market_data_base_url": "https://api-fxpractice.oanda.com",
+    "max_requests_per_second": 20
+  },
+  "strategies": [
+    {
+      "strategy_id": "donchian_breakout_atr",
+      "document": "donchian_breakout_atr.json",
+      "content_hash": "66d6a844b96bf0c5b4fe164e537bced361290f6e093a7a128e694bf0ab3b52b9"
+    }
+  ],
+  "instruments": ["EURUSD", "GBPUSD", "XAUUSD"],
+  "timeframe": "H4",
+  "limits_version": "limits_v2_paper",
+  "broker_profile": "OANDA_REALISTIC",
+  "account": {"currency": "USD", "initial_balance": 100000.0},
+  "sizing": {"policy_id": "fixed_fractional_v1", "risk_fraction": 0.005},
+  "book": {"max_concurrent": 3},
+  "calendar": {"source": "official", "min_impact": "high", "min_coverage_days": 14},
+  "correlation": {"source": "feed_history", "min_observations": 30, "default": 0.30},
+  "ledger_dir": "paper_forward/paper_forward_v1",
+  "feed": {
+    "offset_s": 5,
+    "late_candle_grace_s": 20,
+    "repoll_attempts": 3,
+    "repoll_interval_s": 5,
+    "max_block_s": 30,
+    "warmup_bars": 500,
+    "history_bars": 1500
+  },
+  "pricing": {"max_quote_age_s": 120},
+  "worker": {
+    "lease_name": "paper-forward",
+    "lease_ttl_seconds": 90,
+    "idle_sleep_seconds": 1.0,
+    "reconcile_interval_seconds": 900,
+    "reconcile_every_cycles": 12
+  }
+}

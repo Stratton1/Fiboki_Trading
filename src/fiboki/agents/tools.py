@@ -35,7 +35,8 @@ import hashlib
 import json
 import math
 import re
-from collections.abc import Callable, Mapping
+import sqlite3
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, field
 from datetime import UTC, datetime, timedelta
 from enum import Enum
@@ -56,8 +57,13 @@ from fiboki.core.enums import Timeframe
 from fiboki.core.instruments import get as get_instrument
 from fiboki.data.integrity import IntegrityConfig
 from fiboki.data.integrity import validate as validate_integrity
-from fiboki.data.news.store import NewsSource
+from fiboki.data.news.store import NewsSource, to_utc_text
 from fiboki.data.telemetry import TelemetryReader, slippage_summary
+from fiboki.marketstate.calendar import (
+    ImpactLevel,
+    instrument_currencies,
+    load_official_calendar,
+)
 from fiboki.marketstate.events import (
     ANNOTATION_POLICY_VERSION,
     MAX_RATIONALE_CHARS,
@@ -111,6 +117,11 @@ class WriteDomain(str, Enum):
     #: The QUARANTINED event-annotation table (``marketstate/events.py``).
     #: Research-domain data: only a deterministic, default-off veto policy reads it.
     RESEARCH_EVENT_ANNOTATION = "research:event_annotation"
+    #: The thesis store's append-only ``debate_turn`` table.
+    RESEARCH_DEBATE = "research:debate"
+    #: The thesis store's append-only ``conviction`` table. Research-domain
+    #: data: only a default-off, down-only, tier-gated portfolio policy reads it.
+    RESEARCH_CONVICTION = "research:conviction"
     JOB_QUEUE = "queue:jobs"
 
 
@@ -253,6 +264,60 @@ class BarSource(Protocol):
         """Return ``(frame, dataset_version_id)``.  Absence must raise."""
 
 
+def _research_mid(frame: pd.DataFrame, instrument: str) -> pd.DataFrame:
+    """BID bars become the research ``synthetic_mid`` bars; anything else is untouched.
+
+    The backtest engine prices both legs from MID bars and refuses a BID frame,
+    so every agent backtest on the store's HistData (BID) series dead-lettered.
+    The conversion is THE research one,
+    :func:`fiboki.validation.run.research_mid_frame` (``bid_to_mid`` at the
+    instrument's registered typical spread, stamped ``synthetic_mid``), so an
+    agent backtest and a validation run see the same bars. The lineage rides on
+    ``frame.attrs["price_lineage"]``; the engine records the resulting
+    ``price_basis`` itself. ASK/LAST frames are returned as they are: the
+    engine refuses them by name, which is the right place for that error.
+    """
+    if "price_basis" not in frame.columns or len(frame) == 0:
+        return frame
+    bases = {str(getattr(b, "value", b)).lower() for b in frame["price_basis"].unique()}
+    if bases != {"bid"}:
+        return frame
+    from fiboki.validation.run import research_mid_frame
+
+    converted, lineage = research_mid_frame(frame, instrument.upper())
+    converted = converted.copy()
+    converted.attrs["price_lineage"] = dict(lineage)
+    return converted
+
+
+class _FrameFxStore:
+    """``read_latest`` over an in-memory frame map, for the research FX builder."""
+
+    def __init__(self, frames: Mapping[tuple[str, str], pd.DataFrame]) -> None:
+        self._frames = frames
+
+    def read_latest(self, instrument: str, timeframe: Timeframe, **_: Any) -> tuple[pd.DataFrame, str]:
+        key = (instrument.upper(), getattr(timeframe, "value", str(timeframe)))
+        if key not in self._frames:
+            raise KeyError(f"no {key[0]} {key[1]} bars in this source")
+        frame = self._frames[key]
+        return frame, f"inmem:{key[0]}:{key[1]}:{len(frame)}"
+
+
+def research_fx_for(store: Any, account_ccy: str, quote_ccy: str) -> tuple[Any, str]:
+    """THE research FX conversion (``build_research_fx_source``) for one quote currency.
+
+    Daily closes of the registered crosses, indexed at bar close, one USD
+    triangulation leg, refusing (``FxSourceUnavailable``, naming every pair to
+    ingest) rather than guessing a rate. Returns ``(fx, label)``.
+    """
+    from fiboki.validation.run import build_research_fx_source
+
+    return build_research_fx_source(
+        store, quote_currencies=[quote_ccy.upper()], account_ccy=account_ccy.upper()
+    )
+
+
 class InMemoryBarSource:
     """Bars held in memory, keyed by ``(INSTRUMENT, timeframe)``.
 
@@ -288,7 +353,11 @@ class InMemoryBarSource:
             frame = frame.loc[pd.Timestamp(start, tz="UTC") :]
         if end is not None:
             frame = frame.loc[: pd.Timestamp(end, tz="UTC")]
-        return frame, f"inmem:{key[0]}:{key[1]}:{len(frame)}"
+        return _research_mid(frame, key[0]), f"inmem:{key[0]}:{key[1]}:{len(frame)}"
+
+    def fx_source(self, account_ccy: str, quote_ccy: str) -> tuple[Any, str]:
+        """The research FX conversion from the D1 crosses held here (see :func:`research_fx_for`)."""
+        return research_fx_for(_FrameFxStore(self._frames), account_ccy, quote_ccy)
 
 
 class DataStoreBarSource:
@@ -308,7 +377,11 @@ class DataStoreBarSource:
         frame, version = self._store.read_latest(
             instrument, timeframe, start=start, end=end
         )
-        return frame, version.version_id
+        return _research_mid(frame, instrument), version.version_id
+
+    def fx_source(self, account_ccy: str, quote_ccy: str) -> tuple[Any, str]:
+        """The research FX conversion from the store's validated D1 crosses."""
+        return research_fx_for(self._store, account_ccy, quote_ccy)
 
 
 @dataclass(frozen=True, slots=True)
@@ -409,6 +482,9 @@ class ToolContext:
     manifest whose output an event annotation records; the event-scan workflow
     sets them from the classifier's thought before filing. ``clock`` is the
     wall clock that stamps ``available_at`` (default: ``datetime.now(UTC)``).
+    ``thesis`` (a :class:`ThesisStore`) holds the thesis debate's briefs, turns
+    and convictions; the session keeps ``model_id``/``model_digest`` current
+    after every thought, so a filed artefact names the model that produced it.
     """
 
     research: ResearchStore
@@ -428,6 +504,9 @@ class ToolContext:
     model_digest: str = ""
     manifest_hash: str = ""
     clock: Callable[[], datetime] | None = None
+    #: The thesis store (:class:`ThesisStore`): market briefs, debate turns and
+    #: convictions. ``None`` means not wired and the debate tools refuse.
+    thesis: Any = None
 
     def __post_init__(self) -> None:
         if self.as_of is None:
@@ -2737,6 +2816,724 @@ def _record_event_annotations(
 
 
 # ---------------------------------------------------------------------------
+# THE THESIS DEBATE -- deterministic brief, bounded debate, expiring verdict
+# ---------------------------------------------------------------------------
+#
+# Design: research/reports/due_diligence_2026-09-28/B_tradingagents.md §6.3.
+# The LLM argues over a DETERMINISTIC evidence pack (the market brief). Every
+# claim cites evidence ids that must resolve in the persisted brief and names
+# a falsifier. The arbiter's verdict is a research artefact: stance, an
+# ordinal strength 0..2 and an expiry. No field anywhere carries a price, a
+# stop, a size or a probability. The only reader outside research is the
+# default-off, down-only ConvictionPolicy in ``portfolio/construction.py``,
+# reached through ``workers/runtime.ConvictionAdapter`` and gated by the agent
+# tier (``core/tier.py``).
+
+#: Layout of a market brief. Part of its hash.
+MARKET_BRIEF_SCHEMA = "market-brief:1"
+#: Version of the debate/verdict filing rules (rounds, claims, TTL). Stamped
+#: on every conviction row as its ``policy_version``.
+THESIS_DEBATE_POLICY_VERSION = "thesis_debate_v1"
+DEBATE_MAX_ROUNDS = 2
+DEBATE_MAX_CLAIMS = 5
+#: Closed bars a brief is computed from (the most recent ones at the pin).
+MARKET_BRIEF_LOOKBACK_BARS = 600
+#: A verdict expires no later than one bar of its timeframe after the brief:
+#: the next scheduled debate replaces it, and a missed debate lets it lapse
+#: to "absent" (factor 1.0) rather than linger.
+CONVICTION_TTL: dict[str, timedelta] = {
+    "H1": timedelta(hours=1),
+    "H4": timedelta(hours=4),
+    "D1": timedelta(hours=24),
+}
+#: Evidence ids: dotted, lower-case, 2 to 4 segments, e.g. ``regime.axis.stress``.
+EVIDENCE_ID_PATTERN = r"^[a-z][a-z0-9_]*(\.[a-z0-9_]+){1,3}$"
+_EVIDENCE_ID_RE = re.compile(EVIDENCE_ID_PATTERN)
+
+
+class ThesisStoreError(RuntimeError):
+    """The thesis store refused a write or cannot be opened."""
+
+
+_THESIS_DDL = (
+    """
+    CREATE TABLE IF NOT EXISTS market_brief (
+        brief_id TEXT PRIMARY KEY,
+        brief_hash TEXT NOT NULL,
+        instrument TEXT NOT NULL,
+        timeframe TEXT NOT NULL,
+        as_of TEXT NOT NULL,
+        payload_json TEXT NOT NULL,
+        recorded_at TEXT NOT NULL
+    )
+    """,
+    """
+    CREATE TABLE IF NOT EXISTS debate_turn (
+        turn_id TEXT PRIMARY KEY,
+        debate_id TEXT NOT NULL,
+        brief_id TEXT NOT NULL REFERENCES market_brief(brief_id),
+        stance TEXT NOT NULL,
+        round INTEGER NOT NULL,
+        payload_json TEXT NOT NULL,
+        recorded_by TEXT NOT NULL,
+        model_id TEXT NOT NULL,
+        model_digest TEXT NOT NULL,
+        recorded_at TEXT NOT NULL,
+        UNIQUE (debate_id, stance, round)
+    )
+    """,
+    """
+    CREATE TABLE IF NOT EXISTS conviction (
+        conviction_id TEXT PRIMARY KEY,
+        debate_id TEXT NOT NULL UNIQUE,
+        brief_id TEXT NOT NULL REFERENCES market_brief(brief_id),
+        brief_hash TEXT NOT NULL,
+        instrument TEXT NOT NULL,
+        timeframe TEXT NOT NULL,
+        stance TEXT NOT NULL CHECK (stance IN ('long', 'short', 'none')),
+        strength INTEGER NOT NULL CHECK (strength IN (0, 1, 2)),
+        as_of TEXT NOT NULL,
+        available_at TEXT NOT NULL,
+        valid_until TEXT NOT NULL,
+        policy_version TEXT NOT NULL,
+        model_id TEXT NOT NULL,
+        model_digest TEXT NOT NULL,
+        manifest_hash TEXT NOT NULL,
+        payload_json TEXT NOT NULL,
+        recorded_by TEXT NOT NULL
+    )
+    """,
+    "CREATE INDEX IF NOT EXISTS conviction_by_instrument ON conviction "
+    "(instrument, available_at)",
+)
+
+
+def _thesis_triggers() -> list[str]:
+    out: list[str] = []
+    for table in ("market_brief", "debate_turn", "conviction"):
+        for op in ("UPDATE", "DELETE"):
+            out.append(
+                f"CREATE TRIGGER IF NOT EXISTS {table}_no_{op.lower()} BEFORE {op} ON {table} "
+                f"BEGIN SELECT RAISE(ABORT, '{table} is append-only'); END;"
+            )
+    return out
+
+
+class ThesisStore:
+    """Append-only SQLite store for briefs, debate turns and convictions.
+
+    ``<state_dir>/agents/thesis.sqlite`` in a deployment; ``path=None`` is an
+    in-memory store for tests. Every table refuses UPDATE and DELETE by
+    trigger (a property of the file, not a convention of this API). The
+    ``conviction`` table's column contract is read by
+    ``workers.runtime.conviction_rows_from_sqlite``, read-only.
+    """
+
+    def __init__(self, path: str | Path | None = None) -> None:
+        self.path = Path(path) if path is not None else None
+        if self.path is not None:
+            self.path.parent.mkdir(parents=True, exist_ok=True)
+        target = ":memory:" if self.path is None else str(self.path)
+        self._conn = sqlite3.connect(target, check_same_thread=False)
+        self._conn.execute("PRAGMA foreign_keys = ON")
+        if self.path is not None:
+            self._conn.execute("PRAGMA journal_mode = WAL")
+        for ddl in (*_THESIS_DDL, *_thesis_triggers()):
+            self._conn.execute(ddl)
+        self._conn.commit()
+
+    def close(self) -> None:
+        self._conn.close()
+
+    def _insert(self, table: str, row: Mapping[str, Any]) -> None:
+        cols = ", ".join(row)
+        marks = ", ".join("?" for _ in row)
+        try:
+            with self._conn:
+                self._conn.execute(
+                    f"INSERT INTO {table} ({cols}) VALUES ({marks})", tuple(row.values())
+                )
+        except sqlite3.IntegrityError as exc:
+            raise ThesisStoreError(f"{table}: {exc}") from exc
+
+    # -- briefs -----------------------------------------------------------
+
+    def add_brief(self, brief: MarketBriefOut, *, recorded_at: datetime | None = None) -> str:
+        """Persist a brief. Content-addressed: filing the same brief twice is a no-op."""
+        existing = self._conn.execute(
+            "SELECT brief_hash FROM market_brief WHERE brief_id = ?", (brief.brief_id,)
+        ).fetchone()
+        if existing is not None:
+            if existing[0] != brief.brief_hash:  # pragma: no cover - id derives from hash
+                raise ThesisStoreError(f"brief {brief.brief_id} exists with a different hash")
+            return brief.brief_id
+        self._insert(
+            "market_brief",
+            {
+                "brief_id": brief.brief_id,
+                "brief_hash": brief.brief_hash,
+                "instrument": brief.instrument,
+                "timeframe": brief.timeframe,
+                "as_of": brief.as_of,
+                "payload_json": json.dumps(brief.model_dump(mode="json"), sort_keys=True),
+                "recorded_at": to_utc_text(recorded_at or datetime.now(tz=UTC)),
+            },
+        )
+        return brief.brief_id
+
+    def get_brief(self, brief_id: str) -> MarketBriefOut:
+        row = self._conn.execute(
+            "SELECT payload_json FROM market_brief WHERE brief_id = ?", (brief_id,)
+        ).fetchone()
+        if row is None:
+            raise KeyError(f"no market brief {brief_id!r}")
+        return MarketBriefOut.model_validate(json.loads(row[0]))
+
+    # -- debate turns -----------------------------------------------------
+
+    def add_turn(self, row: Mapping[str, Any]) -> None:
+        self._insert("debate_turn", row)
+
+    def turns(self, debate_id: str) -> list[dict[str, Any]]:
+        rows = self._conn.execute(
+            "SELECT turn_id, brief_id, stance, round, payload_json, recorded_by, model_id "
+            "FROM debate_turn WHERE debate_id = ? ORDER BY round, stance",
+            (debate_id,),
+        ).fetchall()
+        return [
+            {
+                "turn_id": r[0], "brief_id": r[1], "stance": r[2], "round": int(r[3]),
+                "payload": json.loads(r[4]), "recorded_by": r[5], "model_id": r[6],
+            }
+            for r in rows
+        ]
+
+    # -- convictions ------------------------------------------------------
+
+    def add_conviction(self, row: Mapping[str, Any]) -> None:
+        self._insert("conviction", row)
+
+    def convictions(self, instrument: str | None = None) -> list[dict[str, Any]]:
+        query = (
+            "SELECT conviction_id, debate_id, brief_id, instrument, timeframe, stance, "
+            "strength, as_of, available_at, valid_until, policy_version, model_id "
+            "FROM conviction"
+        )
+        params: tuple[Any, ...] = ()
+        if instrument is not None:
+            query += " WHERE instrument = ?"
+            params = (instrument.upper(),)
+        query += " ORDER BY available_at, conviction_id"
+        keys = (
+            "conviction_id", "debate_id", "brief_id", "instrument", "timeframe", "stance",
+            "strength", "as_of", "available_at", "valid_until", "policy_version", "model_id",
+        )
+        return [dict(zip(keys, r, strict=True)) for r in self._conn.execute(query, params)]
+
+
+def default_thesis_store_path(state_dir: str | Path) -> Path:
+    return Path(state_dir) / "agents" / "thesis.sqlite"
+
+
+class EvidenceItem(_Out):
+    """One fact in a brief. ``value`` is canonical text so the hash is stable."""
+
+    evidence_id: str = Field(pattern=EVIDENCE_ID_PATTERN)
+    kind: Literal["regime", "bars", "data_quality", "calendar"]
+    value: str
+    unit: str = ""
+
+
+class BuildMarketBriefIn(_In):
+    instrument: str = Field(min_length=3, max_length=32)
+    timeframe: Literal["H1", "H4", "D1"] = "H4"
+
+
+class MarketBriefOut(_Out):
+    brief_id: str
+    brief_hash: str
+    schema_version: str
+    instrument: str
+    timeframe: str
+    as_of: str
+    dataset_version_id: str
+    evidence: tuple[EvidenceItem, ...]
+    caveats: tuple[str, ...] = ()
+
+    def evidence_ids(self) -> frozenset[str]:
+        return frozenset(e.evidence_id for e in self.evidence)
+
+
+def _num(x: Any, digits: int = 6) -> str:
+    f = _finite(x)
+    return "nan" if f is None else f"{f:.{digits}g}"
+
+
+def market_brief_hash(
+    *, instrument: str, timeframe: str, as_of: str, dataset_version_id: str,
+    evidence: Sequence[EvidenceItem],
+) -> str:
+    """SHA-256 over the canonical brief. Reproducible from the persisted record."""
+    payload = {
+        "schema": MARKET_BRIEF_SCHEMA,
+        "instrument": instrument,
+        "timeframe": timeframe,
+        "as_of": as_of,
+        "dataset_version_id": dataset_version_id,
+        "evidence": [[e.evidence_id, e.kind, e.value, e.unit] for e in evidence],
+    }
+    blob = json.dumps(payload, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    return hashlib.sha256(blob).hexdigest()
+
+
+def _build_market_brief(ctx: ToolContext, inputs: BuildMarketBriefIn) -> MarketBriefOut:
+    """Assemble the deterministic evidence pack. No model, no free text, no I/O but reads.
+
+    Refuses without a pinned clock: a brief whose "now" is the wall clock
+    cannot be reproduced, and a debate that cannot be reproduced cannot be
+    audited. Every value is computed from closed bars at the pin by the
+    platform's own feature engine, regime classifier and integrity checker,
+    plus the committed economic calendar.
+    """
+    if ctx.as_of is None:
+        raise ToolExecutionError(
+            "build_market_brief needs a pinned clock (ToolContext.as_of); an unpinned "
+            "brief is not reproducible"
+        )
+    if not _instrument_known(inputs.instrument):
+        raise ToolExecutionError(f"unregistered instrument {inputs.instrument!r}")
+    symbol = inputs.instrument.upper()
+    timeframe = _tf(inputs.timeframe)
+    window = _pinned_window(ctx, None, None)
+    frame, version_id = _load_bars(ctx, symbol, timeframe, window)
+    frame = frame.iloc[-MARKET_BRIEF_LOOKBACK_BARS:]
+    engine = FeatureEngine(timeframe=timeframe, instrument=symbol)
+    if len(frame) <= engine.warmup:
+        raise ToolExecutionError(
+            f"{symbol} {timeframe.value}: {len(frame)} closed bars at the pin is below the "
+            f"{engine.warmup} the feature engine needs"
+        )
+    try:
+        features = engine.compute(frame)
+        series = RegimeClassifier().classify(features)
+        vector = series.at(frame.index[-1])
+    except (FeatureError, RegimeError, KeyError) as exc:
+        raise ToolExecutionError(f"regime classification failed: {exc}") from exc
+
+    evidence: list[EvidenceItem] = [
+        EvidenceItem(evidence_id="regime.key", kind="regime", value=vector.key),
+        *(
+            EvidenceItem(evidence_id=f"regime.axis.{axis}", kind="regime", value=str(label))
+            for axis, label in sorted(vector.to_dict().items())
+        ),
+        EvidenceItem(
+            evidence_id="regime.classifier_fingerprint", kind="regime", value=series.fingerprint
+        ),
+    ]
+
+    close = frame["close"].to_numpy(dtype=float)
+    logret = np.diff(np.log(close))
+    def _ret(n: int) -> str:
+        return _num((close[-1] / close[-1 - n] - 1.0) * 100.0) if len(close) > n else "nan"
+    tail = logret[-100:]
+    evidence += [
+        EvidenceItem(evidence_id="bars.n_closed", kind="bars", value=str(len(frame))),
+        EvidenceItem(
+            evidence_id="bars.last_bar_open", kind="bars", value=frame.index[-1].isoformat()
+        ),
+        EvidenceItem(evidence_id="bars.last_close", kind="bars", value=_num(close[-1], 8)),
+        EvidenceItem(evidence_id="bars.return_20", kind="bars", value=_ret(20), unit="pct"),
+        EvidenceItem(evidence_id="bars.return_100", kind="bars", value=_ret(100), unit="pct"),
+        EvidenceItem(
+            evidence_id="bars.realised_vol_100",
+            kind="bars",
+            value=(
+                _num(tail.std(ddof=1) * math.sqrt(timeframe.bars_per_year) * 100.0)
+                if tail.size > 1 else "nan"
+            ),
+            unit="pct_annualised",
+        ),
+    ]
+
+    report = validate_integrity(frame, config=IntegrityConfig())
+    evidence += [
+        EvidenceItem(evidence_id="data_quality.verdict", kind="data_quality",
+                     value=report.quality.value),
+        EvidenceItem(evidence_id="data_quality.n_defects", kind="data_quality",
+                     value=str(len(report.defects))),
+        EvidenceItem(evidence_id="data_quality.n_gaps", kind="data_quality",
+                     value=str(len(report.gaps))),
+    ]
+
+    caveats: list[str] = [
+        "cross-asset currency strength and risk appetite are NOT in this brief "
+        "(they need every instrument's bars at the pin); no news text is in it either",
+    ]
+    pin = pd.Timestamp(ctx.as_of)
+    try:
+        cal = load_official_calendar()
+        covered = "covered"
+        try:
+            cal.assert_populated(
+                start=pin, end=pin + pd.Timedelta(hours=24),
+                currencies=sorted(instrument_currencies(symbol)),
+            )
+        except Exception as exc:  # coverage is evidence, not a failure
+            covered = "not_covered"
+            caveats.append(f"calendar coverage: {str(exc).splitlines()[0]}")
+        upcoming = cal.events_near(
+            symbol, pin, minutes_before=0, minutes_after=24 * 60, min_impact=ImpactLevel.HIGH
+        )
+        times = sorted(pd.Timestamp(e.event_time) for e in upcoming)
+        evidence += [
+            EvidenceItem(evidence_id="calendar.coverage", kind="calendar", value=covered),
+            EvidenceItem(evidence_id="calendar.high_impact_next_24h", kind="calendar",
+                         value=str(len(times))),
+            EvidenceItem(
+                evidence_id="calendar.next_high_impact_at", kind="calendar",
+                value=times[0].isoformat() if times else "none",
+            ),
+        ]
+    except Exception as exc:  # a calendar fault is stated, never filled in
+        caveats.append(f"calendar unavailable: {type(exc).__name__}: {exc}")
+
+    as_of_text = pin.isoformat()
+    digest = market_brief_hash(
+        instrument=symbol, timeframe=timeframe.value, as_of=as_of_text,
+        dataset_version_id=version_id, evidence=evidence,
+    )
+    return MarketBriefOut(
+        brief_id=f"mb_{digest[:24]}",
+        brief_hash=digest,
+        schema_version=MARKET_BRIEF_SCHEMA,
+        instrument=symbol,
+        timeframe=timeframe.value,
+        as_of=as_of_text,
+        dataset_version_id=version_id,
+        evidence=tuple(evidence),
+        caveats=tuple(caveats),
+    )
+
+
+def _require_thesis(ctx: ToolContext, tool: str) -> ThesisStore:
+    if ctx.as_of is None:
+        raise ToolExecutionError(f"{tool} needs a pinned clock (ToolContext.as_of)")
+    if ctx.thesis is None:
+        raise ToolExecutionError(f"{tool}: no thesis store is wired into this agent context")
+    return ctx.thesis
+
+
+def _require_brief(ctx: ToolContext, store: ThesisStore, brief_id: str) -> MarketBriefOut:
+    try:
+        brief = store.get_brief(brief_id)
+    except KeyError as exc:
+        raise ToolExecutionError(f"brief {brief_id!r} is not in the thesis store") from exc
+    if pd.Timestamp(brief.as_of) != pd.Timestamp(ctx.as_of):
+        raise ToolExecutionError(
+            f"brief {brief_id} was built at {brief.as_of}, not at the pinned clock "
+            f"{pd.Timestamp(ctx.as_of).isoformat()}; a debate argues over the brief of its own clock"
+        )
+    return brief
+
+
+def _check_evidence(ids: Sequence[str], brief: MarketBriefOut, label: str) -> tuple[str, ...]:
+    cleaned = tuple(i.strip() for i in ids)
+    if len(set(cleaned)) != len(cleaned):
+        raise ToolExecutionError(f"{label}: evidence_ids contains duplicates")
+    unknown = [i for i in cleaned if i not in brief.evidence_ids()]
+    if unknown:
+        raise ToolExecutionError(
+            f"{label}: evidence ids {unknown} do not resolve in brief {brief.brief_id}; "
+            "cite only ids the brief contains"
+        )
+    return cleaned
+
+
+def _check_prose(text: str, label: str) -> None:
+    """The critic's generic-caution filter and the forecast's order vocabulary."""
+    residue = text.lower()
+    for phrase in _VAGUE_PHRASES:
+        residue = residue.replace(phrase, " ")
+    if len(residue.strip()) < 15:
+        raise ToolExecutionError(
+            f"{label} is generic caution ({text!r}), not a falsifiable statement"
+        )
+    hits = order_vocabulary_hits(text)
+    if hits:
+        raise ToolExecutionError(
+            f"{label} contains order vocabulary {list(hits)}. A thesis describes the "
+            "market (price higher/lower, a currency stronger/weaker), never what to do; "
+            "the stance field carries the direction"
+        )
+
+
+def _require_model_pin(ctx: ToolContext, tool: str) -> None:
+    if not ctx.model_id or ctx.model_id == NO_MODEL or not ctx.model_digest:
+        raise ToolExecutionError(
+            f"{tool}: the filing must pin the model that produced it (model id AND "
+            "weights digest); this context carries none"
+        )
+
+
+class ClaimIn(_In):
+    statement: str = Field(min_length=20, max_length=600)
+    evidence_ids: tuple[str, ...] = Field(min_length=1, max_length=8)
+    falsifier: str = Field(
+        min_length=20, max_length=400,
+        description="The observation that would kill this claim.",
+    )
+    rebuts: str | None = Field(
+        default=None, pattern=r"^(long|short)\.r[12]\.c[1-5]$",
+        description="The opponent claim id this answers, e.g. 'short.r1.c2'.",
+    )
+
+
+class AdvocateTurnOut(_In):
+    """What an advocate model returns. The workflow adds the ids."""
+
+    claims: tuple[ClaimIn, ...] = Field(min_length=1, max_length=DEBATE_MAX_CLAIMS)
+
+
+class RecordDebateTurnIn(_In):
+    debate_id: str = Field(min_length=4, max_length=64)
+    brief_id: str = Field(min_length=4, max_length=64)
+    stance: Literal["long", "short"]
+    round: int = Field(ge=1, le=DEBATE_MAX_ROUNDS)
+    claims: tuple[ClaimIn, ...] = Field(min_length=1, max_length=DEBATE_MAX_CLAIMS)
+
+
+class RecordDebateTurnOut(_Out):
+    turn_id: str
+    debate_id: str
+    claim_ids: tuple[str, ...]
+    n_claims: int
+
+
+def _record_debate_turn(ctx: ToolContext, inputs: RecordDebateTurnIn) -> RecordDebateTurnOut:
+    store = _require_thesis(ctx, "record_debate_turn")
+    _require_model_pin(ctx, "record_debate_turn")
+    brief = _require_brief(ctx, store, inputs.brief_id)
+    prior = store.turns(inputs.debate_id)
+    if any(t["brief_id"] != brief.brief_id for t in prior):
+        raise ToolExecutionError("this debate is already bound to a different brief")
+    opponent = "short" if inputs.stance == "long" else "long"
+    opponent_claims = {
+        c["claim_id"] for t in prior if t["stance"] == opponent for c in t["payload"]["claims"]
+    }
+    claims: list[dict[str, Any]] = []
+    for i, claim in enumerate(inputs.claims):
+        label = f"claims[{i}]"
+        evidence = _check_evidence(claim.evidence_ids, brief, label)
+        _check_prose(claim.statement, f"{label}.statement")
+        _check_prose(claim.falsifier, f"{label}.falsifier")
+        if claim.falsifier.strip().lower() == claim.statement.strip().lower():
+            raise ToolExecutionError(f"{label} restates its statement as its falsifier")
+        if claim.rebuts is not None and claim.rebuts not in opponent_claims:
+            raise ToolExecutionError(
+                f"{label}.rebuts={claim.rebuts!r} is not a claim the {opponent} side has filed"
+            )
+        claims.append(
+            {
+                "claim_id": f"{inputs.stance}.r{inputs.round}.c{i + 1}",
+                "statement": claim.statement,
+                "evidence_ids": list(evidence),
+                "falsifier": claim.falsifier,
+                "rebuts": claim.rebuts,
+            }
+        )
+    turn_id = f"{inputs.debate_id}:{inputs.stance}:r{inputs.round}"
+    now = ctx.clock() if ctx.clock is not None else datetime.now(tz=UTC)
+    try:
+        store.add_turn(
+            {
+                "turn_id": turn_id,
+                "debate_id": inputs.debate_id,
+                "brief_id": brief.brief_id,
+                "stance": inputs.stance,
+                "round": inputs.round,
+                "payload_json": json.dumps({"claims": claims}, sort_keys=True),
+                "recorded_by": ctx.agent_id,
+                "model_id": ctx.model_id,
+                "model_digest": ctx.model_digest,
+                "recorded_at": to_utc_text(now),
+            }
+        )
+    except ThesisStoreError as exc:
+        raise ToolExecutionError(f"turn refused by the store: {exc}") from exc
+    return RecordDebateTurnOut(
+        turn_id=turn_id,
+        debate_id=inputs.debate_id,
+        claim_ids=tuple(c["claim_id"] for c in claims),
+        n_claims=len(claims),
+    )
+
+
+class GetDebateIn(_In):
+    debate_id: str = Field(min_length=4, max_length=64)
+
+
+class DebateClaimView(_Out):
+    claim_id: str
+    statement: str
+    evidence_ids: tuple[str, ...]
+    falsifier: str
+    rebuts: str | None = None
+
+
+class DebateTurnView(_Out):
+    turn_id: str
+    stance: str
+    round: int
+    claims: tuple[DebateClaimView, ...]
+
+
+class GetDebateOut(_Out):
+    debate_id: str
+    brief_id: str | None
+    turns: tuple[DebateTurnView, ...]
+
+
+def _get_debate(ctx: ToolContext, inputs: GetDebateIn) -> GetDebateOut:
+    store = _require_thesis(ctx, "get_debate")
+    rows = store.turns(inputs.debate_id)
+    return GetDebateOut(
+        debate_id=inputs.debate_id,
+        brief_id=rows[0]["brief_id"] if rows else None,
+        turns=tuple(
+            DebateTurnView(
+                turn_id=r["turn_id"],
+                stance=r["stance"],
+                round=r["round"],
+                claims=tuple(DebateClaimView(**c) for c in r["payload"]["claims"]),
+            )
+            for r in rows
+        ),
+    )
+
+
+class ArbiterVerdictOut(_In):
+    """What the arbiter model returns. The workflow adds the debate and brief ids."""
+
+    stance: Literal["long", "short", "none"]
+    strength: Literal[0, 1, 2] = Field(
+        description="0 no view (stance none), 1 moderate, 2 strong. An ordinal, not a probability."
+    )
+    decisive_evidence_ids: tuple[str, ...] = Field(min_length=1, max_length=8)
+    invalidated_if: tuple[str, ...] = Field(min_length=1, max_length=5)
+    valid_until: str | None = Field(
+        default=None,
+        description="Optional; defaults to the policy TTL (one bar of the brief's timeframe).",
+    )
+
+
+class RecordConvictionIn(ArbiterVerdictOut):
+    debate_id: str = Field(min_length=4, max_length=64)
+    brief_id: str = Field(min_length=4, max_length=64)
+
+
+class RecordConvictionOut(_Out):
+    conviction_id: str
+    debate_id: str
+    instrument: str
+    stance: str
+    strength: int
+    as_of: str
+    available_at: str
+    valid_until: str
+    policy_version: str
+
+
+def _record_conviction(ctx: ToolContext, inputs: RecordConvictionIn) -> RecordConvictionOut:
+    store = _require_thesis(ctx, "record_conviction")
+    _require_model_pin(ctx, "record_conviction")
+    if not ctx.manifest_hash:
+        raise ToolExecutionError("a conviction must carry the run manifest hash")
+    brief = _require_brief(ctx, store, inputs.brief_id)
+    turns = store.turns(inputs.debate_id)
+    if not turns:
+        raise ToolExecutionError(
+            f"debate {inputs.debate_id!r} has no filed turns; a failed debate produces no "
+            "conviction"
+        )
+    if any(t["brief_id"] != brief.brief_id for t in turns):
+        raise ToolExecutionError("the debate was argued over a different brief")
+    if (inputs.stance == "none") != (inputs.strength == 0):
+        raise ToolExecutionError(
+            "stance 'none' carries strength 0, and a directional stance carries 1 or 2"
+        )
+    evidence = _check_evidence(inputs.decisive_evidence_ids, brief, "decisive_evidence_ids")
+    for i, text in enumerate(inputs.invalidated_if):
+        if len(text.strip()) < 20:
+            raise ToolExecutionError(f"invalidated_if[{i}] is too short to be an observation")
+        _check_prose(text, f"invalidated_if[{i}]")
+    pin = pd.Timestamp(ctx.as_of)
+    ttl = CONVICTION_TTL[brief.timeframe]
+    ceiling = pin + pd.Timedelta(ttl)
+    if inputs.valid_until is None:
+        valid_until = ceiling
+    else:
+        valid_until = _utc(inputs.valid_until, "valid_until")
+        if valid_until > ceiling:
+            raise ToolExecutionError(
+                f"valid_until {valid_until.isoformat()} is beyond the policy TTL "
+                f"({ttl} after the brief, {ceiling.isoformat()})"
+            )
+        if valid_until <= pin:
+            raise ToolExecutionError("valid_until must be after the brief's clock")
+    now = ctx.clock() if ctx.clock is not None else datetime.now(tz=UTC)
+    if now.tzinfo is None:
+        raise ToolExecutionError("the filing clock must be timezone-aware UTC")
+    available = pd.Timestamp(now).tz_convert("UTC")
+    if available >= valid_until:
+        raise ToolExecutionError(
+            f"the verdict would expire ({valid_until.isoformat()}) before it is filed "
+            f"({available.isoformat()}); nothing is recorded"
+        )
+    conviction_id = "cv_" + hashlib.sha256(
+        f"{inputs.debate_id}|{brief.brief_hash}".encode()
+    ).hexdigest()[:24]
+    payload = {
+        "decisive_evidence_ids": list(evidence),
+        "invalidated_if": list(inputs.invalidated_if),
+    }
+    try:
+        store.add_conviction(
+            {
+                "conviction_id": conviction_id,
+                "debate_id": inputs.debate_id,
+                "brief_id": brief.brief_id,
+                "brief_hash": brief.brief_hash,
+                "instrument": brief.instrument,
+                "timeframe": brief.timeframe,
+                "stance": inputs.stance,
+                "strength": int(inputs.strength),
+                "as_of": to_utc_text(pin.to_pydatetime()),
+                "available_at": to_utc_text(available.to_pydatetime()),
+                "valid_until": to_utc_text(valid_until.to_pydatetime()),
+                "policy_version": THESIS_DEBATE_POLICY_VERSION,
+                "model_id": ctx.model_id,
+                "model_digest": ctx.model_digest,
+                "manifest_hash": ctx.manifest_hash,
+                "payload_json": json.dumps(payload, sort_keys=True),
+                "recorded_by": ctx.agent_id,
+            }
+        )
+    except ThesisStoreError as exc:
+        raise ToolExecutionError(f"conviction refused by the store: {exc}") from exc
+    return RecordConvictionOut(
+        conviction_id=conviction_id,
+        debate_id=inputs.debate_id,
+        instrument=brief.instrument,
+        stance=inputs.stance,
+        strength=int(inputs.strength),
+        as_of=pin.isoformat(),
+        available_at=available.isoformat(),
+        valid_until=valid_until.isoformat(),
+        policy_version=THESIS_DEBATE_POLICY_VERSION,
+    )
+
+
+# ---------------------------------------------------------------------------
 # JOB SUBMISSION TOOLS -- the agent queues work; a worker runs it
 # ---------------------------------------------------------------------------
 
@@ -2787,7 +3584,7 @@ class RunBacktestIn(_In):
     end: str | None = None
     initial_balance: float = Field(default=10_000.0, gt=0)
     risk_fraction: float = Field(default=0.01, gt=0.0, le=0.05)
-    account_ccy: str = "USD"
+    account_ccy: str = "GBP"
     profile: str = "ig_realistic"
     experiment_id: str | None = None
     label: str = ""
@@ -2837,7 +3634,7 @@ class RunWalkforwardIn(_In):
     end: str | None = None
     initial_balance: float = Field(default=10_000.0, gt=0)
     risk_fraction: float = Field(default=0.01, gt=0.0, le=0.05)
-    account_ccy: str = "USD"
+    account_ccy: str = "GBP"
     experiment_id: str | None = None
     queue: str = "research"
 
@@ -2858,7 +3655,7 @@ class RunAblationIn(_In):
     end: str | None = None
     initial_balance: float = Field(default=10_000.0, gt=0)
     risk_fraction: float = Field(default=0.01, gt=0.0, le=0.05)
-    account_ccy: str = "USD"
+    account_ccy: str = "GBP"
     experiment_id: str | None = None
     queue: str = "research"
 
@@ -2896,8 +3693,8 @@ def build_registry() -> ToolRegistry:
     """Construct the complete tool registry.
 
     Read this function as the answer to "what can an autonomous agent in Fiboki
-    actually DO".  Fourteen read tools, eight research-domain writes, five job
-    submissions, two external interfaces.  No execution.
+    actually DO".  Sixteen read tools, ten research-domain writes, five job
+    submissions, two external interfaces: 33 in all.  No execution.
     """
     registry = ToolRegistry()
 
@@ -3026,6 +3823,23 @@ def build_registry() -> ToolRegistry:
                           max_rows_returned=NEWS_MAX_ROWS),
     )
 
+    add(
+        "build_market_brief",
+        "Build the DETERMINISTIC evidence pack a thesis debate argues over: regime "
+        "vector and fingerprint, recent returns and realised volatility, data "
+        "quality, and scheduled high-impact events in the next 24 hours, each under "
+        "a stable evidence id (e.g. regime.axis.stress). Closed bars at your pinned "
+        "clock only; content-hashed so the debate can be reproduced. No model is "
+        "involved in its values.",
+        BuildMarketBriefIn, MarketBriefOut, Capability.READ_REGIME, _build_market_brief,
+    )
+    add(
+        "get_debate",
+        "Read every filed turn of one thesis debate: each claim with its id, the "
+        "evidence ids it cites, its falsifier and which opponent claim it rebuts.",
+        GetDebateIn, GetDebateOut, Capability.READ_RESEARCH_MEMORY, _get_debate,
+    )
+
     # -- external (interface only) ---------------------------------------
     add(
         "search_web",
@@ -3111,6 +3925,28 @@ def build_registry() -> ToolRegistry:
         write_domain=WriteDomain.RESEARCH_EVENT_ANNOTATION, budget=_WRITE_BUDGET,
     )
 
+    add(
+        "record_debate_turn",
+        "File one turn of a thesis debate: 1 to 5 claims, each citing evidence ids "
+        "that resolve in the debate's market brief and naming a falsifier. Round 1 "
+        "or 2 only. Generic caution and order vocabulary are refused; the stance "
+        "field carries the direction.",
+        RecordDebateTurnIn, RecordDebateTurnOut, Capability.WRITE_DEBATE_TURN,
+        _record_debate_turn,
+        write_domain=WriteDomain.RESEARCH_DEBATE, budget=_WRITE_BUDGET,
+    )
+    add(
+        "record_conviction",
+        "File the arbiter's verdict on a debate: stance (long, short or none), an "
+        "ORDINAL strength 0..2, the decisive evidence ids and what would invalidate "
+        "it. Expires at most one bar of the brief's timeframe later. It is a research "
+        "artefact: no price, stop, size or probability can be expressed, and the only "
+        "downstream reader is a default-off policy that may only REDUCE a size.",
+        RecordConvictionIn, RecordConvictionOut, Capability.WRITE_CONVICTION,
+        _record_conviction,
+        write_domain=WriteDomain.RESEARCH_CONVICTION, budget=_WRITE_BUDGET,
+    )
+
     # -- queued jobs ------------------------------------------------------
     add(
         "run_backtest",
@@ -3155,22 +3991,34 @@ REGISTRY: ToolRegistry = build_registry()
 
 
 __all__ = [
+    "CONVICTION_TTL",
+    "DEBATE_MAX_CLAIMS",
+    "DEBATE_MAX_ROUNDS",
     "EVENT_BATCH_MAX",
+    "EVIDENCE_ID_PATTERN",
+    "MARKET_BRIEF_SCHEMA",
     "MIN_TRADES_FOR_PROMOTION",
     "NEWS_MAX_LOOKBACK",
     "NEWS_MAX_ROWS",
     "REGISTRY",
+    "THESIS_DEBATE_POLICY_VERSION",
+    "AdvocateTurnOut",
+    "ArbiterVerdictOut",
     "BarSource",
     "DataStoreBarSource",
     "EventAnnotationIn",
     "EventClassificationOut",
+    "EvidenceItem",
     "InMemoryBarSource",
+    "MarketBriefOut",
     "MutationOperator",
     "PortfolioProvider",
     "PortfolioSnapshot",
     "PositionView",
     "StaticPortfolioProvider",
     "StubWebSearch",
+    "ThesisStore",
+    "ThesisStoreError",
     "ToolBudget",
     "ToolContext",
     "ToolExecutionError",
@@ -3180,6 +4028,8 @@ __all__ = [
     "WebSearchProvider",
     "WriteDomain",
     "build_registry",
+    "default_thesis_store_path",
     "headline_ref",
+    "market_brief_hash",
     "order_vocabulary_hits",
 ]

@@ -76,6 +76,14 @@ class Capability(str, Enum):
     #: deterministic veto policy that is off by default and can only block a new
     #: entry; it cannot size, stop, exit or touch a limit.
     WRITE_EVENT_ANNOTATION = "write:event_annotation"
+    #: One turn of a thesis debate: at most five claims, each citing evidence
+    #: ids that resolve in a persisted deterministic market brief and naming a
+    #: falsifier. A research artefact; nothing reads it but the arbiter.
+    WRITE_DEBATE_TURN = "write:debate_turn"
+    #: The arbiter's verdict (stance, ordinal strength 0..2, expiry). A research
+    #: artefact. The only reader outside research is a versioned, default-off,
+    #: DOWN-ONLY portfolio policy (factor in [0.5, 1.0]) gated by the agent tier.
+    WRITE_CONVICTION = "write:conviction"
 
     # -- asking a deterministic worker to do something --------------------
     SUBMIT_JOB = "submit:job"

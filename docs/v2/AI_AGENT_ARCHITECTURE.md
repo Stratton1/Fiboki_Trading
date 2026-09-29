@@ -766,3 +766,81 @@ entry filter that is off by default is the ceiling of the damage.
 - **No live model has classified a real headline yet**; every test uses `EchoProvider`.
 
 <!-- END section: event channel (Wave 4) -->
+
+<!-- BEGIN section: thesis debate, conviction channel, influence tiers, context budgets (Wave 4). Appended 2026-09-29; other sections are edited separately. -->
+
+## 14. The thesis debate, the conviction channel and agent influence tiers (added 2026-09-29)
+
+Counts after this section, checked against the code on 2026-09-29: **25 capabilities, 33 tools,
+15 roles, 11 write domains.** Earlier sections' counts (19 / 25 / 12 / 7) describe earlier
+snapshots. Design source: `research/reports/due_diligence_2026-09-28/B_tradingagents.md` §6.3;
+tiers and budgets: `research/reports/G_frontend_plans_audit.md` §3.4.3, §3.4.4 and §3.7.
+
+### What the agent can and cannot do to a position size
+
+It cannot size anything. The deterministic path decides size (`PORTFOLIO_RISK_STANDARD.md` §2):
+tier base risk, then lifecycle, health, signal confidence, correlation, concentration, vol
+target, margin, drawdown throttle, regime, correlation-aware open-risk budget, and only then
+the conviction step, then the 6% total risk cap and a final clamp at 1.0 x tier base. The
+agent's single input is a `ConvictionReading` that a versioned policy (not the model) maps to a
+factor in [0.75, 1.0]: only disagreement with the strategy's direction dampens; agreement,
+"none", missing or stale are exactly 1.0. `enabled=False`, and a signed tier of T3 is also
+required, whose reviewed ceiling is T1 today. So at this snapshot the agent's influence on size
+is **zero**, and its would-be factor is logged with `Provenance.SHADOW` on every allocation.
+
+### The pieces
+
+| Piece | Where | What it guarantees |
+|---|---|---|
+| `build_market_brief` (read, `READ_REGIME`) | `agents/tools.py` | Deterministic evidence pack at the pinned clock: regime vector and fingerprint, 20/100-bar returns, 100-bar realised vol, data-quality verdict, high-impact events in the next 24 h. Stable dotted evidence ids (`regime.axis.stress`, `bars.return_20`). SHA-256 over the canonical content; `brief_id = mb_<hash[:24]>`. Refuses without a pinned clock. The workflow persists it; rebuilding at the same clock gives the same hash (tested). |
+| `ThesisStore` | `agents/tools.py` | `<state_dir>/agents/thesis.sqlite`: `market_brief`, `debate_turn`, `conviction`; UPDATE and DELETE refused by trigger. |
+| `record_debate_turn` (`WRITE_DEBATE_TURN`, `research:debate`) | `agents/tools.py` | 1 to 5 claims per turn, rounds 1 or 2, each claim cites evidence ids that must resolve in the debate's brief and names a falsifier; a rebuttal must name a claim the opponent actually filed. The critic's `_VAGUE_PHRASES` filter and the forecast's order-vocabulary filter apply to every statement and falsifier. Model id and weights digest required. |
+| `get_debate` (read, `READ_RESEARCH_MEMORY`) | `agents/tools.py` | The arbiter's audited read of the transcript. |
+| `record_conviction` (`WRITE_CONVICTION`, `research:conviction`) | `agents/tools.py` | stance long/short/none, ordinal strength 0..2 (none iff 0), decisive evidence ids that resolve, `invalidated_if` observations, expiry at most one bar of the brief's timeframe (H4: 4 h, D1: 24 h). Refused if the debate has no filed turn, if it expires before filing, or without model pin and manifest hash. One per debate. |
+| `thesis_advocate` / `thesis_arbiter` roles | `agents/roles.py` | Advocate: `build_market_brief`, `record_debate_turn`. Arbiter: `build_market_brief`, `get_debate`, `record_conviction`. Neither can read the portfolio, submit a job or read a forecast score. One advocate spec; the stance is a prompt input and each side is its own principal (`thesis_advocate[long]@<wid>`). |
+| `run_thesis_debate(instrument, timeframe)` | `agents/workflows.py` | Brief (no model) -> long, short (round 1) -> long, short (round 2) -> arbiter, who is shown the brief AND the transcript. A refused turn fails its step and the debate continues; no filed turn means no conviction. Cost cap USD 0.25 per run. `offline_thesis_script()` scripts every step for EchoProvider. |
+| `ConvictionAdapter`, `conviction_rows_from_sqlite` | `workers/runtime.py` | The ONLY construction site of `ConvictionReading`; reads the `conviction` table read-only (`mode=ro`), point-in-time (`available_at <= now`); any fault is "absent" (factor 1.0). |
+| `AgentInfluenceTier`, `read_tier` | `core/tier.py` | T0..T4. `<state_dir>/agent_tier.json`, HMAC-SHA256 with `FIBOKI_SESSION_SECRET`; absent = T1; tampered, unreadable or unverifiable = T1 plus an alert; effective tier = min(record, `MAX_AUTHORISED_TIER` = T1). No tier permits upsizing. |
+| `fiboki agents tier status` and `set` | `cli.py` | `set` needs `--operator`, `--reason` and a non-ephemeral secret, refuses a tier above the ceiling, writes the record atomically and appends to `<state_dir>/agent_tier_audit.jsonl` (with the previous reading). |
+| `TierGatedVetoSource` | `workers/runtime.py` | The event veto can block only at T2+; below it every verdict reports `enabled=False`, so the gateway records `event_veto_shadow:` and passes. Config-enabled but tier-refused raises one alert. |
+
+### Context budgets and session budgets
+
+`RoleSpec.context_budget` (G §3.4.3, `context_budget_v1`): research roles 12k in / 2k out,
+failure investigator 8k / 1.5k, thesis advocate 8k / 1k, thesis arbiter 10k / 400. The budget
+line is rendered into the role's system prompt, so the run manifest (which hashes every prompt)
+moves when a budget moves (tested). `AgentSession.think` estimates the request (4 characters per
+token, the router's estimate), refuses on the record (`model:refused_by_budget`) before any
+model is asked if it exceeds the input budget, and clamps `max_tokens` to the output budget.
+**Deviation:** the event classifier is 4k / 4,096, not G's 1.5k / 200, because the shipped event
+scan classifies up to 40 headlines per call and 200 output tokens cannot hold 40 annotations.
+
+`SessionBudget` (P2-22) now also bounds prompt tokens (200k), completion tokens (40k) and model
+wall-clock seconds (900 s) per session, checked before each call and charged after it; USD is
+kept for hosted models. The declaration on each workflow's start record lists all of them.
+
+After every thought the session copies the model id, weights digest and manifest hash into its
+`ToolContext`, so `record_forecast` (and every other filing) names the model the router chose.
+
+KV-cache reuse (G §3.4.4): the system prompt is static per role; debate prompts put the static
+instructions and the shared brief first and the variable transcript and stance last, so both
+advocates share a prefix up to the transcript (tested).
+
+### Not yet true
+
+- **Nothing schedules the debate.** `thesis_debate_due(timeframe, last_run_close, now)` and
+  `last_bar_close` are the predicate; calling `run_thesis_debate` per instrument per H4/D1 close
+  when `FIBOKI_AGENT_CYCLES` is on is a change to `workers/research_runtime.py` (not in this
+  change's files).
+- **No news text is in the brief,** nor cross-asset currency strength. B §6.5: without a
+  point-in-time text source the debate re-describes numbers the regime scalar already consumes.
+- The tier gates the two *policies*; it does not yet gate the agent *writes* (a T0 record does
+  not stop `record_conviction`). Harmless for trading (a conviction is inert below T3), but T0 is
+  not "no annotations" yet.
+- Per-role `num_ctx` for the Ollama provider (P2-23) is not set from these budgets
+  (`agents/providers.py`, not in this change's files).
+- No real model has run a debate; EchoProvider only.
+- Pre-registration artefacts for the conviction channel (hypothesis, metric, minimum event
+  count, decision date, baselines) are not filed.
+
+<!-- END section: thesis debate, conviction channel, influence tiers, context budgets (Wave 4) -->

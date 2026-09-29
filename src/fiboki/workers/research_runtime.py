@@ -90,6 +90,26 @@ crash may be classified twice, which the append-only store keeps as two rows).
 Every scan, including one that found nothing, writes a ``scan_log`` row: that
 row is the heartbeat the event veto's freshness guard reads.
 
+The thesis debate
+-----------------
+With agent cycles on and ``FIBOKI_THESIS_DEBATE_INSTRUMENTS`` set (a CSV of
+instruments; empty, the default, schedules none), one
+:func:`~fiboki.agents.workflows.run_thesis_debate` runs per instrument per
+``FIBOKI_THESIS_DEBATE_TIMEFRAME`` bar close (``H4``, the default, or ``D1``),
+decided by :func:`~fiboki.agents.workflows.thesis_debate_due` against the last
+claimed close in the schedule file. Claimed before it runs, not fired on the
+first start, and a missed run of many closes runs once, as the other slots.
+Briefs, turns and convictions go to ``<FIBOKI_STATE_DIR>/agents/thesis.sqlite``,
+the file ``workers.runtime.conviction_rows_from_sqlite`` reads.
+
+The experiment ledger
+---------------------
+The research store's :class:`~fiboki.research.experiment.ExperimentLedger`
+(``FIBOKI_EXPERIMENT_DB`` when set) is injected into the job handlers as
+``experiments``, so the validation handler can count the trials behind a
+candidate and evaluate the deflated Sharpe ratio instead of reporting it
+NOT_EVALUATED.
+
 What this module does not do
 ----------------------------
 It holds no execution capability and imports nothing from ``broker``,
@@ -114,14 +134,25 @@ from fiboki.agents.capabilities import CapabilityResolver
 from fiboki.agents.jobs import HANDLERS, register_research_handlers
 from fiboki.agents.orchestrator import Orchestrator, submitter_for
 from fiboki.agents.providers import EchoProvider, LLMProvider, ModelRouter
-from fiboki.agents.tools import NEWS_MAX_LOOKBACK, BarSource, DataStoreBarSource, ToolContext
+from fiboki.agents.tools import (
+    NEWS_MAX_LOOKBACK,
+    BarSource,
+    DataStoreBarSource,
+    ThesisStore,
+    ToolContext,
+    default_thesis_store_path,
+)
 from fiboki.agents.workflows import (
     EVENT_CLASSIFICATION_STEP,
+    THESIS_DEBATE_TIMEFRAMES,
     WorkflowDeps,
     WorkflowResult,
+    last_bar_close,
     run_event_scan,
     run_failure_investigation,
     run_research_cycle,
+    run_thesis_debate,
+    thesis_debate_due,
 )
 from fiboki.core.enums import Timeframe
 from fiboki.data.news.store import HeadlineStore, default_store_path
@@ -142,6 +173,7 @@ __all__ = [
     "ResearchRuntime",
     "ResearchRuntimeSettings",
     "RuntimeConfigError",
+    "ThesisDebateSchedule",
     "compose_research_runtime",
     "research_runtime_from_env",
 ]
@@ -255,11 +287,20 @@ class ResearchRuntimeSettings:
     cycle_target: CycleTarget | None = None
     #: Minutes between event scans; 0 turns the scan off.
     event_scan_minutes: int = 15
+    #: Instruments that get a thesis debate per bar close; empty: none.
+    thesis_debate_instruments: tuple[str, ...] = ()
+    #: The bar whose close schedules a debate: ``H4`` or ``D1``.
+    thesis_debate_timeframe: str = "H4"
 
     def __post_init__(self) -> None:
         if self.provider not in ("echo", "local"):
             raise RuntimeConfigError(
                 f"FIBOKI_AGENT_PROVIDER={self.provider!r}: expected 'echo' or 'local'"
+            )
+        if self.thesis_debate_timeframe not in THESIS_DEBATE_TIMEFRAMES:
+            raise RuntimeConfigError(
+                f"FIBOKI_THESIS_DEBATE_TIMEFRAME={self.thesis_debate_timeframe!r}: "
+                f"expected one of {list(THESIS_DEBATE_TIMEFRAMES)}"
             )
 
     @classmethod
@@ -293,6 +334,16 @@ class ResearchRuntimeSettings:
             event_scan_minutes=_parse_minutes(
                 "FIBOKI_EVENT_SCAN_MINUTES", get("FIBOKI_EVENT_SCAN_MINUTES"), 15
             ),
+            thesis_debate_instruments=tuple(
+                sorted({
+                    part.strip().upper()
+                    for part in get("FIBOKI_THESIS_DEBATE_INSTRUMENTS").split(",")
+                    if part.strip()
+                })
+            ),
+            thesis_debate_timeframe=(
+                get("FIBOKI_THESIS_DEBATE_TIMEFRAME", "H4") or "H4"
+            ).upper(),
         )
 
     @property
@@ -314,6 +365,10 @@ class ResearchRuntimeSettings:
     @property
     def events_path(self) -> Path:
         return default_annotation_store_path(self.state_dir)
+
+    @property
+    def thesis_path(self) -> Path:
+        return default_thesis_store_path(self.state_dir)
 
 
 # ---------------------------------------------------------------------------
@@ -426,6 +481,43 @@ class IntervalSchedule:
 
     def claim(self, slot: datetime) -> None:
         self._daily().claim(slot)
+
+
+@dataclass(slots=True)
+class ThesisDebateSchedule:
+    """One debate per ``timeframe`` bar close for one instrument, claimed on disk.
+
+    Due when :func:`~fiboki.agents.workflows.thesis_debate_due` says a bar has
+    closed since the last claimed close. Same state file and claim-before-run
+    rule as :class:`DailyCycleSchedule`.
+    """
+
+    instrument: str
+    timeframe: str
+    state_path: Path
+
+    @property
+    def name(self) -> str:
+        return f"thesis_debate_{self.instrument}_{self.timeframe}"
+
+    def _daily(self) -> DailyCycleSchedule:
+        return DailyCycleSchedule(self.name, time(0, 0, tzinfo=UTC), self.state_path)
+
+    def last_claimed(self) -> datetime | None:
+        return self._daily().last_claimed()
+
+    def initialise(self, now: datetime) -> None:
+        """First start: the current close is recorded as seen, not debated."""
+        if self.last_claimed() is None:
+            self.claim(last_bar_close(self.timeframe, now))
+
+    def due(self, now: datetime) -> datetime | None:
+        if not thesis_debate_due(self.timeframe, self.last_claimed(), now):
+            return None
+        return last_bar_close(self.timeframe, now)
+
+    def claim(self, close: datetime) -> None:
+        self._daily().claim(close)
 
 
 # ---------------------------------------------------------------------------
@@ -546,6 +638,10 @@ class ResearchRuntime:
     #: classifier's one tool). ``None`` when the event scan is not composed.
     news: HeadlineStore | None = None
     events: AnnotationStore | None = None
+    #: Thesis debates (empty unless instruments are configured and cycles on)
+    #: and the store their briefs, turns and convictions are filed in.
+    debate_schedule: tuple[ThesisDebateSchedule, ...] = ()
+    thesis: ThesisStore | None = None
 
     # -- per-run wiring ---------------------------------------------------
 
@@ -561,6 +657,7 @@ class ResearchRuntime:
             news=self.news,
             events=self.events,
             clock=self.clock,
+            thesis=self.thesis,
         )
 
     def deps(self, as_of: datetime) -> WorkflowDeps:
@@ -677,6 +774,29 @@ class ResearchRuntime:
         _log.info("event scan finished", extra={"summary": result.summary(), "outcome": outcome})
         return result
 
+    def run_thesis_debate(
+        self,
+        instrument: str,
+        *,
+        timeframe: str | None = None,
+        now: datetime | None = None,
+        workflow_id: str | None = None,
+    ) -> WorkflowResult:
+        if self.thesis is None:
+            raise RuntimeConfigError(
+                "the thesis debate is not composed (FIBOKI_AGENT_CYCLES off or "
+                "FIBOKI_THESIS_DEBATE_INSTRUMENTS empty)"
+            )
+        result = run_thesis_debate(
+            self.deps(self._now(now)),
+            instrument=instrument,
+            timeframe=timeframe or self.settings.thesis_debate_timeframe,
+            workflow_id=workflow_id,
+        )
+        self.results.append(result)
+        _log.info("thesis debate finished", extra={"summary": result.summary()})
+        return result
+
     # -- incidents --------------------------------------------------------
 
     def raise_incident(
@@ -707,6 +827,7 @@ class ResearchRuntime:
             bool(len(self.incidents.inbox))
             or any(s.due(when) for s in self.schedule)
             or any(s.due(when) for s in self.event_schedule)
+            or any(s.due(when) for s in self.debate_schedule)
         )
 
     def tick(
@@ -741,6 +862,19 @@ class ResearchRuntime:
                 self.run_event_scan(
                     now=self._now(None) if now is None else when,
                     workflow_id=f"wf_{scan.name}_{slot:%Y%m%dT%H%MZ}",
+                )
+            )
+        for debate in self.debate_schedule:
+            close = debate.due(when)
+            if close is None or should_stop():
+                continue
+            debate.claim(close)  # BEFORE running, as for the other slots
+            ran.append(
+                self.run_thesis_debate(
+                    debate.instrument,
+                    timeframe=debate.timeframe,
+                    now=self._now(None) if now is None else when,
+                    workflow_id=f"wf_{debate.name}_{close:%Y%m%dT%H%MZ}",
                 )
             )
         while not should_stop():
@@ -802,6 +936,7 @@ def compose_research_runtime(
     clock: Callable[[], datetime] | None = None,
     news: HeadlineStore | None = None,
     events: AnnotationStore | None = None,
+    thesis: ThesisStore | None = None,
 ) -> ResearchRuntime:
     """Compose the research side from ``settings``. Explicit arguments win.
 
@@ -833,6 +968,9 @@ def compose_research_runtime(
             strategies=strategies,
             bars=bars,
             job_types=tuple(HANDLERS),
+            # The trial count for deflation: without the ledger the validation
+            # handler's DSR is NOT_EVALUATED (and blocks) on every candidate.
+            experiments=research.ledger,
         )
     provider = provider or _build_provider(settings)
     ledger = JsonlAuditLedger(settings.audit_path)
@@ -875,6 +1013,25 @@ def compose_research_runtime(
         scan.initialise(clock())
         event_schedule = (scan,)
 
+    debate_schedule: tuple[ThesisDebateSchedule, ...] = ()
+    if settings.agent_cycles and settings.thesis_debate_instruments:
+        if bars is None:
+            raise RuntimeConfigError(
+                "FIBOKI_THESIS_DEBATE_INSTRUMENTS is set but no bar source is wired "
+                "(set FIBOKI_DATA_ROOT): every market brief would be refused"
+            )
+        thesis = thesis if thesis is not None else ThesisStore(settings.thesis_path)
+        entries = []
+        for instrument in settings.thesis_debate_instruments:
+            debate = ThesisDebateSchedule(
+                instrument=instrument,
+                timeframe=settings.thesis_debate_timeframe,
+                state_path=settings.schedule_path,
+            )
+            debate.initialise(clock())
+            entries.append(debate)
+        debate_schedule = tuple(entries)
+
     runtime = ResearchRuntime(
         settings=settings,
         orchestrator=orchestrator,
@@ -892,6 +1049,8 @@ def compose_research_runtime(
         event_schedule=event_schedule,
         news=news,
         events=events,
+        debate_schedule=debate_schedule,
+        thesis=thesis,
     )
     _log.info(
         "research runtime composed",
@@ -901,6 +1060,8 @@ def compose_research_runtime(
             "audit_path": str(settings.audit_path),
             "schedule": [f"{s.name}@{s.at.isoformat()}" for s in schedule],
             "event_scan": [f"{s.name}/{s.every}" for s in event_schedule],
+            "thesis_debates": [s.name for s in debate_schedule],
+            "experiments_ledger": str(getattr(research.ledger, "path", "") or "in-memory"),
         },
     )
     return runtime

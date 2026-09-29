@@ -928,6 +928,19 @@ class Worker(abc.ABC):
     def stopping(self) -> bool:
         return self._stop.is_set()
 
+    def pulse(self, detail: str = "") -> None:
+        """Renew the lease and write a WORKING heartbeat, from inside a cycle.
+
+        The loop only renews and beats BETWEEN cycles. A cycle that runs
+        several jobs, or one long job, must call this (or run under
+        :class:`fiboki.workers.research_worker.HeartbeatPulse`, which calls it
+        on a timer) or its lease expires mid-cycle and a second supervised
+        worker can take it (audit F, P1-10). Raises :class:`LeaseLost` if the
+        lease is no longer ours, which the caller must not swallow.
+        """
+        self.lease.renew()
+        self.heartbeat.write(WorkerState.WORKING, fence=self.lease.fence, detail=detail)
+
     # -- the loop --------------------------------------------------------
 
     def run(self, *, install_signals: bool = True) -> int:

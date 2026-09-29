@@ -26,6 +26,18 @@ every record it writes.  For a model call these name the model asked and its
 weights digest; for a tool call they name the model of this session's most
 recent thought, whose output the call acted on, or
 :data:`~fiboki.agents.audit.NO_MODEL` if the session has not thought yet.
+After every thought the session also copies the model id, weights digest and
+manifest hash into its :class:`~fiboki.agents.tools.ToolContext`, so a tool
+that files an artefact (a forecast, a debate turn, a conviction) records the
+model the ROUTER actually chose rather than an empty string.
+
+Budgets (audit F P2-22): a local model costs USD 0.00, so a USD budget alone
+left local sessions unbounded. :class:`SessionBudget` also bounds prompt
+tokens, completion tokens and model wall-clock seconds per session, and every
+model call is first checked against the role's per-request
+:class:`~fiboki.agents.roles.ContextBudget`: a prompt over the input budget is
+refused ON THE RECORD before any model is asked, and ``max_tokens`` is clamped
+to the output budget.
 """
 from __future__ import annotations
 
@@ -66,14 +78,27 @@ class BudgetExceeded(RuntimeError):
 
 @dataclass(slots=True)
 class SessionBudget:
-    """Per-session spend controls.  Deliberately blunt and easy to audit."""
+    """Per-session spend controls.  Deliberately blunt and easy to audit.
+
+    USD bounds a hosted model; tokens and seconds bound a local one, whose
+    cost is zero (P2-22). Each limit is checked twice: ``check_model_headroom``
+    refuses a call that cannot fit BEFORE it is made, and ``charge_model``
+    accounts for the call after it returns and refuses once a limit is passed
+    (the call still happened, so the record still says so).
+    """
 
     max_tool_calls: int = 60
     max_model_calls: int = 30
     max_cost_usd: float = 1.0
+    max_prompt_tokens: int = 200_000
+    max_completion_tokens: int = 40_000
+    max_model_seconds: float = 900.0
     tool_calls: int = 0
     model_calls: int = 0
     cost_usd: float = 0.0
+    prompt_tokens: int = 0
+    completion_tokens: int = 0
+    model_seconds: float = 0.0
     per_tool: dict[str, int] = field(default_factory=dict)
 
     def charge_tool(self, tool: ToolSpec) -> None:
@@ -91,7 +116,34 @@ class SessionBudget:
         self.tool_calls += 1
         self.cost_usd = round(self.cost_usd + tool.budget.estimated_cost_usd, 10)
 
-    def charge_model(self, cost_usd: float) -> None:
+    def check_model_headroom(self, estimated_prompt_tokens: int) -> None:
+        """Refuse a model call that cannot fit, before it is made."""
+        if self.model_calls >= self.max_model_calls:
+            raise BudgetExceeded(
+                f"session model-call budget exhausted ({self.max_model_calls})"
+            )
+        if self.prompt_tokens + estimated_prompt_tokens > self.max_prompt_tokens:
+            raise BudgetExceeded(
+                f"session prompt-token budget: {self.prompt_tokens} used + "
+                f"~{estimated_prompt_tokens} > {self.max_prompt_tokens}"
+            )
+        if self.completion_tokens >= self.max_completion_tokens:
+            raise BudgetExceeded(
+                f"session completion-token budget exhausted ({self.max_completion_tokens})"
+            )
+        if self.model_seconds >= self.max_model_seconds:
+            raise BudgetExceeded(
+                f"session model wall-time budget exhausted ({self.max_model_seconds:.0f}s)"
+            )
+
+    def charge_model(
+        self,
+        cost_usd: float,
+        *,
+        prompt_tokens: int = 0,
+        completion_tokens: int = 0,
+        seconds: float = 0.0,
+    ) -> None:
         if self.model_calls >= self.max_model_calls:
             raise BudgetExceeded(
                 f"session model-call budget exhausted ({self.max_model_calls})"
@@ -103,6 +155,20 @@ class SessionBudget:
             )
         self.model_calls += 1
         self.cost_usd = round(self.cost_usd + cost_usd, 10)
+        self.prompt_tokens += max(0, int(prompt_tokens))
+        self.completion_tokens += max(0, int(completion_tokens))
+        self.model_seconds = round(self.model_seconds + max(0.0, float(seconds)), 6)
+        over = []
+        if self.prompt_tokens > self.max_prompt_tokens:
+            over.append(f"prompt tokens {self.prompt_tokens} > {self.max_prompt_tokens}")
+        if self.completion_tokens > self.max_completion_tokens:
+            over.append(
+                f"completion tokens {self.completion_tokens} > {self.max_completion_tokens}"
+            )
+        if self.model_seconds > self.max_model_seconds:
+            over.append(f"model seconds {self.model_seconds:.1f} > {self.max_model_seconds:.0f}")
+        if over:
+            raise BudgetExceeded("session budget exceeded by this call: " + "; ".join(over))
 
     def declaration(self) -> dict[str, Any]:
         """The limits, as data, for a workflow's start record."""
@@ -110,6 +176,9 @@ class SessionBudget:
             "max_tool_calls": self.max_tool_calls,
             "max_model_calls": self.max_model_calls,
             "max_cost_usd": self.max_cost_usd,
+            "max_prompt_tokens": self.max_prompt_tokens,
+            "max_completion_tokens": self.max_completion_tokens,
+            "max_model_seconds": self.max_model_seconds,
         }
 
 
@@ -165,7 +234,12 @@ class AgentSession:
         self.manifest_hash = manifest_hash
         # The tool context carries the agent's identity so research records are
         # attributed without the handler having to be told twice.
-        self.context = replace(context, agent_id=agent_id, role=self.role_spec.role.value)
+        self.context = replace(
+            context,
+            agent_id=agent_id,
+            role=self.role_spec.role.value,
+            manifest_hash=manifest_hash or context.manifest_hash,
+        )
         self.last_action_id: str | None = None
         #: The model (and its weights digest) of this session's latest thought.
         self.last_model_id: str = NO_MODEL
@@ -311,8 +385,16 @@ class AgentSession:
                 f"{self.agent_id} has no model router; a session that is expected to "
                 "think must be constructed with one"
             )
+        system = self.system_prompt()
+        estimated_prompt_tokens = (len(system) + len(prompt)) // 4 + 1
+        self._enforce_context_budget(
+            estimated_prompt_tokens, max_tokens, prompt=prompt, reason=reason, step=step,
+            parent_action_id=parent_action_id,
+        )
+        requested_max_tokens = max_tokens
+        max_tokens = min(max_tokens, self.role_spec.context_budget.output_tokens)
         request = LLMRequest(
-            system=self.system_prompt(),
+            system=system,
             prompt=prompt,
             task_class=task_class or self.role_spec.task_class,
             max_tokens=max_tokens,
@@ -325,7 +407,7 @@ class AgentSession:
         decision = self.router.select(
             request.task_class,
             budget_usd=min(budget_usd, self.role_spec.budget_usd),
-            estimated_prompt_tokens=(len(request.system) + len(prompt)) // 4 + 1,
+            estimated_prompt_tokens=estimated_prompt_tokens,
             estimated_completion_tokens=max_tokens,
             needs_json=json_only,
         )
@@ -339,6 +421,9 @@ class AgentSession:
                 "task_class": request.task_class.value,
                 "step": step,
                 "max_tokens": max_tokens,
+                "max_tokens_requested": requested_max_tokens,
+                "estimated_prompt_tokens": estimated_prompt_tokens,
+                "context_budget": self.role_spec.context_budget.version,
                 "json_only": json_only,
                 "prompt_digest": request.digest(),
             },
@@ -361,16 +446,30 @@ class AgentSession:
             action.prompt_tokens = response.prompt_tokens
             action.completion_tokens = response.completion_tokens
             action.cost_usd = response.cost_usd
-            self.budget.charge_model(response.cost_usd)
+            elapsed = time.perf_counter() - started
             action.outputs = {
                 "text": response.text,
                 "finish_reason": response.finish_reason,
-                "latency_ms": round((time.perf_counter() - started) * 1000.0, 3),
+                "latency_ms": round(elapsed * 1000.0, 3),
             }
+            self.budget.charge_model(
+                response.cost_usd,
+                prompt_tokens=response.prompt_tokens,
+                completion_tokens=response.completion_tokens,
+                seconds=elapsed,
+            )
         assert action.record is not None
         self.last_action_id = action.record.action_id
         self.last_model_id = action.record.model_id or NO_MODEL
         self.last_model_digest = action.record.model_digest
+        # The model the ROUTER chose, pinned, is what any artefact filed from
+        # this thought must name (``record_forecast`` reads ``ctx.model_id``).
+        self.context = replace(
+            self.context,
+            model_id=self.last_model_id,
+            model_digest=self.last_model_digest or "",
+            manifest_hash=self.manifest_hash or self.context.manifest_hash,
+        )
 
         payload: Any = None
         parse_error = ""
@@ -386,6 +485,58 @@ class AgentSession:
             payload=payload,
             parse_error=parse_error,
         )
+
+    def _enforce_context_budget(
+        self,
+        estimated_prompt_tokens: int,
+        max_tokens: int,
+        *,
+        prompt: str,
+        reason: str,
+        step: str,
+        parent_action_id: str | None,
+    ) -> None:
+        """Refuse, on the record, a request over the role's input or session budget."""
+        budget = self.role_spec.context_budget
+        problem = ""
+        if estimated_prompt_tokens > budget.input_tokens:
+            problem = (
+                f"prompt of ~{estimated_prompt_tokens} tokens exceeds the "
+                f"{self.role_spec.role.value} input budget of {budget.input_tokens} "
+                f"({budget.version}); nothing was sent"
+            )
+        else:
+            try:
+                self.budget.check_model_headroom(estimated_prompt_tokens)
+            except BudgetExceeded as exc:
+                problem = str(exc)
+        if not problem:
+            return
+        with AuditedAction(
+            self.ledger,
+            agent_id=self.agent_id,
+            role=self.role_spec.role.value,
+            kind=ActionKind.MODEL_CALL,
+            tool="model:refused_by_budget",
+            inputs={
+                "step": step,
+                "estimated_prompt_tokens": estimated_prompt_tokens,
+                "max_tokens_requested": max_tokens,
+                "context_budget": {
+                    "input_tokens": budget.input_tokens,
+                    "output_tokens": budget.output_tokens,
+                    "version": budget.version,
+                },
+                "session": self.budget.declaration(),
+            },
+            reason=reason,
+            prompt=prompt,
+            parent_action_id=parent_action_id or self.last_action_id,
+            workflow_id=self.workflow_id,
+            model_id=NO_MODEL,
+            manifest_hash=self.manifest_hash,
+        ):
+            raise BudgetExceeded(problem)
 
     # -- reading the trail ------------------------------------------------
 

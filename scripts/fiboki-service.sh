@@ -2,7 +2,7 @@
 # Fiboki V2: run ONE desktop service in the foreground. launchd calls this
 # (deploy/launchd/uk.fiboki.<service>.plist); you can too, to debug one.
 #
-#   scripts/fiboki-service.sh api|worker|web|news|llama
+#   scripts/fiboki-service.sh api|worker|web|news|llama|paper
 #
 # Environment, in order of precedence:
 #   1. ~/.fiboki/env (operator-owned, chmod 600, never in the repository):
@@ -10,6 +10,11 @@
 #      agent settings (FIBOKI_AGENT_*). scripts/desktop-install.sh creates it.
 #   2. The desktop defaults below, the same paths scripts/dev-up.sh uses, so
 #      `fiboki doctor` resolves them identically.
+#
+# `paper` runs `fiboki paper forward` against the COMMITTED wiring file below
+# (not an environment variable: which strategy trades, where, under which
+# limits, is a reviewed file, and its sha256 is stamped on every decision). It
+# needs FIBOKI_OANDA_PRACTICE_TOKEN and FIBOKI_OANDA_PRACTICE_ACCOUNT_ID in ~/.fiboki/env.
 #
 # Paper only, enforced here: FIBOKI_EXECUTION_MODE is forced to paper and the
 # live controls are unset AFTER the env file is read, so a line in that file
@@ -75,8 +80,18 @@ case "$SERVICE" in
     # shellcheck disable=SC2086
     exec "$ROOT/scripts/llama-server.sh" ${LLAMA_SERVER_ARGS:-}
     ;;
+  paper)
+    # Hold a sleep assertion for as long as THIS pid lives (exec keeps the pid):
+    # -i idle sleep, -s system sleep on AC power. It does not stop a closed
+    # laptop lid from sleeping the machine; docs/v2/OPERATIONS.md says what does.
+    if command -v caffeinate >/dev/null 2>&1; then
+      caffeinate -is -w $$ &
+    fi
+    exec "$ROOT/.venv/bin/fiboki" paper forward \
+      --wiring "$ROOT/src/fiboki/entrypoints/wiring/paper_forward_v1.json"
+    ;;
   *)
-    echo "usage: $0 api|worker|web|news|llama" >&2
+    echo "usage: $0 api|worker|web|news|llama|paper" >&2
     exit 2
     ;;
 esac

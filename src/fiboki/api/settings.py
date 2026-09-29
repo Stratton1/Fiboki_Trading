@@ -28,14 +28,18 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from fiboki.core.enums import ExecutionMode, Provenance
+from fiboki.core.paths import FibokiPaths, resolve_paths
+from fiboki.obs.health import HealthThresholds
 
 __all__ = [
     "ENV_REGISTRY",
     "KNOWN_ENV_NAMES",
     "MODE_PROVENANCE",
     "EnvVar",
+    "HealthThresholds",
     "Settings",
     "SettingsError",
+    "health_thresholds_from_env",
     "load_settings",
     "parse_bool",
     "warn_unknown_env",
@@ -131,15 +135,24 @@ ENV_REGISTRY: tuple[EnvVar, ...] = (
     EnvVar("FIBOKI_SESSION_TTL", "int", "43200", "Session lifetime in seconds."),
     EnvVar("FIBOKI_SESSION_SECRET", "secret", "",
            "Session HMAC key; empty means a per-process ephemeral key.", _BROKER_MODES),
-    EnvVar("FIBOKI_STATE_DIR", "path", "var", "Operator state directory."),
-    EnvVar("FIBOKI_DATA_ROOT", "path", "", "Market-data root, if provisioned."),
-    EnvVar("FIBOKI_EXPERIMENT_DB", "path", "", "Experiment ledger database, if provisioned."),
+    EnvVar("FIBOKI_STATE_DIR", "path", "var",
+           "Operator state directory: kill-switch journal, intent/audit ledgers, holdout, "
+           "alert outbox. Set it in every process; relative means the process's cwd.",
+           read_by="fiboki.core.paths"),
+    EnvVar("FIBOKI_DATA_ROOT", "path", "", "Market-data root, if provisioned.",
+           read_by="fiboki.core.paths"),
+    EnvVar("FIBOKI_EXPERIMENT_DB", "path", "", "Experiment ledger database, if provisioned.",
+           read_by="fiboki.core.paths"),
     EnvVar("FIBOKI_BUILD_SHA", "str", "", "Build commit, injected by the deploy."),
     EnvVar("FIBOKI_BUILD_TIME", "str", "", "Build time, injected by the deploy."),
     EnvVar("FIBOKI_WORKER_HEARTBEAT", "path", "<state_dir>/worker.heartbeat",
-           "Worker heartbeat file."),
+           "Worker heartbeat file.", read_by="fiboki.core.paths"),
     EnvVar("FIBOKI_WORKER_STALE_SECONDS", "float", "120",
-           "Heartbeat age after which the worker is reported stale."),
+           "Heartbeat age after which a worker is reported stale (HealthThresholds)."),
+    EnvVar("FIBOKI_WORKER_DOWN_SECONDS", "float", "300",
+           "Heartbeat age after which a worker is reported down (HealthThresholds)."),
+    EnvVar("FIBOKI_DATA_STALE_SECONDS", "float", "900",
+           "Newest-bar age after which the live worker alerts DATA_STALE (HealthThresholds)."),
     EnvVar("FIBOKI_VENUE_URL", "str", "",
            "Broker venue URL, checked by the mode guard's parsed-hostname control."),
     EnvVar("FIBOKI_SLIPPAGE_MODEL", "str", "zero", "Slippage assumption in force."),
@@ -147,10 +160,11 @@ ENV_REGISTRY: tuple[EnvVar, ...] = (
     EnvVar("FIBOKI_FINANCING_MODEL", "str", "none", "Financing assumption in force."),
     EnvVar("FIBOKI_FX_MODEL", "str", "static_rate", "FX conversion assumption in force."),
     # -- read directly by other modules ------------------------------------
-    EnvVar("FIBOKI_OPERATORS", "str", "", "Operator directory (user:role:sha256).",
+    EnvVar("FIBOKI_OPERATORS", "str", "",
+           "Operator directory, user:role:hash; hash is scrypt$... (legacy sha256 hex: rotate).",
            _BROKER_MODES, read_by="fiboki.api.routers.auth"),
     EnvVar("FIBOKI_PAPER_ROOT", "path", "<FIBOKI_STATE_DIR>/paper",
-           "Paper journal root (read-only data source)."),
+           "Paper journal root (read-only data source).", read_by="fiboki.core.paths"),
     EnvVar("FIBOKI_LIVE_RUNTIME_ARMED", "secret", "",
            "Mode-guard control 2: the exact live arm token.",
            read_by="fiboki.broker.mode_guard"),
@@ -158,12 +172,13 @@ ENV_REGISTRY: tuple[EnvVar, ...] = (
            read_by="fiboki.broker.oanda"),
     EnvVar("FIBOKI_LIVE_EXECUTION_ENABLED", "bool", "", "CLI-level live flag, reported by doctor.",
            read_by="fiboki.cli"),
-    EnvVar("FIBOKI_HOME", "path", "~/.fiboki", "CLI home directory.", read_by="fiboki.cli"),
-    EnvVar("FIBOKI_STATE_DB", "path", "<FIBOKI_HOME>/state.db", "CLI state database.",
-           read_by="fiboki.cli"),
+    EnvVar("FIBOKI_HOME", "path", "~/.fiboki", "Per-user home: env file, worker state db.",
+           read_by="fiboki.core.paths"),
+    EnvVar("FIBOKI_STATE_DB", "path", "<FIBOKI_HOME>/state.db",
+           "Worker lease + heartbeat database.", read_by="fiboki.core.paths"),
     EnvVar("FIBOKI_EXPECTED_WORKERS", "csv", "", "Workers the supervisor expects to see.",
            read_by="fiboki.workers.base"),
-    EnvVar("FIBOKI_ALERT_LOG", "path", "", "Alert log file.", read_by="fiboki.obs.alerts"),
+    EnvVar("FIBOKI_ALERT_LOG", "path", "", "Alert log file.", read_by="fiboki.core.paths"),
     EnvVar("FIBOKI_ALERT_WEBHOOK_URL", "secret", "", "Alert webhook.",
            read_by="fiboki.obs.alerts"),
     EnvVar("FIBOKI_TELEGRAM_BOT_TOKEN", "secret", "", "Telegram alert bot token.",
@@ -205,6 +220,13 @@ ENV_REGISTRY: tuple[EnvVar, ...] = (
            "Minutes between agent event scans (headline classification into the "
            "quarantined annotation store) when FIBOKI_AGENT_CYCLES is on; 0 turns it off.",
            read_by="fiboki.workers.research_runtime"),
+    EnvVar("FIBOKI_THESIS_DEBATE_INSTRUMENTS", "csv", "",
+           "Instruments that get one thesis debate per FIBOKI_THESIS_DEBATE_TIMEFRAME bar "
+           "close when FIBOKI_AGENT_CYCLES is on; empty schedules none.",
+           read_by="fiboki.workers.research_runtime"),
+    EnvVar("FIBOKI_THESIS_DEBATE_TIMEFRAME", "enum", "H4",
+           "Bar close that schedules a thesis debate: 'H4' or 'D1'.",
+           read_by="fiboki.workers.research_runtime"),
     EnvVar("FIBOKI_FINNHUB_API_KEY", "secret", "",
            "Finnhub key: news (free tier, 60 calls/min enforced client-side) and the "
            "premium-only economic calendar; empty leaves both off.",
@@ -231,6 +253,16 @@ ENV_REGISTRY: tuple[EnvVar, ...] = (
     EnvVar("FIBOKI_MARKETAUX_API_KEY", "secret", "",
            "Marketaux news token; empty leaves the Marketaux headline source off.",
            read_by="fiboki.data.news.sources"),
+    # read_by is spelt as a path for these two: the dotted module name may not
+    # appear outside entrypoints/ and cli.py (only the CLI imports entrypoints).
+    EnvVar("FIBOKI_OANDA_PRACTICE_TOKEN", "secret", "",
+           "OANDA PRACTICE token for the paper-forward service's candle and pricing reads "
+           "(never orders). Legacy name OANDA_PRACTICE_TOKEN accepted for one release, warned.",
+           read_by="entrypoints/paper_forward.py"),
+    EnvVar("FIBOKI_OANDA_PRACTICE_ACCOUNT_ID", "str", "",
+           "OANDA PRACTICE account id for the paper-forward pricing read. Legacy name "
+           "OANDA_PRACTICE_ACCOUNT_ID accepted for one release, warned.",
+           read_by="entrypoints/paper_forward.py"),
     EnvVar("FIBOKI_FRED_API_KEY", "secret", "",
            "FRED/ALFRED API key for point-in-time macro vintages; empty means ALFRED refuses.",
            read_by="fiboki.data.providers.alfred"),
@@ -307,8 +339,11 @@ class Settings:
     login_lockout_seconds: int = 900
 
     #: Where mutable operator state lives (kill-switch journal, audit trail,
-    #: sessions). Never inside the source tree.
+    #: sessions). Never inside the source tree. Resolved by
+    #: :func:`fiboki.core.paths.resolve_paths`, like every other process.
     state_dir: Path = field(default_factory=lambda: Path("var"))
+    #: Every operator path, resolved by the same rule the CLI and workers use.
+    paths: FibokiPaths = field(default_factory=lambda: resolve_paths({}))
 
     #: Market-data root and catalogue, if provisioned.
     data_root: Path | None = None
@@ -323,7 +358,8 @@ class Settings:
 
     #: A worker writes this file periodically. Its age is the heartbeat.
     worker_heartbeat_path: Path | None = None
-    worker_heartbeat_stale_seconds: float = 120.0
+    #: THE heartbeat and data staleness thresholds for every surface.
+    health: HealthThresholds = field(default_factory=HealthThresholds)
 
     #: Broker venue this deployment would talk to, if any. Used by the mode
     #: guard's parsed-hostname control.
@@ -348,17 +384,31 @@ class Settings:
             kwargs["domain"] = self.cookie_domain
         return kwargs
 
+    def __post_init__(self) -> None:
+        # A Settings built by hand (not via load_settings) with only state_dir
+        # must not leave the kill-switch path pointing somewhere else.
+        if self.paths.state_dir != self.state_dir:
+            object.__setattr__(
+                self, "paths", resolve_paths({"FIBOKI_STATE_DIR": str(self.state_dir)})
+            )
+
+    @property
+    def worker_heartbeat_stale_seconds(self) -> float:
+        """Kept for existing readers; the value is ``health.worker_stale_after_seconds``."""
+        return self.health.worker_stale_after_seconds
+
     @property
     def sessions_path(self) -> Path:
         return self.state_dir / "sessions.json"
 
     @property
     def killswitch_path(self) -> Path:
-        return self.state_dir / "killswitch.jsonl"
+        """The ONE kill-switch journal (``core.paths``): the CLI writes it too."""
+        return self.paths.killswitch_journal
 
     @property
     def audit_path(self) -> Path:
-        return self.state_dir / "api_audit.jsonl"
+        return self.paths.api_audit
 
     @property
     def live_authorisation_path(self) -> Path:
@@ -414,11 +464,10 @@ def load_settings(env: dict[str, str] | None = None) -> Settings:
     else:
         secret, ephemeral = secrets.token_bytes(32), True
 
-    state_dir = Path(get("FIBOKI_STATE_DIR", "var"))
-    data_root = get("FIBOKI_DATA_ROOT")
-    paper_root = get("FIBOKI_PAPER_ROOT")
-    experiment_db = get("FIBOKI_EXPERIMENT_DB")
-    heartbeat = get("FIBOKI_WORKER_HEARTBEAT")
+    # One resolution rule for every path (core.paths): the CLI and the workers
+    # compute the same answer from the same environment.
+    paths = resolve_paths(source)
+    health = health_thresholds_from_env(source)
 
     def _flag_from(name: str, default: bool) -> bool:
         return parse_bool(name, get(name), default)
@@ -433,19 +482,48 @@ def load_settings(env: dict[str, str] | None = None) -> Settings:
         session_ttl_seconds=int(_number("FIBOKI_SESSION_TTL", "43200", int)),
         session_secret=secret,
         session_secret_is_ephemeral=ephemeral,
-        state_dir=state_dir,
-        data_root=Path(data_root) if data_root else None,
-        paper_root=Path(paper_root) if paper_root else None,
-        experiment_db=Path(experiment_db) if experiment_db else None,
+        state_dir=paths.state_dir,
+        paths=paths,
+        data_root=paths.data_root,
+        paper_root=paths.paper_root if paths.paper_root_from_env else None,
+        experiment_db=paths.experiment_db if paths.experiment_db_from_env else None,
         build_sha=get("FIBOKI_BUILD_SHA"),
         build_time=get("FIBOKI_BUILD_TIME"),
-        worker_heartbeat_path=Path(heartbeat) if heartbeat else state_dir / "worker.heartbeat",
-        worker_heartbeat_stale_seconds=float(
-            _number("FIBOKI_WORKER_STALE_SECONDS", "120", float)
-        ),
+        worker_heartbeat_path=paths.worker_heartbeat,
+        health=health,
         venue_url=get("FIBOKI_VENUE_URL"),
         slippage_model=get("FIBOKI_SLIPPAGE_MODEL", "zero"),
         spread_model=get("FIBOKI_SPREAD_MODEL", "static_typical"),
         financing_model=get("FIBOKI_FINANCING_MODEL", "none"),
         fx_conversion_model=get("FIBOKI_FX_MODEL", "static_rate"),
     )
+
+
+def health_thresholds_from_env(env: Mapping[str, str] | None = None) -> HealthThresholds:
+    """THE observability thresholds (``Settings.health``) from an environment.
+
+    Split out of :func:`load_settings` so a surface that must not fail on an
+    unrelated setting (``fiboki doctor`` reading a demo-mode environment with
+    an unknown name, the live worker's config) still reads the SAME three
+    numbers from the SAME variables. Unparseable or non-positive values raise
+    :class:`SettingsError`.
+    """
+    source = os.environ if env is None else env
+
+    def _number(name: str, default: str) -> float:
+        raw = str(source.get(name, default)).strip()
+        try:
+            return float(raw)
+        except ValueError as exc:
+            raise SettingsError(f"{name}={raw!r} is not a valid float") from exc
+
+    try:
+        return HealthThresholds(
+            worker_stale_after_seconds=_number("FIBOKI_WORKER_STALE_SECONDS", "120"),
+            worker_down_after_seconds=_number("FIBOKI_WORKER_DOWN_SECONDS", "300"),
+            data_stale_after_seconds=_number("FIBOKI_DATA_STALE_SECONDS", "900"),
+        )
+    except ValueError as exc:
+        if isinstance(exc, SettingsError):
+            raise
+        raise SettingsError(f"health thresholds: {exc}") from exc
