@@ -58,8 +58,15 @@ class TestPlateauVersusPeak:
         spike = by_params[(7.0, 7.0)]
         centre = by_params[(3.0, 3.0)]
         assert centre.point_plateau_ratio == pytest.approx(1.0)
-        assert spike.point_plateau_ratio > 3.0
+        # Since engine_v3_realism the ratio excludes the point and carries the
+        # additive floor c = |score| (stats.stability.plateau_ratio), so it is
+        # bounded at 2 for a non-negative neighbourhood. A spike whose
+        # neighbours score zero sits exactly at that bound, (s + s) / (0 + s):
+        assert spike.point_plateau_ratio == pytest.approx(2.0)
+        assert spike.point_plateau_ratio > 1.25  # fails the unchanged gate
         assert spike.plateau_mean_excluding == 0.0
+        # The pre-v3 figure is still reported for comparison, and was > 3 here.
+        assert spike.point_plateau_ratio_inclusive > 3.0
 
     def test_plateau_quality_ranking(self) -> None:
         grid, scores = plateau_and_spike()

@@ -10,6 +10,7 @@ import pandas as pd
 import pytest
 
 from fiboki.backtest.engine import (
+    SIZING_POLICY_V1,
     BacktestConfig,
     BacktestEngine,
     FixedFractionalSizer,
@@ -278,8 +279,13 @@ def test_fixed_fractional_sizer_risks_the_intended_fraction():
 
     Leverage check: notional per unit = 1.1000 * 1.0 * 0.80 = 0.88 GBP,
     cap = 100,000 * 30 / 0.88 = 3,409,090.9 units -- not binding here.
+
+    This is the ``fixed_fractional_v1`` rule (bare stop distance), selected
+    explicitly since engine_v3_realism made v2 the default. The v2 arithmetic,
+    with the costs in the risk per unit, is pinned in
+    ``tests/golden/test_golden_sizing_v2.py``.
     """
-    sizer = FixedFractionalSizer(risk_fraction=0.01)
+    sizer = FixedFractionalSizer(risk_fraction=0.01, policy_id=SIZING_POLICY_V1)
     instrument = get_instrument("EURUSD")
     account = AccountState(balance=100_000.0, equity=100_000.0, currency="GBP")
     sig = _signal("2024-01-02 00:00", 1.1000, 1.0950, 1.1200)
@@ -297,7 +303,7 @@ def test_fixed_fractional_sizer_is_capped_by_retail_leverage():
     rounded DOWN to the 1-unit step = 3,409,090 units. Rounding down is the
     rule everywhere in V2: never round up into more risk.
     """
-    sizer = FixedFractionalSizer(risk_fraction=0.5)
+    sizer = FixedFractionalSizer(risk_fraction=0.5, policy_id=SIZING_POLICY_V1)
     instrument = get_instrument("EURUSD")
     account = AccountState(balance=100_000.0, equity=100_000.0, currency="GBP")
     sig = _signal("2024-01-02 00:00", 1.1000, 1.0950, 1.1200)
@@ -364,5 +370,10 @@ def test_the_result_carries_its_config_and_data_fingerprints():
     res = _run({"EURUSD": _valid_frame()}, [])
     assert res.config_fingerprint["account_ccy"] == "GBP"
     assert res.config_fingerprint["profile"]["name"] == "GOLDEN_FLAT"
-    assert set(res.data_fingerprint["EURUSD"]) == {"bars", "first", "last", "sha256"}
+    # ``price_basis`` added by engine_v3_realism (P1-3): an unlabelled frame is
+    # recorded as an explicit assumption rather than silently taken as mid.
+    assert set(res.data_fingerprint["EURUSD"]) == {
+        "price_basis", "bars", "first", "last", "sha256"
+    }
+    assert res.data_fingerprint["EURUSD"]["price_basis"] == "assumed_mid"
     assert res.data_fingerprint["EURUSD"]["bars"] == 2

@@ -193,27 +193,50 @@ class AlwaysOpenCalendar(SessionCalendar):
 
 
 class FxSessionCalendar(SessionCalendar):
-    """FX 24/5: closed from Friday ``close_hour`` UTC to Sunday ``open_hour`` UTC.
+    """FX 24/5, anchored to 17:00 New York: closed Friday 17:00 NY to Sunday 17:00 NY.
 
-    Defaults match the interbank week (Fri 22:00 UTC close, Sun 22:00 UTC open).
-    Holidays are NOT modelled — a documented gap, not an oversight. Holiday
-    bars are usually absent from the data anyway, in which case the engine
-    simply has nothing to fill against.
+    The interbank week opens and closes at 17:00 America/New_York, which is
+    22:00 UTC in northern winter and 21:00 UTC while New York observes daylight
+    saving. The previous fixed ``22:00 UTC`` was right half the year: from
+    March to November it treated the Sunday 21:00-22:00 UTC bar, which exists
+    and trades, as closed, and let an order fill in the Friday 21:00-22:00 UTC
+    hour after the market had shut.
+
+    ``close_hour`` and ``open_hour`` are hours of the day IN ``tz`` (default
+    17 and 17 in America/New_York). The comparison converts the UTC timestamp
+    into ``tz`` first, so daylight saving is the zone database's job, not a
+    constant's. Holidays are NOT modelled -- a documented gap, not an
+    oversight. Holiday bars are usually absent from the data anyway, in which
+    case the engine simply has nothing to fill against.
     """
 
-    def __init__(self, close_hour: int = 22, open_hour: int = 22) -> None:
+    def __init__(
+        self,
+        close_hour: int = 17,
+        open_hour: int = 17,
+        tz: str = "America/New_York",
+    ) -> None:
+        if not (0 <= close_hour <= 23 and 0 <= open_hour <= 23):
+            raise ValueError("close_hour and open_hour are hours of the day")
         self.close_hour = close_hour
         self.open_hour = open_hour
+        self.tz = tz
 
     def is_open(self, instrument: Instrument, when: pd.Timestamp) -> bool:
         if not instrument.is_fx and instrument.trading_hours not in ("fx_24_5",):
             return True
-        dow = when.dayofweek  # Monday=0 ... Sunday=6
-        if dow == 4 and when.hour >= self.close_hour:
+        if when.tzinfo is None:
+            raise ValueError(
+                f"FxSessionCalendar needs a tz-aware timestamp, got {when}; a naive "
+                "time cannot be placed in the New York trading week"
+            )
+        local = when.tz_convert(self.tz)
+        dow = local.dayofweek  # Monday=0 ... Sunday=6
+        if dow == 4 and local.hour >= self.close_hour:
             return False
         if dow == 5:
             return False
-        return not (dow == 6 and when.hour < self.open_hour)
+        return not (dow == 6 and local.hour < self.open_hour)
 
 
 # --------------------------------------------------------------------------

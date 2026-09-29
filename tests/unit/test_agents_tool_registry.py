@@ -96,6 +96,10 @@ def test_every_mutating_tool_writes_only_to_research_or_the_queue() -> None:
         WriteDomain.RESEARCH_FORECAST,
         # agentic plan Wave 4: the quarantined event-annotation table.
         WriteDomain.RESEARCH_EVENT_ANNOTATION,
+        # agentic plan Wave 4 thesis debate: the append-only thesis store's
+        # debate_turn and conviction tables (research artefacts).
+        WriteDomain.RESEARCH_DEBATE,
+        WriteDomain.RESEARCH_CONVICTION,
         WriteDomain.JOB_QUEUE,
     }
     for tool in REGISTRY.all():

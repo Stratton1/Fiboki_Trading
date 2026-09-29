@@ -51,7 +51,9 @@ from fiboki.core.instruments import Instrument
 #: described it -- otherwise a reader cannot tell a different cost model from the
 #: same cost model described differently. Bump it when a field is added, removed or
 #: reinterpreted. See :mod:`fiboki.core.versioned_key`.
-PROFILE_FINGERPRINT_VERSION = "profile_v1"
+#: ``profile_v2``: the minimum stop distance became per asset class
+#: (``min_stop_by_asset_class``), so a v1 fingerprint cannot describe a v2 profile.
+PROFILE_FINGERPRINT_VERSION = "profile_v2"
 
 __all__ = [
     "IBKR_REALISTIC",
@@ -66,12 +68,14 @@ __all__ = [
     "FixedPipSpread",
     "FixedPointsSlippage",
     "MinStopPolicy",
+    "MinStopRule",
     "NoSlippage",
     "ProbabilisticAdverseTickSlippage",
     "SlippageModel",
     "SpreadModel",
     "TimeOfDayWideningSpread",
     "TypicalMultiplierSpread",
+    "expected_slippage_price",
     "get_profile",
     "rng_for",
 ]
@@ -246,6 +250,35 @@ class ProbabilisticAdverseTickSlippage:
         return magnitude * self.tick_pips * instrument.pip_size
 
 
+def expected_slippage_price(model: SlippageModel, instrument: Instrument) -> float:
+    """The EXPECTED adverse slippage of one fill under ``model``, in price units.
+
+    Used by sizing (``fixed_fractional_v2``) to price the stop-out it is sizing
+    against. Computed from the model's own parameters, never sampled, so the
+    size a signal gets does not depend on a random draw:
+
+    * :class:`NoSlippage` -> 0;
+    * :class:`FixedPointsSlippage` -> ``pips * pip_size``;
+    * :class:`ProbabilisticAdverseTickSlippage` ->
+      ``probability * mean(1..max_ticks) * tick_pips * pip_size``, i.e.
+      ``p * (max_ticks + 1) / 2 * tick_pips * pip_size``. For IG_REALISTIC that
+      is ``0.30 * 2 * 0.4 = 0.24`` pips.
+
+    An unknown model raises: guessing its mean would be inventing a cost.
+    """
+    if isinstance(model, NoSlippage):
+        return 0.0
+    if isinstance(model, FixedPointsSlippage):
+        return model.pips * instrument.pip_size
+    if isinstance(model, ProbabilisticAdverseTickSlippage):
+        mean_ticks = (model.max_ticks + 1) / 2.0
+        return model.probability * mean_ticks * model.tick_pips * instrument.pip_size
+    raise TypeError(
+        f"no expected value is defined for slippage model {type(model).__name__}; "
+        "add one here rather than letting sizing assume zero"
+    )
+
+
 # --------------------------------------------------------------------------
 # Commission
 # --------------------------------------------------------------------------
@@ -340,6 +373,35 @@ class MinStopPolicy(str, Enum):
     ALLOW = "allow"         # research-only: pretend the constraint is not there
 
 
+@dataclass(frozen=True, slots=True)
+class MinStopRule:
+    """A venue's minimum stop distance for one asset class.
+
+    ``max(floor_pips, typical_spread_multiple * typical_spread_pips)`` in the
+    instrument's pips. A flat pip figure is only meaningful within one asset
+    class: 4 pips is 0.0004 on EURUSD but $0.04 on XAUUSD and 4 points on
+    JP225, where the typical spread alone is 7. Expressing the non-FX minimum as
+    a multiple of the registered typical spread keeps it on the instrument's own
+    price scale.
+
+    Known approximation: these are per-class rules, not per-instrument venue
+    specifications. The measured replacement belongs to E-4 (the quote
+    recorder), and until then the numbers are stated here, not hidden.
+    """
+
+    floor_pips: float = 0.0
+    typical_spread_multiple: float = 0.0
+
+    def __post_init__(self) -> None:
+        if self.floor_pips < 0 or self.typical_spread_multiple < 0:
+            raise ValueError("a minimum stop rule cannot be negative")
+
+    def distance_pips(self, instrument: Instrument) -> float:
+        return max(
+            self.floor_pips, self.typical_spread_multiple * instrument.typical_spread_pips
+        )
+
+
 # --------------------------------------------------------------------------
 # Profile
 # --------------------------------------------------------------------------
@@ -356,7 +418,13 @@ class ExecutionProfile:
     financing: FinancingModel
 
     min_deal_size: float = 0.0
+    #: Flat minimum stop in pips, used only when ``min_stop_by_asset_class`` is
+    #: empty. Retained for the profiles that have no minimum (0.0).
     min_stop_distance_pips: float = 0.0
+    #: ``(asset_class value, rule)`` pairs. When set, it is authoritative and an
+    #: asset class it does not name RAISES rather than falling back to the flat
+    #: figure, because a guessed minimum stop is a guessed rejection rate.
+    min_stop_by_asset_class: tuple[tuple[str, MinStopRule], ...] = ()
     min_stop_policy: MinStopPolicy = MinStopPolicy.REJECT
     guaranteed_stop_premium_pips: float = 0.0
     use_guaranteed_stops: bool = False
@@ -400,7 +468,20 @@ class ExecutionProfile:
         return self.spread_price(instrument, hour_utc, mid_price) / 2.0
 
     def min_stop_distance_price(self, instrument: Instrument) -> float:
+        if self.min_stop_by_asset_class:
+            rules = dict(self.min_stop_by_asset_class)
+            key = instrument.asset_class.value
+            if key not in rules:
+                raise KeyError(
+                    f"profile {self.name} declares per-class minimum stops but none "
+                    f"for {key!r} ({instrument.symbol}); add one rather than guess"
+                )
+            return rules[key].distance_pips(instrument) * instrument.pip_size
         return self.min_stop_distance_pips * instrument.pip_size
+
+    def expected_slippage_price(self, instrument: Instrument) -> float:
+        """Expected adverse slippage of ONE fill. See :func:`expected_slippage_price`."""
+        return expected_slippage_price(self.slippage, instrument)
 
     def guaranteed_stop_premium_price(self, instrument: Instrument) -> float:
         return self.guaranteed_stop_premium_pips * instrument.pip_size
@@ -428,6 +509,10 @@ class ExecutionProfile:
             "financing": repr(self.financing),
             "min_deal_size": self.min_deal_size,
             "min_stop_distance_pips": self.min_stop_distance_pips,
+            "min_stop_by_asset_class": [
+                [cls, rule.floor_pips, rule.typical_spread_multiple]
+                for cls, rule in self.min_stop_by_asset_class
+            ],
             "min_stop_policy": self.min_stop_policy.value,
             "guaranteed_stop_premium_pips": self.guaranteed_stop_premium_pips,
             "use_guaranteed_stops": self.use_guaranteed_stops,
@@ -443,6 +528,33 @@ class ExecutionProfile:
 # --------------------------------------------------------------------------
 # The canonical profiles
 # --------------------------------------------------------------------------
+
+def _per_class_min_stop(
+    *, fx_floor_pips: float, spread_multiple: float
+) -> tuple[tuple[str, MinStopRule], ...]:
+    """The per-asset-class minimum stop table a spread-bet/CFD profile uses.
+
+    FX keeps its flat pip floor, so an FX result is unchanged by the move from a
+    single flat figure. Every other class is a multiple of the instrument's own
+    typical spread (IG: XAUUSD 3 x 30 pips = $0.90, US500 3 x 0.4 = 1.2 points,
+    JP225 3 x 7 = 21 points, WTI 3 x 3 = 9 cents).
+    """
+    fx = MinStopRule(floor_pips=fx_floor_pips)
+    other = MinStopRule(typical_spread_multiple=spread_multiple)
+    return tuple(
+        sorted(
+            {
+                "fx_major": fx,
+                "fx_cross": fx,
+                "metal": other,
+                "index": other,
+                "energy": other,
+                "equity": other,
+                "crypto": other,
+            }.items()
+        )
+    )
+
 
 #: Frictionless. Its ONLY legitimate use is as the numerator of a cost-impact
 #: ratio: "this strategy keeps 38% of its idealised profit under IG_REALISTIC".
@@ -480,6 +592,7 @@ IG_REALISTIC = ExecutionProfile(
     financing=FinancingModel(annual_bps_long=290.0, annual_bps_short=110.0, basis_days=365.0),
     min_deal_size=0.0,
     min_stop_distance_pips=4.0,
+    min_stop_by_asset_class=_per_class_min_stop(fx_floor_pips=4.0, spread_multiple=3.0),
     min_stop_policy=MinStopPolicy.REJECT,
     guaranteed_stop_premium_pips=3.0,
     use_guaranteed_stops=False,
@@ -488,7 +601,8 @@ IG_REALISTIC = ExecutionProfile(
     latency_bars=0,
     seed=20260919,
     notes=(
-        "IG UK retail CFD. Spread-only, 4pt minimum stop distance, rollover "
+        "IG UK retail CFD. Spread-only, minimum stop 4 pips on FX and 3x the "
+        "typical spread elsewhere, rollover "
         "widening at 21:00-23:00 UTC. Financing is static over the sample — a "
         "known approximation, see FinancingModel."
     ),
@@ -554,6 +668,7 @@ SEVERE_STRESS = ExecutionProfile(
     financing=FinancingModel(annual_bps_long=500.0, annual_bps_short=350.0, basis_days=360.0),
     min_deal_size=1.0,
     min_stop_distance_pips=10.0,
+    min_stop_by_asset_class=_per_class_min_stop(fx_floor_pips=10.0, spread_multiple=6.0),
     min_stop_policy=MinStopPolicy.REJECT,
     guaranteed_stop_premium_pips=6.0,
     partial_fill_probability=0.15,

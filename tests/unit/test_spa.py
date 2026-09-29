@@ -140,7 +140,7 @@ class TestStepM:
 
     def test_rejects_bad_alpha(self) -> None:
         with pytest.raises(ValueError):
-            step_m(noise(), alpha=0.0)
+            step_m(noise(), alpha=0.0, rng=0)
 
 
 class TestPlumbing:
@@ -183,11 +183,11 @@ class TestPlumbing:
 
     def test_rejects_short_samples_and_nan(self) -> None:
         with pytest.raises(ValueError, match="at least 4 periods"):
-            superior_predictive_ability(np.ones((3, 2)))
+            superior_predictive_ability(np.ones((3, 2)), rng=0)
         bad = noise(n_obs=50, n_strat=3)
         bad[2, 1] = np.nan
         with pytest.raises(ValueError, match="non-finite"):
-            superior_predictive_ability(bad)
+            superior_predictive_ability(bad, rng=0)
 
     def test_single_strategy_is_accepted(self) -> None:
         d = np.random.default_rng(0).standard_normal(300) * 0.01 + 0.004

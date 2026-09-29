@@ -64,6 +64,7 @@ from typing import Any, Protocol
 import pandas as pd
 
 from fiboki.core.enums import Timeframe
+from fiboki.core.instruments import get as get_instrument
 from fiboki.core.money import FxRateSource
 from fiboki.discovery.hypothesis import Hypothesis, HypothesisLedger
 from fiboki.discovery.mutation import MutationEngine, MutationProposal, mutation_lineage
@@ -77,7 +78,11 @@ from fiboki.validation.gates import GATE_SET_V2, GateSet
 from fiboki.validation.holdout import DEFAULT_HOLDOUT_FRACTION, HoldoutRegistry
 from fiboki.validation.ladder import LadderConfig
 from fiboki.validation.report import ValidationReport
-from fiboki.validation.run import run_validation
+from fiboki.validation.run import (
+    RESEARCH_ACCOUNT_CCY,
+    build_research_fx_source,
+    run_validation,
+)
 
 __all__ = [
     "BarSet",
@@ -142,7 +147,10 @@ class CampaignSpec:
     actor_kind: ActorKind = ActorKind.AGENT
 
     profile_name: str = "IG_REALISTIC"
-    account_ccy: str = "USD"
+    #: GBP, the operator's account currency, so campaign figures are comparable
+    #: with paper figures. A campaign over a store-backed bar source builds its
+    #: rate source from the stored GBP crosses (see :class:`CampaignRunner`).
+    account_ccy: str = RESEARCH_ACCOUNT_CCY
     initial_balance: float = 10_000.0
     risk_fraction: float = 0.01
     gate_set: GateSet = GATE_SET_V2
@@ -612,6 +620,23 @@ class CampaignRunner:
                 "conversion is a silent one."
             )
         self.spec = spec
+        self.fx_label = spec.fx_label
+        # No source supplied, a store-backed bar source, and instruments quoted
+        # in something other than the account currency: build the source from
+        # the store's daily GBP crosses NOW, so a missing cross refuses the
+        # campaign up front with the list of instruments to ingest, instead of
+        # failing cell by cell hours in.
+        store = getattr(bars, "store", None)
+        if fx is None and store is not None:
+            foreign = {
+                get_instrument(sym).quote.upper()
+                for sym in spec.universe
+            } - {spec.account_ccy.upper()}
+            if foreign:
+                fx, built = build_research_fx_source(
+                    store, quote_currencies=foreign, account_ccy=spec.account_ccy
+                )
+                self.fx_label = spec.fx_label or built
         self.fx = fx
         self.bars = bars
         self.ledger = ledger
@@ -629,7 +654,7 @@ class CampaignRunner:
             lambda **kw: run_cell(
                 cache_dir=self.cache_dir,
                 fx=self.fx,
-                fx_label=self.spec.fx_label,
+                fx_label=self.fx_label,
                 calendar=self._calendar(),
                 **kw,
             )
@@ -1274,19 +1299,27 @@ def seed_documents(path: str | Path = "research/strategies") -> tuple[StrategyDo
     return tuple(sorted(found, key=lambda d: d.strategy_id))
 
 
-def store_bar_source(
-    store: Any, *, kind: Any = None
-) -> Callable[[str, Timeframe], BarSet | None]:
+@dataclass(frozen=True, slots=True)
+class StoreBarSource:
     """A :class:`BarSource` backed by a :class:`fiboki.data.store.DataStore`.
 
     Duck-typed so this module does not import the data platform: the campaign
     only needs something that can answer "the latest validated bars for this
-    instrument and timeframe, and the version id they came from".
+    instrument and timeframe, and the version id they came from". It exposes
+    ``store`` so :class:`CampaignRunner` can build the research FX source from
+    the same store the bars come from.
+
+    Bars are returned as stored, ``price_basis`` column included; BID bars are
+    converted to synthetic mid, and the conversion recorded, by
+    :func:`fiboki.validation.run.research_mid_frame` inside ``run_validation``.
     """
 
-    def source(instrument: str, timeframe: Timeframe) -> BarSet | None:
+    store: Any
+    kind: Any = None
+
+    def __call__(self, instrument: str, timeframe: Timeframe) -> BarSet | None:
         try:
-            frame, version = store.read_latest(instrument, timeframe, kind=kind)
+            frame, version = self.store.read_latest(instrument, timeframe, kind=self.kind)
         except Exception:
             return None
         if frame is None or len(frame) == 0:
@@ -1298,4 +1331,7 @@ def store_bar_source(
             dataset_version_id=str(version.version_id),
         )
 
-    return source
+
+def store_bar_source(store: Any, *, kind: Any = None) -> StoreBarSource:
+    """A :class:`StoreBarSource` over ``store``. See that class."""
+    return StoreBarSource(store=store, kind=kind)

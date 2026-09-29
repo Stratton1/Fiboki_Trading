@@ -149,18 +149,30 @@ class RiskContext:
     strategy: StrategyView = field(default_factory=StrategyView)
     request_kind: RequestKind = RequestKind.OPEN
 
+    # -- loss and exposure inputs -------------------------------------------
+    # ``None`` means the caller did not supply the input. It is NOT zero: a
+    # composition that forgot the P&L ledger used to pass ``daily_loss`` against
+    # a default of 0.0 on every order, which is absence dressed as a value
+    # (AGENTS.md §1). The check that needs a missing input blocks with
+    # ``<check>_input_missing:<field>`` in DEMO and LIVE (and SHADOW); PAPER
+    # records the same reason and passes only when the gateway was built with
+    # ``paper_allows_missing_inputs=True``. BACKTEST never reaches this gateway
+    # with a missing input in practice and is treated like PAPER.
+    # ``tests/unit/test_risk_context_explicit_inputs.py`` fails if src/
+    # constructs a RiskContext without passing every one of them explicitly.
+
     #: Sum of risk-to-stop across all open positions, ACCOUNT currency.
-    open_risk_amount: float = 0.0
+    open_risk_amount: float | None = None
     #: Gross notional already held in instruments correlated above the limit
     #: set's ``correlation_threshold`` with this plan's instrument.
-    correlated_exposure: float = 0.0
+    correlated_exposure: float | None = None
     #: Realised + unrealised P&L over the rolling day / week, account currency.
     #: Negative numbers are losses.
-    daily_pnl: float = 0.0
-    weekly_pnl: float = 0.0
+    daily_pnl: float | None = None
+    weekly_pnl: float | None = None
     #: FX rate converting the instrument's quote currency to the account
     #: currency at decision time. Used for notional arithmetic.
-    fx_quote_to_account: float = 1.0
+    fx_quote_to_account: float | None = None
     extra: dict[str, Any] = field(default_factory=dict)
     #: The event-veto source (agentic plan, Wave 4). ``None`` means not wired:
     #: the ``event_veto`` check passes and the attempt row says
@@ -177,7 +189,13 @@ class RiskContext:
 
     @property
     def plan_notional_account(self) -> float:
-        """Gross notional this plan would add, in the account currency."""
+        """Gross notional this plan would add, in the account currency.
+
+        Raises when ``fx_quote_to_account`` is missing; the exposure checks ask
+        :meth:`RiskGateway._require` first so the block is named, not an error.
+        """
+        if self.fx_quote_to_account is None:
+            raise ValueError("fx_quote_to_account is missing")
         price = self.market.mid_price or self.plan.signal.reference_price
         return abs(
             price
@@ -395,8 +413,37 @@ class RiskGateway:
         recorder: AttemptRecorder | None = None,
         limits: LimitSet = DEFAULT_LIMITS,
         locks: LockSource | None = None,
+        mode: ExecutionMode | None = None,
+        paper_allows_missing_inputs: bool = False,
     ) -> None:
-        self.kill_switch = kill_switch or KillSwitch()
+        """Build a gateway.
+
+        ``mode`` declares what this gateway guards. Any mode but BACKTEST
+        REQUIRES a durable kill switch (a :class:`FileKillSwitchJournal`,
+        normally ``KillSwitch.from_paths(resolve_paths(os.environ))``):
+        construction raises otherwise, because an in-memory journal is one no
+        operator command can reach. ``mode=None`` is the legacy, undeclared
+        form kept so existing callers keep constructing; it is backstopped in
+        :meth:`_check_kill_switch`, which blocks every risk-adding order in a
+        broker-touching mode (SHADOW, DEMO, LIVE) when the journal is not
+        durable, and stamps ``kill_switch_journal: in_memory`` on every other
+        attempt so a paper replay without the operator's switch is visible.
+
+        ``paper_allows_missing_inputs`` is the explicit, recorded permission for
+        a PAPER order to pass with a missing loss/exposure input (see
+        :class:`RiskContext`). It has no effect in any other mode.
+        """
+        switch = kill_switch or KillSwitch()
+        if mode is not None and mode is not ExecutionMode.BACKTEST and not switch.durable:
+            raise ValueError(
+                f"RiskGateway(mode={mode.value}) was given an in-memory kill-switch "
+                "journal. Only BACKTEST may run without the operator's durable "
+                "switch: `fiboki killswitch pause` could never reach this gateway. "
+                "Pass kill_switch=KillSwitch.from_paths(resolve_paths(os.environ))."
+            )
+        self.mode = mode
+        self.kill_switch = switch
+        self.paper_allows_missing_inputs = bool(paper_allows_missing_inputs)
         self.recorder: AttemptRecorder = recorder or InMemoryAttemptRecorder()
         self.default_limits = limits
         #: Where entry-lock state comes from. Like the kill switch it is held by
@@ -552,6 +599,9 @@ class RiskGateway:
                 "event_veto_policy": (
                     ctx.event_veto.policy_version if ctx.event_veto is not None else "not_wired"
                 ),
+                "kill_switch_journal": "durable" if self.kill_switch.durable else "in_memory",
+                "missing_inputs": self._missing_inputs(ctx),
+                "paper_allows_missing_inputs": self.paper_allows_missing_inputs,
             },
         )
         self.recorder.record(attempt)
@@ -576,9 +626,66 @@ class RiskGateway:
             raise ValueError("timestamp must be timezone-aware UTC")
         return float((now - then).total_seconds())
 
+    #: The RiskContext fields that may be ``None`` and which check reads each.
+    INPUT_FIELDS: tuple[tuple[str, tuple[str, ...]], ...] = (
+        ("open_risk_amount", ("max_account_risk",)),
+        (
+            "fx_quote_to_account",
+            (
+                "max_instrument_exposure",
+                "max_strategy_exposure",
+                "max_currency_exposure",
+                "max_correlated_exposure",
+            ),
+        ),
+        ("correlated_exposure", ("max_correlated_exposure",)),
+        ("daily_pnl", ("daily_loss",)),
+        ("weekly_pnl", ("weekly_loss",)),
+    )
+
+    #: Modes in which a missing input can never be excused.
+    _STRICT_INPUT_MODES = frozenset(
+        {ExecutionMode.SHADOW, ExecutionMode.DEMO, ExecutionMode.LIVE}
+    )
+
+    @classmethod
+    def _missing_inputs(cls, ctx: RiskContext) -> list[str]:
+        return [name for name, _ in cls.INPUT_FIELDS if getattr(ctx, name) is None]
+
+    def _require(self, ctx: RiskContext, check: str, *names: str) -> bool:
+        """``True`` when every named input is present; otherwise decide the gap.
+
+        Blocks with ``<check>_input_missing:<field>`` unless this gateway was
+        explicitly built with ``paper_allows_missing_inputs=True`` AND the
+        order is not in a broker-touching mode. An excused gap is still on the
+        record: every attempt row carries ``missing_inputs`` and
+        ``paper_allows_missing_inputs``. (It is not written into
+        ``decision.reasons`` because any reason there without a
+        ``core.contracts.SHADOW_REASON_PREFIXES`` prefix blocks, and that tuple
+        is owned by ``core.contracts``.)
+        """
+        missing = [n for n in names if getattr(ctx, n) is None]
+        if not missing:
+            return True
+        excused = (
+            self.paper_allows_missing_inputs
+            and ctx.mode not in self._STRICT_INPUT_MODES
+        )
+        if not excused:
+            self._block(f"{check}_input_missing:{','.join(missing)}")
+        return False
+
     # -------------------------------------------------------------- checks
 
     def _check_kill_switch(self, ctx: RiskContext, limits: LimitSet) -> None:
+        if (
+            ctx.request_kind.adds_risk
+            and not self.kill_switch.durable
+            and ctx.mode.touches_broker
+        ):
+            # The undeclared-mode backstop (see __init__). Exits are never
+            # refused for this: blocking a close is the trap, not the control.
+            self._block(f"kill_switch_journal_not_durable:{ctx.mode.value}")
         ok, why = self.kill_switch.allows(ctx.request_kind)
         if not ok:
             self._block(why)
@@ -658,14 +765,54 @@ class RiskGateway:
             )
 
     def _check_event_blackout(self, ctx: RiskContext, limits: LimitSet) -> None:
-        window = pd.Timedelta(minutes=limits.event_blackout_minutes)
-        if window <= pd.Timedelta(0):
+        """No new risk around a flagged economic event.
+
+        v1 limit sets: symmetric ``|event - now| <= event_blackout_minutes``,
+        with ``now`` as the caller supplies it -- in a replay, the bar's OPEN
+        stamp, so on H4 the check ran about four hours early.
+
+        v2 limit sets (``limits.asymmetric_blackout``): the window is
+        ``[decision - post, decision + max(pre, one bar)]`` where ``decision``
+        is the later of ``now`` and the signal bar's CLOSE (``bar_time +
+        timeframe``) -- the moment the decision could actually be taken. The
+        forward reach is at least one bar because an entry filled at the next
+        open is held for at least that bar: an H1 entry at 12:10 with NFP at
+        12:30 is refused rather than held through the release.
+        """
+        if not limits.asymmetric_blackout:
+            window = pd.Timedelta(minutes=limits.event_blackout_minutes)
+            if window <= pd.Timedelta(0):
+                return
+            for ev in ctx.market.event_times:
+                if ev.tzinfo is None:
+                    self._block("event_time_not_utc")
+                    continue
+                if abs(ev - ctx.now) <= window:
+                    self._block(f"event_blackout:{ev.isoformat()}")
             return
+
+        # Imported here so this check's edit stays inside this function.
+        from fiboki.core.enums import Timeframe
+
+        pre = pd.Timedelta(minutes=float(limits.event_blackout_pre_minutes or 0.0))
+        post = pd.Timedelta(minutes=float(limits.event_blackout_post_minutes or 0.0))
+        decision = ctx.now
+        bar = pd.Timedelta(0)
+        signal = getattr(getattr(ctx, "plan", None), "signal", None)
+        if signal is not None:
+            try:
+                bar = pd.Timedelta(minutes=Timeframe(str(signal.timeframe)).minutes)
+            except ValueError:
+                bar = pd.Timedelta(0)
+            bar_close = signal.bar_time + bar
+            if bar_close.tzinfo is not None and bar_close > decision:
+                decision = bar_close
+        ahead = max(pre, bar)
         for ev in ctx.market.event_times:
             if ev.tzinfo is None:
                 self._block("event_time_not_utc")
                 continue
-            if abs(ev - ctx.now) <= window:
+            if decision - post <= ev <= decision + ahead:
                 self._block(f"event_blackout:{ev.isoformat()}")
 
     def _check_event_veto(self, ctx: RiskContext, limits: LimitSet) -> None:
@@ -747,12 +894,17 @@ class RiskGateway:
             )
 
     def _check_max_account_risk(self, ctx: RiskContext, limits: LimitSet) -> None:
+        if not self._require(ctx, "max_account_risk", "open_risk_amount"):
+            return
+        assert ctx.open_risk_amount is not None
         total = ctx.open_risk_amount + ctx.plan.risk_amount
         pct = self._pct_of_equity(total, ctx.equity)
         if pct > limits.max_account_risk_pct:
             self._block(f"max_account_risk:{pct:.3f}%>{limits.max_account_risk_pct}%")
 
     def _check_max_instrument_exposure(self, ctx: RiskContext, limits: LimitSet) -> None:
+        if not self._require(ctx, "max_instrument_exposure", "fx_quote_to_account"):
+            return
         held = abs(float(ctx.snapshot.instrument_exposure.get(ctx.plan.instrument, 0.0)))
         pct = self._pct_of_equity(held + ctx.plan_notional_account, ctx.equity)
         if pct > limits.max_instrument_exposure_pct:
@@ -762,6 +914,8 @@ class RiskGateway:
             )
 
     def _check_max_strategy_exposure(self, ctx: RiskContext, limits: LimitSet) -> None:
+        if not self._require(ctx, "max_strategy_exposure", "fx_quote_to_account"):
+            return
         sid = ctx.plan.signal.strategy_id
         held = abs(float(ctx.snapshot.strategy_exposure.get(sid, 0.0)))
         pct = self._pct_of_equity(held + ctx.plan_notional_account, ctx.equity)
@@ -771,6 +925,8 @@ class RiskGateway:
             )
 
     def _check_max_currency_exposure(self, ctx: RiskContext, limits: LimitSet) -> None:
+        if not self._require(ctx, "max_currency_exposure", "fx_quote_to_account"):
+            return
         instr = ctx.instrument
         add = ctx.plan_notional_account
         sign = ctx.plan.direction.sign
@@ -786,6 +942,11 @@ class RiskGateway:
                 )
 
     def _check_max_correlated_exposure(self, ctx: RiskContext, limits: LimitSet) -> None:
+        if not self._require(
+            ctx, "max_correlated_exposure", "correlated_exposure", "fx_quote_to_account"
+        ):
+            return
+        assert ctx.correlated_exposure is not None
         total = ctx.correlated_exposure + ctx.plan_notional_account
         pct = self._pct_of_equity(total, ctx.equity)
         if pct > limits.max_correlated_exposure_pct:
@@ -795,6 +956,9 @@ class RiskGateway:
             )
 
     def _check_daily_loss(self, ctx: RiskContext, limits: LimitSet) -> None:
+        if not self._require(ctx, "daily_loss", "daily_pnl"):
+            return
+        assert ctx.daily_pnl is not None
         if ctx.daily_pnl >= 0:
             return
         pct = self._pct_of_equity(-ctx.daily_pnl, ctx.equity)
@@ -802,6 +966,9 @@ class RiskGateway:
             self._block(f"daily_loss:{pct:.2f}%>={limits.max_daily_loss_pct}%")
 
     def _check_weekly_loss(self, ctx: RiskContext, limits: LimitSet) -> None:
+        if not self._require(ctx, "weekly_loss", "weekly_pnl"):
+            return
+        assert ctx.weekly_pnl is not None
         if ctx.weekly_pnl >= 0:
             return
         pct = self._pct_of_equity(-ctx.weekly_pnl, ctx.equity)
@@ -814,8 +981,30 @@ class RiskGateway:
             self._block(f"total_drawdown:{dd:.2f}%>={limits.max_total_drawdown_pct}%")
 
     def _check_margin_utilisation(self, ctx: RiskContext, limits: LimitSet) -> None:
+        """Margin in use as a share of equity, against the limit.
+
+        v1 sets look at the book BEFORE this trade. v2 sets
+        (``margin_utilisation_after_trade``) add the margin this plan would
+        consume, ``notional / leverage`` in the account currency, so 45% in use
+        plus a position needing 15% is 60% and blocks a 50% limit.
+        """
         util = ctx.snapshot.margin_utilisation * 100.0
-        if util >= limits.max_margin_utilisation_pct:
+        if not limits.margin_utilisation_after_trade:
+            if util >= limits.max_margin_utilisation_pct:
+                self._block(
+                    f"margin_utilisation:{util:.2f}%>={limits.max_margin_utilisation_pct}%"
+                )
+            return
+        equity = ctx.equity
+        leverage = float(ctx.plan.max_leverage_applied or ctx.instrument.retail_leverage)
+        if equity <= 0 or leverage <= 0:
+            self._block("margin_utilisation_after_trade:equity_or_leverage_not_positive")
+            return
+        after = (
+            ctx.snapshot.account.margin_used + ctx.plan_notional_account / leverage
+        ) / equity * 100.0
+        if after >= limits.max_margin_utilisation_pct:
             self._block(
-                f"margin_utilisation:{util:.2f}%>={limits.max_margin_utilisation_pct}%"
+                f"margin_utilisation_after_trade:{after:.2f}%"
+                f">={limits.max_margin_utilisation_pct}%"
             )

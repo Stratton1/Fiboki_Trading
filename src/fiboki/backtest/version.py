@@ -43,11 +43,47 @@ not have been.
 """
 from __future__ import annotations
 
-__all__ = ["ENGINE_VERSION", "ENGINE_VERSION_HISTORY", "is_current", "supersession_reason"]
+__all__ = [
+    "ENGINE_V3_REASONS",
+    "ENGINE_VERSION",
+    "ENGINE_VERSION_HISTORY",
+    "is_current",
+    "supersession_reason",
+]
 
 
 #: The current engine generation. Every stored backtest is stamped with it.
-ENGINE_VERSION = "engine_v2_exit_vocabulary"
+ENGINE_VERSION = "engine_v3_realism"
+
+#: Why ``engine_v3_realism`` superseded ``engine_v2_exit_vocabulary``, one line
+#: per change, in the order of the backend audit (F_backend_audit.md section 2).
+#: Every one of these can change a stored number; none of them is a refactor.
+ENGINE_V3_REASONS: tuple[str, ...] = (
+    "P1-1 FCA/ESMA retail leverage by currency set (ESMA 2018/796, FCA PS19/18): "
+    "AUDUSD and NZDUSD 30->20, the ten major crosses (EURGBP, EURJPY, GBPJPY, "
+    "EURCHF, CADJPY, CHFJPY, GBPCAD, GBPCHF, EURCAD, CADCHF) 20->30, XAGUSD "
+    "20->10, HK50 20->10; the cap binds in sizing on tight stops.",
+    "P1-3 price basis: a frame labelled BID/ASK/LAST is refused; research "
+    "converts BID bars to SYNTHETIC_MID with half the instrument's typical "
+    "spread (bid_to_mid) and records it; an unlabelled frame is recorded as "
+    "assumed_mid.",
+    "P1-16 sizing fixed_fractional_v2 is the default: risk per unit is the stop "
+    "distance plus the spread and two fills of expected slippage, priced by the "
+    "named cost profile (the evaluator's own profile in research, IG_REALISTIC "
+    "when unnamed); positions are smaller by that ratio.",
+    "FixedFractionalSizer clips a requested max_leverage to the instrument's "
+    "regulatory cap, as SizingPolicy.leverage_for always did.",
+    "P2-7 financing is charged on business-day rollovers with a triple day "
+    "(Wednesday for FX and metals, Friday for indices and energy) and nothing "
+    "on Saturday or Sunday, instead of every calendar night.",
+    "P2-9 minimum stop distance is per asset class in IG_REALISTIC and "
+    "SEVERE_STRESS (FX unchanged; metals, indices and energy a multiple of the "
+    "typical spread), so non-FX rejections at the minimum stop change.",
+    "P2-13 Metrics.sharpe is computed on daily (17:00 New York) resampled "
+    "equity; the bar-return figure moves to sharpe_bar_based and Lo's (2002) "
+    "autocorrelation-adjusted figure is reported beside it.",
+    "P3-4 the engine requires a UTC index, not merely a tz-aware one.",
+)
 
 #: Every generation, oldest first, with what changed. An empty string is the
 #: unstamped generation: everything written before the stamp existed.
@@ -59,12 +95,19 @@ ENGINE_VERSION_HISTORY: tuple[tuple[str, str], ...] = (
         "and per-leg take-profit allocations discarded.",
     ),
     (
-        ENGINE_VERSION,
+        "engine_v2_exit_vocabulary",
         "Full DSL exit vocabulary: multi-leg partial take-profits with "
         "allocations, trailing stops with activate_after_r, breakeven, time "
         "stops, cooldown, reversal and event blackouts. Shared with the paper "
         "broker through backtest/position.py, so paper and backtest decide "
-        "exits with one implementation.",
+        "exits with one implementation. Superseded by engine_v3_realism: "
+        "wrong leverage caps on 14 instruments, BID bars traded as mid, sizing "
+        "that ignored costs, calendar-night financing and bar-return Sharpe.",
+    ),
+    (
+        ENGINE_VERSION,
+        "Realism corrections from the 2026-09 backend audit: "
+        + " ".join(ENGINE_V3_REASONS),
     ),
 )
 

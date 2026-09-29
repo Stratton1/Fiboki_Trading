@@ -42,6 +42,12 @@ ROOT = Path(__file__).resolve().parents[2]
 SEEDS = ROOT / "research" / "strategies"
 
 #: Computed before the change, on the tree the change was made against.
+#:
+#: ``exit_policy_fp`` RE-PINNED DELIBERATELY for engine_v3_realism: the exit
+#: policy fingerprint carries ``key_version = ENGINE_VERSION``
+#: (``backtest/exits.py``), so bumping the engine generation moves it and
+#: nothing else. The document pins (content hashes, JSON, structure,
+#: complexity) did NOT move.
 PINS: dict[str, dict[str, object]] = {
     "donchian_breakout_atr": {
         "template_content_hash": "8483154d0f1754b8841296b67e4b6152b8f095153b839e65b46f4d8c071d9031",
@@ -50,7 +56,7 @@ PINS: dict[str, dict[str, object]] = {
         "bound_json_sha": "ff58290b2d7acfa14ea4c758b54468fbe812b52af4a88203348cfdc280327dc0",
         "structure_hash": "ea8d0371a473de2a15fb13b01a5f2f9a7be681a923ca1fde7b39e00fa9dba1fe",
         "complexity": 8.0,
-        "exit_policy_fp": "2c79d6ceca23d13a14b639e505e894a76e2dcbc4918f42ba6e3ffeed0932341f",
+        "exit_policy_fp": "3c73579bf2cefcbf265494b5b02ef48947a72008b4e680e43aa84e73331d1378",
     },
     "fib_golden_pocket_pullback": {
         "template_content_hash": "fd2a53ed94907ab418b6dd6ecc67a8a0fd49b20c378ca7236860838bb8e84df8",
@@ -59,7 +65,7 @@ PINS: dict[str, dict[str, object]] = {
         "bound_json_sha": "03df806ee32e3a1aabea4f5f4d345145e82fd1a21558d917cbe79c9678d3c85f",
         "structure_hash": "4b480bd11a0ac3651f2dd16d832d26e3c8691e9262f551676ebcdb6bdafc439e",
         "complexity": 14.0,
-        "exit_policy_fp": "a178aca16fd83ac48c3c2665a1c7015fc6a1d2887b98e317612cfe2aa4307872",
+        "exit_policy_fp": "5e45a155b8627de608b588ea24a50cadd3be1c46815f292bbaef6821b451464a",
     },
     "ichimoku_kumo_trend": {
         "template_content_hash": "75caa48f3c2043bc3e2ca07d3665dddf9cefb7644d5a2a7a69d6bf4759123248",
@@ -68,7 +74,7 @@ PINS: dict[str, dict[str, object]] = {
         "bound_json_sha": "f26e0192b58091458a64a4a8c3d2fea80fd3b4e6dc63eaea131d4aaafc4548d3",
         "structure_hash": "6f37891f231f781b6566b878a2fe9bb485ede65a220093beae4210e57763f3ea",
         "complexity": 13.5,
-        "exit_policy_fp": "3a5da699b725c9e94b342510cfed314449658f31931e328305f0c9c3607d2292",
+        "exit_policy_fp": "bd83e4f229fa4a1bdb7d80a901579fdcc1f4dba48881ef507b6d145744a6edad",
     },
     "macd_ema_trend_hybrid": {
         "template_content_hash": "78083597c61621ad885e5942de6986a133c72ee2bb0a37b3e1af9dee9e84c2d2",
@@ -77,7 +83,7 @@ PINS: dict[str, dict[str, object]] = {
         "bound_json_sha": "adcdf497d13bf4ca8c9a92a4e0d9a58ee4698a300f7e08b0ec8c209e719652cd",
         "structure_hash": "4985a06a17cdf3259439502bca3b49cf21551f5c44c0fc1240400956a097068d",
         "complexity": 14.0,
-        "exit_policy_fp": "f7a8cac545efdd7833feb26c12ab67a94cacc78ea4c1e8f5d1b31e9dee84fb3c",
+        "exit_policy_fp": "f1fcb2b2488ca47cfb496314f3dcd8b19b9b3dc9b6bd320cfe149554626e5f1e",
     },
     "rsi_band_mean_reversion": {
         "template_content_hash": "0a1f5a26c24d96c04586fe589899d4a786d45a0e9a9dd5289552c0bbfb1b6c20",
@@ -86,7 +92,7 @@ PINS: dict[str, dict[str, object]] = {
         "bound_json_sha": "58d2afbad28401f5fdf6930b2fd45ee290da65c3ce3d628dc228987f72a9102c",
         "structure_hash": "4147815be090df81830350397980cd7489781c6f1bb89563de5397399cb02baf",
         "complexity": 13.0,
-        "exit_policy_fp": "819e024178e5b30d39399d324859acc1fafbfd912f7c155be71427d6bdef9a01",
+        "exit_policy_fp": "0bd4278af10011dec178b5a2dd44dc4354f345f5e2d2d5983f898ed1897dedb9",
     },
 }
 
@@ -178,38 +184,48 @@ def _run(strategy_id: str, bars: pd.DataFrame):
 #: Engine ledger pins, same provenance: ``(ledger_sha256, leg_ledger_sha256,
 #: n_trades, rejections, signals_seen)``. Computed with THIS file's runner on
 #: the pre-change tree and again on the changed one; the two were identical.
+#:
+#: The two hashes were RE-PINNED DELIBERATELY for engine_v3_realism
+#: (backtest/version.py ENGINE_V3_REASONS): ``FixedFractionalSizer`` now
+#: defaults to ``fixed_fractional_v2`` (spread + expected slippage in the risk
+#: per unit, so sizes are smaller) and financing is charged on business-day
+#: rollovers with the FX Wednesday triple. The trade COUNTS, the rejection
+#: counts and ``signals_seen`` are unchanged for all five documents, which is
+#: what shows the move is sizing and financing and not entries or exits. Re-run
+#: under ``fixed_fractional_v1`` the hashes still differ from the old pins
+#: (financing), so both changes contribute.
 _LEDGER: dict[str, tuple[str, str, int, dict[str, int], int]] = {
     "donchian_breakout_atr": (
-        "649ab1359859ff16cbd6b5d72057cd19c8e5efa0c972bfe243d01370ee14f440",
-        "20a17bb10c4072f8d981cf058bd7124b45dfb9e738ed2fdae4d974762f45b031",
+        "09e5ab35987d343e3884ba06734bd5d1795ccc8f60af10b2c82ac79f8147153a",
+        "cceb31e71cdaa6d1193a046d5fb39c01af4f8f4cd4996d98c1c2b7f79946020d",
         106,
         {"cooldown": 2, "max_concurrent": 284},
         392,
     ),
     "fib_golden_pocket_pullback": (
-        "222cc9ea2b5b617818522a5c6bc20e872a4add9c93bc442e714e58ca308db20a",
-        "d46f5e042718b86398df634203c7d9bf3eaf9115ff7db6f6e0ea772ba3c874b4",
+        "4325aabf1a443c414a54ce05db32c5f6f2e763d0ec73caec34d95bbc53529c53",
+        "17cd1ed9d47879700d119057b8a1e6bea55798cd163b8cabd96f603d32acb482",
         32,
         {"cooldown": 4, "max_concurrent": 24},
         60,
     ),
     "ichimoku_kumo_trend": (
-        "93b86394644093b5c01f53a7e06267cabdc4d6e2c3692839f81a90ce7478bfe7",
-        "9dae62689e475da9ad497945e4c166a34be3c426276e40a354950562c21b24c3",
+        "93243358e5127fb8c106763771805dcfa608f9f68fcc1f9a719d22e3f91e2b20",
+        "a0230387f492ef4c72f479ce9fad0a73774d08e0494f4224a9f6377e8b34f858",
         12,
         {},
         12,
     ),
     "macd_ema_trend_hybrid": (
-        "af6fb76969dcabc95fb12017f240f359b1039cf5cdd574dc9079fdac1f9c4ddf",
-        "d1f1ed622260f1ae96567a4b26318dbfe7ab409b8968d5d4eb615727ce8deb69",
+        "5181b77b32a1a7fd93bd117fe57fe5d9d82e06ae259c6e2f6e4056904780997e",
+        "9b6d2e318d28e48f94bc71f88a3575d4522fe99a1dfb04f426e086e1189ca2d7",
         5,
         {},
         5,
     ),
     "rsi_band_mean_reversion": (
-        "f265f3fa9d39dff49572dd2d188be4a81e02ea5df0f0d6133a3b98da2b9a7ab9",
-        "5a4faf003da3970659339c9f8e77e7f84a56942bfd7cf2525e1972359fe9a5ff",
+        "4aa1b1e58118993e215c58d5d44a6fa66067e12e9f85374dcd90e8160bf3f128",
+        "f58db72f08c2ee1ccc2c19bd77961f13975b5a15ee90ec36919122455e0b1116",
         16,
         {},
         16,

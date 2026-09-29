@@ -455,14 +455,20 @@ def test_golden_both_touched_policy_changes_the_result_by_80_gbp(
 
 
 # ==========================================================================
-# 8. Financing over exactly three nights
+# 8. Financing over three rollovers, one of them Wednesday's triple
 # ==========================================================================
 
 
 def test_golden_financing_over_three_nights():
     """
     A position opened 2024-01-02 00:00 UTC and closed 2024-01-05 00:00 UTC
-    crosses the 21:00 UTC rollover on 01-02, 01-03 and 01-04: THREE nights.
+    crosses the 21:00 UTC rollover on 01-02 (Tue), 01-03 (Wed) and 01-04 (Thu).
+
+    UPDATED DELIBERATELY for engine_v3_realism (audit P2-7). Under the old
+    calendar-night rule that was three nights (3.30 USD, 2.64 GBP). Spot FX
+    rolls T+2, so Wednesday's rollover carries the weekend and is charged three
+    nights: Tue 1 + Wed 3 + Thu 1 = FIVE nights (backtest/position.py
+    ``financing_nights``). The old figure was the bug, not the arithmetic.
 
     Prices are held flat at 1.1000 for the whole hold (except the final bar's
     high, which reaches the target) so the notional is constant and the
@@ -473,13 +479,13 @@ def test_golden_financing_over_three_nights():
       nightly rate  = 0.0365 / 365                  = 0.0001   (1 bp per night)
       notional      = 1.1000 * 10,000 * 1.0         = 11,000.00 USD
       per night     = 11,000.00 * 0.0001            =      1.10 USD
-      three nights  = 1.10 * 3                      =      3.30 USD
-      in GBP        = 3.30 * 0.80                   =      2.64
+      five nights   = 1.10 * (1 + 3 + 1)            =      5.50 USD
+      in GBP        = 5.50 * 0.80                   =      4.40
 
     Exit on the final bar at the target 1.1050:
       gross USD = (1.1050 - 1.1000) * 10,000        =     50.00
       gross GBP = 50.00 * 0.80                      =     40.00
-      net  GBP  = 40.00 - 2.64                      =     37.36
+      net  GBP  = 40.00 - 4.40                      =     35.60
     (spread and commission are zero in this profile so financing is isolated)
     """
     rows = []
@@ -505,20 +511,22 @@ def test_golden_financing_over_three_nights():
     t = res.trades[0]
     assert t.entry_time == pd.Timestamp("2024-01-02 00:00", tz="UTC")
     assert t.exit_time == pd.Timestamp("2024-01-05 00:00", tz="UTC")
-    assert t.financing_cost == pytest.approx(2.64, abs=1e-9)
+    assert t.financing_cost == pytest.approx(4.40, abs=1e-9)
     assert t.gross_pnl == pytest.approx(40.00, abs=1e-9)
-    assert t.net_pnl == pytest.approx(37.36, abs=1e-9)
+    assert t.net_pnl == pytest.approx(35.60, abs=1e-9)
     _assert_decomposition(t)
-    assert res.costs.financing == pytest.approx(2.64, abs=1e-9)
+    assert res.costs.financing == pytest.approx(4.40, abs=1e-9)
 
 
 def test_golden_short_financing_uses_the_short_rate():
     """
-    Same three-night hold, SHORT, with annual_bps_short = 730.0 (2 bp/night):
-      per night    = 11,000.00 * 0.0002 = 2.20 USD
-      three nights =                      6.60 USD -> 5.28 GBP
+    Same Tue-Wed-Thu hold, SHORT, with annual_bps_short = 730.0 (2 bp/night):
+      per night    = 11,000.00 * 0.0002          = 2.20 USD
+      five nights  = 2.20 * (1 + 3 + 1)          = 11.00 USD -> 11.00 * 0.80 = 8.80 GBP
 
-    A long/short differential that the engine ignored would report 2.64 here.
+    (UPDATED DELIBERATELY for engine_v3_realism, P2-7: Wednesday's rollover is
+    the FX triple. Under the old calendar-night rule this was 5.28 GBP.)
+    A long/short differential that the engine ignored would report 4.40 here.
     """
     rows = []
     ts = pd.Timestamp("2024-01-01 20:00", tz="UTC")
@@ -539,7 +547,7 @@ def test_golden_short_financing_uses_the_short_rate():
         financing=FinancingModel(annual_bps_long=365.0, annual_bps_short=730.0, basis_days=365.0),
     )
     res = _run(frame, sig, profile=profile, size=10_000)
-    assert res.trades[0].financing_cost == pytest.approx(5.28, abs=1e-9)
+    assert res.trades[0].financing_cost == pytest.approx(8.80, abs=1e-9)
 
 
 # ==========================================================================

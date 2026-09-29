@@ -21,12 +21,18 @@ import json
 from dataclasses import asdict, dataclass, replace
 from typing import Any
 
+from fiboki.core.enums import ExecutionMode
+
 __all__ = [
     "CONSERVATIVE_LIMITS",
+    "CONSERVATIVE_LIMITS_V2",
     "DEFAULT_LIMITS",
+    "DEFAULT_LIMITS_V2",
     "LIMIT_SETS",
     "PAPER_LIMITS",
+    "PAPER_LIMITS_V2",
     "LimitSet",
+    "default_limit_set",
     "get_limit_set",
     "register_limit_set",
 ]
@@ -93,8 +99,30 @@ class LimitSet:
     #: Minimum broker health score in [0, 1].
     min_broker_health: float = 0.50
     #: Minutes either side of a flagged economic event during which no new risk
-    #: is taken.
+    #: is taken. The v1 rule: symmetric, measured from the gateway's ``now``
+    #: (which a replay sets to the bar's OPEN stamp). Superseded in v2 sets by
+    #: the two asymmetric fields below, and kept so a v1 decision stays
+    #: explicable.
     event_blackout_minutes: float = 15.0
+
+    # -- fields added by limits_v2 -----------------------------------------
+    # Each defaults to ``None``, meaning "this limit set predates the rule".
+    # ``fingerprint`` leaves ``None`` fields out, so every v1 fingerprint is
+    # byte-identical to what it was before these fields existed.
+
+    #: Minutes BEFORE an event during which no new risk is taken, measured from
+    #: the DECISION time (the signal bar's close; see
+    #: ``RiskGateway._check_event_blackout``). The window ahead is at least one
+    #: bar, so an H1 entry at 12:10 with NFP at 12:30 is refused rather than
+    #: held through the release.
+    event_blackout_pre_minutes: float | None = None
+    #: Minutes AFTER an event during which no new risk is taken.
+    event_blackout_post_minutes: float | None = None
+    #: Measure margin utilisation INCLUDING the margin this trade would add
+    #: (``(margin_used + notional / leverage) / equity``). ``None``/False is the
+    #: v1 rule, which looked at the book before the trade, so 45% utilisation
+    #: plus a 15% position passed a 50% limit.
+    margin_utilisation_after_trade: bool | None = None
 
     notes: str = ""
 
@@ -126,6 +154,19 @@ class LimitSet:
             raise ValueError(
                 f"LimitSet {self.version}: weekly loss limit exceeds total drawdown limit"
             )
+        if (self.event_blackout_pre_minutes is None) != (
+            self.event_blackout_post_minutes is None
+        ):
+            raise ValueError(
+                f"LimitSet {self.version}: set both event_blackout_pre_minutes and "
+                "event_blackout_post_minutes, or neither; half an asymmetric window "
+                "would silently fall back to the symmetric v1 rule"
+            )
+
+    @property
+    def asymmetric_blackout(self) -> bool:
+        """True for a v2 set: the blackout is ``[decision - post, decision + max(pre, bar)]``."""
+        return self.event_blackout_pre_minutes is not None
 
     # ------------------------------------------------------------------
 
@@ -139,7 +180,11 @@ class LimitSet:
         fingerprint, which is the correct behaviour: it is the numbers that
         decided the trade.
         """
-        payload = {k: v for k, v in sorted(self.as_dict().items()) if k not in ("version", "notes")}
+        payload = {
+            k: v
+            for k, v in sorted(self.as_dict().items())
+            if k not in ("version", "notes") and v is not None
+        }
         return hashlib.sha256(
             json.dumps(payload, sort_keys=True, separators=(",", ":")).encode("utf-8")
         ).hexdigest()[:16]
@@ -204,8 +249,52 @@ PAPER_LIMITS = LimitSet(
 )
 
 
+_V2_NOTE = (
+    " limits_v2: the event blackout is asymmetric, 30 minutes before and 15 "
+    "after, measured from the decision time (the signal bar's close) and "
+    "reaching at least one bar ahead; margin utilisation is measured AFTER the "
+    "trade. Every other number is the v1 set's."
+)
+
+#: ``limits_v2`` (audit P2-1, P2-2). Published beside v1 rather than replacing
+#: it, because stored decisions name their set and must stay explicable; the
+#: composition roots (``workers/runtime.py`` and the API's displayed set) choose
+#: which one is in force.
+DEFAULT_LIMITS_V2 = DEFAULT_LIMITS.derive(
+    "limits_v2_default",
+    event_blackout_pre_minutes=30.0,
+    event_blackout_post_minutes=15.0,
+    margin_utilisation_after_trade=True,
+    notes=DEFAULT_LIMITS.notes + _V2_NOTE,
+)
+CONSERVATIVE_LIMITS_V2 = CONSERVATIVE_LIMITS.derive(
+    "limits_v2_conservative",
+    event_blackout_pre_minutes=30.0,
+    event_blackout_post_minutes=30.0,
+    margin_utilisation_after_trade=True,
+    notes=CONSERVATIVE_LIMITS.notes
+    + " limits_v2: asymmetric blackout 30 before / 30 after (v1 was 30 either "
+    "side) from the decision time, and margin utilisation after the trade.",
+)
+PAPER_LIMITS_V2 = PAPER_LIMITS.derive(
+    "limits_v2_paper",
+    event_blackout_pre_minutes=30.0,
+    event_blackout_post_minutes=15.0,
+    margin_utilisation_after_trade=True,
+    notes=PAPER_LIMITS.notes + _V2_NOTE,
+)
+
+
 LIMIT_SETS: dict[str, LimitSet] = {
-    s.version: s for s in (DEFAULT_LIMITS, CONSERVATIVE_LIMITS, PAPER_LIMITS)
+    s.version: s
+    for s in (
+        DEFAULT_LIMITS,
+        CONSERVATIVE_LIMITS,
+        PAPER_LIMITS,
+        DEFAULT_LIMITS_V2,
+        CONSERVATIVE_LIMITS_V2,
+        PAPER_LIMITS_V2,
+    )
 }
 
 
@@ -230,3 +319,26 @@ def get_limit_set(version: str) -> LimitSet:
             "under unknown limits is not an auditable decision."
         )
     return LIMIT_SETS[version]
+
+
+def default_limit_set(mode: ExecutionMode | str) -> LimitSet:
+    """THE limit set in force for ``mode``. One source of truth.
+
+    Every composition root (``workers/runtime.py``, the paper-forward
+    entrypoint, the live worker) and every surface that DISPLAYS the set in
+    force (the API's trading and system routers) calls this, so what the
+    operator is shown is what the gateway enforces. The v2 sets are current;
+    the v1 sets stay registered only so stored decisions remain explicable.
+
+    ``BACKTEST``/``PAPER``: ``limits_v2_paper`` (data-quality tolerances
+    relaxed, every risk limit identical to the default). ``SHADOW``/``DEMO``:
+    ``limits_v2_default``, the baseline for a real venue
+    (docs/v2/PORTFOLIO_RISK_STANDARD.md). ``LIVE``: ``limits_v2_conservative``,
+    half the default risk for the first live-adjacent period.
+    """
+    resolved = mode if isinstance(mode, ExecutionMode) else ExecutionMode(str(mode).strip().lower())
+    if resolved in (ExecutionMode.BACKTEST, ExecutionMode.PAPER):
+        return PAPER_LIMITS_V2
+    if resolved in (ExecutionMode.SHADOW, ExecutionMode.DEMO):
+        return DEFAULT_LIMITS_V2
+    return CONSERVATIVE_LIMITS_V2

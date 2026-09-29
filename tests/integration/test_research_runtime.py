@@ -43,7 +43,7 @@ from fiboki.workers.research_runtime import (
     research_runtime_from_env,
 )
 from fiboki.workers.research_worker import ResearchWorker, ResearchWorkerConfig
-from tests.agents_fixtures import ema_crossover_document, trending_bars
+from tests.agents_fixtures import ema_crossover_document, gbp_fx_frames, trending_bars
 
 TARGET = CycleTarget("ema_cross_fixture", "EURUSD", "H1", "Does stop width carry it?")
 NOW = datetime(2026, 9, 28, 3, 0, tzinfo=UTC)
@@ -73,6 +73,8 @@ def _settings(tmp_path: Path, **overrides) -> ResearchRuntimeSettings:
         # tests/integration/test_event_scan_runtime.py; off here so a tick runs
         # exactly what each test names.
         "event_scan_minutes": 0,
+        # Thesis debates have their own tests in test_research_runtime_round4.py.
+        "thesis_debate_instruments": (),
     }
     payload.update(overrides)
     return ResearchRuntimeSettings(**payload)
@@ -81,7 +83,7 @@ def _settings(tmp_path: Path, **overrides) -> ResearchRuntimeSettings:
 def _parts():
     strategies = StrategyRegistry()
     strategies.register(ema_crossover_document())
-    bars = InMemoryBarSource({("EURUSD", "H1"): trending_bars()})
+    bars = InMemoryBarSource({("EURUSD", "H1"): trending_bars(), **gbp_fx_frames()})
     return strategies, bars
 
 

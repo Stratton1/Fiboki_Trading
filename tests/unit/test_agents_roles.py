@@ -30,6 +30,11 @@ EXPECTED_ROLES = {
     "research_librarian",
     # agentic plan Wave 4: the tool-less (one write, no reads) headline classifier.
     "event_classifier",
+    # agentic plan Wave 4 thesis debate (B_tradingagents.md §6.3): one advocate
+    # spec with the stance supplied by the workflow, and the arbiter that reads
+    # the brief as well as the transcript.
+    "thesis_advocate",
+    "thesis_arbiter",
 }
 
 

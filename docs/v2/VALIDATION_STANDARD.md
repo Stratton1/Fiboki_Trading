@@ -117,11 +117,17 @@ The fixed-parameter procedure is still computed and recorded, under keys prefixe
 `CONTRAST_`, with a note: a candidate whose contrast figures are healthy while its true
 walk-forward figures are not was being selected on noise.
 
-**Walk-forward efficiency** is `100 × mean(OOS profit-per-day) / mean(IS profit-per-day)`. It is
-defined on profit *per day* rather than on the selection metric so that folds of unequal length
-are comparable and the number keeps its usual meaning whatever the candidate was selected on. A
-non-positive in-sample rate returns `nan` rather than a flattering number, and `nan` fails the
-gate.
+**Walk-forward efficiency** is `100 × mean(OOS rate) / mean(IS rate)`, where the rate is **log
+growth per day**, `ln((E0 + net) / E0) / days`, for every evaluation that records its opening
+equity `E0` (every `EngineEvaluator` run does, in `meta["opening_equity"]`). It was money profit
+per day until `engine_v3_realism`, which a compounding fixed-fractional sizer biases: an anchored
+train window one to five slices long has compounded longer than its one-slice test window, so its
+money rate is inflated and WFE was biased DOWN for every profitable strategy (audit P2-11; a
+strategy growing 10% per 100 days everywhere scored 86% instead of 100%). An evaluator that
+records no opening equity (a synthetic one, which does not compound) falls back to money per day
+for the whole fold; bases are never mixed within a fold, and the report lists the basis used
+(`walk_forward_efficiency_basis`). A non-positive in-sample rate returns `nan` rather than a
+flattering number, and `nan` fails the gate.
 
 The modal selected parameterisation across folds is what rung 6 eventually evaluates; ties break
 towards the earliest fold so the answer does not depend on dict ordering. `_param_agreement`
@@ -185,6 +191,16 @@ irregular spacing but does assume each parameter's values are meaningfully order
 parameter must not be passed as an axis). Taking the argmax of a noisy surface selects the point
 where the noise was most favourable, which is usually surrounded by cells that perform far worse
 — and those cells are what live trading delivers. An isolated peak fails the rung outright.
+
+The plateau gate compares `point_plateau_ratio = (s + c) / (m + c)`, with `s` the selected point's
+score, `m` the mean of its neighbours **excluding the point itself**, and the additive floor
+`c = |s|` (`stats/stability.plateau_ratio`, definition `excluding_point_additive_floor_v2`). For
+`s > 0` it equals `2 / (1 + m/s)`, so the unchanged `<= 1.25` threshold means `m >= 0.6 s`: the
+neighbours keep at least 60% of the point's score, at any scale. The pre-v3 ratio `s / mean(including
+s)` let the point dilute its own test and exploded as the mean approached zero (a score of 0.12
+against neighbours at 0.09 failed at 1.33; it now passes at 1.14); it is still reported as
+`point_plateau_ratio_inclusive`. A neighbourhood so negative that `m + c <= 0` gives `inf`, which the
+gate set treats as not finite and therefore blocking.
 
 The plateau gate is `NOT_APPLICABLE` when the grid is not fully numeric or has fewer than three
 points, and that is recorded as not-applicable rather than as a pass.
@@ -500,7 +516,42 @@ implemented**. The statistical primitives they need (`probabilistic_sharpe_ratio
 | Threshold change mints a new version | `with_overrides` requires `version` | enforced |
 | Report produced for rejected candidates | `ValidationLadder.run` always builds one | enforced |
 | Trials matrix refuses unaligned columns | `_trials_matrix` returns `None` + reason | enforced |
-| Honest `external_trial_count` | recorded on the report | **researcher obligation** |
+| Honest `external_trial_count` | recorded on the report | **researcher obligation** in the ladder; the agent `validation_handler` reads `N` from `ExperimentLedger.count_trials` and blocks when it is unknown |
 | Demotion / stopping rules | — | **not implemented** |
 | Lifecycle transitions | — | **not implemented** |
 | Parameter binding (domain value → rule literal) | `StrategyDocument.bind` / `bind_defaults`; `tests/unit/test_strategy_binding.py` | implemented. `tests/integration/test_validation_ladder_real_engine.py` runs the ladder against the real backtest engine |
+
+## 9. The agent validation job's deflated Sharpe (2026-09-29)
+
+`agents/jobs.validation_handler` evaluates the gate set against ONE recorded backtest. Its deflated
+Sharpe now follows the same rules as rung 5, with the two inputs it lacks supplied honestly:
+
+* **`N` comes from the experiment ledger**: the larger of the trials recorded for the strategy's
+  family (`structure_hash`) and for the campaign its experiment belongs to
+  (`ExperimentLedger.count_trials`). The payload's `n_trials_in_search` may only RAISE it (recorded
+  as a caveat); it is never the source. With no ledger injected, or nothing recorded for the scope,
+  the DSR is `NOT_EVALUATED` and blocks.
+* **The null variance of the trial Sharpes** is Lo's (2002) asymptotic
+  `(1 - g3·SR + (g4 - 1)/4·SR²) / (T - 1)` of a per-trade Sharpe on `T` trades, because no
+  cross-section of trial Sharpes is recorded. The handler used to pass the variance of per-TRADE
+  RETURNS (about 0.01² at 1% risk), which put the expected maximum of 1,000 null trials at ~0.033
+  instead of ~0.165 and reported a DSR of ~0.91 where the honest figure was ~0.05 (audit P1-2).
+
+Every DSR a `validation_handler` stored before this change is invalid.
+
+## 10. Research sizes through portfolio construction (2026-09-29)
+
+Every validation run (`EngineEvaluator`, `run_validation`, and so every discovery campaign) now
+sizes through the paper runtime's portfolio construction
+(`validation.engine_evaluator.research_construction_policy`: construction_v2, equal risk,
+PROBATIONARY, regime `unknown`, no conviction) instead of a flat 1% `risk_fraction`, which is now a
+ceiling on the tier base; the policy and its version are in the engine fingerprint and so in every
+cache key and report. Results from before this change are **superseded for sizing-dependent
+metrics**: net profit and every P&L figure (their scale), drawdown, bootstrap ruin probabilities
+and any gate on them, and Sharpe-type ratios on period returns (roughly scale-free, but the
+throttle and budgets vary size trade to trade, so not identical). They are **not** superseded for
+hit rate or trade counts, which depend on entries and exits only, except where construction
+refused an entry the flat path took (drawdown past 10%, where PROBATIONARY is suspended, or 15%,
+PAUSE; or a second concurrent position on one instrument, rho 1.0 at the hard cap); on the five seed documents
+the trade counts and signals seen are unchanged, and the book's `max_concurrent` refusals appear as
+`allocation_dropped` instead. `construction=None` reproduces the flat path for comparison.

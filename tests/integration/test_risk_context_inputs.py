@@ -223,7 +223,8 @@ def test_the_session_summary_reports_the_values_not_just_that_checks_ran(store) 
 
 
 def test_without_a_ledger_the_builder_falls_back_and_says_so() -> None:
-    """Backwards compatible, and honest about it."""
+    """A pinned static value is used and reported as not live; an unsupplied
+    source is a MISSING input (``None``), never a benign zero or ``True``."""
     broker = PaperBroker(
         config=PaperConfig(initial_balance=10_000.0), fx=IdentityFxSource()
     )
@@ -243,7 +244,9 @@ def test_without_a_ledger_the_builder_falls_back_and_says_so() -> None:
     plan = make_plan(signal=make_signal(instrument=SYMBOL))
     context = builder(plan)
     assert context.daily_pnl == -123.0
-    assert context.correlated_exposure == 0.0
+    assert context.weekly_pnl is None, "no ledger and nothing pinned: unknown, not flat"
+    assert context.correlated_exposure is None, "no matrix: unknown, not uncorrelated"
+    assert context.market.market_open is None, "no source: unknown, not open"
 
 
 # ==========================================================================
@@ -276,6 +279,9 @@ def _breaching_builder(*, equity: float, loss: float, now: pd.Timestamp):
         # supply one would be asserting against ``spread_unknown`` rather than
         # against the loss limit it is about.
         spread_source=lambda instrument, now: 0.00012,
+        # Pinned, like the spread: an unsupplied market-open source is now
+        # "unknown" and market_state would block before the loss limit is read.
+        market_open=True,
     )
     builder.last_bar_times[SYMBOL] = now - pd.Timedelta(seconds=30)
     return builder, broker
@@ -367,6 +373,7 @@ def test_the_block_survives_until_the_clock_crosses_midnight() -> None:
         # supply one would be asserting against ``spread_unknown`` rather than
         # against the loss limit it is about.
         spread_source=lambda instrument, now: 0.00012,
+        market_open=True,
     )
     builder.last_bar_times[SYMBOL] = evening - pd.Timedelta(seconds=30)
     gateway = _gateway()
@@ -461,6 +468,10 @@ def test_correlated_exposure_can_actually_breach_its_limit() -> None:
             "fiboki.risk.gateway", fromlist=["StrategyView"]
         ).StrategyView(lifecycle=StrategyLifecycle.PAPER),
         correlated_exposure=total,
+        open_risk_amount=0.0,
+        daily_pnl=0.0,
+        weekly_pnl=0.0,
+        fx_quote_to_account=1.0,
     )
     decision = RiskGateway(limits=limits).evaluate(context)
     assert not decision.allowed
@@ -489,6 +500,10 @@ def test_a_zero_correlated_exposure_cannot_breach_the_default_limit() -> None:
         venue=healthy_venue(),
         strategy=StrategyView(lifecycle=StrategyLifecycle.PAPER),
         correlated_exposure=0.0,
+        open_risk_amount=0.0,
+        daily_pnl=0.0,
+        weekly_pnl=0.0,
+        fx_quote_to_account=1.0,
     )
     decision = RiskGateway(limits=PAPER_LIMITS).evaluate(context)
     assert "max_correlated_exposure" in decision.checks_run

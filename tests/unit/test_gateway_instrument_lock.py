@@ -136,11 +136,19 @@ def test_a_global_streak_locks_a_strategy_that_declares_nothing() -> None:
 
 
 def test_a_restarted_gateway_reads_the_lock_back_from_the_intent_ledger(tmp_path) -> None:
-    """Friday 21:00 close, 4-bar cooldown; the gateway process is then replaced.
-    The new one, with nothing but the JSONL intent ledger, refuses a Sunday
-    22:00 signal and a Monday 00:00 signal and permits Monday 01:00."""
+    """Friday close on the last bar of a SUMMER week, 4-bar cooldown; the
+    gateway process is then replaced. The new one, with nothing but the JSONL
+    intent ledger, refuses Sunday 21:00, 22:00 and 23:00 and permits Monday
+    00:00.
+
+    New York is on daylight saving on 2024-05-31, so the interbank week (the
+    sim session calendar, 17:00 New York) closes at 21:00 UTC on Friday and
+    reopens at 21:00 UTC on Sunday: Fri 20:00 is session bar k, Sun 21:00 k+1,
+    Sun 22:00 k+2, Sun 23:00 k+3, Mon 00:00 k+4. (Under the old fixed 22:00 UTC
+    calendar Fri 21:00 counted as a bar and Sun 21:00 did not, an hour wrong at
+    both ends for most of the year.)"""
     path = tmp_path / "intents.jsonl"
-    closed_at = pd.Timestamp("2024-05-31 21:00", tz="UTC")  # a Friday
+    closed_at = pd.Timestamp("2024-05-31 20:00", tz="UTC")  # a Friday, last summer bar
     store = JsonlIntentStore(path)
     store.write(
         OrderIntent(
@@ -166,9 +174,9 @@ def test_a_restarted_gateway_reads_the_lock_back_from_the_intent_ledger(tmp_path
                            market=healthy_market(now=now, instrument="EURUSD"))
         return restarted.evaluate(ctx).allowed
 
-    assert not decide("2024-06-02 22:00")  # Sunday, first bar of the week
-    assert not decide("2024-06-03 00:00")
-    assert decide("2024-06-03 01:00")
+    assert not decide("2024-06-02 21:00")  # Sunday, first bar of a summer week
+    assert not decide("2024-06-02 23:00")
+    assert decide("2024-06-03 00:00")
 
 
 def test_an_exit_never_runs_the_lock_check() -> None:

@@ -1,11 +1,14 @@
 """Entry locks: session-bar arithmetic, stop-streak semantics, scopes, restart.
 
 Every expectation below is worked out by hand in the test's docstring or
-comment, against the interbank week (closed Friday 22:00 UTC to Sunday 22:00
-UTC). ``fiboki.backtest.locks`` is the ONE implementation the engine and the
+comment, against the interbank week (closed Friday 17:00 to Sunday 17:00
+America/New_York, the sim session calendar: 22:00 UTC in winter, which is
+every January case below, and 21:00 UTC under daylight saving). ``fiboki.backtest.locks`` is the ONE implementation the engine and the
 risk gateway share, so an arithmetic slip here is a slip everywhere.
 """
 from __future__ import annotations
+
+import itertools
 
 import pandas as pd
 import pytest
@@ -105,6 +108,47 @@ class TestSessionClock:
                 pytest.skip(f"{sym} not registered")
             k = c.index(T("2024-01-05 21:00"))
             assert c.index(T("2024-01-07 22:00")) == k + 1
+
+    def test_the_week_is_anchored_to_17_00_new_york_not_a_utc_constant(self) -> None:
+        """The SIM session calendar's week: Friday 17:00 to Sunday 17:00 New York.
+
+        Summer (EDT, 2024-07-05 is a Friday): closes 21:00 UTC, reopens Sunday
+        21:00 UTC. Fri 20:00 -> k, Fri 21:00 is closed (shares k), Sun 21:00 ->
+        k+1, Mon 00:00 -> k+4. The old fixed 22:00 UTC calendar counted Fri
+        21:00 as a bar and refused Sun 21:00, which trades.
+        """
+        c = SessionBarClock.for_instrument("EURUSD", "H1")
+        k = c.index(T("2024-07-05 20:00"))
+        assert c.index(T("2024-07-05 21:00")) == k, "closed: after 17:00 New York"
+        assert c.index(T("2024-07-07 20:59")) == k
+        assert c.index(T("2024-07-07 21:00")) == k + 1, "open: 17:00 New York"
+        assert c.index(T("2024-07-08 00:00")) == k + 4
+        assert c.bars_between(T("2024-07-08 00:00"), T("2024-07-15 00:00")) == 120
+
+    def test_it_agrees_with_the_sim_session_calendar_slot_by_slot(self) -> None:
+        """Parity with ``sim.fills.FxSessionCalendar``: every H1 slot the fill
+        simulator calls open advances the clock by one, every closed one does
+        not, across both 2024 daylight-saving weekends."""
+        from fiboki.core.instruments import get as get_instrument
+        from fiboki.sim.fills import FxSessionCalendar
+
+        cal, eur = FxSessionCalendar(), get_instrument("EURUSD")
+        c = SessionBarClock.for_instrument("EURUSD", "H1")
+        for start, end in (("2024-03-07", "2024-03-12"), ("2024-10-31", "2024-11-05"),
+                           ("2024-07-04", "2024-07-09"), ("2024-01-04", "2024-01-09")):
+            hours = pd.date_range(T(start), T(end), freq="1h", inclusive="left")
+            for prev, cur in itertools.pairwise(hours):
+                step = c.index(cur) - c.index(prev)
+                assert step == (1 if cal.is_open(eur, cur) else 0), cur
+
+    def test_h4_summer_week_drops_the_friday_slot_and_keeps_sunday(self) -> None:
+        """EDT: Fri 20:00-24:00 UTC is one hour open (does not count), Sun
+        20:00-24:00 three hours open (counts). 30 slots, winter's 31 less one."""
+        c = SessionBarClock.for_instrument("EURUSD", "H4")
+        assert c.bars_between(T("2024-07-08 00:00"), T("2024-07-15 00:00")) == 30
+        k = c.index(T("2024-07-05 16:00"))
+        assert c.index(T("2024-07-05 20:00")) == k
+        assert c.index(T("2024-07-07 20:00")) == k + 1
 
     def test_naive_timestamps_are_refused(self) -> None:
         with pytest.raises(ValueError, match="timezone-aware"):

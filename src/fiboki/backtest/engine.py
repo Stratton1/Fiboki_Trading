@@ -76,13 +76,39 @@ refused before it is sized or queued, recorded as ``instrument_lock`` in
 bar, rebuilt from the trade ledger, which is how paper and live agree with this.
 A run whose policy declares no locks never constructs a lock book and is
 byte-identical to a run before locks existed.
+
+Portfolio construction (research/paper sizing parity)
+-----------------------------------------------------
+The paper runtime sizes every bar's signals through portfolio construction
+(tier base risk, health, confidence, correlation, concentration, vol target,
+margin, drawdown throttle, regime, correlated open risk, conviction) and then
+calls the sizer once at ``tier base risk x weight``. With
+``BacktestConfig.construction`` set, the engine does the same on each decision
+bar against its OWN simulated book: the signals that survive the reversal and
+lock filters are offered together to :class:`ConstructionPolicy.allocate`, and
+each accepted one is sized once by the configured sizer at
+``risk_fraction = base_risk_pct / 100`` and ``portfolio_weight = weight``. Every
+decision, including a refusal, is a row of :attr:`BacktestResult.
+allocation_ledger` (compact JSON) and each trade row links to the decision
+that opened it.
+
+The engine cannot import ``portfolio`` (``tests/unit/test_layering.py``: rank
+50 below rank 60), so the policy is a Protocol here and
+``fiboki.portfolio.engine_policy.BacktestConstructionPolicy`` satisfies it. For
+the same reason the engine-level default is ``None`` (the flat
+``risk_fraction`` path, fingerprinted ``construction=none``); the research
+entry points (``validation.engine_evaluator``, ``validation.run``) default to
+the paper runtime's policy. There is no conviction input anywhere on this
+path: historical LLM convictions are inadmissible in a backtest (plan D-A3),
+so the conviction step always reads "missing" and multiplies by exactly 1.0.
 """
 from __future__ import annotations
 
 import hashlib
-from collections.abc import Sequence
-from dataclasses import dataclass, field
-from typing import Protocol
+import json
+from collections.abc import Callable, Mapping, Sequence
+from dataclasses import dataclass, field, replace
+from typing import Any, Protocol
 
 import numpy as np
 import pandas as pd
@@ -120,7 +146,7 @@ from fiboki.core.contracts import (
     Signal,
     Trade,
 )
-from fiboki.core.enums import ExitReason, Provenance
+from fiboki.core.enums import ExitReason, Provenance, Timeframe
 from fiboki.core.instruments import Instrument
 from fiboki.core.instruments import get as get_instrument
 from fiboki.core.money import FxRateSource, round_size
@@ -134,10 +160,15 @@ from fiboki.sim.fills import (
 from fiboki.sim.profiles import IG_REALISTIC, ExecutionProfile
 
 __all__ = [
+    "SIZING_POLICY_V1",
+    "SIZING_POLICY_V2",
+    "AllocationDecision",
     "BacktestConfig",
     "BacktestEngine",
     "BacktestResult",
     "BarContext",
+    "ConstructionPolicy",
+    "ConstructionRequest",
     "CostBreakdown",
     "ExitLeg",
     "FixedFractionalSizer",
@@ -145,7 +176,9 @@ __all__ = [
     "PrecomputedSignals",
     "Sizer",
     "Strategy",
+    "expected_entry_time",
     "run_backtest",
+    "stop_out_cost_per_unit",
 ]
 
 
@@ -195,18 +228,145 @@ class FixedSizeSizer:
         return round_size(instrument, _snap_to_step(self.size, instrument.size_step))
 
 
+#: Sizing rule identifiers. ``v1`` risks ``risk_fraction`` of equity over the
+#: bare stop distance; ``v2`` over the stop distance PLUS the expected cost of
+#: getting in and stopped out. See :func:`stop_out_cost_per_unit`.
+SIZING_POLICY_V1 = "fixed_fractional_v1"
+SIZING_POLICY_V2 = "fixed_fractional_v2"
+SIZING_POLICIES = (SIZING_POLICY_V1, SIZING_POLICY_V2)
+
+#: The cost profile a v2 sizer prices its stop-out with when none is named.
+#: IG_REALISTIC because it is the research default
+#: (``EvaluatorConfig.profile_name``) AND the paper broker's default
+#: (``PaperBrokerConfig.profile``): a paper plan and a backtest of the same
+#: signal therefore size identically unless someone names a different profile,
+#: and the one used is recorded in the sizing fingerprint either way. It is a
+#: stated default, not an inference from the run: a backtest under
+#: SEVERE_STRESS with an unnamed cost profile sizes on IG costs and says so.
+DEFAULT_SIZING_COST_PROFILE: ExecutionProfile = IG_REALISTIC
+
+
+def expected_entry_time(signal: Signal) -> pd.Timestamp:
+    """When the entry this signal causes is expected to fill: the NEXT bar's open.
+
+    A signal is dated on its bar's open stamp and acted on once that bar has
+    closed, so the entry fills ``timeframe`` later. An unparseable timeframe
+    falls back to the signal's own bar time, which is the hour the strategy saw.
+    """
+    try:
+        minutes = Timeframe(str(signal.timeframe)).minutes
+    except ValueError:
+        return signal.bar_time
+    return signal.bar_time + pd.Timedelta(minutes=minutes)
+
+
+def stop_out_cost_per_unit(
+    profile: ExecutionProfile, instrument: Instrument, signal: Signal
+) -> float:
+    """Expected cost, in PRICE units per unit of size, of entering and being stopped.
+
+    The realised loss of a position stopped exactly at its level is not the
+    stop distance. With both-leg costs (``sim/fills.py``) it is::
+
+        stop_distance + half_spread (entry) + half_spread (exit)
+                      + slippage (entry, market order) + slippage (exit, stop order)
+      = stop_distance + spread + 2 * E[slippage]
+
+    ``spread`` is the profile's full spread at the expected ENTRY hour and the
+    signal's reference price; ``E[slippage]`` is
+    :func:`fiboki.sim.profiles.expected_slippage_price`. Worked example
+    (IG_REALISTIC, EURUSD, 5-pip stop, 1-pip spread): slippage is
+    0.30 * 2 * 0.4 = 0.24 pips per fill, so the per-unit risk is
+    5 + 1 + 0.48 = 6.48 pips and a v1 size risks 6.48 / 5 = 1.296 x its stated
+    fraction at the stop. The audit's 25% figure counted slippage once.
+
+    Stated approximations: the exit spread is priced at the ENTRY hour (the exit
+    hour is unknown when sizing), stale-bar widening is not anticipated,
+    commission is excluded (it is per ticket and in its own currency, so it is
+    not linear in size), and financing is excluded (it depends on the holding
+    period). Each makes the v2 figure a floor on the realised stop-out loss,
+    never a ceiling.
+    """
+    hour = int(expected_entry_time(signal).hour)
+    spread = profile.spread_price(instrument, hour, float(signal.reference_price))
+    return float(spread + 2.0 * profile.expected_slippage_price(instrument))
+
+
 @dataclass(frozen=True, slots=True)
 class FixedFractionalSizer:
     """Risk a fixed fraction of CURRENT equity per trade, capped by leverage.
 
-    ``risk_fraction`` is fraction of equity lost if the stop fills exactly at
-    its level. Gaps can and do exceed it — that is the honest part: this is a
-    sizing intent, not a loss guarantee, and the engine's realised MAE
-    distribution is where you find out how often the intent failed.
+    ``risk_fraction`` is the fraction of equity lost if the stop fills exactly
+    at its level. Under ``fixed_fractional_v2`` (the default) that loss includes
+    the spread and the expected slippage of both legs, priced by
+    ``cost_profile``; under ``fixed_fractional_v1`` it is the bare stop
+    distance, which understates the realised stop-out loss by the costs. Gaps
+    can and do exceed either -- this is a sizing intent, not a loss guarantee,
+    and the engine's realised MAE distribution is where you find out how often
+    the intent failed.
+
+    ``cost_profile=None`` under v2 means :data:`DEFAULT_SIZING_COST_PROFILE`
+    (IG_REALISTIC), the same default :class:`fiboki.portfolio.sizing.SizingPolicy`
+    uses, so the paper path and the backtest agree by construction. A caller
+    that wants sizing priced on its run's own frictions names them
+    (``EngineEvaluator`` passes its configured profile).
+
+    Kept arithmetically identical to :func:`fiboki.portfolio.sizing.size_trade`;
+    ``tests/unit/test_sizing_authority.py`` pins the two together, including
+    ``portfolio_weight``: the risk budget is ``equity * risk_fraction *
+    portfolio_weight`` evaluated in that order, as ``size_trade`` does, so a
+    construction-weighted size is byte-identical on both paths. At the default
+    weight of exactly 1.0 the product is the unweighted one to the last bit.
     """
 
     risk_fraction: float = 0.01
     max_leverage: float | None = None
+    policy_id: str = SIZING_POLICY_V2
+    cost_profile: ExecutionProfile | None = None
+    #: The fraction of the per-trade budget portfolio construction allocated.
+    #: Set per trade by :meth:`allocated`; the run-level sizer keeps 1.0.
+    portfolio_weight: float = 1.0
+
+    def __post_init__(self) -> None:
+        if self.policy_id not in SIZING_POLICIES:
+            raise ValueError(
+                f"unknown sizing policy {self.policy_id!r}; known {SIZING_POLICIES}"
+            )
+        if not 0.0 <= self.portfolio_weight <= 1.0:
+            raise ValueError(
+                f"portfolio_weight must lie in [0, 1], got {self.portfolio_weight}: "
+                "construction may reduce a size, never increase it"
+            )
+
+    def allocated(self, *, risk_fraction: float, portfolio_weight: float) -> FixedFractionalSizer:
+        """This sizer at a construction allocation: the tier base risk and the weight.
+
+        The paper runtime's equivalent is ``size_trade(policy=replace(policy,
+        risk_fraction=base_risk_pct / 100), portfolio_weight=weight)``.
+        """
+        return replace(self, risk_fraction=risk_fraction, portfolio_weight=portfolio_weight)
+
+    @property
+    def resolved_cost_profile(self) -> ExecutionProfile | None:
+        if self.policy_id == SIZING_POLICY_V1:
+            return None
+        return self.cost_profile or DEFAULT_SIZING_COST_PROFILE
+
+    def fingerprint(self) -> dict[str, object]:
+        return {
+            "sizer": type(self).__name__,
+            "policy_id": self.policy_id,
+            "risk_fraction": self.risk_fraction,
+            "max_leverage": self.max_leverage,
+            "cost_profile": (
+                self.resolved_cost_profile.name
+                if self.resolved_cost_profile is not None
+                else None
+            ),
+            "cost_profile_defaulted": (
+                self.policy_id == SIZING_POLICY_V2 and self.cost_profile is None
+            ),
+        }
 
     def size_for(
         self,
@@ -218,15 +378,27 @@ class FixedFractionalSizer:
         stop_distance = signal.stop_distance
         if stop_distance <= 0:
             return 0.0
-        risk_account = account.equity * self.risk_fraction
+        risk_account = account.equity * self.risk_fraction * self.portfolio_weight
         if risk_account <= 0:
             return 0.0
-        risk_per_unit_account = stop_distance * instrument.contract_size * fx_quote_to_account
+        per_unit_price = stop_distance
+        profile = self.resolved_cost_profile
+        if profile is not None:
+            per_unit_price = stop_distance + stop_out_cost_per_unit(
+                profile, instrument, signal
+            )
+        risk_per_unit_account = per_unit_price * instrument.contract_size * fx_quote_to_account
         if risk_per_unit_account <= 0:
             return 0.0
         size = risk_account / risk_per_unit_account
 
-        leverage = self.max_leverage or instrument.retail_leverage
+        # Never above the instrument's regulatory cap, whatever was asked for:
+        # the same rule as ``SizingPolicy.leverage_for``.
+        leverage = (
+            instrument.retail_leverage
+            if self.max_leverage is None
+            else min(self.max_leverage, instrument.retail_leverage)
+        )
         notional_per_unit = (
             signal.reference_price * instrument.contract_size * fx_quote_to_account
         )
@@ -258,6 +430,81 @@ class PrecomputedSignals:
 
 
 # --------------------------------------------------------------------------
+# Portfolio construction seam (the policy lives in ``portfolio``)
+# --------------------------------------------------------------------------
+
+
+@dataclass(frozen=True, slots=True)
+class ConstructionRequest:
+    """The engine's book on one decision bar: all an allocation may read.
+
+    Mirrors what the paper runtime hands ``PortfolioConstructor`` (the venue's
+    ``account()``, ``positions()``, its equity curve, the bars seen so far) and
+    nothing more. There is deliberately no conviction field: a backtest has no
+    admissible LLM conviction (plan D-A3).
+    """
+
+    as_of: pd.Timestamp
+    #: Balance, equity, peak and ``margin_used`` computed exactly as
+    #: ``PaperBroker.account()`` computes them.
+    account: AccountState
+    open_positions: tuple[Position, ...]
+    #: The bar's signals that survived the reversal and lock filters, in the
+    #: order the strategy emitted them.
+    signals: tuple[Signal, ...]
+    account_ccy: str
+    #: ``sizer.risk_fraction``: the configured sizing policy is a CEILING on
+    #: the tier base risk, exactly as ``SignalEvaluator`` applies it.
+    risk_ceiling_fraction: float | None
+    #: The sizing rule's cost profile (``None`` under ``fixed_fractional_v1``).
+    #: Open risk to stop is cost-inclusive under it, the same definition as a
+    #: plan's ``risk_amount`` and as ``RiskContextBuilder.open_risk_by_instrument``.
+    sizing_cost_profile: ExecutionProfile | None
+    #: ``quote currency -> account currency`` at :attr:`as_of`.
+    rate: Callable[[str], float]
+    #: Bars 0..now INCLUSIVE for an instrument (the strategy's own view).
+    history: Callable[[str], pd.DataFrame]
+    #: The marked-to-market equity curve up to and including this bar.
+    equity_curve: Callable[[], pd.Series]
+    #: This bar, as the position book sees it (a regime source may read it).
+    view: BarSlice
+
+
+@dataclass(frozen=True, slots=True)
+class AllocationDecision:
+    """One signal's allocation, as the engine needs it to size (or refuse) it."""
+
+    signal_id: str
+    #: The tier's base risk per trade, % of equity, after the ceiling.
+    base_risk_pct: float
+    #: Fraction of the base risk, in [0, 1].
+    weight: float
+    dropped: bool
+    drop_reason: str | None
+    #: The compact, JSON-serialisable record of every step (the "why this
+    #: size" row). The engine adds ``bar_time``, ``size`` and ``outcome``.
+    record: Mapping[str, Any]
+
+
+class ConstructionPolicy(Protocol):
+    """Allocates a decision bar's signals against the engine's own book.
+
+    Satisfied by ``fiboki.portfolio.engine_policy.BacktestConstructionPolicy``
+    (the engine may not import ``portfolio``). ``fingerprint()`` enters
+    :meth:`BacktestConfig.fingerprint` and therefore every stored result and
+    every evaluation cache key.
+    """
+
+    def fingerprint(self) -> dict[str, object]: ...
+
+    def allocate(self, request: ConstructionRequest) -> Sequence[AllocationDecision]: ...
+
+
+#: How a run without portfolio construction is fingerprinted.
+CONSTRUCTION_NONE = "none"
+
+
+# --------------------------------------------------------------------------
 # Config, context, results
 # --------------------------------------------------------------------------
 
@@ -277,6 +524,20 @@ class BacktestConfig:
     close_at_end_of_data: bool = True
     strategy_id: str = "unnamed"
     provenance: Provenance = Provenance.BACKTEST
+    #: What an OHLC frame WITHOUT a ``price_basis`` column is taken to be. The
+    #: fill model assumes mid bars; a frame that says it is BID or ASK is refused
+    #: whatever this says (convert it with ``data.providers.histdata.bid_to_mid``
+    #: first). ``True`` records ``assumed_mid`` against that instrument in the
+    #: data fingerprint, so the assumption is visible on every stored result;
+    #: ``False`` refuses an unlabelled frame outright.
+    assume_mid: bool = True
+    #: Portfolio construction on each decision bar. ``None`` (the engine-level
+    #: default, forced by the layering rule: see the module docstring) is the
+    #: flat ``risk_fraction`` path, byte-identical to every pinned ledger and
+    #: fingerprinted ``construction=none``. Research runs pass the paper
+    #: runtime's policy (``validation.engine_evaluator.
+    #: research_construction_policy``), so research and paper size alike.
+    construction: ConstructionPolicy | None = None
 
     def __post_init__(self) -> None:
         if self.initial_balance <= 0:
@@ -312,6 +573,15 @@ class BacktestConfig:
             "close_at_end_of_data": self.close_at_end_of_data,
             "strategy_id": self.strategy_id,
             "provenance": self.provenance.value,
+            "assume_mid": self.assume_mid,
+            # The construction policy version (and everything else that can
+            # move a size) rather than an ENGINE_VERSION bump: ``none`` and a
+            # policy are different runs of the same engine generation.
+            "construction": (
+                CONSTRUCTION_NONE
+                if self.construction is None
+                else dict(self.construction.fingerprint())
+            ),
         }
 
 
@@ -378,6 +648,15 @@ class BacktestResult:
     #: instrument, the strategy and the lock's code. Empty for a run whose
     #: policy declares no locks.
     lock_blocks: list[dict[str, object]] = field(default_factory=list)
+    #: One row per signal offered to portfolio construction, in decision order:
+    #: the policy's record (tier, base risk, weight, every step's factor and
+    #: detail) plus ``bar_time``, ``size`` and ``outcome`` (``queued``,
+    #: ``allocation_dropped`` or ``sized_to_zero``). Empty under
+    #: ``construction=None``.
+    allocation_ledger: list[dict[str, Any]] = field(default_factory=list)
+    #: Aligned 1:1 with :attr:`trades`: the index into
+    #: :attr:`allocation_ledger` of the decision that opened each trade.
+    trade_allocation_index: list[int | None] = field(default_factory=list)
 
     # Columns whose values define the ledger. UUIDs are excluded on purpose:
     # they are random by construction and would defeat the determinism test
@@ -430,7 +709,31 @@ class BacktestResult:
                     "fx_rate_used": t.fx_rate_used,
                 }
             )
-        return pd.DataFrame(rows, columns=list(self.LEDGER_COLUMNS))
+        frame = pd.DataFrame(rows, columns=list(self.LEDGER_COLUMNS))
+        if self.allocation_ledger:
+            # "Why this size", on the trade row, as compact JSON. Absent under
+            # construction=None so that frame is unchanged.
+            frame["allocation"] = self.trade_allocations()
+        return frame
+
+    def trade_allocations(self) -> list[str | None]:
+        """The allocation record behind each trade, compact JSON, aligned with trades."""
+        out: list[str | None] = []
+        for k in range(len(self.trades)):
+            idx = (
+                self.trade_allocation_index[k]
+                if k < len(self.trade_allocation_index)
+                else None
+            )
+            out.append(None if idx is None else allocation_json(self.allocation_ledger[idx]))
+        return out
+
+    def allocation_ledger_text(self) -> str:
+        """Canonical text of the size-and-reason ledger: one compact JSON row per line."""
+        return "".join(allocation_json(row) + "\n" for row in self.allocation_ledger)
+
+    def allocation_ledger_sha256(self) -> str:
+        return hashlib.sha256(self.allocation_ledger_text().encode("utf-8")).hexdigest()
 
     def ledger_text(self) -> str:
         """Canonical text form. ``repr`` of a float round-trips exactly in CPython."""
@@ -572,6 +875,13 @@ class BacktestEngine:
         if not data:
             raise ValueError("BacktestEngine requires at least one instrument frame")
 
+        if config.construction is not None and not callable(getattr(sizer, "allocated", None)):
+            raise TypeError(
+                f"BacktestConfig.construction is set but {type(sizer).__name__} cannot "
+                "size at an allocation (it has no allocated(risk_fraction=, "
+                "portfolio_weight=)). Use FixedFractionalSizer, or construction=None: "
+                "a sizer that ignored the weight would report construction it never did."
+            )
         self.config = config
         self.strategy = strategy
         self.sizer = sizer
@@ -587,9 +897,11 @@ class BacktestEngine:
         self.symbols: tuple[str, ...] = tuple(sorted(data))
         self.frames: dict[str, pd.DataFrame] = {}
         self.instruments: dict[str, Instrument] = {}
+        self.price_basis: dict[str, str] = {}
         for sym in self.symbols:
-            frame = _validate_frame(sym, data[sym])
+            frame, basis = _validate_frame(sym, data[sym], assume_mid=config.assume_mid)
             self.frames[sym] = frame
+            self.price_basis[sym] = basis
             self.instruments[sym] = get_instrument(sym)
 
         self.timeline: pd.DatetimeIndex = _union_timeline(self.frames, self.symbols)
@@ -694,6 +1006,12 @@ class BacktestEngine:
         )
         self.lock_book = lock_book
         lock_blocks: list[dict[str, object]] = []
+        construction = cfg.construction
+        allocation_ledger: list[dict[str, Any]] = []
+        #: pending-entry seq -> ledger row, until the entry fills or is refused
+        allocation_by_pending: dict[int, int] = {}
+        #: managed-position seq -> ledger row, once filled
+        allocation_by_position: dict[int, int] = {}
         peak_equity = book.balance
         signals_seen = 0
         orders_submitted = 0
@@ -721,6 +1039,11 @@ class BacktestEngine:
             if lock_book is not None:
                 for trade in advanced.trades:
                     lock_book.on_close(trade)
+            if allocation_by_pending:
+                for event in advanced.entries:
+                    row = allocation_by_pending.pop(event.pending.seq, None)
+                    if row is not None and event.filled and event.managed is not None:
+                        allocation_by_position[event.managed.seq] = row
 
             # -- 4. mark to market on the bar's close
             unrealised, exposure = book.mark_to_market(view)
@@ -763,6 +1086,7 @@ class BacktestEngine:
                 _cursor={sym: int(self._positions[sym][i]) for sym in self.symbols},
             )
             emitted = self.strategy.on_bar(ctx)
+            batch: list[tuple[Signal, Instrument]] = []
             for signal in emitted or ():
                 signals_seen += 1
                 if signal.bar_time != ts:
@@ -808,26 +1132,65 @@ class BacktestEngine:
                         )
                         continue
 
+                if construction is not None:
+                    # Allocated together with the rest of this bar's signals,
+                    # below, exactly as the paper runtime allocates a batch.
+                    batch.append((signal, instr))
+                    continue
+
                 rate = self._rate(instr.quote, ts)
                 size = self.sizer.size_for(signal, instr, account, rate)
                 if size <= 0:
                     book.bump("sized_to_zero")
                     continue
                 orders_submitted += 1
-                book.queue_entry(
-                    PendingEntry(
-                        seq=book.next_seq(),
-                        instrument=instr,
-                        direction=signal.direction,
-                        size=size,
-                        stop_price=signal.stop_price,
-                        take_profit_prices=tuple(signal.take_profit_prices),
-                        take_profit_allocations=tuple(signal.take_profit_allocations),
-                        strategy_id=signal.strategy_id,
-                        actionable_index=i + 1 + cfg.profile.latency_bars,
-                        created_index=i,
+                self._queue(book, signal, instr, size, i)
+
+            # -- 7. portfolio construction, then ONE sizing call per accepted
+            #    candidate (``SignalEvaluator.evaluate`` on the paper path).
+            if batch:
+                assert construction is not None
+                decisions = {
+                    d.signal_id: d
+                    for d in construction.allocate(
+                        self._construction_request(
+                            book, view, ctx, account, [s for s, _ in batch],
+                            eq_ts, eq_equity, written,
+                        )
                     )
-                )
+                }
+                bar_time = ts.isoformat()
+                for signal, instr in batch:
+                    decision = decisions.get(signal.signal_id)
+                    if decision is None:
+                        raise RuntimeError(
+                            f"construction returned no decision for signal on "
+                            f"{signal.instrument} at {ts}; a signal may be refused, "
+                            "never silently skipped"
+                        )
+                    row = {**dict(decision.record), "bar_time": bar_time}
+                    if decision.dropped or decision.weight <= 0:
+                        book.bump("allocation_dropped")
+                        allocation_ledger.append(
+                            {**row, "size": 0.0, "outcome": "allocation_dropped"}
+                        )
+                        continue
+                    rate = self._rate(instr.quote, ts)
+                    sizer = self.sizer.allocated(  # type: ignore[attr-defined]
+                        risk_fraction=decision.base_risk_pct / 100.0,
+                        portfolio_weight=decision.weight,
+                    )
+                    size = sizer.size_for(signal, instr, account, rate)
+                    if size <= 0:
+                        book.bump("sized_to_zero")
+                        allocation_ledger.append(
+                            {**row, "size": 0.0, "outcome": "sized_to_zero"}
+                        )
+                        continue
+                    orders_submitted += 1
+                    entry = self._queue(book, signal, instr, size, i)
+                    allocation_by_pending[entry.seq] = len(allocation_ledger)
+                    allocation_ledger.append({**row, "size": size, "outcome": "queued"})
 
         # -- end of data: close whatever is left, honestly flagged
         if cfg.close_at_end_of_data and book.open and not bankrupt:
@@ -864,7 +1227,10 @@ class BacktestEngine:
             trades=book.trades,
             equity_curve=equity_curve,
             costs=book.costs,
-            config_fingerprint=self.config.fingerprint(),
+            config_fingerprint={
+                **self.config.fingerprint(),
+                "sizing": sizer_fingerprint(self.sizer),
+            },
             data_fingerprint=self.data_fingerprint(),
             rejections=dict(sorted(book.rejections.items())),
             bankrupt=bankrupt,
@@ -873,9 +1239,69 @@ class BacktestEngine:
             exit_legs=book.exit_legs,
             exit_policy_fingerprint=self.exit_policy.fingerprint(),
             lock_blocks=lock_blocks,
+            allocation_ledger=allocation_ledger,
+            trade_allocation_index=(
+                _trade_allocation_index(book, allocation_by_position)
+                if allocation_ledger
+                else []
+            ),
         )
 
     # -------------------------------------------------------------- helpers
+
+    def _queue(
+        self, book: PositionBook, signal: Signal, instr: Instrument, size: float, i: int
+    ) -> PendingEntry:
+        return book.queue_entry(
+            PendingEntry(
+                seq=book.next_seq(),
+                instrument=instr,
+                direction=signal.direction,
+                size=size,
+                stop_price=signal.stop_price,
+                take_profit_prices=tuple(signal.take_profit_prices),
+                take_profit_allocations=tuple(signal.take_profit_allocations),
+                strategy_id=signal.strategy_id,
+                actionable_index=i + 1 + self.config.profile.latency_bars,
+                created_index=i,
+            )
+        )
+
+    def _construction_request(
+        self,
+        book: PositionBook,
+        view: BarSlice,
+        ctx: BarContext,
+        account: AccountState,
+        signals: list[Signal],
+        eq_ts: np.ndarray,
+        eq_equity: np.ndarray,
+        written: int,
+    ) -> ConstructionRequest:
+        """The book as ``PaperBroker.account()`` / ``positions()`` would report it."""
+        cfg = self.config
+        ts = view.timestamp
+
+        def equity_curve() -> pd.Series:
+            # One row per bar, as the paper venue's ``equity_curve`` has.
+            return pd.Series(
+                eq_equity[:written].copy(),
+                index=pd.DatetimeIndex(eq_ts[:written], tz="UTC"),
+            )
+
+        return ConstructionRequest(
+            as_of=ts,
+            account=replace(account, margin_used=_margin_used(book, view)),
+            open_positions=tuple(op.position for op in book.open),
+            signals=tuple(signals),
+            account_ccy=cfg.account_ccy,
+            risk_ceiling_fraction=getattr(self.sizer, "risk_fraction", None),
+            sizing_cost_profile=getattr(self.sizer, "resolved_cost_profile", None),
+            rate=lambda ccy: self._rate(ccy, ts),
+            history=ctx.history,
+            equity_curve=equity_curve,
+            view=view,
+        )
 
     def _slice(
         self, i: int, ts: pd.Timestamp, prev_ts: pd.Timestamp | None
@@ -980,6 +1406,7 @@ class BacktestEngine:
                 + self.frames[sym].index.asi8.tobytes()
             ).hexdigest()
             entry: dict[str, object] = {
+                "price_basis": self.price_basis.get(sym, "assumed_mid"),
                 "bars": int(len(arr)),
                 "first": self.frames[sym].index[0].isoformat(),
                 "last": self.frames[sym].index[-1].isoformat(),
@@ -1011,10 +1438,93 @@ def _bump(counter: dict[str, int], key: str) -> None:
     counter[key] = counter.get(key, 0) + 1
 
 
+def allocation_json(row: Mapping[str, Any]) -> str:
+    """Compact, canonical JSON for one allocation row (sorted keys, no spaces).
+
+    ``json`` writes a float with ``repr``, which round-trips exactly, so two
+    rows are the same text only when every factor is the same double.
+    """
+    return json.dumps(dict(row), sort_keys=True, separators=(",", ":"), default=str)
+
+
+def _margin_used(book: PositionBook, view: BarSlice) -> float:
+    """Margin in use, computed as ``PaperBroker._margin_used`` computes it.
+
+    Marked at the instrument's latest close (the paper venue's last delivered
+    bar), at the entry FX rate, over the instrument's retail leverage.
+    """
+    total = 0.0
+    for op in book.open:
+        leverage = op.instrument.retail_leverage or 1.0
+        mark = view.last_closes.get(op.position.instrument)
+        price = mark if mark is not None else op.entry_mid
+        rate = op.entry_fx
+        total += abs(price * op.position.size * op.instrument.contract_size * rate) / leverage
+    return total
+
+
+def _trade_allocation_index(
+    book: PositionBook, by_position: Mapping[int, int]
+) -> list[int | None]:
+    """Link each trade to the decision that opened it, via its final exit leg.
+
+    The book appends a position's FINAL leg immediately before its ``Trade`` on
+    every close path (exit, reversal, flatten), so the k-th final leg belongs to
+    the k-th trade.
+    """
+    finals = [leg.position_seq for leg in book.exit_legs if leg.final]
+    out: list[int | None] = []
+    for k in range(len(book.trades)):
+        seq = finals[k] if k < len(finals) else None
+        out.append(None if seq is None else by_position.get(seq))
+    return out
+
+
 _plan_legs = plan_legs
 
 
-def _validate_frame(symbol: str, frame: pd.DataFrame) -> pd.DataFrame:
+#: ``price_basis`` values the fill model can price both sides from.
+EXECUTABLE_PRICE_BASES = frozenset({"mid", "synthetic_mid"})
+
+_UTC_NAMES = frozenset({"UTC", "Etc/UTC", "tzutc()", "UTC+00:00", "Etc/Universal", "Universal", "Zulu"})
+
+
+def _is_utc(tz: object) -> bool:
+    return tz is not None and (str(tz) in _UTC_NAMES or getattr(tz, "zone", None) == "UTC")
+
+
+def sizer_fingerprint(sizer: object) -> dict[str, object]:
+    """How a run was sized, for the result's config fingerprint."""
+    fp = getattr(sizer, "fingerprint", None)
+    if callable(fp):
+        return dict(fp())
+    out: dict[str, object] = {"sizer": type(sizer).__name__}
+    size = getattr(sizer, "size", None)
+    if isinstance(size, int | float):
+        out["size"] = float(size)
+    policy = getattr(sizer, "policy", None)
+    if policy is not None and hasattr(policy, "fingerprint"):
+        out["policy"] = policy.fingerprint()
+    return out
+
+
+def _validate_frame(
+    symbol: str, frame: pd.DataFrame, *, assume_mid: bool = True
+) -> tuple[pd.DataFrame, str]:
+    """The OHLC the engine will trade on, and the price basis it is on.
+
+    Refuses a frame whose ``price_basis`` column says BID, ASK or LAST: the fill
+    model assumes mid bars, so a long entered on BID bars pays bid + half
+    spread, which is the true MID -- half a spread too cheap -- and a short's
+    stop triggers on BID highs where the real trigger is the ASK. The error is
+    directional (it flatters long-biased strategies), so it is refused rather
+    than tolerated. A frame without the column is taken as mid only under
+    ``assume_mid``, and is then recorded as ``assumed_mid``.
+
+    Requires a UTC index, not merely a tz-aware one: financing rollovers and
+    the financing-day rule read the UTC hour and weekday, so a frame in
+    Europe/London shifts every rollover by the DST offset.
+    """
     required = ("open", "high", "low", "close")
     missing = [c for c in required if c not in frame.columns]
     if missing:
@@ -1023,16 +1533,42 @@ def _validate_frame(symbol: str, frame: pd.DataFrame) -> pd.DataFrame:
         raise TypeError(f"{symbol}: frame index must be a DatetimeIndex")
     if frame.index.tz is None:
         raise ValueError(f"{symbol}: frame index must be timezone-aware UTC")
+    if not _is_utc(frame.index.tz):
+        raise ValueError(
+            f"{symbol}: frame index is in {frame.index.tz}, not UTC. Convert with "
+            ".tz_convert('UTC') first; financing and session rules read UTC hours."
+        )
     if not frame.index.is_monotonic_increasing:
         raise ValueError(f"{symbol}: frame index must be sorted ascending")
     if frame.index.has_duplicates:
         raise ValueError(f"{symbol}: frame index has duplicate timestamps")
     if len(frame) == 0:
         raise ValueError(f"{symbol}: frame is empty")
+    if "price_basis" in frame.columns:
+        bases = sorted({str(getattr(b, "value", b)).lower() for b in frame["price_basis"].unique()})
+        bad = [b for b in bases if b not in EXECUTABLE_PRICE_BASES]
+        if bad:
+            raise ValueError(
+                f"{symbol}: price_basis {bad} is not executable on both sides. The "
+                "fill model assumes MID bars; convert BID bars with "
+                "fiboki.data.providers.histdata.bid_to_mid (and record the assumed "
+                "spread) before running. Trading BID bars as mid understates a "
+                "long's entry cost by half a spread and a short's stop-outs."
+            )
+        if len(bases) != 1:
+            raise ValueError(f"{symbol}: frame mixes price bases {bases}")
+        basis = bases[0]
+    elif assume_mid:
+        basis = "assumed_mid"
+    else:
+        raise ValueError(
+            f"{symbol}: frame has no price_basis column and assume_mid is False; "
+            "say what the prices are rather than let the engine guess"
+        )
     sub = frame[list(required)].astype(np.float64)
     if not np.isfinite(sub.to_numpy()).all():
         raise ValueError(f"{symbol}: OHLC contains NaN or inf; repair upstream")
-    return sub
+    return sub, basis
 
 
 def _union_timeline(frames: dict[str, pd.DataFrame], symbols: tuple[str, ...]) -> pd.DatetimeIndex:

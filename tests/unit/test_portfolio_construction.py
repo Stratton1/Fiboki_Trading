@@ -12,6 +12,7 @@ from fiboki.core.enums import StrategyLifecycle
 from fiboki.portfolio.construction import (
     ConstructionConfig,
     CorrelationMatrix,
+    EqualRiskAllocator,
     PortfolioConstructor,
     get_allocator,
 )
@@ -269,12 +270,18 @@ def test_volatility_targeting_scales_down_a_hot_portfolio() -> None:
     assert hot_w < calm_w
 
 
-def test_volatility_targeting_scale_up_is_capped() -> None:
-    config = ConstructionConfig(target_portfolio_vol=0.10, vol_target_max_scale=1.5)
+def test_volatility_targeting_never_scales_up() -> None:
+    """construction_v2 (audit F P1-11): v1 allowed a 1.5x scale-up here, which
+    fought the per-trade gateway cap and the down-only principle. A scale above
+    1.0 is now refused at configuration, and a very calm book gets exactly 1.0."""
+    with pytest.raises(ValueError, match="vol_target_max_scale"):
+        ConstructionConfig(target_portfolio_vol=0.10, vol_target_max_scale=1.5)
+    config = ConstructionConfig(target_portfolio_vol=0.10)
     snapshot = make_snapshot(realised_portfolio_vol=0.001)
     allocation = _allocate([make_candidate()], snapshot, config=config).allocations[0]
-    factor = next(r.factor for r in allocation.reasons if r.step == "volatility_target")
-    assert factor == pytest.approx(1.5)
+    factor = next(r.factor for r in allocation.trace if r.step == "volatility_target")
+    assert factor == 1.0
+    assert allocation.weight <= allocation.base_weight
 
 
 def test_an_unmeasured_portfolio_vol_is_neutral_not_a_free_scale_up() -> None:
@@ -336,23 +343,29 @@ def test_the_total_budget_caps_the_sum_across_candidates() -> None:
 
 
 def test_scaling_to_the_total_budget_is_recorded_as_a_reason() -> None:
-    """Volatility targeting can scale UP, which is the one way the pipeline can
-    push the aggregate above the budget. The total cap is what catches it."""
+    """Every per-candidate step is now down-only (construction_v2), so the only
+    way the aggregate can exceed the budget is an allocator that over-allocates
+    its BASE weights. The total cap is what catches it, and says so."""
+
+    class _Greedy(EqualRiskAllocator):
+        name = "greedy_test_allocator"
+
+        def base_weights(self, candidates, snapshot, config):
+            return {c.key: 1.0 for c in candidates}
+
     config = ConstructionConfig(
         max_total_weight=1.0,
         max_weight_per_candidate=1.0,
         min_weight_to_trade=0.0,
-        target_portfolio_vol=0.12,
     )
     candidates = [
         make_candidate(instrument="EURUSD", strategy_id="a"),
         make_candidate(instrument="USDJPY", strategy_id="b"),
     ]
-    snapshot = make_snapshot(regime="trend", realised_portfolio_vol=0.04)
-    result = _allocate(candidates, snapshot, config=config)
+    snapshot = make_snapshot(regime="trend")
+    result = PortfolioConstructor(_Greedy(), config).allocate(candidates, snapshot)
 
     steps = {r.step for a in result.accepted for r in a.reasons}
-    assert "volatility_target" in steps
     assert "total_budget" in steps
     assert result.notes
     assert result.total_weight <= config.max_total_weight + 1e-9

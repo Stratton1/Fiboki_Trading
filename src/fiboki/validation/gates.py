@@ -405,9 +405,11 @@ GATE_SET_V2 = GateSet(
             rung=4,
             units="ratio",
             rationale=(
-                "Selected point's score divided by the mean of its neighbourhood. "
-                "Above 1.25 the result is a spike in the parameter surface, which "
-                "does not survive contact with a different sample."
+                "(s + |s|) / (m + |s|): s is the selected point's score and m the "
+                "mean of its neighbours EXCLUDING the point, so for s > 0 it is "
+                "2 / (1 + m/s). Above 1.25 the neighbours keep less than 60% of the "
+                "point's score: a spike in the parameter surface, which does not "
+                "survive contact with a different sample."
             ),
         ),
     ),

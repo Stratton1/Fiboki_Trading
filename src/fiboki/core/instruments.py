@@ -43,24 +43,69 @@ _ISO = {
     "JPY", "MXN", "NOK", "NZD", "PLN", "SEK", "SGD", "TRY", "USD", "ZAR",
 }
 
-# FCA/ESMA retail leverage. Source: FCA PS19/18 and ESMA product intervention.
+# FCA/ESMA retail leverage caps (initial margin 1/cap).
+#
+# Sources, both retained in UK law after 2020:
+#   * ESMA Decision (EU) 2018/796, Article 2 and Annex II (CFD product
+#     intervention measures);
+#   * FCA Policy Statement PS19/18 (restricting CFDs to retail clients), COBS
+#     22.5.
+#
+# The caps are 30:1 for "major currency pairs", 20:1 for non-major currency
+# pairs, gold and major indices, 10:1 for commodities other than gold and for
+# non-major equity indices, 5:1 for individual equities, 2:1 for crypto.
+#
+# A "major currency pair" is DEFINED BY THE CURRENCY SET, not by the colloquial
+# list of USD pairs: any pair made of two of USD, EUR, JPY, GBP, CAD and CHF.
+# So AUDUSD and NZDUSD are non-major (20:1) and EURGBP, EURJPY, GBPJPY, EURCHF,
+# CADJPY, CHFJPY, GBPCAD, GBPCHF, EURCAD and CADCHF are major (30:1). The
+# earlier symbol list here had both halves backwards: permissive on AUDUSD and
+# NZDUSD, conservative on the ten crosses. ``tests/golden/
+# test_golden_retail_leverage.py`` pins every registered instrument.
+#
+# "Major indices" is a closed list in the same Annex: FTSE 100, CAC 40, DAX 30,
+# Dow Jones Industrial Average, S&P 500, NASDAQ Composite, NASDAQ 100, Nikkei
+# 225, S&P/ASX 200 and EURO STOXX 50. The Hang Seng is not on it, so HK50 is
+# 10:1. Silver is a "commodity other than gold", so XAGUSD is 10:1.
+ESMA_MAJOR_CURRENCIES: frozenset[str] = frozenset({"USD", "EUR", "JPY", "GBP", "CAD", "CHF"})
+
 _RETAIL_LEVERAGE = {
     AssetClass.FX_MAJOR: 30.0,
     AssetClass.FX_CROSS: 20.0,
-    AssetClass.METAL: 20.0,
-    AssetClass.INDEX: 20.0,
+    AssetClass.METAL: 20.0,   # gold only; other metals are set per instrument
+    AssetClass.INDEX: 20.0,   # major indices only; others are set per instrument
     AssetClass.ENERGY: 10.0,
     AssetClass.CRYPTO: 2.0,
     AssetClass.EQUITY: 5.0,
 }
 
-_MAJORS = {"EURUSD", "GBPUSD", "USDJPY", "USDCHF", "USDCAD", "AUDUSD", "NZDUSD"}
+#: Retail leverage for a commodity other than gold, and for an index that is not
+#: on the ESMA major-index list.
+NON_MAJOR_COMMODITY_LEVERAGE = 10.0
+NON_MAJOR_INDEX_LEVERAGE = 10.0
+
+#: Registered index symbols that ARE on the ESMA/FCA major-index list.
+ESMA_MAJOR_INDICES: frozenset[str] = frozenset(
+    {"US500", "US100", "US30", "UK100", "DE40", "FR40", "JP225", "AU200", "EU50"}
+)
+
+
+def is_esma_major_pair(base: str, quote: str) -> bool:
+    """True when BOTH legs are ESMA major currencies (ESMA 2018/796 Annex II)."""
+    return base.upper() in ESMA_MAJOR_CURRENCIES and quote.upper() in ESMA_MAJOR_CURRENCIES
 
 
 def _fx(symbol: str, spread: float) -> Instrument:
+    """Register an FX pair. Its class, and so its cap, follow the currency set.
+
+    ``AssetClass.FX_MAJOR`` therefore means the REGULATORY major, not the
+    colloquial "USD major": AUDUSD is ``FX_CROSS`` and EURGBP is ``FX_MAJOR``.
+    Every consumer of the class outside this module treats the two FX classes
+    alike, so only the leverage cap reads the difference.
+    """
     base, quote = symbol[:3], symbol[3:]
     jpy = quote == "JPY"
-    cls = AssetClass.FX_MAJOR if symbol in _MAJORS else AssetClass.FX_CROSS
+    cls = AssetClass.FX_MAJOR if is_esma_major_pair(base, quote) else AssetClass.FX_CROSS
     return Instrument(
         symbol=symbol, asset_class=cls, base=base, quote=quote,
         pip_size=0.01 if jpy else 0.0001,
@@ -96,7 +141,7 @@ _add(Instrument("XAUUSD", AssetClass.METAL, "XAU", "USD", 0.01, 1.0,
                 annual_financing_bps=300.0))
 _add(Instrument("XAGUSD", AssetClass.METAL, "XAG", "USD", 0.001, 1.0,
                 min_size=0.05, size_step=0.05, price_precision=3,
-                typical_spread_pips=25.0, retail_leverage=20.0,
+                typical_spread_pips=25.0, retail_leverage=NON_MAJOR_COMMODITY_LEVERAGE,
                 annual_financing_bps=300.0))
 _add(Instrument("WTIUSD", AssetClass.ENERGY, "WTI", "USD", 0.01, 1.0,
                 min_size=0.1, size_step=0.1, price_precision=2,
@@ -115,7 +160,12 @@ for _s, _q, _sp, _prec in [
 ]:
     _add(Instrument(_s, AssetClass.INDEX, _s, _q, 1.0, 1.0,
                     min_size=0.1, size_step=0.1, price_precision=_prec,
-                    typical_spread_pips=_sp, retail_leverage=20.0,
+                    typical_spread_pips=_sp,
+                    retail_leverage=(
+                        _RETAIL_LEVERAGE[AssetClass.INDEX]
+                        if _s in ESMA_MAJOR_INDICES
+                        else NON_MAJOR_INDEX_LEVERAGE
+                    ),
                     annual_financing_bps=300.0, trading_hours="index"))
 
 

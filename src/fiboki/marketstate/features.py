@@ -342,6 +342,10 @@ def naive_expanding_rank_pct(
     return out
 
 
+#: Elements per block in :func:`rolling_ols_stats` (about 16 MB of float64).
+_OLS_BLOCK_ELEMENTS = 2_000_000
+
+
 def rolling_ols_stats(
     y: np.ndarray, window: int
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
@@ -377,15 +381,29 @@ def rolling_ols_stats(
     x = np.arange(w, dtype=float)
     xc = x - x.mean()
     sxx = float((xc * xc).sum())
-    # Sliding dot product with a fixed weight vector == valid convolution with
-    # the reversed weights. O(n*w) flops, O(n) memory.
-    dot = np.convolve(arr, xc[::-1], mode="valid")
-    csum = np.concatenate([[0.0], np.cumsum(arr)])
-    csum2 = np.concatenate([[0.0], np.cumsum(arr * arr)])
-    sy = csum[w:] - csum[:-w]
-    sy2 = csum2[w:] - csum2[:-w]
-    sl = dot / sxx
-    ss_tot = sy2 - (sy * sy) / w
+    # Every window is DEMEANED before its sums of squares are formed. The
+    # previous form took ``sum(y^2) - (sum y)^2 / w`` from running cumulative
+    # sums, which on a long, high-priced series subtracts two numbers of order
+    # ``N * price^2`` to recover a variance of order ``w * sigma^2``: on XAUUSD
+    # M1 over years that is catastrophic cancellation, and r2 / tstat came out
+    # as noise (audit P3-1). The demeaned form is exact to rounding in the
+    # window's own scale. Windows are processed in blocks so memory stays
+    # O(block * w) rather than O(n * w).
+    n_windows = n - w + 1
+    sl = np.empty(n_windows)
+    ss_tot = np.empty(n_windows)
+    block = max(1, _OLS_BLOCK_ELEMENTS // w)
+    view = np.lib.stride_tricks.sliding_window_view(arr, w)
+    for lo in range(0, n_windows, block):
+        hi = min(n_windows, lo + block)
+        chunk = view[lo:hi]
+        dev = chunk - chunk.mean(axis=1, keepdims=True)
+        # einsum, not ``@``: BLAS may choose a different kernel (and so a
+        # different rounding) for a different number of rows, and a row's value
+        # must not depend on how many rows follow it (causality is tested
+        # bit-for-bit by truncation).
+        sl[lo:hi] = np.einsum("ij,j->i", dev, xc) / sxx
+        ss_tot[lo:hi] = np.einsum("ij,ij->i", dev, dev)
     ss_reg = sl * sl * sxx
     ss_res = np.maximum(ss_tot - ss_reg, 0.0)
     with np.errstate(divide="ignore", invalid="ignore"):

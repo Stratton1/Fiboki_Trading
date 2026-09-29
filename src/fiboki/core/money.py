@@ -50,21 +50,68 @@ class IdentityFxSource:
         )
 
 
+#: How old the newest daily observation may be before a lookup refuses. Four
+#: days covers a weekend plus a one-day holiday (Friday close to Tuesday), and no
+#: more. It was seven, which let a rate from the previous Wednesday price a
+#: Tuesday trade; for daily FX that is a stale rate, not a holiday.
+DEFAULT_MAX_STALENESS = pd.Timedelta(days=4)
+
+
 @dataclass
 class SeriesFxSource:
     """Conversion from historical FX series. Uses as-of (backward) lookup.
 
-    `series` maps 'GBPUSD' -> a tz-aware Series of rates. Inverse pairs are
-    derived automatically. As-of lookup never reads a future observation.
+    ``series`` maps 'GBPUSD' -> a tz-aware Series of rates, indexed by the time
+    each rate became KNOWN (for a daily bar, its close, not its open). Inverse
+    pairs are derived automatically. As-of lookup never reads a future
+    observation.
+
+    ``pivot`` allows ONE triangulation leg through a pivot currency when neither
+    the direct nor the inverse pair is loaded: NZD->GBP is NZD->USD times
+    USD->GBP. Each leg is looked up and staleness-checked on its own, so a
+    triangulated rate is never fresher than its stalest leg. ``pivot=None``
+    forbids triangulation.
     """
 
     series: dict[str, pd.Series]
-    max_staleness: pd.Timedelta = field(default_factory=lambda: pd.Timedelta(days=7))
+    max_staleness: pd.Timedelta = field(default_factory=lambda: DEFAULT_MAX_STALENESS)
+    pivot: str | None = "USD"
 
     def rate(self, from_ccy: str, to_ccy: str, when: pd.Timestamp) -> float:
         f, t = from_ccy.upper(), to_ccy.upper()
         if f == t:
             return 1.0
+        direct = self._direct(f, t, when)
+        if direct is not None:
+            return direct
+        pivot = (self.pivot or "").upper()
+        if pivot and pivot not in (f, t):
+            first = self._direct(f, pivot, when)
+            second = self._direct(pivot, t, when)
+            if first is not None and second is not None:
+                return first * second
+        raise KeyError(
+            f"No FX series for {f}->{t}"
+            + (f" (directly, inversely or via {pivot})" if pivot else "")
+            + ". Load it before running, or the result would be silently "
+            "denominated in the wrong currency."
+        )
+
+    def has_route(self, from_ccy: str, to_ccy: str) -> bool:
+        """Could :meth:`rate` answer this pair at all, ignoring staleness?"""
+        f, t = from_ccy.upper(), to_ccy.upper()
+        if f == t or f + t in self.series or t + f in self.series:
+            return True
+        pivot = (self.pivot or "").upper()
+        if not pivot or pivot in (f, t):
+            return False
+
+        def _one(a: str, b: str) -> bool:
+            return a + b in self.series or b + a in self.series
+
+        return _one(f, pivot) and _one(pivot, t)
+
+    def _direct(self, f: str, t: str, when: pd.Timestamp) -> float | None:
         direct, inverse = f + t, t + f
         if direct in self.series:
             return self._asof(self.series[direct], when, direct)
@@ -73,10 +120,7 @@ class SeriesFxSource:
             if v == 0.0 or not np.isfinite(v):
                 raise ValueError(f"Non-invertible rate {v} for {inverse} at {when}")
             return 1.0 / v
-        raise KeyError(
-            f"No FX series for {f}->{t}. Load it before running, or the result "
-            "would be silently denominated in the wrong currency."
-        )
+        return None
 
     def _asof(self, s: pd.Series, when: pd.Timestamp, name: str) -> float:
         idx = s.index.searchsorted(when, side="right") - 1

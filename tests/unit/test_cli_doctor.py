@@ -261,6 +261,43 @@ def test_worker_heartbeat_age_and_a_null_age_is_not_zero(repo: Path, tmp_path: P
     assert _one(_run(late, "worker heartbeat"), "worker heartbeat").status == DoctorStatus.FAIL
 
 
+def test_worker_heartbeat_threshold_is_settings_health(repo: Path, tmp_path: Path) -> None:
+    """The doctor reads Settings.health, not its own 120 s literal."""
+    state_db = tmp_path / "home" / "state.db"
+    state_db.parent.mkdir(parents=True)
+    _beat(state_db, NOW - timedelta(seconds=200))
+    env = {"FIBOKI_EXECUTION_MODE": "paper", "FIBOKI_STATE_DB": str(state_db)}
+    default = _one(_run(FakeHost(repo, env=env), "worker heartbeat"), "worker heartbeat")
+    assert default.status == DoctorStatus.FAIL and "stale after 120s" in default.detail
+    wide = FakeHost(repo, env={**env, "FIBOKI_WORKER_STALE_SECONDS": "300",
+                               "FIBOKI_WORKER_DOWN_SECONDS": "600"})
+    check = _one(_run(wide, "worker heartbeat"), "worker heartbeat")
+    assert check.status == DoctorStatus.OK and "stale after 300s" in check.detail
+    bad = FakeHost(repo, env={**env, "FIBOKI_WORKER_STALE_SECONDS": "-5"})
+    check = _one(_run(bad, "worker heartbeat"), "worker heartbeat")
+    assert check.status == DoctorStatus.FAIL and "check crashed" in check.detail
+
+
+def test_legacy_sha256_operator_hashes_are_flagged(repo: Path) -> None:
+    from fiboki.api.routers.auth import hash_password
+
+    legacy = hashlib.sha256(b"pw").hexdigest()
+    scrypt = hash_password("pw")
+    env = {"FIBOKI_EXECUTION_MODE": "paper",
+           "FIBOKI_OPERATORS": f"joe:admin:{scrypt},tom:admin:{legacy}"}
+    check = _one(_run(FakeHost(repo, env=env), "operator hashes"), "operator hashes")
+    assert check.status == DoctorStatus.WARN
+    assert "tom" in check.detail and "joe" not in check.detail
+    assert legacy not in check.detail and legacy not in json.dumps(check.as_dict())
+    assert check.data == {"operators": 2, "legacy": ["tom"], "malformed": 0}
+
+    env["FIBOKI_OPERATORS"] = f"joe:admin:{scrypt},tom:operator:{hash_password('x')}"
+    check = _one(_run(FakeHost(repo, env=env), "operator hashes"), "operator hashes")
+    assert check.status == DoctorStatus.OK and "2 operator(s), all scrypt" in check.detail
+    unset = _one(_run(FakeHost(repo), "operator hashes"), "operator hashes")
+    assert unset.status == DoctorStatus.WARN and "not set" in unset.detail
+
+
 def test_news_store_last_poll(repo: Path) -> None:
     host = FakeHost(repo)
     assert _one(_run(host, "news store"), "news store").status == DoctorStatus.WARN
@@ -416,6 +453,24 @@ def test_launchd_state_per_service(repo: Path) -> None:
     assert _one(_run(linux, "launchd"), "launchd").status == DoctorStatus.WARN
 
 
+def test_launchd_lists_the_optional_paper_service(repo: Path) -> None:
+    running = (0, "\tstate = running\n\tpid = 1\n\tlast exit code = (never exited)\n")
+    core = [f"gui/501/uk.fiboki.{n}" for n in ("api", "worker", "web", "news", "llama")]
+    host = FakeHost(repo, commands={("launchctl", "print", lbl): running for lbl in core})
+    check = _one(_run(host, "launchd"), "launchd")
+    assert "uk.fiboki.paper" in cli.DOCTOR_LAUNCHD_LABELS
+    assert check.status == DoctorStatus.OK and "paper: not loaded (optional)" in check.detail
+    assert check.data["uk.fiboki.paper"] == "not loaded"
+
+    exited = (0, "\tstate = not running\n\tlast exit code = 75\n")
+    host = FakeHost(repo, commands={
+        **{("launchctl", "print", lbl): running for lbl in core},
+        ("launchctl", "print", "gui/501/uk.fiboki.paper"): exited,
+    })
+    check = _one(_run(host, "launchd"), "launchd")
+    assert check.status == DoctorStatus.WARN and "paper: not running, last exit 75" in check.detail
+
+
 # ------------------------------------------------------------ the command
 
 
@@ -433,7 +488,7 @@ def test_every_check_runs_on_a_fake_host_and_json_counts_add_up(repo: Path) -> N
     checks = run_doctor(FakeHost(repo), hash_weights=False)
     names = {c.name for c in checks}
     for expected in ("python", "pins", ".venv", "node/npm", "web node_modules", "git",
-                     "environment", "live controls", "data root", "experiment ledger",
+                     "environment", "live controls", "operator hashes", "data root", "experiment ledger",
                      "paper journal", "worker heartbeat", "news store", "calendar coverage",
                      "local model", "disk free", "port 8000 (api)", "launchd"):
         assert expected in names

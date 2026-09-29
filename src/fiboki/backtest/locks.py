@@ -58,15 +58,24 @@ closing leg. It refuses new risk and nothing else.
 
 Approximations, stated
 ----------------------
-* The session calendar models the WEEKEND only (Friday 22:00 to Sunday 22:00 UTC,
-  the interbank week, for every trading-hours class currently registered). Daily
-  maintenance breaks on index and energy CFDs and exchange holidays count as
-  session bars. A holiday therefore consumes lock bars that no market printed.
+* The session calendar models the WEEKEND only: the interbank week, closed from
+  Friday 17:00 to Sunday 17:00 America/New_York, for every trading-hours class
+  currently registered. It is the SIM session calendar
+  (:class:`fiboki.sim.fills.FxSessionCalendar`, its ``close_hour``,
+  ``open_hour`` and ``tz``), so the closure is 22:00 UTC in northern winter and
+  21:00 UTC while New York observes daylight saving, exactly as the fill
+  simulator's. (Until round 4 this module used a fixed 22:00 UTC, which was an
+  hour late for most of the year.) Daily maintenance breaks on index and
+  energy CFDs and exchange holidays count as session bars. A holiday therefore
+  consumes lock bars that no market printed.
 * A slot counts as in-session when at least half of it is open. On H1 and below
-  that is exact; on H4 the Friday 20:00 and Sunday 20:00 slots count (each is
-  half open) and on D1 Sunday does not. A bar stamped inside a closed slot (a D1
-  bar stamped Sunday 22:00 by some feeds) shares the ordinal of the last open
-  slot before it, which keeps a lock in force one bar LONGER, never shorter.
+  that is exact. On H4, in winter the Friday 20:00 and Sunday 20:00 UTC slots
+  both count (each is half open: 31 slots a week); in summer the Friday 20:00
+  slot is only a quarter open and does not count, while the Sunday 20:00 slot
+  is three quarters open and does (30 a week). On D1 Sunday never counts. A bar
+  stamped inside a closed slot (a D1 bar stamped Sunday 22:00 by some feeds)
+  shares the ordinal of the last open slot before it, which keeps a lock in
+  force one bar LONGER, never shorter.
 * A close whose exit reason is unknown -- a closing intent recovered from the
   intent ledger, which does not record why a position closed -- is counted as a
   stop-out for ``stop_streak``. Not knowing whether it was a stop-out does not
@@ -78,16 +87,20 @@ Approximations, stated
 """
 from __future__ import annotations
 
+import threading
 from collections.abc import Callable, Iterable, Mapping
 from dataclasses import dataclass, field
+from datetime import UTC, datetime
 from enum import Enum
 from functools import lru_cache
 from typing import Any, Protocol
+from zoneinfo import ZoneInfo
 
 import pandas as pd
 
 from fiboki.core.enums import Timeframe
 from fiboki.core.instruments import get as get_instrument
+from fiboki.sim.fills import FxSessionCalendar
 
 __all__ = [
     "ClosedTrade",
@@ -137,20 +150,24 @@ _MINUTE_NS = 60_000_000_000
 _WEEK_MINUTES = 7 * 24 * 60
 #: Monday 1970-01-05 00:00 UTC. Slots are aligned to Monday midnight UTC.
 _ANCHOR = pd.Timestamp("1970-01-05", tz="UTC")
+_ANCHOR_DT = datetime(1970, 1, 5, tzinfo=UTC)
 
-#: The interbank week: closed from Friday 22:00 UTC to Sunday 22:00 UTC, stated
-#: as minutes after Monday 00:00 UTC. The same defaults as
-#: ``fiboki.sim.fills.FxSessionCalendar``.
-_INTERBANK_WEEKEND = ((4 * 1440 + 22 * 60, 6 * 1440 + 22 * 60),)
+#: The interbank week, from THE sim session calendar: closed Friday 17:00 to
+#: Sunday 17:00 America/New_York (21:00 or 22:00 UTC with daylight saving).
+_INTERBANK_WEEKEND = FxSessionCalendar()
 
-#: Weekly closures per ``Instrument.trading_hours``. Every class registered in
-#: ``core/instruments.py`` today closes for the interbank weekend. Index and
-#: energy CFDs also have daily breaks, which are NOT modelled (module docstring).
-SESSION_CLOSURES: dict[str, tuple[tuple[int, int], ...]] = {
+#: The weekly closure calendar per ``Instrument.trading_hours``. Every class
+#: registered in ``core/instruments.py`` today closes for the interbank weekend.
+#: Index and energy CFDs also have daily breaks, which are NOT modelled (module
+#: docstring).
+SESSION_CLOSURES: dict[str, FxSessionCalendar] = {
     "fx_24_5": _INTERBANK_WEEKEND,
     "index": _INTERBANK_WEEKEND,
     "energy": _INTERBANK_WEEKEND,
 }
+
+#: What a lock fingerprint says the bars were counted on.
+LOCK_CALENDAR_ID = "session_bars:interbank_weekend:fri17-sun17_america_new_york"
 
 
 def timeframe_for_interval(interval: pd.Timedelta) -> Timeframe:
@@ -183,7 +200,7 @@ class SessionBarClock:
     @classmethod
     def for_instrument(cls, instrument: str, timeframe: Timeframe | str) -> SessionBarClock:
         hours = get_instrument(instrument).trading_hours
-        if hours not in SESSION_CLOSURES:
+        if not isinstance(SESSION_CLOSURES.get(hours), FxSessionCalendar):
             raise UnknownSessionError(
                 f"{instrument}: trading_hours {hours!r} has no session calendar in "
                 "fiboki.backtest.locks.SESSION_CLOSURES; add one rather than "
@@ -196,10 +213,14 @@ class SessionBarClock:
         if stamp.tzinfo is None:
             raise ValueError("SessionBarClock.index needs a timezone-aware UTC timestamp")
         minutes = int((stamp - _ANCHOR).value) // _MINUTE_NS
-        slot = minutes // self.timeframe.minutes
-        prefix, per_week = _template(self.trading_hours, self.timeframe.minutes)
-        week, r = divmod(slot, len(prefix) - 1)
-        return week * per_week + prefix[r + 1] - 1
+        slot_minutes = self.timeframe.minutes
+        slot = minutes // slot_minutes
+        if _WEEK_MINUTES % slot_minutes:
+            raise ValueError(f"a {slot_minutes}-minute slot does not tile a week")
+        week, r = divmod(slot, _WEEK_MINUTES // slot_minutes)
+        calendar = SESSION_CLOSURES[self.trading_hours]
+        prefix, _per_week = _template(_week_closure(_calendar_key(calendar), week), slot_minutes)
+        return _open_slots_before(calendar, slot_minutes, week) + prefix[r + 1] - 1
 
     def bars_between(self, earlier: pd.Timestamp, later: pd.Timestamp) -> int:
         """Session bars from ``earlier``'s bar to ``later``'s bar."""
@@ -210,17 +231,69 @@ class SessionBarClock:
         return f"{self.trading_hours}/{self.timeframe.value}"
 
 
-@lru_cache(maxsize=64)
-def _template(trading_hours: str, slot_minutes: int) -> tuple[tuple[int, ...], int]:
-    """``(prefix, open_slots_per_week)`` for one calendar and slot size.
+_CalendarKey = tuple[str, int, int]
+
+
+def _calendar_key(calendar: FxSessionCalendar) -> _CalendarKey:
+    return (str(calendar.tz), int(calendar.close_hour), int(calendar.open_hour))
+
+
+@lru_cache(maxsize=16384)
+def _week_closure(key: _CalendarKey, week: int) -> tuple[tuple[int, int], ...]:
+    """The week's closure as minutes after that week's Monday 00:00 UTC.
+
+    Friday ``close_hour`` to Sunday ``open_hour`` in the calendar's zone, each
+    converted to UTC by the zone database, so a daylight-saving change (which
+    in New York happens on a Sunday at 02:00 local, INSIDE the closure) gives
+    a 47- or 49-hour weekend rather than a constant's 48.
+    """
+    tz_name, close_hour, open_hour = key
+    zone = ZoneInfo(tz_name)
+    monday = _ANCHOR_DT + pd.Timedelta(weeks=week).to_pytimedelta()
+    friday = (monday + pd.Timedelta(days=4).to_pytimedelta()).date()
+    sunday = (monday + pd.Timedelta(days=6).to_pytimedelta()).date()
+    close = datetime(friday.year, friday.month, friday.day, close_hour, tzinfo=zone)
+    reopen = datetime(sunday.year, sunday.month, sunday.day, open_hour, tzinfo=zone)
+    start = int((close.astimezone(UTC) - monday).total_seconds()) // 60
+    end = int((reopen.astimezone(UTC) - monday).total_seconds()) // 60
+    return ((start, end),)
+
+
+_CUMULATIVE: dict[tuple[_CalendarKey, int], list[int]] = {}
+_CUMULATIVE_LOCK = threading.Lock()
+
+
+def _open_slots_before(calendar: FxSessionCalendar, slot_minutes: int, week: int) -> int:
+    """In-session slots in every week from the anchor up to (not incl.) ``week``.
+
+    Weeks differ (a summer week has a different Friday and Sunday slot count on
+    H4), so the ordinal is a running sum. Kept per calendar and slot size and
+    extended on demand; a pure function of its arguments.
+    """
+    if week < 0:
+        raise ValueError("SessionBarClock counts from 1970-01-05; an earlier timestamp is not a bar")
+    key = _calendar_key(calendar)
+    with _CUMULATIVE_LOCK:
+        sums = _CUMULATIVE.setdefault((key, slot_minutes), [0])
+        while len(sums) <= week:
+            w = len(sums) - 1
+            sums.append(sums[-1] + _template(_week_closure(key, w), slot_minutes)[1])
+        return sums[week]
+
+
+@lru_cache(maxsize=256)
+def _template(
+    closures: tuple[tuple[int, int], ...], slot_minutes: int
+) -> tuple[tuple[int, ...], int]:
+    """``(prefix, open_slots_per_week)`` for one week's closure and slot size.
 
     ``prefix[k]`` is the number of in-session slots among the first ``k`` slots
     of the week. A slot is in session when at least half of its minutes are.
-    Computed once, at minute resolution, from the closure table.
+    Computed at minute resolution; only four closures exist (winter, summer and
+    the two changeover weekends), so this runs a handful of times per process.
     """
     if _WEEK_MINUTES % slot_minutes:
         raise ValueError(f"a {slot_minutes}-minute slot does not tile a week")
-    closures = SESSION_CLOSURES[trading_hours]
     slots = _WEEK_MINUTES // slot_minutes
     prefix = [0]
     for k in range(slots):
@@ -297,7 +370,7 @@ class LockPolicy:
         return {
             "cooldown_bars_after_close": int(self.cooldown_bars_after_close),
             "stop_streak": None if self.stop_streak is None else self.stop_streak.fingerprint(),
-            "calendar": "session_bars:interbank_weekend",
+            "calendar": LOCK_CALENDAR_ID,
         }
 
 

@@ -145,6 +145,12 @@ def _context(plan: TradePlan, account, bar: Bar) -> RiskContext:
         venue=VenueView(connected=True, score=1.0),
         strategy=StrategyView(lifecycle=StrategyLifecycle.PAPER),
         request_kind=RequestKind.OPEN,
+        # A flat book in an account-currency-quoted instrument, stated.
+        open_risk_amount=0.0,
+        correlated_exposure=0.0,
+        daily_pnl=0.0,
+        weekly_pnl=0.0,
+        fx_quote_to_account=1.0,
     )
 
 

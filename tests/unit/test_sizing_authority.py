@@ -9,7 +9,12 @@ from __future__ import annotations
 import pandas as pd
 import pytest
 
-from fiboki.backtest.engine import FixedFractionalSizer, _snap_to_step
+from fiboki.backtest.engine import (
+    SIZING_POLICY_V1,
+    SIZING_POLICY_V2,
+    FixedFractionalSizer,
+    _snap_to_step,
+)
 from fiboki.broker.execution_service import (
     ExecutionService,
     InMemoryIntentStore,
@@ -29,6 +34,7 @@ from fiboki.portfolio.sizing import (
     _snap_to_step as sizing_snap,
 )
 from fiboki.risk.gateway import RiskGateway
+from fiboki.sim.profiles import IG_REALISTIC
 from tests.exec_fixtures import NOW, make_account, make_context, make_signal
 
 
@@ -47,9 +53,18 @@ def _size(**kwargs):
 # ---------------------------------------------------------------- the rule
 
 
+#: The v1 rule, selected explicitly. The three tests below pin its arithmetic
+#: (bare stop distance) and were written before fixed_fractional_v2 became the
+#: default in engine_v3_realism; the v2 arithmetic is pinned in
+#: tests/golden/test_golden_sizing_v2.py.
+V1 = SIZING_POLICY_V1
+
+
 def test_risk_fraction_produces_the_intended_loss_at_the_stop() -> None:
     sig = make_signal(reference_price=1.1000, stop_distance=0.0050)
-    out = _size(signal=sig, equity=50_000.0, policy=SizingPolicy(risk_fraction=0.01))
+    out = _size(
+        signal=sig, equity=50_000.0, policy=SizingPolicy(risk_fraction=0.01, policy_id=V1)
+    )
     plan = out.require()
     # 1% of 50,000 = 500 risked over a 0.0050 stop on a contract size of 1.
     assert plan.size == pytest.approx(100_000.0)
@@ -66,7 +81,7 @@ def test_size_is_rounded_DOWN_to_the_instrument_step() -> None:
         instrument=instrument,
         account=make_account(10_000.0),
         fx_quote_to_account=1.0,
-        policy=SizingPolicy(risk_fraction=0.01),
+        policy=SizingPolicy(risk_fraction=0.01, policy_id=V1),
     )
     plan = out.require()
     raw = 100.0 / 7.0  # 14.2857...
@@ -81,7 +96,7 @@ def test_recorded_risk_is_the_risk_actually_taken_after_rounding() -> None:
                       take_profit_distance=50.0)
     plan = size_trade(
         signal=sig, instrument=instrument, account=make_account(10_000.0),
-        fx_quote_to_account=1.0, policy=SizingPolicy(risk_fraction=0.01),
+        fx_quote_to_account=1.0, policy=SizingPolicy(risk_fraction=0.01, policy_id=V1),
     ).require()
     assert plan.risk_amount == pytest.approx(plan.size * 7.0)
     assert plan.risk_amount < 100.0, "rounded-down size must risk less, not more"
@@ -160,18 +175,29 @@ def test_sizing_outcome_cannot_carry_both_or_neither() -> None:
 # ------------------------------------------------- parity with the engine
 
 
-def test_portfolio_sizer_matches_the_engines_fixed_fractional_sizer() -> None:
-    """The backtester and live must not be able to disagree about size."""
-    sig = make_signal(reference_price=1.1000, stop_distance=0.0037, take_profit_distance=0.0100)
-    instrument = get_instrument("EURUSD")
+@pytest.mark.parametrize("symbol", ["EURUSD", "XAUUSD", "US500"])
+@pytest.mark.parametrize("policy_id", [SIZING_POLICY_V1, SIZING_POLICY_V2])
+def test_portfolio_sizer_matches_the_engines_fixed_fractional_sizer(symbol, policy_id) -> None:
+    """The backtester and live must not be able to disagree about size.
+
+    Under both rules, and under v2 whether the profile is named or left to the
+    default (IG_REALISTIC on both sides).
+    """
+    instrument = get_instrument(symbol)
+    ref = {"EURUSD": 1.1000, "XAUUSD": 2000.0, "US500": 5000.0}[symbol]
+    stop = {"EURUSD": 0.0037, "XAUUSD": 7.3, "US500": 11.0}[symbol]
+    sig = make_signal(
+        instrument=symbol, reference_price=ref, stop_distance=stop,
+        take_profit_distance=stop * 3,
+    )
     account = make_account(83_333.0)
     for fx in (1.0, 0.7912, 1.2634):
-        ours = PortfolioSizer(policy=SizingPolicy(risk_fraction=0.01)).size_for(
-            sig, instrument, account, fx
-        )
-        theirs = FixedFractionalSizer(risk_fraction=0.01).size_for(
-            sig, instrument, account, fx
-        )
+        ours = PortfolioSizer(
+            policy=SizingPolicy(risk_fraction=0.01, policy_id=policy_id)
+        ).size_for(sig, instrument, account, fx)
+        theirs = FixedFractionalSizer(
+            risk_fraction=0.01, policy_id=policy_id, cost_profile=IG_REALISTIC
+        ).size_for(sig, instrument, account, fx)
         assert ours == theirs, f"sizing authority diverged from the engine at fx={fx}"
 
 

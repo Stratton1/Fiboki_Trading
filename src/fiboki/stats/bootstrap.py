@@ -59,6 +59,7 @@ __all__ = [
     "moving_block_bootstrap",
     "moving_block_bootstrap_indices",
     "optimal_block_length",
+    "require_rng",
     "resample_fixed_size",
     "resample_with_compounding",
     "stationary_bootstrap",
@@ -75,17 +76,35 @@ def _as_1d(x: np.ndarray | pd.Series | list[float]) -> np.ndarray:
     return arr
 
 
-def _rng(rng: np.random.Generator | int | None) -> np.random.Generator:
+def require_rng(rng: np.random.Generator | int) -> np.random.Generator:
+    """A generator from an explicit seed or generator. ``None`` is refused.
+
+    ``np.random.default_rng(None)`` draws from OS entropy, so a call that forgot
+    its seed would produce a different confidence interval, SPA p-value or
+    stress curve on every run -- a non-reproducible research number that looks
+    exactly like a reproducible one. Every ``rng`` in ``stats/bootstrap.py``,
+    ``stats/spa.py`` and ``stats/stress.py`` is therefore a required argument,
+    and ``tests/unit/test_stats_rng_required.py`` parses the three modules to
+    keep it that way.
+    """
+    if rng is None:
+        raise TypeError(
+            "rng is required: pass a seeded numpy Generator or an integer seed. "
+            "None would draw from OS entropy and make the result unreproducible."
+        )
     if isinstance(rng, np.random.Generator):
         return rng
     return np.random.default_rng(rng)
+
+
+_rng = require_rng
 
 
 # --------------------------------------------------------------- index draws
 
 
 def iid_bootstrap_indices(
-    n_obs: int, n_boot: int, rng: np.random.Generator | int | None = None
+    n_obs: int, n_boot: int, rng: np.random.Generator | int
 ) -> np.ndarray:
     """``(n_boot, n_obs)`` iid indices.  Only valid for serially independent data."""
     if n_obs < 1 or n_boot < 1:
@@ -97,7 +116,7 @@ def stationary_bootstrap_indices(
     n_obs: int,
     block_length: float,
     n_boot: int,
-    rng: np.random.Generator | int | None = None,
+    rng: np.random.Generator | int,
 ) -> np.ndarray:
     """``(n_boot, n_obs)`` indices from the Politis-Romano stationary bootstrap.
 
@@ -127,7 +146,7 @@ def moving_block_bootstrap_indices(
     n_obs: int,
     block_length: int,
     n_boot: int,
-    rng: np.random.Generator | int | None = None,
+    rng: np.random.Generator | int,
     *,
     circular: bool = True,
 ) -> np.ndarray:
@@ -159,7 +178,8 @@ def stationary_bootstrap(
     series: np.ndarray | pd.Series | list[float],
     n_boot: int = 1000,
     block_length: float | None = None,
-    rng: np.random.Generator | int | None = None,
+    *,
+    rng: np.random.Generator | int,
 ) -> np.ndarray:
     """``(n_boot, len(series))`` stationary-bootstrap resamples of ``series``.
 
@@ -174,8 +194,8 @@ def moving_block_bootstrap(
     series: np.ndarray | pd.Series | list[float],
     n_boot: int = 1000,
     block_length: int | None = None,
-    rng: np.random.Generator | int | None = None,
     *,
+    rng: np.random.Generator | int,
     circular: bool = True,
 ) -> np.ndarray:
     """``(n_boot, len(series))`` moving-block resamples of ``series``."""
@@ -327,7 +347,7 @@ def bootstrap_confidence_interval(
     method: str = "percentile",
     scheme: str = "stationary",
     block_length: float | None = None,
-    rng: np.random.Generator | int | None = None,
+    rng: np.random.Generator | int,
 ) -> BootstrapCI:
     """Block-bootstrap confidence interval for any scalar statistic of a series.
 
@@ -462,7 +482,7 @@ def _r_paths(
     r_multiples: np.ndarray | pd.Series | list[float],
     n_paths: int,
     block_length: float | None,
-    rng: np.random.Generator | int | None,
+    rng: np.random.Generator | int,
 ) -> np.ndarray:
     arr = _as_1d(r_multiples)
     if block_length is not None:
@@ -483,7 +503,7 @@ def resample_with_compounding(
     ruin_fraction: float = 0.5,
     ruin_basis: str = "peak",
     block_length: float | None = None,
-    rng: np.random.Generator | int | None = None,
+    rng: np.random.Generator | int,
     keep_paths: bool = False,
 ) -> RuinSimulation:
     """Monte Carlo that RE-SIMULATES position sizing off running equity.
@@ -534,7 +554,7 @@ def resample_fixed_size(
     ruin_fraction: float = 0.5,
     ruin_basis: str = "peak",
     block_length: float | None = None,
-    rng: np.random.Generator | int | None = None,
+    rng: np.random.Generator | int,
     keep_paths: bool = False,
 ) -> RuinSimulation:
     """V1-equivalent Monte Carlo: stake frozen at the INITIAL equity.
@@ -563,7 +583,7 @@ def compare_sizing_modes(
     ruin_fraction: float = 0.5,
     ruin_basis: str = "peak",
     block_length: float | None = None,
-    rng: np.random.Generator | int | None = None,
+    rng: np.random.Generator | int,
 ) -> tuple[RuinSimulation, RuinSimulation]:
     """Run both sizing modes over the SAME resampled sequences (paired comparison).
 

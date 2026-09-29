@@ -109,6 +109,24 @@ distance.
 `targets[0]`, which made every "scale out at 1R then let the rest run" idea unrepresentable and
 therefore quietly untested. The Ichimoku seed uses two legs at 1.5R and 3.0R, 50% each.
 
+**A stop is sized with its costs, and must clear the venue's minimum.** Since
+`engine_v3_realism` a position is sized so that being stopped out at the level loses
+`risk_fraction` of equity INCLUDING the spread and two fills of expected slippage
+(`fixed_fractional_v2`, `backtest.engine.stop_out_cost_per_unit`). A tight stop therefore buys a
+smaller position than it used to: on a 5-pip EURUSD stop under IG_REALISTIC the cost is 1.38 pips,
+28% of the stop. A stop inside the profile's minimum distance is rejected (`MinStopPolicy.REJECT`),
+and that minimum is per asset class: 4 pips on FX, three times the instrument's typical spread on
+metals, indices and energy under IG_REALISTIC (XAUUSD $0.90, US500 1.2 points, JP225 21 points).
+A document whose stop is routinely within a few spreads of entry is a bet on the cost model.
+
+**Research sizes a signal as paper will.** Validation runs size through portfolio construction
+(`docs/v2/PORTFOLIO_RISK_STANDARD.md` §2): the strategy's evidence tier sets the base risk
+(PROBATIONARY 0.25%, with the run's `risk_fraction` a ceiling), then health, confidence,
+correlation, concentration, vol targeting, margin, the drawdown throttle, the regime scalar
+(`unknown` 0.6 in a backtest) and the open-risk budgets scale it down. A document's `confidence`
+therefore moves its size, and every trade row carries the allocation that sized it
+(`BacktestResult.trade_allocations()`). The flat `risk_fraction` path is `construction=None`.
+
 A `Signal` constructed from a document is validated again at the contract boundary
 (`core/contracts.Signal.__post_init__`): positive prices, stop on the correct side of entry,
 take-profits on the correct side. V1 allowed a wrong-sided stop and relied on a downstream
@@ -413,7 +431,9 @@ the correction by three orders of magnitude.
 1. A hypothesis of at least 120 characters containing an **economic story** and the **evidence
    against**, with citations where published evidence exists.
 2. A falsifier: what result would make you abandon this.
-3. Every instrument in `universe` registered in `core/instruments.py`.
+3. Every instrument in `universe` registered in `core/instruments.py`, and, for research in the GBP
+   account, its quote currency convertible from the store's D1 GBP crosses
+   (`validation.run.research_fx_pairs`; HK50 is not, until USDHKD is registered).
 4. A stop — the schema will not let you omit one — with the operands its kind requires.
 5. An exit that is not only the stop: a take-profit, a trailing model or a time stop. Otherwise
    the health check warns `stop_only_exit`.

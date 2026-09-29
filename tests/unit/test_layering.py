@@ -89,6 +89,10 @@ RANKS: dict[str, int] = {
     "workers": 105,
     # The HTTP surface.
     "api": 110,
+    # Composition roots (``entrypoints/paper_forward.py``): assemble a worker
+    # from a reviewed wiring file. Above workers and api (it reads
+    # ``api.settings``), imported by nothing but ``cli.py``.
+    "entrypoints": 115,
     # ``cli.py`` and ``__init__.py``, which compose the lot.
     "<root>": 120,
 }

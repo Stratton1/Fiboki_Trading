@@ -253,8 +253,9 @@ statistics were meaningless. A rejection tells the next search where not to go.
 
 **Approximations are stated, not absorbed.** The known ones at this snapshot are listed in
 `DATA_ARCHITECTURE.md` and `EXECUTION_ARCHITECTURE.md`, and several are stated in the code that
-owns them: static financing rates over a sample in which real rates went from ~0 to ~5.5%; no
-weekend triple-swap; a single-lag Hurst estimator published as an indicator of tendency rather
+owns them: static financing rates over a sample in which real rates went from ~0 to ~5.5%;
+financing charged on business-day rollovers with a per-asset-class triple day at a fixed UTC hour
+and with no holiday calendar (`backtest/position.financing_nights`); a single-lag Hurst estimator published as an indicator of tendency rather
 than a measurement; execution-delay stress that rescales the captured move rather than re-walking
 bars; and an economic calendar that ships event *types* but no dated instances, so every blackout
 query currently returns "not in blackout" — the dangerous default, which is why
@@ -311,6 +312,47 @@ falsified; a rule set with none is a curve fit waiting to be discovered.
 | Indicator causality | `tests/unit/test_indicator_causality.py` over the whole registry |
 | No look-ahead in the engine or compiler | `test_no_lookahead.py`, `test_compiler_causality.py` |
 | Hand-calculated indicator and P&L values | `tests/golden/`, `golden` marker |
-| Honest `external_trial_count` | **Not enforced.** Researcher obligation; recorded on the report. |
+| Honest `external_trial_count` | **Not enforced in the ladder.** Researcher obligation; recorded on the report. The agent `validation_handler` takes `N` from `ExperimentLedger.count_trials` (family and campaign) and never from its payload; unknown `N` is `NOT_EVALUATED`. |
+| Retail leverage caps by the ESMA currency set | `tests/golden/test_golden_retail_leverage.py` (all 41 instruments) |
+| BID bars never traded as mid | `backtest/engine._validate_frame`, `tests/unit/test_price_basis_and_utc.py` |
+| Resampling statistics are seeded | `tests/unit/test_stats_rng_required.py` (AST) |
 | Backtest regression pins over a realistic run | **Not enforced.** Gap. |
 | Import-direction layering between packages | **Not enforced.** Gap. |
+
+## 10. Engine generation `engine_v3_realism` (2026-09-29)
+
+The 2026-09 backend audit (`research/reports/F_backend_audit.md` section 2) found eight ways a
+stored number could be believed that should not be. Each is corrected in code, pinned by a test and
+listed in `backtest/version.ENGINE_V3_REASONS`; every result stamped `engine_v2_exit_vocabulary`
+or earlier is superseded (`BUILD_LOG.md`, 2026-09-29).
+
+**Account currency.** Research runs in GBP, the operator's account currency
+(`validation.run.RESEARCH_ACCOUNT_CCY`), so research and paper monetary figures are comparable.
+Quote-currency conversion uses `core.money.SeriesFxSource` built by
+`validation.run.build_research_fx_source` from the store's validated **D1** closes of the GBP
+crosses, each close indexed at the bar's close (open + 1 day), one triangulation leg through USD
+when no GBP cross is registered (NZD), and a staleness limit of 4 days. A missing cross refuses the
+run, naming every instrument to ingest. HKD has no route (no USDHKD is registered), so HK50 cannot
+be researched in GBP until one is.
+
+**Price basis.** The engine refuses a frame labelled `bid`, `ask` or `last`. Research converts BID
+bars to `synthetic_mid` by adding half the instrument's registered typical spread
+(`data.providers.histdata.bid_to_mid`) and records the conversion in the evaluator's engine
+fingerprint (`price_basis_lineage`), so it enters every cache key. An unlabelled frame is recorded
+as `assumed_mid`.
+
+**Sizing.** `fixed_fractional_v2` is the default: the risk per unit is the stop distance plus the
+spread and two fills of expected slippage (`backtest.engine.stop_out_cost_per_unit`), so "1% at
+risk" means 1% lost at the stop including costs. The rule and its cost profile are recorded on
+every plan (`TradePlan.sizing_basis`) and in every backtest's config fingerprint (`sizing`).
+
+**Sharpe.** `Metrics.sharpe` is computed on equity resampled to trading days ending 17:00 New York
+and annualised by the measured trading days per year. `sharpe_lo_adjusted` applies Lo's (2002)
+autocorrelation correction; `sharpe_bar_based` is the old figure, kept for comparison.
+
+**Validation statistics.** Walk-forward efficiency is computed on log growth per day where the
+evaluation records its opening equity (every `EngineEvaluator` run does), removing the compounding
+bias against longer anchored train windows. The plateau ratio excludes the point from its own
+neighbourhood and uses the additive floor `c = |score|`, so `<= 1.25` means "the neighbours keep
+at least 60% of the point's score" at any scale. Neither gate threshold moved; E-1
+(`research/preregistration/gate_calibration_e1.json`) will measure whether they should.

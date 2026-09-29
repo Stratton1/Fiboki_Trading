@@ -30,6 +30,7 @@ import numpy as np
 import pandas as pd
 
 from fiboki.core.contracts import Trade
+from fiboki.stats.bootstrap import require_rng
 
 __all__ = [
     "StressCurve",
@@ -186,12 +187,17 @@ def _reprice(
 
 
 def _resample(
-    trades: Sequence[Trade], n_samples: int, rng: np.random.Generator | int | None
+    trades: Sequence[Trade], n_samples: int, rng: np.random.Generator | int
 ) -> list[list[Trade]]:
-    """``n_samples`` bootstrap redraws of the trade sequence (1 -> the sequence itself)."""
+    """``n_samples`` bootstrap redraws of the trade sequence (1 -> the sequence itself).
+
+    ``rng`` is validated even when no draw is made, so a caller that forgot its
+    seed is told at the first call, not at the first call that happens to
+    resample.
+    """
+    gen = require_rng(rng)
     if n_samples <= 1:
         return [list(trades)]
-    gen = rng if isinstance(rng, np.random.Generator) else np.random.default_rng(rng)
     n = len(trades)
     return [[trades[i] for i in gen.integers(0, n, size=n)] for _ in range(n_samples)]
 
@@ -211,7 +217,7 @@ def spread_multiplier_stress(
     metric: TradeMetric = net_profit,
     *,
     n_samples: int = 1,
-    rng: np.random.Generator | int | None = None,
+    rng: np.random.Generator | int,
 ) -> StressCurve:
     """Scale every recorded spread cost.
 
@@ -249,7 +255,7 @@ def slippage_stress(
     *,
     basis: str = "spread_multiple",
     n_samples: int = 1,
-    rng: np.random.Generator | int | None = None,
+    rng: np.random.Generator | int,
 ) -> StressCurve:
     """Add slippage on top of whatever the trades already carry.
 
@@ -289,7 +295,7 @@ def execution_delay_stress(
     *,
     mode: str = "capture",
     n_samples: int = 1,
-    rng: np.random.Generator | int | None = None,
+    rng: np.random.Generator | int,
 ) -> StressCurve:
     """Entering late, approximated without bar data.
 
@@ -332,7 +338,7 @@ def random_deletion_stress(
     metric: TradeMetric = net_profit,
     *,
     n_samples: int = 200,
-    rng: np.random.Generator | int | None = None,
+    rng: np.random.Generator | int,
 ) -> StressCurve:
     """Delete a random fraction of trades, repeatedly.
 
@@ -341,7 +347,7 @@ def random_deletion_stress(
     and the sample size is a fiction.
     """
     trades = _require(trades)
-    gen = rng if isinstance(rng, np.random.Generator) else np.random.default_rng(rng)
+    gen = require_rng(rng)
     n = len(trades)
     samples: list[np.ndarray] = []
     for frac in fractions:
@@ -426,7 +432,7 @@ def missing_fill_stress(
     *,
     bias: str = "random",
     n_samples: int = 200,
-    rng: np.random.Generator | int | None = None,
+    rng: np.random.Generator | int,
 ) -> StressCurve:
     """Some orders never get filled.
 
@@ -442,7 +448,7 @@ def missing_fill_stress(
     if bias not in ("random", "worst", "best"):
         raise ValueError("bias must be 'random', 'worst' or 'best'")
     n = len(trades)
-    gen = rng if isinstance(rng, np.random.Generator) else np.random.default_rng(rng)
+    gen = require_rng(rng)
     ranked = sorted(range(n), key=lambda i: trades[i].net_pnl, reverse=(bias == "worst"))
     samples: list[np.ndarray] = []
     for p in probabilities:
@@ -474,7 +480,7 @@ def run_stress_suite(
     metric: TradeMetric = net_profit,
     *,
     n_samples: int = 200,
-    rng: np.random.Generator | int | None = None,
+    rng: np.random.Generator | int,
 ) -> dict[str, StressCurve]:
     """Every stress at its default grid, keyed by curve name.
 
@@ -482,16 +488,16 @@ def run_stress_suite(
     assumption, and a ``breaking_level`` per curve to sort promotion candidates by
     fragility rather than by headline profit.
     """
-    gen = rng if isinstance(rng, np.random.Generator) else np.random.default_rng(rng)
+    gen = require_rng(rng)
     curves = [
-        spread_multiplier_stress(trades, metric=metric),
-        slippage_stress(trades, metric=metric),
-        execution_delay_stress(trades, metric=metric, mode="capture"),
-        execution_delay_stress(trades, metric=metric, mode="adverse"),
+        spread_multiplier_stress(trades, metric=metric, rng=gen),
+        slippage_stress(trades, metric=metric, rng=gen),
+        execution_delay_stress(trades, metric=metric, mode="capture", rng=gen),
+        execution_delay_stress(trades, metric=metric, mode="adverse", rng=gen),
         random_deletion_stress(trades, metric=metric, n_samples=n_samples, rng=gen),
         start_date_stress(trades, metric=metric),
         end_date_stress(trades, metric=metric),
         missing_fill_stress(trades, metric=metric, bias="random", n_samples=n_samples, rng=gen),
-        missing_fill_stress(trades, metric=metric, bias="worst"),
+        missing_fill_stress(trades, metric=metric, bias="worst", rng=gen),
     ]
     return {c.name: c for c in curves}

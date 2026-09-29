@@ -15,13 +15,28 @@ convert units (lots, contracts, venue-specific granularity) and nothing else.
 ``tests/unit/test_sizing_authority.py`` asserts the number survives unchanged
 from :func:`size_trade` all the way to the ``Order`` handed to a venue.
 
-The rule
---------
+The rule (``fixed_fractional_v2``, the default)
+------------------------------------------------
     risk_account        = equity * risk_fraction * portfolio_weight
-    risk_per_unit       = stop_distance * contract_size * fx(quote->account)
+    cost_per_unit       = spread + 2 * E[slippage]          (price units)
+    risk_per_unit       = (stop_distance + cost_per_unit) * contract_size * fx(quote->account)
     size                = risk_account / risk_per_unit
     size                = min(size, equity * leverage / notional_per_unit)
     size                = round_DOWN_to_step(size)
+
+``cost_per_unit`` is :func:`fiboki.backtest.engine.stop_out_cost_per_unit`: the
+spread paid across both legs plus the expected slippage of the market entry and
+the stop exit, from the policy's cost profile. It exists because a position
+stopped exactly at its level loses the stop distance PLUS those costs, so v1
+(which divided by the bare stop distance) risked more than its stated fraction
+on every trade -- about 30% more on a 5-pip EURUSD stop under IG_REALISTIC.
+``fixed_fractional_v1`` is kept, selectable by ``policy_id``, so a plan made
+under it stays explicable; ``TradePlan.sizing_basis`` names the rule.
+
+``TradePlan.risk_amount`` is the risk AT THE STOP INCLUDING those costs under
+v2, which is exactly what the risk gateway's ``max_per_trade_risk`` and
+``max_account_risk`` checks compare against the limit, so the gateway and the
+sizer agree on what "1% at risk" means.
 
 Rounding is always DOWN (:func:`fiboki.core.money.round_size`). Rounding up
 would manufacture risk the rule did not intend, and "one step" is a material
@@ -37,11 +52,22 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any
 
+from fiboki.backtest.engine import (
+    DEFAULT_SIZING_COST_PROFILE,
+    SIZING_POLICIES,
+    SIZING_POLICY_V1,
+    SIZING_POLICY_V2,
+    stop_out_cost_per_unit,
+)
 from fiboki.core.contracts import AccountState, Signal, TradePlan
 from fiboki.core.instruments import Instrument
 from fiboki.core.money import round_size
+from fiboki.sim.profiles import ExecutionProfile
 
 __all__ = [
+    "DEFAULT_SIZING_COST_PROFILE",
+    "SIZING_POLICY_V1",
+    "SIZING_POLICY_V2",
     "PortfolioSizer",
     "SizingOutcome",
     "SizingPolicy",
@@ -70,9 +96,19 @@ class SizingPolicy:
     risk_fraction: float = 0.01
     #: ``None`` means "use the instrument's registered retail leverage cap".
     max_leverage: float | None = None
-    policy_id: str = "fixed_fractional_v1"
+    policy_id: str = SIZING_POLICY_V2
+    #: The frictions a v2 policy prices its stop-out with. ``None`` means
+    #: :data:`~fiboki.backtest.engine.DEFAULT_SIZING_COST_PROFILE`
+    #: (IG_REALISTIC), the same default the backtest sizer uses, so paper and
+    #: backtest agree unless someone names a profile. Ignored by v1.
+    cost_profile: ExecutionProfile | None = None
 
     def __post_init__(self) -> None:
+        if self.policy_id not in SIZING_POLICIES:
+            raise ValueError(
+                f"unknown sizing policy {self.policy_id!r}; known {SIZING_POLICIES}. "
+                "A stored plan names its rule, so an unnamed rule cannot be audited."
+            )
         if not 0.0 < self.risk_fraction <= 1.0:
             raise ValueError(
                 f"risk_fraction must be in (0, 1], got {self.risk_fraction}. "
@@ -80,6 +116,38 @@ class SizingPolicy:
             )
         if self.max_leverage is not None and self.max_leverage <= 0:
             raise ValueError("max_leverage must be positive when set")
+
+    @property
+    def resolved_cost_profile(self) -> ExecutionProfile | None:
+        """The profile v2 prices costs with; ``None`` under v1 (no costs priced)."""
+        if self.policy_id == SIZING_POLICY_V1:
+            return None
+        return self.cost_profile or DEFAULT_SIZING_COST_PROFILE
+
+    def cost_per_unit(self, instrument: Instrument, signal: Signal) -> float:
+        """Price units added to the stop distance: 0 under v1."""
+        profile = self.resolved_cost_profile
+        if profile is None:
+            return 0.0
+        return stop_out_cost_per_unit(profile, instrument, signal)
+
+    @property
+    def basis(self) -> str:
+        """What ``TradePlan.sizing_basis`` records: the rule and, under v2, its costs."""
+        profile = self.resolved_cost_profile
+        return self.policy_id if profile is None else f"{self.policy_id}:{profile.name}"
+
+    def fingerprint(self) -> dict[str, Any]:
+        profile = self.resolved_cost_profile
+        return {
+            "policy_id": self.policy_id,
+            "risk_fraction": self.risk_fraction,
+            "max_leverage": self.max_leverage,
+            "cost_profile": profile.name if profile is not None else None,
+            "cost_profile_defaulted": (
+                profile is not None and self.cost_profile is None
+            ),
+        }
 
     def leverage_for(self, instrument: Instrument) -> float:
         """Never exceed the instrument's registered retail cap, whatever is asked.
@@ -164,6 +232,7 @@ def size_trade(
     ccy = account_ccy or account.currency
     detail: dict[str, Any] = {
         "policy_id": policy.policy_id,
+        "sizing_basis": policy.basis,
         "risk_fraction": policy.risk_fraction,
         "portfolio_weight": portfolio_weight,
         "equity": account.equity,
@@ -188,7 +257,10 @@ def size_trade(
     if risk_account <= 0:
         return SizingOutcome(None, SizingRejection.NON_POSITIVE_RISK_BUDGET, detail)
 
-    risk_per_unit = stop_distance * instrument.contract_size * fx_quote_to_account
+    cost_per_unit = policy.cost_per_unit(instrument, signal)
+    detail["cost_per_unit_price"] = cost_per_unit
+    per_unit_price = stop_distance + cost_per_unit
+    risk_per_unit = per_unit_price * instrument.contract_size * fx_quote_to_account
     detail["risk_per_unit_account"] = risk_per_unit
     if risk_per_unit <= 0:
         return SizingOutcome(None, SizingRejection.NON_POSITIVE_RISK_PER_UNIT, detail)
@@ -218,8 +290,10 @@ def size_trade(
         return SizingOutcome(None, SizingRejection.BELOW_MIN_SIZE, detail)
 
     # Recomputed from the ROUNDED size so the recorded risk is the risk actually
-    # taken, not the risk the unrounded arithmetic wanted to take.
-    realised_risk = stop_distance * size * instrument.contract_size * fx_quote_to_account
+    # taken, not the risk the unrounded arithmetic wanted to take. Under v2 it
+    # includes the expected stop-out costs, which is what the gateway's
+    # per-trade and account risk checks then compare against their limits.
+    realised_risk = per_unit_price * size * instrument.contract_size * fx_quote_to_account
     detail["risk_amount_account"] = realised_risk
 
     plan = TradePlan(
@@ -227,7 +301,7 @@ def size_trade(
         size=size,
         account_ccy=ccy,
         risk_amount=realised_risk,
-        sizing_basis=policy.policy_id,
+        sizing_basis=policy.basis,
         max_leverage_applied=leverage,
         portfolio_weight=portfolio_weight,
     )
@@ -245,6 +319,13 @@ class PortfolioSizer:
 
     policy: SizingPolicy = field(default_factory=SizingPolicy)
     portfolio_weight: float = 1.0
+
+    def fingerprint(self) -> dict[str, Any]:
+        return {
+            "sizer": type(self).__name__,
+            **self.policy.fingerprint(),
+            "portfolio_weight": self.portfolio_weight,
+        }
 
     def size_for(
         self,

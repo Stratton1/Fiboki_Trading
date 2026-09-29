@@ -102,7 +102,7 @@ def _shared_block_length(d: np.ndarray, block_length: float | None) -> float:
 
 
 def _bootstrap_means(
-    d: np.ndarray, n_boot: int, block_length: float, rng: np.random.Generator | int | None
+    d: np.ndarray, n_boot: int, block_length: float, rng: np.random.Generator | int
 ) -> np.ndarray:
     """``(n_boot, L)`` resampled column means using ONE shared index draw per replicate."""
     n = d.shape[0]
@@ -169,7 +169,7 @@ def superior_predictive_ability(
     *,
     n_boot: int = 1000,
     block_length: float | None = None,
-    rng: np.random.Generator | int | None = None,
+    rng: np.random.Generator | int,
 ) -> SPAResult:
     """Hansen's SPA test.
 
@@ -231,7 +231,7 @@ def spa_p_value(
     *,
     n_boot: int = 1000,
     block_length: float | None = None,
-    rng: np.random.Generator | int | None = None,
+    rng: np.random.Generator | int,
 ) -> float:
     """Convenience wrapper returning only the consistent p-value."""
     return superior_predictive_ability(
@@ -256,7 +256,7 @@ def reality_check(
     *,
     n_boot: int = 1000,
     block_length: float | None = None,
-    rng: np.random.Generator | int | None = None,
+    rng: np.random.Generator | int,
     studentised: bool = False,
 ) -> RealityCheckResult:
     """White's (2000) Reality Check.
@@ -313,7 +313,7 @@ def step_m(
     alpha: float = 0.05,
     n_boot: int = 1000,
     block_length: float | None = None,
-    rng: np.random.Generator | int | None = None,
+    rng: np.random.Generator | int,
     studentised: bool = True,
     max_steps: int = 100,
 ) -> StepMResult:

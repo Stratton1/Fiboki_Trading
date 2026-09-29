@@ -73,7 +73,7 @@ class TestIndexDraws:
     @pytest.mark.parametrize("bad", [0.0, 0.5, -1.0])
     def test_rejects_block_length_below_one(self, bad: float) -> None:
         with pytest.raises(ValueError):
-            stationary_bootstrap_indices(10, bad, 5)
+            stationary_bootstrap_indices(10, bad, 5, rng=0)
 
 
 class TestResampling:

@@ -84,7 +84,11 @@ def test_the_same_returns_over_different_spans_annualise_differently():
     # 1200 hours ~ 0.137 years -> ~8766 bars/yr ; 1200 days ~ 3.29 yr -> ~365/yr
     assert hourly.bars_per_year == pytest.approx(8766.0, rel=0.02)
     assert daily.bars_per_year == pytest.approx(365.25, rel=0.02)
-    assert hourly.sharpe > daily.sharpe * 4  # sqrt(8766/365.25) ~ 4.9
+    # The BAR-based Sharpe is the one annualised by bars per year, so it is the
+    # one this test is about. Since engine_v3_realism the default ``sharpe`` is
+    # on daily (17:00 New York) equity and does not depend on the bar size at
+    # all -- tests/unit/test_daily_sharpe_lo.py pins that.
+    assert hourly.sharpe_bar_based > daily.sharpe_bar_based * 4  # sqrt(8766/365.25) ~ 4.9
 
 
 def test_trade_frequency_is_derived_from_the_real_span():

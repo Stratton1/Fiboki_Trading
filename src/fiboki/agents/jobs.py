@@ -56,6 +56,8 @@ from fiboki.research.artefacts import (
     ResearchStore,
     ValidationReportRecord,
 )
+from fiboki.research.experiment import ExperimentLedger
+from fiboki.research.structure import structure_hash
 from fiboki.sim.profiles import get_profile
 from fiboki.stats.bootstrap import bootstrap_confidence_interval
 from fiboki.stats.sharpe import (
@@ -133,15 +135,38 @@ class CompiledStrategyRunner:
         return tuple(out)
 
 
-def _fx_source(account_ccy: str, quote_ccy: str, acknowledged: bool) -> tuple[Any, tuple[str, ...]]:
+#: The account currency an agent job runs in when its payload names none: the
+#: operator's account currency, the one research (``validation.run``) and paper
+#: use, so an agent figure is comparable with both.
+DEFAULT_ACCOUNT_CCY = "GBP"
+
+
+def _fx_source(
+    account_ccy: str, quote_ccy: str, acknowledged: bool, bars: Any = None
+) -> tuple[Any, tuple[str, ...]]:
     if account_ccy.upper() == quote_ccy.upper():
         return IdentityFxSource(), ()
+    # THE research conversion when the bar source can build it (daily crosses
+    # from the same store the bars came from); never a guessed rate.
+    resolver = getattr(bars, "fx_source", None)
+    unavailable = ""
+    if resolver is not None:
+        try:
+            fx, label = resolver(account_ccy, quote_ccy)
+        except Exception as exc:  # FxSourceUnavailable names the pairs to ingest
+            unavailable = f" ({type(exc).__name__}: {exc})"
+        else:
+            return fx, (
+                f"FX: {quote_ccy.upper()}->{account_ccy.upper()} converted with {label}; "
+                "rates are daily closes known at bar close (usually BID, about half a "
+                "spread off mid).",
+            )
     if not acknowledged:
         raise ValueError(
             f"account currency {account_ccy} differs from the quote currency "
-            f"{quote_ccy} and no FX series is wired in. Either run in {quote_ccy}, or "
-            "set fx_approximation_acknowledged=true to record, in the result, that a "
-            "1.0 conversion was used deliberately."
+            f"{quote_ccy} and no FX series is wired in{unavailable}. Either run in "
+            f"{quote_ccy}, or set fx_approximation_acknowledged=true to record, in the "
+            "result, that a 1.0 conversion was used deliberately."
         )
     return IdentityFxSource(allow_mismatch=True), (
         f"FX APPROXIMATION: {quote_ccy}->{account_ccy} was converted at 1.0. Every "
@@ -279,7 +304,7 @@ def _run_one(
             f"window holds {len(frame)}; the result would be entirely warmup"
         )
     instrument_spec = get_instrument(symbol)
-    fx, caveats = _fx_source(account_ccy, instrument_spec.quote, fx_acknowledged)
+    fx, caveats = _fx_source(account_ccy, instrument_spec.quote, fx_acknowledged, bars)
     frames = {symbol: frame}
     runner = CompiledStrategyRunner(compiled, frames, timeframe)
     config = BacktestConfig(
@@ -350,7 +375,7 @@ def backtest_handler(ctx: JobContext) -> Mapping[str, Any]:
         end=payload.get("end"),
         initial_balance=float(payload.get("initial_balance", 10_000.0)),
         risk_fraction=float(payload.get("risk_fraction", 0.01)),
-        account_ccy=str(payload.get("account_ccy", "USD")),
+        account_ccy=str(payload.get("account_ccy", DEFAULT_ACCOUNT_CCY)),
         profile_name=str(payload.get("profile", "ig_realistic")),
         fx_acknowledged=bool(payload.get("fx_approximation_acknowledged", False)),
         parameters=payload.get("parameters"),
@@ -432,6 +457,88 @@ def _trade_returns(record: BacktestRecord, initial_equity: float) -> np.ndarray:
     return np.array(out, dtype=float)
 
 
+def _lo_null_sharpe_variance(moments: Any) -> float | None:
+    """Null dispersion of a per-observation Sharpe on ``T`` observations (Lo 2002).
+
+    ``var(SR_hat) = (1 - g3*SR + (g4 - 1)/4 * SR^2) / (T - 1)`` with non-excess
+    kurtosis ``g4``. ``None`` when the bracket is not positive (the asymptotic
+    expansion does not hold) or ``T < 2``.
+    """
+    t = int(moments.n_obs)
+    if t < 2:
+        return None
+    sr, g3, g4 = float(moments.sr_hat), float(moments.skew), float(moments.kurtosis)
+    bracket = 1.0 - g3 * sr + (g4 - 1.0) / 4.0 * sr * sr
+    if not np.isfinite(bracket) or bracket <= 0.0:
+        return None
+    return bracket / (t - 1)
+
+
+def _ledger_trial_count(
+    ctx: JobContext, record: BacktestRecord, *, declared: int
+) -> tuple[dict[str, Any], list[str]]:
+    """``N`` for deflation, from the experiment ledger. Never from the payload.
+
+    The honest search size is the larger of the strategy FAMILY's trials (every
+    reparameterisation of this rule structure, across campaigns) and the
+    CAMPAIGN's trials (everything searched alongside it), when the backtest names
+    an experiment that belongs to one. A payload ``n_trials_in_search`` larger
+    than that is honoured -- it can only make deflation harder -- and recorded;
+    a smaller one is ignored. With no ledger injected, or nothing in it for
+    this scope, the count is unknown and the gate is NOT_EVALUATED.
+    """
+    notes: list[str] = []
+    ledger = ctx.services.get("experiments")
+    out: dict[str, Any] = {
+        "known": False,
+        "n_trials": 0,
+        "source": "experiment_ledger",
+        "declared_in_payload": int(declared),
+    }
+    if ledger is None:
+        notes.append(
+            "no experiment ledger was injected into the validation handler, so the "
+            "trial count is unknown"
+        )
+        return out, notes
+    counts: list[dict[str, Any]] = []
+    try:
+        strategies: StrategyRegistry = ctx.service("strategies")
+        family = structure_hash(strategies.get(record.strategy_id))
+    except Exception as exc:  # unknown strategy, or no registry
+        family = ""
+        notes.append(f"strategy family could not be resolved ({type(exc).__name__})")
+    try:
+        if family:
+            counts.append(ledger.count_trials(structure_hash=family).to_dict())
+        experiment_id = record.experiment_id or ctx.payload.get("experiment_id")
+        if experiment_id:
+            experiment = ledger.get(str(experiment_id))
+            campaign = str((experiment.outputs or {}).get("campaign_id", "") or "")
+            if campaign:
+                counts.append(ledger.count_trials(campaign_id=campaign).to_dict())
+    except Exception as exc:  # key-version mismatch, missing experiment
+        notes.append(
+            f"the experiment ledger could not answer the trial count "
+            f"({type(exc).__name__}: {exc}); it is treated as unknown"
+        )
+        return out, notes
+    known = [c for c in counts if c["n_experiments"] > 0]
+    out["scopes"] = counts
+    if not known:
+        return out, notes
+    n = max(int(c["n_trials"]) for c in known)
+    if declared > n:
+        notes.append(
+            f"the payload declared a search of {declared} trials, more than the "
+            f"{n} the ledger records; the larger figure is used, and the ledger "
+            "is missing trials"
+        )
+        n = declared
+    out.update({"known": True, "n_trials": int(n)})
+    return out, notes
+
+
 def validation_handler(ctx: JobContext) -> Mapping[str, Any]:
     """Evaluate the PLATFORM's promotion gates. The verdict is not an opinion.
 
@@ -450,7 +557,9 @@ def validation_handler(ctx: JobContext) -> Mapping[str, Any]:
     store: ResearchStore = ctx.service("research")
     payload = ctx.payload
     record = store.get_backtest(str(payload["backtest_id"]))
-    n_trials = int(payload.get("n_trials_in_search", 1))
+    #: Recorded, and allowed only to RAISE the ledger's count (a declared search
+    #: larger than the ledger knows about is information); never used alone.
+    declared_trials = int(payload.get("n_trials_in_search", 0) or 0)
     seed = int(payload.get("seed", 0))
     n_boot = int(payload.get("bootstrap_samples", 500))
 
@@ -482,32 +591,55 @@ def validation_handler(ctx: JobContext) -> Mapping[str, Any]:
         )
         metrics["psr"] = round(psr, 8)
 
-        if n_trials > 1:
-            # With no cross-section of trial Sharpes recorded, the dispersion of
-            # this strategy's own trade returns stands in for the trial-Sharpe
-            # variance. Say so: an assumed variance is the usual way a DSR is
-            # quietly inflated.
-            sr_variance = float(np.var(returns, ddof=1))
+        trials, trial_notes = _ledger_trial_count(ctx, record, declared=declared_trials)
+        caveats.extend(trial_notes)
+        metrics["trial_count"] = trials
+        n_trials = int(trials["n_trials"]) if trials.get("known") else 0
+        null_variance = _lo_null_sharpe_variance(moments)
+        metrics["null_sharpe_variance"] = (
+            round(null_variance, 12) if null_variance is not None else None
+        )
+        metrics["null_sharpe_variance_source"] = "lo_2002_asymptotic"
+        dsr: float | None
+        if n_trials <= 0:
+            dsr = None
+            caveats.append(
+                "the experiment ledger holds no trials for this strategy's family or "
+                "campaign, so the size of the search is UNKNOWN and the deflated "
+                "Sharpe is NOT_EVALUATED (it blocks). A payload trial count is never "
+                "used: it is written by whoever wants the number."
+            )
+        elif null_variance is None:
+            dsr = None
+            caveats.append(
+                "Lo's (2002) variance term is non-positive for these moments, so "
+                "the null dispersion of the trial Sharpes cannot be estimated and "
+                "the deflated Sharpe is NOT_EVALUATED"
+            )
+        elif n_trials == 1:
+            dsr = psr
+            caveats.append(
+                "the ledger records exactly one trial for this family, so the "
+                "deflated Sharpe equals the PSR"
+            )
+        else:
+            # No cross-section of trial Sharpes is recorded, so the NULL
+            # dispersion of a per-trade Sharpe estimated on T trades stands in:
+            # var(SR_hat) = (1 - g3*SR + (g4-1)/4*SR^2) / (T-1) (Lo 2002). The
+            # variance of per-TRADE RETURNS used before is ~0.01^2 at 1% risk,
+            # which put the expected maximum of 1,000 trials at ~0.033 instead
+            # of ~0.165 and reported a DSR of ~0.91 for a strategy whose true
+            # figure was ~0.05 (audit P1-2).
             dsr = deflated_sharpe_ratio(
-                moments.sr_hat, moments.n_obs, n_trials, sr_variance,
+                moments.sr_hat, moments.n_obs, n_trials, null_variance,
                 moments.skew, moments.kurtosis,
             )
             metrics["expected_max_sharpe_of_search"] = round(
-                expected_max_sharpe(n_trials, sr_variance), 8
+                expected_max_sharpe(n_trials, null_variance), 8
             )
-            caveats.append(
-                "deflated Sharpe used the dispersion of this strategy's own trade "
-                "returns as the trial-Sharpe variance because no cross-section of "
-                "trial results was recorded; supply one for a tighter deflation"
-            )
-        else:
-            dsr = psr
-            caveats.append(
-                "n_trials_in_search=1, so the deflated Sharpe equals the PSR. If the "
-                "search really tried more than one thing, this gate is too easy."
-            )
-        metrics["deflated_sharpe_ratio"] = round(dsr, 8)
-        gate_values["deflated_sharpe_ratio"] = dsr
+        metrics["deflated_sharpe_ratio"] = round(dsr, 8) if dsr is not None else None
+        if dsr is not None:
+            gate_values["deflated_sharpe_ratio"] = dsr
 
         ci = bootstrap_confidence_interval(
             returns, lambda a: float(np.mean(a)), n_boot=n_boot, alpha=0.05, rng=seed
@@ -526,7 +658,7 @@ def validation_handler(ctx: JobContext) -> Mapping[str, Any]:
     # backtest CAN answer, because it reprices the trades that actually happened.
     if record.trades:
         trades = tuple(_rehydrate_trade(t) for t in record.trades)
-        curve = spread_multiplier_stress(trades, (1.0, 2.0), net_profit)
+        curve = spread_multiplier_stress(trades, (1.0, 2.0), net_profit, rng=seed)
         at_2x = float(curve.median[-1])
         metrics["net_profit_at_2x_spread"] = round(at_2x, 6)
         metrics["net_profit_baseline"] = round(float(curve.baseline), 6)
@@ -644,7 +776,7 @@ def walkforward_handler(ctx: JobContext) -> Mapping[str, Any]:
             end=fold_end,
             initial_balance=float(payload.get("initial_balance", 10_000.0)),
             risk_fraction=float(payload.get("risk_fraction", 0.01)),
-            account_ccy=str(payload.get("account_ccy", "USD")),
+            account_ccy=str(payload.get("account_ccy", DEFAULT_ACCOUNT_CCY)),
             profile_name=str(payload.get("profile", "ig_realistic")),
             fx_acknowledged=bool(payload.get("fx_approximation_acknowledged", False)),
             parameters=payload.get("parameters"),
@@ -777,7 +909,7 @@ def ablation_handler(ctx: JobContext) -> Mapping[str, Any]:
             end=payload.get("end"),
             initial_balance=float(payload.get("initial_balance", 10_000.0)),
             risk_fraction=float(payload.get("risk_fraction", 0.01)),
-            account_ccy=str(payload.get("account_ccy", "USD")),
+            account_ccy=str(payload.get("account_ccy", DEFAULT_ACCOUNT_CCY)),
             profile_name=str(payload.get("profile", "ig_realistic")),
             fx_acknowledged=bool(payload.get("fx_approximation_acknowledged", False)),
             parameters=payload.get("parameters"),
@@ -968,6 +1100,7 @@ def register_research_handlers(
     strategies: StrategyRegistry,
     bars: BarSource | None = None,
     job_types: Sequence[JobType] | None = None,
+    experiments: ExperimentLedger | None = None,
 ) -> None:
     """Wire the deterministic handlers into an orchestrator.
 
@@ -975,7 +1108,14 @@ def register_research_handlers(
     a job only for a type that has been registered here, so the set of things
     the research fleet can cause to happen is fixed at wiring time.
     """
-    services = {"research": research, "strategies": strategies, "bars": bars}
+    services = {
+        "research": research,
+        "strategies": strategies,
+        "bars": bars,
+        # The trial count for deflation. Without it the validation handler's
+        # DSR is NOT_EVALUATED, which blocks: it will not deflate by a guess.
+        "experiments": experiments,
+    }
     for job_type in job_types or tuple(HANDLERS):
         handler = HANDLERS.get(job_type)
         if handler is None:

@@ -138,8 +138,15 @@ def test_the_recorded_result_is_deterministic(harness: Harness, backtest_id: str
     assert result["metrics"]["total_return_pct"] == first.metrics["total_return_pct"]
 
 
-def test_a_currency_mismatch_is_refused_unless_acknowledged(harness: Harness) -> None:
+@pytest.fixture(scope="module")
+def no_fx_harness() -> Harness:
+    """A bar source with NO GBP cross: the FX route cannot be built."""
+    return Harness(with_fx=False)
+
+
+def test_a_currency_mismatch_is_refused_unless_acknowledged(no_fx_harness: Harness) -> None:
     """V1 silently reported USD-quoted results as GBP. V2 will not."""
+    harness = no_fx_harness
     harness.orchestrator.submit(
         JobSpec(
             job_type=JobType.BACKTEST,
@@ -157,11 +164,12 @@ def test_a_currency_mismatch_is_refused_unless_acknowledged(harness: Harness) ->
     record = harness.orchestrator.drain("research")[0]
     assert record.status is JobStatus.DEAD_LETTER
     assert "fx_approximation_acknowledged" in record.error
+    assert "GBPUSD" in record.error, "the refusal names the cross to ingest"
 
 
-def test_an_acknowledged_mismatch_records_the_caveat(harness: Harness) -> None:
+def test_an_acknowledged_mismatch_records_the_caveat(no_fx_harness: Harness) -> None:
     result = _run(
-        harness,
+        no_fx_harness,
         JobType.BACKTEST,
         {
             "strategy_id": "ema_cross_fixture",
@@ -173,6 +181,47 @@ def test_an_acknowledged_mismatch_records_the_caveat(harness: Harness) -> None:
         key="fx_acknowledged",
     )
     assert any("FX APPROXIMATION" in c for c in result["caveats"])
+
+
+def test_the_default_account_is_gbp_converted_by_the_research_fx_route(
+    harness: Harness,
+) -> None:
+    """No ``account_ccy``: the operator's GBP account, converted with THE research
+    FX source built from the GBPUSD D1 series in the same bar source."""
+    result = _run(
+        harness,
+        JobType.BACKTEST,
+        {"strategy_id": "ema_cross_fixture", "instrument": "EURUSD", "timeframe": "H1"},
+        key="default_gbp",
+    )
+    assert result["backtest_id"]
+    assert any(c.startswith("FX: USD->GBP converted with SeriesFxSource") for c in result["caveats"])
+    assert not any("FX APPROXIMATION" in c for c in result["caveats"])
+
+
+def test_bid_bars_are_converted_to_the_research_mid_before_a_backtest() -> None:
+    """The store's HistData series are BID; the engine refuses BID frames. The bar
+    source converts them with the research helper, so the job runs."""
+    from fiboki.data.schema import PriceBasis, canonical_frame
+    from tests.agents_fixtures import trending_bars
+
+    frame = trending_bars()
+    bid = canonical_frame(
+        frame[["open", "high", "low", "close", "volume"]],
+        instrument="EURUSD", timeframe=Timeframe.H1, price_basis=PriceBasis.BID,
+    )
+    harness = Harness(bars=bid)
+    loaded, _version = harness.bars.load("EURUSD", Timeframe.H1)
+    assert set(loaded["price_basis"].unique()) == {"synthetic_mid"}
+    assert loaded.attrs["price_lineage"]["from"] == "bid"
+    assert (loaded["close"] > bid["close"]).all(), "mid = bid + half the typical spread"
+    result = _run(
+        harness,
+        JobType.BACKTEST,
+        {"strategy_id": "ema_cross_fixture", "instrument": "EURUSD", "timeframe": "H1"},
+        key="bid_converted",
+    )
+    assert result["backtest_id"]
 
 
 def test_a_strategy_run_outside_its_universe_is_refused(harness: Harness) -> None:
@@ -240,7 +289,14 @@ def test_an_honestly_bad_strategy_fails_the_gates(harness: Harness, backtest_id:
     assert "min_trades" in record.result["failed_checks"]
     assert record.result["binding_constraint"] == "min_trades"
     report = harness.research.get_validation_report(str(record.result["report_id"]))
-    assert report.metrics["deflated_sharpe_ratio"] < 0.95
+    # UPDATED DELIBERATELY (audit P1-2): this harness injects no experiment
+    # ledger, so the search size is unknown and the DSR is NOT_EVALUATED --
+    # which blocks -- instead of being computed from the payload's
+    # ``n_trials_in_search`` and a per-trade-return variance. A DSR computed
+    # with a ledger is covered by tests/integration/test_agents_validation_dsr.py.
+    assert report.metrics["deflated_sharpe_ratio"] is None
+    by_name = {c["name"]: c for c in report.checks}
+    assert by_name["deflated_sharpe"]["status"] == "not_evaluated"
 
 
 def test_the_report_states_its_own_caveats(harness: Harness, backtest_id: str) -> None:
@@ -253,7 +309,10 @@ def test_the_report_states_its_own_caveats(harness: Harness, backtest_id: str) -
     report = harness.research.get_validation_report(result["report_id"])
     joined = " ".join(report.caveats)
     assert "PER TRADE" in joined
-    assert "n_trials_in_search=1" in joined
+    # The payload's trial count is not a source of N (audit P1-2); the report
+    # says the count is unknown and the gate blocks.
+    assert "trial count is unknown" in joined
+    assert "payload trial count is never used" in joined
 
 
 def test_the_verdict_is_computed_not_supplied(harness: Harness, backtest_id: str) -> None:

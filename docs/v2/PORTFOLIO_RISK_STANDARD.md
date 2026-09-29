@@ -82,8 +82,15 @@ strategies could each take "1% risk" on six correlated FX majors simultaneously 
 result 12% risk when the realised one-factor exposure was closer to 50%.
 
 `portfolio/construction.py` decides how much of the per-trade risk budget each concurrent
-candidate is entitled to, *before* `size_trade` turns that entitlement into units. Weights are
-fractions of the risk budget, not of equity: a weight of 1.0 means "the full `risk_fraction`".
+candidate is entitled to, *before* `size_trade` turns that entitlement into units. Since
+`construction_v2` (2026-09-29) weights are fractions of the candidate's **tier base risk**
+(`RISK_GOVERNANCE.md` Governor 1: Probationary 0.25%, Established 0.75%, Proven 1.5%, Flagship
+2.0% of equity per trade), and the intended risk is `base_risk_pct x weight`, with the weight
+never above 1.0. It is **wired into the paper runtime**: `workers/runtime.SignalEvaluator`
+allocates every bar's signals together against the venue's own book and then calls
+`size_trade` once per accepted candidate with `risk_fraction = base risk` and
+`portfolio_weight = weight` (audit F P1-11; before this it called `size_trade` at a flat
+`risk_fraction` and the constructor ran in no runtime).
 
 ### Allocators — the base weight
 
@@ -99,43 +106,125 @@ construction: it is maximally permissive exactly where you know least.** The def
 therefore a constructor argument, and `ConstructionConfig.unmeasured_correlation` is a
 deliberately positive 0.30.
 
-### The adjustment pipeline
+### The adjustment pipeline (construction_v2)
 
-A fixed, ordered sequence of thirteen steps runs after the allocator, and **every** scaling
-factor is recorded on the `Allocation` with the step that applied it. An allocation you cannot
-explain is an allocation you should not have taken, so the reasoning is data, not a log line.
+A fixed, ordered sequence of fifteen per-candidate steps runs after the allocator, then three
+batch passes. Every factor is recorded: `Allocation.reasons` holds the steps whose factor was not
+1.0 (plus the conviction step, always), and `Allocation.trace` holds **every** step that ran,
+including those at exactly 1.0, which is what an operator view of "why this size" reads.
 
 ```
-lifecycle → health → confidence
-  → instrument_correlation → strategy_correlation
-  → instrument_concentration → asset_class_concentration → currency_exposure
-  → volatility_target → margin → drawdown → regime
-  → total_budget cap
+lifecycle -> tier -> health -> confidence
+  -> instrument_correlation -> strategy_correlation
+  -> instrument_concentration -> asset_class_concentration -> currency_exposure
+  -> volatility_target -> margin -> drawdown -> regime
+  -> correlated_risk_budget -> conviction
+  => total_budget (weights) => total_risk_cap (6%) => tier_cap (weight <= 1.0)
 ```
 
-The order is fixed and **not configurable**, because changing it changes the answer. Eligibility
-gates run first, so a quarantined strategy never consumes budget; then per-candidate quality
-scaling; then book-level constraints; then the global cap.
+**Down only.** Every step's factor is at most 1.0 (asserted in the loop) and the final `tier_cap`
+pass clamps each weight to `max_scale_vs_tier` (asserted <= 1.0), so **a candidate's final risk
+never exceeds its tier's base risk**. `tests/unit/test_construction_policy.py` holds the property
+test (300 random books, every allocator, every agent tier) and `tests/golden/
+test_golden_construction.py` the hand-calculated cases. The three scale-up paths v1 had are
+refused at configuration: `vol_target_max_scale > 1.0` (v1 default 1.5), a regime or lifecycle
+scalar above 1.0, and `max_scale_vs_tier > 1.0`. RISK_GOVERNANCE's opportunistic upward
+multipliers (regime concentration 1.5x, volatility scaling up to 1.5x, conviction stacking
+1.25x) are therefore **not implemented**, deliberately, by this brief's cap.
 
-**`ConstructionConfig`, version `construction_v1`:**
+**`ConstructionConfig`, version `construction_v2`:**
 
 | Field | Default | Meaning |
 |---|---:|---|
-| `max_total_weight` | 3.0 | Total budget across all concurrent candidates, as a multiple of the single-trade risk fraction. |
-| `max_weight_per_candidate` | 1.0 | No candidate exceeds one full budget. |
+| `tier_risk_pct` | 0.25 / 0.75 / 1.50 / 2.00 | Base risk per trade by `StrategyTier`, % of equity (Governor 1). |
+| `tier_max_concurrent` | 2 / 4 / 6 / 8 | Open positions per strategy by tier; at the cap the candidate is dropped (Governor 1). |
+| `risk_ceiling_pct` | `None` | Hard ceiling on the base. The runtime sets it to `SizingPolicy.risk_fraction`, so a configured sizing policy can only LOWER the tier table. |
+| `max_scale_vs_tier` | 1.0 | The final clamp. Asserted <= 1.0. |
+| `max_total_weight` | 3.0 | Sum of weights across concurrent candidates. |
+| `max_weight_per_candidate` | 1.0 | Allocator base-weight cap. |
 | `min_weight_to_trade` | 0.10 | Below this a candidate is dropped rather than traded at a token size. |
 | `correlation_soft_cap` / `correlation_hard_cap` | 0.40 / 0.85 | Penalty band; above the hard cap a candidate goes to zero. |
 | `unmeasured_correlation` | 0.30 | Conservative assumption for pairs with no measurement. |
+| `max_correlated_risk_pct` | 3.0 | `sum |rho(c, i)| x open_risk_i` plus the candidate's planned risk may not exceed this (Governor 2 treats correlated positions as one, and one position's instrument cap is 3%). Unmeasured pairs at 0.30, the same instrument at 1.0. |
+| `max_total_risk_pct` | 6.0 | Open risk to stop plus the whole batch's new risk (Governor 2). Scales the batch; drops it when the book is already full. |
 | `max_instrument_notional_pct` | 10.0 | Gross notional per instrument, as a **multiple of equity**. |
 | `max_asset_class_notional_pct` | 20.0 | Per asset class. |
 | `max_currency_notional_pct` | 15.0 | Net per currency leg. |
-| `target_portfolio_vol` | 0.12 | Annualised vol target; `None` disables. |
-| `vol_target_max_scale` | 1.50 | Vol targeting may never scale *up* by more than this. |
+| `target_portfolio_vol` / `vol_target_max_scale` | 0.12 / 1.0 | Vol targeting may only REDUCE. |
 | `max_margin_utilisation` | 0.50 | |
-| `drawdown_derisk_start_pct` / `drawdown_zero_pct` | 5.0 / 20.0 | Linear de-risking between the two; at or beyond 20% no new risk is allocated at all. |
-| `regime_scalars` | trend 1.0, range 0.7, high_vol 0.5, crisis 0.25, unknown 0.6 | Missing regimes use 1.0. **`unknown` is 0.6, not 1.0** — not knowing the regime reduces size. |
+| drawdown throttle | x0.6 from 5%, x0.3 from 10% (Probationary suspended), PAUSE at 15%, FLATTEN at 20% | Governor 3, a step function; the boundary belongs to the stricter band. At 20% the construction allocates nothing; flattening is the kill switch's act, not this module's. The "ten trading days above the threshold before lifting" hysteresis is **not implemented** (the step is stateless). |
+| `regime_scalars` | trend 1.0, range 0.7, high_vol 0.5, crisis 0.25, unknown 0.6 | **`unknown` is 0.6, not 1.0.** The five-axis `marketstate` key (`up|high|trending|deep|calm`) is mapped to these labels by `coarse_regime` (stressed -> crisis; high/extreme volatility or elevated stress -> high_vol; trending -> trend; mean_reverting/random -> range; any unknown axis -> unknown). Under v1 no real key matched, so every regime was scaled 0.6. Each candidate uses its OWN instrument's regime. |
 | `allocatable_lifecycles` | PAPER, SHADOW, DEMO, APPROVED, LIVE, WATCH | Everything else receives nothing. |
 | `lifecycle_scalars` | WATCH 0.5, DEMO 0.75 | States that may trade but at reduced size. |
+| `conviction` | `ConvictionPolicy` v1, `enabled=False` | See below. |
+
+Evidence tiers are an input (`StrategyTier`, persisted values). Nothing in the code computes a
+promotion yet, so the runtime's default `tier_source` answers PROBATIONARY for every strategy:
+at this snapshot every paper position is sized at 0.25% x weight.
+
+`PortfolioSnapshot.open_risk_by_instrument` is `None` when unmeasured and the budgets then say
+`open_risk_unmeasured` on the trace and `open_risk_measured: false` in the stamp (the total cap
+then applies to the batch's new risk only, and the gateway's `max_account_risk` still runs). The
+runtime always measures it (`RiskContextBuilder.open_risk_by_instrument`).
+
+Every `AllocationResult` carries a `stamp` (construction version, allocator, conviction policy
+version and effective state, the agent tier and its source, the budgets, drawdown and open risk)
+and every row of `as_rows()` repeats it. In the runtime, `StampingRecorder` merges the stamp of
+the allocation behind each plan (`sizing: {...}`) and the agent tier into every gateway attempt
+row, exits included.
+
+### The conviction step: the only place an agent verdict can touch a size
+
+`_step_conviction` is the only consumer of a `core.contracts.ConvictionReading` (instrument,
+stance long/short/none, ordinal strength 0..2, as_of, valid_until, artefact id, policy version;
+no text, price, stop, size or probability). The reading comes from the agent thesis debate's
+`conviction` table through `workers/runtime.ConvictionAdapter`, the only construction site, read
+point-in-time (`available_at <= now`). `ConvictionPolicy` v1 maps it to a factor:
+
+| Reading | Factor |
+|---|---:|
+| missing, stale (`now >= valid_until`), not yet available, wrong instrument, validity longer than 24 h | 1.0 |
+| stance `none`, or stance agrees with the signal | 1.0 |
+| disagrees, strength 1 | 0.90 |
+| disagrees, strength 2 | 0.75 (the floor) |
+
+`floor >= 0.5` and `max_factor <= 1.0` are asserted in `__post_init__`; no `AgentInfluenceTier`
+permits upsizing, so there is nothing a higher tier could unlock. The policy is `enabled=False`,
+and even when enabled it applies only if the operator's signed tier (`core/tier.py`) is T3 or
+higher; the reviewed ceiling `MAX_AUTHORISED_TIER` is T1, so today it cannot apply at all. In
+every case the would-be factor is logged as a `ShadowFactor` with `Provenance.SHADOW`. An LLM
+outage therefore cannot change book risk (missing is 1.0, unlike the regime's 0.6), and the
+worst an enabled, adversarial verdict can do is shrink a position the deterministic strategy
+already chose to 0.75 of its size. AST tests (`tests/unit/test_conviction_channel.py`): one
+construction site; fields read only in the policy helper that only `_step_conviction` calls;
+no name containing "conviction" anywhere in `risk/`, `broker/`, `strategy/`, `backtest/`,
+`sim/`, `indicators/` or `portfolio/sizing.py`; nothing on the sizing path writes
+`Signal.confidence`.
+
+### Parity with the backtest (closed 2026-09-29, audit F B-24)
+
+With `BacktestConfig.construction` set, the engine allocates each decision bar's signals through
+the same `PortfolioConstructor` against its OWN book (account, open positions, margin marked as
+`PaperBroker` marks it, cost-inclusive open risk, the equity curve for realised vol) and sizes
+each accepted one once at `tier base risk x weight`. `portfolio/engine_policy.
+BacktestConstructionPolicy` satisfies the engine's `ConstructionPolicy` Protocol (the engine may
+not import `portfolio`); its helpers mirror `RiskContextBuilder.snapshot` and
+`SignalEvaluator` expression for expression. `tests/integration/test_construction_parity.py`
+drives the engine, the runtime's sizing components and `build_replay_session` over the same bars
+and demands byte-identical size-and-reason, trade and leg ledgers, with every drawdown band
+(de-risk, severe, PAUSE, FLATTEN-required) first firing on the same bar on all three.
+
+Defaults: `construction=None` at the engine (the flat path; every existing pin; fingerprinted
+`construction=none`), the paper policy in every validation run
+(`validation.engine_evaluator.research_construction_policy`). In a backtest the conviction step
+has no source by construction (plan D-A3: historical LLM convictions are inadmissible) and reads
+`missing`, factor 1.0; the regime is `unknown` (0.6) unless a regime source is supplied, exactly
+as on a paper session without a market-state engine; lifecycle, health and tier are policy
+constants. Stated differences: a replay session measures instrument correlation over the whole
+replayed window (look-ahead) while the engine uses the unmeasured default unless handed a matrix;
+the engine refuses a locked signal BEFORE allocation while paper's gateway refuses it after, so
+on a bar with several candidates a locked one can share paper's budget; the replay runtime
+schedules no reversals.
 
 Currency exposure is **net**: long EURUSD is +EUR and −USD, so a simultaneous long EURUSD and
 short EURGBP partially nets in EUR and does not in USD/GBP. `PortfolioSnapshot` carries signed
@@ -424,7 +513,12 @@ An automatic drawdown-triggered flatten does not exist at this snapshot.
 | Limits cannot be mutated in place | frozen dataclass; `derive` requires a new version | enforced |
 | Kill-switch state survives a crash | fsynced journal, recovered on startup | enforced |
 | Kill switch never self-clears | no timeout path exists | enforced |
-| Allocation reasoning is data | `AllocationReason` per pipeline step | enforced |
+| Allocation reasoning is data | `AllocationReason` per pipeline step; full `trace`; stamp on every attempt row | enforced |
+| Construction runs in the paper runtime | `tests/integration/test_runtime_sizing_path.py` (AST: `evaluate` allocates, then one `size_trade`) | enforced (construction_v2) |
+| Final risk never exceeds the tier base | property test, `tests/unit/test_construction_policy.py` | enforced |
+| Drawdown throttle x0.6 / x0.3 / PAUSE 15% / FLATTEN 20% | `_step_drawdown`, parametrised boundary test | enforced in construction (new risk only); **no hysteresis**; the 20% flatten itself is not automatic |
+| An agent conviction can only reduce a size, and only at tier T3 | `ConvictionPolicy` asserts; AST tests; tier gate | enforced; **off by default, ceiling T1** |
+| Backtest sizes like paper | none | **not implemented** (engine still sizes at a flat `risk_fraction`) |
 | Unmeasured correlation is conservative | `unmeasured_correlation = 0.30` | enforced |
 | **Automatic drawdown-triggered flatten** | — | **not implemented** |
 | **Lifecycle transition machine** | — | **not implemented**; the gateway reads a lifecycle nothing owns |

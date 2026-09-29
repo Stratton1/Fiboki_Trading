@@ -178,12 +178,17 @@ EXPECTED_CAPABILITIES = {
     # +2 (21 -> 23), agentic plan Wave 4 event channel: READ_NEWS_SNAPSHOT for
     # query_news, WRITE_EVENT_ANNOTATION for the quarantined annotation store.
     "READ_NEWS_SNAPSHOT", "WRITE_EVENT_ANNOTATION",
+    # +2 (23 -> 25), agentic plan Wave 4 thesis debate: WRITE_DEBATE_TURN for
+    # record_debate_turn and WRITE_CONVICTION for record_conviction. Both are
+    # research writes to the append-only thesis store and pass the execution
+    # guard (verb WRITE, nouns DEBATE_TURN / CONVICTION are not execution nouns).
+    "WRITE_DEBATE_TURN", "WRITE_CONVICTION",
 }
 
 
-def test_capability_set_is_pinned_at_23() -> None:
+def test_capability_set_is_pinned_at_25() -> None:
     assert {c.name for c in Capability} == EXPECTED_CAPABILITIES
-    assert len(Capability) == 23
+    assert len(Capability) == 25
 
 
 def test_the_forecast_capabilities_pass_the_execution_guard() -> None:

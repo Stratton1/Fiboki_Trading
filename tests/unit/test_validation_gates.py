@@ -150,3 +150,16 @@ class TestBindingConstraint:
             }
         )
         assert GateSet.binding_constraint(results) is None
+
+
+def test_the_plateau_rationale_states_the_ratio_the_gate_reads() -> None:
+    """The text shown beside the gate is the definition in stats.stability
+    (``(s + |s|) / (m + |s|)``, neighbours excluding the point), and its 60%
+    reading is the threshold: plateau_ratio(1.0, 0.6) == 1.25."""
+    from fiboki.stats.stability import plateau_ratio
+
+    gate = GATE_SET_V2.by_name("parameter_plateau")
+    assert "(s + |s|) / (m + |s|)" in gate.rationale
+    assert "EXCLUDING the point" in gate.rationale and "60%" in gate.rationale
+    assert "divided by the mean of its neighbourhood" not in gate.rationale
+    assert plateau_ratio(1.0, 0.6) == pytest.approx(gate.threshold)

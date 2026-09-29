@@ -169,7 +169,7 @@ def test_the_exit_policy_carries_locks_only_when_declared() -> None:
         "cooldown_bars_after_close": 3,
         "stop_streak": {"n_stops": 2, "lookback_bars": 30, "lock_bars": 12,
                         "scope": "instrument"},
-        "calendar": "session_bars:interbank_weekend",
+        "calendar": "session_bars:interbank_weekend:fri17-sun17_america_new_york",
     }
     # Every other key of the fingerprint is untouched by declaring locks.
     assert {k: v for k, v in locked.fingerprint().items() if k != "locks"} == plain.fingerprint()

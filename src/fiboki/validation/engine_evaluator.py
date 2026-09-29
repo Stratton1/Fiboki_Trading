@@ -59,6 +59,7 @@ import hashlib
 import json
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
+from functools import partial
 from pathlib import Path
 from typing import Any
 
@@ -66,9 +67,12 @@ import numpy as np
 import pandas as pd
 
 from fiboki.backtest.engine import (
+    SIZING_POLICIES,
+    SIZING_POLICY_V2,
     BacktestConfig,
     BacktestResult,
     BarContext,
+    ConstructionPolicy,
     FixedFractionalSizer,
     run_backtest,
 )
@@ -76,6 +80,8 @@ from fiboki.backtest.exits import BlackoutSource, ExitPolicy, exit_policy_from_d
 from fiboki.core.contracts import Signal, Trade
 from fiboki.core.enums import Direction, ExitReason, Provenance, Timeframe
 from fiboki.core.money import FxRateSource, IdentityFxSource
+from fiboki.portfolio.engine_policy import BacktestConstructionPolicy
+from fiboki.risk.accounting import realised_portfolio_vol
 from fiboki.sim.profiles import ExecutionProfile, get_profile
 from fiboki.strategy.compiler import CompiledStrategy, compile_strategy
 from fiboki.strategy.dsl import StrategyDocument
@@ -96,7 +102,35 @@ __all__ = [
     "WindowedStrategyRunner",
     "blackout_fingerprint",
     "frame_digest",
+    "research_construction_policy",
 ]
+
+
+#: ``RiskContextBuilder.vol_min_observations``: the paper runtime's threshold
+#: below which realised portfolio vol is "unmeasured" (0.0, neutral).
+RUNTIME_VOL_MIN_OBSERVATIONS = 20
+
+
+def research_construction_policy() -> BacktestConstructionPolicy:
+    """The portfolio construction research sizes with by default: the paper runtime's.
+
+    ``construction_v2`` (``ConstructionConfig()``), the equal-risk allocator,
+    PROBATIONARY / PAPER / health 1.0, no regime source (``unknown``), no
+    conviction (inadmissible, plan D-A3), and realised portfolio vol measured
+    by the SAME function the runtime's ``RiskContextBuilder`` calls, over the
+    engine's own marked-to-market equity curve. ``EvaluatorConfig.risk_fraction``
+    is a ceiling on the tier base risk, as ``SizingPolicy.risk_fraction`` is in
+    paper.
+    """
+    return BacktestConstructionPolicy(
+        realised_vol=partial(
+            realised_portfolio_vol, min_observations=RUNTIME_VOL_MIN_OBSERVATIONS
+        ),
+        realised_vol_source=(
+            "risk.accounting.realised_portfolio_vol(min_observations="
+            f"{RUNTIME_VOL_MIN_OBSERVATIONS}) over the engine's equity curve"
+        ),
+    )
 
 
 # --------------------------------------------------------------------------
@@ -117,8 +151,18 @@ class EvaluatorConfig:
     instrument: str
     timeframe: Timeframe
     initial_balance: float = 10_000.0
-    account_ccy: str = "USD"
+    #: GBP because the operator's account is GBP. Research used to run in USD
+    #: while paper ran in GBP, so every monetary limit and every size differed
+    #: between the two for the 30 of 41 instruments not quoted in GBP. A
+    #: non-GBP-quoted instrument therefore needs a real rate source: see
+    #: :func:`fiboki.validation.run.build_research_fx_source`.
+    account_ccy: str = "GBP"
     risk_fraction: float = 0.01
+    #: The sizing rule. ``fixed_fractional_v2`` prices the spread and the
+    #: expected slippage of both legs into the risk per unit
+    #: (:func:`fiboki.backtest.engine.stop_out_cost_per_unit`); v1 is kept only
+    #: so an old configuration can be re-run and compared.
+    sizing_policy: str = SIZING_POLICY_V2
     profile_name: str = "IG_REALISTIC"
     charge_financing: bool = True
     close_at_end_of_data: bool = True
@@ -134,6 +178,10 @@ class EvaluatorConfig:
             raise ValueError("initial_balance must be positive")
         if not 0.0 < self.risk_fraction < 1.0:
             raise ValueError("risk_fraction must be in (0, 1)")
+        if self.sizing_policy not in SIZING_POLICIES:
+            raise ValueError(
+                f"unknown sizing policy {self.sizing_policy!r}; known {SIZING_POLICIES}"
+            )
         get_profile(self.profile_name)  # raises on an unknown profile
 
     @property
@@ -147,6 +195,7 @@ class EvaluatorConfig:
             "initial_balance": float(self.initial_balance),
             "account_ccy": self.account_ccy.upper(),
             "risk_fraction": float(self.risk_fraction),
+            "sizing_policy": self.sizing_policy,
             "profile_name": self.profile_name.upper(),
             "charge_financing": bool(self.charge_financing),
             "close_at_end_of_data": bool(self.close_at_end_of_data),
@@ -367,6 +416,14 @@ def _trade_from_dict(raw: Mapping[str, Any]) -> Trade:
     )
 
 
+def _frame_price_basis(frame: pd.DataFrame) -> str:
+    """The frame's single price basis, or ``assumed_mid`` when it carries none."""
+    if "price_basis" not in frame.columns:
+        return "assumed_mid"
+    bases = sorted({str(getattr(b, "value", b)).lower() for b in frame["price_basis"].unique()})
+    return bases[0] if len(bases) == 1 else "mixed:" + ",".join(bases)
+
+
 def _evaluation_to_dict(ev: WindowEvaluation) -> dict[str, Any]:
     return {
         "window": ev.window.to_dict(),
@@ -428,7 +485,20 @@ class EngineEvaluator:
     #: another's (``validation/run.py`` worked round it with a per-calendar
     #: cache subdirectory).
     blackout: BlackoutSource | None = None
+    #: How the bars reached their price basis, when it was converted (for
+    #: example ``{"from": "bid", "via": "bid_to_mid", "assumed_spread_pips":
+    #: 0.9}``). Part of the engine fingerprint and so of every cache key.
+    price_basis_lineage: Mapping[str, Any] = field(default_factory=dict)
+    #: Portfolio construction on every decision bar. Defaults to the paper
+    #: runtime's policy so research and paper size a signal identically;
+    #: ``None`` is the flat ``risk_fraction`` path (``construction=none`` in the
+    #: fingerprint), kept for regression pins and for comparison. Either way it
+    #: is part of :meth:`engine_fingerprint` and so of every cache key.
+    construction: ConstructionPolicy | None = field(
+        default_factory=research_construction_policy
+    )
 
+    _price_basis: str = field(init=False, default="", repr=False)
     _blackout_fingerprint: dict[str, Any] | None = field(init=False, default=None, repr=False)
     _frame_digest: str = field(init=False, default="", repr=False)
     _bound: dict[str, StrategyDocument] = field(init=False, default_factory=dict, repr=False)
@@ -460,6 +530,7 @@ class EngineEvaluator:
                 "bytes it ran on is not reproducible and is not evidence"
             )
         self._frame_digest = frame_digest(self.frame)
+        self._price_basis = _frame_price_basis(self.frame)
         self._engine_fingerprint = self._base_config("fingerprint_probe").fingerprint()
         self._blackout_fingerprint = blackout_fingerprint(self.blackout)
         if (
@@ -488,6 +559,7 @@ class EngineEvaluator:
             close_at_end_of_data=self.config.close_at_end_of_data,
             strategy_id=strategy_id,
             provenance=Provenance.BACKTEST,
+            construction=self.construction,
         )
 
     def bind(self, params: Mapping[str, Any]) -> StrategyDocument:
@@ -517,6 +589,13 @@ class EngineEvaluator:
         out = {k: v for k, v in self._engine_fingerprint.items() if k != "strategy_id"}
         out["evaluator"] = self.config.to_dict()
         out["fx_source"] = self.fx_label
+        # What the bars ARE. ``assumed_mid`` means the frame carried no
+        # ``price_basis`` column and the engine's assumption was taken; a BID
+        # frame never gets this far (the engine refuses it), and a converted one
+        # says ``synthetic_mid`` plus the conversion in ``price_basis_lineage``.
+        out["price_basis"] = self._price_basis
+        if self.price_basis_lineage:
+            out["price_basis_lineage"] = dict(self.price_basis_lineage)
         # Only present when a source is set, so a no-calendar evaluation keeps
         # the hash (and the cache entries) it always had.
         if self._blackout_fingerprint is not None:
@@ -610,11 +689,22 @@ class EngineEvaluator:
         )
         config = self._base_config(bound.strategy_id)
         policy = exit_policy_from_document(bound)
+        # ``price_basis`` travels with the OHLC so the ENGINE checks it: a BID
+        # frame is refused there, not silently traded as mid.
+        columns = ["open", "high", "low", "close"]
+        if "price_basis" in fed.columns:
+            columns.append("price_basis")
         result = run_backtest(
-            data={symbol: fed[["open", "high", "low", "close"]]},
+            data={symbol: fed[columns]},
             config=config,
             strategy=runner,
-            sizer=FixedFractionalSizer(risk_fraction=float(self.config.risk_fraction)),
+            # Sizing is priced on the SAME frictions the fills charge: the
+            # evaluator's configured profile, named, not left to the default.
+            sizer=FixedFractionalSizer(
+                risk_fraction=float(self.config.risk_fraction),
+                policy_id=self.config.sizing_policy,
+                cost_profile=self.config.profile,
+            ),
             fx=self.fx,
             exit_policy=policy,
             exit_series=self._exit_series(symbol, runner, policy),
@@ -647,6 +737,18 @@ class EngineEvaluator:
             "blackout_source": type(self.blackout).__name__ if self.blackout else None,
             "cache_key": key,
             "costs": result.costs.as_dict(),
+            # The equity the run started from, so walk-forward can measure LOG
+            # growth rather than money per day (validation.ladder._growth_rate).
+            "opening_equity": float(self.config.initial_balance),
+            "sizing": result.config_fingerprint.get("sizing"),
+            # How sizes were decided: the construction policy (or "none") and
+            # the size-and-reason ledger's hash and refusal count.
+            "construction": result.config_fingerprint.get("construction"),
+            "allocation_ledger_sha256": (
+                result.allocation_ledger_sha256() if result.allocation_ledger else None
+            ),
+            "allocation_decisions": len(result.allocation_ledger),
+            "allocation_dropped": int(result.rejections.get("allocation_dropped", 0)),
         }
         if warmup_note:
             meta["warmup_warning"] = warmup_note

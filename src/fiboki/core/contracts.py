@@ -305,6 +305,66 @@ class VetoAssessment:
     detail: str = ""
 
 
+# ----------------------------------------------------------- CONVICTION
+#
+# The conviction channel (docs/v2/AGENTIC_INTEGRATION_PLAN.md §4, design in
+# research/reports/due_diligence_2026-09-28/B_tradingagents.md §6.3). A thesis
+# debate between LLM roles ends in an arbiter's schema-bound verdict, filed as
+# a research artefact. The runtime reads the latest one BY ID and turns it into
+# this contract; ``portfolio.construction._step_conviction`` is the only
+# consumer, and a versioned ``ConvictionPolicy`` (not the model) maps it to a
+# factor in [floor, 1.0]. It carries no free text, no price, no stop, no size
+# and no probability: ``strength`` is an ordinal so nothing can over-read it.
+
+#: The closed stance vocabulary. ``none`` is a real answer ("no view").
+ConvictionStance = Literal["long", "short", "none"]
+CONVICTION_STANCES: tuple[str, ...] = get_args(ConvictionStance)
+CONVICTION_STRENGTHS: tuple[int, ...] = (0, 1, 2)
+
+
+@dataclass(frozen=True, slots=True)
+class ConvictionReading:
+    """One arbiter verdict for one instrument, as the portfolio layer may see it.
+
+    ``as_of`` is when the verdict became available to a point-in-time reader
+    (the later of the brief's clock and the filing time); ``valid_until`` is
+    when it expires, after which the policy treats it as absent (factor 1.0).
+    ``artefact_id`` is the conviction record's id, so an allocation can be
+    traced to the debate that produced it. Construct only in the runtime
+    adapter (``workers/runtime.py``); consumed only in ``_step_conviction``
+    (AST-tested in ``tests/unit/test_conviction_channel.py``).
+    """
+
+    instrument: str
+    stance: str
+    strength: int
+    as_of: pd.Timestamp
+    valid_until: pd.Timestamp
+    artefact_id: str
+    policy_version: str
+
+    def __post_init__(self) -> None:
+        if not self.instrument or self.instrument != self.instrument.upper():
+            raise ValueError(f"instrument {self.instrument!r} must be a non-empty upper-case symbol")
+        if self.stance not in CONVICTION_STANCES:
+            raise ValueError(f"stance {self.stance!r} is not in {CONVICTION_STANCES}")
+        if isinstance(self.strength, bool) or self.strength not in CONVICTION_STRENGTHS:
+            raise ValueError(f"strength {self.strength!r} is not one of {CONVICTION_STRENGTHS}")
+        if (self.stance == "none") != (self.strength == 0):
+            raise ValueError(
+                "stance 'none' carries strength 0 and a directional stance carries 1 or 2; "
+                f"got stance={self.stance!r} strength={self.strength!r}"
+            )
+        _aware("as_of", self.as_of)
+        _aware("valid_until", self.valid_until)
+        if self.valid_until <= self.as_of:
+            raise ValueError("a conviction must expire after it becomes available")
+        if not self.artefact_id:
+            raise ValueError("a conviction reading must name the artefact it came from")
+        if not self.policy_version:
+            raise ValueError("a conviction reading must name the policy version that filed it")
+
+
 # ------------------------------------------------------------ EXECUTION
 
 

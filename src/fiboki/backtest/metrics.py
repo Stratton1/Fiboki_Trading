@@ -18,11 +18,30 @@ Two V1 behaviours this module exists to prevent
 Which Sharpe is the default, and why
 --------------------------------------
 ``Metrics.sharpe`` is the **returns-based** estimator computed on the
-mark-to-market equity curve. It is the default because:
+mark-to-market equity curve RESAMPLED TO TRADING DAYS that end at 17:00 New
+York (the FX value-date roll), annualised by the measured number of trading
+days per year. It is the default because:
 
 * it prices the risk of OPEN positions, which is where drawdown actually lives;
 * it does not change when a strategy merges two adjacent trades into one;
-* it is comparable across strategies with wildly different trade counts.
+* it is comparable across strategies with wildly different trade counts AND
+  across timeframes: an H1 and an H4 run of the same positions give the same
+  daily series.
+
+Until ``engine_v3_realism`` it was computed on BAR returns and annualised by
+``sqrt(bars per year)``. A strategy that holds positions for many bars has
+positively autocorrelated bar returns, and ``sqrt(n)`` scaling of an
+autocorrelated series overstates the annual Sharpe (Lo 2002, "The Statistics of
+Sharpe Ratios", Financial Analysts Journal 58(4)). That figure is still
+reported as ``sharpe_bar_based`` so the two can be compared.
+
+``Metrics.sharpe_lo_adjusted`` applies Lo's (2002) correction to the daily
+series: ``SR_annual = SR_daily * eta(q)`` with
+``eta(q) = q / sqrt(q + 2 * sum_{k=1..L} (q - k) * rho_k)``, ``q`` the measured
+trading days per year and ``rho_k`` the sample autocorrelations of the daily
+returns, truncated at the Newey-West lag ``L = floor(4 * (n / 100) ** (2/9))``.
+With no autocorrelation it equals ``sharpe``. When the two differ materially,
+believe the adjusted one.
 
 ``Metrics.sharpe_trade_based`` is also reported. It uses per-trade returns and
 annualises by the realised trade frequency. It is the more familiar number and
@@ -46,9 +65,16 @@ __all__ = [
     "Metrics",
     "annualisation_factor",
     "compute_metrics",
+    "daily_equity",
+    "lo_adjusted_sharpe",
     "max_drawdown",
     "ulcer_index",
 ]
+
+#: Where one trading day ends and the next begins: 17:00 America/New_York, the
+#: FX value-date roll. DST-aware, so it is 22:00 UTC in winter, 21:00 in summer.
+TRADING_DAY_TZ = "America/New_York"
+TRADING_DAY_END_HOUR = 17
 
 _SECONDS_PER_YEAR = 365.25 * 24 * 3600.0
 
@@ -156,6 +182,70 @@ def _sortino(returns: np.ndarray, periods_per_year: float, mar_annual: float = 0
     return (float(np.mean(returns)) - mar) / dd * float(np.sqrt(periods_per_year))
 
 
+def daily_equity(
+    equity: pd.Series, *, initial_equity: float | None = None
+) -> pd.Series:
+    """Equity at the END of each trading day (17:00 New York), one row per day.
+
+    A trading day runs from 17:00 New York to 17:00 New York the next calendar
+    day and is labelled by the date it ENDS on, so Sunday evening's bars belong
+    to Monday. Days with no bars (weekends, holidays) produce no row; that is
+    not a zero return, it is no observation. With ``initial_equity`` the series
+    is prefixed by that opening value, one second before the first bar, so the
+    first day's return is measured from the start of the run.
+    """
+    if not isinstance(equity.index, pd.DatetimeIndex) or equity.index.tz is None:
+        raise DegenerateMetricError("daily resampling needs a tz-aware DatetimeIndex")
+    local = equity.index.tz_convert(TRADING_DAY_TZ)
+    # Shift so a day that ends at 17:00 ends at midnight, then take the date.
+    day = (local + pd.Timedelta(hours=24 - TRADING_DAY_END_HOUR)).normalize()
+    closes = pd.Series(equity.to_numpy(dtype=np.float64), index=day).groupby(level=0).last()
+    if initial_equity is not None:
+        opening = pd.Series(
+            [float(initial_equity)], index=[closes.index[0] - pd.Timedelta(days=1)]
+        )
+        closes = pd.concat([opening, closes])
+    return closes
+
+
+def lo_adjusted_sharpe(
+    returns: np.ndarray, periods_per_year: float
+) -> tuple[float, float, int]:
+    """Lo's (2002) autocorrelation-corrected annual Sharpe: ``(sharpe, eta, lags)``.
+
+    ``SR = mean/sd * eta(q)`` with ``eta(q) = q / sqrt(q + 2 sum_{k=1..L}
+    (q-k) rho_k)`` (Lo 2002, eq. 19). ``L`` is the Newey-West bandwidth
+    ``floor(4 * (n/100) ** (2/9))`` capped at ``q - 1`` and ``n - 2``, because
+    summing sample autocorrelations out to lag ``q - 1`` on a few hundred
+    observations is summing noise. Raises when the correction's denominator is
+    non-positive (a series so negatively autocorrelated that the expansion
+    fails) rather than returning a number.
+    """
+    r = np.asarray(returns, dtype=np.float64)
+    n = r.size
+    if n < 3:
+        raise DegenerateMetricError(f"Lo adjustment needs at least 3 observations, got {n}")
+    sd = float(np.std(r, ddof=1))
+    if sd <= 0 or not np.isfinite(sd):
+        raise DegenerateMetricError("Zero or non-finite return dispersion")
+    q = float(periods_per_year)
+    lags = int(np.floor(4.0 * (n / 100.0) ** (2.0 / 9.0)))
+    lags = max(1, min(lags, int(np.floor(q)) - 1, n - 2))
+    dev = r - r.mean()
+    denom0 = float(np.dot(dev, dev))
+    total = q
+    for k in range(1, lags + 1):
+        rho = float(np.dot(dev[k:], dev[:-k])) / denom0
+        total += 2.0 * (q - k) * rho
+    if total <= 0:
+        raise DegenerateMetricError(
+            "Lo's variance term is non-positive: the daily returns are too "
+            "negatively autocorrelated for the correction to hold"
+        )
+    eta = q / float(np.sqrt(total))
+    return float(r.mean() / sd * eta), float(eta), int(lags)
+
+
 # --------------------------------------------------------------------------
 # The metrics object
 # --------------------------------------------------------------------------
@@ -175,7 +265,7 @@ class Metrics:
     final_equity: float
     initial_equity: float
 
-    sharpe: float | None                 # returns-based; the default
+    sharpe: float | None                 # daily (17:00 NY) returns; the default
     sharpe_trade_based: float | None
     sortino: float | None
     calmar: float | None
@@ -209,6 +299,19 @@ class Metrics:
     gross_pnl: float
     total_costs: float
     cost_drag_pct_of_gross: float | None
+
+    #: Bar-return Sharpe annualised by sqrt(bars per year): the pre-v3 default,
+    #: biased upward for persistent positions (module docstring).
+    sharpe_bar_based: float | None = None
+    #: Lo (2002) autocorrelation-corrected daily Sharpe.
+    sharpe_lo_adjusted: float | None = None
+    #: The correction factor applied (``sharpe_lo_adjusted / sharpe``) and the
+    #: number of autocorrelation lags it used.
+    lo_eta: float | None = None
+    lo_lags: int | None = None
+    #: Trading days in the daily series, and trading days per year measured.
+    daily_observations: int = 0
+    days_per_year: float | None = None
 
     degenerate: tuple[str, ...] = ()
 
@@ -279,7 +382,28 @@ def compute_metrics(
         rets = np.diff(eq) / eq[:-1]
     rets = rets[np.isfinite(rets)]
 
-    sharpe = _maybe(strict, degenerate, "sharpe", lambda: _sharpe(rets, bars_per_year, risk_free_annual))
+    sharpe_bar = _maybe(
+        strict, degenerate, "sharpe_bar_based",
+        lambda: _sharpe(rets, bars_per_year, risk_free_annual),
+    )
+
+    # -- the default Sharpe: daily (17:00 New York) resampled equity ---------
+    daily = daily_equity(equity_curve[equity_column], initial_equity=initial_equity)
+    daily_vals = daily.to_numpy(dtype=np.float64)
+    with np.errstate(divide="ignore", invalid="ignore"):
+        daily_rets = np.diff(daily_vals) / daily_vals[:-1]
+    daily_rets = daily_rets[np.isfinite(daily_rets)]
+    days_per_year = daily_rets.size / years if years > 0 else 0.0
+    sharpe = _maybe(
+        strict, degenerate, "sharpe",
+        lambda: _sharpe(daily_rets, max(days_per_year, 1e-12), risk_free_annual),
+    )
+    lo = _maybe(
+        strict, degenerate, "sharpe_lo_adjusted",
+        lambda: lo_adjusted_sharpe(
+            daily_rets - risk_free_annual / max(days_per_year, 1e-12), days_per_year
+        ),
+    )
     sortino = _maybe(strict, degenerate, "sortino", lambda: _sortino(rets, bars_per_year, risk_free_annual))
 
     # -- trade-based Sharpe -------------------------------------------------
@@ -396,6 +520,12 @@ def compute_metrics(
         initial_equity=float(initial_equity),
         sharpe=sharpe,
         sharpe_trade_based=sharpe_trade_based,
+        sharpe_bar_based=sharpe_bar,
+        sharpe_lo_adjusted=lo[0] if lo is not None else None,
+        lo_eta=lo[1] if lo is not None else None,
+        lo_lags=lo[2] if lo is not None else None,
+        daily_observations=int(daily_rets.size),
+        days_per_year=float(days_per_year) if daily_rets.size else None,
         sortino=sortino,
         calmar=calmar,
         max_drawdown_abs=dd_abs,

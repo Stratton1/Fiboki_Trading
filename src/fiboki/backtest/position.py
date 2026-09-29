@@ -64,6 +64,7 @@ from fiboki.core.money import FxRateSource, round_size
 from fiboki.sim.fills import Bar, FillSimulator, LegCosts
 
 __all__ = [
+    "FINANCING_DAY_RULE",
     "AdvanceResult",
     "BarSlice",
     "BookConfig",
@@ -75,6 +76,7 @@ __all__ = [
     "PendingEntry",
     "PositionBook",
     "TakeProfitLeg",
+    "financing_nights",
     "plan_legs",
     "snap_to_step",
 ]
@@ -610,10 +612,13 @@ class PositionBook:
             return
         ts = slice_.timestamp
         for op in self.open:
-            nights = nights_between(
+            # Business-day rollovers, weighted: the triple day carries the
+            # weekend, Saturday and Sunday carry nothing (``financing_nights``).
+            nights = financing_nights(
                 op.last_financing_time or op.position.entry_time,
                 ts,
                 cfg.financing_rollover_hour_utc,
+                op.instrument.asset_class,
             )
             if not nights:
                 continue
@@ -1237,9 +1242,17 @@ def size_for_exit(op: ManagedPosition, fill: Any) -> tuple[float, bool]:
 def nights_between(last: pd.Timestamp, now: pd.Timestamp, rollover_hour: int) -> int:
     """Number of ``rollover_hour`` UTC crossings in the half-open interval (last, now].
 
-    Weekend triple-swap is NOT modelled. That understates financing on
-    Wednesday-held positions by up to two nights per week — a documented
-    approximation, not a silent one.
+    A CALENDAR count: every day's crossing counts once, Saturdays and Sundays
+    included, and no day counts three times. It is not the financing rule --
+    :func:`financing_nights` is -- and is kept because it is the building block
+    and because its tests pin the crossing arithmetic.
+
+    (The docstring used to say this was the financing rule with "no weekend
+    triple swap" and that it understated Wednesday holds. Both halves were
+    wrong: charging all seven calendar nights happens to give the right WEEKLY
+    total, but a position held only over a weekend paid two nights it should
+    not have, and one held only over Wednesday paid one night instead of
+    three.)
     """
     if now <= last:
         return 0
@@ -1249,3 +1262,73 @@ def nights_between(last: pd.Timestamp, now: pd.Timestamp, rollover_hour: int) ->
     if anchor > now:
         return 0
     return int((now - anchor) // pd.Timedelta(days=1)) + 1
+
+
+#: The version of the financing-day rule, recorded where financing is
+#: described. ``business_day_triple_v1``: Monday to Friday rollovers count, the
+#: asset class's triple day counts three, Saturday and Sunday count nothing.
+FINANCING_DAY_RULE = "business_day_triple_v1"
+
+#: The weekday that carries the weekend's financing (Monday=0 ... Sunday=6).
+#: Spot FX and spot metals settle T+2, so Wednesday's rollover moves the value
+#: date from Friday to Monday and is charged three nights. CFD indices,
+#: energy and single equities charge the weekend on Friday. Crypto trades seven
+#: days and is charged every calendar night, with no triple day (``None``).
+TRIPLE_ROLLOVER_WEEKDAY: dict[str, int | None] = {
+    "fx_major": 2,
+    "fx_cross": 2,
+    "metal": 2,
+    "index": 4,
+    "energy": 4,
+    "equity": 4,
+    "crypto": None,
+}
+
+
+def financing_nights(
+    last: pd.Timestamp,
+    now: pd.Timestamp,
+    rollover_hour: int,
+    asset_class: Any,
+) -> int:
+    """Nights of financing owed for the rollovers in the half-open interval (last, now].
+
+    Each ``rollover_hour`` UTC crossing is weighted by the weekday it falls on:
+
+    * Monday to Friday: 1, except the asset class's triple day, which is 3;
+    * Saturday and Sunday: 0 (there is no rollover while the market is shut);
+    * crypto: every calendar day 1, no triple day.
+
+    A full Monday-to-Monday week therefore sums to 4 + 3 = 7 nights, exactly
+    what the calendar count gave, but the nights now land on the right days: a
+    Friday-to-Monday hold of FX pays 1 (Friday), not 3, and a Tuesday-to-
+    Thursday hold pays 1 + 3 = 4, not 2. Uses the UTC date of each crossing,
+    so the engine's insistence on a UTC index is what keeps the weekday right.
+
+    Known approximation: holidays are not modelled (a holiday rollover is
+    charged as a normal day), and the rollover hour is a fixed UTC hour, so
+    it sits one hour away from 17:00 New York for half the year.
+    """
+    count = nights_between(last, now, rollover_hour)
+    if count == 0:
+        return 0
+    key = getattr(asset_class, "value", asset_class)
+    if key not in TRIPLE_ROLLOVER_WEEKDAY:
+        raise KeyError(
+            f"no financing-day rule for asset class {key!r}; add one to "
+            "TRIPLE_ROLLOVER_WEEKDAY rather than charging it calendar nights"
+        )
+    triple = TRIPLE_ROLLOVER_WEEKDAY[key]
+    if triple is None:
+        return count
+    anchor = last.normalize() + pd.Timedelta(hours=rollover_hour)
+    if anchor <= last:
+        anchor += pd.Timedelta(days=1)
+    first_dow = int(anchor.dayofweek)
+    total = 0
+    for k in range(count):
+        dow = (first_dow + k) % 7
+        if dow >= 5:
+            continue
+        total += 3 if dow == triple else 1
+    return total

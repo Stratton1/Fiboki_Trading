@@ -34,6 +34,7 @@ is how V1 ended up re-discovering the same dead end repeatedly.
 """
 from __future__ import annotations
 
+import math
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
 from typing import Any
@@ -46,7 +47,7 @@ from fiboki.stats.multiple_testing import effective_trials_by_clustering
 from fiboki.stats.pbo import combinatorially_symmetric_cv
 from fiboki.stats.sharpe import deflated_sharpe_ratio, sharpe_moments
 from fiboki.stats.spa import step_m, superior_predictive_ability
-from fiboki.stats.stability import analyse_parameter_stability
+from fiboki.stats.stability import PLATEAU_RATIO_DEFINITION, analyse_parameter_stability
 from fiboki.stats.stress import (
     end_date_stress,
     execution_delay_stress,
@@ -438,6 +439,7 @@ class WalkForwardRung(Rung):
             # the test window sees. V1 skipped this line and measured nothing.
             oos = ctx.evaluate(selected_params, test)
             fixed = ctx.evaluate(ctx.candidate.default_params, test)
+            is_rate, oos_rate, fixed_rate, basis = _fold_rates(trained[chosen], oos, fixed)
 
             folds.append(
                 {
@@ -445,13 +447,16 @@ class WalkForwardRung(Rung):
                     "train": train.to_dict(),
                     "test": test.to_dict(),
                     "selected_params": selected_params,
-                    "is_rate": trained[chosen].profit_per_day,
+                    "rate_basis": basis,
+                    "is_rate": is_rate,
+                    "is_profit_per_day": trained[chosen].profit_per_day,
                     "is_net_profit": trained[chosen].net_profit,
-                    "oos_rate": oos.profit_per_day,
+                    "oos_rate": oos_rate,
+                    "oos_profit_per_day": oos.profit_per_day,
                     "oos_net_profit": oos.net_profit,
                     "oos_trades": oos.n_trades,
                     "oos_sharpe": oos.sharpe,
-                    "fixed_param_oos_rate": fixed.profit_per_day,
+                    "fixed_param_oos_rate": fixed_rate,
                     "fixed_param_oos_net_profit": fixed.net_profit,
                 }
             )
@@ -478,6 +483,7 @@ class WalkForwardRung(Rung):
             "n_folds": cfg.walk_forward_folds,
             "folds": folds,
             "walk_forward_efficiency": wfe,
+            "walk_forward_efficiency_basis": sorted({f["rate_basis"] for f in folds}),
             "oos_profitable_fraction": hit,
             "mean_is_rate": float(is_rates.mean()),
             "mean_oos_rate": float(oos_rates.mean()),
@@ -651,13 +657,13 @@ class RobustnessRung(Rung):
 
         trades = list(full.trades)
         rng = np.random.default_rng(cfg.seed)
-        spread = spread_multiplier_stress(trades, multipliers=SPREAD_MULTIPLIERS)
+        spread = spread_multiplier_stress(trades, multipliers=SPREAD_MULTIPLIERS, rng=rng)
         two_x = float(spread.median[SPREAD_MULTIPLIERS.index(2.0)])
         curves = {
             "spread_multiplier": spread,
-            "slippage": slippage_stress(trades),
-            "execution_delay_capture": execution_delay_stress(trades, mode="capture"),
-            "execution_delay_adverse": execution_delay_stress(trades, mode="adverse"),
+            "slippage": slippage_stress(trades, rng=rng),
+            "execution_delay_capture": execution_delay_stress(trades, mode="capture", rng=rng),
+            "execution_delay_adverse": execution_delay_stress(trades, mode="adverse", rng=rng),
             "random_deletion": random_deletion_stress(
                 trades, n_samples=cfg.stress_samples, rng=rng
             ),
@@ -741,6 +747,8 @@ class RobustnessRung(Rung):
             "plateau_mean_excluding": chosen.plateau_mean_excluding,
             "plateau_std": chosen.plateau_std,
             "point_plateau_ratio": chosen.point_plateau_ratio,
+            "point_plateau_ratio_definition": PLATEAU_RATIO_DEFINITION,
+            "point_plateau_ratio_inclusive": chosen.point_plateau_ratio_inclusive,
             "plateau_quality": chosen.plateau_quality,
             "is_isolated_peak": chosen.is_isolated_peak,
             "n_isolated_peaks_in_grid": len(report.isolated_peaks),
@@ -1184,17 +1192,82 @@ def _trials_matrix(sweep: Sequence[WindowEvaluation]) -> tuple[np.ndarray | None
     )
 
 
-def _efficiency(is_rates: np.ndarray, oos_rates: np.ndarray) -> float:
-    """Walk-forward efficiency as a percentage.
+#: What a walk-forward "rate" is measured in. ``log_growth_per_day`` when the
+#: evaluation recorded the equity it started from (every EngineEvaluator run
+#: does), ``profit_per_day`` otherwise.
+WFE_RATE_LOG_GROWTH = "log_growth_per_day"
+WFE_RATE_PROFIT = "profit_per_day"
 
-    Defined on PROFIT PER DAY rather than on the selection metric so that folds
-    of unequal length are comparable and so the number keeps its usual meaning
-    whatever a candidate was selected on. A non-positive in-sample rate makes the
-    ratio meaningless, and returns ``nan`` rather than a flattering number.
+
+def _opening_equity(evaluation: WindowEvaluation) -> float | None:
+    raw = evaluation.meta.get("opening_equity")
+    try:
+        value = float(raw) if raw is not None else None
+    except (TypeError, ValueError):
+        return None
+    return value if value is not None and math.isfinite(value) and value > 0 else None
+
+
+def _growth_rate(evaluation: WindowEvaluation) -> float:
+    """The walk-forward rate of one evaluation: log growth per day where possible.
+
+    ``log((E0 + net_profit) / E0) / days``. A fixed-fractional sizer compounds,
+    so money profit per day is not comparable between an anchored train window
+    one to five slices long and a one-slice test window: the longer window has
+    had longer to compound, its money rate is inflated, and WFE is biased
+    DOWN for every profitable strategy (audit P2-11). Log growth per day is
+    invariant to that. An evaluation that did not record ``opening_equity``
+    (a synthetic evaluator, which does not compound) falls back to profit per
+    day, and the report names which basis every fold used. A window that lost
+    the whole account has no log growth, and returns ``-inf``.
+    """
+    opening = _opening_equity(evaluation)
+    days = evaluation.window.days
+    if opening is None:
+        return evaluation.profit_per_day
+    if days <= 0:
+        return 0.0
+    closing = opening + float(evaluation.net_profit)
+    if closing <= 0.0:
+        return float("-inf")
+    return math.log(closing / opening) / days
+
+
+def _fold_rates(
+    is_ev: WindowEvaluation, oos_ev: WindowEvaluation, fixed_ev: WindowEvaluation
+) -> tuple[float, float, float, str]:
+    """One fold's in-sample, out-of-sample and contrast rates, on ONE basis.
+
+    Log growth only when all three evaluations recorded their opening equity;
+    otherwise all three fall back to profit per day. Mixing the two within a
+    fold would divide a log rate by a money rate.
+    """
+    evs = (is_ev, oos_ev, fixed_ev)
+    if all(_opening_equity(e) is not None for e in evs):
+        rates = [_growth_rate(e) for e in evs]
+        return rates[0], rates[1], rates[2], WFE_RATE_LOG_GROWTH
+    return (
+        is_ev.profit_per_day,
+        oos_ev.profit_per_day,
+        fixed_ev.profit_per_day,
+        WFE_RATE_PROFIT,
+    )
+
+
+def _efficiency(is_rates: np.ndarray, oos_rates: np.ndarray) -> float:
+    """Walk-forward efficiency as a percentage: mean OOS rate over mean IS rate.
+
+    The rate is LOG GROWTH PER DAY (see :func:`_growth_rate`) so that folds of
+    unequal length and unequal compounding are comparable, and so the number
+    keeps its usual meaning whatever a candidate was selected on. A
+    non-positive in-sample rate makes the ratio meaningless, and returns
+    ``nan`` rather than a flattering number.
     """
     mean_is = float(np.mean(is_rates))
     mean_oos = float(np.mean(oos_rates))
     if not np.isfinite(mean_is) or mean_is <= 0.0:
+        return float("nan")
+    if not np.isfinite(mean_oos):
         return float("nan")
     return 100.0 * mean_oos / mean_is
 

@@ -386,11 +386,20 @@ class DataStore:
         version_id: str,
         *,
         start: pd.Timestamp | str | None = None,
-        end: pd.Timestamp | str | None = None,
+        end_inclusive: pd.Timestamp | str | None = None,
         allow_suspect: bool = False,
         verify_checksum: bool = False,
+        end: pd.Timestamp | str | None = None,
     ) -> pd.DataFrame:
-        """Read a dataset by version id.
+        """Read a dataset by version id, bars in ``[start, end_inclusive]``.
+
+        The end is INCLUSIVE -- the bar stamped exactly ``end_inclusive`` is
+        returned -- which is the opposite of :class:`~fiboki.validation.
+        evaluation.DateWindow`'s half-open ``[start, end)``. The argument is
+        named for that, so a caller building a window cannot forget it and put
+        the boundary bar in both train and test. ``end`` is the old name, kept
+        as an alias with identical (inclusive) behaviour so existing callers
+        keep working; passing both is refused.
 
         ``allow_suspect=False`` (the default) refuses to hand back a dataset
         whose stored integrity report contains blocking defects. That refusal is
@@ -398,6 +407,7 @@ class DataStore:
         get dirty data back without having said, in code, that it wants dirty
         data.
         """
+        end = _inclusive_end(end_inclusive, end)
         version = self.catalogue.resolve(version_id)
         path = Path(version.storage_path)
         if not path.exists():
@@ -408,7 +418,7 @@ class DataStore:
             )
         if not allow_suspect:
             self._assert_readable_clean(version)
-        frame = self._read_frame(path, start=start, end=end)
+        frame = self._read_frame(path, start=start, end_inclusive=end)
         # A checksum only means anything against the whole dataset; a windowed
         # read is a different set of bytes by construction.
         if verify_checksum and start is None and end is None:
@@ -435,15 +445,17 @@ class DataStore:
         *,
         kind: DatasetKind = DatasetKind.VALIDATED,
         start: pd.Timestamp | str | None = None,
-        end: pd.Timestamp | str | None = None,
+        end_inclusive: pd.Timestamp | str | None = None,
         allow_suspect: bool = False,
+        end: pd.Timestamp | str | None = None,
     ) -> tuple[pd.DataFrame, DatasetVersion]:
         """Read the most recent dataset of a kind. Raises if there is none.
 
         Returning the version alongside the frame is deliberate: a caller that
         computes anything from these bars is expected to store the version id
-        next to the result.
+        next to the result. The end bound is INCLUSIVE; see :meth:`read`.
         """
+        end = _inclusive_end(end_inclusive, end)
         version = self.catalogue.latest(instrument, timeframe, kind=kind)
         if version is None:
             tf = timeframe.value if isinstance(timeframe, Timeframe) else timeframe
@@ -453,7 +465,10 @@ class DataStore:
                 "completed no-data outcome and do not checkpoint it as done."
             )
         frame = self.read(
-            version.version_id, start=start, end=end, allow_suspect=allow_suspect
+            version.version_id,
+            start=start,
+            end_inclusive=end,
+            allow_suspect=allow_suspect,
         )
         return frame, version
 
@@ -462,12 +477,12 @@ class DataStore:
         path: Path,
         *,
         start: pd.Timestamp | str | None = None,
-        end: pd.Timestamp | str | None = None,
+        end_inclusive: pd.Timestamp | str | None = None,
     ) -> pd.DataFrame:
         dataset = pads.dataset(str(path), format="parquet", partitioning="hive")
         filt = None
         start_ts = _as_utc(start)
-        end_ts = _as_utc(end)
+        end_ts = _as_utc(end_inclusive)
         field = pads.field("timestamp")
         if start_ts is not None:
             filt = field >= pa.scalar(start_ts.to_pydatetime())
@@ -631,6 +646,18 @@ def _report_from_dict(version: DatasetVersion) -> IntegrityReport:
         checks_run=("stored",),
         calendar_name=str(raw.get("calendar_name", "unknown")),
     )
+
+
+def _inclusive_end(
+    end_inclusive: pd.Timestamp | str | None, end: pd.Timestamp | str | None
+) -> pd.Timestamp | str | None:
+    """Resolve the renamed argument: ``end`` is an alias of ``end_inclusive``."""
+    if end_inclusive is not None and end is not None:
+        raise TypeError(
+            "pass end_inclusive or its legacy alias end, not both; both are "
+            "INCLUSIVE bounds"
+        )
+    return end_inclusive if end_inclusive is not None else end
 
 
 def _as_utc(value: pd.Timestamp | str | None) -> pd.Timestamp | None:

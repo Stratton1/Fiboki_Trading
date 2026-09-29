@@ -25,12 +25,54 @@ import numpy as np
 import pandas as pd
 
 __all__ = [
+    "PLATEAU_RATIO_DEFINITION",
     "ParameterPoint",
     "StabilityReport",
     "analyse_parameter_stability",
     "marginal_sensitivity",
+    "plateau_ratio",
     "sensitivity_surface",
 ]
+
+#: Recorded in reports next to the number, because the number's meaning changed.
+PLATEAU_RATIO_DEFINITION = "excluding_point_additive_floor_v2"
+
+
+def plateau_ratio(score: float, neighbour_mean: float) -> float:
+    """Point-to-plateau ratio, scale-free: ``(s + c) / (m + c)`` with ``c = |s|``.
+
+    ``s`` is the selected point's score and ``m`` the mean of its neighbours
+    EXCLUDING the point itself. Two defects of the old ``s / mean(including
+    s)`` are fixed:
+
+    * **The point no longer dilutes its own test.** With ``k`` neighbours the old
+      denominator was ``(s + k m) / (k + 1)``; a spike pulled its own
+      neighbourhood mean up and so looked less like a spike.
+    * **Scale.** A score of 0.12 against a neighbourhood of 0.09 gave 1.33, a
+      failure, on noise, and as the mean approached zero the ratio exploded.
+      The additive floor ``c = |s|`` puts the point's own magnitude on both
+      sides, so the ratio is bounded in ``[0, 2]`` whenever ``m >= 0`` and
+      depends only on ``m / s``.
+
+    For ``s > 0`` the ratio is ``2 / (1 + m/s)``, so the gate's ``<= 1.25`` is
+    exactly ``m >= 0.6 s``: the neighbours must keep 60% of the point's score.
+    That is the scale-free condition proposed in the audit (section 3.1), with
+    the mean where the audit wrote the median; the threshold did not move.
+
+    Returns ``nan`` when ``s <= 0`` or ``m`` is not finite (nothing to test: a
+    non-positive selected score has already failed rung 1), and ``inf`` when
+    ``m + c <= 0`` (the neighbours lose at least as much as the point makes:
+    a spike on a losing surface, which must fail rather than go unevaluated).
+    """
+    s = float(score)
+    m = float(neighbour_mean)
+    if not np.isfinite(s) or not np.isfinite(m) or s <= 0.0:
+        return float("nan")
+    c = abs(s)
+    denominator = m + c
+    if denominator <= 0.0:
+        return float("inf")
+    return (s + c) / denominator
 
 
 @dataclass(frozen=True, slots=True)
@@ -46,7 +88,17 @@ class ParameterPoint:
     plateau_mean_excluding: float
     """Mean over the neighbours only - what you get if you miss this cell."""
     point_plateau_ratio: float
-    """``score / plateau_mean``.  Much greater than 1 means the point is a spike."""
+    """``(score + c) / (plateau_mean_excluding + c)`` with the additive floor
+    ``c = |score|``. See :func:`plateau_ratio`. 1.0 on a flat surface; above 1
+    the point stands out from its neighbours; at the gate's 1.25 the neighbours
+    average 60% of the point. ``inf`` when the neighbours are so negative that
+    the denominator is not positive (a spike on a losing surface); ``nan`` when
+    the point's own score is not positive or it has no neighbours."""
+    point_plateau_ratio_inclusive: float
+    """The pre-``engine_v3_realism`` definition, ``score / plateau_mean`` with the
+    point INSIDE its own neighbourhood mean. Kept for comparison only: it is
+    scale-dependent (it explodes as the mean approaches zero) and the point
+    dilutes its own test."""
     plateau_quality: float
     """``plateau_mean - penalty * plateau_std``: the level you can expect to keep
     if the parameter drifts one grid step in any direction.  Rank on this."""
@@ -199,7 +251,8 @@ def analyse_parameter_stability(
         plateau_std = float(np.std(finite)) if finite.size > 1 else 0.0
         plateau_min = float(np.min(finite))
         excl_mean = float(np.mean(neighbours)) if neighbours.size else float("nan")
-        ratio = score / plateau_mean if plateau_mean > 0.0 else float("nan")
+        inclusive = score / plateau_mean if plateau_mean > 0.0 else float("nan")
+        ratio = plateau_ratio(score, excl_mean)
         quality = plateau_mean - penalty * plateau_std
         # STRICTLY best, so the edge of a genuine plateau (which ties with its
         # neighbours) is never mistaken for a spike.
@@ -216,6 +269,7 @@ def analyse_parameter_stability(
                 plateau_min=plateau_min,
                 plateau_mean_excluding=excl_mean,
                 point_plateau_ratio=ratio,
+                point_plateau_ratio_inclusive=inclusive,
                 plateau_quality=quality,
                 n_neighbours=int(neighbours.size),
                 coverage=float(finite.size / full_neighbourhood),
