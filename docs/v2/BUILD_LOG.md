@@ -1323,3 +1323,53 @@ assertion about label punctuation in the test itself; corrected, then
 
 Stored results: none invalidated by this change (it is a runner); K1 and K2 were already
 superseded by `engine_v3_realism`.
+
+## 2026-09-29: the MacBook runs the four services under launchd; doctor reads `~/.fiboki/env`
+
+Commits `8df7694`, `cf70c41`, `076fffe`, `2d4b968`, `b2d8fcc` and this one. Every line below
+was run on the MacBook (M1, 8 GB) or in the build container as stated.
+
+**What was wrong, in the order it was found.** (1) `launchctl bootstrap` of `uk.fiboki.*`
+against the checkout under `~/Documents/Claude/Projects/Fiboki` failed with `Operation not
+permitted` before `fiboki-service.sh` ran a line: macOS TCC protects `~/Documents` from
+LaunchAgents. Decision: a second, runtime-only checkout at `~/fiboki` (`DEPLOYMENT.md` §2.6).
+(2) The service script sourced `~/.fiboki/env`; the new scrypt operator hashes contain `$` and
+`set -u` aborted on `$8: unbound variable`. Fixed in `076fffe`: values are quoted in the file and
+the script reads it line by line with no expansion. (3) `npm: not found`: node is installed through
+nvm, which launchd's minimal `PATH` does not see. Fixed in `2d4b968`: the script adds the newest
+`~/.nvm/versions/node/*/bin`. (4) `launchd-install.sh --load` bootstrapped a label while its
+previous instance was still finishing its cycle after SIGTERM (`Bootstrap failed: 5`), and
+`set -e` then skipped the remaining services. Fixed in `b2d8fcc`: it polls `launchctl print`
+for up to 90 s before bootstrapping. (5) Two wrapper tests still asserted the old `. "$ENV_FILE"`
+line; they now assert the reader and that the file is never sourced, with a behavioural test of
+the reader block against quoted, `$`-laden and malformed lines. (6) Old `dev-up` processes from
+two days earlier (uvicorn on 8000, a research worker holding the lease, a Next 14 dev server on
+3000) were stopped with SIGTERM; the K3 campaign process was not touched. (7) `fiboki doctor` from
+a bare shell reported `FIBOKI_OPERATORS is not set` and an unnamed local model on a machine
+whose API process had both: doctor did not read `~/.fiboki/env`. New `fiboki.core.env_file`
+(pure parser with the shell reader's rules; `read_env_file`; `env_file_path`) and `DoctorHost`
+fills unset names from the file, process environment winning; the `environment` row now says
+how many values came from the file and names malformed lines (WARN).
+
+**Verified on the MacBook after the reload.** `launchctl list`: api pid 94375, worker 98307,
+news 98314, web 94617 (its `127` is the last exit before the PATH fix; it is running).
+`curl` 200 on `/api/health` and on `/`; `lsof` shows Fiboki's own pids on 8000 and 3000; the
+worker resumed and holds the lease (heartbeat 1 s old); the news loop fetched 312 headlines,
+0 errors; `next start` ready in 173 ms. `fiboki doctor` in `~/fiboki`: 16 OK, 5 WARN, 0 FAIL.
+The WARNs: operator hashes and local model (both false, closed by this commit's doctor change),
+paper journal empty in the runtime `var/` (correct: nothing has traded forward), disk 14 GiB
+free, `llama`/`paper` services not loaded (no llama.cpp model on 8 GB; no OANDA token).
+`ps eww` on the API pid lists `FIBOKI_OPERATORS`, `FIBOKI_SESSION_SECRET` and the agent
+variables (names only were printed).
+
+Tests (container): `tests/unit/test_core_env_file.py` (4: no expansion and malformed keys; a
+missing file is empty, not an error; the path follows `FIBOKI_HOME`/`HOME`; the Python and bash
+readers agree on one sample), `tests/unit/test_cli_doctor.py` (+2: the file fills unset names and
+the process wins, `$` intact, malformed line WARNs, operator row no longer says "not set"; no file
+says so and `env_file=False` skips it; `FakeHost` now pins `HOME` under the temp repo so the
+developer's own `~/.fiboki/env` can never leak into a test), `tests/unit/test_desktop_scripts.py`
+(+1 reader behaviour). `mypy` clean on the new module; `ruff check` clean. Full suite: see the
+figure in the commit message.
+
+Stored results: none affected. Docs: `DEPLOYMENT.md` §2.5, §2.6 (new), `OPERATIONS.md` §13.3,
+`USER_ACTIONS.md` (C1, C4, M2, P7 marked done with evidence; status line).

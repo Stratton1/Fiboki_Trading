@@ -527,15 +527,21 @@ and the §9 checks. Until then the restore is tested only against temporary dire
 
 ### 13.3 Upgrade
 
+The services run from the runtime checkout (`~/fiboki`; `DEPLOYMENT.md` §2.6 says why it is not
+under `~/Documents`). Changes are pushed from the development checkout and pulled here:
+
 ```bash
-cd ~/Fiboki
+cd ~/fiboki
 scripts/backup.sh                                   # always, before an upgrade
-git fetch && git status                             # nothing uncommitted
-git pull --ff-only
-scripts/desktop-install.sh                          # re-syncs pins, node_modules, web build
+git status                                          # nothing uncommitted (this checkout is never edited)
+git pull --ff-only origin v2/integration
+scripts/desktop-install.sh                          # if pins, node_modules or the web build changed
+scripts/launchd-install.sh --services api,worker,web,news --load   # boots out, waits, bootstraps
 .venv/bin/fiboki doctor
-for s in api worker web news; do launchctl kickstart -k gui/$(id -u)/uk.fiboki.$s; done
 ```
+
+`launchctl kickstart -k` restarts a service in place without rewriting its plist; use the
+install script when the templates or the repository path changed.
 
 If the upgrade changed `pyproject.toml` pins, run the golden tests
 (`.venv/bin/python -m pytest -m golden -q`) before trusting any new number, and read the

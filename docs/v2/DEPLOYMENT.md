@@ -109,11 +109,61 @@ pins it by the SHA-256 of the GGUF file. Runbook: `docs/v2/OPERATIONS.md` §13.
 ### 2.5 The desktop launcher
 
 `scripts/desktop/install-launcher.sh` puts `Fiboki.app` and `Start Fiboki.command` on the
-Desktop. The launcher runs `scripts/dev-up.sh` in a Terminal window: use it *instead of* the
-launchd services for an interactive session, not alongside them (both bind ports 8000 and 3000).
-Its model detection recognises llama.cpp by `/props`, exports the declared
+Desktop. When the launchd services are loaded the launcher defers to them: it prints their
+state and opens the browser, and starts nothing. Otherwise it runs `scripts/dev-up.sh` in a
+Terminal window for an interactive session (both paths bind ports 8000 and 3000, so the two
+are never run together). Its model detection recognises llama.cpp by `/props`, exports the declared
 `FIBOKI_AGENT_LOCAL_URL` / `FIBOKI_AGENT_LOCAL_MODEL`, and only switches agent cycles on when
 `FIBOKI_AGENT_CYCLE_TARGET` is set.
+
+### 2.6 Where the checkout lives: outside `~/Documents` (decision, 2026-09-29)
+
+**Finding.** On macOS 14+, a LaunchAgent has no access to `~/Documents`, `~/Desktop` or
+`~/Downloads` unless the user has granted it in System Settings > Privacy & Security > Files and
+Folders; those folders are protected by TCC, and the grant is per binary, so `bash`, `python`
+and `node` would each need one and it does not survive a re-install. The first attempt to load
+`uk.fiboki.*` against a checkout under `~/Documents/Claude/Projects/Fiboki` failed with
+`Operation not permitted` before the service script ran a line.
+
+**Decision.** Two checkouts of the same repository, one job each:
+
+| Checkout | Path on this Mac | Used for |
+|---|---|---|
+| Development | `~/Documents/Claude/Projects/Fiboki` | Editing, tests, research campaigns run from a terminal (`var/` here holds the research outputs), pushing to GitHub. The `_v2_delivery/sync/` folder is where bundles from the build container land |
+| Runtime | `~/fiboki` (a `git clone` of the same GitHub remote, on `v2/integration`) | The launchd services only: `.venv`, `apps/web/.next`, its own `var/` (data root, ledgers, journals, logs). Never edited by hand |
+
+`~/fiboki` is outside every TCC-protected folder, so the services run without a grant. The two
+`var/` directories are separate on purpose: the runtime's ledgers are the operational record;
+the development checkout's are research scratch. `~/.fiboki` (env file, state database,
+Keychain-backed secrets) is shared, because both are the same operator on the same machine.
+
+**Deploy flow** (what "ship a change to the running services" means here):
+
+```bash
+# 1. development checkout: land the change, run the gate, push
+cd ~/Documents/Claude/Projects/Fiboki
+git fetch _v2_delivery/sync/<name>.bundle v2/integration && git merge --ff-only FETCH_HEAD   # when it came as a bundle
+git push origin v2/integration main
+
+# 2. runtime checkout: pull, rebuild what changed, reload the services
+cd ~/fiboki
+git pull --ff-only origin v2/integration
+scripts/desktop-install.sh                 # only if pins, node_modules or the web build changed
+scripts/launchd-install.sh --services api,worker,web,news --load
+.venv/bin/fiboki doctor
+```
+
+`launchd-install.sh --load` boots each service out and waits for it to exit (the worker finishes
+its current cycle on SIGTERM; up to 90 s) before bootstrapping it again, so a reload never races
+its own shutdown. `scripts/fiboki-service.sh` adds Homebrew and the newest nvm `node` to `PATH`
+because launchd starts services with a minimal environment, and reads `~/.fiboki/env` line by
+line without shell expansion (operator hashes contain `$`). `fiboki doctor` reads the same file
+the same way (`fiboki.core.env_file`), so a doctor run from a bare shell reports what the
+services see; the process environment still wins over the file.
+
+**What not to do.** Do not run `scripts/dev-up.sh` in the development checkout while the
+services are loaded (same ports; the launcher already refuses). Do not point a LaunchAgent at
+`~/Documents`. Do not edit files in `~/fiboki`; change the development checkout and pull.
 
 ## 3. Linux server
 

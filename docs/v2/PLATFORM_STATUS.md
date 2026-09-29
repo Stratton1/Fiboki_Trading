@@ -14,7 +14,7 @@
 
 **Operator workstation.** Sign-in and roles; live SSE stream with freshness states (never a blank or a zero after first data); mode frame per execution mode (live is magenta with "REAL MONEY"); provenance chip grammar (hollow = simulated, filled = executed, MIXED with counts); kill switch with PAUSE (reason) and FLATTEN (typed); promote with per-caveat acknowledgement and server-computed consequences; attention queue and incidents; a virtualised data grid, command palette and keyboard chords; a11y at zero serious axe violations; contrast 268/268 pairs; Playwright 478 passed.
 
-**Operations.** `fiboki doctor` (16 checks), desktop installer, backup/restore with manifest, launchd services (api, worker, web, news, llama, paper), a desktop launcher, alert delivery with an outbox, a watchdog process.
+**Operations.** `fiboki doctor` (16 checks; reads `~/.fiboki/env` as the services do), desktop installer, backup/restore with manifest, launchd services (api, worker, web, news, llama, paper), a desktop launcher, alert delivery with an outbox, a watchdog process. **Running now on the MacBook** from the runtime checkout `~/fiboki`: api, worker, web (production build) and news, all four verified serving (BUILD_LOG 2026-09-29, last entry); `llama` and `paper` wait on a llama.cpp model and an OANDA practice token.
 
 ## 2. What it cannot do yet
 

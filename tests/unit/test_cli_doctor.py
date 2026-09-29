@@ -31,7 +31,9 @@ PINS = {
 
 class FakeHost(DoctorHost):
     def __init__(self, repo: Path, env: dict[str, str] | None = None, **kw: Any) -> None:
-        super().__init__(repo=repo, env=env or {"FIBOKI_EXECUTION_MODE": "paper"})
+        # HOME under the temp repo so ~/.fiboki/env is the test's, never the developer's.
+        base = {"HOME": str(repo), **(env or {"FIBOKI_EXECUTION_MODE": "paper"})}
+        super().__init__(repo=repo, env=base)
         self.system = kw.get("system", "Darwin")
         self.machine = kw.get("machine", "arm64")
         self.python_version = kw.get("python_version", (3, 11, 11))
@@ -514,3 +516,43 @@ def test_doctor_is_a_group_with_a_model_subcommand() -> None:
 
     command = typer.main.get_command(cli.app)
     assert "model" in command.commands["doctor"].commands  # type: ignore[attr-defined]
+
+
+# --------------------------------------------------------------- ~/.fiboki/env
+
+
+def test_doctor_reads_the_env_file_the_services_read(repo: Path) -> None:
+    """A bare-shell ``fiboki doctor`` must see ~/.fiboki/env, or it reports
+    'FIBOKI_OPERATORS is not set' on a machine where the services sign people
+    in. The process environment wins; `$` in values is never expanded."""
+    home = repo / ".fiboki"
+    home.mkdir()
+    (home / "env").write_text(
+        "# operators\n"
+        "FIBOKI_OPERATORS='joe:admin:scrypt$16384$8$1$abc$def'\n"
+        'FIBOKI_AGENT_LOCAL_MODEL="qwen3:4b"\n'
+        "FIBOKI_EXECUTION_MODE=live\n"
+        "bad key=1\n"
+    )
+    host = FakeHost(repo, env={"FIBOKI_EXECUTION_MODE": "paper"})
+    assert host.env["FIBOKI_OPERATORS"] == "joe:admin:scrypt$16384$8$1$abc$def"
+    assert host.env["FIBOKI_AGENT_LOCAL_MODEL"] == "qwen3:4b"
+    assert host.env["FIBOKI_EXECUTION_MODE"] == "paper", "process environment wins"
+    assert host.env_file_applied == ("FIBOKI_AGENT_LOCAL_MODEL", "FIBOKI_OPERATORS")
+    check = _one(_run(host, "environment"), "environment")
+    assert check.status == DoctorStatus.WARN, check.detail
+    assert "2 of 3 values from" in check.detail and "bad key" in check.detail
+    assert check.data["env_file_applied"] == ["FIBOKI_AGENT_LOCAL_MODEL", "FIBOKI_OPERATORS"]
+    ops = _one(_run(host, "operator hashes"), "operator hashes")
+    assert "not set" not in ops.detail
+
+
+def test_doctor_without_an_env_file_says_so_and_can_skip_it(repo: Path) -> None:
+    host = FakeHost(repo)
+    assert not host.env_file.exists and host.env_file_applied == ()
+    check = _one(_run(host, "environment"), "environment")
+    assert check.status == DoctorStatus.OK and f"no {repo / '.fiboki' / 'env'}" in check.detail
+    (repo / ".fiboki").mkdir()
+    (repo / ".fiboki" / "env").write_text("FIBOKI_OPERATORS=x:admin:scrypt$a$b\n")
+    skipped = DoctorHost(repo=repo, env={"HOME": str(repo)}, env_file=False)
+    assert "FIBOKI_OPERATORS" not in skipped.env

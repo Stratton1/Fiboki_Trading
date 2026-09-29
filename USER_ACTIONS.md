@@ -2,7 +2,7 @@
 
 **Generated:** 19 September 2026, at the end of the V2 build programme. **Updated 29 September 2026** after the agentic-integration wave (see `docs/v2/AGENTIC_INTEGRATION_PLAN.md` §3 and `docs/v2/BUILD_LOG.md`).
 
-**Status line:** `v2/integration` on the Mac; full backend suite 3,923 passed; frontend 318 Playwright passed. The two decisions waiting on you are in `docs/v2/FRONTEND_OVERHAUL_PLAN.md` D-F5/D-F6 (Lightweight Charts over KLineChart; uPlot over Plotly) and P6 below (news API tier and FRED key). The first real-model agent run needs Ollama on the Mac (P7).
+**Status line (29 September 2026, evening):** GitHub `main` and `v2/integration` are the same commit (V1 is under `legacy/v1/`, tag `v1-final`). The four launchd services (`uk.fiboki.api`, `worker`, `web`, `news`) run from the runtime checkout `~/fiboki` (`docs/v2/DEPLOYMENT.md` §2.6), `fiboki doctor` there reports 0 FAIL, and http://localhost:3000 serves the production web build. Ollama `qwen3:4b` passed the smoke test (P7) and the agent cycles are on. Campaign K3 (`engine_v3_realism`, GBP, official calendar) is running in the development checkout. Backend suite 4,802 passed; Playwright 478 passed. **Still needing you:** P1 (OANDA practice token: nothing trades forward until it is in `~/.fiboki/env`), P6 (Finnhub/FRED keys), L2 (tax/capital advice), and the decisions in `docs/v2/IMPROVEMENT_BACKLOG.md` §3.
 
 Everything in this document is something the engineering programme could not do for you: it needs an account, a credential, a payment, a legal acceptance, a physical action, or a judgement that is yours rather than mine. Everything *else* has been built, and where an external dependency was missing I built the adapter, the interface, the fixtures and the tests so the platform is ready the day the dependency arrives.
 
@@ -12,13 +12,9 @@ Items are ordered by when they block you, not by effort.
 
 ## CRITICAL — do these before anything else
 
-### C1. Review and merge the V2 tree into your repository
+### C1. ~~Review and merge the V2 tree into your repository~~ — DONE 2026-09-29
 
-V2 was built in an isolated container and is a self-contained git repository with six checkpoint commits. It has **not** been merged into `Fiboki_Trading` on your Mac, because merging a 65,000-line parallel implementation into your working repo is a decision with your name on it, not mine.
-
-You need to decide the shape: a `v2/` subtree alongside the existing code with `legacy/v1/` preserved, a long-lived branch, or a new repository with V1 archived. The architecture documents assume the first.
-
-Nothing in V2 imports, modifies or deletes anything in V1.
+You chose "V2 is the repository": `main` was fast-forwarded to `v2/integration`, V1 is preserved under `legacy/v1/` and at the tag `v1-final` (commit ccc3af2). Nothing in V2 imports anything from `legacy/`.
 
 ### C2. Decide what happens to the V1 production deployment
 
@@ -32,9 +28,9 @@ Your options are to leave V1 running as-is, take it down, or put a holding page 
 
 ---
 
-### C4. Rotate both operator passwords (added 2026-09-29)
+### C4. ~~Rotate both operator passwords~~ — DONE 2026-09-29
 
-Operator entries in `FIBOKI_OPERATORS` were unsalted SHA-256 and the dev launcher gave joe and tom the same default. Passwords are now stored as `scrypt$...`; legacy entries still verify but `fiboki doctor` flags them. Generate new hashes with `.venv/bin/python -c "from fiboki.api.routers.auth import hash_password as h; print(h('<new password>'))"` (see docs/v2/SECURITY_MODEL.md), put them in `~/.fiboki/env`, and remove `FIBOKI_DEV_PASSWORD` from anything committed.
+Both operators now have fresh passwords stored as `scrypt$...` in `~/.fiboki/env` (values quoted; the service script reads the file without shell expansion). The passwords themselves are in the macOS Keychain, never in chat or a file: `security find-generic-password -a joe -s fiboki-operator -w` (and `-a tom`). Tell Tom his the way you would any credential, then have him change it. To rotate again: `.venv/bin/python -c "from fiboki.api.routers.auth import hash_password as h; import getpass; print(h(getpass.getpass()))"` and replace the entry.
 
 ## REQUIRED BEFORE PAPER TRADING
 
@@ -193,17 +189,17 @@ Everything here keeps the deployment in paper mode; none of it touches a live co
 ### M2. On the desktop
 
 - [ ] `brew install python@3.11 node git sqlite llama.cpp`.
-- [ ] `git clone` the repository and check out the branch (do not copy `.venv/`, `node_modules/` or `.next/`: they are rebuilt).
-- [ ] `scripts/desktop-install.sh --check`, then `scripts/desktop-install.sh` until it prints no MISSING line.
-- [ ] Edit `~/.fiboki/env` (mode 600): `FIBOKI_OPERATORS` for Joe and Tom, each hash computed with `read -rs PW && printf '%s' "$PW" | shasum -a 256 && unset PW`; any news or macro API keys.
-- [ ] Copy the market-data store into `var/datastore`; `scripts/restore.sh <archive> --dry-run`, then `scripts/restore.sh <archive>`.
-- [ ] Download one model (M3) into `~/Models`, verify its SHA-256 against the Hugging Face page, `scripts/llama-server.sh --print`.
-- [ ] Ask for the one-line change in `fiboki.workers.research_runtime._build_provider` (`for_ollama` to `for_local_server`, `OPERATIONS.md` §13.4). Until it is made, the research worker cannot use llama.cpp and `fiboki doctor` says so.
-- [ ] Set the agent variables in `~/.fiboki/env` (`OPERATIONS.md` §13.4). Leave `FIBOKI_AGENT_CYCLES` off until the smoke test passes.
-- [ ] `.venv/bin/fiboki doctor` until nothing is FAIL; then `scripts/launchd-install.sh --load`.
-- [ ] System Settings: log in automatically, never sleep, restart after a power failure. LaunchAgents only run while you are logged in.
+- [x] `git clone` the repository **outside `~/Documents`** (macOS TCC blocks LaunchAgents there; `DEPLOYMENT.md` §2.6). On the MacBook this is `~/fiboki`; on the desktop use the same path so the runbooks apply unchanged.
+- [x] `scripts/desktop-install.sh --check`, then `scripts/desktop-install.sh` until it prints no MISSING line.
+- [x] `~/.fiboki/env` (mode 600): `FIBOKI_OPERATORS` for Joe and Tom as `scrypt$` hashes (C4); the file is shared by both checkouts. Still to add: `FIBOKI_OANDA_PRACTICE_TOKEN` / `FIBOKI_OANDA_PRACTICE_ACCOUNT_ID` (P1), `FIBOKI_FINNHUB_KEY`, `FIBOKI_FRED_KEY` (P6).
+- [x] Market-data store in `var/datastore` (60 instruments, 16.5M bars, verified by `fiboki doctor`). On the desktop: copy it again, or `scripts/backup.sh --include-datastore` on this machine first.
+- [ ] Download one model (M3) into `~/Models`, verify its SHA-256 against the Hugging Face page, `scripts/llama-server.sh --print`. On the MacBook (8 GB) Ollama `qwen3:4b` is used instead; llama.cpp with a larger model is the desktop plan.
+- [x] ~~`_build_provider` change~~ — made (`for_local_server`; detects llama.cpp by `/props`, Ollama otherwise).
+- [x] Agent variables set in `~/.fiboki/env`; `FIBOKI_AGENT_CYCLES=true` after the smoke test passed (P7).
+- [x] `.venv/bin/fiboki doctor`: 0 FAIL in `~/fiboki`; `scripts/launchd-install.sh --services api,worker,web,news --load` done; `uk.fiboki.llama` and `uk.fiboki.paper` are not loaded (no llama.cpp model; no OANDA token).
+- [ ] System Settings: log in automatically, never sleep, restart after a power failure. LaunchAgents only run while you are logged in. (Your action; I cannot change system settings.)
 - [ ] Rehearse a restore once (`OPERATIONS.md` §13.2) before you rely on the backups.
-- [ ] Known blocker to check first: the web build with `NEXT_PUBLIC_FIBOKI_API=""` (`OPERATIONS.md` §13.5).
+- [x] ~~Web build with `NEXT_PUBLIC_FIBOKI_API=""`~~ — fixed (`apiOrigin()` treats empty as same-origin).
 
 ### M3. Which model for which Mac
 
@@ -277,9 +273,9 @@ Compare the 0.618 level against randomly drawn levels between 0.5 and 0.7 on the
 
 The 400-trade minimum was written for a 60-instrument campaign. A single instrument on a single timeframe mostly cannot clear it, which is why most K1 cells were rejected for having too little evidence rather than bad evidence. A genuine multi-instrument campaign is the next real research step — and it needs P4 (the full data store) first.
 
-### P7. Run the first real-model agent smoke test (Ollama on the Mac)
+### P7. ~~Run the first real-model agent smoke test (Ollama on the Mac)~~ — DONE 2026-09-29
 
-Nothing in the agent layer has ever run against a real model; every workflow has been exercised with the offline `EchoProvider`. The provider, weights-pinning and audit stamping are built and tested with recorded responses. To close the gap:
+Ollama `qwen3:4b` on the MacBook: `smoke_test_provider` returned `ok: true`, `model_digest` `sha256:359d7dd4...` (matches `ollama list`). Two provider changes came out of it: Ollama requests send `think: false`, and a leading closed `<think>` block is stripped before JSON parsing (Qwen3 otherwise spends its whole output thinking). `FIBOKI_AGENT_CYCLES=true` is set with `FIBOKI_AGENT_CYCLE_TARGET=donchian_breakout_atr:XAUUSD:H4` at 02:15 UTC and headline scans every 15 minutes; the worker's audit ledger is `~/fiboki/var/agents/audit.jsonl`. **What is still unmeasured:** agent quality. Run `fiboki.agents.evals.run_evals` over the ledger after the first few nights, and the 20-run acceptance protocol (`FRONTEND_OVERHAUL_PLAN.md` revision, item 12) before trusting any output beyond research notes. The original procedure, for the desktop or another model:
 
 ```bash
 ollama pull qwen2.5:7b-instruct      # or any 7B–30B instruct model you prefer

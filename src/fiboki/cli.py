@@ -2279,9 +2279,29 @@ class DoctorHost:
     commands with a timeout and never raises for a missing binary.
     """
 
-    def __init__(self, repo: Path | None = None, env: Mapping[str, str] | None = None) -> None:
+    def __init__(
+        self,
+        repo: Path | None = None,
+        env: Mapping[str, str] | None = None,
+        *,
+        env_file: bool = True,
+    ) -> None:
+        from fiboki.core.env_file import EnvFile, env_file_path, read_env_file
+
         self.repo = (repo or repo_root()).resolve()
         self.env: dict[str, str] = dict(os.environ if env is None else env)
+        # The services read ~/.fiboki/env (scripts/fiboki-service.sh); a doctor
+        # run from a bare shell must see the same values or it reports problems
+        # the services do not have. The process environment wins; the file
+        # fills what is unset. Recorded so the environment check can say so.
+        self.env_file: EnvFile = EnvFile(path=None)
+        self.env_file_applied: tuple[str, ...] = ()
+        if env_file:
+            self.env_file = read_env_file(env_file_path(self.env))
+            applied = [k for k in self.env_file.values if not self.env.get(k)]
+            for key in applied:
+                self.env[key] = self.env_file.values[key]
+            self.env_file_applied = tuple(sorted(applied))
         self.system = platform.system()
         self.machine = platform.machine()
         self.python_version: tuple[int, int, int] = tuple(sys.version_info[:3])  # type: ignore[assignment]
@@ -2554,16 +2574,30 @@ def _check_env(host: DoctorHost) -> list[DoctorCheck]:
     else:
         status = DoctorStatus.OK
     parts = [f"mode {mode.value}"]
+    env_file = host.env_file
+    if env_file.exists:
+        parts.append(f"{len(host.env_file_applied)} of {len(env_file.values)} values from {env_file.path}")
+        if env_file.malformed:
+            status = max(status, DoctorStatus.WARN, key=DoctorStatus.ALL.index)
+            parts.append(f"malformed lines ignored: {', '.join(env_file.malformed)}")
+    elif env_file.path is not None:
+        parts.append(f"no {env_file.path}")
     if unknown:
         parts.append(f"unknown: {', '.join(unknown)}")
     if missing:
         parts.append(f"missing in {mode.value}: {', '.join(missing)}")
+    fix = ""
+    if unknown or missing:
+        fix = ("Unknown FIBOKI_* names are settings silently left at their default (a startup "
+               "error in demo/live). Remove them or declare them in fiboki.api.settings.ENV_REGISTRY.")
+    elif env_file.malformed:
+        fix = f"Every line in {env_file.path} must be KEY=VALUE with KEY in [A-Z0-9_]; the services skip the rest."
     out.append(DoctorCheck(
-        "environment", status, "; ".join(parts),
-        "" if status == DoctorStatus.OK else "Unknown FIBOKI_* names are settings silently left at "
-        "their default (a startup error in demo/live). Remove them or declare them in "
-        "fiboki.api.settings.ENV_REGISTRY.",
-        {"unknown": unknown, "missing_in_mode": missing, "mode": mode.value},
+        "environment", status, "; ".join(parts), fix,
+        {"unknown": unknown, "missing_in_mode": missing, "mode": mode.value,
+         "env_file": str(env_file.path) if env_file.exists else None,
+         "env_file_applied": list(host.env_file_applied),
+         "env_file_malformed": list(env_file.malformed)},
     ))
     live_flag = host.env.get("FIBOKI_LIVE_EXECUTION_ENABLED", "").strip().lower()
     armed = bool(host.env.get("FIBOKI_LIVE_RUNTIME_ARMED") or host.env.get("FIBOKI_OANDA_LIVE_RUNTIME"))
