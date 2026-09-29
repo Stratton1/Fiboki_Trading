@@ -240,11 +240,12 @@ first K4 cell runs; a change is a new campaign id.
 | Timeframes | H4 only in K4 (the store has no D1). The document's primary bet is D1; K4 therefore tests the SHORT-horizon expression (126 H4 bars is about three weeks) and cannot confirm or refute the D1 claim. A D1 campaign needs D1 bars in the store first |
 | Runs after | K3 completes; the MacBook cannot hold both (BUILD_LOG 2026-09-29, memory) |
 
-**External prior trials: K3's declared N plus K3's own true N.** K4 shares K3's bars and its
-question ("does any rule family have an edge net of costs on these series?"); the honest
-prior is everything spent on them: 4,026 (K3's declaration) + K3's true N as printed by its
-`--plan-only` (recorded in `research/reports/campaign_k3_multi_instrument/run.log`). The number
-is filled in from that log when K4 is launched and copied here; it can only be raised.
+**External prior trials: 7,376, K3's true N.** K4 shares K3's bars and its question ("does
+any rule family have an edge net of costs on these series?"), so the honest prior is
+everything spent on them: K3's true trial count as printed in its report, 7,376 = 3,350
+planned by K3 + 4,026 declared before K3 (which already includes K1 and K2). It is not
+4,026 + 7,376: that would count K3's declaration twice. (Corrected 2026-09-30 before any K4
+compute; the first draft of this paragraph said "4,026 plus K3's true N".)
 
 **What K4 can and cannot say.** Zero survivors would be consistent with Huang et al. (2020)
 and with the document's own evidence-against; it would not be evidence about D1 TSMOM. One or
