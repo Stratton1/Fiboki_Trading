@@ -1,6 +1,6 @@
 "use client";
 
-import { useApi } from "@/lib/api";
+import { useApi } from "@/lib/query";
 import { AsyncBoundary } from "@/components/AsyncBoundary";
 import { Card, PageHead, StatusBadge } from "@/components/primitives";
 import { formatTimestamp } from "@/lib/format";

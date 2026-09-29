@@ -1,5 +1,14 @@
+import type { components } from "./generated/openapi";
+
+/** Generated from the API's OpenAPI schema (npm run gen:api). */
+type Schemas = components["schemas"];
+
 /**
  * Mirrors of the API's pydantic response models.
+ *
+ * Wave 2: being replaced by generated types, progressively. A type below that
+ * is an alias of `Schemas[...]` is generated; a hand-written interface is
+ * checked field-for-field against its schema by lib/api-contract.ts.
  *
  * `Figure` is the single most important type in this file. Every number the API
  * returns arrives inside one, carrying the provenance that says where it came
@@ -121,19 +130,7 @@ export interface ExecutionModeBanner {
   as_of: string;
 }
 
-export interface KillSwitchView {
-  active: boolean;
-  mode: string | null;
-  operator: string | null;
-  reason: string | null;
-  since: string | null;
-  armable: boolean;
-  blocks_new_risk: boolean;
-  requires_flatten: boolean;
-  open_positions: number;
-  /** Server-computed consequence list, per mode, for the shared confirm dialog. */
-  consequences: Record<string, string[]>;
-}
+export type KillSwitchView = Schemas["KillSwitchView"];
 
 export interface ServiceRow {
   name: string;
@@ -150,15 +147,7 @@ export interface WorkerRow {
   detail: string;
 }
 
-export interface BrokerHealthView {
-  configured: boolean;
-  venue_url_host: string;
-  mode: string;
-  guard_allowed: boolean;
-  controls: Record<string, boolean>;
-  reasons: string[];
-  detail: string;
-}
+export type BrokerHealthView = Schemas["BrokerHealthView"];
 
 export interface SettingsView {
   execution_mode: string;
@@ -252,12 +241,7 @@ export interface PromotePreflightView {
 }
 
 /** GET /api/trading/preflight/kill-switch-disarm, for the re-arm dialog. */
-export interface KillSwitchDisarmPreflightView {
-  active: boolean;
-  mode: string | null;
-  execution_mode: string;
-  consequences: Record<string, string[]>;
-}
+export type KillSwitchDisarmPreflightView = Schemas["KillSwitchDisarmPreflightView"];
 
 export interface PortfolioView {
   balance: Figure;
@@ -430,26 +414,9 @@ export interface CorrelationView {
 
 // ----------------------------------------------------------- intelligence
 
-export interface AgentRoleRow {
-  role: string;
-  purpose: string;
-  capabilities: string[];
-  can_execute: boolean;
-}
+export type AgentRoleRow = Schemas["AgentRoleView"];
 
-export interface AuditEntryRow {
-  sequence: number;
-  at: string;
-  action: string;
-  actor: string;
-  actor_role: string;
-  outcome: string;
-  reason: string;
-  target: string;
-  execution_mode: string;
-  correlation_id: string;
-  entry_hash: string;
-}
+export type AuditEntryRow = Schemas["AuditEntryView"];
 
 export interface AuditIntegrityView {
   intact: boolean;
@@ -465,11 +432,61 @@ export interface ResearchMemoryView {
   rediscovery_rate: Figure;
 }
 
-export interface PrincipalView {
-  user_id: string;
-  display_name: string;
-  role: string;
-  expires_at: string;
-  can_arm_kill_switch: boolean;
-  can_promote: boolean;
+export type PrincipalView = Schemas["PrincipalView"];
+
+// ---------------------------------------------------------------- command
+//
+// Hand-written from the backend's in-progress routers (src/fiboki/api/
+// routers/command.py and incidents.py, not yet in the OpenAPI snapshot).
+// Replace with generated aliases once `npm run gen:api` reads a schema that
+// has them.
+
+export type Severity = "info" | "warning" | "error" | "critical";
+
+/**
+ * GET /api/command/attention: one item in the server-ranked attention queue.
+ * The array order IS the ranking; the workstation never re-sorts it.
+ */
+export interface AttentionItem {
+  id: string;
+  category: string;
+  severity: Severity;
+  title: string;
+  reason: string;
+  /** An in-app path to the screen that resolves it. */
+  deep_link: string;
+  as_of: string | null;
+  /** The server's ranking score, labelled like every number. */
+  score: Figure;
+}
+
+export type IncidentStatus = "open" | "acknowledged" | "resolved";
+
+export interface IncidentTimelineEntry {
+  at: string;
+  kind: "occurrence" | "resolved" | "ack" | "note";
+  severity: string | null;
+  actor: string;
+  text: string;
+  correlation_id: string;
+}
+
+/** GET /api/system/incidents (Page) and the `incidents` stream topic (entities keyed by `id`). */
+export interface IncidentRow {
+  id: string;
+  key: string;
+  event: string;
+  source: string;
+  title: string;
+  severity: Severity;
+  status: IncidentStatus;
+  first_seen: string;
+  last_seen: string;
+  occurrences: Figure;
+  acknowledged_by: string | null;
+  acknowledged_at: string | null;
+  resolved_at: string | null;
+  deep_link: string;
+  as_of: string;
+  timeline: IncidentTimelineEntry[];
 }

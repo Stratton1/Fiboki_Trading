@@ -1,7 +1,9 @@
 "use client";
 
+import { parseAsStringLiteral, useQueryState } from "nuqs";
 import { lazy, Suspense } from "react";
 import { PageHead } from "@/components/primitives";
+import { UrlState } from "@/components/UrlState";
 import { ProvenanceChip, ProvenanceLabelChip } from "@/components/ProvenanceChip";
 import { TITLE_PREFIX } from "@/components/shell/Mode";
 import { StatusPill } from "@/components/ui/StatusPill";
@@ -115,30 +117,9 @@ export default function LegendPage() {
         title="Legend"
         intro="What each colour, shape and frame on this workstation means. Colour carries four meanings only (execution mode, provenance, P&L direction, health) and each also has a shape, glyph or word, so nothing depends on colour alone."
       />
-      <TabsRoot defaultValue="meanings">
-        <TabsList aria-label="Legend sections">
-          <Tab value="meanings" data-testid="legend-tab-meanings">
-            Meanings
-          </Tab>
-          <Tab value="tokens" data-testid="legend-tab-tokens">
-            Tokens
-          </Tab>
-          <Tab value="controls" data-testid="legend-tab-controls">
-            Controls
-          </Tab>
-        </TabsList>
-        <TabsPanel value="meanings">
-          <Meanings />
-        </TabsPanel>
-        <TabsPanel value="tokens">
-          <Tokens />
-        </TabsPanel>
-        <TabsPanel value="controls">
-          <Suspense fallback={<p className="muted">Loading controls.</p>}>
-            <LegendControls />
-          </Suspense>
-        </TabsPanel>
-      </TabsRoot>
+      <UrlState fallback={<LegendTabs tab="meanings" onTab={() => undefined} />}>
+        <LegendTabsFromUrl />
+      </UrlState>
     </>
   );
 }
@@ -341,5 +322,46 @@ function Tokens() {
         </ul>
       </section>
     </div>
+  );
+}
+
+/** The open tab is URL state (`?tab=tokens`), so a legend section can be linked. */
+const TABS = ["meanings", "tokens", "controls"] as const;
+type LegendTab = (typeof TABS)[number];
+const tabParser = parseAsStringLiteral(TABS).withDefault("meanings").withOptions({
+  history: "replace",
+});
+
+function LegendTabsFromUrl() {
+  const [tab, setTab] = useQueryState("tab", tabParser);
+  return <LegendTabs tab={tab} onTab={(next) => void setTab(next)} />;
+}
+
+function LegendTabs({ tab, onTab }: { tab: LegendTab; onTab: (next: LegendTab) => void }) {
+  return (
+      <TabsRoot value={tab} onValueChange={(value) => onTab(value as LegendTab)}>
+        <TabsList aria-label="Legend sections">
+          <Tab value="meanings" data-testid="legend-tab-meanings">
+            Meanings
+          </Tab>
+          <Tab value="tokens" data-testid="legend-tab-tokens">
+            Tokens
+          </Tab>
+          <Tab value="controls" data-testid="legend-tab-controls">
+            Controls
+          </Tab>
+        </TabsList>
+        <TabsPanel value="meanings">
+          <Meanings />
+        </TabsPanel>
+        <TabsPanel value="tokens">
+          <Tokens />
+        </TabsPanel>
+        <TabsPanel value="controls">
+          <Suspense fallback={<p className="muted">Loading controls.</p>}>
+            <LegendControls />
+          </Suspense>
+        </TabsPanel>
+      </TabsRoot>
   );
 }

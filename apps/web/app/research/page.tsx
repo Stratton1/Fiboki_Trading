@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useApi } from "@/lib/api";
+import { useApi } from "@/lib/query";
 import { AsyncBoundary } from "@/components/AsyncBoundary";
 import { Card, PageHead, SourceBadge, Tile } from "@/components/primitives";
 import type { Page, StrategyRow, ValidationRow } from "@/lib/types";

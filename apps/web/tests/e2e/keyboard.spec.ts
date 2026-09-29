@@ -157,8 +157,17 @@ test.describe("dialog focus", () => {
     const gate = new Promise<void>((resolve) => {
       release = resolve;
     });
+    let accepted = false;
+    // The GET reflects the arm once the POST has been accepted, as the
+    // platform would; the dialog closes when that is read back.
+    await page.route(`${API}/api/system/kill-switch`, (route: Route) =>
+      route.fulfill({
+        json: accepted ? killSwitchView({ active: true, mode: "pause" }) : killSwitchView(),
+      }),
+    );
     await page.route(`${API}/api/system/kill-switch/arm`, async (route: Route) => {
       await gate;
+      accepted = true;
       await route.fulfill({ json: killSwitchView({ active: true, mode: "pause" }) });
     });
     await page.goto("/trading/risk");

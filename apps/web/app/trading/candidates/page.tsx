@@ -1,9 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { ApiError, apiFetch, useApi } from "@/lib/api";
+import { ApiError, apiFetch } from "@/lib/api";
+import { capability } from "@/lib/auth";
+import { useApi } from "@/lib/query";
 import { AsyncBoundary } from "@/components/AsyncBoundary";
-import { useExecutionMode } from "@/components/shell/platform";
+import { useExecutionMode, useOperator } from "@/components/shell/platform";
 import { Button } from "@/components/ui/Button";
 import {
   ConfirmDialog,
@@ -42,6 +44,7 @@ import type {
 export default function CandidatesPage() {
   const state = useApi<Page<CandidateRow>>("/api/trading/candidates");
   const { mode: executionMode, mutationsAllowed } = useExecutionMode();
+  const allowed = capability(useOperator(), "can_promote");
   const [target, setTarget] = useState<CandidateRow | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -121,6 +124,11 @@ export default function CandidatesPage() {
           <>
             <SourceBadge source={page.source} />
             <CaveatList caveats={page.caveats} />
+            {!allowed.allowed ? (
+              <p className="muted" data-testid="promote-role-blocked" role="note">
+                Promotion is disabled. {allowed.reason}
+              </p>
+            ) : null}
             <TableWrap>
               <table>
                 <thead>
@@ -176,11 +184,15 @@ export default function CandidatesPage() {
                         <Button
                           size="sm"
                           data-testid={`promote-${row.strategy_id}`}
-                          disabled={!row.eligible_for_ranking || !mutationsAllowed}
+                          disabled={
+                            !row.eligible_for_ranking || !mutationsAllowed || !allowed.allowed
+                          }
                           title={
                             !mutationsAllowed
                               ? "The execution mode is unknown; nothing can be promoted until it can be read."
-                              : row.eligible_for_ranking
+                              : !allowed.allowed
+                                ? (allowed.reason ?? undefined)
+                                : row.eligible_for_ranking
                                 ? `Requires the ${row.next_action_requires_role} role.`
                                 : row.blocking_reasons.join(" ")
                           }

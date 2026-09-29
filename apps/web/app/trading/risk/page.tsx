@@ -1,6 +1,6 @@
 "use client";
 
-import { useApi } from "@/lib/api";
+import { useApi } from "@/lib/query";
 import { AsyncBoundary } from "@/components/AsyncBoundary";
 import { KillSwitchPanel } from "@/components/KillSwitch";
 import { Card, PageHead, SourceBadge, Tile } from "@/components/primitives";

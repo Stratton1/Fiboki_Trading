@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { parseAsStringLiteral, useQueryState } from "nuqs";
 import { ListPage, type Column } from "@/components/ListPage";
+import { UrlState } from "@/components/UrlState";
 import { FigureValue } from "@/components/FigureValue";
 import { ProvenanceChip } from "@/components/ProvenanceChip";
 import { Distribution } from "@/components/charts";
@@ -17,10 +18,34 @@ import { deriveProvenance } from "@/lib/provenance";
  * "Recent Execution" below a tile called "Fleet PnL (live)".
  *
  * Provenance is a COLUMN and a FILTER. The page title makes no claim about
- * where these trades came from, because the rows say it themselves.
+ * where these trades came from, because the rows say it themselves. The
+ * filter is URL state (`?provenance=paper`), so a filtered view can be linked.
  */
+const FILTERS = ["all", ...PROVENANCES] as const;
+const filterParser = parseAsStringLiteral(FILTERS)
+  .withDefault("all")
+  .withOptions({ history: "replace" });
+
 export default function ExecutionPage() {
-  const [filter, setFilter] = useState<Provenance | "all">("all");
+  return (
+    <UrlState fallback={<ExecutionView filter="all" onFilter={() => undefined} />}>
+      <ExecutionFromUrl />
+    </UrlState>
+  );
+}
+
+function ExecutionFromUrl() {
+  const [filter, setFilter] = useQueryState("provenance", filterParser);
+  return <ExecutionView filter={filter} onFilter={(next) => void setFilter(next)} />;
+}
+
+function ExecutionView({
+  filter,
+  onFilter,
+}: {
+  filter: Provenance | "all";
+  onFilter: (next: Provenance | "all") => void;
+}) {
   const query = filter === "all" ? "" : `&provenance=${filter}`;
 
   const columns: Column<TradeRow>[] = [
@@ -66,7 +91,7 @@ export default function ExecutionPage() {
               id="prov-filter"
               data-testid="provenance-filter"
               value={filter}
-              onChange={(e) => setFilter(e.target.value as Provenance | "all")}
+              onChange={(e) => onFilter(e.target.value as Provenance | "all")}
             >
               <option value="all">All sources (mixed)</option>
               {PROVENANCES.map((p) => (

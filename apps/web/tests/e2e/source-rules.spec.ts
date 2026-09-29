@@ -180,6 +180,23 @@ test.describe("source rules", () => {
     }
   });
 
+  test("the generated API types are what their schema produces", async () => {
+    // `npm run gen:api` writes lib/generated/openapi.ts from openapi.json (or
+    // the checked-in snapshot). A schema change without regenerated types
+    // fails here; lib/api-contract.ts then fails typecheck on any drifted field.
+    const { generate, OUTPUT } = await import("../../scripts/gen-api.mjs");
+    expect(readFileSync(OUTPUT, "utf8"), "run `npm run gen:api`").toBe(await generate());
+  });
+
+  test("the attention queue is rendered in the server's order", async () => {
+    // Ranking is logic, and logic belongs in the backend (report E §6.6).
+    const text = stripComments(
+      readFileSync(join(ROOT, "components", "command", "AttentionPanel.tsx"), "utf8"),
+    );
+    expect(text).not.toMatch(/\.(sort|toSorted|reverse|toReversed)\s*\(/);
+    expect(text).not.toMatch(/\.filter\s*\(/);
+  });
+
   test("runtime dependencies are an explicit allow-list", async () => {
     // Replaces "exactly three dependencies" (report E §3.7, plan D-F7). Each
     // entry is a reviewed decision; adding a runtime dependency means adding
@@ -193,6 +210,9 @@ test.describe("source rules", () => {
       "@fontsource-variable/inter": "self-hosted UI font, OFL (D-F9)",
       "@fontsource-variable/jetbrains-mono": "self-hosted mono font, OFL (D-F9)",
       "react-resizable-panels": "SplitPane (D-F8)",
+      "@tanstack/react-query": "server state and the ViewState contract (D-F3, Wave 2)",
+      nuqs: "URL state for filters, selection and tabs; mounted per page (D-F3, Wave 2)",
+      zustand: "the live store for high-frequency stream state (D-F3, Wave 2)",
     };
     const pkg = JSON.parse(readFileSync(join(ROOT, "package.json"), "utf8"));
     const runtime = Object.keys(pkg.dependencies).sort();

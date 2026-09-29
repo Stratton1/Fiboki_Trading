@@ -25,7 +25,8 @@ npm run dev
 ## Gates
 
 ```bash
-npx tsc --noEmit   # types
+npm run gen:api    # lib/generated/openapi.ts from openapi.json (or the snapshot)
+npx tsc --noEmit   # types, including lib/api-contract.ts drift checks
 npx eslint .       # includes the `?? 0` ban
 npm run build
 npm run size       # per-route first-load JS budgets (size-limit, after build)
@@ -49,6 +50,32 @@ popups load on first use (`components/ui/layers.ts`) so the shell stays inside
 its 180 KB first-load budget. `/system/legend` shows what every colour, shape
 and frame means.
 
+## Data layer, session and live stream (Wave 2)
+
+Server state is TanStack Query (`lib/query.ts`): every read is keyed by its
+path, shared across views, and exposed as one `ViewState` (loading on first
+load only; success carries `freshness`: live, fresh, lagging, stale or
+disconnected, and `asOf`, and never returns to loading). `apiFetch` in
+`lib/api.ts` is still the only way to the API (credentials, CSRF, typed
+errors); a 401 sends the operator to `/login?next=<path>`.
+
+One SSE connection per browser (`lib/stream/client.ts`, loaded after first
+paint): the tab holding the Web Lock `fiboki-stream` owns the `EventSource`
+and fans frames out over a `BroadcastChannel`. `lib/stream/router.ts` speaks
+the backend's entity model (`src/fiboki/api/routers/stream.py`: snapshot
+`{entities, count}`, delta `{id, entity}`, tombstone `{id}`), dedupes on
+(event, id) in an LRU of 1,000, checks per-topic sequence numbers (a gap is
+re-read by REST, never guessed), writes only REST-shaped fields into the query
+cache (anything else triggers a REST re-read), and puts marks and heartbeats in
+the Zustand live store (`lib/live-store.ts`, rAF-batched). Backoff 1, 2, 4, 8, 15 s with jitter; DISCONNECTED after five
+failures, with Reconnect and REST polling every 10 s. The freshness rules are
+in `lib/freshness.ts`. Mutations show no optimistic state: the dialog waits for
+the platform to echo the change (`lib/echo.ts`).
+
+URL state (filters, selection, tabs) is nuqs, mounted per page
+(`components/UrlState.tsx`). Tests drive the stream with the scripted harness
+in `tests/e2e/sse.ts`.
+
 ## The rules this app exists to keep
 
 Each has a test. They are not style preferences; each one closes a specific way
@@ -69,7 +96,12 @@ the V1 frontend misled an operator.
 | A strict CSP with no inline styles and no eval, and no violation on any route | `next.config.ts`; `csp.spec.ts` |
 | Responsive from 360px, drawer under lg, comfortable density under 1024px, no x-scroll | `globals.css`; `responsive.spec.ts` |
 | Realism caveats are server-computed, never page copy | `CaveatList` renders payload only; `source-rules.spec.ts` |
-| A poll never blanks a view; a failed refresh keeps the last good data, marked STALE | `useApi` resets only on a path change; `AsyncBoundary`/`ModeBanner`; `refresh.spec.ts` |
+| A poll or stream event never blanks a view; a failed refresh keeps the last good data, marked STALE | `useApi`'s `ViewState` (`lib/query.ts`); `AsyncBoundary`/`ModeBanner`; `refresh.spec.ts`, `freshness.spec.ts` |
+| A connected stream with a dead worker looks stale; a gap is re-read, never guessed | `lib/freshness.ts`, `lib/stream/router.ts`; `freshness.spec.ts`, `stream.spec.ts`, `stream-router.spec.ts` |
+| One stream per browser, whatever the number of tabs | Web Locks leader in `lib/stream/client.ts`; `stream.spec.ts` |
+| No optimistic UI for the kill switch or an incident acknowledgement | `lib/echo.ts`; `stream.spec.ts` |
+| Sign-in never puts a credential in a URL; a 401 returns the operator to where they were; roles disable what they cannot do, with the reason | `app/login`, `lib/api.ts`, `lib/auth.ts`; `auth.spec.ts` |
+| The attention queue is the server's ranking, never re-sorted | `components/command/AttentionPanel.tsx`; `command.spec.ts`, `source-rules.spec.ts` |
 | Promotion caveats are ticked one by one; consequences are server-computed | `ConfirmDialog` acknowledgements; `.../promote/preflight`; `promote.spec.ts` |
 | A chart's provenance is derived from its rows (MIXED, or "unlabelled source"), never a fallback | `lib/provenance.ts`; `chart-provenance.spec.ts`; `source-rules.spec.ts` |
 | Every time is labelled UTC; `as_of` is shown | `lib/format.ts`; `FigureValue`; `SourceBadge`; `time-labels.spec.ts` |

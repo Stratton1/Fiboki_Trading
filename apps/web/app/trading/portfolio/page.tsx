@@ -1,6 +1,6 @@
 "use client";
 
-import { useApi } from "@/lib/api";
+import { useApi } from "@/lib/query";
 import { AsyncBoundary } from "@/components/AsyncBoundary";
 import { LineChart } from "@/components/charts";
 import { FigureValue } from "@/components/FigureValue";

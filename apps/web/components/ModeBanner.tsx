@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import { useClock } from "@/lib/clock";
 import { formatAge, formatTimestamp } from "@/lib/format";
 import { useExecutionMode, useOperator } from "./shell/platform";
 
@@ -23,14 +24,20 @@ import { useExecutionMode, useOperator } from "./shell/platform";
  * marker saying how old it is. It used to blank to grey on every 30-second
  * poll, which trained the eye to ignore the one element that must be read.
  *
+ * Wave 2: the banner's read is fed by the stream (mode events, and the 5 s
+ * heartbeat that carries mode and kill-switch state), so another operator's
+ * arm appears here within one heartbeat. While the stream is not feeding it,
+ * it polls REST as before.
+ *
  * v2: each mode has its own treatment (report E §4.4). LIVE is inverted
  * magenta with REAL MONEY in capitals, the signed-in operator's name when the
  * platform supplies one, and a kill-switch control that is always visible. The
  * kill-switch state is shown in every mode, armed or not.
  */
 export function ModeBanner() {
-  const { handle: state, freshness, mode } = useExecutionMode();
+  const { handle: state, freshness, mode, stale } = useExecutionMode();
   const operator = useOperator();
+  const now = useClock(stale);
 
   // A single 250 ms pulse when the mode CHANGES into live, never on load and
   // never on a poll tick. (Suppressed under reduced motion in the stylesheet.)
@@ -66,8 +73,9 @@ export function ModeBanner() {
   }
 
   const banner = state.data.data;
-  const stale = freshness?.stale === true;
   const refreshError = state.refreshError;
+  const disconnected = freshness === "disconnected";
+  const ageSeconds = Math.max(0, (now - Date.parse(state.asOf)) / 1_000);
   const live = banner.mode === "live";
   return (
     <div
@@ -98,10 +106,11 @@ export function ModeBanner() {
         <span aria-hidden="true"> · </span>
         {banner.detail}
       </span>
-      {stale && freshness ? (
+      {stale ? (
         <span
           className="mode-banner__stale"
           data-testid="mode-banner-stale"
+          data-freshness={freshness ?? undefined}
           title={
             `Last read from the platform ${formatTimestamp(state.asOf)}. ` +
             (refreshError
@@ -109,7 +118,7 @@ export function ModeBanner() {
               : "No refresh has completed since; the mode may have changed.")
           }
         >
-          STALE · last good {formatAge(freshness.ageSeconds)} · retrying
+          {disconnected ? "DISCONNECTED" : "STALE"} · last good {formatAge(ageSeconds)} · retrying
         </span>
       ) : null}
       {banner.kill_switch_active ? (

@@ -1,64 +1,28 @@
 "use client";
 
-import { useEffect, useState, type ReactNode } from "react";
-import type { AsyncState } from "@/lib/api";
+import type { ReactNode } from "react";
+import { isStale } from "@/lib/freshness";
+import type { ViewState } from "@/lib/query";
 import { Button } from "./ui/Button";
 import { EmptyState } from "./ui/EmptyState";
 import { Skeleton } from "./ui/Skeleton";
-import { StaleBadge, type Freshness } from "./ui/StaleBadge";
+import { ResyncBadge, StaleBadge } from "./ui/StaleBadge";
 
-export { StaleBadge, type Freshness } from "./ui/StaleBadge";
-
-/** Data older than this many poll intervals is stale even with no error. */
-export const STALE_AFTER_INTERVALS = 3;
+export { StaleBadge, type StaleInfo } from "./ui/StaleBadge";
 
 /**
- * A wall clock that ticks only while something on screen depends on it, so a
- * "last good 40s ago" badge keeps counting between polls.
- */
-export function useNow(active: boolean, tickMs = 1000): number {
-  const [now, setNow] = useState(() => Date.now());
-  useEffect(() => {
-    if (!active) return;
-    const timer = setInterval(() => setNow(Date.now()), tickMs);
-    return () => clearInterval(timer);
-  }, [active, tickMs]);
-  return now;
-}
-
-/**
- * How current a successful payload is. Stale when the last refresh failed, or
- * when the payload is older than {@link STALE_AFTER_INTERVALS} poll intervals
- * (a refresh that hangs never errors, so age is checked independently).
- */
-export function useFreshness<T>(
-  state: AsyncState<T>,
-  refreshMs: number | undefined,
-): Freshness | null {
-  const success = state.status === "success";
-  const now = useNow(success && (refreshMs !== undefined || state.refreshError !== null));
-  if (state.status !== "success") return null;
-  const ageSeconds = Math.max(0, (now - Date.parse(state.asOf)) / 1000);
-  const overdue =
-    refreshMs !== undefined && ageSeconds * 1000 > STALE_AFTER_INTERVALS * refreshMs;
-  return {
-    stale: state.refreshError !== null || overdue,
-    ageSeconds,
-    refreshError: state.refreshError,
-  };
-}
-
-/**
- * Loading, error, empty and success are four distinct visual states.
+ * Loading, error, empty and success are distinct visual states, and success
+ * carries its freshness (report E §3.3, §6.4).
  *
- * The component takes a discriminated `AsyncState`, so the success branch is
- * unreachable while the request is in flight or has failed — TypeScript, not
- * discipline, keeps them apart. The error branch always names the failure and
- * the correlation id; it never degrades into an empty table.
+ * The component takes a discriminated ViewState, so the success branch is
+ * unreachable while the first request is in flight or has failed: TypeScript,
+ * not discipline, keeps them apart. The error branch always names the failure
+ * and the correlation id; it never degrades into an empty table.
  *
- * After a first success the view keeps its data through every later refresh.
- * A failed or overdue refresh adds a STALE badge beside the last good data
- * rather than swapping the panel for a skeleton or an error: an operator can
+ * After a first success the view keeps its data through every later refresh
+ * and every stream event. A lagging view shows LAG; a stale one STALE with the
+ * last good age; a disconnected one DISCONNECTED with the age struck through.
+ * None of them swaps the panel for a skeleton or an error: an operator can
  * still read the numbers, and cannot mistake them for current ones.
  */
 export function AsyncBoundary<T>({
@@ -70,7 +34,7 @@ export function AsyncBoundary<T>({
   onRetry,
   children,
 }: {
-  state: AsyncState<T> & { refreshMs?: number };
+  state: ViewState<T> & { refreshMs?: number };
   isEmpty?: (data: T) => boolean;
   emptyTitle?: string;
   emptyBody?: string;
@@ -78,12 +42,14 @@ export function AsyncBoundary<T>({
   onRetry?: () => void;
   children: (data: T) => ReactNode;
 }) {
-  // Called unconditionally: hooks may not follow the early returns below.
-  const freshness = useFreshness(state, state.refreshMs);
-
   if (state.status === "loading") {
     return (
-      <div className="state state--loading" data-testid="state-loading" role="status">
+      <div
+        className="state state--loading"
+        data-testid="state-loading"
+        data-label={label}
+        role="status"
+      >
         <div className="state__title">Loading {label}…</div>
         <Skeleton className="w-[72%]" />
         <Skeleton className="w-[54%]" />
@@ -94,7 +60,7 @@ export function AsyncBoundary<T>({
 
   if (state.status === "error") {
     return (
-      <div className="state state--error" data-testid="state-error" role="alert">
+      <div className="state state--error" data-testid="state-error" data-label={label} role="alert">
         <div className="state__title">
           <span>Could not load {label}</span>
           <span className="badge badge--down">FAILED</span>
@@ -124,24 +90,36 @@ export function AsyncBoundary<T>({
     );
   }
 
-  const stale = freshness?.stale === true;
+  const stale = isStale(state.freshness);
   const badge =
-    freshness && stale ? (
+    stale || state.freshness === "lagging" ? (
       <StaleBadge
-        freshness={freshness}
-        asOf={state.asOf}
+        info={{
+          freshness: state.freshness,
+          asOf: state.asOf,
+          sourceAsOf: state.sourceAsOf,
+          refreshError: state.refreshError,
+        }}
         polling={state.refreshMs !== undefined}
         onRetry={onRetry}
       />
     ) : null;
+  const badges = (
+    <>
+      {badge}
+      {state.resyncing ? <ResyncBadge /> : null}
+    </>
+  );
 
   if (isEmpty?.(state.data)) {
     return (
       <EmptyState
         title={emptyTitle}
-        badge={badge}
+        badge={badges}
         data-as-of={state.asOf}
         data-stale={stale}
+        data-freshness={state.freshness}
+        data-label={label}
       >
         {emptyBody}
       </EmptyState>
@@ -151,11 +129,14 @@ export function AsyncBoundary<T>({
   return (
     <div
       data-testid="state-success"
+      data-label={label}
       data-as-of={state.asOf}
       data-refreshing={state.refreshing}
       data-stale={stale}
+      data-freshness={state.freshness}
+      data-refresh-error={state.refreshError?.code}
     >
-      {badge}
+      {badges}
       {children(state.data)}
     </div>
   );

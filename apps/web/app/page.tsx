@@ -1,7 +1,9 @@
 "use client";
 
-import { useApi } from "@/lib/api";
+import { useApi } from "@/lib/query";
 import { useHealth } from "@/components/shell/platform";
+import { AttentionPanel } from "@/components/command/AttentionPanel";
+import { IncidentsPanel } from "@/components/command/IncidentsPanel";
 import { AsyncBoundary } from "@/components/AsyncBoundary";
 import { KillSwitchPanel } from "@/components/KillSwitch";
 import { LineChart } from "@/components/charts";
@@ -30,6 +32,10 @@ import type {
  * Execution", which was the same backtest trades again, beside hardcoded
  * "Online" and "Connected" badges. An operator could not tell a dead backend
  * from a quiet one.
+ *
+ * Command v1 (Wave 2): the top panel is the server-ranked attention queue,
+ * then open incidents, then health. The ranking is the server's; this page
+ * only renders it in order.
  */
 export default function OverviewPage() {
   // Shared with the status bar: one /api/health poll for the whole shell.
@@ -41,8 +47,16 @@ export default function OverviewPage() {
     <>
       <PageHead
         title="Overview"
-        intro="Platform health first, then the book. Every figure below carries the provenance of the run that produced it."
+        intro="What needs you first, then platform health, then the book. Every figure below carries the provenance of the run that produced it."
       />
+
+      <Card title="Needs attention">
+        <AttentionPanel />
+      </Card>
+
+      <Card title="Incidents">
+        <IncidentsPanel />
+      </Card>
 
       <Card title="Platform health">
         <AsyncBoundary state={health} label="platform health" onRetry={health.reload}>

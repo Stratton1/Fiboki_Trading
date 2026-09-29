@@ -1,7 +1,3 @@
-"use client";
-
-import { useCallback, useEffect, useRef, useState } from "react";
-import { asOfCandidates, noteAsOf } from "./as-of";
 import type { ApiErrorBody } from "./types";
 
 export const API_BASE =
@@ -9,6 +5,39 @@ export const API_BASE =
 
 const CSRF_COOKIE = "fiboki_csrf";
 const CSRF_HEADER = "X-Fiboki-CSRF";
+
+/** The sign-in route, and the query parameter that carries the return path. */
+export const LOGIN_PATH = "/login";
+export const NEXT_PARAM = "next";
+
+/** Paths whose 401 is an answer, not an expired session. */
+const NO_REDIRECT_ON_401 = new Set(["/api/auth/login"]);
+
+/**
+ * Only an in-app path may be a return target: it must start with one slash.
+ * "//evil.example" and "https://..." are protocol-relative or absolute URLs,
+ * which would turn the sign-in page into an open redirect.
+ */
+export function safeReturnPath(raw: string | null | undefined): string {
+  if (!raw || !raw.startsWith("/") || raw.startsWith("//") || raw.startsWith("/\\")) return "/";
+  if (raw === LOGIN_PATH || raw.startsWith(`${LOGIN_PATH}?`)) return "/";
+  return raw;
+}
+
+/**
+ * A 401 means there is no valid session. Send the operator to sign in, and
+ * bring them back to where they were. Never from the sign-in page itself.
+ */
+export function redirectToLogin() {
+  if (typeof window === "undefined") return;
+  const { pathname, search } = window.location;
+  if (pathname === LOGIN_PATH) return;
+  const next = encodeURIComponent(safeReturnPath(`${pathname}${search}`));
+  // A full navigation, deliberately: nothing held in memory by the expired
+  // session (query cache, stream, live store) should survive into the next.
+  // eslint-disable-next-line @next/next/no-location-assign-relative-destination
+  window.location.href = `${LOGIN_PATH}?${NEXT_PARAM}=${next}`;
+}
 
 export class ApiError extends Error {
   readonly code: string;
@@ -74,7 +103,7 @@ export async function apiFetch<T>(
       credentials: "include",
       cache: "no-store",
     });
-  } catch (cause) {
+  } catch {
     // A network failure is NOT an empty result. It gets its own error so the
     // page can say "could not reach the platform" rather than drawing zeros.
     throw new ApiError(
@@ -89,134 +118,10 @@ export async function apiFetch<T>(
     );
   }
 
+  if (response.status === 401 && !NO_REDIRECT_ON_401.has(path.split("?")[0] ?? path)) {
+    redirectToLogin();
+  }
   if (!response.ok) throw await parseError(response);
   if (response.status === 204) return undefined as T;
   return (await response.json()) as T;
-}
-
-export type AsyncState<T> =
-  | { status: "loading"; data: null; error: null }
-  | { status: "error"; data: null; error: ApiError }
-  | {
-      status: "success";
-      data: T;
-      error: null;
-      /** Client receipt time (ISO, UTC) of the data currently held. */
-      asOf: string;
-      /** A poll or manual reload is in flight; `data` is the last good payload. */
-      refreshing: boolean;
-      /**
-       * The most recent refresh failed. `data` is still the last good payload
-       * and is NOT current; the view must say so rather than blank itself.
-       */
-      refreshError: ApiError | null;
-    };
-
-/** The hook's return: the state, a manual reload, and the poll interval in force. */
-export type ApiHandle<T> = AsyncState<T> & {
-  reload: () => void;
-  refreshMs: number | undefined;
-};
-
-const LOADING = { status: "loading", data: null, error: null } as const;
-
-function toApiError(error: unknown): ApiError {
-  return error instanceof ApiError
-    ? error
-    : new ApiError(0, { code: "unexpected_error" }, String(error));
-}
-
-/**
- * The four states are modelled in the type, so a component physically cannot
- * render a success branch while the request is in flight or has failed.
- *
- * "empty" is derived by the consumer from the successful payload, because only
- * the consumer knows what empty means for its shape.
- *
- * Refresh semantics. The state resets to loading ONLY when the path changes. A
- * poll tick or a manual reload keeps the last good payload on screen, marks it
- * `refreshing`, and on failure records `refreshError` beside it. Once a path
- * has succeeded, its view never falls back to the loading or error branch:
- * blanking the execution-mode banner every 30 seconds taught operators to
- * ignore it, and a view that flickers to a skeleton on each poll is a view
- * whose outages look like routine refreshes.
- */
-export function useApi<T>(
-  path: string | null,
-  options: { refreshMs?: number } = {},
-): ApiHandle<T> {
-  const [state, setState] = useState<AsyncState<T>>(LOADING);
-  const [nonce, setNonce] = useState(0);
-  // Adjust state DURING render when the request identity changes, rather than
-  // in an effect. React sanctions adjusting state during render for exactly
-  // this; doing it in an effect renders one frame of stale success data for
-  // the new path, which on this product means showing the previous
-  // instrument's numbers under the new instrument's heading.
-  const [tracked, setTracked] = useState<{ path: string | null; nonce: number }>({
-    path,
-    nonce,
-  });
-  if (tracked.path !== path) {
-    // A different resource: nothing held belongs to it.
-    setTracked({ path, nonce });
-    setState(LOADING);
-  } else if (tracked.nonce !== nonce) {
-    // The same resource, fetched again: keep the last good payload.
-    setTracked({ path, nonce });
-    if (state.status === "success") {
-      if (!state.refreshing) setState({ ...state, refreshing: true });
-    } else if (state.status === "error") {
-      // Never succeeded: a retry is a fresh load.
-      setState(LOADING);
-    }
-  }
-
-  const mounted = useRef(true);
-  useEffect(() => {
-    mounted.current = true;
-    return () => {
-      mounted.current = false;
-    };
-  }, []);
-
-  useEffect(() => {
-    if (path === null) return;
-    let cancelled = false;
-    apiFetch<T>(path)
-      .then((data) => {
-        if (!cancelled && mounted.current) {
-          for (const asOf of asOfCandidates(data)) noteAsOf(asOf);
-          setState({
-            status: "success",
-            data,
-            error: null,
-            asOf: new Date().toISOString(),
-            refreshing: false,
-            refreshError: null,
-          });
-        }
-      })
-      .catch((error: unknown) => {
-        if (cancelled || !mounted.current) return;
-        const apiError = toApiError(error);
-        setState((previous) =>
-          previous.status === "success"
-            ? { ...previous, refreshing: false, refreshError: apiError }
-            : { status: "error", data: null, error: apiError },
-        );
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [path, nonce]);
-
-  useEffect(() => {
-    const interval = options.refreshMs;
-    if (!interval || path === null) return;
-    const timer = setInterval(() => setNonce((n) => n + 1), interval);
-    return () => clearInterval(timer);
-  }, [options.refreshMs, path]);
-
-  const reload = useCallback(() => setNonce((n) => n + 1), []);
-  return { ...state, reload, refreshMs: options.refreshMs };
 }

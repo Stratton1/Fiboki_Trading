@@ -1,6 +1,6 @@
 "use client";
 
-import { useApi } from "@/lib/api";
+import { useApi } from "@/lib/query";
 import { ListPage, type Column } from "@/components/ListPage";
 import { AsyncBoundary } from "@/components/AsyncBoundary";
 import { formatTimestamp } from "@/lib/format";

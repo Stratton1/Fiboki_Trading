@@ -1,6 +1,6 @@
 "use client";
 
-import { useApi } from "@/lib/api";
+import { useApi } from "@/lib/query";
 import { AsyncBoundary } from "@/components/AsyncBoundary";
 import { PageHead, SourceBadge, Tile } from "@/components/primitives";
 import type { Envelope, ResearchMemoryView } from "@/lib/types";

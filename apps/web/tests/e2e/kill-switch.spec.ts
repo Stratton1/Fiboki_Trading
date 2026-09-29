@@ -93,18 +93,24 @@ test.describe("kill switch", () => {
 
   test("confirming posts the chosen mode and the reason", async ({ page }) => {
     let posted: Record<string, unknown> | null = null;
+    const armed = killSwitchView({
+      active: true,
+      mode: "flatten",
+      operator: "joe",
+      reason: "data feed went stale mid-session",
+      requires_flatten: true,
+      blocks_new_risk: true,
+    });
+    // The platform's state, as a real backend would hold it: the GET shows
+    // the arm once the POST has been accepted. The dialog closes only when
+    // that state is read back (no optimistic UI; stream.spec covers the
+    // stream echo, this covers the REST echo when no stream is connected).
+    await page.route(`${API}/api/system/kill-switch`, (route) =>
+      route.fulfill({ json: posted ? armed : killSwitchView() }),
+    );
     await page.route(`${API}/api/system/kill-switch/arm`, async (route) => {
       posted = JSON.parse(route.request().postData() ?? "{}");
-      await route.fulfill({
-        json: killSwitchView({
-          active: true,
-          mode: "flatten",
-          operator: "joe",
-          reason: "data feed went stale mid-session",
-          requires_flatten: true,
-          blocks_new_risk: true,
-        }),
-      });
+      await route.fulfill({ json: armed });
     });
 
     await page.goto("/trading/risk");
@@ -118,6 +124,8 @@ test.describe("kill switch", () => {
       mode: "flatten",
       reason: "data feed went stale mid-session",
     });
+    await expect(page.getByTestId("kill-switch-status")).toHaveAttribute("data-active", "true");
+    await expect(page.getByTestId("kill-switch-confirming")).toHaveCount(0);
   });
 
   test("cancelling posts nothing", async ({ page }) => {

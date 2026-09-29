@@ -1,7 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { useApi } from "@/lib/api";
+import { useApi } from "@/lib/query";
 import type { Page } from "@/lib/types";
 import { AsyncBoundary } from "./AsyncBoundary";
 import { CaveatList, PageHead, SourceBadge, TableWrap } from "./primitives";

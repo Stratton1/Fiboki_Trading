@@ -251,8 +251,19 @@ export function healthReport(overrides: Record<string, unknown> = {}) {
   };
 }
 
+/**
+ * GET /api/stream, held open and never answered: the stream stays
+ * "connecting", deterministically, and every view reads REST exactly as it
+ * did before the stream existed. Tests of the stream install tests/e2e/sse.ts
+ * instead (a later route wins).
+ */
+export async function holdStream(page: Page) {
+  await page.route(`${API}/api/stream*`, () => new Promise<void>(() => undefined));
+}
+
 /** Install the default happy-path API. Individual tests override routes after. */
 export async function mockApi(page: Page) {
+  await holdStream(page);
   await page.route(`${API}/api/system/execution-mode`, (route: Route) =>
     route.fulfill({ json: modeBanner() }),
   );
@@ -315,19 +326,136 @@ export function liveBanner(overrides: Record<string, unknown> = {}) {
   });
 }
 
+/** One attention item, shaped as routers/command.py's AttentionItem. */
+export function attentionItem(
+  id: string,
+  severity: string,
+  deepLink: string,
+  overrides: Record<string, unknown> = {},
+) {
+  return {
+    id,
+    category: "test",
+    severity,
+    title: `Item ${id}`,
+    reason: `Reason ${id}`,
+    deep_link: deepLink,
+    as_of: "2026-09-19T12:00:00Z",
+    score: figure(400, "paper", "score"),
+    ...overrides,
+  };
+}
+
+/** GET /api/command/attention: the server-ranked queue, in the server's order. */
+export function attentionPage(items?: Record<string, unknown>[]) {
+  const list = items ?? [
+    attentionItem("kill_switch:armed", "critical", "/trading/risk", {
+      title: "Daily loss at 82% of its limit",
+    }),
+    attentionItem("strategy_review:abc:candidate", "info", "/trading/candidates", {
+      title: "Two candidates await review",
+    }),
+  ];
+  return {
+    items: list,
+    total: list.length,
+    offset: 0,
+    limit: 50,
+    source: source("live", "Ranked by the platform."),
+    caveats: [],
+  };
+}
+
+/** One incident, shaped as routers/incidents.py's IncidentView. */
+export function incident(overrides: Record<string, unknown> = {}) {
+  return {
+    id: "inc-1",
+    key: "worker_heartbeat_late",
+    event: "worker.heartbeat_late",
+    source: "alert_log",
+    title: "Worker heartbeat late",
+    severity: "warning",
+    status: "open",
+    first_seen: "2026-09-19T11:55:00Z",
+    last_seen: "2026-09-19T11:58:00Z",
+    occurrences: figure(3, "paper", "count"),
+    acknowledged_by: null,
+    acknowledged_at: null,
+    resolved_at: null,
+    deep_link: "/system/incidents/inc-1",
+    as_of: "2026-09-19T12:00:00Z",
+    timeline: [],
+    ...overrides,
+  };
+}
+
+/** GET /api/system/incidents. */
+export function incidentsPage(items?: Record<string, unknown>[]) {
+  const list = items ?? [incident()];
+  return {
+    items: list,
+    total: list.length,
+    offset: 0,
+    limit: 100,
+    source: source("live", "Incident read model."),
+    caveats: [],
+  };
+}
+
 /**
- * The shell's own reads (health for the status bar, the operator) on top of
- * mockApi, so a test sees a fully answered shell rather than "unreachable".
+ * The shell's own reads (health for the status bar, the operator, the
+ * command screen's queue and incidents) on top of mockApi, so a test sees a
+ * fully answered shell rather than "unreachable".
+ *
+ * `operator: false` makes /api/auth/me fail without saying "no session"
+ * (a 503): the platform did not supply an operator. `"unauthenticated"` is
+ * the 401 that sends the workstation to the sign-in page.
  */
-export async function mockShell(page: Page, options: { operator?: boolean } = {}) {
+export async function mockShell(
+  page: Page,
+  options: { operator?: boolean | "unauthenticated" | Record<string, unknown> } = {},
+) {
   await mockApi(page);
   await page.route(`${API}/api/health`, (route: Route) => route.fulfill({ json: healthReport() }));
-  await page.route(`${API}/api/auth/me`, (route: Route) =>
-    options.operator === false
-      ? route.fulfill({
-          status: 401,
-          json: { code: "not_authenticated", detail: "No session.", correlation_id: "cid-me", context: {} },
-        })
-      : route.fulfill({ json: principal() }),
+  await page.route(`${API}/api/command/attention`, (route: Route) =>
+    route.fulfill({ json: attentionPage() }),
   );
+  await page.route(`${API}/api/system/incidents`, (route: Route) =>
+    route.fulfill({ json: incidentsPage() }),
+  );
+  const op = options.operator;
+  await page.route(`${API}/api/auth/me`, (route: Route) => {
+    if (op === false) {
+      return route.fulfill({
+        status: 503,
+        json: { code: "unavailable", detail: "Sessions unavailable.", correlation_id: "cid-me", context: {} },
+      });
+    }
+    if (op === "unauthenticated") {
+      return route.fulfill({
+        status: 401,
+        json: { code: "not_authenticated", detail: "Sign in to continue.", correlation_id: "cid-me", context: {} },
+      });
+    }
+    return route.fulfill({ json: principal(typeof op === "object" ? op : {}) });
+  });
+}
+
+/** GET /api/trading/risk's `data` (RiskStateView). */
+export function riskState(overrides: Record<string, unknown> = {}) {
+  return {
+    limits_version: "limits_v1_paper",
+    kill_switch_active: false,
+    kill_switch_mode: null,
+    new_risk_permitted: true,
+    new_risk_reason: "within limits",
+    closing_permitted: true,
+    daily_loss_pct: figure(-0.42, "paper", "pct"),
+    max_daily_loss_pct: figure(2, "paper", "pct"),
+    drawdown_pct: figure(1.1, "paper", "pct"),
+    max_drawdown_limit_pct: figure(10, "paper", "pct"),
+    margin_utilisation_pct: figure(null, "paper", "pct"),
+    breaches: [],
+    ...overrides,
+  };
 }

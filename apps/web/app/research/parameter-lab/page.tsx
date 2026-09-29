@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
-import { useApi } from "@/lib/api";
+import { parseAsString, useQueryState } from "nuqs";
+import { UrlState } from "@/components/UrlState";
+import { useApi } from "@/lib/query";
 import { AsyncBoundary } from "@/components/AsyncBoundary";
 import { FigureValue } from "@/components/FigureValue";
 import {
@@ -20,15 +21,37 @@ import type { Envelope, Page, ParameterLabView, StrategyRow } from "@/lib/types"
  * warning the API computes from it. Sweeping a grid is a multiple-testing
  * burden, and an operator turning five knobs should be told what that does to
  * every later Sharpe, not discover it in a validation report.
+ *
+ * The selected strategy is URL state (`?strategy=<id>`).
  */
+const strategyParser = parseAsString.withOptions({ history: "replace" });
+
 export default function ParameterLabPage() {
+  return (
+    <UrlState fallback={<ParameterLab selected={null} onSelect={() => undefined} />}>
+      <ParameterLabFromUrl />
+    </UrlState>
+  );
+}
+
+function ParameterLabFromUrl() {
+  const [selected, setSelected] = useQueryState("strategy", strategyParser);
+  return <ParameterLab selected={selected} onSelect={(id) => void setSelected(id)} />;
+}
+
+function ParameterLab({
+  selected,
+  onSelect,
+}: {
+  selected: string | null;
+  onSelect: (id: string) => void;
+}) {
   const strategies = useApi<Page<StrategyRow>>("/api/research/strategies");
-  const [selected, setSelected] = useState<string | null>(null);
   const chosen =
     selected ??
     (strategies.status === "success" ? (strategies.data.items[0]?.strategy_id ?? null) : null);
   const lab = useApi<Envelope<ParameterLabView>>(
-    chosen ? `/api/research/parameter-lab/${chosen}` : null,
+    chosen ? `/api/research/parameter-lab/${encodeURIComponent(chosen)}` : null,
   );
 
   return (
@@ -48,7 +71,7 @@ export default function ParameterLabPage() {
               id="strategy-select"
               data-testid="strategy-select"
               value={chosen ?? ""}
-              onChange={(e) => setSelected(e.target.value)}
+              onChange={(e) => onSelect(e.target.value)}
             >
               {page.items.map((row) => (
                 <option key={row.strategy_id} value={row.strategy_id}>

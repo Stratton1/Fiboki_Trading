@@ -1,6 +1,6 @@
 "use client";
 
-import { useApi } from "@/lib/api";
+import { useApi } from "@/lib/query";
 import { AsyncBoundary } from "@/components/AsyncBoundary";
 import { Heatmap } from "@/components/charts";
 import { CaveatList, PageHead, SourceBadge } from "@/components/primitives";

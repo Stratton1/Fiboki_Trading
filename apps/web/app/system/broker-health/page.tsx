@@ -1,6 +1,6 @@
 "use client";
 
-import { useApi } from "@/lib/api";
+import { useApi } from "@/lib/query";
 import { AsyncBoundary } from "@/components/AsyncBoundary";
 import { Card, PageHead, SourceBadge, TableWrap } from "@/components/primitives";
 import type { BrokerHealthView, Envelope } from "@/lib/types";

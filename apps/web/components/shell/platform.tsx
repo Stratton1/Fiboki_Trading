@@ -1,7 +1,12 @@
 "use client";
 
-import { createContext, useContext, type ReactNode } from "react";
-import { useApi, type ApiHandle } from "@/lib/api";
+import { usePathname } from "next/navigation";
+import { createContext, useContext, useEffect, type ReactNode } from "react";
+import { LOGIN_PATH } from "@/lib/api";
+import { ME_PATH } from "@/lib/auth";
+import type { Freshness } from "@/lib/freshness";
+import { writeLive } from "@/lib/live-store";
+import { useApi, type ApiHandle } from "@/lib/query";
 import type {
   Envelope,
   ExecutionMode,
@@ -9,16 +14,12 @@ import type {
   HealthReport,
   PrincipalView,
 } from "@/lib/types";
-import { useFreshness, type Freshness } from "../AsyncBoundary";
 
 /**
- * The shell's three platform reads, made ONCE and shared: the execution mode
- * (every 30 s), health (every 20 s) and the signed-in operator (once).
- *
- * Before this, the banner, the kill switch and the promote page each fetched
- * the execution mode on their own, and could disagree for a poll interval.
- * Wave 2 replaces this with TanStack Query and the stream; until then this is
- * the single source.
+ * The shell's three platform reads, made ONCE and shared: the execution mode,
+ * health and the signed-in operator. All three are TanStack Query reads, so a
+ * page that reads the same path shares the same cache entry, and the stream
+ * updates them in place (mode, health) with no polling while it is live.
  */
 
 export type ModeKey = "loading" | "unknown" | ExecutionMode;
@@ -33,7 +34,10 @@ export interface ModeState {
   mode: ModeKey;
   banner: ExecutionModeBanner | null;
   stale: boolean;
-  /** False while the mode is loading or unknown: nothing mutating may be confirmed. */
+  /**
+   * False while the mode is loading or unknown, or the workstation is
+   * disconnected from the platform: nothing mutating may be confirmed.
+   */
   mutationsAllowed: boolean;
 }
 
@@ -45,20 +49,33 @@ interface Platform {
 
 const PlatformContext = createContext<Platform | null>(null);
 
+/** REST poll intervals while the stream is not feeding these reads. */
 export const MODE_REFRESH_MS = 30_000;
 export const HEALTH_REFRESH_MS = 20_000;
 
 export function PlatformProvider({ children }: { children: ReactNode }) {
+  const signingIn = usePathname() === LOGIN_PATH;
   const modeHandle = useApi<Envelope<ExecutionModeBanner>>("/api/system/execution-mode", {
     refreshMs: MODE_REFRESH_MS,
   });
-  const freshness = useFreshness(modeHandle, modeHandle.refreshMs);
-  const health = useApi<HealthReport>("/api/health", { refreshMs: HEALTH_REFRESH_MS });
-  const me = useApi<PrincipalView>("/api/auth/me");
+  const health = useApi<HealthReport>(signingIn ? null : "/api/health", {
+    refreshMs: HEALTH_REFRESH_MS,
+  });
+  // No "who am I" on the sign-in page: its 401 would redirect to itself.
+  const me = useApi<PrincipalView>(signingIn ? null : ME_PATH);
+
+  // The worker heartbeat from REST, for freshness while the stream is down.
+  const workerAge = health.status === "success" ? health.data.worker_heartbeat_age_seconds : undefined;
+  const healthAsOf = health.status === "success" ? health.asOf : null;
+  useEffect(() => {
+    if (workerAge === undefined || healthAsOf === null) return;
+    writeLive(() => ({ restWorker: { ageS: workerAge, receivedAt: Date.parse(healthAsOf) } }));
+  }, [workerAge, healthAsOf]);
 
   const banner = modeHandle.status === "success" ? modeHandle.data.data : null;
   const mode: ModeKey =
     modeHandle.status === "loading" ? "loading" : banner === null ? "unknown" : banner.mode;
+  const freshness = modeHandle.status === "success" ? modeHandle.freshness : null;
 
   const value: Platform = {
     mode: {
@@ -66,8 +83,8 @@ export function PlatformProvider({ children }: { children: ReactNode }) {
       freshness,
       mode,
       banner,
-      stale: freshness?.stale === true,
-      mutationsAllowed: banner !== null,
+      stale: freshness === "stale" || freshness === "disconnected",
+      mutationsAllowed: banner !== null && freshness !== "disconnected",
     },
     health,
     // Absent unless the platform answered; the UI then omits the name rather

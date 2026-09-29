@@ -2,9 +2,16 @@ import type { NextConfig } from "next";
 
 const DEV = process.env.NODE_ENV !== "production";
 
-/** The API origin the browser calls (lib/api.ts). Baked in at build time. */
-function apiOrigin(): string {
-  const raw = process.env.NEXT_PUBLIC_FIBOKI_API ?? "http://127.0.0.1:8000";
+/**
+ * The API origin the browser calls (lib/api.ts). Baked in at build time.
+ * An EMPTY value means same-origin: the page calls relative /api/* URLs and
+ * the rewrite below proxies them (how scripts/dev-up.sh and the launchd
+ * service run it). Same-origin needs no extra connect-src entry.
+ */
+function apiOrigin(): string | null {
+  const raw = process.env.NEXT_PUBLIC_FIBOKI_API;
+  if (raw === undefined) return "http://127.0.0.1:8000";
+  if (raw.trim() === "") return null;
   try {
     return new URL(raw).origin;
   } catch {
@@ -38,7 +45,7 @@ function contentSecurityPolicy(): string {
     "style-src": ["'self'", ...(DEV ? ["'unsafe-inline'"] : [])],
     "img-src": ["'self'", "data:"],
     "font-src": ["'self'"],
-    "connect-src": ["'self'", api, ...(DEV ? ["ws:", "wss:"] : [])],
+    "connect-src": ["'self'", ...(api ? [api] : []), ...(DEV ? ["ws:", "wss:"] : [])],
     "object-src": ["'none'"],
     "base-uri": ["'self'"],
     "form-action": ["'self'"],
@@ -73,6 +80,21 @@ const config: NextConfig = {
     const target = process.env.FIBOKI_API_PROXY_TARGET;
     if (!target) return [];
     return [{ source: "/api/:path*", destination: `${target}/api/:path*` }];
+  },
+  /**
+   * The plan's section URLs (plan §4), which the backend's attention queue
+   * already links to (routers/command.py), mapped to where those sections
+   * live today (components/shell/sections.ts). Temporary (307): Wave 4 moves
+   * the screens to these URLs and these entries go. Entity links such as
+   * /lifecycle/<hash> and /system/incidents/<id> have no screen yet and are
+   * deliberately NOT redirected to a list that would lose the entity.
+   */
+  async redirects() {
+    return [
+      { source: "/risk", destination: "/trading/risk", permanent: false },
+      { source: "/system", destination: "/system/services", permanent: false },
+      { source: "/journal", destination: "/trading/execution", permanent: false },
+    ];
   },
   async headers() {
     return [

@@ -157,7 +157,7 @@ export default function ConfirmDialogLayer({
           </>
         ) : null}
 
-        {selected ? (
+        {selected && selected.consequences.length > 0 ? (
           <>
             <p className="field-label">What this will do</p>
             <ul className="dialog__consequences" data-testid="confirm-consequences">
@@ -166,7 +166,7 @@ export default function ConfirmDialogLayer({
               ))}
             </ul>
           </>
-        ) : choices.length > 0 ? (
+        ) : selected ? null : choices.length > 0 ? (
           <p className="muted" data-testid="confirm-no-choice">
             Select an action above to see its consequences.
           </p>
