@@ -28,10 +28,20 @@ cd "$ROOT"
 
 ENV_FILE="${FIBOKI_HOME:-$HOME/.fiboki}/env"
 if [ -f "$ENV_FILE" ]; then
-  set -a
-  # shellcheck disable=SC1090
-  . "$ENV_FILE"
-  set +a
+  # Read KEY=VALUE lines WITHOUT shell expansion: operator password hashes are
+  # scrypt strings full of `$`, and sourcing the file would expand them into
+  # nothing (or abort under `set -u`). Values may be wrapped in single or
+  # double quotes; blank lines and # comments are ignored.
+  while IFS= read -r line || [ -n "$line" ]; do
+    case "$line" in ''|'#'*) continue ;; esac
+    key="${line%%=*}"; value="${line#*=}"
+    case "$key" in *[!A-Z0-9_]*|'') echo "fiboki-service: ignoring malformed line in $ENV_FILE: ${line%%=*}=..." >&2; continue ;; esac
+    case "$value" in
+      \'*\') value="${value#\'}"; value="${value%\'}" ;;
+      \"*\") value="${value#\"}"; value="${value%\"}" ;;
+    esac
+    export "$key=$value"
+  done < "$ENV_FILE"
 fi
 
 # ---- paper only (after the env file, deliberately) ------------------------
