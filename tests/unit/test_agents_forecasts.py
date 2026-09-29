@@ -175,12 +175,15 @@ EXPECTED_CAPABILITIES = {
     "WRITE_EXPERIMENT_DESIGN", "WRITE_CRITIQUE", "WRITE_RESEARCH_NOTE",
     "WRITE_FORECAST",
     "SUBMIT_JOB",
+    # +2 (21 -> 23), agentic plan Wave 4 event channel: READ_NEWS_SNAPSHOT for
+    # query_news, WRITE_EVENT_ANNOTATION for the quarantined annotation store.
+    "READ_NEWS_SNAPSHOT", "WRITE_EVENT_ANNOTATION",
 }
 
 
-def test_capability_set_is_pinned_at_21() -> None:
+def test_capability_set_is_pinned_at_23() -> None:
     assert {c.name for c in Capability} == EXPECTED_CAPABILITIES
-    assert len(Capability) == 21
+    assert len(Capability) == 23
 
 
 def test_the_forecast_capabilities_pass_the_execution_guard() -> None:

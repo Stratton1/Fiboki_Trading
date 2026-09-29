@@ -28,6 +28,8 @@ EXPECTED_ROLES = {
     "data_quality_analyst",
     "failure_investigator",
     "research_librarian",
+    # agentic plan Wave 4: the tool-less (one write, no reads) headline classifier.
+    "event_classifier",
 }
 
 

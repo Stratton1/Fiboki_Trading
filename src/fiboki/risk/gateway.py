@@ -12,7 +12,7 @@ tree asserting that no other module constructs an ``Order`` at all.
 
 Three properties matter more than the individual checks:
 
-**Every check is named.** ``RiskDecision.checks_run`` lists all nineteen check
+**Every check is named.** ``RiskDecision.checks_run`` lists all twenty check
 names on every decision, allowed or blocked. An audit can prove which rules ran
 rather than trusting that they did.
 
@@ -30,12 +30,19 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 from dataclasses import asdict, dataclass, field
-from typing import Any, Protocol
+from datetime import datetime
+from typing import Any, Protocol, runtime_checkable
 
 import pandas as pd
 
 from fiboki.backtest.locks import LockSource, LockStateUnavailable
-from fiboki.core.contracts import ExecutionTelemetry, RiskDecision, TradePlan
+from fiboki.core.contracts import (
+    ExecutionTelemetry,
+    RiskDecision,
+    TradePlan,
+    VetoAssessment,
+    is_shadow_reason,
+)
 from fiboki.core.enums import ExecutionMode, StrategyLifecycle
 from fiboki.core.instruments import Instrument
 from fiboki.core.instruments import get as get_instrument
@@ -46,6 +53,7 @@ from fiboki.strategy.dsl import LOCKS_DECLARED_FEATURE
 
 __all__ = [
     "AttemptRecorder",
+    "EventVetoProvider",
     "ExecutionAttempt",
     "ExitContext",
     "InMemoryAttemptRecorder",
@@ -100,6 +108,28 @@ class StrategyView:
     degraded: bool = False
 
 
+@runtime_checkable
+class EventVetoProvider(Protocol):
+    """Where the ``event_veto`` check gets its answer.
+
+    Implemented by :class:`fiboki.marketstate.events.EventVetoSource`, which
+    ``risk`` may not import (``marketstate`` sits above it), hence a protocol.
+    ``assess`` must be point-in-time (only annotations available by ``at``)
+    and must turn its own missing or unreadable input into
+    ``available=False`` rather than raise: that channel is fail-OPEN by design
+    (docs/v2/PORTFOLIO_RISK_STANDARD.md §3). An exception that escapes it is a
+    bug and blocks, like any other check error.
+    """
+
+    @property
+    def enabled(self) -> bool: ...
+
+    @property
+    def policy_version(self) -> str: ...
+
+    def assess(self, instrument: str, at: datetime) -> VetoAssessment: ...
+
+
 @dataclass(frozen=True, slots=True)
 class RiskContext:
     """Everything the gateway needs. Assembled by the caller, never fetched here.
@@ -132,6 +162,10 @@ class RiskContext:
     #: currency at decision time. Used for notional arithmetic.
     fx_quote_to_account: float = 1.0
     extra: dict[str, Any] = field(default_factory=dict)
+    #: The event-veto source (agentic plan, Wave 4). ``None`` means not wired:
+    #: the ``event_veto`` check passes and the attempt row says
+    #: ``event_veto_policy: not_wired``, so an unwired shadow log is visible.
+    event_veto: EventVetoProvider | None = None
 
     @property
     def instrument(self) -> Instrument:
@@ -217,7 +251,9 @@ class ExecutionAttempt:
 
     @property
     def reason(self) -> str:
-        return ";".join(self.decision.reasons) if self.decision.reasons else ""
+        """The BLOCKING reasons. Shadow notes never read as a refusal."""
+        blocking = self.decision.blocking_reasons
+        return ";".join(blocking) if blocking else ""
 
     def to_telemetry(self, *, spread_at_decision: float = 0.0) -> ExecutionTelemetry:
         """Render as :class:`ExecutionTelemetry` so blocked and filled orders
@@ -244,6 +280,7 @@ class ExecutionAttempt:
             extra={
                 "blocked_by_risk_gateway": not self.allowed,
                 "checks_run": list(self.decision.checks_run),
+                "shadow_reasons": list(self.decision.shadow_reasons),
                 "limits_version": self.limits_version,
                 "limits_fingerprint": self.limits_fingerprint,
                 "strategy_id": self.strategy_id,
@@ -299,6 +336,19 @@ class _CheckFailure(Exception):
         self.reason = reason
 
 
+class _ShadowNote(Exception):
+    """Internal: a SHADOW check recorded what it would have done. Never blocks.
+
+    Each reason must carry a prefix from
+    :data:`fiboki.core.contracts.SHADOW_REASON_PREFIXES`; one that does not is
+    treated as a block, so a mislabelled note fails closed.
+    """
+
+    def __init__(self, *reasons: str) -> None:
+        super().__init__(";".join(reasons))
+        self.reasons = reasons
+
+
 class RiskGateway:
     """Pre-order risk control. Mandatory, exhaustive, fail-closed.
 
@@ -324,6 +374,7 @@ class RiskGateway:
         "abnormal_spread",
         "broker_health",
         "event_blackout",
+        "event_veto",
         "instrument_lock",
         "max_per_trade_risk",
         "max_account_risk",
@@ -381,6 +432,8 @@ class RiskGateway:
                 handler(ctx, limits)
             except _CheckFailure as blocked:
                 reasons.append(blocked.reason)
+            except _ShadowNote as note:
+                reasons.extend(note.reasons)
             except Exception as exc:
                 # FAIL CLOSED. A check that raises has not passed. Swallowing
                 # this and continuing is how a risk system quietly becomes
@@ -392,7 +445,8 @@ class RiskGateway:
             reasons.extend(coverage)
 
         decision = RiskDecision(
-            allowed=not reasons,
+            # Shadow notes are evidence, not votes: only blocking reasons count.
+            allowed=not [r for r in reasons if not is_shadow_reason(r)],
             reasons=tuple(reasons),
             adjusted_size=None,
             checks_run=tuple(ran),
@@ -495,6 +549,9 @@ class RiskGateway:
                 "request_kind": ctx.request_kind.value,
                 "risk_amount": ctx.plan.risk_amount,
                 "portfolio_weight": ctx.plan.portfolio_weight,
+                "event_veto_policy": (
+                    ctx.event_veto.policy_version if ctx.event_veto is not None else "not_wired"
+                ),
             },
         )
         self.recorder.record(attempt)
@@ -610,6 +667,36 @@ class RiskGateway:
                 continue
             if abs(ev - ctx.now) <= window:
                 self._block(f"event_blackout:{ev.isoformat()}")
+
+    def _check_event_veto(self, ctx: RiskContext, limits: LimitSet) -> None:
+        """The agent event channel: may only refuse a NEW entry. Twentieth check.
+
+        Reads one thing, ``ctx.event_veto.assess(instrument, now)``, and has
+        exactly two outcomes besides passing: ``event_veto:<code>`` (block;
+        only when the policy is enabled) or ``event_veto_shadow:<...>`` (a
+        non-blocking note of what it would have done, or that its source was
+        unavailable). It never reads or changes a size, a stop, an exit or the
+        kill switch, and it is not in :attr:`EXIT_CHECKS` (AST-tested in
+        ``tests/unit/test_event_veto_gateway.py``).
+
+        Only ``RequestKind.OPEN`` is screened: an INCREASE adds to a position
+        the operator already holds and is left to the other nineteen checks.
+        Fail-open on missing input is the source's job (it alerts); a raise
+        here still fails closed like every other check.
+        """
+        source = ctx.event_veto
+        if source is None or ctx.request_kind is not RequestKind.OPEN:
+            return
+        verdict = source.assess(ctx.plan.instrument, ctx.now)
+        if verdict.veto is not None and verdict.enabled:
+            self._block(f"event_veto:{verdict.veto.code}")
+        notes: list[str] = []
+        if not verdict.available:
+            notes.append(f"event_veto_shadow:unavailable:{verdict.detail or 'unknown'}")
+        if verdict.veto is not None:
+            notes.append(f"event_veto_shadow:{verdict.veto.code}")
+        if notes:
+            raise _ShadowNote(*notes)
 
     def _check_instrument_lock(self, ctx: RiskContext, limits: LimitSet) -> None:
         """Entry locks declared by strategy documents. Fail-closed.

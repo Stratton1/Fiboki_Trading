@@ -56,6 +56,10 @@ class Capability(str, Enum):
     #: its own scorecard can learn to game it (hedge towards 0.5, forecast only
     #: what it already knows). Only roles that do not forecast hold this.
     READ_FORECAST_SCORES = "read:forecast_scores"
+    #: Recorded headlines, point-in-time (``observed_at <= as_of``), returned as
+    #: quoted data objects. Deliberately NOT held by the event classifier: the
+    #: role that reads untrusted text must not also be able to go and fetch more.
+    READ_NEWS_SNAPSHOT = "read:news_snapshot"
 
     # -- writing to the RESEARCH domain, and nowhere else -----------------
     WRITE_HYPOTHESIS = "write:hypothesis"
@@ -67,6 +71,11 @@ class Capability(str, Enum):
     #: A pre-registered, scoreable claim about price relative to price. Lands in
     #: the append-only research store; nothing downstream reads it as a signal.
     WRITE_FORECAST = "write:forecast"
+    #: A structured event classification (type, buckets, severity, scheduled,
+    #: confidence) into the QUARANTINED annotation store. Nothing reads it but a
+    #: deterministic veto policy that is off by default and can only block a new
+    #: entry; it cannot size, stop, exit or touch a limit.
+    WRITE_EVENT_ANNOTATION = "write:event_annotation"
 
     # -- asking a deterministic worker to do something --------------------
     SUBMIT_JOB = "submit:job"

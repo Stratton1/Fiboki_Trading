@@ -2,7 +2,8 @@
 
 Four adapters share one :class:`LLMProvider` contract:
 
-* :class:`LocalHTTPProvider`   -- Ollama / llama.cpp style HTTP server.
+* :class:`LocalHTTPProvider`   -- Ollama; its subclass :class:`LlamaCppProvider`
+  speaks to llama.cpp's ``llama-server``.
 * :class:`OpenAICompatibleProvider` -- anything speaking ``/v1/chat/completions``.
 * :class:`AnthropicProvider`   -- the Messages API.
 * :class:`EchoProvider`        -- deterministic, offline, for tests.
@@ -26,8 +27,12 @@ Running against a real local model
 ----------------------------------
 :func:`ollama_http_client` builds a real ``httpx.Client`` (no retries, no proxy
 environment, explicit timeouts) and :meth:`LocalHTTPProvider.for_ollama`
-declares one named Ollama model with a fixed context size.  Both are called
-explicitly by the operator; nothing here builds a client on its own.
+declares one named Ollama model with a fixed context size.
+:meth:`LocalHTTPProvider.for_llama_cpp` instead DISCOVERS the model a running
+``llama-server`` has loaded (``/v1/models``, ``/props``) and pins it by the
+SHA-256 of its GGUF file; :meth:`LocalHTTPProvider.for_local_server` asks the
+server which of the two it is.  All are called explicitly by the operator (the
+same client suits both servers); nothing here builds a client on its own.
 :meth:`LLMProvider.model_fingerprint` returns the model id and weights digest
 that :class:`~fiboki.agents.session.AgentSession` stamps on every audit record,
 and :func:`smoke_test_provider` is the one-call check that a configured
@@ -37,12 +42,14 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 import re
 import time
 from abc import ABC, abstractmethod
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
 from enum import Enum
+from pathlib import Path
 from typing import Any, Protocol, runtime_checkable
 
 
@@ -443,6 +450,78 @@ class LocalHTTPProvider(LLMProvider):
             seed=seed,
         )
 
+    @classmethod
+    def for_llama_cpp(
+        cls,
+        base_url: str = "http://127.0.0.1:8080",
+        model: str | None = None,
+        *,
+        client: HTTPClient | None = None,
+        max_output_tokens: int = 2048,
+        timeout: float = 300.0,
+        seed: int | None = 0,
+        gguf_path: str | Path | None = None,
+        digest_cache_path: str | Path | None = None,
+    ) -> LlamaCppProvider:
+        """Discover the model a running ``llama-server`` has loaded and declare it.
+
+        See :class:`LlamaCppProvider`.  Unlike :meth:`for_ollama` this reads
+        the server at construction (``/v1/models`` and ``/props``), because
+        the model id, the per-slot context and the weights file are facts of
+        the running server, not of the operator's configuration.
+        """
+        return LlamaCppProvider.discover(
+            base_url,
+            model,
+            client=client,
+            max_output_tokens=max_output_tokens,
+            timeout=timeout,
+            seed=seed,
+            gguf_path=gguf_path,
+            digest_cache_path=digest_cache_path,
+        )
+
+    @classmethod
+    def for_local_server(
+        cls,
+        model: str | None,
+        *,
+        client: HTTPClient | None = None,
+        base_url: str = "http://127.0.0.1:11434",
+        **kwargs: Any,
+    ) -> LocalHTTPProvider:
+        """llama.cpp or Ollama at ``base_url``, decided by asking the server.
+
+        ``GET /props`` answering with ``default_generation_settings`` is
+        llama.cpp's ``llama-server`` (Ollama has no ``/props``); anything else
+        is treated as Ollama.  An unreachable server raises
+        :class:`ProviderUnavailable` rather than guessing which one it would
+        have been.  For llama.cpp ``model`` must be the id or an alias the
+        server reports in ``/v1/models`` (``None`` accepts the single model it
+        has loaded); for Ollama it is mandatory, because an Ollama server
+        holds many models and nothing here picks one for the operator.
+        """
+        if client is None:
+            raise ProviderUnavailable(
+                f"{base_url}: no HTTP client configured; cannot tell llama.cpp from Ollama"
+            )
+        props = _probe_llama_cpp_props(client, base_url.rstrip("/"), 10.0)
+        if props is not None:
+            allowed = {"max_output_tokens", "timeout", "seed", "gguf_path", "digest_cache_path"}
+            return cls.for_llama_cpp(
+                base_url, model, client=client, **{k: v for k, v in kwargs.items() if k in allowed}
+            )
+        if not model:
+            raise ProviderError(
+                f"{base_url} is not llama.cpp (no /props); as Ollama it needs an explicit "
+                "model name. There is no default model."
+            )
+        allowed = {"num_ctx", "max_output_tokens", "timeout", "seed"}
+        return cls.for_ollama(
+            model, client=client, base_url=base_url,
+            **{k: v for k, v in kwargs.items() if k in allowed},
+        )
+
     def models(self) -> tuple[ModelCapabilities, ...]:
         return self._models
 
@@ -560,6 +639,536 @@ class LocalHTTPProvider(LLMProvider):
             latency_ms=round((time.perf_counter() - started) * 1000.0, 3),
             finish_reason=str(body.get("done_reason") or "stop"),
             raw=body,
+        )
+
+
+#: ``llama-server`` builds (the ``bNNNN`` in ``/props`` ``build_info`` and in
+#: ``llama-server --version``) at which the structured-output wire format
+#: changed.  Each was read from the llama.cpp git history, not inferred:
+#:
+#: * b2487 (PR #5978, 2024-03-21): ``/v1/chat/completions`` accepts
+#:   ``response_format: {"type": "json_object", "schema": {...}}`` and turns
+#:   the schema into a GBNF grammar server-side.  Any other ``type`` is an
+#:   error.
+#: * b3782 (PR #9527, 2024-09-18): ``{"type": "json_schema", "json_schema":
+#:   {"schema": {...}}}`` (the OpenAI shape) is also accepted.
+#: * b4820 (PR #12168, 2025-03-04): fixes a variable-shadowing bug in that
+#:   branch.  Issues #10732 and #11988 report builds in between on which the
+#:   ``json_schema`` form was accepted and then IGNORED (unconstrained output,
+#:   no error), so this provider only sends it from b4820.
+#:
+#: The ``json_object`` + ``schema`` form still works on current master
+#: (``tools/server/server-common.cpp``), so it is the fallback for older
+#: builds and for a build whose number the server does not report.
+LLAMA_CPP_MIN_SCHEMA_BUILD = 2487
+LLAMA_CPP_JSON_SCHEMA_BUILD = 4820
+
+
+class StructuredMode(str, Enum):
+    """How a JSON schema is put on the wire to ``llama-server``."""
+
+    #: ``response_format: {"type": "json_schema", "json_schema": {...}}``.
+    JSON_SCHEMA = "json_schema"
+    #: ``response_format: {"type": "json_object", "schema": {...}}``: the
+    #: server compiles the schema to GBNF with its own converter.
+    JSON_OBJECT_SCHEMA = "json_object_schema"
+
+
+def parse_llama_cpp_build(build_info: str | None) -> int | None:
+    """``b6358-c466abe1`` -> 6358.  ``None`` when the server does not say."""
+    if not build_info:
+        return None
+    match = re.match(r"^\s*b(\d+)", str(build_info))
+    return int(match.group(1)) if match else None
+
+
+def structured_mode_for_build(build: int | None) -> StructuredMode:
+    """The schema wire form to use for a given ``llama-server`` build.
+
+    An unknown build gets the ``json_object`` form, which every build since
+    b2487 honours, rather than the ``json_schema`` form that some builds
+    before b4820 silently ignored.  A known build older than b2487 cannot
+    constrain output to a schema at all and raises.
+    """
+    if build is None:
+        return StructuredMode.JSON_OBJECT_SCHEMA
+    if build < LLAMA_CPP_MIN_SCHEMA_BUILD:
+        raise ProviderError(
+            f"llama.cpp build b{build} predates schema-constrained output "
+            f"(b{LLAMA_CPP_MIN_SCHEMA_BUILD}); upgrade llama.cpp (brew upgrade llama.cpp)"
+        )
+    if build < LLAMA_CPP_JSON_SCHEMA_BUILD:
+        return StructuredMode.JSON_OBJECT_SCHEMA
+    return StructuredMode.JSON_SCHEMA
+
+
+#: Split GGUF shards: ``<stem>-00001-of-00003.gguf``.
+_GGUF_SHARD = re.compile(r"^(?P<stem>.+)-(?P<index>\d{5})-of-(?P<count>\d{5})\.gguf$")
+
+#: In-process digest cache: key (paths, sizes, mtimes) -> ``sha256:<hex>``.
+_GGUF_DIGESTS: dict[str, str] = {}
+
+
+def gguf_shard_paths(path: str | Path) -> tuple[Path, ...]:
+    """Every file that makes up the model ``path`` names, in load order."""
+    first = Path(path)
+    match = _GGUF_SHARD.match(first.name)
+    if match is None:
+        return (first,)
+    count = int(match.group("count"))
+    stem = match.group("stem")
+    return tuple(first.with_name(f"{stem}-{i:05d}-of-{count:05d}.gguf") for i in range(1, count + 1))
+
+
+def gguf_weights_digest(
+    path: str | Path, *, cache_path: str | Path | None = None, chunk_bytes: int = 8 << 20
+) -> tuple[str, dict[str, Any]]:
+    """``sha256:<hex>`` of the GGUF weights at ``path``, and how it was obtained.
+
+    The digest is the SHA-256 of the file's bytes, so for a single-file model
+    it equals ``shasum -a 256 <file>`` and the ``lfs.sha256`` Hugging Face
+    publishes for that file.  A split model (``-00001-of-0000N.gguf``) is
+    hashed as the concatenation of its shards in order.
+
+    Hashing tens of gigabytes takes a while, so the result is cached keyed on
+    each shard's resolved path, size and ``mtime_ns``: in memory for the life
+    of the process and, when ``cache_path`` is given, in a small JSON file.  A
+    changed size or modification time is a cache miss.  A file replaced with
+    one of identical size AND a forged mtime would be missed; that is the
+    stated limit of the cache, and deleting the cache file forces a re-hash.
+    """
+    shards = gguf_shard_paths(path)
+    stats: list[tuple[str, int, int]] = []
+    for shard in shards:
+        try:
+            resolved = shard.expanduser().resolve(strict=True)
+            st = resolved.stat()
+        except OSError as exc:
+            raise ProviderError(f"GGUF weights file {shard} is not readable: {exc}") from exc
+        stats.append((str(resolved), int(st.st_size), int(st.st_mtime_ns)))
+    key = json.dumps(stats, separators=(",", ":"))
+    info: dict[str, Any] = {"shards": [s[0] for s in stats], "bytes": sum(s[1] for s in stats)}
+    cached = _GGUF_DIGESTS.get(key)
+    if cached is not None:
+        return cached, {**info, "cache": "memory"}
+    disk: dict[str, str] = {}
+    cache_file = Path(cache_path).expanduser() if cache_path is not None else None
+    if cache_file is not None and cache_file.exists():
+        try:
+            loaded = json.loads(cache_file.read_text(encoding="utf-8"))
+            disk = {str(k): str(v) for k, v in dict(loaded).items()}
+        except (OSError, ValueError, TypeError):
+            disk = {}  # a corrupt cache is only a cache: re-hash
+    if key in disk and re.fullmatch(r"sha256:[0-9a-f]{64}", disk[key]):
+        _GGUF_DIGESTS[key] = disk[key]
+        return disk[key], {**info, "cache": "file"}
+    hasher = hashlib.sha256()
+    for resolved_path, _size, _mtime in stats:
+        try:
+            with open(resolved_path, "rb") as handle:
+                while True:
+                    block = handle.read(chunk_bytes)
+                    if not block:
+                        break
+                    hasher.update(block)
+        except OSError as exc:
+            raise ProviderError(f"GGUF weights file {resolved_path} is not readable: {exc}") from exc
+    digest = f"sha256:{hasher.hexdigest()}"
+    _GGUF_DIGESTS[key] = digest
+    if cache_file is not None:
+        disk[key] = digest
+        try:
+            cache_file.parent.mkdir(parents=True, exist_ok=True)
+            tmp = cache_file.with_suffix(cache_file.suffix + ".tmp")
+            tmp.write_text(json.dumps(disk, indent=1, sort_keys=True), encoding="utf-8")
+            os.replace(tmp, cache_file)
+        except OSError:
+            pass  # the digest is correct either way; only the cache failed
+    return digest, {**info, "cache": "computed"}
+
+
+def _get_json_strict(client: HTTPClient, url: str, timeout: float) -> dict[str, Any]:
+    """GET a JSON object or raise.  Discovery must not fall back to a guess."""
+    get = getattr(client, "get", None)
+    if not callable(get):
+        raise ProviderUnavailable(f"{url}: the HTTP client cannot GET; discovery needs it")
+    try:
+        response = get(url, headers={}, timeout=timeout)
+    except Exception as exc:
+        raise ProviderUnavailable(f"{url}: {exc}") from exc
+    status = getattr(response, "status_code", 200)
+    if status >= 400:
+        raise ProviderError(f"{url}: HTTP {status}: {getattr(response, 'text', '')[:400]}")
+    try:
+        body = response.json()
+    except ValueError as exc:
+        raise ProviderError(f"{url}: response body is not JSON: {exc}") from exc
+    if not isinstance(body, Mapping):
+        raise ProviderError(f"{url}: expected a JSON object, got {type(body).__name__}")
+    return dict(body)
+
+
+def _probe_llama_cpp_props(client: HTTPClient, base_url: str, timeout: float) -> dict[str, Any] | None:
+    """``/props`` if the server is llama.cpp, ``None`` if it answers but is not.
+
+    Raises :class:`ProviderUnavailable` when nothing answers at all.
+    """
+    get = getattr(client, "get", None)
+    if not callable(get):
+        raise ProviderUnavailable(f"{base_url}: the HTTP client cannot GET; cannot probe")
+    try:
+        response = get(f"{base_url}/props", headers={}, timeout=timeout)
+    except Exception as exc:
+        raise ProviderUnavailable(f"{base_url}/props: {exc}") from exc
+    if getattr(response, "status_code", 200) >= 400:
+        return None
+    try:
+        body = response.json()
+    except ValueError:
+        return None
+    if isinstance(body, Mapping) and isinstance(body.get("default_generation_settings"), Mapping):
+        return dict(body)
+    return None
+
+
+def _error_message(response: Any) -> str:
+    """The ``error.message`` of an OpenAI-shaped error body, else the raw text."""
+    try:
+        body = response.json()
+    except Exception:
+        return str(getattr(response, "text", ""))[:400]
+    if isinstance(body, Mapping):
+        err = body.get("error")
+        if isinstance(err, Mapping):
+            return str(err.get("message") or err)[:400]
+        if err:
+            return str(err)[:400]
+    return str(getattr(response, "text", ""))[:400]
+
+
+class LlamaCppProvider(LocalHTTPProvider):
+    """``llama-server`` (llama.cpp) through its OpenAI-compatible endpoint.
+
+    Built by :meth:`LocalHTTPProvider.for_llama_cpp`, which discovers:
+
+    * the model id from ``GET /v1/models`` (the ``--alias`` if one was given,
+      otherwise the ``-m`` path; ``aliases`` is honoured when present);
+    * the per-slot context ``default_generation_settings.n_ctx``, the weights
+      path ``model_path`` and ``build_info`` from ``GET /props``.  Shapes as
+      documented in ``tools/server/README.md`` of llama.cpp and produced by
+      ``get_res_props`` in ``tools/server/server-context.cpp``.
+
+    ``name`` stays ``"local"`` on purpose: the offline evals FAIL a local
+    record with no weights digest and only mark other providers not
+    evaluable, and a llama.cpp model is exactly as pinnable as an Ollama one.
+    The backend is recorded in the fingerprint ``source`` and in
+    ``model_version`` (``llama.cpp b<build>``).
+
+    The same production rules as the Ollama path, each deliberate:
+
+    * **Pinned or refused.**  :meth:`model_fingerprint` hashes the GGUF file
+      ``/props`` names (all shards of a split model).  A relative path, a path
+      on another machine or an unreadable file raises; nothing is recorded as
+      pinned that was not hashed.
+    * **The model cannot change underneath the pin.**  Every :meth:`generate`
+      re-reads ``/props`` (a GET, not a generation) and refuses if the
+      weights path or the context differs from what was discovered.
+    * **No silent truncation.**  A request whose estimated size exceeds the
+      per-slot ``n_ctx`` is refused before it is sent.
+    * **One generation per call.**  The only second POST is protocol
+      negotiation: if the server rejects the ``json_schema`` response format
+      itself (HTTP error naming ``response_format``, so nothing was
+      generated), the provider switches to the ``json_object`` + ``schema``
+      form for the rest of its life and sends once more.  A generation that
+      ran and produced bad JSON is never re-sent.
+    * **Schema-constrained output.**  ``request.json_schema`` (local ``$ref``
+      inlined) goes out in the wire form :func:`structured_mode_for_build`
+      picks; ``json_only`` alone sends ``{"type": "json_object"}``.  There is
+      no client-side JSON-Schema-to-GBNF converter: the fallback form makes
+      the server compile the schema with its own, upstream-tested converter,
+      and a second converter here would be a second place for the constraint
+      to be wrong.
+    """
+
+    name = "local"
+
+    def __init__(
+        self,
+        *,
+        base_url: str,
+        spec: ModelCapabilities,
+        client: HTTPClient,
+        props: Mapping[str, Any],
+        n_ctx: int,
+        timeout: float = 300.0,
+        seed: int | None = 0,
+        gguf_path: str | Path | None = None,
+        digest_cache_path: str | Path | None = None,
+        structured_mode: StructuredMode = StructuredMode.JSON_SCHEMA,
+    ) -> None:
+        super().__init__(
+            base_url=base_url,
+            models=(spec,),
+            client=client,
+            timeout=timeout,
+            path="/v1/chat/completions",
+            num_ctx=n_ctx,
+            seed=seed,
+        )
+        self.props = dict(props)
+        self.model_path = str(props.get("model_path") or "")
+        self.build_info = str(props.get("build_info") or "")
+        self.build = parse_llama_cpp_build(self.build_info)
+        self.gguf_path = Path(gguf_path).expanduser() if gguf_path is not None else None
+        self.digest_cache_path = digest_cache_path
+        self.structured_mode = structured_mode
+        #: Set when the server rejected the json_schema form and the provider
+        #: fell back; recorded so the audit can see which form constrained it.
+        self.fell_back: str | None = None
+        #: ``meta`` from ``/v1/models`` (n_params, n_ctx_train, size), if given.
+        self.model_meta: dict[str, Any] = {}
+
+    @classmethod
+    def discover(
+        cls,
+        base_url: str = "http://127.0.0.1:8080",
+        model: str | None = None,
+        *,
+        client: HTTPClient | None = None,
+        max_output_tokens: int = 2048,
+        timeout: float = 300.0,
+        seed: int | None = 0,
+        gguf_path: str | Path | None = None,
+        digest_cache_path: str | Path | None = None,
+    ) -> LlamaCppProvider:
+        base = base_url.rstrip("/")
+        if client is None:
+            raise ProviderUnavailable(
+                f"{base}: no HTTP client configured. Discovery reads the running server; "
+                "pass client=ollama_http_client() (it suits llama-server too)."
+            )
+        listing = _get_json_strict(client, f"{base}/v1/models", timeout)
+        entries = [e for e in (listing.get("data") or ()) if isinstance(e, Mapping)]
+        if not entries:
+            raise ProviderError(f"{base}/v1/models lists no model; is llama-server still loading?")
+        chosen: Mapping[str, Any] | None = None
+        if model is None:
+            if len(entries) != 1:
+                raise ProviderError(
+                    f"{base}/v1/models lists {len(entries)} models (router mode?); name the "
+                    "model explicitly. Fiboki pins one model per server."
+                )
+            chosen = entries[0]
+        else:
+            for entry in entries:
+                names = {str(entry.get("id", ""))} | {str(a) for a in (entry.get("aliases") or ())}
+                if model in names:
+                    chosen = entry
+                    break
+            if chosen is None:
+                served = sorted(str(e.get("id", "")) for e in entries)
+                raise ProviderError(
+                    f"{base}: model {model!r} is not the model llama-server has loaded "
+                    f"({served}); refusing to attribute its answers to {model!r}"
+                )
+        model_id = model if model is not None else str(chosen.get("id", ""))
+        props = _get_json_strict(client, f"{base}/props", timeout)
+        settings = props.get("default_generation_settings")
+        n_ctx = settings.get("n_ctx") if isinstance(settings, Mapping) else None
+        if not isinstance(n_ctx, int) or isinstance(n_ctx, bool) or n_ctx <= 0:
+            raise ProviderError(
+                f"{base}/props has no usable default_generation_settings.n_ctx ({n_ctx!r}); "
+                "without the per-slot context the prompt-size refusal cannot work"
+            )
+        if not props.get("model_path"):
+            raise ProviderError(f"{base}/props names no model_path; the weights cannot be pinned")
+        build_info = str(props.get("build_info") or "")
+        mode = structured_mode_for_build(parse_llama_cpp_build(build_info))
+        meta = chosen.get("meta") if isinstance(chosen.get("meta"), Mapping) else {}
+        spec = ModelCapabilities(
+            model=model_id,
+            provider=cls.name,
+            context_window=n_ctx,
+            max_output_tokens=min(max_output_tokens, n_ctx),
+            supports_tools=False,
+            supports_json_mode=True,
+            local=True,
+            version=f"llama.cpp {build_info or 'build-unknown'}",
+            task_classes=frozenset(TaskClass),
+        )
+        provider = cls(
+            base_url=base,
+            spec=spec,
+            client=client,
+            props=props,
+            n_ctx=n_ctx,
+            timeout=timeout,
+            seed=seed,
+            gguf_path=gguf_path,
+            digest_cache_path=digest_cache_path,
+            structured_mode=mode,
+        )
+        provider.model_meta = dict(meta or {})
+        return provider
+
+    # -- pinning ----------------------------------------------------------
+
+    def weights_file(self) -> Path:
+        """The local GGUF file the server loaded, or raise.  Never a guess."""
+        reported = Path(self.model_path).expanduser()
+        if self.gguf_path is not None:
+            if self.gguf_path.name != reported.name:
+                raise ProviderError(
+                    f"gguf_path {self.gguf_path} does not match the server's model_path "
+                    f"{self.model_path!r}; refusing to pin the wrong file"
+                )
+            return self.gguf_path
+        if not reported.is_absolute():
+            raise ProviderError(
+                f"llama-server reports a relative model_path {self.model_path!r}; start it "
+                "with an absolute -m path (scripts/llama-server.sh does) or pass gguf_path. "
+                "Refusing to run an unpinned local model."
+            )
+        return reported
+
+    def model_fingerprint(self, model: str | None = None) -> ModelFingerprint:
+        """SHA-256 of the GGUF weights ``/props`` names, cached by path+size+mtime."""
+        spec = self.capabilities_for(model or self._models[0].model)
+        cached = self._fingerprints.get(spec.model)
+        if cached is not None:
+            return cached
+        path = self.weights_file()
+        digest, how = gguf_weights_digest(path, cache_path=self.digest_cache_path)
+        fingerprint = ModelFingerprint(
+            model_id=spec.model,
+            digest=digest,
+            source=f"llama.cpp: sha256 of GGUF bytes at {path} ({how['cache']})",
+            details={
+                "backend": "llama.cpp",
+                "model_path": self.model_path,
+                "build_info": self.build_info,
+                "n_ctx": self.num_ctx,
+                "total_slots": self.props.get("total_slots"),
+                "structured_mode": self.structured_mode.value,
+                "shards": len(how["shards"]),
+                "bytes": how["bytes"],
+                **{k: self.model_meta[k] for k in ("n_params", "n_ctx_train") if k in self.model_meta},
+            },
+        )
+        self._fingerprints[spec.model] = fingerprint
+        return fingerprint
+
+    def _assert_same_model_loaded(self, client: HTTPClient) -> None:
+        props = _get_json_strict(client, f"{self.base_url}/props", self.timeout)
+        path = str(props.get("model_path") or "")
+        settings = props.get("default_generation_settings")
+        n_ctx = settings.get("n_ctx") if isinstance(settings, Mapping) else None
+        if path != self.model_path or n_ctx != self.num_ctx:
+            raise ProviderError(
+                f"{self.base_url}: llama-server now serves {path!r} with n_ctx={n_ctx!r}, "
+                f"not the {self.model_path!r} with n_ctx={self.num_ctx} this provider pinned; "
+                "refusing to attribute the answer to the pinned weights. Rebuild the provider."
+            )
+
+    # -- generation -------------------------------------------------------
+
+    def _response_format(self, request: LLMRequest) -> dict[str, Any] | None:
+        if request.json_schema is not None:
+            schema = inline_json_schema_refs(request.json_schema)
+            if self.structured_mode is StructuredMode.JSON_SCHEMA:
+                return {
+                    "type": "json_schema",
+                    "json_schema": {"name": "fiboki_output", "strict": True, "schema": schema},
+                }
+            return {"type": "json_object", "schema": schema}
+        if request.json_only:
+            return {"type": "json_object"}
+        return None
+
+    def _post(self, client: HTTPClient, payload: Mapping[str, Any]) -> tuple[int, Any]:
+        url = f"{self.base_url}{self.path}"
+        try:
+            response = client.post(url, json=dict(payload), headers={}, timeout=self.timeout)
+        except Exception as exc:
+            raise ProviderUnavailable(f"{url}: {exc}") from exc
+        return int(getattr(response, "status_code", 200)), response
+
+    def generate(self, request: LLMRequest, model: str) -> LLMResponse:
+        spec = self.capabilities_for(model)
+        client = self._require_client()
+        assert self.num_ctx is not None  # set by discovery
+        needed = _approx_tokens(request.system) + _approx_tokens(request.prompt) + request.max_tokens
+        if needed > self.num_ctx:
+            raise ProviderError(
+                f"{model}: request needs about {needed} tokens but the llama-server slot "
+                f"context is {self.num_ctx}; refusing rather than letting the server "
+                "truncate or reject the prompt"
+            )
+        self._assert_same_model_loaded(client)
+        payload: dict[str, Any] = {
+            "model": spec.model,
+            "stream": False,
+            "temperature": request.temperature,
+            "max_tokens": min(request.max_tokens, spec.max_output_tokens),
+            "messages": [
+                {"role": "system", "content": request.system},
+                {"role": "user", "content": request.prompt},
+            ],
+        }
+        if self.seed is not None:
+            payload["seed"] = self.seed
+        if request.stop:
+            payload["stop"] = list(request.stop)
+        response_format = self._response_format(request)
+        if response_format is not None:
+            payload["response_format"] = response_format
+        url = f"{self.base_url}{self.path}"
+        started = time.perf_counter()
+        status, response = self._post(client, payload)
+        if (
+            status >= 400
+            and request.json_schema is not None
+            and self.structured_mode is StructuredMode.JSON_SCHEMA
+            and "response_format" in _error_message(response)
+        ):
+            # The server refused the wire form before generating anything:
+            # protocol negotiation, not a retry of a failed generation.
+            self.fell_back = _error_message(response)
+            self.structured_mode = StructuredMode.JSON_OBJECT_SCHEMA
+            self._fingerprints.clear()  # the fingerprint records the mode
+            payload["response_format"] = self._response_format(request)
+            status, response = self._post(client, payload)
+        if status >= 400:
+            raise ProviderError(f"{url}: HTTP {status}: {_error_message(response)}")
+        try:
+            body = response.json()
+        except ValueError as exc:
+            raise ProviderError(f"{url}: response body is not JSON: {exc}") from exc
+        if not isinstance(body, Mapping):
+            raise ProviderError(f"{url}: expected a JSON object, got {type(body).__name__}")
+        if body.get("error"):
+            raise ProviderError(f"{url}: {str(body['error'])[:400]}")
+        choices = body.get("choices") or []
+        message = (choices[0].get("message") or {}) if choices else {}
+        text = str(message.get("content") or "")
+        usage = body.get("usage") or {}
+        prompt_tokens = int(usage.get("prompt_tokens") or _approx_tokens(request.prompt))
+        completion_tokens = int(usage.get("completion_tokens") or _approx_tokens(text))
+        raw = dict(body)
+        raw["fiboki_structured_mode"] = (
+            self.structured_mode.value if response_format is not None else None
+        )
+        return LLMResponse(
+            text=text,
+            model=spec.model,
+            model_version=spec.version,
+            provider=self.name,
+            prompt_tokens=prompt_tokens,
+            completion_tokens=completion_tokens,
+            cost_usd=spec.estimated_cost(prompt_tokens, completion_tokens),
+            latency_ms=round((time.perf_counter() - started) * 1000.0, 3),
+            finish_reason=str(choices[0].get("finish_reason") or "stop") if choices else "stop",
+            raw=raw,
         )
 
 
@@ -1052,6 +1661,8 @@ def echo_router(script: Mapping[str, str] | None = None) -> ModelRouter:
 
 
 __all__ = [
+    "LLAMA_CPP_JSON_SCHEMA_BUILD",
+    "LLAMA_CPP_MIN_SCHEMA_BUILD",
     "STRUCTURED_TASKS",
     "AnthropicProvider",
     "EchoProvider",
@@ -1059,6 +1670,7 @@ __all__ = [
     "LLMProvider",
     "LLMRequest",
     "LLMResponse",
+    "LlamaCppProvider",
     "LocalHTTPProvider",
     "ModelCapabilities",
     "ModelFingerprint",
@@ -1069,9 +1681,14 @@ __all__ = [
     "ProviderUnavailable",
     "RoutingDecision",
     "SmokeReport",
+    "StructuredMode",
     "TaskClass",
     "echo_router",
+    "gguf_shard_paths",
+    "gguf_weights_digest",
     "inline_json_schema_refs",
     "ollama_http_client",
+    "parse_llama_cpp_build",
     "smoke_test_provider",
+    "structured_mode_for_build",
 ]

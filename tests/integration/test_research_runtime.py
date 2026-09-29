@@ -68,6 +68,11 @@ def _settings(tmp_path: Path, **overrides) -> ResearchRuntimeSettings:
         "strategies_dir": tmp_path / "no-strategies-here",
         "cycle_target": TARGET,
         "cycle_at": time(2, 15, tzinfo=UTC),
+        # These tests pin the nightly cycle and incidents. The 15-minute event
+        # scan (agentic plan Wave 4) has its own tests in
+        # tests/integration/test_event_scan_runtime.py; off here so a tick runs
+        # exactly what each test names.
+        "event_scan_minutes": 0,
     }
     payload.update(overrides)
     return ResearchRuntimeSettings(**payload)

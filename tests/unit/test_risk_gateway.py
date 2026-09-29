@@ -46,7 +46,9 @@ def test_a_clean_plan_is_allowed_and_every_check_is_named() -> None:
     decision = gw.evaluate(make_context())
     assert decision.allowed, decision.reasons
     assert decision.checks_run == RiskGateway.CHECKS
-    assert len(decision.checks_run) == 19
+    # 19 -> 20: ``event_veto`` (agentic plan Wave 4, the agent event channel).
+    # It passes here because no veto source is wired into make_context().
+    assert len(decision.checks_run) == 20
     assert decision.decided_at == NOW
 
 
@@ -97,7 +99,7 @@ def test_an_exception_inside_a_check_BLOCKS_the_order(monkeypatch) -> None:
 
 
 def test_every_single_check_fails_closed_when_it_raises(monkeypatch) -> None:
-    """Not just one -- all nineteen."""
+    """Not just one -- all twenty."""
     for name in RiskGateway.CHECKS:
         gw = _gateway()
         monkeypatch.setattr(
@@ -398,7 +400,7 @@ def test_a_blocked_attempt_renders_as_execution_telemetry() -> None:
     assert telemetry.rejected_size > 0
     assert "weekly_loss" in telemetry.venue_error
     assert telemetry.extra["blocked_by_risk_gateway"] is True
-    assert len(telemetry.extra["checks_run"]) == 19
+    assert len(telemetry.extra["checks_run"]) == 20  # + event_veto (Wave 4)
 
 
 def test_nothing_is_dropped_silently_over_many_attempts() -> None:

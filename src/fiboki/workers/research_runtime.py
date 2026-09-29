@@ -25,6 +25,10 @@ nightly cycle           :func:`~fiboki.agents.workflows.run_research_cycle` on
                         ``FIBOKI_AGENT_CYCLE_UTC`` (``HH:MM``, UTC)
 incident investigation  :func:`~fiboki.agents.workflows.run_failure_investigation`
                         for an incident that names a backtest
+event scan              :func:`~fiboki.agents.workflows.run_event_scan` every
+                        ``FIBOKI_EVENT_SCAN_MINUTES`` (default 15; 0 = off)
+                        over ``<FIBOKI_STATE_DIR>/news/headlines.sqlite``,
+                        filing into ``<FIBOKI_STATE_DIR>/events/annotations.sqlite``
 ======================  =====================================================
 
 All of it sits behind ``FIBOKI_AGENT_CYCLES`` (default OFF). With the flag off
@@ -74,6 +78,18 @@ The ``local`` provider
 test double: with no script every model step fails to parse and is RECORDED as
 failed, so an ``echo`` nightly cycle is a wiring check, not research.
 
+The event scan
+--------------
+Every ``FIBOKI_EVENT_SCAN_MINUTES`` the tool-less ``event_classifier`` role is
+shown the headlines recorded since the previous scan (at most seven days, at
+most 200) and its annotations are filed in the quarantined store. The slot is
+claimed before the scan runs, like the nightly slot; the headline WINDOW,
+however, starts where the last LOGGED scan ended, so a scan that crashed
+leaves its window to the next one (at-least-once: a batch filed before the
+crash may be classified twice, which the append-only store keeps as two rows).
+Every scan, including one that found nothing, writes a ``scan_log`` row: that
+row is the heartbeat the event veto's freshness guard reads.
+
 What this module does not do
 ----------------------------
 It holds no execution capability and imports nothing from ``broker``,
@@ -98,14 +114,18 @@ from fiboki.agents.capabilities import CapabilityResolver
 from fiboki.agents.jobs import HANDLERS, register_research_handlers
 from fiboki.agents.orchestrator import Orchestrator, submitter_for
 from fiboki.agents.providers import EchoProvider, LLMProvider, ModelRouter
-from fiboki.agents.tools import BarSource, DataStoreBarSource, ToolContext
+from fiboki.agents.tools import NEWS_MAX_LOOKBACK, BarSource, DataStoreBarSource, ToolContext
 from fiboki.agents.workflows import (
+    EVENT_CLASSIFICATION_STEP,
     WorkflowDeps,
     WorkflowResult,
+    run_event_scan,
     run_failure_investigation,
     run_research_cycle,
 )
 from fiboki.core.enums import Timeframe
+from fiboki.data.news.store import HeadlineStore, default_store_path
+from fiboki.marketstate.events import AnnotationStore, default_annotation_store_path
 from fiboki.obs.alerts import Alert, AlertEvent
 from fiboki.obs.logging import get_logger
 from fiboki.research.artefacts import ResearchStore
@@ -118,6 +138,7 @@ __all__ = [
     "DailyCycleSchedule",
     "Incident",
     "IncidentChannel",
+    "IntervalSchedule",
     "ResearchRuntime",
     "ResearchRuntimeSettings",
     "RuntimeConfigError",
@@ -161,6 +182,19 @@ def _parse_bool(name: str, raw: str, default: bool) -> bool:
         f"{name}={raw!r} is not a boolean; use one of {sorted(_TRUE | _FALSE)}. "
         "Refusing to guess."
     )
+
+
+def _parse_minutes(name: str, raw: str, default: int) -> int:
+    text = raw.strip()
+    if not text:
+        return default
+    try:
+        value = int(text)
+    except ValueError as exc:
+        raise RuntimeConfigError(f"{name}={raw!r} is not a whole number of minutes") from exc
+    if value < 0 or value > 24 * 60:
+        raise RuntimeConfigError(f"{name}={raw!r} must be 0 (off) to 1440 minutes")
+    return value
 
 
 def _parse_hhmm(name: str, raw: str) -> time:
@@ -219,6 +253,8 @@ class ResearchRuntimeSettings:
     local_model: str = ""
     cycle_at: time = field(default_factory=lambda: time(2, 15, tzinfo=UTC))
     cycle_target: CycleTarget | None = None
+    #: Minutes between event scans; 0 turns the scan off.
+    event_scan_minutes: int = 15
 
     def __post_init__(self) -> None:
         if self.provider not in ("echo", "local"):
@@ -254,6 +290,9 @@ class ResearchRuntimeSettings:
                 "FIBOKI_AGENT_CYCLE_UTC", get("FIBOKI_AGENT_CYCLE_UTC", "02:15") or "02:15"
             ),
             cycle_target=CycleTarget.parse(target) if target else None,
+            event_scan_minutes=_parse_minutes(
+                "FIBOKI_EVENT_SCAN_MINUTES", get("FIBOKI_EVENT_SCAN_MINUTES"), 15
+            ),
         )
 
     @property
@@ -267,6 +306,14 @@ class ResearchRuntimeSettings:
     @property
     def schedule_path(self) -> Path:
         return self.agents_dir / "schedule.json"
+
+    @property
+    def news_path(self) -> Path:
+        return default_store_path(self.state_dir)
+
+    @property
+    def events_path(self) -> Path:
+        return default_annotation_store_path(self.state_dir)
 
 
 # ---------------------------------------------------------------------------
@@ -335,6 +382,50 @@ class DailyCycleSchedule:
         state = self._read()
         state[self.name] = slot.isoformat()
         self._write(state)
+
+
+@dataclass(slots=True)
+class IntervalSchedule:
+    """One run per ``every`` (slots aligned to the UTC epoch), claimed on disk.
+
+    Same claim-before-run rule and same state file as
+    :class:`DailyCycleSchedule`; a missed run of many slots is run ONCE.
+    """
+
+    name: str
+    every: timedelta
+    state_path: Path
+
+    def __post_init__(self) -> None:
+        if self.every <= timedelta(0):
+            raise RuntimeConfigError(f"{self.name}: interval must be positive")
+
+    def slot_for(self, now: datetime) -> datetime:
+        now = now.astimezone(UTC)
+        epoch = datetime(1970, 1, 1, tzinfo=UTC)
+        n = (now - epoch) // self.every
+        return epoch + n * self.every
+
+    def _daily(self) -> DailyCycleSchedule:
+        # Reuse the daily schedule's state-file handling verbatim.
+        return DailyCycleSchedule(self.name, time(0, 0, tzinfo=UTC), self.state_path)
+
+    def last_claimed(self) -> datetime | None:
+        return self._daily().last_claimed()
+
+    def initialise(self, now: datetime) -> None:
+        if self.last_claimed() is None:
+            self.claim(self.slot_for(now))
+
+    def due(self, now: datetime) -> datetime | None:
+        slot = self.slot_for(now)
+        last = self.last_claimed()
+        if last is not None and last >= slot:
+            return None
+        return slot
+
+    def claim(self, slot: datetime) -> None:
+        self._daily().claim(slot)
 
 
 # ---------------------------------------------------------------------------
@@ -449,6 +540,12 @@ class ResearchRuntime:
     clock: Callable[[], datetime]
     incidents: IncidentChannel
     results: list[WorkflowResult] = field(default_factory=list)
+    #: The event scan (empty when FIBOKI_EVENT_SCAN_MINUTES=0 or cycles are off).
+    event_schedule: tuple[IntervalSchedule, ...] = ()
+    #: Headline store (read) and quarantined annotation store (written by the
+    #: classifier's one tool). ``None`` when the event scan is not composed.
+    news: HeadlineStore | None = None
+    events: AnnotationStore | None = None
 
     # -- per-run wiring ---------------------------------------------------
 
@@ -461,6 +558,9 @@ class ResearchRuntime:
             submit_job=submitter_for(self.cycle_orchestrator),
             default_queue=CYCLE_QUEUE,
             as_of=as_of,
+            news=self.news,
+            events=self.events,
+            clock=self.clock,
         )
 
     def deps(self, as_of: datetime) -> WorkflowDeps:
@@ -518,6 +618,65 @@ class ResearchRuntime:
         _log.info("failure investigation finished", extra={"summary": result.summary()})
         return result
 
+    def run_event_scan(
+        self, *, now: datetime | None = None, workflow_id: str | None = None
+    ) -> WorkflowResult:
+        """One event scan over the headlines since the last logged scan.
+
+        Always writes one ``scan_log`` row, whatever happened, unless the run
+        raised (then the next scan re-covers the window).
+        """
+        if self.news is None or self.events is None:
+            raise RuntimeConfigError(
+                "the event scan is not composed (FIBOKI_AGENT_CYCLES off or "
+                "FIBOKI_EVENT_SCAN_MINUTES=0)"
+            )
+        as_of = self._now(now)
+        floor = as_of - NEWS_MAX_LOOKBACK
+        last = self.events.last_scan_as_of()
+        every = timedelta(minutes=self.settings.event_scan_minutes or 15)
+        since = (
+            last.to_pydatetime() + timedelta(microseconds=1) if last is not None
+            else as_of - every
+        )
+        detail = ""
+        if since < floor:
+            detail = f"window_clamped:headlines observed before {floor.isoformat()} not scanned"
+            since = floor
+        if since > as_of:
+            since = as_of
+        result = run_event_scan(
+            self.deps(as_of), headlines_since=since, workflow_id=workflow_id
+        )
+        self.results.append(result)
+        fetch = next((s for s in result.steps if s.step == "fetch_headlines"), None)
+        batches = [s for s in result.steps if s.step.startswith(EVENT_CLASSIFICATION_STEP)]
+        if fetch is None or not fetch.ok:
+            outcome = "error"
+        elif all(b.ok for b in batches):
+            outcome = "ok"
+        elif any(b.ok for b in batches):
+            outcome = "partial"
+        else:
+            outcome = "error"
+        failed = [b.step for b in batches if not b.ok]
+        if failed:
+            detail = "; ".join(x for x in (detail, f"failed batches: {failed}") if x)
+        self.events.log_scan(
+            as_of=as_of,
+            since=since,
+            finished_at=self._now(None) if now is None else as_of,
+            outcome=outcome,
+            n_headlines=int((fetch.output if fetch else {}).get("n_headlines", 0)),
+            n_batches=len(batches),
+            n_annotations=sum(int(b.output.get("n_written", 0)) for b in batches if b.ok),
+            truncated=bool((fetch.output if fetch else {}).get("truncated", False)),
+            workflow_id=result.workflow_id,
+            detail=detail,
+        )
+        _log.info("event scan finished", extra={"summary": result.summary(), "outcome": outcome})
+        return result
+
     # -- incidents --------------------------------------------------------
 
     def raise_incident(
@@ -544,7 +703,11 @@ class ResearchRuntime:
 
     def has_work(self, now: datetime | None = None) -> bool:
         when = self._now(now)
-        return bool(len(self.incidents.inbox)) or any(s.due(when) for s in self.schedule)
+        return (
+            bool(len(self.incidents.inbox))
+            or any(s.due(when) for s in self.schedule)
+            or any(s.due(when) for s in self.event_schedule)
+        )
 
     def tick(
         self,
@@ -567,6 +730,17 @@ class ResearchRuntime:
                 self.run_research_cycle(
                     now=self._now(None) if now is None else when,
                     workflow_id=f"wf_{entry.name}_{slot:%Y%m%dT%H%MZ}",
+                )
+            )
+        for scan in self.event_schedule:
+            slot = scan.due(when)
+            if slot is None or should_stop():
+                continue
+            scan.claim(slot)  # BEFORE running, as for the nightly slot
+            ran.append(
+                self.run_event_scan(
+                    now=self._now(None) if now is None else when,
+                    workflow_id=f"wf_{scan.name}_{slot:%Y%m%dT%H%MZ}",
                 )
             )
         while not should_stop():
@@ -593,7 +767,11 @@ def _build_provider(settings: ResearchRuntimeSettings) -> LLMProvider:
         )
     from fiboki.agents.providers import LocalHTTPProvider, ollama_http_client
 
-    return LocalHTTPProvider.for_ollama(
+    # llama.cpp (GET /props answers) or Ollama, decided by asking the server
+    # once at composition. A server that is down at start is a start failure
+    # by design: a research cycle attributed to a model nobody could reach is
+    # not a cycle, and launchd retries the worker.
+    return LocalHTTPProvider.for_local_server(
         settings.local_model, client=ollama_http_client(), base_url=settings.local_url
     )
 
@@ -622,6 +800,8 @@ def compose_research_runtime(
     strategies: StrategyRegistry | None = None,
     research: ResearchStore | None = None,
     clock: Callable[[], datetime] | None = None,
+    news: HeadlineStore | None = None,
+    events: AnnotationStore | None = None,
 ) -> ResearchRuntime:
     """Compose the research side from ``settings``. Explicit arguments win.
 
@@ -683,6 +863,18 @@ def compose_research_runtime(
         entry.initialise(clock())
         schedule = (entry,)
 
+    event_schedule: tuple[IntervalSchedule, ...] = ()
+    if settings.agent_cycles and settings.event_scan_minutes > 0:
+        news = news if news is not None else HeadlineStore(settings.news_path)
+        events = events if events is not None else AnnotationStore(settings.events_path)
+        scan = IntervalSchedule(
+            name="event_scan",
+            every=timedelta(minutes=settings.event_scan_minutes),
+            state_path=settings.schedule_path,
+        )
+        scan.initialise(clock())
+        event_schedule = (scan,)
+
     runtime = ResearchRuntime(
         settings=settings,
         orchestrator=orchestrator,
@@ -697,6 +889,9 @@ def compose_research_runtime(
         schedule=schedule,
         clock=clock,
         incidents=IncidentChannel(inbox=_IncidentInbox(), clock=clock),
+        event_schedule=event_schedule,
+        news=news,
+        events=events,
     )
     _log.info(
         "research runtime composed",
@@ -705,6 +900,7 @@ def compose_research_runtime(
             "provider": settings.provider,
             "audit_path": str(settings.audit_path),
             "schedule": [f"{s.name}@{s.at.isoformat()}" for s in schedule],
+            "event_scan": [f"{s.name}/{s.every}" for s in event_schedule],
         },
     )
     return runtime

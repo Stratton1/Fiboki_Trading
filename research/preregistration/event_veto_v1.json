@@ -1,0 +1,73 @@
+{
+  "schema": "fiboki-preregistration:1",
+  "id": "event_veto_v1",
+  "status": "draft: not yet filed. Filing = operator fills model_pin and decision_date, commits this file, and records the commit before any shadow report is read.",
+  "channel": "event_veto",
+  "plan_reference": "docs/v2/AGENTIC_INTEGRATION_PLAN.md section 5, Wave 4 (pre-registration row) and Wave 5",
+  "code": {
+    "policy": "fiboki.marketstate.events.EventVetoPolicy",
+    "policy_version": "event_veto_v1",
+    "annotation_policy_version": "event_annotation_v1",
+    "evaluator": "fiboki.marketstate.events.shadow_report",
+    "gateway_check": "fiboki.risk.gateway.RiskGateway._check_event_veto"
+  },
+  "policy_constants": {
+    "enabled": false,
+    "min_severity": 2,
+    "min_confidence": 0.6,
+    "veto_window_minutes": 120,
+    "require_unscheduled": true,
+    "max_annotation_age_minutes": 60
+  },
+  "hypothesis": "New entries taken within 120 minutes after an UNSCHEDULED event that the event classifier marks severity >= 2 with confidence >= 0.6 for a bucket the instrument is exposed to have lower net expectancy and larger adverse excursion than the entries the veto would keep, by more than either deterministic baseline achieves on the same trades.",
+  "null_hypothesis": "The would-be-vetoed trades are not worse than the kept trades, or the event veto separates them no better than the realised-volatility spike filter or the scheduled-calendar-only window.",
+  "metrics": {
+    "primary": "expectancy_kept_minus_blocked for channel event_veto: mean net P&L per kept trade minus mean net P&L per would-be-vetoed trade, account currency, net of modelled costs",
+    "secondary": [
+      "mean |MAE| of would-be-vetoed trades minus mean |MAE| of kept trades, account currency",
+      "the same two quantities for channels vol_spike_filter and calendar_only on the same trades",
+      "number of would-be-vetoed trades and of distinct annotations that vetoed them"
+    ]
+  },
+  "minimum_sample": {
+    "min_would_be_vetoed_trades": 80,
+    "min_distinct_vetoing_annotations": 20,
+    "min_forward_months": 6,
+    "rule": "The decision is taken at the LATER of decision_date and the date both counts are reached. Below either count, the result is 'insufficient', which means the channel is not enabled."
+  },
+  "baselines": [
+    {
+      "name": "no_veto",
+      "version": "none",
+      "definition": "take every entry"
+    },
+    {
+      "name": "vol_spike_filter",
+      "version": "vol_spike_v1",
+      "definition": "block when mean true range of the last 3 closed bars exceeds 2.0 x the median true range of the 100 closed bars before them",
+      "short_bars": 3,
+      "long_bars": 100,
+      "multiple": 2.0
+    },
+    {
+      "name": "calendar_only",
+      "version": "calendar_high_impact_v1",
+      "definition": "block when a HIGH-impact scheduled event from the official calendar for the instrument's currencies lies in [T, T + 120 minutes] of the entry",
+      "calendar": "fiboki.marketstate.calendar.load_official_calendar"
+    }
+  ],
+  "decision_rule": "Enable (operator sign-off, veto-only, further monitored period) only if the primary metric is positive for event_veto AND exceeds the same metric for BOTH vol_spike_filter and calendar_only. Otherwise delete the channel; do not tune it and re-test on the same data.",
+  "data_rules": [
+    "Forward annotations only: available_at after the filing commit. Backfilled annotations are exploratory and cannot support enabling (plan D-A3).",
+    "Trades are whatever the deterministic system took in PAPER or DEMO over the period; none is added or removed after the fact.",
+    "The policy constants above are frozen for the whole period; any change starts a new pre-registration with a new policy version."
+  ],
+  "model_pin": {
+    "model_id": "TO_BE_FILLED_AT_FILING",
+    "model_digest": "TO_BE_FILLED_AT_FILING",
+    "run_manifest_hash": "TO_BE_FILLED_AT_FILING"
+  },
+  "decision_date": "TO_BE_SET_AT_FILING (YYYY-MM-DD, at least min_forward_months after filing)",
+  "filed_at": null,
+  "filed_commit": null
+}

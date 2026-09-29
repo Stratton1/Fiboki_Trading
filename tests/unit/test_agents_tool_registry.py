@@ -43,6 +43,8 @@ REQUIRED_TOOLS = (
     "fetch_research",
     "record_forecast",
     "query_forecast_scores",
+    "query_news",
+    "record_event_annotations",
 )
 
 #: Words that would betray an execution tool hiding in the registry.
@@ -92,6 +94,8 @@ def test_every_mutating_tool_writes_only_to_research_or_the_queue() -> None:
         WriteDomain.RESEARCH_CRITIQUE,
         WriteDomain.RESEARCH_NOTE,
         WriteDomain.RESEARCH_FORECAST,
+        # agentic plan Wave 4: the quarantined event-annotation table.
+        WriteDomain.RESEARCH_EVENT_ANNOTATION,
         WriteDomain.JOB_QUEUE,
     }
     for tool in REGISTRY.all():

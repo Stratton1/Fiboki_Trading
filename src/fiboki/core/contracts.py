@@ -15,7 +15,7 @@ from __future__ import annotations
 
 import uuid
 from dataclasses import dataclass, field
-from typing import Any
+from typing import Any, Literal, get_args
 
 import pandas as pd
 
@@ -133,6 +133,18 @@ class TradePlan:
 # ----------------------------------------------------------------- RISK
 
 
+#: Reason prefixes that record what a SHADOW control would have done. A shadow
+#: reason is evidence for a later evaluation, never a block: ``allowed`` is
+#: decided by :attr:`RiskDecision.blocking_reasons` alone. Adding a prefix here
+#: is how a new shadow channel becomes non-blocking, so the list is short and
+#: every entry names its channel.
+SHADOW_REASON_PREFIXES: tuple[str, ...] = ("event_veto_shadow:",)
+
+
+def is_shadow_reason(reason: str) -> bool:
+    return reason.startswith(SHADOW_REASON_PREFIXES)
+
+
 @dataclass(frozen=True, slots=True)
 class RiskDecision:
     allowed: bool
@@ -141,6 +153,16 @@ class RiskDecision:
     checks_run: tuple[str, ...] = ()
     decided_at: pd.Timestamp | None = None
 
+    @property
+    def blocking_reasons(self) -> tuple[str, ...]:
+        """The reasons that decide ``allowed``: everything except shadow notes."""
+        return tuple(r for r in self.reasons if not is_shadow_reason(r))
+
+    @property
+    def shadow_reasons(self) -> tuple[str, ...]:
+        """What shadow controls would have done. Never blocks."""
+        return tuple(r for r in self.reasons if is_shadow_reason(r))
+
     @staticmethod
     def allow(checks: tuple[str, ...]) -> RiskDecision:
         return RiskDecision(True, (), None, checks)
@@ -148,6 +170,139 @@ class RiskDecision:
     @staticmethod
     def block(reason: str, checks: tuple[str, ...] = ()) -> RiskDecision:
         return RiskDecision(False, (reason,), None, checks)
+
+
+# --------------------------------------------------------------- EVENTS
+#
+# The event channel (docs/v2/AGENTIC_INTEGRATION_PLAN.md §4). An LLM classifies
+# recorded headlines; its output is filed in a quarantined store; a
+# deterministic policy in ``marketstate/events.py`` reads it and may, when
+# enabled, VETO a new entry. These contracts are what crosses that boundary.
+# They carry no free text, no prices, no stops and no sizes: the model's
+# rationale stays in the quarantined table, and nothing here can express an
+# order, a size or a limit.
+
+#: The closed event vocabulary. ``none`` is a real answer ("not market news").
+EventType = Literal[
+    "central_bank",
+    "macro_release",
+    "geopolitical",
+    "market_structure",
+    "liquidity_shock",
+    "natural_disaster",
+    "other",
+    "none",
+]
+#: The closed exposure vocabulary an annotation may name. Currency codes for
+#: the eight FX currencies; asset buckets for metals, oil and the four index
+#: regions. An instrument maps onto these deterministically
+#: (``marketstate.events.instrument_buckets``); the model never names a symbol.
+EventBucket = Literal[
+    "USD", "EUR", "GBP", "JPY", "AUD", "CAD", "CHF", "NZD",
+    "XAU", "XAG", "OIL",
+    "INDEX_US", "INDEX_EU", "INDEX_UK", "INDEX_JP",
+]
+EVENT_TYPES: tuple[str, ...] = get_args(EventType)
+EVENT_BUCKETS: tuple[str, ...] = get_args(EventBucket)
+EVENT_SEVERITIES: tuple[int, ...] = (0, 1, 2, 3)
+
+
+def _aware(name: str, ts: pd.Timestamp) -> None:
+    if not isinstance(ts, pd.Timestamp) or ts.tzinfo is None:
+        raise ValueError(f"{name} must be a timezone-aware UTC pd.Timestamp, got {ts!r}")
+
+
+@dataclass(frozen=True, slots=True)
+class EventAnnotation:
+    """One classified event, as the deterministic veto policy consumes it.
+
+    ``observed_at`` is the first-seen instant of the earliest headline it cites
+    (our clock, not the vendor's); ``available_at`` is when the annotation was
+    written, so a point-in-time reader at ``t`` may use it only if
+    ``available_at <= t``. ``model_id``/``model_digest``/``manifest_hash`` pin
+    what produced it. Construct only in ``marketstate/events.py`` (AST test).
+    """
+
+    annotation_id: str
+    source_ids: tuple[str, ...]
+    event_type: str
+    currencies: tuple[str, ...]
+    severity: int
+    scheduled: bool
+    confidence: float
+    observed_at: pd.Timestamp
+    available_at: pd.Timestamp
+    model_id: str
+    model_digest: str
+    manifest_hash: str
+    policy_version: str
+
+    def __post_init__(self) -> None:
+        if not self.annotation_id:
+            raise ValueError("an event annotation needs an id")
+        if not self.source_ids or any(not s for s in self.source_ids):
+            raise ValueError("an event annotation cites at least one headline id")
+        if self.event_type not in EVENT_TYPES:
+            raise ValueError(f"event_type {self.event_type!r} is not in {EVENT_TYPES}")
+        unknown = [c for c in self.currencies if c not in EVENT_BUCKETS]
+        if unknown:
+            raise ValueError(f"currencies {unknown} are not in {EVENT_BUCKETS}")
+        if len(set(self.currencies)) != len(self.currencies):
+            raise ValueError("currencies contains duplicates")
+        if self.severity not in EVENT_SEVERITIES or isinstance(self.severity, bool):
+            raise ValueError(f"severity {self.severity!r} is not one of {EVENT_SEVERITIES}")
+        if not (0.0 <= float(self.confidence) <= 1.0):
+            raise ValueError(f"confidence {self.confidence!r} is outside [0, 1]")
+        _aware("observed_at", self.observed_at)
+        _aware("available_at", self.available_at)
+        if self.available_at < self.observed_at:
+            raise ValueError(
+                f"available_at {self.available_at} precedes observed_at {self.observed_at}: "
+                "an annotation cannot exist before the headline it classifies was seen"
+            )
+        if not self.model_id or not self.model_digest:
+            raise ValueError("an event annotation must pin its model id and weights digest")
+        if not self.policy_version:
+            raise ValueError("an event annotation must name its policy version")
+
+
+@dataclass(frozen=True, slots=True)
+class VetoReason:
+    """Why the event policy would block a NEW entry. Identifiers only."""
+
+    annotation_id: str
+    event_type: str
+    #: The buckets shared by the instrument and the annotation.
+    buckets: tuple[str, ...]
+    severity: int
+    confidence: float
+    observed_at: pd.Timestamp
+    policy_version: str
+
+    @property
+    def code(self) -> str:
+        return (
+            f"{self.event_type}:{'+'.join(self.buckets)}:sev{self.severity}:"
+            f"{self.annotation_id}"
+        )
+
+
+@dataclass(frozen=True, slots=True)
+class VetoAssessment:
+    """The event policy's answer for one instrument at one instant.
+
+    ``available`` is False when the annotation store is missing, unreadable or
+    stale; that is fail-OPEN by design (a veto can only block, so an absent
+    veto is the conservative-for-trading default) and it is always paired with
+    an operator alert by the source. ``veto`` may still be set when stale:
+    annotations already on file remain valid evidence.
+    """
+
+    policy_version: str
+    enabled: bool
+    available: bool
+    veto: VetoReason | None = None
+    detail: str = ""
 
 
 # ------------------------------------------------------------ EXECUTION

@@ -166,7 +166,7 @@ persist it.
 
 ### Three properties that matter more than the individual checks
 
-**Every check is named.** `RiskDecision.checks_run` lists all nineteen names on every decision,
+**Every check is named.** `RiskDecision.checks_run` lists all twenty names on every decision,
 allowed or blocked. An audit can *prove* which rules ran rather than trusting that they did.
 `_verify_coverage` compares the list that ran against `CHECKS` after the fact, and a check that
 somehow did not run appends `check_did_not_run:<name>`, which blocks.
@@ -189,7 +189,7 @@ intervene.
 caller assembles `RiskContext`. That is what makes it exhaustively testable and what stops a
 check from silently succeeding because a network call timed out.
 
-### The nineteen checks, in order
+### The twenty checks, in order
 
 | # | Check | Blocks when |
 |---:|---|---|
@@ -201,17 +201,51 @@ check from silently succeeding because a network call timed out.
 | 6 | `abnormal_spread` | spread above `max_spread_multiple` × the instrument's typical |
 | 7 | `broker_health` | health score below `min_broker_health`, or unknown |
 | 8 | `event_blackout` | inside `event_blackout_minutes` either side of a flagged release |
-| 9 | `instrument_lock` | an entry lock declared by a strategy document is in force on the signal's decision bar; or the signal's document declares locks and the lock state cannot be established (see below) |
-| 10 | `max_per_trade_risk` | this trade's risk-to-stop exceeds the per-trade cap |
-| 11 | `max_account_risk` | summed open risk-to-stop across the book exceeds the cap |
-| 12 | `max_instrument_exposure` | gross notional in one instrument exceeds the cap |
-| 13 | `max_strategy_exposure` | gross notional attributable to one strategy exceeds the cap |
-| 14 | `max_currency_exposure` | net notional in one currency leg exceeds the cap |
-| 15 | `max_correlated_exposure` | gross notional across positions correlated above `correlation_threshold` exceeds the cap |
-| 16 | `daily_loss` | realised loss today exceeds the daily cap |
-| 17 | `weekly_loss` | realised loss this week exceeds the weekly cap |
-| 18 | `total_drawdown` | drawdown from peak exceeds the total cap |
-| 19 | `margin_utilisation` | margin used exceeds the cap |
+| 9 | `event_veto` | a NEW entry (`RequestKind.OPEN` only) meets an unscheduled, severe, confident event annotation for one of the instrument's buckets AND `EventVetoPolicy.enabled` (off by default). Disabled or unavailable: never blocks, records `event_veto_shadow:<...>` instead (see below) |
+| 10 | `instrument_lock` | an entry lock declared by a strategy document is in force on the signal's decision bar; or the signal's document declares locks and the lock state cannot be established (see below) |
+| 11 | `max_per_trade_risk` | this trade's risk-to-stop exceeds the per-trade cap |
+| 12 | `max_account_risk` | summed open risk-to-stop across the book exceeds the cap |
+| 13 | `max_instrument_exposure` | gross notional in one instrument exceeds the cap |
+| 14 | `max_strategy_exposure` | gross notional attributable to one strategy exceeds the cap |
+| 15 | `max_currency_exposure` | net notional in one currency leg exceeds the cap |
+| 16 | `max_correlated_exposure` | gross notional across positions correlated above `correlation_threshold` exceeds the cap |
+| 17 | `daily_loss` | realised loss today exceeds the daily cap |
+| 18 | `weekly_loss` | realised loss this week exceeds the weekly cap |
+| 19 | `total_drawdown` | drawdown from peak exceeds the total cap |
+| 20 | `margin_utilisation` | margin used exceeds the cap |
+
+### `event_veto`: the agent event channel (veto-only, shadow first)
+
+Added 2026-09-29 (AGENTIC_INTEGRATION_PLAN §5 Wave 4). The one place LLM output can reach the
+risk path, and it can only ever REMOVE a new entry.
+
+- **Input.** `RiskContext.event_veto`, an `EventVetoProvider` (protocol in `risk/gateway.py`,
+  implemented by `marketstate.events.EventVetoSource`, which `risk` may not import). The check
+  asks `assess(plan.instrument, ctx.now)` and reads nothing else: no size, stop, exit, limit or
+  kill-switch state (AST test in `tests/unit/test_event_veto_gateway.py`). Like `instrument_lock`,
+  the I/O is in the source the caller supplies, not in the gateway.
+- **Policy.** `EventVetoPolicy` (`marketstate/events.py`, version `event_veto_v1`):
+  `enabled=False`, `min_severity=2`, `min_confidence=0.6`, window `[observed_at, +2h)`,
+  unscheduled only, point-in-time on the annotation's `available_at`, instrument mapped to
+  currency/asset buckets deterministically. Its version is stamped on every attempt row as
+  `event_veto_policy` (`not_wired` when no source is supplied).
+- **Shadow reasons.** Disabled, a matching annotation is recorded as
+  `event_veto_shadow:<type>:<buckets>:sev<n>:<annotation_id>` and the order is ALLOWED.
+  `RiskDecision.allowed` is decided by `blocking_reasons` only; the prefixes in
+  `core.contracts.SHADOW_REASON_PREFIXES` are the only non-blocking ones (a mislabelled note
+  blocks). `ExecutionAttempt.reason` and the telemetry `venue_error` carry blocking reasons only;
+  shadow notes go to `extra["shadow_reasons"]`.
+- **Fail-OPEN, the one exception to "unknown blocks".** A missing, unreadable or stale annotation
+  store (no successful scan within `max_annotation_age`, 1 h) means NO veto, a shadow note
+  `event_veto_shadow:unavailable:<why>` and one operator alert per transition. Failing closed
+  would let a dead classifier or a switched-off model host halt all entries, i.e. hand the LLM
+  layer an indirect kill switch. A raise inside the source is still `check_error:event_veto`
+  and blocks.
+- **Scope.** OPEN only; an INCREASE is left to the other nineteen checks. Not in `EXIT_CHECKS`.
+- **Not wired.** No worker passes a source into its `RiskContext` yet (`workers/runtime.py` was
+  outside this change), so today every attempt row says `event_veto_policy: not_wired` and the
+  gateway's shadow log is empty; `fiboki events shadow-report` computes the same counterfactual
+  offline from the annotation store and a trade ledger.
 
 ### `instrument_lock`: strategy-declared entry locks
 
@@ -380,7 +414,8 @@ An automatic drawdown-triggered flatten does not exist at this snapshot.
 | `Order` constructed only downstream of a `RiskDecision` | AST test, single call site | enforced |
 | Gateway called before `Order` is built | AST test, source-order assertion | enforced |
 | Close path consults the gateway | AST test on `ExecutionService.close` | enforced |
-| All 19 checks ran | `_verify_coverage` on every decision | enforced |
+| All 20 checks ran | `_verify_coverage` on every decision | enforced |
+| The event veto can only block a new entry, and only when enabled | AST test on `_check_event_veto`; `blocking_reasons`; not in `EXIT_CHECKS` | enforced; **off by default and no worker wires a source yet** |
 | Strategy-declared entry locks agree with the backtest | `tests/integration/test_lock_parity.py`; lock state rebuilt from the ledger per question | enforced in the gateway and engine; **no worker wires a lock source yet**, so lock-declaring documents are refused in paper/demo |
 | A raising check blocks | `except Exception` → `check_error:` | enforced |
 | Unknown input blocks | `None` handling in each check | enforced |
