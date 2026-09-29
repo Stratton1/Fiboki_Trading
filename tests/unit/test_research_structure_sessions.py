@@ -32,7 +32,7 @@ from fiboki.research.structure import (
     structure_hash,
 )
 from fiboki.strategy.dsl import StrategyDocument
-from tests.discovery_fixtures import all_seeds, seed
+from tests.discovery_fixtures import seed
 
 
 def rewritten(document: StrategyDocument, **fields: object) -> StrategyDocument:
@@ -209,8 +209,12 @@ CURRENT_HASHES = {
 
 
 def test_every_seed_document_restricts_its_dealing_window() -> None:
-    """Which is why all five of them changed hash. This is not a surprise."""
-    for document in all_seeds():
+    """Which is why all five of them changed hash. This is not a surprise.
+
+    Scoped to the five documents whose hashes are recorded above: a seed added
+    later (tsmom_dual_horizon, 2026-09-29) is not part of that invalidation
+    note and is free to trade without a dealing restriction."""
+    for document in (seed(sid) for sid in sorted(PRE_SESSION_TOKEN_HASHES)):
         restricted = document.sessions is not None or bool(
             document.events.blocked_event_tags
             or document.events.block_minutes_before

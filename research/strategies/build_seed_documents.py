@@ -18,6 +18,7 @@ from fiboki.strategy.dsl import (
     TrailingModel,
 )
 from fiboki.strategy.primitives import (
+    ConstantOperand,
     CrossoverRule,
     IndicatorOperand,
     IndicatorSpec,
@@ -582,7 +583,113 @@ fib_pullback = StrategyDocument(
 )
 
 
-DOCS = [ichimoku_trend, donchian_breakout, rsi_reversion, macd_ema_hybrid, fib_pullback]
+# ------------------------------------------------ 6. Time-series momentum
+
+#: MOP (2012) is a cross-asset result, so the universe spans FX, a metal and two
+#: equity indices rather than the FX-heavy TREND_UNIVERSE.
+TSMOM_UNIVERSE = (*FX_MAJORS, "XAUUSD", "US500", "DE40")
+ROC_SLOW = spec("roc", period=P("slow_lookback"))
+ROC_FAST = spec("roc", period=P("fast_lookback"))
+ZERO = ConstantOperand(value=0.0)
+
+tsmom_dual_horizon = StrategyDocument(
+    strategy_id="tsmom_dual_horizon",
+    name="Time-Series Momentum, Dual Horizon",
+    family=StrategyFamily.MOMENTUM,
+    hypothesis=(
+        "ECONOMIC STORY. This is time-series momentum in its original form: the "
+        "SIGN of an instrument's own past return predicts the sign of its next "
+        "return. It is deliberately NOT a price-level breakout -- no channel, no "
+        "moving-average state, no retracement level -- so it is a different bet from "
+        "every other seed rather than another expression of 'price crossed a line'. "
+        "The mechanisms advanced are slow information diffusion (prices under-react "
+        "to news and catch up over weeks), herding and extrapolative flows, and "
+        "hedging and risk-management flows that add to positions as they move. "
+        "Moskowitz, Ooi and Pedersen (2012) document it across 58 futures and "
+        "forwards at a 12-month lookback and 1-month hold; Hurst, Ooi and Pedersen "
+        "(2017) extend it back to 1880; Baltas and Kosowski (2013) study it with "
+        "volatility-scaled positions. Here the slow return (roc over slow_lookback "
+        "bars, above or below zero) is the state and the fast return crossing zero "
+        "in the same direction is the entry event, so a position is opened when "
+        "short-horizon momentum re-aligns with the long-horizon sign, and held for a "
+        "fixed number of bars as in MOP. The entry is a CrossoverRule of roc(fast) "
+        "against a ConstantOperand of 0, not an EMA crossover, so the signal really "
+        "is the sign of a return. Lookbacks are in BARS: on D1, 126 bars is about six "
+        "months and 21 bars a month, which is the bet; on H4 the same numbers are "
+        "about three weeks and three days, a much shorter horizon, and H4 is carried "
+        "only so the campaign machinery can run it on the H4 store.\n\n"
+        "EVIDENCE AGAINST, STATED PLAINLY. Huang, Li, Wang and Zhou (2020, JFE, "
+        "'Time series momentum: Is it there?') find TSMOM largely insignificant "
+        "asset by asset; the headline significance comes from pooled regressions "
+        "that let a few assets carry the rest. Kim, Tse and Wald (2016) attribute "
+        "much of the TSMOM Sharpe ratio to volatility scaling rather than to the "
+        "sign signal, and Goyal and Jegadeesh (2018) show that TSMOM's advantage "
+        "over cross-sectional momentum is largely a time-varying net long position. "
+        "Trend-following returns decayed materially after 2009. On FX specifically, "
+        "Menkhoff, Sarno, Schmeling and Schrimpf (2012) find currency momentum "
+        "concentrated in high-cost, illiquid currencies -- not the majors traded "
+        "here. This document deliberately does NOT vol-scale position size: sizing "
+        "is the portfolio layer's job, not the strategy's, so it tests the SIGN "
+        "signal alone, which is the harder claim and the one the evidence above "
+        "most doubts. At D1 with a 21-bar hold the sample is small per instrument, "
+        "and the ladder's min-trades gate is expected to bind on short histories; a "
+        "failure there is a verdict on the sample, not on the idea. FALSIFIER: if "
+        "the D1 default binding shows no positive deflated edge net of spread across "
+        "the pooled universe out of sample, the sign signal adds nothing here."
+    ),
+    universe=TSMOM_UNIVERSE,
+    timeframes=(Timeframe.D1, Timeframe.H4),
+    direction=TradeDirection.BOTH,
+    regime=(
+        RegimeGateRule(metric=op(RVOL), min_value=0.0015, max_value=0.05),
+    ),
+    setup=RuleSet(
+        long=(ThresholdRule(operand=op(ROC_SLOW), comparator=">", value=0.0),),
+        short=(ThresholdRule(operand=op(ROC_SLOW), comparator="<", value=0.0),),
+    ),
+    entry=RuleSet(
+        long=(CrossoverRule(fast=op(ROC_FAST), slow=ZERO, direction="above"),),
+        short=(CrossoverRule(fast=op(ROC_FAST), slow=ZERO, direction="below"),),
+    ),
+    stop=StopModel(
+        kind="atr_multiple", value=P("atr_stop_multiple"), atr=ATR_OP, min_distance_atr=0.5
+    ),
+    take_profits=(),
+    trailing=None,
+    position_management=PositionManagement(
+        max_concurrent_positions=1,
+        allow_pyramiding=False,
+        allow_reversal_on_opposite_signal=False,
+        max_bars_in_trade=P("holding_bars"),
+        cooldown_bars_after_exit=0,
+    ),
+    sessions=None,
+    parameters={
+        # The lookback sets are geometric (quarter / half-year / year; two weeks /
+        # a month / two months), which a min/max/step range cannot express
+        # without admitting values nobody declared. ``choice`` makes the domain
+        # exactly the three values and nothing between them.
+        "slow_lookback": ParameterSpec(kind="choice", default=126, choices=(63, 126, 252),
+                                       description="Bars over whose return the sign is taken"),
+        "fast_lookback": ParameterSpec(kind="choice", default=20, choices=(10, 20, 40),
+                                       description="Bars whose return crossing zero times entry"),
+        "atr_stop_multiple": ParameterSpec(kind="float", default=3.0, min_value=2.0,
+                                           max_value=3.0, step=1.0),
+        "holding_bars": ParameterSpec(kind="int", default=21, min_value=21, max_value=42,
+                                      step=21, description="Fixed holding period (time exit)"),
+    },
+    author="fiboki-v2-seed",
+    notes=("Different bet: the sign of past returns, not a price-level breakout. "
+           "Not vol-scaled by design. Exit is the ATR stop or the holding_bars time "
+           "exit. Default events block keeps avoid_rollover_hour: on a D1 series "
+           "stamped at the rollover hour it blocks every entry (backtest/exits.py)."),
+)
+
+
+DOCS = [
+    ichimoku_trend, donchian_breakout, rsi_reversion, macd_ema_hybrid, fib_pullback,
+    tsmom_dual_horizon,
+]
 
 if __name__ == "__main__":
     OUT.mkdir(parents=True, exist_ok=True)

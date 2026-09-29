@@ -115,10 +115,10 @@ def test_membership_iteration_and_lookup() -> None:
 def test_seed_registry_is_healthy() -> None:
     reg = load_seed_registry(SEED_DIR)
     report = reg.health_check()
-    assert len(reg) == 5
+    assert len(reg) == 6
     assert report.ok, [(i.strategy_id, i.code, i.detail) for i in report.errors]
-    assert report.checked == 5
-    assert "5 strategies checked" in report.summary()
+    assert report.checked == 6
+    assert "6 strategies checked" in report.summary()
 
 
 def test_health_check_flags_a_stop_only_exit() -> None:
@@ -178,7 +178,7 @@ def test_health_check_flags_an_unmanaged_runner() -> None:
 def test_load_directory_reads_every_seed() -> None:
     reg = StrategyRegistry()
     hashes = reg.load_directory(SEED_DIR)
-    assert len(hashes) == len(set(hashes)) == 5
+    assert len(hashes) == len(set(hashes)) == 6
     assert "ichimoku_kumo_trend" in reg.ids()
 
 

@@ -4,7 +4,7 @@
 compiler,registry}.py`. Tests: `tests/unit/test_dsl_roundtrip.py`, `test_compiler_causality.py`,
 `test_strategy_registry.py`, `test_indicator_causality.py`, `test_indicator_semantics.py`,
 `tests/property/test_dsl_properties.py`, `tests/golden/test_indicator_values.py`.
-Seed documents: `research/strategies/*.json` (5).
+Seed documents: `research/strategies/*.json` (6 since 2026-09-29; five at the K1 freeze).
 
 ---
 
@@ -83,6 +83,7 @@ That is the correct use of a negative prior, and it is the correct posture for t
 own namesake. The other four seeds — `donchian_breakout_atr`, `macd_ema_trend_hybrid`,
 `rsi_band_mean_reversion`, `fib_golden_pocket_pullback` — each carry a hypothesis of comparable
 length with the same two sections.
+A sixth, `tsmom_dual_horizon` (2026-09-29), is a different bet rather than a reparameterisation: it trades the sign of past returns (Moskowitz, Ooi and Pedersen 2012), roc(slow) as state and roc(fast) crossing zero as entry, with no price level, channel or moving-average state, and `tests/unit/test_tsmom_seed.py` asserts `is_reparameterisation` is false against each of the other five.
 
 The Fibonacci one carries a specific outstanding obligation from the V1 audit: no peer-reviewed
 study establishes that the specific ratios outperform arbitrary retracement levels, so the burden

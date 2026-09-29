@@ -697,6 +697,17 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--cache", default=None, type=Path)
     parser.add_argument("--gates", choices=("production", "diagnostic"), default="production")
     parser.add_argument("--campaign-id", default="k1_xauusd_h4")
+    parser.add_argument(
+        "--seeds",
+        nargs="+",
+        default=None,
+        metavar="STRATEGY_ID",
+        help=(
+            "Restrict the campaign to these seed documents (default: every document in "
+            "research/strategies). Hypotheses are unaffected. An unknown id is an error, "
+            "so a typo cannot silently run the whole roster. Recorded in run.log."
+        ),
+    )
     parser.add_argument("--instruments", nargs="+", default=["XAUUSD"])
     parser.add_argument("--timeframes", nargs="+", default=["H4"])
     parser.add_argument(
@@ -791,6 +802,17 @@ def main(argv: list[str] | None = None) -> int:
         )
         return EXIT_ENGINE_VERSION
 
+    # Likewise an unknown --seeds id: refused before the out dir exists.
+    if args.seeds:
+        known = sorted(d.strategy_id for d in seed_documents(SEED_DIR))
+        unknown = sorted(set(args.seeds) - set(known))
+        if unknown:
+            print(
+                f"REFUSED: --seeds names unknown document(s) {unknown}; known: {known}",
+                file=sys.stderr,
+            )
+            return 2
+
     args.out.mkdir(parents=True, exist_ok=True)
     with _run_log(args.out / "run.log"):
         return _run(args)
@@ -807,6 +829,9 @@ def _run(args: argparse.Namespace) -> int:
 def _run_with_store(args: argparse.Namespace, store: DataStore) -> int:
     gates = gate_set_for(args.gates)
     seeds = seed_documents(SEED_DIR)
+    if args.seeds:  # validated in main() before any side effect
+        known = {d.strategy_id: d for d in seeds}
+        seeds = tuple(known[s] for s in sorted(set(args.seeds)))
     hypotheses = load_hypotheses(HYPOTHESIS_DIR)
     account_ccy = str(args.account_ccy).upper()
 
@@ -867,6 +892,10 @@ def _run_with_store(args: argparse.Namespace, store: DataStore) -> int:
     print(f"gate_set: {gates.version} (min_trades={gates.by_name('min_trades').threshold:g})")
     print(f"bars_from: {bars_from.isoformat() if bars_from is not None else 'none (full series)'}")
     print(f"universe: {len(instruments)} instrument(s) {' '.join(instruments)}; timeframes {' '.join(args.timeframes)}")
+    print(
+        "seeds_requested: "
+        + (" ".join(d.strategy_id for d in seeds) if args.seeds else "all (every document in research/strategies)")
+    )
     print(
         f"budget: max_evaluations={args.max_evaluations} generations={args.generations} "
         f"grid={args.max_grid_points}x{args.max_values_per_axis} folds={args.folds}"

@@ -276,3 +276,22 @@ def test_plan_only_succeeds_on_h4_only_gbp_crosses_that_start_late(
     assert route["via_usd_last"] < "2023-09-06"
     assert coverage["instruments_without_usable_coverage"] == []
     assert "fx route EURJPY H4:" in log
+
+
+def test_seeds_restricts_the_roster_and_refuses_an_unknown_id(
+    script: ModuleType, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """``--seeds`` runs only the named documents (recorded in run.log) and a typo
+    is a refusal, never a silent run of the whole roster."""
+    root = _data_root(tmp_path)
+    out = tmp_path / "out"
+    assert script.main(_argv(root, out, tmp_path, "--seeds", "tsmom_dual_horizon")) == 0
+    log = (out / "run.log").read_text(encoding="utf-8")
+    assert "seeds: ['tsmom_dual_horizon']" in log
+    assert "seeds_requested: tsmom_dual_horizon" in log
+
+    bad = tmp_path / "bad"
+    assert script.main(_argv(root, bad, tmp_path, "--seeds", "donchian_breakout_atr", "nope")) == 2
+    err = capsys.readouterr().err
+    assert "REFUSED: --seeds names unknown document(s) ['nope']" in err
+    assert not (bad / "run.log").exists()

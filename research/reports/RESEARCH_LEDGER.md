@@ -217,3 +217,36 @@ Read `run.log`, `fx_coverage.json` and `calendar_coverage.json`; if the precondi
 re-run the identical command without `--plan-only`. Re-running resumes from `checkpoint.json`.
 
 **K3 addendum (2026-09-29, before the run):** the dry run on the Mac's `var/datastore` showed 4 to 145 bars per series between 2000-05-30 and 2006-01-03 with no fresh GBP rate on either route (the H4-derived GBP crosses in that store begin on 2006-01-03, and pre-2006 HistData has holiday gaps longer than the 4-day staleness guard). Rather than invent a rate, K3 runs with `--bars-from 2006-01-04T00:00:00Z`, a recorded campaign-level trim written to run.log and the campaign notes. Consequence: about 6 of 26 years are excluded for the seven series that start in 2000 to 2002; the dataset version ids are unchanged. Pre-2006 data was also the segment with the most V1 store defects.
+
+## Pre-registration: K4, `k4_tsmom_dual_horizon_engine_v3` (filed 2026-09-29, before any K4 compute)
+
+K4 runs ONE new document, `tsmom_dual_horizon` (content hash `6fd25ce7669f`, structure hash
+`bd40affab19f`; `is_reparameterisation` is False against all five seeds, pinned by
+`tests/unit/test_tsmom_seed.py`), under exactly K3's engine, account, FX, calendar, construction,
+gates and search budget, on K3's 16 H4 series (its universe carries ten of them: the seven USD
+majors, XAUUSD, US500, DE40; the rest skip as `out_of_universe`). It is the first document added
+since the roster was frozen for K1, and it exists to test a different bet, the sign of past
+returns, not to widen the search around the same ones. Nothing below may be edited after the
+first K4 cell runs; a change is a new campaign id.
+
+**What is fixed**
+
+| | |
+|---|---|
+| Campaign id | `k4_tsmom_dual_horizon_engine_v3` |
+| Command | K3's command with `--seeds tsmom_dual_horizon --campaign-id k4_tsmom_dual_horizon_engine_v3 --out research/reports/campaign_k4_tsmom --cache var/eval_cache_k4` and the K3 `--bars-from 2006-01-04T00:00:00Z` trim; `--plan-only` first, and the printed true N is the declared N |
+| Seed | `research/strategies/tsmom_dual_horizon.json` as committed (hashes above); declared domain 3 x 3 x 2 x 2 = 36 cells per instrument-timeframe before the script's grid cap |
+| Search, gates, account, FX, calendar, construction, holdout | identical to K3 (above), including the uncalibrated `v2.0.0-audit` gate set; a K4 verdict is conditional on E-1 in the same way |
+| Timeframes | H4 only in K4 (the store has no D1). The document's primary bet is D1; K4 therefore tests the SHORT-horizon expression (126 H4 bars is about three weeks) and cannot confirm or refute the D1 claim. A D1 campaign needs D1 bars in the store first |
+| Runs after | K3 completes; the MacBook cannot hold both (BUILD_LOG 2026-09-29, memory) |
+
+**External prior trials: K3's declared N plus K3's own true N.** K4 shares K3's bars and its
+question ("does any rule family have an edge net of costs on these series?"); the honest
+prior is everything spent on them: 4,026 (K3's declaration) + K3's true N as printed by its
+`--plan-only` (recorded in `research/reports/campaign_k3_multi_instrument/run.log`). The number
+is filled in from that log when K4 is launched and copied here; it can only be raised.
+
+**What K4 can and cannot say.** Zero survivors would be consistent with Huang et al. (2020)
+and with the document's own evidence-against; it would not be evidence about D1 TSMOM. One or
+more cells clearing rungs 0 to 5 would be the first in this repository, and the holdout is
+spent only once on the single best cell by DSR, chosen before the look.

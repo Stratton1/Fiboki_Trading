@@ -330,8 +330,12 @@ def test_every_seed_binds_at_both_ends_of_every_referenced_domain(path: Path) ->
     referenced = set(doc.unbound_parameters())
     for name in sorted(referenced):
         spec = doc.parameters[name]
-        for value in (spec.min_value, spec.max_value):
-            cast = int(value) if spec.kind == "int" else float(value)
+        # A choice domain has no endpoints: every declared value must compile.
+        values = spec.choices if spec.kind == "choice" else (spec.min_value, spec.max_value)
+        for value in values:
+            cast = value if spec.kind == "choice" else (
+                int(value) if spec.kind == "int" else float(value)
+            )
             bound = doc.bind(defaults(doc, **{name: cast}))
             assert compile_strategy(bound).warmup_period > 0
 
