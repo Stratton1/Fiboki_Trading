@@ -1,7 +1,20 @@
 import type { ApiErrorBody } from "./types";
 
+/**
+ * Where the API lives, from the browser's point of view.
+ *
+ * Unset or empty (the desktop services, dev-up, a bare `npm run build`): the
+ * SAME origin, and next.config.ts proxies /api to the backend. That is the
+ * only arrangement in which the HttpOnly SameSite=lax session cookie comes
+ * back on fetches: localhost:3000 and 127.0.0.1:8000 are different sites,
+ * and a build that called the API there directly signed in (200) and was
+ * 401 on the next request (2026-09-30, the runtime checkout on the MacBook).
+ * An absolute URL (CI's Playwright build, a hosted API on its own origin)
+ * is called directly.
+ */
+const RAW_API = process.env.NEXT_PUBLIC_FIBOKI_API;
 export const API_BASE =
-  process.env.NEXT_PUBLIC_FIBOKI_API ?? "http://127.0.0.1:8000";
+  RAW_API === undefined || RAW_API.trim() === "" ? "" : RAW_API.replace(/\/+$/, "");
 
 const CSRF_COOKIE = "fiboki_csrf";
 const CSRF_HEADER = "X-Fiboki-CSRF";

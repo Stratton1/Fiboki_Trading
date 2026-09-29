@@ -10,8 +10,8 @@ const DEV = process.env.NODE_ENV !== "production";
  */
 function apiOrigin(): string | null {
   const raw = process.env.NEXT_PUBLIC_FIBOKI_API;
-  if (raw === undefined) return "http://127.0.0.1:8000";
-  if (raw.trim() === "") return null;
+  // Unset and empty both mean same-origin (lib/api.ts says why).
+  if (raw === undefined || raw.trim() === "") return null;
   try {
     return new URL(raw).origin;
   } catch {
@@ -74,10 +74,15 @@ const config: NextConfig = {
    * same-origin with it. Without this the browser must make a cross-origin
    * request from localhost:3000 to 127.0.0.1:8000, which some browsers block
    * as a private-network request regardless of CORS. Production sets
-   * NEXT_PUBLIC_FIBOKI_API to the real API origin and this rewrite is unused.
+   * NEXT_PUBLIC_FIBOKI_API to a real API origin and this rewrite is unused;
+   * unset or empty, the proxy is on by default (target 127.0.0.1:8000).
    */
   async rewrites() {
-    const target = process.env.FIBOKI_API_PROXY_TARGET;
+    // Same-origin builds proxy to the local API unless told where else it is;
+    // a build that names an absolute API origin needs no rewrite.
+    const target =
+      process.env.FIBOKI_API_PROXY_TARGET ??
+      (apiOrigin() === null ? "http://127.0.0.1:8000" : "");
     if (!target) return [];
     return [{ source: "/api/:path*", destination: `${target}/api/:path*` }];
   },

@@ -208,6 +208,20 @@ test.describe("source rules", () => {
     }
   });
 
+  test("an unset API origin means same-origin, never a cross-site default", async () => {
+    // The session cookie is HttpOnly SameSite=lax. A build made without
+    // NEXT_PUBLIC_FIBOKI_API once defaulted to http://127.0.0.1:8000, which
+    // from localhost:3000 is a different site: sign-in returned 200 and every
+    // following request 401 (2026-09-30). Unset or empty must resolve to ""
+    // in lib/api.ts and to a proxied /api rewrite in next.config.ts.
+    const api = stripComments(readFileSync(join(ROOT, "lib", "api.ts"), "utf8"));
+    expect(api).not.toMatch(/NEXT_PUBLIC_FIBOKI_API\s*\?\?\s*"http/);
+    expect(api).toMatch(/RAW_API === undefined \|\| RAW_API\.trim\(\) === "" \? ""/);
+    const config = stripComments(readFileSync(join(ROOT, "next.config.ts"), "utf8"));
+    expect(config).toMatch(/if \(raw === undefined \|\| raw\.trim\(\) === ""\) return null;/);
+    expect(config).toMatch(/apiOrigin\(\) === null \? "http:\/\/127\.0\.0\.1:8000" : ""/);
+  });
+
   test("the generated API types are what their schema produces", async () => {
     // `npm run gen:api` writes lib/generated/openapi.ts from openapi.json (or
     // the checked-in snapshot). A schema change without regenerated types
