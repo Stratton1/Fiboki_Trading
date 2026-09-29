@@ -21,6 +21,11 @@
 # cannot arm anything. Nothing in this script can set a live control.
 set -euo pipefail
 export PATH="/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:$PATH"
+# Node installed through nvm is not on launchd's PATH: add the newest nvm node.
+if [ -d "$HOME/.nvm/versions/node" ]; then
+  NVM_NODE="$(ls -d "$HOME"/.nvm/versions/node/*/bin 2>/dev/null | sort -V | tail -1)"
+  [ -n "$NVM_NODE" ] && export PATH="$NVM_NODE:$PATH"
+fi
 
 SERVICE="${1:-}"
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
