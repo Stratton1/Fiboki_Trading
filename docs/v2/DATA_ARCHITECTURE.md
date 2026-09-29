@@ -505,6 +505,7 @@ Official feeds (discovered on each bank's own RSS index page, fetched and parsed
 | SNB | `snb_mopo` | https://www.snb.ch/public/rss/en/mopo | RSS 2.0 |
 | RBA | `rba_media` | https://www.rba.gov.au/rss/rss-cb-media-releases.xml | RSS 1.0 / RDF (RSS-CB) |
 | RBA | `rba_speeches` | https://www.rba.gov.au/rss/rss-cb-speeches.xml | RSS 1.0 / RDF (RSS-CB) |
+| BIS (added 2026-09-29, §14.5) | `bis_cbspeeches` | https://www.bis.org/doclist/cbspeeches.rss | RSS 1.0 / RDF (RSS-CB) |
 
 The BoJ's `https://www.boj.or.jp/en/rss/index.htm` returns 404 and the SNB's
 `.../digital-services/rss` page moved to `.../rss-calendar-feeds`; the URLs above come from the
@@ -584,3 +585,167 @@ Licences and attribution (each in its provider's `describe()`):
 - **Headlines** are recorded, not classified; there is no currency tagging of vendor items
   (`currencies_hint` narrows only the central-bank sources). The `query_news` tool and
   `READ_NEWS_SNAPSHOT` capability (Wave 3, row 3) are not built by this item.
+
+### 14.4 The source registry: every source, its cost and its terms
+
+Added 2026-09-29. `src/fiboki/data/sources/registry.py` lists every external source Fiboki
+knows about, implemented or not, with `terms_url`, a `terms_summary` quoted from that page (read
+2026-09-29 unless stated), a `terms_status` and its point-in-time semantics.
+`describe_sources(kind=, implemented_only=)` is the listing for the API and the docs (no API route
+is wired yet: `api/` was outside this item). `tests/unit/test_source_registry.py` fails when a
+module under `data/providers/` or `data/positioning/` has no entry, when a feed key, macro
+provider, pack or secondary calendar is unregistered, when a forbidden source acquires a module,
+and when the table below differs from `registry_markdown()`.
+
+`terms_status`: **permitted** (automated retrieval and storage for research allowed, usually with
+attribution); **personal_only** (the operator's own non-commercial research; no redistribution and
+no commercial product without a licence); **opt_in_unclear** (no licence found for automated use,
+or the terms arguably prohibit it: behind an explicit opt-in, off by default, never in CI);
+**forbidden** (prohibited, or a paid licence we do not hold: never implemented).
+
+| Source | Kind | Cost | Terms status | Key env | Cadence | Point in time | Module |
+|---|---|---|---|---|---|---|---|
+| `fed_rss` | news | free | [permitted](https://www.federalreserve.gov/disclaimer.htm) | none | 300 s poll | observed_at (our clock at first poll); vendor pubDate informational only | `fiboki.data.news.sources` |
+| `ecb_rss` | news | free | [permitted](https://www.ecb.europa.eu/services/disclaimer/html/index.en.html) | none | 300 s poll | observed_at (our clock at first poll); vendor pubDate informational only | `fiboki.data.news.sources` |
+| `boe_rss` | news | free | [permitted](https://www.bankofengland.co.uk/legal) | none | 300 s poll | observed_at (our clock at first poll); vendor pubDate informational only | `fiboki.data.news.sources` |
+| `boj_rss` | news | free | [personal_only](https://www.boj.or.jp/en/about/copyright.htm) | none | 300 s poll | observed_at (our clock at first poll); vendor pubDate informational only | `fiboki.data.news.sources` |
+| `snb_rss` | news | free | [personal_only](https://www.snb.ch/en/srv/disclaimer_copyright) | none | 300 s poll | observed_at (our clock at first poll); vendor pubDate informational only | `fiboki.data.news.sources` |
+| `rba_rss` | news | free | [permitted](https://www.rba.gov.au/copyright/) | none | 300 s poll | observed_at (our clock at first poll); vendor pubDate informational only | `fiboki.data.news.sources` |
+| `bis_cbspeeches` | news | free | [personal_only](https://www.bis.org/terms_conditions.htm) | none | 300 s poll | observed_at (our clock at first poll); vendor pubDate informational only; BIS republishes speeches days after delivery, stamped midnight | `fiboki.data.news.sources` |
+| `finnhub_news` | news | free tier (60 calls/min, enforced client-side) | [personal_only](https://finnhub.io/terms-of-service) | `FIBOKI_FINNHUB_API_KEY` | 60 s per category | observed_at (our clock at first poll); vendor pubDate informational only | `fiboki.data.news.sources` |
+| `marketaux_news` | news | free tier (100 requests/day, 3 articles/request) | [personal_only](https://www.marketaux.com/tos) | `FIBOKI_MARKETAUX_API_KEY` | 900 s | observed_at (our clock at first poll); vendor pubDate informational only | `fiboki.data.news.sources` |
+| `gdelt_doc` | news | free | [permitted](https://www.gdeltproject.org/about.html) | `FIBOKI_GDELT_ENABLED` | 900 s per query, 1 request per 5 s | observed_at (our clock at first poll); vendor pubDate informational only; seendate kept as vendor time | `fiboki.data.news.sources` |
+| `official_calendar` | calendar | free | [permitted](https://www.federalreserve.gov/disclaimer.htm) | none | committed fixture, refreshed by hand | scheduled times only; no values | `fiboki.marketstate.calendar` |
+| `finnhub_calendar` | calendar | PREMIUM: Finnhub marks /calendar/economic 'Premium Access Required' | [personal_only](https://finnhub.io/terms-of-service) | `FIBOKI_FINNHUB_API_KEY` | on demand (weekly is enough) | dated snapshot files; scheduled times only; 'time' zone inferred UTC from the schema sample | `fiboki.data.providers.finnhub` |
+| `forexfactory_feed` | calendar | free | [opt_in_unclear](https://www.forexfactory.com/notices) | `FIBOKI_FF_CALENDAR_OPT_IN` | at most hourly; the feed is the current week | dated snapshot files; scheduled times only | `fiboki.data.providers.forexfactory_feed` |
+| `cftc_cot` | positioning | free | [permitted](https://www.cftc.gov/WebPolicy/index.htm) | none | weekly (Friday 15:30 ET release) | available_at by the CFTC release rule, overrides and unresolved windows | `fiboki.data.providers.cftc_cot` |
+| `oanda_books` | positioning | free with an OANDA account | [personal_only](https://www.oanda.com/site/terms-of-use) | `FIBOKI_OANDA_BOOKS_TOKEN`, `FIBOKI_OANDA_BOOKS_ENVIRONMENT` | hourly | observed_at; book 'time' kept as vendor time | `fiboki.data.positioning.oanda_books` |
+| `myfxbook_outlook` | positioning | free (100 requests/24 h; paid 2,880) | [personal_only](https://www.myfxbook.com/api) | `FIBOKI_MYFXBOOK_EMAIL`, `FIBOKI_MYFXBOOK_PASSWORD` | hourly (24 of 100 daily requests) | observed_at only (no vendor time) | `fiboki.data.positioning.myfxbook` |
+| `alfred` | macro | free (API key) | [permitted](https://fred.stlouisfed.org/docs/api/terms_of_use.html) | `FIBOKI_FRED_API_KEY` | on demand | VINTAGE | `fiboki.data.providers.alfred` |
+| `fred_cross_asset_daily` | macro | free (API key) | [personal_only](https://fred.stlouisfed.org/docs/api/terms_of_use.html) | `FIBOKI_FRED_API_KEY` | daily | VINTAGE | `fiboki.data.providers.fred_pack` |
+| `ecb_sdmx` | macro | free | [permitted](https://www.ecb.europa.eu/stats/ecb_statistics/governance_and_quality_framework/html/usage_policy.en.html) | none | daily | RELEASE_RULE (EXR) / FIRST_SEEN | `fiboki.data.providers.ecb_sdmx` |
+| `boe_iadb` | macro | free | [permitted](https://www.bankofengland.co.uk/legal) | none | daily | RELEASE_RULE / FIRST_SEEN | `fiboki.data.providers.boe_iadb` |
+| `ons` | macro | free | [permitted](https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/) | none | per release | SOURCE_TIMESTAMP / RELEASE_RULE | `fiboki.data.providers.ons` |
+| `nyfed` | macro | free | [permitted](https://www.newyorkfed.org/privacy/termsofuse) | none | daily | RELEASE_RULE / SOURCE_TIMESTAMP | `fiboki.data.providers.nyfed` |
+| `histdata` | prices | free | [opt_in_unclear](https://www.histdata.com/f-a-q/) | none | bulk download | historical bars; no availability semantics needed | `fiboki.data.providers.histdata` |
+| `dukascopy` | prices | free | [opt_in_unclear](https://www.dukascopy.com/swiss/english/legal-pages/terms-of-use/) | none | not fetched | historical ticks | `fiboki.data.providers.dukascopy` |
+| `oanda_candles` | prices | free with an OANDA account | [personal_only](https://www.oanda.com/site/terms-of-use) | none | live recorder / on demand | closed candles only | `fiboki.data.providers.oanda` |
+| `investing_com` | calendar | n/a | [forbidden](https://www.investing.com/about-us/terms-and-conditions) | none | n/a | n/a | not implemented |
+| `tradingview_undocumented` | prices | n/a | [forbidden](https://www.tradingview.com/policies/) | none | n/a | n/a | not implemented |
+| `myfxbook_scraping` | positioning | n/a | [forbidden](https://www.myfxbook.com/terms) | none | n/a | n/a | not implemented |
+| `forexfactory_scraping` | calendar | n/a | [forbidden](https://www.forexfactory.com/notices) | none | n/a | n/a | not implemented |
+| `reuters` | news | paid licence (LSEG / Reuters Connect) | [forbidden](https://developers.lseg.com/en/product/news/overview) | none | n/a | n/a | not implemented |
+| `associated_press` | news | paid licence (AP Media API) | [forbidden](https://developer.ap.org/) | none | n/a | n/a | not implemented |
+
+Not implemented because the terms forbid it, with the page that says so:
+
+- **Investing.com** (https://www.investing.com/about-us/terms-and-conditions): "It is prohibited
+  to use, store, reproduce, display, modify, transmit or distribute the data contained in this
+  website without the explicit prior written permission of Fusion Media and/or the data provider."
+- **TradingView undocumented endpoints** (https://www.tradingview.com/policies/): the terms
+  prohibit non-display and automated use and "third-party products, tools, or services designed
+  to facilitate or enable such non-display usage", and say "We do not permit commercial usage of
+  any of our services or APIs." The Lightweight Charts library is a separate Apache-2.0 product.
+- **Myfxbook page scraping** (https://www.myfxbook.com/terms): "Reproduction is prohibited by
+  law." The official API is used instead (`myfxbook_outlook`).
+- **ForexFactory calendar pages** (https://www.forexfactory.com/notices): copying "calendar
+  schedules and specs" is prohibited without written consent.
+- **Reuters and AP are not free.** Reuters news is an LSEG-licensed product ("News Feeds are
+  licensed primarily for programmatic internal end uses", redistribution needs separate
+  licences, https://developers.lseg.com/en/product/news/overview; licensing:
+  https://www.reutersagency.com/en/licensing/). AP's Media API serves a customer's "licensed
+  content" (https://developer.ap.org/). Neither is implemented without a paid licence.
+
+Two existing sources are now marked **opt_in_unclear** on reading their terms, and that is a
+finding, not a formality: **HistData** states no licence at all (its FAQ offers the data "at your
+own will and risk"), and **Dukascopy**'s site terms forbid "any 'scraper,' 'robot,' 'bot,'
+'spider' ... to access, acquire, copy, or monitor any portion of the WEBSITE" and using it "to
+construct a database of any kind". Whether `datafeed.dukascopy.com` is "the WEBSITE" is unclear;
+its HTTP fetch is still a stub and should stay one until Dukascopy answers in writing.
+
+### 14.5 Sources added on 2026-09-29
+
+**Headlines** (all through the existing recorder, `observed_at` as availability):
+
+- **BIS central bankers' speeches**, `bis_cbspeeches`, https://www.bis.org/doclist/cbspeeches.rss,
+  RSS 1.0 with the RSS-CB speech extension, found on https://www.bis.org/rss/index.htm. It is a
+  republication channel: speeches appear days after delivery, stamped midnight, so it is text and
+  coverage (it carries banks with no feed of their own), never an event clock. Stored as
+  `NewsSource.OTHER`: the source enum is a `CHECK` constraint in every existing
+  `headlines.sqlite`, so a new enum value needs a store migration (not in this item's files).
+- **Central-bank feeds re-verified** on their index pages today: the Fed's
+  `speeches_and_testimony.xml` already covers `speeches.xml` and `testimony.xml`
+  (https://www.federalreserve.gov/feeds/feeds.htm); the ECB has no separate speeches feed, its
+  `press.html` carries speeches (https://www.ecb.europa.eu/home/html/rss.en.html); BoE speeches
+  are `boe_speeches` (https://www.bankofengland.co.uk/rss); the BoJ English site links only
+  `whatsnew.xml` (https://www.boj.or.jp/en/index.htm; `/en/rss/index.htm` and
+  `/en/about/services/rss.htm` are 404). No bank URL was added except BIS, and none was guessed.
+- **GDELT DOC 2.0**, opt-in with `FIBOKI_GDELT_ENABLED=true`: six curated queries
+  (`GDELT_QUERIES`: central banks, FX majors, US dollar, gold, equity indices, macro releases),
+  `mode=ArtList&format=json&maxrecords=250&timespan=1h&sort=DateDesc`, every 900 s. Limits,
+  stated: the API searches a **rolling 3 months**; **250 results** per request at most (a full
+  response is logged `truncated: true` in the poll log, because older matches in the hour were not
+  returned); **one request every 5 seconds** (GDELT's own 429 text), enforced by one limiter shared
+  across queries, so a full poll takes about 30 s. Dedupe is by URL within a response and by
+  `(source, url_hash)` in the store, so an article found by two queries is one row. `seendate` is
+  kept as the informational vendor time. Terms: free for any use with a citation (the constant
+  `GDELT_ATTRIBUTION`). From this build environment GDELT answered 429 to every request (a shared
+  egress address), so the fixture is constructed.
+- **Finnhub** news: the free tier's **60 calls per minute** is now enforced client-side by one
+  `SlidingWindowLimiter` shared by every Finnhub client from the same key. Finnhub's pricing and
+  terms pages could not be read by tooling (JavaScript-rendered; robots.txt), so the 60/min figure
+  is from the brief and third-party summaries; the API's own swagger states 429 on excess and a
+  30 calls/second cap on every plan.
+
+**Calendars** (secondary: written beside the official calendar, diffed, never merged):
+
+- `data/providers/calendar_feed.py`: `dated_event`, `write_events_file` (write-once; refuses the
+  official fixture's file name; refuses events carrying actual/forecast/previous),
+  `load_events_file`, `snapshot_path` (`<root>/calendar/<source>/<YYYYMMDDTHHMMSSZ>.json`) and
+  `calendar_diff(official, feed)`. The file shape is the object form
+  `marketstate.calendar.load_events_json` reads; `data` may not import `marketstate`, so a test
+  loads every written file through that loader. `calendar_diff` matches by currency and time
+  (never by name), an official no-fixed-time event matching anywhere in its window; its scope is
+  the feed's span, currencies present on both sides, and `impact >= min_impact` (default high).
+  `only_in_feed` is the list worth reading: releases our official fixture does not carry.
+- **Finnhub economic calendar** (`data/providers/finnhub.py`): `/api/v1/calendar/economic` is
+  marked **"Premium Access Required"** in Finnhub's swagger; a free key gets 401/403, raised as
+  `AuthenticationRequired` naming the plan. The `time` field's zone is undocumented; the schema's
+  own sample (Australian current account at 01:30 for an 11:30 AEST release) is UTC, so it is
+  treated as UTC and every file says so in `time_basis`. Country codes map to currencies (euro
+  members to EUR); unmapped countries, unrated impacts and bad times are counted.
+- **ForexFactory weekly feed** (`data/providers/forexfactory_feed.py`), `opt_in_unclear`, off
+  unless `FIBOKI_FF_CALENDAR_OPT_IN=true`. ForexFactory's notices: "The copying, republication or
+  redistribution of FEED, in part or in whole, is explicitly prohibited"; no licence for the
+  `nfs.faireconomy.media` export was found. JSON `date` carries an offset and is converted; the
+  XML twin's zone-less times are not parsed; Holiday and Non-Economic rows are skipped and
+  counted; a local 00:00 time (reportedly how "All Day"/"Tentative" is encoded) becomes a
+  whole-day window with `time_known: false`, which can only widen a blackout. At most one fetch an
+  hour. Nothing fetched from it is committed; the fixture is constructed.
+
+**Positioning** (`data/positioning/`, append-only `snapshots.sqlite`, `PositioningStore.as_of`
+filters on `observed_at` alone; no backfill):
+
+- **OANDA position and order books** (`oanda_books.py`), hourly, `FIBOKI_OANDA_BOOKS_TOKEN` with
+  `FIBOKI_OANDA_BOOKS_ENVIRONMENT=practice|live`. GET-only on exactly two path templates, host
+  checked by parsed hostname against the two v20 REST hosts. **Availability is not
+  established**: the endpoints were added in v20 3.0.25 (2018-09-28, release notes) but are absent
+  from today's instrument reference, and a third-party report (Dekalog, 2024-09) says OANDA
+  withdrew them. A 4xx per instrument is logged, never stored as a flat book.
+- **Myfxbook Community Outlook** (`myfxbook.py`), `personal_only`, via the official API only:
+  login once (email and password travel in the query string by API design; both and the session
+  are scrubbed from errors), then one request per poll; a 100-per-UTC-day budget is enforced
+  before every request. No vendor timestamp exists, so each poll's reading is its own row.
+- CFTC COT is unchanged; it stays a macro provider because its availability comes from a release
+  rule, not first sight.
+
+**Macro pack**: `fred_cross_asset_daily` (`data/providers/fred_pack.py`, registered in
+`MACRO_DATASET_PACKS`): DGS2, DGS10, DTWEXBGS, VIXCLS, DCOILWTICO through the ALFRED provider,
+stored as one content-addressed dataset. VIXCLS carries "Copyright, 2016, Chicago Board Options
+Exchange, Inc. Reprinted with permission.", so the pack is `personal_only`; the other four are
+public domain (Federal Reserve Board, EIA).
+
+**Not wired, stated**: no CLI commands for the calendars, positioning or the pack (`cli.py`
+belonged to another item), no API route for `describe_sources()`, no worker supervision of the
+positioning recorder. GDELT, Finnhub and BIS reach `fiboki news record` through
+`vendor_clients_from_env` and `OFFICIAL_FEEDS` without a CLI change.

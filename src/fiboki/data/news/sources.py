@@ -17,12 +17,26 @@ and any document declaring a DOCTYPE with an ENTITY is refused outright,
 which closes entity-expansion attacks without a new dependency. Bodies above
 :data:`MAX_FEED_BYTES` are refused.
 
-Vendor APIs (optional, off without a key)
------------------------------------------
+The BIS central bankers' speeches feed (``bis_cbspeeches``, added 2026-09-29)
+is found on https://www.bis.org/rss/index.htm. It is a REPUBLICATION channel:
+the BIS posts speeches days after delivery, stamped at midnight, so it is
+useful for text and coverage (it carries banks with no feed of their own) and
+useless for event timing. BIS terms permit non-commercial redistribution and
+limited extracts with citation. Its source is ``NewsSource.OTHER`` because
+the store's source enum is a CHECK constraint baked into existing database
+files; widening it is a store schema change owned elsewhere.
+
+Vendor and open APIs (optional, off until configured)
+-----------------------------------------------------
 * **Finnhub** ``GET /api/v1/news?category=<general|forex>``; key sent in the
-  ``X-Finnhub-Token`` header, never in the URL.
+  ``X-Finnhub-Token`` header, never in the URL. The free tier's 60 calls per
+  minute is enforced client-side by one limiter shared by every Finnhub
+  client built from the same key (:func:`vendor_clients_from_env`).
 * **Marketaux** ``GET /v1/news/all``; the API requires ``api_token`` as a query
   parameter, so every error message is scrubbed of it before it is logged.
+* **GDELT DOC 2.0** ``GET https://api.gdeltproject.org/api/v2/doc/doc``
+  (``mode=ArtList&format=json``): free and open, opt-in with
+  ``FIBOKI_GDELT_ENABLED=true``. See :class:`GdeltDocClient` for its limits.
 """
 from __future__ import annotations
 
@@ -36,25 +50,38 @@ from datetime import UTC, datetime
 from email.utils import parsedate_to_datetime
 from typing import Any, Protocol
 
-from fiboki.data.news.store import NewItem, NewsSource
+from fiboki.data.news.store import NewItem, NewsSource, normalise_url
+from fiboki.data.providers.ratelimit import (
+    SlidingWindowLimiter,
+    finnhub_free_tier_limiter,
+    gdelt_limiter,
+)
 
 __all__ = [
     "ENV_FINNHUB_API_KEY",
+    "ENV_GDELT_ENABLED",
     "ENV_MARKETAUX_API_KEY",
+    "GDELT_ATTRIBUTION",
+    "GDELT_QUERIES",
     "MAX_FEED_BYTES",
     "OFFICIAL_FEEDS",
     "FeedFormatError",
     "FeedSpec",
     "FinnhubNewsClient",
+    "GdeltDocClient",
+    "GdeltQuery",
     "MarketauxNewsClient",
     "RssFeedReader",
     "SourceFetchError",
+    "env_flag",
     "parse_feed",
+    "parse_gdelt",
     "vendor_clients_from_env",
 ]
 
 ENV_FINNHUB_API_KEY = "FIBOKI_FINNHUB_API_KEY"
 ENV_MARKETAUX_API_KEY = "FIBOKI_MARKETAUX_API_KEY"
+ENV_GDELT_ENABLED = "FIBOKI_GDELT_ENABLED"
 MAX_FEED_BYTES = 5_000_000
 USER_AGENT = "fiboki-news-recorder/1 (headline archive for research; polite polling)"
 
@@ -172,6 +199,12 @@ OFFICIAL_FEEDS: tuple[FeedSpec, ...] = (
     FeedSpec("rba_speeches", NewsSource.RBA_RSS,
              "https://www.rba.gov.au/rss/rss-cb-speeches.xml", "rss1.0",
              "https://www.rba.gov.au/rss/", _RETRIEVED, "Speeches (RSS-CB 1.2)"),
+    FeedSpec("bis_cbspeeches", NewsSource.OTHER,
+             "https://www.bis.org/doclist/cbspeeches.rss", "rss1.0",
+             "https://www.bis.org/rss/index.htm", "2026-09-29T10:30:00Z",
+             "BIS central bankers' speeches (English), RSS 1.0 with the RSS-CB speech "
+             "extension. Republished days after delivery; not an event clock. "
+             "Terms: non-commercial, cite the BIS (https://www.bis.org/terms_conditions.htm)"),
 )
 
 
@@ -305,7 +338,8 @@ class FinnhubNewsClient:
     HOST = "https://finnhub.io"
 
     def __init__(self, api_key: str, http_client: Any, *, category: str = "forex",
-                 min_interval_s: float = 60.0) -> None:
+                 min_interval_s: float = 60.0,
+                 rate_limiter: SlidingWindowLimiter | None = None) -> None:
         if not api_key:
             raise ValueError("FinnhubNewsClient needs an API key; leave it unconfigured instead")
         if category not in ("general", "forex", "crypto", "merger"):
@@ -316,8 +350,12 @@ class FinnhubNewsClient:
         self.key = f"finnhub_{category}"
         self.source = NewsSource.FINNHUB
         self.min_interval_s = min_interval_s
+        #: The free tier's 60/min is per KEY: pass the same limiter to every
+        #: client (news and calendar) that uses this key.
+        self.rate_limiter = rate_limiter if rate_limiter is not None else finnhub_free_tier_limiter()
 
     def fetch(self) -> tuple[list[NewItem], int]:
+        self.rate_limiter.acquire()
         text = _http_get(
             self.http_client, f"{self.HOST}/api/v1/news", params={"category": self.category},
             headers={"X-Finnhub-Token": self._key}, secrets=(self._key,), what=self.key,
@@ -404,21 +442,196 @@ def parse_marketaux(text: str, *, feed_key: str) -> tuple[list[NewItem], int]:
     return items, rejected
 
 
+# -------------------------------------------------------------------- GDELT
+
+
+#: Required by the GDELT terms (https://www.gdeltproject.org/about.html): "any
+#: use or redistribution of the data must include a citation to the GDELT
+#: Project and a link to this website".
+GDELT_ATTRIBUTION = "Source: The GDELT Project (https://www.gdeltproject.org/)."
+
+_GDELT_SEENDATE = re.compile(r"^(\d{8})T?(\d{6})Z?$")
+
+
+@dataclass(frozen=True, slots=True)
+class GdeltQuery:
+    """One curated DOC 2.0 query. ``key`` becomes the feed key ``gdelt_<key>``."""
+
+    key: str
+    query: str
+    notes: str = ""
+
+
+#: Curated queries for FX, gold, indices and central banks. GDELT syntax: OR
+#: groups must be parenthesised, phrases quoted; ``sourcelang:english`` keeps
+#: the archive to text we can read. Kept few and broad: every query costs one
+#: request per poll and GDELT allows one request every five seconds.
+GDELT_QUERIES: tuple[GdeltQuery, ...] = (
+    GdeltQuery("central_banks",
+               '("Federal Reserve" OR "European Central Bank" OR "Bank of England" OR '
+               '"Bank of Japan" OR "Swiss National Bank" OR "Reserve Bank of Australia") '
+               "sourcelang:english",
+               "The six banks whose official feeds are recorded, as the press reports them"),
+    GdeltQuery("fx_majors",
+               '("forex" OR "currency markets" OR "sterling" OR "yen" OR "euro zone" OR '
+               '"Swiss franc" OR "Australian dollar") sourcelang:english',
+               "Major-currency market coverage"),
+    GdeltQuery("us_dollar",
+               '("dollar index" OR "US dollar" OR "greenback" OR "Treasury yields") '
+               "sourcelang:english", "USD and the US rates complex"),
+    GdeltQuery("gold",
+               '("gold price" OR "gold prices" OR "bullion" OR "spot gold") sourcelang:english',
+               "XAUUSD"),
+    GdeltQuery("equity_indices",
+               '("S&P 500" OR "Nasdaq" OR "Dow Jones" OR "FTSE 100" OR "DAX" OR "Nikkei") '
+               "sourcelang:english", "Index CFDs"),
+    GdeltQuery("macro_releases",
+               '("rate hike" OR "rate cut" OR "inflation data" OR "nonfarm payrolls" OR '
+               '"consumer prices" OR "jobs report") sourcelang:english',
+               "Scheduled-release coverage, for comparison with the official calendar"),
+)
+
+
+def _parse_gdelt_seendate(raw: Any) -> datetime | None:
+    m = _GDELT_SEENDATE.match(str(raw or "").strip())
+    if not m:
+        return None
+    try:
+        return datetime.strptime(m.group(1) + m.group(2), "%Y%m%d%H%M%S").replace(tzinfo=UTC)
+    except ValueError:
+        return None
+
+
+def parse_gdelt(text: str, *, feed_key: str) -> tuple[list[NewItem], int]:
+    """Parse a DOC 2.0 ``ArtList`` JSON body; dedupe by normalised URL within it.
+
+    GDELT answers some malformed queries with HTTP 200 and a plain-text
+    message; that is a :class:`FeedFormatError`, never an empty result. A
+    response with no matches is ``{}`` (no ``articles`` key), which is a real
+    empty result. ``seendate`` (GDELT's crawl instant, UTC) is kept as the
+    informational vendor time; availability is still our ``observed_at``.
+    """
+    body = text.strip()
+    if not body:
+        return [], 0
+    try:
+        payload = json.loads(body)
+    except json.JSONDecodeError:
+        raise FeedFormatError(f"{feed_key}: GDELT returned non-JSON: {body[:160]!r}") from None
+    if not isinstance(payload, dict):
+        raise FeedFormatError(f"{feed_key}: expected a JSON object from GDELT")
+    articles = payload.get("articles", [])
+    if not isinstance(articles, list):
+        raise FeedFormatError(f"{feed_key}: 'articles' is not a list")
+    items: list[NewItem] = []
+    seen: set[str] = set()
+    rejected = 0
+    for rec in articles:
+        title = " ".join(str(rec.get("title") or "").split())
+        url = str(rec.get("url") or "").strip()
+        if not title or not url:
+            rejected += 1
+            continue
+        norm = normalise_url(url)
+        if norm in seen:
+            continue  # the same article listed twice in one response
+        seen.add(norm)
+        items.append(
+            NewItem(
+                source=NewsSource.OTHER, feed_key=feed_key, url=url, title=title, summary=None,
+                source_item_id=None, vendor_published_at=_parse_gdelt_seendate(rec.get("seendate")),
+                raw={"provider": "gdelt_doc_v2", **{k: rec.get(k) for k in (
+                    "url", "title", "seendate", "domain", "language", "sourcecountry")}},
+            )
+        )
+    return items, rejected
+
+
+class GdeltDocClient:
+    """GDELT DOC 2.0 article search for one curated query.
+
+    Limits, stated (GDELT's DOC 2.0 announcement, fetched 2026-09-29, and its
+    429 body): the API searches a rolling window of the last **3 months** of
+    coverage; ``maxrecords`` is at most **250** per request; requests are
+    limited to **one every 5 seconds** per client, enforced here by a limiter
+    shared across all GDELT queries. The query asks for the newest articles in
+    the last ``timespan``; when a response holds exactly ``maxrecords`` the
+    window was truncated and older matches in it were not returned, which
+    ``last_report["truncated"]`` records so the gap is visible.
+
+    Items carry ``NewsSource.OTHER`` and feed key ``gdelt_<query key>``; the
+    store's ``(source, url_hash)`` dedupe therefore merges the same article
+    across GDELT queries (and with the BIS feed if a URL ever coincides).
+    """
+
+    HOST = "https://api.gdeltproject.org"
+    PATH = "/api/v2/doc/doc"
+    MAX_RECORDS = 250
+
+    def __init__(self, spec: GdeltQuery, http_client: Any, *, timespan: str = "1h",
+                 maxrecords: int = MAX_RECORDS, min_interval_s: float = 900.0,
+                 rate_limiter: SlidingWindowLimiter | None = None) -> None:
+        if not 1 <= maxrecords <= self.MAX_RECORDS:
+            raise ValueError(f"maxrecords must be in 1..{self.MAX_RECORDS}")
+        self.spec = spec
+        self.http_client = http_client
+        self.timespan = timespan
+        self.maxrecords = int(maxrecords)
+        self.key = f"gdelt_{spec.key}"
+        self.source = NewsSource.OTHER
+        self.min_interval_s = min_interval_s
+        self.rate_limiter = rate_limiter if rate_limiter is not None else gdelt_limiter()
+        self.last_report: dict[str, Any] = {}
+
+    def params(self) -> dict[str, Any]:
+        return {"query": self.spec.query, "mode": "ArtList", "format": "json",
+                "maxrecords": self.maxrecords, "timespan": self.timespan, "sort": "DateDesc"}
+
+    def fetch(self) -> tuple[list[NewItem], int]:
+        self.rate_limiter.acquire()
+        text = _http_get(self.http_client, f"{self.HOST}{self.PATH}", params=self.params(),
+                         what=self.key)
+        items, rejected = parse_gdelt(str(text), feed_key=self.key)
+        truncated = len(items) + rejected >= self.maxrecords
+        self.last_report = {"truncated": truncated} if truncated else {}
+        return items, rejected
+
+
+def env_flag(environ: Mapping[str, str], name: str, default: bool = False) -> bool:
+    """Strict boolean from the environment, with the same spellings as
+    ``fiboki.api.settings.parse_bool`` (which the data layer may not import).
+    Anything unrecognised raises rather than silently meaning False."""
+    raw = (environ.get(name) or "").strip().lower()
+    if not raw:
+        return default
+    if raw in ("1", "true", "yes", "on"):
+        return True
+    if raw in ("0", "false", "no", "off"):
+        return False
+    raise ValueError(f"{name}={raw!r} is not a boolean; use true/false. Refusing to guess.")
+
+
 def vendor_clients_from_env(
     http_client: Any, *, env: Mapping[str, str] | None = None,
     finnhub_categories: tuple[str, ...] = ("forex", "general"),
     marketaux_min_interval_s: float = 900.0,
+    finnhub_limiter: SlidingWindowLimiter | None = None,
+    gdelt_queries: tuple[GdeltQuery, ...] = GDELT_QUERIES,
 ) -> tuple[list[Any], dict[str, str]]:
-    """Configured vendor clients, plus a reason for each one that is off.
+    """Configured vendor and open-API clients, plus a reason for each one that is off.
 
-    A vendor without a key is OFF and says so; it is never a silent skip.
+    A source that is not configured is OFF and says so; it is never a silent
+    skip. Every Finnhub client built here shares one 60-per-minute limiter
+    (pass ``finnhub_limiter`` to share it with the calendar client too).
     """
     environ = os.environ if env is None else env
     clients: list[Any] = []
     off: dict[str, str] = {}
     fh = (environ.get(ENV_FINNHUB_API_KEY) or "").strip()
     if fh:
-        clients += [FinnhubNewsClient(fh, http_client, category=c) for c in finnhub_categories]
+        limiter = finnhub_limiter if finnhub_limiter is not None else finnhub_free_tier_limiter()
+        clients += [FinnhubNewsClient(fh, http_client, category=c, rate_limiter=limiter)
+                    for c in finnhub_categories]
     else:
         off["finnhub"] = f"{ENV_FINNHUB_API_KEY} not set"
     mx = (environ.get(ENV_MARKETAUX_API_KEY) or "").strip()
@@ -426,4 +639,9 @@ def vendor_clients_from_env(
         clients.append(MarketauxNewsClient(mx, http_client, min_interval_s=marketaux_min_interval_s))
     else:
         off["marketaux"] = f"{ENV_MARKETAUX_API_KEY} not set"
+    if env_flag(environ, ENV_GDELT_ENABLED):
+        shared = gdelt_limiter()
+        clients += [GdeltDocClient(q, http_client, rate_limiter=shared) for q in gdelt_queries]
+    else:
+        off["gdelt"] = f"{ENV_GDELT_ENABLED} not true (opt-in)"
     return clients, off

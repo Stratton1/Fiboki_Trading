@@ -57,7 +57,8 @@ class PollResult:
 
 class NewsRecorder:
     """Owns a store and a list of readers (anything with ``key``, ``source``,
-    ``min_interval_s`` and ``fetch() -> (items, rejected)``)."""
+    ``min_interval_s`` and ``fetch() -> (items, rejected)``, optionally a
+    ``last_report`` dict merged into that reader's poll-log entry)."""
 
     def __init__(
         self,
@@ -116,6 +117,11 @@ class NewsRecorder:
                 per_feed[reader.key] = {"error": f"{type(exc).__name__}: {exc}", "fetched": 0}
                 continue
             per_feed[reader.key] = {"fetched": len(items), "rejected": rejected}
+            # A reader may report more about its last fetch (GDELT: a response
+            # truncated at maxrecords). Recorded in the poll log, never hidden.
+            extra = getattr(reader, "last_report", None)
+            if extra:
+                per_feed[reader.key].update(dict(extra))
             batch.append((reader.key, items))
         for key, items in batch:
             per_feed[key].update(self.store.record(items, now))

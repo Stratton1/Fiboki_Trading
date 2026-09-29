@@ -1,0 +1,113 @@
+{
+ "DGS2": {
+  "realtime_start": "1776-07-04",
+  "realtime_end": "9999-12-31",
+  "count": 2,
+  "offset": 0,
+  "limit": 100000,
+  "observations": [
+   {
+    "realtime_start": "2026-09-22",
+    "realtime_end": "9999-12-31",
+    "date": "2026-09-21",
+    "value": "3.61"
+   },
+   {
+    "realtime_start": "2026-09-23",
+    "realtime_end": "9999-12-31",
+    "date": "2026-09-22",
+    "value": "3.63"
+   }
+  ]
+ },
+ "DGS10": {
+  "realtime_start": "1776-07-04",
+  "realtime_end": "9999-12-31",
+  "count": 3,
+  "offset": 0,
+  "limit": 100000,
+  "observations": [
+   {
+    "realtime_start": "2026-09-22",
+    "realtime_end": "2026-09-23",
+    "date": "2026-09-21",
+    "value": "4.10"
+   },
+   {
+    "realtime_start": "2026-09-24",
+    "realtime_end": "9999-12-31",
+    "date": "2026-09-21",
+    "value": "4.11"
+   },
+   {
+    "realtime_start": "2026-09-23",
+    "realtime_end": "9999-12-31",
+    "date": "2026-09-22",
+    "value": "4.15"
+   }
+  ]
+ },
+ "DTWEXBGS": {
+  "realtime_start": "1776-07-04",
+  "realtime_end": "9999-12-31",
+  "count": 2,
+  "offset": 0,
+  "limit": 100000,
+  "observations": [
+   {
+    "realtime_start": "2026-09-29",
+    "realtime_end": "9999-12-31",
+    "date": "2026-09-21",
+    "value": "119.20"
+   },
+   {
+    "realtime_start": "2026-09-29",
+    "realtime_end": "9999-12-31",
+    "date": "2026-09-22",
+    "value": "."
+   }
+  ]
+ },
+ "VIXCLS": {
+  "realtime_start": "1776-07-04",
+  "realtime_end": "9999-12-31",
+  "count": 2,
+  "offset": 0,
+  "limit": 100000,
+  "observations": [
+   {
+    "realtime_start": "2026-09-22",
+    "realtime_end": "9999-12-31",
+    "date": "2026-09-21",
+    "value": "16.20"
+   },
+   {
+    "realtime_start": "2026-09-23",
+    "realtime_end": "9999-12-31",
+    "date": "2026-09-22",
+    "value": "17.05"
+   }
+  ]
+ },
+ "DCOILWTICO": {
+  "realtime_start": "1776-07-04",
+  "realtime_end": "9999-12-31",
+  "count": 2,
+  "offset": 0,
+  "limit": 100000,
+  "observations": [
+   {
+    "realtime_start": "2026-09-24",
+    "realtime_end": "9999-12-31",
+    "date": "2026-09-21",
+    "value": "95.10"
+   },
+   {
+    "realtime_start": "2026-09-24",
+    "realtime_end": "9999-12-31",
+    "date": "2026-09-22",
+    "value": "96.41"
+   }
+  ]
+ }
+}

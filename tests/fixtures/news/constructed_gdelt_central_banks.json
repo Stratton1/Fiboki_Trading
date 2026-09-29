@@ -1,0 +1,44 @@
+{
+ "articles": [
+  {
+   "url": "https://example.com/markets/fed-holds-rates",
+   "url_mobile": "",
+   "title": "Fed holds rates steady, signals patience",
+   "seendate": "20260929T101500Z",
+   "socialimage": "",
+   "domain": "example.com",
+   "language": "English",
+   "sourcecountry": "United States"
+  },
+  {
+   "url": "https://EXAMPLE.com/markets/fed-holds-rates#top",
+   "url_mobile": "",
+   "title": "Fed holds rates steady, signals patience (update)",
+   "seendate": "20260929T103000Z",
+   "socialimage": "",
+   "domain": "example.com",
+   "language": "English",
+   "sourcecountry": "United States"
+  },
+  {
+   "url": "https://example.org/ecb/lagarde-hearing",
+   "url_mobile": "",
+   "title": "  Lagarde   tells lawmakers inflation risks are balanced ",
+   "seendate": "20260929T094500Z",
+   "socialimage": "",
+   "domain": "example.org",
+   "language": "English",
+   "sourcecountry": "Germany"
+  },
+  {
+   "url": "https://example.net/untitled",
+   "url_mobile": "",
+   "title": "",
+   "seendate": "20260929T090000Z",
+   "socialimage": "",
+   "domain": "example.net",
+   "language": "English",
+   "sourcecountry": "United Kingdom"
+  }
+ ]
+}

@@ -1,0 +1,26 @@
+{
+ "positionBook": {
+  "instrument": "EUR_USD",
+  "time": "2026-09-29T10:00:00.000000000Z",
+  "unixTime": "1790676000",
+  "price": "1.12860",
+  "bucketWidth": "0.00050",
+  "buckets": [
+   {
+    "price": "1.12800",
+    "longCountPercent": "0.2627",
+    "shortCountPercent": "0.2670"
+   },
+   {
+    "price": "1.12850",
+    "longCountPercent": "0.2712",
+    "shortCountPercent": "0.2034"
+   },
+   {
+    "price": "1.12900",
+    "longCountPercent": "0.2161",
+    "shortCountPercent": "0.2034"
+   }
+  ]
+ }
+}

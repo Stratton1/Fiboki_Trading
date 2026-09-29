@@ -20,6 +20,14 @@ from fiboki.data.providers.boe_iadb import BoeIadbProvider
 from fiboki.data.providers.cftc_cot import CftcCotProvider
 from fiboki.data.providers.dukascopy import DukascopyProvider
 from fiboki.data.providers.ecb_sdmx import EcbSdmxProvider
+from fiboki.data.providers.finnhub import FinnhubCalendarProvider
+from fiboki.data.providers.forexfactory_feed import ForexFactoryFeed
+from fiboki.data.providers.fred_pack import (
+    FRED_CROSS_ASSET_DAILY,
+    MACRO_DATASET_PACKS,
+    MacroDatasetPack,
+    fetch_pack,
+)
 from fiboki.data.providers.histdata import HistDataParquetProvider
 from fiboki.data.providers.macro_base import (
     AvailabilityBasis,
@@ -44,8 +52,18 @@ MACRO_PROVIDERS: dict[str, type] = {
     "nyfed": NyFedMarketsProvider,
 }
 
+#: Secondary dated-event calendars: written beside, and diffed against, the
+#: official calendar (``calendar_feed.calendar_diff``); never a replacement.
+SECONDARY_CALENDARS: dict[str, type] = {
+    "finnhub_calendar": FinnhubCalendarProvider,
+    "forexfactory_feed": ForexFactoryFeed,
+}
+
 __all__ = [
+    "FRED_CROSS_ASSET_DAILY",
+    "MACRO_DATASET_PACKS",
     "MACRO_PROVIDERS",
+    "SECONDARY_CALENDARS",
     "AlfredProvider",
     "AuthenticationRequired",
     "AvailabilityBasis",
@@ -55,8 +73,11 @@ __all__ = [
     "CftcCotProvider",
     "DukascopyProvider",
     "EcbSdmxProvider",
+    "FinnhubCalendarProvider",
+    "ForexFactoryFeed",
     "HistDataParquetProvider",
     "MacroDataset",
+    "MacroDatasetPack",
     "MacroDatasetStore",
     "MacroProviderDescriptor",
     "NyFedMarketsProvider",
@@ -65,4 +86,5 @@ __all__ = [
     "ProviderCapabilities",
     "ProviderError",
     "RateLimited",
+    "fetch_pack",
 ]

@@ -174,17 +174,21 @@ def test_vendors_are_off_without_keys_and_say_so():
     clients, off = vendor_clients_from_env(object(), env={})
     assert clients == []
     assert off == {"finnhub": f"{ENV_FINNHUB_API_KEY} not set",
-                   "marketaux": f"{ENV_MARKETAUX_API_KEY} not set"}
+                   "marketaux": f"{ENV_MARKETAUX_API_KEY} not set",
+                   "gdelt": "FIBOKI_GDELT_ENABLED not true (opt-in)"}
     clients, off = vendor_clients_from_env(
         object(), env={ENV_FINNHUB_API_KEY: "k1", ENV_MARKETAUX_API_KEY: "k2"})
     assert sorted(c.key for c in clients) == ["finnhub_forex", "finnhub_general", "marketaux_all"]
-    assert off == {}
+    assert off == {"gdelt": "FIBOKI_GDELT_ENABLED not true (opt-in)"}
 
 
 def test_official_feed_registry_is_complete_and_https():
     sources = {f.source for f in OFFICIAL_FEEDS}
     assert sources == {NewsSource.FED_RSS, NewsSource.ECB_RSS, NewsSource.BOE_RSS,
-                       NewsSource.BOJ_RSS, NewsSource.SNB_RSS, NewsSource.RBA_RSS}
+                       NewsSource.BOJ_RSS, NewsSource.SNB_RSS, NewsSource.RBA_RSS,
+                       NewsSource.OTHER}
+    # OTHER is the BIS republication feed only; every central bank keeps its own source.
+    assert [f.key for f in OFFICIAL_FEEDS if f.source is NewsSource.OTHER] == ["bis_cbspeeches"]
     assert len({f.key for f in OFFICIAL_FEEDS}) == len(OFFICIAL_FEEDS)
     for f in OFFICIAL_FEEDS:
         assert f.url.startswith("https://") and f.discovered_from.startswith("https://")
@@ -332,7 +336,7 @@ def _official_client() -> RecordedHttpClient:
         "ecb_blog": "ecb_press.xml", "boe_news": "boe_news.xml", "boe_speeches": "boe_news.xml",
         "boj_whatsnew": "boj_whatsnew.xml", "snb_pressrel": "snb_pressrel.xml",
         "snb_mopo": "snb_pressrel.xml", "rba_media": "rba_media.xml",
-        "rba_speeches": "rba_speeches.xml",
+        "rba_speeches": "rba_speeches.xml", "bis_cbspeeches": "bis_cbspeeches.rss",
     }
     for spec in OFFICIAL_FEEDS:
         client.add_file(spec.url, f"news/{by_key[spec.key]}")
@@ -343,15 +347,15 @@ def test_poll_once_fetches_every_feed_dedupes_and_logs(store):
     recorder = NewsRecorder.official(store, _official_client(), disabled={"finnhub": "no key"})
     r1 = recorder.poll_once(T0)
     assert r1.errors == {}
-    assert r1.total("fetched") == 32
+    assert r1.total("fetched") == 34
     # fed_press_all/ecb_blog/boe_speeches/snb_mopo replay a sibling's items: same source+URL
-    assert r1.total("new") == 3 + 3 + 3 + 3 + 3 + 1 + 1 + 3 == 20
+    assert r1.total("new") == 3 + 3 + 3 + 3 + 3 + 1 + 1 + 3 + 2 == 22
     assert r1.total("duplicate") == 12
     assert r1.per_feed["finnhub"] == {"disabled": "no key"}
     r2 = recorder.poll_once(T0 + timedelta(minutes=5))
-    assert r2.total("new") == 0 and r2.total("duplicate") == 32
+    assert r2.total("new") == 0 and r2.total("duplicate") == 34
     st = store.status()
-    assert st["rows"] == 20 and len(st["polls"]) == 2 and len(st["feeds"]) == len(OFFICIAL_FEEDS)
+    assert st["rows"] == 22 and len(st["polls"]) == 2 and len(st["feeds"]) == len(OFFICIAL_FEEDS)
     assert {h.observed_at for h in store.query(T0 + timedelta(hours=1), T0)} == {T0}
 
 
@@ -362,7 +366,7 @@ def test_recorder_survives_restart_without_duplicates(tmp_path):
     with HeadlineStore(path) as s2:  # a new process on the same file
         r = NewsRecorder.official(s2, _official_client()).poll_once(T0 + timedelta(minutes=5))
         assert r.total("new") == 0
-        assert s2.status()["rows"] == 20
+        assert s2.status()["rows"] == 22
         assert len(s2.status()["polls"]) == 2
 
 
@@ -374,7 +378,7 @@ def test_one_failing_feed_is_recorded_and_the_rest_carry_on(store):
     r = NewsRecorder.official(store, client).poll_once(T0)
     assert set(r.errors) == {"boj_whatsnew", "snb_pressrel"}
     assert "HTTP 503" in r.errors["snb_pressrel"]
-    assert r.total("new") == 20 - 3  # BoJ's three missing; SNB's still arrive via snb_mopo
+    assert r.total("new") == 22 - 3  # BoJ's three missing; SNB's still arrive via snb_mopo
     last = store.status()["polls"][-1][2]
     assert "boj_whatsnew" in last["errors"]
 
@@ -432,6 +436,7 @@ def test_cli_record_once_then_status(tmp_path, monkeypatch, capsys):
     monkeypatch.setattr(cli, "_http_client", _ClosableClient)
     monkeypatch.delenv(ENV_FINNHUB_API_KEY, raising=False)
     monkeypatch.delenv(ENV_MARKETAUX_API_KEY, raising=False)
+    monkeypatch.delenv("FIBOKI_GDELT_ENABLED", raising=False)
     state = tmp_path / "state"
     assert cli_main(["news", "status", "--state-dir", str(state)]) == 1  # no store yet
     assert cli_main(["news", "record", "--once", "--state-dir", str(state), "--json"]) == 0
@@ -439,7 +444,7 @@ def test_cli_record_once_then_status(tmp_path, monkeypatch, capsys):
     capsys.readouterr()
     assert cli_main(["news", "status", "--state-dir", str(state), "--json"]) == 0
     out = capsys.readouterr().out
-    assert '"rows": 20' in out and '"polls": 2' in out
+    assert '"rows": 22' in out and '"polls": 2' in out  # twelve bank feeds plus BIS
     assert cli_main(["news", "record", "--state-dir", str(state)]) == 2  # neither --once nor --loop
     assert cli_main(["news", "record", "--loop", "--interval", "5", "--state-dir", str(state)]) == 2
 

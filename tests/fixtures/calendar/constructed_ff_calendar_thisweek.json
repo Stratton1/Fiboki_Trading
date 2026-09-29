@@ -1,0 +1,82 @@
+[
+ {
+  "title": "CB Consumer Confidence",
+  "country": "USD",
+  "date": "2026-10-27T10:00:00-04:00",
+  "impact": "Medium",
+  "forecast": "",
+  "previous": ""
+ },
+ {
+  "title": "BOE Gov Bailey Speaks",
+  "country": "GBP",
+  "date": "2026-10-27T11:00:00-04:00",
+  "impact": "High",
+  "forecast": "",
+  "previous": ""
+ },
+ {
+  "title": "Federal Funds Rate",
+  "country": "USD",
+  "date": "2026-10-28T14:00:00-04:00",
+  "impact": "High",
+  "forecast": "",
+  "previous": ""
+ },
+ {
+  "title": "German Prelim CPI m/m",
+  "country": "EUR",
+  "date": "2026-10-29T00:00:00-04:00",
+  "impact": "Medium",
+  "forecast": "",
+  "previous": ""
+ },
+ {
+  "title": "Advance GDP q/q",
+  "country": "USD",
+  "date": "2026-10-29T08:30:00-04:00",
+  "impact": "High",
+  "forecast": "",
+  "previous": ""
+ },
+ {
+  "title": "Main Refinancing Rate",
+  "country": "EUR",
+  "date": "2026-10-29T09:15:00-04:00",
+  "impact": "High",
+  "forecast": "",
+  "previous": ""
+ },
+ {
+  "title": "BOJ Policy Rate",
+  "country": "JPY",
+  "date": "2026-10-29T23:00:00-04:00",
+  "impact": "High",
+  "forecast": "",
+  "previous": ""
+ },
+ {
+  "title": "Bank Holiday",
+  "country": "NZD",
+  "date": "2026-10-26T00:00:00-04:00",
+  "impact": "Holiday",
+  "forecast": "",
+  "previous": ""
+ },
+ {
+  "title": "Some Non-Economic Item",
+  "country": "USD",
+  "date": "2026-10-26T09:00:00-04:00",
+  "impact": "Non-Economic",
+  "forecast": "",
+  "previous": ""
+ },
+ {
+  "title": "Zone-less row",
+  "country": "USD",
+  "date": "2026-10-30T08:30:00",
+  "impact": "High",
+  "forecast": "",
+  "previous": ""
+ }
+]

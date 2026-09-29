@@ -1,0 +1,64 @@
+{
+ "economicCalendar": [
+  {
+   "actual": null,
+   "country": "US",
+   "estimate": 2.1,
+   "event": "GDP Growth Rate QoQ Adv",
+   "impact": "high",
+   "prev": 1.9,
+   "time": "2026-10-29 12:30:00",
+   "unit": "%"
+  },
+  {
+   "actual": null,
+   "country": "EU",
+   "estimate": 2.0,
+   "event": "ECB Interest Rate Decision",
+   "impact": "high",
+   "prev": 2.0,
+   "time": "2026-10-29 13:15:00",
+   "unit": "%"
+  },
+  {
+   "actual": null,
+   "country": "DE",
+   "estimate": null,
+   "event": "Germany - Unemployment Change",
+   "impact": "medium",
+   "prev": null,
+   "time": "2026-10-29 08:55:00",
+   "unit": "K"
+  },
+  {
+   "actual": null,
+   "country": "XX",
+   "estimate": null,
+   "event": "Unknown country release",
+   "impact": "low",
+   "prev": null,
+   "time": "2026-10-29 01:00:00",
+   "unit": ""
+  },
+  {
+   "actual": null,
+   "country": "US",
+   "estimate": null,
+   "event": "Impact not rated",
+   "impact": "",
+   "prev": null,
+   "time": "2026-10-29 14:00:00",
+   "unit": ""
+  },
+  {
+   "actual": null,
+   "country": "JP",
+   "estimate": null,
+   "event": "Bad time row",
+   "impact": "low",
+   "prev": null,
+   "time": "not a time",
+   "unit": ""
+  }
+ ]
+}

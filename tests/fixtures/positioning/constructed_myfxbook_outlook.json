@@ -1,0 +1,42 @@
+{
+ "error": false,
+ "message": "",
+ "symbols": [
+  {
+   "name": "EURUSD",
+   "shortPercentage": 61,
+   "longPercentage": 39,
+   "shortVolume": 8000.5,
+   "longVolume": 5000.25,
+   "longPositions": 12000,
+   "shortPositions": 17000,
+   "totalPositions": 29000,
+   "avgShortPrice": 1.1215,
+   "avgLongPrice": 1.1302
+  },
+  {
+   "name": "XAUUSD",
+   "shortPercentage": 30,
+   "longPercentage": 70,
+   "shortVolume": 90.1,
+   "longVolume": 210.4,
+   "longPositions": 5000,
+   "shortPositions": 2100,
+   "totalPositions": 7100,
+   "avgShortPrice": 3650.2,
+   "avgLongPrice": 3702.9
+  }
+ ],
+ "general": {
+  "demoAccountsPercentage": 40,
+  "realAccountsPercentage": 60,
+  "profitablePercentage": 45,
+  "nonProfitablePercentage": 55,
+  "fundsWon": "1000.00",
+  "fundsLost": "1200.00",
+  "averageDeposit": "500.00",
+  "averageAccountProfit": "100.00",
+  "averageAccountLoss": "120.00",
+  "totalFunds": "100000.00"
+ }
+}
