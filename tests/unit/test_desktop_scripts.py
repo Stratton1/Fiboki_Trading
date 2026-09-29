@@ -39,7 +39,10 @@ def _run(argv: list[str], env: dict[str, str] | None = None, cwd: Path = REPO,
                           text=True, timeout=timeout, check=False)
 
 
-@pytest.mark.parametrize("name", [*NEW_SCRIPTS, "desktop/Start Fiboki.command"])
+@pytest.mark.parametrize(
+    "name", [*NEW_SCRIPTS, "desktop/Start Fiboki.command", "desktop/fiboki-launch.sh",
+             "desktop/install-launcher.sh"]
+)
 def test_every_script_parses_and_sets_no_live_control(name: str) -> None:
     path = SCRIPTS / name
     assert _run(["bash", "-n", str(path)]).returncode == 0
@@ -381,3 +384,109 @@ def test_the_launcher_recognises_llama_cpp_and_names_its_model(fake_llama: str) 
 def test_the_launcher_with_no_server_leaves_agents_offline() -> None:
     env = _detect("http://127.0.0.1:9")
     assert "FIBOKI_AGENT_PROVIDER" not in env and "FIBOKI_AGENT_CYCLES" not in env
+
+
+# ------------------------------------------------------- Fiboki.app launcher
+
+
+def _stub(bin_dir: Path, name: str, body: str) -> None:
+    path = bin_dir / name
+    path.write_text(f"#!/bin/sh\n{body}\n")
+    path.chmod(0o755)
+
+
+def _fake_mac(bin_dir: Path, *, healthy_after: int, loaded: bool) -> None:
+    """Stubs for the macOS commands the silent launcher touches. `curl` succeeds
+    from the Nth call (each health probe is two calls); `launchctl print` says
+    a label is loaded or not; `open`, `osascript` and `launchctl` record calls."""
+    calls = bin_dir / "calls.log"
+    _stub(bin_dir, "open", f'echo "open $*" >> {calls}')
+    _stub(bin_dir, "osascript", f'echo "osascript $*" >> {calls}')
+    _stub(bin_dir, "curl", (
+        f'n=$(cat {bin_dir}/curl.count 2>/dev/null || echo 0); n=$((n+1)); echo $n > {bin_dir}/curl.count\n'
+        f'[ $n -gt {healthy_after} ]'
+    ))
+    print_branch = 'echo "state = running"; exit 0' if loaded else "exit 113"
+    _stub(bin_dir, "launchctl", (
+        f'echo "launchctl $*" >> {calls}\n'
+        'case "$1" in\n'
+        f"  print) {print_branch} ;;\n"
+        '  bootstrap|kickstart) exit 0 ;;\n'
+        '  list) exit 0 ;;\n'
+        'esac'
+    ))
+
+
+def _installed_launcher(tmp_path: Path) -> Path:
+    desk = tmp_path / "Desktop"
+    proc = _run(["bash", str(SCRIPTS / "desktop" / "install-launcher.sh"), "--desktop", str(desk)])
+    assert proc.returncode == 0, proc.stderr
+    return desk
+
+
+def test_install_launcher_builds_a_silent_app_bundle(tmp_path: Path) -> None:
+    desk = _installed_launcher(tmp_path)
+    app = desk / "Fiboki.app" / "Contents"
+    plist = plistlib.loads((app / "Info.plist").read_bytes())
+    assert plist["CFBundleExecutable"] == "Fiboki" and plist["LSUIElement"] is True
+    assert plist["CFBundleIconFile"] == "Fiboki"
+    exe = (app / "MacOS" / "Fiboki").read_text()
+    assert "open -a Terminal" not in exe, "the app must not open a Terminal window"
+    assert f'ROOT="${{FIBOKI_ROOT:-{REPO}}}"' in exe, "repository path substituted"
+    assert "__FIBOKI_ROOT__" not in exe
+    assert os.access(app / "MacOS" / "Fiboki", os.X_OK)
+    assert (desk / "Start Fiboki (Terminal).command").exists()
+    assert not (desk / "Start Fiboki.command").exists()
+    # Idempotent, and honours --root.
+    again = _run(["bash", str(SCRIPTS / "desktop" / "install-launcher.sh"), "--desktop", str(desk), "--root", str(REPO)])
+    assert again.returncode == 0, again.stderr
+
+
+def test_the_app_opens_the_workstation_when_already_healthy(tmp_path: Path) -> None:
+    bin_dir = tmp_path / "bin"
+    bin_dir.mkdir()
+    _fake_mac(bin_dir, healthy_after=0, loaded=True)
+    desk = _installed_launcher(tmp_path)
+    proc = _run(["bash", str(desk / "Fiboki.app" / "Contents" / "MacOS" / "Fiboki")],
+                env={"PATH": f"{bin_dir}:{os.environ['PATH']}", "HOME": str(tmp_path)})
+    assert proc.returncode == 0, proc.stderr
+    calls = (bin_dir / "calls.log").read_text()
+    assert "open http://localhost:3000" in calls
+    assert "launchctl bootstrap" not in calls and "display dialog" not in calls
+
+
+def test_the_app_bootstraps_installed_services_then_waits_for_health(tmp_path: Path) -> None:
+    bin_dir = tmp_path / "bin"
+    bin_dir.mkdir()
+    # Not loaded; plists installed under this HOME; healthy from the 3rd probe.
+    _fake_mac(bin_dir, healthy_after=4, loaded=False)
+    agents = tmp_path / "Library" / "LaunchAgents"
+    agents.mkdir(parents=True)
+    for name in ("api", "worker", "web", "news"):
+        (agents / f"uk.fiboki.{name}.plist").write_text("<plist/>")
+    desk = _installed_launcher(tmp_path)
+    proc = _run(["bash", str(desk / "Fiboki.app" / "Contents" / "MacOS" / "Fiboki")],
+                env={"PATH": f"{bin_dir}:{os.environ['PATH']}", "HOME": str(tmp_path)}, timeout=60)
+    assert proc.returncode == 0, proc.stderr
+    calls = (bin_dir / "calls.log").read_text()
+    for name in ("api", "worker", "web", "news"):
+        assert f"launchctl bootstrap gui/{os.getuid()} {agents / f'uk.fiboki.{name}.plist'}" in calls
+    assert "uk.fiboki.paper" not in calls, "paper only when its plist is installed"
+    assert "display notification" in calls and "display dialog" not in calls
+    assert calls.rstrip().endswith("open http://localhost:3000")
+    log = (REPO / "var" / "logs" / "launcher.log").read_text()
+    assert "healthy after" in log
+
+
+def test_the_app_shows_a_dialog_when_the_platform_never_comes_up(tmp_path: Path) -> None:
+    bin_dir = tmp_path / "bin"
+    bin_dir.mkdir()
+    _fake_mac(bin_dir, healthy_after=10_000, loaded=True)
+    _stub(bin_dir, "sleep", "exit 0")  # the 120 s wait, without waiting
+    desk = _installed_launcher(tmp_path)
+    proc = _run(["bash", str(desk / "Fiboki.app" / "Contents" / "MacOS" / "Fiboki")],
+                env={"PATH": f"{bin_dir}:{os.environ['PATH']}", "HOME": str(tmp_path)}, timeout=60)
+    assert proc.returncode == 1
+    calls = (bin_dir / "calls.log").read_text()
+    assert "display dialog" in calls and "did not become healthy" in calls
+    assert "open http://localhost:3000" not in calls

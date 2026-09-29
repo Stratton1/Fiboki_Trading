@@ -108,13 +108,20 @@ pins it by the SHA-256 of the GGUF file. Runbook: `docs/v2/OPERATIONS.md` §13.
 
 ### 2.5 The desktop launcher
 
-`scripts/desktop/install-launcher.sh` puts `Fiboki.app` and `Start Fiboki.command` on the
-Desktop. When the launchd services are loaded the launcher defers to them: it prints their
-state and opens the browser, and starts nothing. Otherwise it runs `scripts/dev-up.sh` in a
-Terminal window for an interactive session (both paths bind ports 8000 and 3000, so the two
-are never run together). Its model detection recognises llama.cpp by `/props`, exports the declared
-`FIBOKI_AGENT_LOCAL_URL` / `FIBOKI_AGENT_LOCAL_MODEL`, and only switches agent cycles on when
-`FIBOKI_AGENT_CYCLE_TARGET` is set.
+`scripts/desktop/install-launcher.sh --root ~/fiboki` puts `Fiboki.app` on the Desktop: a
+real app bundle (`LSUIElement`, no Dock tile, no Terminal window) whose executable is
+`scripts/desktop/fiboki-launch.sh`. Double-clicking it: if the workstation already answers on
+8000 and 3000, opens the browser; otherwise posts a notification, bootstraps any installed
+`uk.fiboki.*` LaunchAgents that are not loaded (kickstarting any loaded but exited), installs
+the four core services if none are, waits up to 120 s for `/api/health` and `/`, then opens
+http://localhost:3000. A failure shows a dialog with the log path (`var/logs/launcher.log`).
+It never runs `dev-up.sh`; `Start Fiboki (Terminal).command` remains for an interactive
+session with visible logs, and refuses when the services are loaded (same ports).
+
+The icon is generated: `scripts/desktop/make_icon.py` writes `fiboki-icon.svg` from the
+workstation's OKLCH tokens (graphite tile, golden-rectangle grid, the golden spiral in the
+accent), `apps/web/scripts/desktop-icon.mjs` renders `Fiboki.iconset` with the Playwright
+Chromium, and the installer builds the `.icns` with `iconutil` on every run.
 
 ### 2.6 Where the checkout lives: outside `~/Documents` (decision, 2026-09-29)
 

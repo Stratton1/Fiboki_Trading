@@ -196,6 +196,7 @@ Everything here keeps the deployment in paper mode; none of it touches a live co
 - [ ] Download one model (M3) into `~/Models`, verify its SHA-256 against the Hugging Face page, `scripts/llama-server.sh --print`. On the MacBook (8 GB) Ollama `qwen3:4b` is used instead; llama.cpp with a larger model is the desktop plan.
 - [x] ~~`_build_provider` change~~ — made (`for_local_server`; detects llama.cpp by `/props`, Ollama otherwise).
 - [x] Agent variables set in `~/.fiboki/env`; `FIBOKI_AGENT_CYCLES=true` after the smoke test passed (P7).
+- [x] Desktop launcher reinstalled from `~/fiboki` (`scripts/desktop/install-launcher.sh --root ~/fiboki`): silent start, brand icon.
 - [x] `.venv/bin/fiboki doctor`: 0 FAIL in `~/fiboki`; `scripts/launchd-install.sh --services api,worker,web,news --load` done; `uk.fiboki.llama` and `uk.fiboki.paper` are not loaded (no llama.cpp model; no OANDA token).
 - [ ] System Settings: log in automatically, never sleep, restart after a power failure. LaunchAgents only run while you are logged in. (Your action; I cannot change system settings.)
 - [ ] Rehearse a restore once (`OPERATIONS.md` §13.2) before you rely on the backups.
