@@ -8,11 +8,14 @@ Design (matches ``apps/web/app/globals.css``: quiet graphite chrome, one accent)
 * a golden rectangle subdivided into Fibonacci squares (13, 8, 5, 3, 2, 1, 1),
   drawn as hairlines in ``--border-strong`` so the construction is visible up
   close and disappears at 32 px;
-* the golden spiral through those squares in the accent ``--accent`` to
-  ``--focus-ring``, round caps, ending in a dot: the mark reads as an "F"-less
-  Fibonacci curve rather than lettering, which does not survive 16 px anyway.
+* the golden spiral through those squares in the Fiboki brand emerald
+  (the V1 identity: ``--color-primary #059669`` to ``--color-primary-light
+  #10B981``, lifted to ``#34D399`` at the tip for the glow), round caps, ending
+  in a dot: the mark reads as a Fibonacci curve rather than lettering, which
+  does not survive 16 px anyway. The workstation UI keeps its blue accent:
+  its stylesheet reserves green for P&L-up, and the icon is outside that rule.
 
-Colours are the sRGB values of the OKLCH tokens (computed, not eyeballed).
+Neutrals are the sRGB values of the OKLCH tokens (computed, not eyeballed).
 Usage: ``python3 scripts/desktop/make_icon.py`` writes ``fiboki-icon.svg`` next
 to this file; ``node scripts/desktop-icon.mjs`` (from ``apps/web``) renders the iconset.
 """
@@ -49,9 +52,11 @@ TOKENS = {
     "bg_sunken": oklch_to_hex(0.125, 0.008, 255),
     "border": oklch_to_hex(0.320, 0.012, 255),
     "border_strong": oklch_to_hex(0.420, 0.014, 255),
-    "accent": oklch_to_hex(0.720, 0.140, 250),
-    "focus": oklch_to_hex(0.800, 0.150, 250),
     "fg": oklch_to_hex(0.955, 0.004, 255),
+    # Brand emerald (legacy/v1/frontend/src/app/globals.css), not an OKLCH token.
+    "brand": "#059669",
+    "brand_light": "#10b981",
+    "brand_tip": "#34d399",
 }
 
 # Fibonacci squares tiling a 13 x 8 golden rectangle: (x, y, side, arc centre,
@@ -107,8 +112,9 @@ def build_svg() -> str:
       <stop offset="0.6" stop-color="{t['fg']}" stop-opacity="0"/>
     </radialGradient>
     <linearGradient id="curve" x1="0" y1="1" x2="1" y2="0">
-      <stop offset="0" stop-color="{t['accent']}"/>
-      <stop offset="1" stop-color="{t['focus']}"/>
+      <stop offset="0" stop-color="{t['brand']}"/>
+      <stop offset="0.6" stop-color="{t['brand_light']}"/>
+      <stop offset="1" stop-color="{t['brand_tip']}"/>
     </linearGradient>
     <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
       <feGaussianBlur stdDeviation="14" result="b"/>
