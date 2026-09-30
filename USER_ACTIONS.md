@@ -16,19 +16,15 @@ Items are ordered by when they block you, not by effort.
 
 You chose "V2 is the repository": `main` was fast-forwarded to `v2/integration`, V1 is preserved under `legacy/v1/` and at the tag `v1-final` (commit ccc3af2). Nothing in V2 imports anything from `legacy/`.
 
-### C2. Decide what happens to the V1 production deployment — DECIDED 2026-09-30: take V1 down; one click is yours
+### C2. Decide what happens to the V1 production deployment — DONE 2026-09-30/10-01: V1 is down
 
-You decided on 2026-09-30 to take V1 down and make V2 the live site. `fiboki.uk` and `www.fiboki.uk`
-still serve the V1 build (Vercel project `fiboki-trading`, every build since main moved to V2 fails
-with "Root Directory 'frontend' does not exist", so the last successful V1 deployment is what is
-served); `api.fiboki.uk` answers 404 on `/health` (Railway V1 API).
-
-- [ ] **Pause the Vercel project** (this takes V1 down and stops the failure e-mails; it is reversible
-  with Unpause). The API token this session holds is read-only for project updates (403 on pause), so
-  it is one click for you: vercel.com → `fiboki-trading` → Settings → General → **Pause Project**.
-  Alternative with the same effect: Settings → Git → disconnect the repository, then delete the
-  production deployment.
-- [ ] Railway: stop or delete the V1 API service (`api.fiboki.uk`).
+You decided on 2026-09-30 to take V1 down and make V2 the live site. Verified 2026-10-01 00:10 UTC:
+`https://fiboki.uk/` answers HTTP 503 `x-vercel-error: DEPLOYMENT_PAUSED` (the Vercel project
+`fiboki-trading` is paused; Unpause reverses it), and `https://api.fiboki.uk/` answers Railway's
+fallback 404 (`x-railway-fallback: true`, "Application not found"): the V1 API deployment was
+removed and the `Fiboki_Trading` Railway service's GitHub source was disconnected on 2026-09-30, so
+pushes to `main` no longer trigger a (failing) Railway build. The Railway service, its custom
+domain and its variables still exist; delete the service when you no longer want the DNS record.
 
 **V2 cannot be "the live site" on Vercel as it stands, and this is a design property, not a bug.**
 V2's web tier is thin (display and controls); every number comes from the FastAPI service and the
@@ -175,6 +171,31 @@ Telegram bot token and chat id, or a webhook URL. The dispatcher is built and fi
 `deploy/Dockerfile` carries a placeholder digest and will not build until you substitute a real `python:3.11-slim-bookworm` digest. This was deliberate — inventing a digest would be worse than leaving it obviously absent.
 
 ---
+
+## RESEARCH DECISIONS THAT ARE YOURS
+
+### R1. File E-2 (gate calibration, the step after E-1) — a decision, not a click
+
+`research/preregistration/gate_calibration_e2.json` is a DRAFT (2026-10-01). It names the candidate
+gate sets built from the audit's section 3.1 proposals (`validation/gates.py`,
+`GATE_SET_V2_1_CANDIDATES`, none promotable), states before any result what each is expected to do,
+and fixes the decision rule: a replacement is admitted only if its size stays at or below 0.05 on
+both E-1 processes; the calibrated set is the audited set with every admitted replacement, published
+as `v2.1.0-calibrated` only if its own size holds; `c_dsr_family` (deflation against the candidate's
+own trials only) is measured and never admitted. Read it, change what you disagree with, then set
+`status` to `FILED <date>` with `filed_at`, `filed_commit` and a `decision_date` after both E-1
+processes have run. Until it is filed no candidate-set rate is read or quoted; the measuring-mode
+runs record them, sealed. What you are deciding: that these, and only these, are the loosenings
+on the table, and that the deflation's trial count is a separate experiment (E-3), not a knob.
+
+### R2. Run E-1 process 2 on the Mac (compute, not judgement)
+
+`perturbed_price_paths` costs about 500 s of engine time per replicate on a single core (60-odd
+`engine_v3_realism` backtests per replicate; the ladder statistics are negligible), so 400
+replicates are about 58 core-hours. The study now shards (`--replicate-range`), checkpoints after
+every replicate and resumes (`--resume`), and merges (`--merge`); `research/reports/e1/run_paths_mac.sh`
+launches the shards. Leave the MacBook on mains and awake; a sleep interrupts nothing that
+`--resume` cannot continue.
 
 ## REQUIRED BEFORE LIVE MONEY
 

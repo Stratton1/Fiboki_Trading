@@ -30,6 +30,7 @@ __all__ = [
     "StabilityReport",
     "analyse_parameter_stability",
     "marginal_sensitivity",
+    "neighbourhood_median_ratio",
     "plateau_ratio",
     "sensitivity_surface",
 ]
@@ -75,6 +76,26 @@ def plateau_ratio(score: float, neighbour_mean: float) -> float:
     return (s + c) / denominator
 
 
+def neighbourhood_median_ratio(score: float, neighbour_median: float) -> float:
+    """Median neighbour score over the point's own score: ``median(neighbours) / s``.
+
+    The audit's (section 3.1) scale-free plateau condition, measured as its own
+    number so a candidate gate can read it (``>= 0.6``) beside, not instead of,
+    :func:`plateau_ratio`. The MEDIAN of the neighbourhood EXCLUDING the point,
+    so neither the point nor one extreme neighbour moves it. Dimensionless:
+    multiplying every score by ``k > 0`` leaves it unchanged.
+
+    Returns ``nan`` when ``s <= 0`` (a ratio to a non-positive score has no
+    plateau reading; the gate is then NOT_EVALUATED, which blocks) or when the
+    median is not finite (no neighbours).
+    """
+    s = float(score)
+    m = float(neighbour_median)
+    if not np.isfinite(s) or not np.isfinite(m) or s <= 0.0:
+        return float("nan")
+    return m / s
+
+
 @dataclass(frozen=True, slots=True)
 class ParameterPoint:
     """One grid point, with its own score and its neighbourhood's."""
@@ -108,6 +129,12 @@ class ParameterPoint:
     scores below 1.0 even when every cell it has is populated.  A low-coverage
     point's plateau statistics rest on fewer neighbours and deserve less trust."""
     is_isolated_peak: bool
+    plateau_median_excluding: float = float("nan")
+    """Median over the neighbours only (the point excluded); ``nan`` without
+    neighbours. Input to :func:`neighbourhood_median_ratio`."""
+    plateau_min_excluding: float = float("nan")
+    """Minimum over the neighbours only (the point excluded); ``nan`` without
+    neighbours. ``plateau_min`` includes the point and is kept as it was."""
 
     def __repr__(self) -> str:  # pragma: no cover - cosmetic
         p = ", ".join(f"{k}={v:g}" for k, v in self.params.items())
@@ -251,6 +278,8 @@ def analyse_parameter_stability(
         plateau_std = float(np.std(finite)) if finite.size > 1 else 0.0
         plateau_min = float(np.min(finite))
         excl_mean = float(np.mean(neighbours)) if neighbours.size else float("nan")
+        excl_median = float(np.median(neighbours)) if neighbours.size else float("nan")
+        excl_min = float(np.min(neighbours)) if neighbours.size else float("nan")
         inclusive = score / plateau_mean if plateau_mean > 0.0 else float("nan")
         ratio = plateau_ratio(score, excl_mean)
         quality = plateau_mean - penalty * plateau_std
@@ -274,6 +303,8 @@ def analyse_parameter_stability(
                 n_neighbours=int(neighbours.size),
                 coverage=float(finite.size / full_neighbourhood),
                 is_isolated_peak=isolated,
+                plateau_median_excluding=excl_median,
+                plateau_min_excluding=excl_min,
             )
         )
     return StabilityReport(

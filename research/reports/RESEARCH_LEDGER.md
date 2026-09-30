@@ -367,3 +367,49 @@ step; the trial-count question is a design question (deflate against the candida
 plus the family's, or against the whole campaign's) and must be argued in the pre-registration
 of the calibrated set, not tuned. **Next:** `perturbed_price_paths` on the Mac or desktop; then
 the decision on 2026-10-02 or the first day both results exist.
+
+## E-2 gate calibration, `gate_calibration_e2` (DRAFT 2026-10-01, not filed; instruments built, no candidate rate read)
+
+**What was built, before any candidate result existed.** (i) The audit's section 3.1 proposals as
+CANDIDATE gate sets, `validation/gates.py` `GATE_SET_V2_1_CANDIDATES` (version prefix
+`v2.1.0-candidate:`; `lifecycle.promotion` accepts only `GATE_SET_V2`'s fingerprint, so none can
+promote anything): `c_min_trl` (n ≥ max(150, MinTRL_95)), `c_wfe_log` (log-growth WFE with a
+30-trade OOS-fold floor), `c_hit_wilson` (Wilson 95% lower bound of the fold hit rate > 0.5),
+`c_hit_8fold` (5 of 8 folds; judged only in an 8-fold run), `c_plateau_median` (neighbourhood
+median ≥ 0.6 × point and every neighbour > 0), `c_dsr_family` (DSR against the candidate's own
+trials only; a measurement of what the campaign count costs, never admissible), `c_all`. The
+ladder computes every replacement metric beside the audited ones (`ladder.py`; the audited set
+reads none of them, pinned by `test_validation_gates.py`). `GATE_SET_V2` is unchanged, fingerprint
+`fe7daa4c…`. (ii) **Measuring mode**, `ValidationLadder.run_measuring`: every rung runs once on a
+150-trade rung-0 floor and the one measurement is judged under every set; a gate block never stops
+the rungs, a rung's own rejection does; in-memory holdout registries only (it consumes the holdout
+of every candidate it measures). Verdict and binding constraint equal the fail-fast ladder's
+candidate by candidate (`tests/unit/test_ladder_measuring.py`, 38 cases spanning rung-0, mid-rung
+and deflation rejections and promotions, every set). It is what makes E-2 affordable: E-1 process 2
+and E-2 are ONE run, and E-1's path 2 ("the gate whose removal most reduces size") is readable from
+the same rows (`gate_removal_v2` in the output; `judge_rows` re-judges any gate set post hoc, pinned
+equal to the ladder's own verdicts by `test_gate_power_study.py`). (iii) The study shards
+(`--replicate-range`), checkpoints after every replicate, resumes (`--resume`) and merges
+(`--merge`; refuses overlaps, gaps, partials and mismatched identity; shards merged equal the
+unsharded run row for row, `test_gate_power_study_real.py`). `research/reports/e1/run_paths_mac.sh`
+runs process 2 as shards on the Mac.
+
+**Cost, measured.** One `perturbed_price_paths` replicate is about 500 s on one core of the cloud
+sandbox: 63 `engine_v3_realism` backtests take 99.5% of it (profile, `cProfile`, 1,264 s under the
+profiler); `generate_signal` 47%, `realised_portfolio_vol` (recomputed per bar) 24%, per-bar
+DataFrame column access 16%. The ladder statistics are negligible. 400 replicates ≈ 58 core-hours;
+the audit's §4.3 vectorisation plan (results byte-identical) is the only large lever and is NOT
+taken here, because an engine change invalidates every stored result and belongs in its own commit
+with its own golden-test evidence.
+
+**Discipline.** The draft states, per candidate, what it is expected to do BEFORE any result is
+read, with the arithmetic: MinTRL_95 is 425 trades at SR 0.08 (not a loosening at the target
+edge); Wilson > 0.5 needs 5 of 5 folds (a tightening; P = 0.05 at a 55% hit rate); 5 of 8 is
+roughly 3 of 5; and the trial count is expected to dominate (H2). Decision rule: single
+replacements admitted only at size ≤ 0.05 on both processes; the calibrated set is the audited set
+with every admitted replacement, published only if ITS size holds; `c_dsr_family` never; the trial
+count is E-3, not a knob. The E-1 process-1 measuring replay
+(`research/reports/e1/e1_block_bootstrap_real_returns.measuring.json`) is run before filing for
+ONE purpose, the equivalence check of the audited set's 2,000 verdicts against the stored fail-fast
+result (`scripts/e1_equivalence.py`); its candidate-set summaries are not read until E-2 is FILED
+(USER_ACTIONS R1). Nothing is moved by this entry.

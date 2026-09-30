@@ -45,9 +45,18 @@ from fiboki.core.enums import Provenance
 from fiboki.stats.cv import CombinatorialPurgedCV, LabelSpans
 from fiboki.stats.multiple_testing import effective_trials_by_clustering
 from fiboki.stats.pbo import combinatorially_symmetric_cv
-from fiboki.stats.sharpe import deflated_sharpe_ratio, sharpe_moments
+from fiboki.stats.proportions import wilson_lower_bound
+from fiboki.stats.sharpe import (
+    deflated_sharpe_ratio,
+    minimum_track_record_length,
+    sharpe_moments,
+)
 from fiboki.stats.spa import step_m, superior_predictive_ability
-from fiboki.stats.stability import PLATEAU_RATIO_DEFINITION, analyse_parameter_stability
+from fiboki.stats.stability import (
+    PLATEAU_RATIO_DEFINITION,
+    analyse_parameter_stability,
+    neighbourhood_median_ratio,
+)
 from fiboki.stats.stress import (
     end_date_stress,
     execution_delay_stress,
@@ -86,10 +95,29 @@ __all__ = [
     "ValidationLadder",
     "WalkForwardRung",
     "default_rungs",
+    "sanity_trade_floor",
 ]
 
 #: Multipliers the audit names for the spread stress. 2.0 is the gated one.
 SPREAD_MULTIPLIERS = (1.0, 1.5, 2.0, 3.0)
+
+#: ``n_trades_over_min_trl`` is ``n_trades / max(min_trl_95, MIN_TRL_FLOOR_TRADES)``,
+#: so one ``>= 1.0`` gate reads "n >= max(150, MinTRL_95)" (audit section 3.1).
+#: Part of the METRIC's definition, recorded beside it in the rung-0 metrics.
+MIN_TRL_FLOOR_TRADES = 150
+#: One-sided confidence of ``min_trl_95`` (Z = 1.6449) and of the Wilson bound
+#: on the OOS window hit rate.
+MIN_TRL_CONFIDENCE = 0.95
+WILSON_CONFIDENCE = 0.95
+
+#: Every gate name that reads a parameter-plateau metric. When the plateau does
+#: not apply (non-numeric grid, fewer than 3 points) all of them are
+#: NOT_APPLICABLE, whichever gate set is in force.
+PLATEAU_GATE_NAMES = (
+    "parameter_plateau",
+    "plateau_neighbourhood_median",
+    "plateau_neighbourhood_min",
+)
 
 
 # --------------------------------------------------------------------------
@@ -322,12 +350,27 @@ class SanityRung(Rung):
         ctx.scratch["baseline"] = baseline
         ctx.gate_values["n_trades"] = float(baseline.n_trades)
         ctx.label("n_trades", Provenance.BACKTEST)
+        # Candidate-gate inputs (E-2). Measured for every gate set; read only by
+        # a gate set that names them.
+        min_trl, min_trl_basis = _min_trl_95(baseline)
+        over_min_trl = (
+            None
+            if min_trl is None
+            else float(baseline.n_trades) / max(min_trl, float(MIN_TRL_FLOOR_TRADES))
+        )
+        ctx.gate_values["min_trl_95"] = min_trl
+        ctx.gate_values["n_trades_over_min_trl"] = over_min_trl
+        ctx.label("min_trl_95", Provenance.BACKTEST)
+        ctx.label("n_trades_over_min_trl", Provenance.BACKTEST)
         metrics = {
             "baseline": baseline.summary(),
             "n_trades": baseline.n_trades,
             "expectancy": baseline.expectancy,
             "net_profit": baseline.net_profit,
             "min_trades_required": ctx.config.min_trades,
+            "min_trl_95": min_trl,
+            "n_trades_over_min_trl": over_min_trl,
+            "min_trl_basis": min_trl_basis,
         }
         degeneracies = baseline.degeneracies()
         if degeneracies:
@@ -424,6 +467,7 @@ class WalkForwardRung(Rung):
         cfg = ctx.config
         slices = ctx.research_window.slices(cfg.walk_forward_folds + 1, prefix="wf")
         folds: list[dict[str, Any]] = []
+        log_rates: list[tuple[float, float] | None] = []
         for i in range(cfg.walk_forward_folds):
             if cfg.walk_forward_scheme == "anchored":
                 train = DateWindow(f"wf_train_{i}", slices[0].start, slices[i].end)
@@ -440,6 +484,7 @@ class WalkForwardRung(Rung):
             oos = ctx.evaluate(selected_params, test)
             fixed = ctx.evaluate(ctx.candidate.default_params, test)
             is_rate, oos_rate, fixed_rate, basis = _fold_rates(trained[chosen], oos, fixed)
+            log_rates.append(_log_growth_rates(trained[chosen], oos))
 
             folds.append(
                 {
@@ -469,6 +514,20 @@ class WalkForwardRung(Rung):
         hit = float(np.mean([f["oos_net_profit"] > 0.0 for f in folds]))
         fixed_hit = float(np.mean([f["fixed_param_oos_net_profit"] > 0.0 for f in folds]))
 
+        # Candidate-gate inputs (E-2), beside the audited ones, never instead.
+        complete = [r for r in log_rates if r is not None]
+        wfe_log = _finite_or_none(
+            _efficiency(
+                np.array([r[0] for r in complete], dtype=float),
+                np.array([r[1] for r in complete], dtype=float),
+            )
+            if complete and len(complete) == len(log_rates)
+            else float("nan")
+        )
+        min_oos_trades = float(min(f["oos_trades"] for f in folds)) if folds else None
+        n_profitable = int(sum(f["oos_net_profit"] > 0.0 for f in folds))
+        hit_wilson = wilson_lower_bound(n_profitable, len(folds), WILSON_CONFIDENCE)
+
         selected = _modal_params([f["selected_params"] for f in folds])
         ctx.scratch["selected_params"] = selected
         ctx.scratch["walk_forward_folds"] = folds
@@ -477,6 +536,12 @@ class WalkForwardRung(Rung):
         ctx.gate_values["oos_profitable_fraction"] = hit
         ctx.label("walk_forward_efficiency", Provenance.WALKFORWARD)
         ctx.label("oos_profitable_fraction", Provenance.WALKFORWARD)
+        ctx.gate_values["walk_forward_efficiency_log_growth"] = wfe_log
+        ctx.gate_values["walk_forward_min_oos_trades"] = min_oos_trades
+        ctx.gate_values["oos_profitable_fraction_wilson_lower"] = hit_wilson
+        ctx.label("walk_forward_efficiency_log_growth", Provenance.WALKFORWARD)
+        ctx.label("walk_forward_min_oos_trades", Provenance.WALKFORWARD)
+        ctx.label("oos_profitable_fraction_wilson_lower", Provenance.WALKFORWARD)
 
         metrics = {
             "scheme": cfg.walk_forward_scheme,
@@ -485,6 +550,10 @@ class WalkForwardRung(Rung):
             "walk_forward_efficiency": wfe,
             "walk_forward_efficiency_basis": sorted({f["rate_basis"] for f in folds}),
             "oos_profitable_fraction": hit,
+            "walk_forward_efficiency_log_growth": wfe_log,
+            "walk_forward_min_oos_trades": min_oos_trades,
+            "oos_profitable_windows": n_profitable,
+            "oos_profitable_fraction_wilson_lower": hit_wilson,
             "mean_is_rate": float(is_rates.mean()),
             "mean_oos_rate": float(oos_rates.mean()),
             "selected_params": selected,
@@ -570,6 +639,7 @@ class PurgedCVRung(Rung):
             cfg.cv_groups, cfg.cv_k, spans=spans, embargo_pct=cfg.embargo_pct
         )
         splits = list(cv.split())
+        ctx.scratch["cv_n_splits"] = len(splits)
         chosen_per_split = [
             _select_column(matrix[s.train, :], cfg.selection_metric) for s in splits
         ]
@@ -690,8 +760,11 @@ class RobustnessRung(Rung):
         ratio = plateau.get("point_plateau_ratio")
         ctx.gate_values["point_plateau_ratio"] = ratio
         ctx.label("point_plateau_ratio", Provenance.BACKTEST)
+        for name in ("plateau_neighbourhood_median_ratio", "plateau_neighbourhood_min"):
+            ctx.gate_values[name] = _finite_or_none(plateau.get(name))
+            ctx.label(name, Provenance.BACKTEST)
         if plateau.get("not_applicable"):
-            ctx.not_applicable.add("parameter_plateau")
+            ctx.not_applicable.update(PLATEAU_GATE_NAMES)
 
         if plateau.get("is_isolated_peak"):
             return self._fail(
@@ -717,6 +790,8 @@ class RobustnessRung(Rung):
                     f"{list(numeric)} are numeric."
                 ),
                 "point_plateau_ratio": None,
+                "plateau_neighbourhood_median_ratio": None,
+                "plateau_neighbourhood_min": None,
             }
         if grid.full_size() < 3:
             return {
@@ -726,6 +801,8 @@ class RobustnessRung(Rung):
                     "plateau in."
                 ),
                 "point_plateau_ratio": None,
+                "plateau_neighbourhood_median_ratio": None,
+                "plateau_neighbourhood_min": None,
             }
         points = [dict(e.params) for e in sweep]
         scores = [e.metric(ctx.config.selection_metric) for e in sweep]
@@ -751,6 +828,11 @@ class RobustnessRung(Rung):
             "point_plateau_ratio_inclusive": chosen.point_plateau_ratio_inclusive,
             "plateau_quality": chosen.plateau_quality,
             "is_isolated_peak": chosen.is_isolated_peak,
+            "plateau_median_excluding": chosen.plateau_median_excluding,
+            "plateau_neighbourhood_median_ratio": neighbourhood_median_ratio(
+                chosen.score, chosen.plateau_median_excluding
+            ),
+            "plateau_neighbourhood_min": chosen.plateau_min_excluding,
             "n_isolated_peaks_in_grid": len(report.isolated_peaks),
             "best_by_plateau_params": report.best_by_plateau.params,
         }
@@ -782,7 +864,13 @@ class DeflationRung(Rung):
         }
 
         if matrix is None:
-            for name in ("deflated_sharpe_ratio", "pbo", "spa_p_consistent", "stepm_member"):
+            for name in (
+                "deflated_sharpe_ratio",
+                "pbo",
+                "spa_p_consistent",
+                "stepm_member",
+                "deflated_sharpe_ratio_family_n",
+            ):
                 ctx.gate_values[name] = None
             return self._error(
                 "no aligned trials matrix: "
@@ -857,6 +945,21 @@ class DeflationRung(Rung):
         ctx.label("deflated_sharpe_ratio", Provenance.OUT_OF_SAMPLE)
         metrics["selected_sharpe"] = moments.sr_hat
         metrics["deflated_sharpe_ratio"] = float(dsr)
+
+        # A MEASUREMENT for E-2, not an endorsement: see _own_family_trials.
+        n_family, family_parts = _own_family_trials(ctx)
+        dsr_family = deflated_sharpe_ratio(
+            moments.sr_hat,
+            moments.n_obs,
+            n_trials=n_family,
+            sr_variance=sr_variance,
+            skew=moments.skew,
+            kurtosis=moments.kurtosis,
+        )
+        ctx.gate_values["deflated_sharpe_ratio_family_n"] = float(dsr_family)
+        ctx.label("deflated_sharpe_ratio_family_n", Provenance.OUT_OF_SAMPLE)
+        metrics["deflated_sharpe_ratio_family_n"] = float(dsr_family)
+        metrics["n_trials_family"] = {"n_used": n_family, **family_parts}
 
         # -- PBO / SPA / StepM need a FAMILY; with one trial there is no selection
         if n_cols < 2:
@@ -1004,13 +1107,30 @@ def default_rungs() -> tuple[Rung, ...]:
 
 @dataclass(slots=True)
 class ValidationLadder:
-    """Runs the rungs in order, stops at the first rejection, writes a report."""
+    """Runs the rungs in order, stops at the first rejection, writes a report.
+
+    :meth:`run` is the ladder. :meth:`run_measuring` is the calibration study's
+    instrument: the same rungs, a gate block never stops them, several gate sets
+    judged on one measurement, in-memory registries only.
+    """
 
     config: LadderConfig = field(default_factory=LadderConfig)
     gate_set: GateSet = GATE_SET_V2
     rungs: tuple[Rung, ...] = field(default_factory=default_rungs)
 
     def __post_init__(self) -> None:
+        if _uses_min_trl_gate(self.gate_set):
+            # A candidate set whose rung-0 gate is n / max(MinTRL, floor) >= 1:
+            # rung 0's own floor must be that floor, so the rung never rejects
+            # what the gate would admit, and the gate is what binds above it.
+            if int(self.config.min_trades) != MIN_TRL_FLOOR_TRADES:
+                raise ValueError(
+                    f"{self.gate_set.version} gates n_trades_over_min_trl, whose floor "
+                    f"is {MIN_TRL_FLOOR_TRADES} trades; LadderConfig.min_trades "
+                    f"({self.config.min_trades}) must equal it "
+                    "(use sanity_trade_floor(gate_set))."
+                )
+            return
         gate_min = self.gate_set.by_name("min_trades").threshold
         if float(self.config.min_trades) != float(gate_min):
             raise ValueError(
@@ -1056,29 +1176,149 @@ class ValidationLadder:
                 continue
             result = rung.run(ctx)
             if result.passed:
-                blocking = self._blocking_gate_for(ctx, rung.index)
-                if blocking is not None:
-                    result = RungResult(
-                        index=result.index,
-                        name=result.name,
-                        outcome=RungOutcome.FAIL,
-                        reason=f"promotion gate not met -- {blocking}",
-                        metrics=result.metrics,
-                        provenance=result.provenance,
-                        is_evidence=result.is_evidence,
-                    )
+                result = self._with_gate_block(ctx, result, self.gate_set)
             results.append(result)
             if not result.passed:
                 stopped = True
 
-        gate_results = self.gate_set.evaluate(
+        return self._report(
+            ctx, candidate, dataset_version_id, self.gate_set, results,
+            engine_config=engine_config, broker_profile=broker_profile,
+            experiment_id=experiment_id, actor=actor, notes=notes,
+        )
+
+    def run_measuring(
+        self,
+        candidate: Candidate,
+        evaluator: Evaluator,
+        *,
+        registry: HoldoutRegistry,
+        dataset_version_id: str,
+        gate_sets: Mapping[str, GateSet],
+        engine_config: Mapping[str, Any] | None = None,
+        broker_profile: Mapping[str, Any] | None = None,
+        experiment_id: str = "",
+        actor: str = "",
+        notes: str = "",
+        measured_rungs: list[RungResult] | None = None,
+    ) -> dict[str, ValidationReport]:
+        """MEASUREMENT mode, for the gate calibration study only: every rung runs
+        once, and the same measurement is judged under several gate sets.
+
+        ``measured_rungs``, when a list is passed, receives the rungs' OWN
+        results (no gate block applied): what every judged report is built from.
+
+        :meth:`run` is fail-fast: a gate that blocks at rung *k* stops the ladder,
+        so a report says nothing about the rungs above *k*. That is right for
+        promotion (the expensive rungs are paid for only by candidates that
+        survived the cheap ones) and useless for calibration, which must know,
+        for every simulated candidate, what EVERY gate would have said, and what
+        the verdict would be with one gate replaced or removed.
+
+        Here a gate block never stops the ladder; only a rung's OWN rejection or
+        error does (a rung that cannot compute leaves nothing for the rungs above
+        it to read, under any gate set). The rung-0 trade floor in force is
+        ``config.min_trades``, which must be no higher than any judged set's own
+        floor, or the measurement would reject at rung 0 what that set admits.
+
+        Returns one report per name in ``gate_sets`` (this ladder's own set is
+        added under its version). Each carries the verdict and the binding
+        constraint :meth:`run` would produce under that set: the first rung whose
+        gates block is marked FAIL with that gate's description, as :meth:`run`
+        marks it, and :meth:`ValidationReport.build` derives the verdict from the
+        first failing rung exactly as it does for the fail-fast ladder. Two
+        differences, neither touching the verdict: rungs above the first blocked
+        one are reported as measured rather than ``NOT_REACHED``; and a candidate
+        below a judged set's trade floor but above ``config.min_trades`` is
+        rejected by that set's trade gate at rung 0 rather than by rung 0's own
+        check, the same gate binding with a different reason string.
+        ``tests/unit/test_ladder_measuring.py`` pins the equivalence.
+
+        Refused on a persistent holdout registry: rung 6 runs here for every
+        candidate, including ones the gates reject at rung 0, and consuming a
+        real holdout for a candidate that was never going to be promoted is
+        exactly what the registry exists to prevent. A report from this method
+        is never a promotion input; ``lifecycle.promotion`` accepts only the
+        production set's fingerprint.
+        """
+        if registry.db_path is not None:
+            raise ValueError(
+                "run_measuring consumes the holdout of every candidate it measures; "
+                "it accepts only HoldoutRegistry.in_memory(), never a persistent registry"
+            )
+        judged: dict[str, GateSet] = {self.gate_set.version: self.gate_set, **gate_sets}
+        for name, gate_set in judged.items():
+            floor = sanity_trade_floor(gate_set)
+            if int(self.config.min_trades) > floor:
+                raise ValueError(
+                    f"the rung-0 floor in force ({self.config.min_trades} trades) is above "
+                    f"the {floor}-trade floor of gate set {name!r} ({gate_set.version}); "
+                    "the measurement would reject at rung 0 what that set admits"
+                )
+
+        segment = registry.segment(dataset_version_id)
+        registry.assert_untouched(dataset_version_id, segment.research_window)
+        ctx = LadderContext(
+            candidate=candidate,
+            evaluator=evaluator,
+            segment=segment,
+            config=self.config,
+            registry=registry,
+            experiment_id=experiment_id,
+            actor=actor,
+        )
+        measured: list[RungResult] = []
+        stopped = False
+        for rung in self.rungs:
+            if stopped:
+                measured.append(rung.not_reached())
+                continue
+            result = rung.run(ctx)
+            measured.append(result)
+            if not result.passed:
+                stopped = True
+        if measured_rungs is not None:
+            measured_rungs.extend(measured)
+
+        reports: dict[str, ValidationReport] = {}
+        for name, gate_set in judged.items():
+            results: list[RungResult] = []
+            blocked = False
+            for result in measured:
+                if result.passed and not blocked:
+                    result = self._with_gate_block(ctx, result, gate_set)
+                    blocked = not result.passed
+                results.append(result)
+            reports[name] = self._report(
+                ctx, candidate, dataset_version_id, gate_set, results,
+                engine_config=engine_config, broker_profile=broker_profile,
+                experiment_id=experiment_id, actor=actor, notes=notes,
+            )
+        return reports
+
+    def _report(
+        self,
+        ctx: LadderContext,
+        candidate: Candidate,
+        dataset_version_id: str,
+        gate_set: GateSet,
+        results: Sequence[RungResult],
+        *,
+        engine_config: Mapping[str, Any] | None,
+        broker_profile: Mapping[str, Any] | None,
+        experiment_id: str,
+        actor: str,
+        notes: str,
+    ) -> ValidationReport:
+        gate_results = gate_set.evaluate(
             ctx.gate_values, not_applicable=frozenset(ctx.not_applicable)
         )
+        segment = ctx.segment
         return ValidationReport.build(
             strategy_id=candidate.strategy_id,
             strategy_content_hash=candidate.content_hash,
             dataset_version_id=dataset_version_id,
-            gate_set=self.gate_set,
+            gate_set=gate_set,
             gate_results=gate_results,
             rungs=results,
             engine_config=dict(engine_config or {}),
@@ -1102,23 +1342,175 @@ class ValidationLadder:
             notes=notes,
         )
 
-    def _blocking_gate_for(self, ctx: LadderContext, rung_index: int) -> str | None:
-        """Describe the first gate this rung produced that does not pass."""
-        for gate in self.gate_set.gates:
-            if gate.rung != rung_index:
-                continue
-            result = gate.evaluate(
-                ctx.gate_values.get(gate.metric),
-                applicable=gate.name not in ctx.not_applicable,
-            )
-            if result.status.blocks_promotion:
-                return result.describe()
-        return None
+    @staticmethod
+    def _with_gate_block(ctx: LadderContext, result: RungResult, gate_set: GateSet) -> RungResult:
+        """``result`` marked FAIL when a gate of its rung blocks, else unchanged."""
+        blocking = _blocking_gate_for(ctx, gate_set, result.index)
+        if blocking is None:
+            return result
+        return RungResult(
+            index=result.index,
+            name=result.name,
+            outcome=RungOutcome.FAIL,
+            reason=f"promotion gate not met -- {blocking}",
+            metrics=result.metrics,
+            provenance=result.provenance,
+            is_evidence=result.is_evidence,
+        )
+
+
+def _blocking_gate_for(ctx: LadderContext, gate_set: GateSet, rung_index: int) -> str | None:
+    """Describe the first gate of ``gate_set`` at this rung that does not pass."""
+    for gate in gate_set.gates:
+        if gate.rung != rung_index:
+            continue
+        result = gate.evaluate(
+            ctx.gate_values.get(gate.metric),
+            applicable=gate.name not in ctx.not_applicable,
+        )
+        if result.status.blocks_promotion:
+            return result.describe()
+    return None
 
 
 # --------------------------------------------------------------------------
 # Helpers
 # --------------------------------------------------------------------------
+
+
+def _uses_min_trl_gate(gate_set: GateSet) -> bool:
+    """True when the set has no ``n_trades`` ``min_trades`` gate but gates MinTRL."""
+    try:
+        if gate_set.by_name("min_trades").metric == "n_trades":
+            return False
+    except KeyError:
+        pass
+    return any(g.metric == "n_trades_over_min_trl" for g in gate_set.gates)
+
+
+def sanity_trade_floor(gate_set: GateSet) -> int:
+    """The ``LadderConfig.min_trades`` a gate set requires.
+
+    The ``min_trades`` gate's threshold for a set that gates ``n_trades`` (the
+    audited set: 400), and :data:`MIN_TRL_FLOOR_TRADES` for a candidate set
+    that gates ``n_trades_over_min_trl`` instead. Raises ``KeyError`` for a set
+    with neither, as :class:`ValidationLadder` does.
+    """
+    if _uses_min_trl_gate(gate_set):
+        return MIN_TRL_FLOOR_TRADES
+    return int(gate_set.by_name("min_trades").threshold)
+
+
+def _finite_or_none(value: Any) -> float | None:
+    if value is None:
+        return None
+    v = float(value)
+    return v if math.isfinite(v) else None
+
+
+def _min_trl_95(evaluation: WindowEvaluation) -> tuple[float | None, dict[str, Any]]:
+    """Minimum track record length at 95% for the evaluation's per-trade Sharpe.
+
+    Bailey and Lopez de Prado (2012), with ``SR* = 0``:
+    ``MinTRL = 1 + [1 - g3*SR + (g4-1)/4 * SR^2] * (Z / SR)^2``, ``Z = 1.6449``
+    (one-sided 95%), in TRADES, using the observed per-trade Sharpe, skew and
+    NON-excess kurtosis (:func:`fiboki.stats.sharpe.minimum_track_record_length`).
+
+    The per-trade series is each ``Trade.net_pnl`` in the account currency, or
+    the returns themselves on a ``"trade"`` basis. Approximation, stated: on a
+    compounding sizer money P&L scales with equity, so late trades weigh more
+    than a return-on-equity series would give them.
+
+    ``None`` (NOT_EVALUATED, which blocks) when there are fewer than 2 trades,
+    no per-trade series, zero dispersion, SR <= 0 (no amount of data makes a
+    non-positive Sharpe significant), or moments outside the expansion.
+    """
+    basis: dict[str, Any] = {
+        "formula": "1 + [1 - g3*SR + (g4-1)/4*SR^2] * (Z/SR)^2, SR* = 0",
+        "confidence": MIN_TRL_CONFIDENCE,
+        "floor_trades": MIN_TRL_FLOOR_TRADES,
+    }
+    if evaluation.trades:
+        series = np.array([float(t.net_pnl) for t in evaluation.trades], dtype=float)
+        basis["series"] = "Trade.net_pnl"
+    elif evaluation.returns_basis == "trade":
+        series = np.asarray(evaluation.returns, dtype=float)
+        basis["series"] = "returns (trade basis)"
+    else:
+        basis["series"] = "none: period returns without Trade objects"
+        return None, basis
+    if series.size < 2:
+        basis["undefined"] = f"{series.size} trades"
+        return None, basis
+    try:
+        moments = sharpe_moments(series)
+    except ValueError as exc:
+        basis["undefined"] = str(exc)
+        return None, basis
+    basis.update(
+        per_trade_sharpe=moments.sr_hat,
+        skew=moments.skew,
+        kurtosis=moments.kurtosis,
+        n_trades=moments.n_obs,
+    )
+    if moments.sr_hat <= 0.0:
+        basis["undefined"] = "per-trade Sharpe <= 0"
+        return None, basis
+    try:
+        trl = minimum_track_record_length(
+            moments.sr_hat, 0.0, moments.skew, moments.kurtosis, MIN_TRL_CONFIDENCE
+        )
+    except ValueError as exc:
+        basis["undefined"] = str(exc)
+        return None, basis
+    return _finite_or_none(trl), basis
+
+
+def _log_growth_rates(
+    is_ev: WindowEvaluation, oos_ev: WindowEvaluation
+) -> tuple[float, float] | None:
+    """One fold's (IS, OOS) log growth per day, or ``None`` without an equity base.
+
+    Strictly log growth: unlike :func:`_fold_rates` there is no fallback to
+    money per day, so ``walk_forward_efficiency_log_growth`` is ``None`` (and a
+    gate reading it NOT_EVALUATED) for an evaluator that records no
+    ``opening_equity``.
+    """
+    if _opening_equity(is_ev) is None or _opening_equity(oos_ev) is None:
+        return None
+    return _growth_rate(is_ev), _growth_rate(oos_ev)
+
+
+def _own_family_trials(ctx: LadderContext) -> tuple[int, dict[str, Any]]:
+    """N for ``deflated_sharpe_ratio_family_n``: the trials THIS ladder performed.
+
+    One per declared grid point swept at rung 1, plus one per re-selection the
+    ladder made for this candidate: each walk-forward fold's fit (rung 2) and
+    each purged-CV split's re-selection (rung 3). Floored at 2, as the audited
+    DSR is, because the expected-maximum approximation needs two trials.
+
+    This UNDERSTATES N and is recorded for comparison only. It charges nothing
+    for the campaign that produced the candidate (other documents, instruments,
+    timeframes, earlier campaigns: ``external_trial_count``), and its
+    re-selections are correlated re-fits of the same grid rather than
+    independent trials. The audited ``deflated_sharpe_ratio`` (clustered N plus
+    ``external_trial_count``) is unchanged beside it; whether any gate may read
+    this number is E-2's decision, not this function's.
+    """
+    grid_points = len(ctx.scratch.get("sweep", []))
+    wf_fits = len(ctx.scratch.get("walk_forward_folds", []))
+    cv_fits = int(ctx.scratch.get("cv_n_splits", 0) or 0)
+    parts = {
+        "grid_points": grid_points,
+        "walk_forward_fits": wf_fits,
+        "purged_cv_fits": cv_fits,
+        "note": (
+            "the candidate's own family only; understates N (no campaign trials, "
+            "correlated re-fits). A measurement for E-2, not a gate input of "
+            "the audited set."
+        ),
+    }
+    return max(2, grid_points + wf_fits + cv_fits), parts
 
 
 def _spans_for(evaluation: WindowEvaluation, n_rows: int) -> tuple[LabelSpans, str]:

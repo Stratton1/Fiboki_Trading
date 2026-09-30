@@ -8,6 +8,7 @@ from fiboki.stats.stability import (
     analyse_parameter_stability,
     full_grid,
     marginal_sensitivity,
+    neighbourhood_median_ratio,
     sensitivity_surface,
 )
 
@@ -191,3 +192,47 @@ class TestValidation:
         assert {"tenkan", "kijun", "score", "plateau_quality", "is_isolated_peak"} <= set(
             frame.columns
         )
+
+
+class TestNeighbourhoodMedianAndMinimum:
+    """The E-2 candidate plateau inputs: median and minimum of the neighbours, point excluded."""
+
+    @staticmethod
+    def _line(scores: list[float]):
+        grid = [{"p": float(i)} for i in range(len(scores))]
+        return analyse_parameter_stability(grid, scores, radius=1)
+
+    def test_hand_computed_neighbourhood(self) -> None:
+        """Scores 1, 2, 10, 3, 4 on a line; the point 10 has neighbours 2 and 3:
+        median 2.5, minimum 2, so the median ratio is 2.5 / 10 = 0.25."""
+        point = self._line([1.0, 2.0, 10.0, 3.0, 4.0]).points[2]
+        assert point.plateau_median_excluding == pytest.approx(2.5)
+        assert point.plateau_min_excluding == pytest.approx(2.0)
+        assert point.plateau_min == pytest.approx(2.0)  # inclusive, unchanged
+        assert neighbourhood_median_ratio(point.score, point.plateau_median_excluding) == (
+            pytest.approx(0.25)
+        )
+
+    def test_the_point_is_excluded_from_the_minimum(self) -> None:
+        """A dip AT the point: inclusive minimum is the point, exclusive is its neighbour."""
+        point = self._line([5.0, 1.0, 6.0]).points[1]
+        assert point.plateau_min == pytest.approx(1.0)
+        assert point.plateau_min_excluding == pytest.approx(5.0)
+
+    def test_scale_free(self) -> None:
+        base = self._line([1.0, 2.0, 10.0, 3.0, 4.0]).points[2]
+        scaled = self._line([7.0, 14.0, 70.0, 21.0, 28.0]).points[2]
+        assert neighbourhood_median_ratio(
+            scaled.score, scaled.plateau_median_excluding
+        ) == pytest.approx(neighbourhood_median_ratio(base.score, base.plateau_median_excluding))
+
+    @pytest.mark.parametrize(
+        ("score", "median"), [(0.0, 1.0), (-1.0, 1.0), (1.0, float("nan")), (float("nan"), 1.0)]
+    )
+    def test_undefined_is_nan(self, score: float, median: float) -> None:
+        assert np.isnan(neighbourhood_median_ratio(score, median))
+
+    def test_a_lone_point_has_no_neighbourhood(self) -> None:
+        point = analyse_parameter_stability([{"p": 1.0}], [3.0]).points[0]
+        assert np.isnan(point.plateau_median_excluding)
+        assert np.isnan(point.plateau_min_excluding)

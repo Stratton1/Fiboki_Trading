@@ -28,7 +28,10 @@ from enum import Enum
 from typing import Any
 
 __all__ = [
+    "CANDIDATE_LADDER_FOLDS",
+    "CANDIDATE_VERSION_PREFIX",
     "GATE_SET_V2",
+    "GATE_SET_V2_1_CANDIDATES",
     "Comparison",
     "Gate",
     "GateResult",
@@ -414,3 +417,183 @@ GATE_SET_V2 = GateSet(
         ),
     ),
 )
+
+
+# --------------------------------------------------------------------------
+# E-2 candidates: NOT FOR PROMOTION
+# --------------------------------------------------------------------------
+
+#: Every candidate version starts with this, so no report produced under one can
+#: be read as "v2.1.0-calibrated" (which does not exist until E-2 publishes it).
+CANDIDATE_VERSION_PREFIX = "v2.1.0-candidate:"
+
+_CANDIDATE_DESCRIPTION = (
+    "CANDIDATE gate set for the E-2 calibration study. NOT FOR PROMOTION: a "
+    "measurement instrument built from {base} by replacing {replaced}. "
+    "lifecycle.promotion refuses any report whose fingerprint is not "
+    "GATE_SET_V2's. Thresholds are the audit's proposals (F_backend_audit "
+    "section 3.1), uncalibrated; E-2 decides, under the pre-registered size "
+    "constraint, whether any of them is admitted to v2.1.0-calibrated."
+)
+
+#: The replacement gates, by the audited gate each one replaces. Tuples of more
+#: than one gate replace one audited gate with a conjunction, in order.
+_CANDIDATE_REPLACEMENTS: dict[str, tuple[Gate, ...]] = {
+    "min_trades": (
+        Gate(
+            name="min_track_record",
+            metric="n_trades_over_min_trl",
+            comparison=Comparison.GTE,
+            threshold=1.0,
+            rung=0,
+            units="ratio",
+            rationale=(
+                "n_trades / max(MinTRL_95, 150) >= 1, i.e. n >= max(150, MinTRL): "
+                "Bailey and Lopez de Prado (2012) minimum track record length at "
+                "95% for the candidate's own per-trade Sharpe, skew and kurtosis, "
+                "so a weak edge needs more trades and a strong one fewer than a "
+                "fixed 400. Undefined (NOT_EVALUATED) for SR <= 0."
+            ),
+        ),
+    ),
+    "walk_forward_efficiency": (
+        # Declared FIRST so that, when both block, the binding constraint names
+        # the trade floor: a WFE on too few OOS trades is not a measurement.
+        Gate(
+            name="walk_forward_min_oos_trades",
+            metric="walk_forward_min_oos_trades",
+            comparison=Comparison.GTE,
+            threshold=30.0,
+            rung=2,
+            units="trades",
+            rationale=(
+                "Applicability floor of the log-growth WFE, expressed as a GATE: "
+                "the smallest out-of-sample fold must hold at least 30 trades. "
+                "Below that it FAILS here rather than making the WFE gate "
+                "NOT_EVALUATED; both block, and a separate gate lets E-2 "
+                "attribute the rejection."
+            ),
+        ),
+        Gate(
+            name="walk_forward_efficiency_log_growth",
+            metric="walk_forward_efficiency_log_growth",
+            comparison=Comparison.GTE,
+            threshold=50.0,
+            rung=2,
+            units="%",
+            rationale=(
+                "Out-of-sample log growth per day as a percentage of the in-sample "
+                "log growth per day of the same selected parameters, strictly on "
+                "log growth (no money-per-day fallback): profit per day on a "
+                "compounding sizer biases WFE down (audit P2-11)."
+            ),
+        ),
+    ),
+    "oos_window_hit_rate": (
+        Gate(
+            name="oos_window_hit_rate_wilson",
+            metric="oos_profitable_fraction_wilson_lower",
+            comparison=Comparison.GT,
+            threshold=0.5,
+            rung=2,
+            units="fraction",
+            rationale=(
+                "One-sided 95% Wilson lower bound of the profitable-window rate "
+                "over the walk-forward folds must exceed 0.5: the folds must "
+                "show the hit rate beats a coin, not merely that 3 of 5 did."
+            ),
+        ),
+    ),
+    "parameter_plateau": (
+        Gate(
+            name="plateau_neighbourhood_median",
+            metric="plateau_neighbourhood_median_ratio",
+            comparison=Comparison.GTE,
+            threshold=0.6,
+            rung=4,
+            units="ratio",
+            rationale=(
+                "Median of the neighbourhood scores EXCLUDING the point, divided "
+                "by the point's score: the neighbours must keep 60% of it. "
+                "Scale-free; undefined (NOT_EVALUATED) for a non-positive score."
+            ),
+        ),
+        Gate(
+            name="plateau_neighbourhood_min",
+            metric="plateau_neighbourhood_min",
+            comparison=Comparison.GT,
+            threshold=0.0,
+            rung=4,
+            units="score",
+            rationale=(
+                "Every neighbour of the selected point (the point excluded) must "
+                "itself score above zero: one losing step away is not a plateau."
+            ),
+        ),
+    ),
+    "deflated_sharpe": (
+        Gate(
+            name="deflated_sharpe_family_n",
+            metric="deflated_sharpe_ratio_family_n",
+            comparison=Comparison.GT,
+            threshold=0.95,
+            rung=5,
+            units="probability",
+            rationale=(
+                "DSR with N = the candidate's OWN trial family (grid points plus "
+                "the ladder's walk-forward and purged-CV re-fits). This UNDERSTATES "
+                "N: it charges nothing for the campaign. Measured so E-2 can see "
+                "what the external count costs; not an endorsement."
+            ),
+        ),
+    ),
+}
+
+
+def _candidate(name: str, replaced: tuple[str, ...]) -> GateSet:
+    gates: list[Gate] = []
+    for gate in GATE_SET_V2.gates:
+        if gate.name in replaced:
+            gates.extend(_CANDIDATE_REPLACEMENTS[gate.name])
+        else:
+            gates.append(gate)
+    return GateSet(
+        version=f"{CANDIDATE_VERSION_PREFIX}{name}",
+        gates=tuple(gates),
+        description=_CANDIDATE_DESCRIPTION.format(
+            base=GATE_SET_V2.version, replaced=", ".join(replaced)
+        ),
+    )
+
+
+#: Candidate gate sets for E-2, each GATE_SET_V2 with ONE audited gate replaced
+#: (so E-2 can attribute a change in size or power to one gate), plus "c_all".
+#: NOT FOR PROMOTION: see ``_CANDIDATE_DESCRIPTION``. GATE_SET_V2 is unchanged.
+GATE_SET_V2_1_CANDIDATES: dict[str, GateSet] = {
+    "c_min_trl": _candidate("c_min_trl", ("min_trades",)),
+    "c_wfe_log": _candidate("c_wfe_log", ("walk_forward_efficiency",)),
+    "c_hit_wilson": _candidate("c_hit_wilson", ("oos_window_hit_rate",)),
+    "c_plateau_median": _candidate("c_plateau_median", ("parameter_plateau",)),
+    "c_dsr_family": _candidate("c_dsr_family", ("deflated_sharpe",)),
+    "c_all": _candidate("c_all", tuple(_CANDIDATE_REPLACEMENTS)),
+}
+
+#: The audit's other hit-rate proposal (section 3.1): 8 walk-forward folds with at
+#: least 5 of 8 profitable (0.625) instead of 3 of 5 (0.60). A THRESHOLD change
+#: that only means what it says under ``LadderConfig.walk_forward_folds = 8``;
+#: :data:`CANDIDATE_LADDER_FOLDS` records that, and the study judges it only in
+#: a run with that many folds.
+_EIGHT_FOLD = GATE_SET_V2.with_overrides(
+    f"{CANDIDATE_VERSION_PREFIX}c_hit_8fold", oos_window_hit_rate=0.625
+)
+GATE_SET_V2_1_CANDIDATES["c_hit_8fold"] = GateSet(
+    version=_EIGHT_FOLD.version,
+    gates=_EIGHT_FOLD.gates,
+    description=_CANDIDATE_DESCRIPTION.format(
+        base=GATE_SET_V2.version,
+        replaced="oos_window_hit_rate's threshold (0.625 = 5 of 8 folds; walk_forward_folds must be 8)",
+    ),
+)
+#: Walk-forward fold counts a candidate set REQUIRES; every other set is judged at
+#: the run's own fold count.
+CANDIDATE_LADDER_FOLDS: dict[str, int] = {"c_hit_8fold": 8}

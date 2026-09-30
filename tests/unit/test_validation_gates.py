@@ -163,3 +163,119 @@ def test_the_plateau_rationale_states_the_ratio_the_gate_reads() -> None:
     assert "EXCLUDING the point" in gate.rationale and "60%" in gate.rationale
     assert "divided by the mean of its neighbourhood" not in gate.rationale
     assert plateau_ratio(1.0, 0.6) == pytest.approx(gate.threshold)
+
+
+class TestTheAuditedSetIsFrozen:
+    #: GATE_SET_V2.fingerprint() at v2.0.0-audit (verified 2026-09-30, commit 7e487a7).
+    #: A change here is a new gate set, which needs a new version, not an edit.
+    PINNED = "fe7daa4c71e886b120f7ebe2e14cd5331e0c906b89e473f290f394e6de6e3ea2"
+
+    def test_the_fingerprint_is_pinned(self) -> None:
+        assert GATE_SET_V2.fingerprint() == self.PINNED
+
+    def test_building_the_candidates_did_not_touch_it(self) -> None:
+        from fiboki.validation.gates import GATE_SET_V2_1_CANDIDATES
+
+        assert GATE_SET_V2_1_CANDIDATES  # built at import, after GATE_SET_V2
+        assert GATE_SET_V2.version == "v2.0.0-audit"
+        assert GATE_SET_V2.fingerprint() == self.PINNED
+
+
+#: candidate -> (audited gates removed, candidate gates added, in declaration order)
+_INTENDED: dict[str, tuple[set[str], list[str]]] = {
+    "c_min_trl": ({"min_trades"}, ["min_track_record"]),
+    "c_wfe_log": (
+        {"walk_forward_efficiency"},
+        ["walk_forward_min_oos_trades", "walk_forward_efficiency_log_growth"],
+    ),
+    "c_hit_wilson": ({"oos_window_hit_rate"}, ["oos_window_hit_rate_wilson"]),
+    "c_plateau_median": (
+        {"parameter_plateau"},
+        ["plateau_neighbourhood_median", "plateau_neighbourhood_min"],
+    ),
+    "c_dsr_family": ({"deflated_sharpe"}, ["deflated_sharpe_family_n"]),
+}
+
+
+class TestE2Candidates:
+    """Candidate sets for the E-2 calibration study: data, versioned, never promotion bars."""
+
+    @staticmethod
+    def _candidates():
+        from fiboki.validation.gates import GATE_SET_V2_1_CANDIDATES
+
+        return GATE_SET_V2_1_CANDIDATES
+
+    def test_the_named_candidates_exist(self) -> None:
+        assert set(self._candidates()) == {*_INTENDED, "c_all", "c_hit_8fold"}
+
+    def test_the_eight_fold_candidate_moves_one_threshold_and_names_its_fold_count(self) -> None:
+        from fiboki.validation.gates import CANDIDATE_LADDER_FOLDS
+
+        eight = self._candidates()["c_hit_8fold"]
+        audited = {g.name: g.to_dict() for g in GATE_SET_V2.gates}
+        mine = {g.name: g.to_dict() for g in eight.gates}
+        assert set(mine) == set(audited)
+        assert mine["oos_window_hit_rate"]["threshold"] == 0.625  # 5 of 8
+        for name in set(audited) - {"oos_window_hit_rate"}:
+            assert mine[name] == audited[name]
+        assert CANDIDATE_LADDER_FOLDS == {"c_hit_8fold": 8}
+        assert "walk_forward_folds must be 8" in eight.description
+
+    @pytest.mark.parametrize("name", list(_INTENDED))
+    def test_each_differs_from_v2_in_exactly_the_intended_gate(self, name) -> None:
+        removed, added = _INTENDED[name]
+        candidate = self._candidates()[name]
+        audited = {g.name: g.to_dict() for g in GATE_SET_V2.gates}
+        mine = {g.name: g.to_dict() for g in candidate.gates}
+        assert set(audited) - set(mine) == removed
+        assert [g.name for g in candidate.gates if g.name not in audited] == added
+        # Every other audited gate is carried over byte for byte, in its place.
+        for gate_name in set(audited) - removed:
+            assert mine[gate_name] == audited[gate_name]
+        kept = [g.name for g in candidate.gates if g.name in audited]
+        assert kept == [g.name for g in GATE_SET_V2.gates if g.name not in removed]
+
+    def test_c_all_is_every_replacement_together(self) -> None:
+        c_all = self._candidates()["c_all"]
+        removed = set().union(*(r for r, _ in _INTENDED.values()))
+        added = {g for _, a in _INTENDED.values() for g in a}
+        names = [g.name for g in c_all.gates]
+        assert removed.isdisjoint(names)
+        assert added <= set(names)
+        assert len(names) == len(GATE_SET_V2.gates) - len(removed) + len(added)
+
+    @pytest.mark.parametrize(
+        ("name", "gate", "metric", "comparison", "threshold", "rung"),
+        [
+            ("c_min_trl", "min_track_record", "n_trades_over_min_trl", Comparison.GTE, 1.0, 0),
+            ("c_wfe_log", "walk_forward_efficiency_log_growth",
+             "walk_forward_efficiency_log_growth", Comparison.GTE, 50.0, 2),
+            ("c_wfe_log", "walk_forward_min_oos_trades", "walk_forward_min_oos_trades",
+             Comparison.GTE, 30.0, 2),
+            ("c_hit_wilson", "oos_window_hit_rate_wilson",
+             "oos_profitable_fraction_wilson_lower", Comparison.GT, 0.5, 2),
+            ("c_plateau_median", "plateau_neighbourhood_median",
+             "plateau_neighbourhood_median_ratio", Comparison.GTE, 0.6, 4),
+            ("c_plateau_median", "plateau_neighbourhood_min", "plateau_neighbourhood_min",
+             Comparison.GT, 0.0, 4),
+            ("c_dsr_family", "deflated_sharpe_family_n", "deflated_sharpe_ratio_family_n",
+             Comparison.GT, 0.95, 5),
+        ],
+    )
+    def test_the_candidate_thresholds(self, name, gate, metric, comparison, threshold, rung) -> None:
+        g = self._candidates()[name].by_name(gate)
+        assert (g.metric, g.comparison, g.threshold, g.rung) == (metric, comparison, threshold, rung)
+        assert len(g.rationale) > 40
+
+    def test_no_candidate_can_be_mistaken_for_a_calibrated_or_audited_set(self) -> None:
+        from fiboki.validation.gates import CANDIDATE_VERSION_PREFIX
+
+        fingerprints = {GATE_SET_V2.fingerprint()}
+        for name, gates in self._candidates().items():
+            assert gates.version == f"{CANDIDATE_VERSION_PREFIX}{name}"
+            assert gates.version.startswith("v2.1.0-candidate:")
+            assert "calibrated" not in gates.version
+            assert "NOT FOR PROMOTION" in gates.description
+            fingerprints.add(gates.fingerprint())
+        assert len(fingerprints) == 1 + len(self._candidates())

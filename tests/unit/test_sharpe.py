@@ -177,3 +177,29 @@ class TestMinimumTrackRecordLength:
     def test_rejects_bad_confidence(self, conf: float) -> None:
         with pytest.raises(ValueError):
             minimum_track_record_length(0.1, confidence=conf)
+
+
+class TestMinTRLAsTheE2CandidateReadsIt:
+    """The audit's MinTRL figures (F_backend_audit section 3.1), gamma3 = 0, gamma4 = 3, 95%.
+
+    MinTRL = 1 + [1 - 0*SR + (3-1)/4 * SR^2] * (Z/SR)^2, Z = Phi^-1(0.95) = 1.6448536:
+      SR 0.20: 1 + 1.0200 * (8.224268)^2   =   69.99
+      SR 0.10: 1 + 1.0050 * (16.448536)^2  =  272.91
+      SR 0.05: 1 + 1.00125 * (32.897073)^2 = 1084.58
+    """
+
+    Z95 = 1.6448536269514722
+
+    @pytest.mark.parametrize(
+        ("sr", "expected"), [(0.20, 69.99), (0.10, 272.91), (0.05, 1084.58)]
+    )
+    def test_the_audits_worked_figures(self, sr: float, expected: float) -> None:
+        by_hand = 1.0 + (1.0 + 0.5 * sr**2) * (self.Z95 / sr) ** 2
+        assert by_hand == pytest.approx(expected, abs=0.01)
+        assert minimum_track_record_length(sr, 0.0, 0.0, 3.0, 0.95) == pytest.approx(by_hand)
+
+    def test_fat_tails_and_negative_skew_raise_it(self) -> None:
+        """SR 0.1, skew -1, kurtosis 9: 1 + (1 + 0.1 + 2 * 0.01) * (16.4485)^2 = 304.02."""
+        by_hand = 1.0 + (1.0 + 0.1 + 0.02) * (self.Z95 / 0.1) ** 2
+        assert by_hand == pytest.approx(304.02, abs=0.01)
+        assert minimum_track_record_length(0.1, 0.0, -1.0, 9.0, 0.95) == pytest.approx(by_hand)

@@ -365,3 +365,91 @@ def test_an_evidence_process_without_bars_refuses(tmp_path: Path) -> None:
         module.main(["--process", "perturbed_price_paths", "--out", str(tmp_path / "x.json")])
     with pytest.raises(SystemExit):
         module.main(["--starter", "--out", str(tmp_path / "y.json")])
+
+
+# ------------------------------------------------------------ shards and resume
+
+
+def _strip_run_bookkeeping(doc: dict) -> dict:
+    """Everything a merged result must reproduce of the single run: not wall-clock,
+    not the shard/merge bookkeeping, and not the data-root spelling."""
+    out = {k: v for k, v in _strip_wall(doc).items()
+           if k not in ("shard", "partial", "merged_from")}
+    if "source" in out:
+        out["source"] = {k: v for k, v in out["source"].items() if k != "data_root"}
+    return out
+
+
+@pytest.mark.slow
+def test_shards_merge_into_the_single_run_byte_for_byte(bootstrap_runs, tmp_path: Path) -> None:
+    """Two shards of one replicate each, merged, equal the unsharded run's rows and rates."""
+    module = _script()
+    whole, _ = bootstrap_runs
+    shards = []
+    for start in (0, 1):
+        path = tmp_path / f"shard{start}.json"
+        assert module.main([*BB_ARGS, "--replicate-range", str(start), str(start + 1),
+                            "--out", str(path)]) == 0
+        doc = json.loads(path.read_text(encoding="utf-8"))
+        assert doc["shard"] == {"start": start, "end": start + 1, "of": 2}
+        assert doc["partial"] is False
+        assert {r["replicate"] for r in doc["runs"]} == {start}
+        shards.append(path)
+    merged_path = tmp_path / "merged.json"
+    assert module.main(["--merge", *map(str, shards), "--out", str(merged_path)]) == 0
+    merged = json.loads(merged_path.read_text(encoding="utf-8"))
+    assert merged["merged_from"] == [str(p) for p in shards]
+    assert _strip_run_bookkeeping(merged) == _strip_run_bookkeeping(whole)
+
+
+@pytest.mark.slow
+def test_a_merge_refuses_gaps_overlaps_partials_and_other_studies(bootstrap_runs, tmp_path: Path) -> None:
+    module = _script()
+    whole, _ = bootstrap_runs
+    only_first = tmp_path / "first.json"
+    assert module.main([*BB_ARGS, "--replicate-range", "0", "1", "--out", str(only_first)]) == 0
+    with pytest.raises(ValueError, match="not covered"):
+        module.merge_shards([only_first])
+    with pytest.raises(ValueError, match="in both"):
+        module.merge_shards([only_first, only_first])
+    partial = tmp_path / "partial.json"
+    doc = json.loads(only_first.read_text(encoding="utf-8"))
+    partial.write_text(json.dumps({**doc, "partial": True}), encoding="utf-8")
+    with pytest.raises(ValueError, match="partial"):
+        module.merge_shards([partial])
+    other = tmp_path / "other.json"
+    other.write_text(json.dumps({**doc, "gate_set_fingerprint": "0" * 64}), encoding="utf-8")
+    with pytest.raises(ValueError, match="identity"):
+        module.merge_shards([only_first, other])
+
+
+@pytest.mark.slow
+def test_an_interrupted_run_resumes_from_its_checkpoint(bootstrap_runs, tmp_path: Path) -> None:
+    """A checkpoint holding replicate 0 only, resumed, yields the full run."""
+    module = _script()
+    whole, _ = bootstrap_runs
+    out = tmp_path / "e1.json"
+    # Fabricate the checkpoint an interrupted 2-replicate run leaves: the header
+    # of a real run over the same shard, with replicate 0's rows and partial=True.
+    first = tmp_path / "first.json"
+    assert module.main([*BB_ARGS, "--replicate-range", "0", "1", "--out", str(first)]) == 0
+    doc = json.loads(first.read_text(encoding="utf-8"))
+    checkpoint = {**doc, "shard": {"start": 0, "end": 2, "of": 2}, "partial": True}
+    out.write_text(json.dumps(checkpoint), encoding="utf-8")
+    assert module.main([*BB_ARGS, "--resume", "--out", str(out)]) == 0
+    resumed = json.loads(out.read_text(encoding="utf-8"))
+    assert resumed["partial"] is False
+    assert _strip_run_bookkeeping(resumed) == _strip_run_bookkeeping(whole)
+    # A checkpoint from a different configuration is refused, not silently extended.
+    out.write_text(json.dumps({**checkpoint, "config": {**checkpoint["config"], "seed": 1}}),
+                   encoding="utf-8")
+    with pytest.raises(ValueError, match="different run"):
+        module.main([*BB_ARGS, "--resume", "--out", str(out)])
+
+
+def test_a_replicate_range_outside_the_study_is_refused(tmp_path: Path) -> None:
+    module = _script()
+    for bad in (["2", "3"], ["1", "1"], ["-1", "1"]):
+        with pytest.raises(SystemExit):
+            module.main(["--replicates", "2", "--sr", "0", "--replicate-range", *bad,
+                         "--out", str(tmp_path / "x.json")])

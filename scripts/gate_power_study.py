@@ -54,6 +54,27 @@ Usage (tiny scale, as the tests run it)::
         --spa-bootstraps 40 --stress-samples 5 --out e1.json
     python scripts/gate_power_study.py --process block_bootstrap_real_returns \
         --starter --replicates 2 --sr 0 0.5 --out e1_bb.json
+
+Shards, checkpoints and merging
+-------------------------------
+A real-data run can be split into SHARDS with ``--replicate-range START END``
+(replicates ``[START, END)`` of ``--replicates``), run on any machines that hold
+the same bars, and joined with ``--merge SHARD... --out MERGED``. Each replicate's
+resample is seeded by its index alone, so the merged output holds the rows one
+uninterrupted run would have produced, in the same order; the merge refuses
+shards whose identity (process, gate set, config, source digests) differs, that
+overlap, that leave a replicate uncovered, or that are partial. Every real-data
+run checkpoints ``--out`` after each replicate (``"partial": true`` until the
+last one) and ``--resume`` continues from that checkpoint. A partial file's
+rates are not a result.
+
+Gate sets (E-2)
+---------------
+``--gate-set NAME`` runs the same ladder under a named CANDIDATE set from
+:data:`~fiboki.validation.gates.GATE_SET_V2_1_CANDIDATES` instead of the audited
+``v2.0.0-audit`` (the default). The output records ``gate_set_version`` and
+``gate_set_fingerprint`` either way. Candidate sets are measurement
+instruments, never promotion bars; any other name is refused.
 """
 from __future__ import annotations
 
@@ -63,6 +84,7 @@ import dataclasses
 import hashlib
 import json
 import math
+import os
 import sys
 import time
 from collections.abc import Callable, Mapping, Sequence
@@ -80,9 +102,15 @@ from fiboki.validation.evaluation import (
     WindowEvaluation,
     params_key,
 )
-from fiboki.validation.gates import GATE_SET_V2
+from fiboki.validation.gates import (
+    CANDIDATE_LADDER_FOLDS,
+    CANDIDATE_VERSION_PREFIX,
+    GATE_SET_V2,
+    GATE_SET_V2_1_CANDIDATES,
+    GateSet,
+)
 from fiboki.validation.holdout import DEFAULT_HOLDOUT_FRACTION, HoldoutRegistry
-from fiboki.validation.ladder import LadderConfig, ValidationLadder
+from fiboki.validation.ladder import LadderConfig, ValidationLadder, sanity_trade_floor
 
 ROOT = Path(__file__).resolve().parents[1]
 PREREGISTRATION = "research/preregistration/gate_calibration_e1.json"
@@ -271,6 +299,53 @@ class RecordingEvaluator:
 
 #: Gate inputs whose distribution at sr = 0 is a pre-registered secondary metric.
 DISTRIBUTION_GATES = ("deflated_sharpe", "pbo", "spa_consistent_p")
+#: Gates of the audited set. Under a candidate set, every gate NOT in this set
+#: (the replacements) has its value recorded too, so E-2 sees its distribution.
+_AUDITED_GATE_NAMES = frozenset(g.name for g in GATE_SET_V2.gates)
+#: ``--gate-set`` choices: the audited set by its version, and the E-2 candidates.
+GATE_SETS: dict[str, GateSet] = {GATE_SET_V2.version: GATE_SET_V2, **GATE_SET_V2_1_CANDIDATES}
+
+
+def judged_gate_sets(folds: int) -> dict[str, GateSet]:
+    """The sets a measuring run with ``folds`` walk-forward folds judges: every
+    known set except those that REQUIRE another fold count (``c_hit_8fold``
+    means 5 of 8; judging it on 5 folds would read 0.625 against 3 of 5)."""
+    return {
+        name: gs for name, gs in GATE_SETS.items()
+        if CANDIDATE_LADDER_FOLDS.get(name, folds) == folds
+    }
+
+
+def gate_set_named(name: str) -> GateSet:
+    """The audited set or a named E-2 candidate; anything else is refused."""
+    try:
+        return GATE_SETS[name]
+    except KeyError:
+        raise ValueError(f"unknown gate set {name!r}; known {sorted(GATE_SETS)}") from None
+
+
+#: The gate set the MEASURING ladder is built on: its rung-0 floor (150, the
+#: MinTRL candidates' floor) is the lowest of any judged set, so no judged set is
+#: rejected at rung 0 for a candidate it would admit.
+MEASURING_BASE = GATE_SET_V2_1_CANDIDATES["c_all"]
+LADDER_MODES = ("measuring", "fail_fast")
+
+
+def _verdict_fields(report: Any, *, all_values: bool) -> dict[str, Any]:
+    binding = report.binding_constraint
+    return {
+        "promoted": bool(report.verdict.promotable),
+        "verdict": report.verdict.value,
+        "binding_kind": binding.kind,
+        "binding": binding.name,
+        "gate_status": {g.gate.name: g.status.value for g in report.gate_results},
+        "gate_values": {
+            g.gate.name: (None if g.value is None or not math.isfinite(g.value) else g.value)
+            for g in report.gate_results
+            if all_values or g.gate.name in DISTRIBUTION_GATES
+            or g.gate.name not in _AUDITED_GATE_NAMES
+        },
+    }
 
 
 def _run_ladder(
@@ -283,34 +358,140 @@ def _run_ladder(
     notes: str,
     sr: float,
     replicate: int,
+    gate_set: GateSet = GATE_SET_V2,
+    ladder_mode: str = "measuring",
 ) -> dict[str, Any]:
+    """One simulated candidate through the ladder.
+
+    ``measuring`` (the default): every rung runs once
+    (:meth:`ValidationLadder.run_measuring`, rung-0 floor 150) and the
+    measurement is judged under EVERY known gate set; ``gate_set`` is the
+    PRIMARY one, whose verdict fills the row's top-level fields; every set's
+    verdict, the primary's included, is under ``row["under"]``. ``fail_fast`` runs
+    :meth:`ValidationLadder.run` under ``gate_set`` alone, the ladder exactly as
+    promotion runs it; verdicts are identical by construction and by test
+    (``tests/unit/test_ladder_measuring.py``), and the measuring row carries more.
+    """
     recorder = RecordingEvaluator(evaluator)
-    report = ValidationLadder(config=config, gate_set=GATE_SET_V2).run(
-        candidate, recorder, registry=registry, dataset_version_id=dataset_version_id,
-        actor="scripts/gate_power_study.py", notes=notes,
-    )
-    binding = report.binding_constraint
-    return {
-        "sr": sr,
-        "replicate": replicate,
-        "promoted": bool(report.verdict.promotable),
-        "verdict": report.verdict.value,
-        "binding_kind": binding.kind,
-        "binding": binding.name,
-        "evaluations": recorder.calls,
-        "gate_status": {g.gate.name: g.status.value for g in report.gate_results},
-        "gate_values": {
-            g.gate.name: (None if g.value is None or not math.isfinite(g.value) else g.value)
-            for g in report.gate_results
-            if g.gate.name in DISTRIBUTION_GATES
-        },
-        "sanity_n_trades": recorder.first_n_trades,
-        "trade_counts": {k: v for k, v in sorted(recorder.trade_counts.items())},
-    }
+    common = {"sr": sr, "replicate": replicate, "ladder_mode": ladder_mode}
+    if ladder_mode == "fail_fast":
+        report = ValidationLadder(config=config, gate_set=gate_set).run(
+            candidate, recorder, registry=registry, dataset_version_id=dataset_version_id,
+            actor="scripts/gate_power_study.py", notes=notes,
+        )
+        row = {**common, **_verdict_fields(report, all_values=False)}
+    elif ladder_mode == "measuring":
+        measured: list[Any] = []
+        judged = judged_gate_sets(config.walk_forward_folds)
+        reports = ValidationLadder(config=config, gate_set=MEASURING_BASE).run_measuring(
+            candidate, recorder, registry=registry, dataset_version_id=dataset_version_id,
+            gate_sets=judged, actor="scripts/gate_power_study.py", notes=notes,
+            measured_rungs=measured,
+        )
+        primary = next(k for k, v in judged.items() if v is gate_set)
+        row = {**common, **_verdict_fields(reports[primary], all_values=True)}
+        # The rungs' own outcomes (no gate applied) and every metric any known
+        # gate reads: enough to judge a gate set nobody named at run time
+        # (:func:`judge_rows`), so a combination E-2 admits needs no re-run.
+        row["rung_outcomes"] = {str(r.index): r.outcome.value for r in measured}
+        row["rung_labels"] = {str(r.index): r.label for r in measured}
+        row["metrics"] = {
+            g.gate.metric: (None if g.value is None or not math.isfinite(g.value) else g.value)
+            for report in reports.values() for g in report.gate_results
+        }
+        row["not_applicable"] = sorted({
+            g.gate.name for report in reports.values() for g in report.gate_results
+            if g.status.value == "not_applicable"
+        })
+        # Every judged set, the primary included, so a reader of ``under`` never
+        # has to know which set filled the top level.
+        row["under"] = {
+            name: _verdict_fields(reports[name], all_values=True) for name in sorted(judged)
+        }
+    else:
+        raise ValueError(f"unknown ladder mode {ladder_mode!r}; known {LADDER_MODES}")
+    row["evaluations"] = recorder.calls
+    row["sanity_n_trades"] = recorder.first_n_trades
+    row["trade_counts"] = {k: v for k, v in sorted(recorder.trade_counts.items())}
+    return row
+
+
+def judge_rows(rows: Sequence[Mapping[str, Any]], gate_set: GateSet) -> list[dict[str, Any]]:
+    """The measuring rows judged under ANY gate set, from the recorded measurement.
+
+    For a set the run judged, this reproduces ``row["under"][name]`` exactly
+    (``tests/unit/test_gate_power_study.py`` pins it); for one it did not (a
+    combination of admitted replacements, say) it is the verdict a re-run would
+    give, without the re-run. The verdict follows
+    :meth:`ValidationReport.build`: the first rung that failed on its own
+    rejects (named through that rung's blocking gate when it has one); else the
+    first blocking gate in (rung, declaration) order rejects, or leaves the
+    verdict incomplete when it is NOT_EVALUATED; else promote. A metric no
+    known gate read at run time is NOT_EVALUATED, which blocks.
+    """
+
+    out = []
+    for r in rows:
+        try:
+            outcomes = {int(k): v for k, v in r["rung_outcomes"].items()}
+            metrics, na = r["metrics"], set(r["not_applicable"])
+        except KeyError:
+            raise ValueError(
+                f"row (sr {r.get('sr')}, replicate {r.get('replicate')}) carries no measurement "
+                f"(ladder_mode {r.get('ladder_mode')!r}); only a measuring run can be re-judged"
+            ) from None
+        results = gate_set.evaluate(metrics, not_applicable=na)
+        failed_rung = min((i for i, o in outcomes.items() if o in ("fail", "error")), default=None)
+        blocking = GateSet.binding_constraint(results)
+        # The ladder marks the first rung whose gate blocks as FAIL (a NOT_EVALUATED
+        # gate included), so with anything blocking the verdict is REJECT and the
+        # binding is whichever came first: that gate, or the rung's own failure
+        # (named through a blocking gate of the same rung when it has one).
+        if failed_rung is not None and (blocking is None or blocking.gate.rung >= failed_rung):
+            gate_for_rung = next(
+                (g for g in results if g.gate.rung == failed_rung and g.status.blocks_promotion), None
+            )
+            verdict = "reject"
+            kind, name = (
+                ("gate", gate_for_rung.gate.name) if gate_for_rung is not None
+                else ("rung", r["rung_labels"][str(failed_rung)])
+            )
+        elif blocking is not None:
+            verdict, kind, name = "reject", "gate", blocking.gate.name
+        else:
+            verdict, kind, name = "promote", "none", ""
+        out.append({
+            **r,
+            "promoted": verdict == "promote",
+            "verdict": verdict,
+            "binding_kind": kind,
+            "binding": name,
+            "gate_status": {g.gate.name: g.status.value for g in results},
+            "gate_values": {
+                g.gate.name: (None if g.value is None or not math.isfinite(g.value) else g.value)
+                for g in results
+            },
+        })
+    return out
+
+
+def rows_under(rows: Sequence[Mapping[str, Any]], name: str) -> list[dict[str, Any]]:
+    """The rows as judged under gate set ``name`` (a measuring-mode run only)."""
+    out = []
+    for r in rows:
+        try:
+            out.append({**r, **r["under"][name]})
+        except KeyError:
+            raise ValueError(
+                f"row (sr {r.get('sr')}, replicate {r.get('replicate')}) was not judged "
+                f"under {name!r}; ladder_mode {r.get('ladder_mode')!r}"
+            ) from None
+    return out
 
 
 def run_one(
-    *, process: str, sr: float, replicate: int, config: LadderConfig, base_seed: int
+    *, process: str, sr: float, replicate: int, config: LadderConfig, base_seed: int,
+    gate_set: GateSet = GATE_SET_V2, ladder_mode: str = "measuring",
 ) -> dict[str, Any]:
     """One synthetic-process ladder run (the evidence processes use :class:`RealStudy`)."""
     seed = _seed(base_seed, process, sr, replicate)
@@ -326,7 +507,7 @@ def run_one(
     return _run_ladder(
         candidate=candidate, evaluator=evaluator, registry=registry,
         dataset_version_id=DATASET_VERSION, config=config, notes="E-1 synthetic",
-        sr=sr, replicate=replicate,
+        sr=sr, replicate=replicate, gate_set=gate_set, ladder_mode=ladder_mode,
     )
 
 
@@ -1198,9 +1379,14 @@ class RealStudy:
     sweep_axes: dict[str, tuple[str, ...]] = field(default_factory=dict)
     grid_shape: tuple[int, int] = (8, 2)
     calibration_paths: int = 4
+    gate_set: GateSet = GATE_SET_V2
+    ladder_mode: str = "measuring"
 
     @classmethod
-    def build(cls, process: str, args: argparse.Namespace, config: LadderConfig) -> RealStudy:
+    def build(
+        cls, process: str, args: argparse.Namespace, config: LadderConfig,
+        gate_set: GateSet = GATE_SET_V2, ladder_mode: str = "measuring",
+    ) -> RealStudy:
         from fiboki.core.enums import Timeframe
         from fiboki.marketstate.calendar import load_official_calendar
 
@@ -1220,7 +1406,8 @@ class RealStudy:
             process=process, series=series, skipped=skipped, source_meta=meta,
             documents=documents, calendar=load_official_calendar(), config=config,
             base_seed=args.seed, sweep_axes=campaign_sweep_axes(), grid_shape=campaign_grid_shape(),
-            calibration_paths=int(args.calibration_paths),
+            calibration_paths=int(args.calibration_paths), gate_set=gate_set,
+            ladder_mode=ladder_mode,
         )
         for doc in documents:
             for s in series:
@@ -1317,6 +1504,7 @@ class RealStudy:
                 evaluator=BootstrapEvaluator(rep, sr, index, distance, vid),
                 registry=registry, dataset_version_id=vid, config=self.config,
                 notes="E-1 block_bootstrap_real_returns", sr=sr, replicate=replicate,
+                gate_set=self.gate_set, ladder_mode=self.ladder_mode,
             )
             row["seed_document"] = seed_series.strategy_id
             row["simulated_trades"] = rep.n_trades
@@ -1434,6 +1622,7 @@ class RealStudy:
                 candidate=candidate, evaluator=overlay, registry=registry,
                 dataset_version_id=vid, config=self.config,
                 notes="E-1 perturbed_price_paths", sr=sr, replicate=replicate,
+                gate_set=self.gate_set, ladder_mode=self.ladder_mode,
             )
             row["cell"] = f"{doc.strategy_id}@{series.instrument}"
             row["path"] = {k: info[k] for k in ("block_length", "n_bars", "coherence_clamped", "path_sha256")}
@@ -1553,7 +1742,33 @@ def main(argv: Sequence[str] | None = None) -> int:
                     help="perturbed_price_paths: independent paths the mark-up is calibrated on")
     ap.add_argument("--bars-from", default=None,
                     help=f"UTC trim (default {K5_BARS_FROM} with --data-root, none with --starter)")
+    ap.add_argument("--gate-set", default=GATE_SET_V2.version, choices=sorted(GATE_SETS),
+                    help=f"default {GATE_SET_V2.version} (audited); the others are E-2 "
+                         "candidates, never promotion bars")
+    ap.add_argument("--ladder-mode", default="measuring", choices=LADDER_MODES,
+                    help="measuring (default): every rung once, judged under every known gate "
+                         "set, rung-0 floor 150; fail_fast: the ladder exactly as promotion "
+                         "runs it, under --gate-set alone")
+    ap.add_argument("--replicate-range", type=int, nargs=2, metavar=("START", "END"), default=None,
+                    help="run only replicates [START, END) of --replicates (a SHARD; merge "
+                         "shards with --merge before reading any rate)")
+    ap.add_argument("--resume", action="store_true",
+                    help="continue an interrupted run from the checkpoint at --out")
+    ap.add_argument("--merge", type=Path, nargs="+", default=None, metavar="SHARD",
+                    help="merge shard outputs into --out instead of running anything")
     args = ap.parse_args(argv)
+    if args.merge is not None:
+        merged = merge_shards(args.merge)
+        args.out.write_text(json.dumps(merged, indent=2, sort_keys=True), encoding="utf-8")
+        print(json.dumps(merged["summary"], indent=2, sort_keys=True))
+        return 0
+    gate_set = gate_set_named(args.gate_set)
+    required_folds = CANDIDATE_LADDER_FOLDS.get(args.gate_set)
+    if required_folds is not None and args.folds != required_folds:
+        ap.error(f"gate set {args.gate_set} means what it says only with --folds {required_folds}")
+    start, end = (0, args.replicates) if args.replicate_range is None else args.replicate_range
+    if not 0 <= start < end <= args.replicates:
+        ap.error(f"--replicate-range must satisfy 0 <= START < END <= --replicates ({args.replicates})")
 
     real = args.process in REAL_PROCESSES
     if real and not (args.starter or args.data_root is not None):
@@ -1563,9 +1778,11 @@ def main(argv: Sequence[str] | None = None) -> int:
     if real and any(sr < 0 for sr in args.sr):
         ap.error("injected Sharpe values must be non-negative")
 
-    # min_trades is the gate set's own threshold: this study measures the gates
-    # as they stand and changes none of them.
-    min_trades = int(GATE_SET_V2.by_name("min_trades").threshold)
+    # min_trades is the gate set's own threshold (for a MinTRL candidate, the
+    # metric's 150-trade floor): this study measures gates and changes none. A
+    # measuring run is built on MEASURING_BASE, whose floor every judged set
+    # admits; each set's own trade gate then decides at rung 0.
+    min_trades = sanity_trade_floor(MEASURING_BASE if args.ladder_mode == "measuring" else gate_set)
     config = LadderConfig(
         min_trades=min_trades,
         walk_forward_folds=args.folds,
@@ -1577,35 +1794,8 @@ def main(argv: Sequence[str] | None = None) -> int:
     started = time.monotonic()
     source: dict[str, Any] | None = None
     build_seconds = 0.0
-    if real:
-        _check_grid_against_filing()
-        study = RealStudy.build(args.process, args, config)
-        build_seconds = time.monotonic() - started
-        source = study.describe()
-        rows: list[dict[str, Any]] = []
-        for i in range(args.replicates):
-            t0 = time.monotonic()
-            rows.extend(study.replicate_rows(i, args.sr))
-            if i == 0:
-                per = time.monotonic() - t0
-                print(
-                    f"E-1 {args.process}: source built in {build_seconds:.1f}s; first replicate "
-                    f"({len(args.sr)} sr values) took {per:.1f}s; estimated total for "
-                    f"{args.replicates} replicates: {build_seconds + per * args.replicates:.0f}s "
-                    f"(~{(build_seconds + per * args.replicates) / 3600:.2f}h)",
-                    file=sys.stderr, flush=True,
-                )
-        order = {sr: k for k, sr in enumerate(args.sr)}
-        rows.sort(key=lambda r: (order[r["sr"]], r["replicate"]))
-    else:
-        rows = [
-            run_one(process=args.process, sr=sr, replicate=i, config=config, base_seed=args.seed)
-            for sr in args.sr
-            for i in range(args.replicates)
-        ]
-    elapsed = time.monotonic() - started
     evidence = real and not args.starter
-    result: dict[str, Any] = {
+    header: dict[str, Any] = {
         "study": "E-1",
         "preregistration": PREREGISTRATION,
         "evidence": evidence,
@@ -1621,7 +1811,13 @@ def main(argv: Sequence[str] | None = None) -> int:
             )
         ),
         "size_basis_note": SIZE_BASIS_NOTE,
-        "gate_set_version": GATE_SET_V2.version,
+        "gate_set_version": gate_set.version,
+        "gate_set_fingerprint": gate_set.fingerprint(),
+        "ladder_mode": args.ladder_mode,
+        "judged_gate_sets": (
+            {name: gs.fingerprint() for name, gs in sorted(judged_gate_sets(args.folds).items())}
+            if args.ladder_mode == "measuring" else {args.gate_set: gate_set.fingerprint()}
+        ),
         "process": args.process,
         "config": {
             "min_trades": min_trades, "walk_forward_folds": args.folds,
@@ -1629,18 +1825,207 @@ def main(argv: Sequence[str] | None = None) -> int:
             "external_trial_count": args.external_trials, "seed": args.seed,
             "replicates": args.replicates, "sr_grid": list(args.sr),
         },
+        "shard": {"start": start, "end": end, "of": args.replicates},
+    }
+    order = {sr: k for k, sr in enumerate(args.sr)}
+    if real:
+        _check_grid_against_filing()
+        study = RealStudy.build(args.process, args, config, gate_set, args.ladder_mode)
+        build_seconds = time.monotonic() - started
+        source = study.describe()
+        header["source"] = source
+        rows, done = _resume_rows(args.out, header) if args.resume else ([], set())
+        todo = [i for i in range(start, end) if i not in done]
+        if done:
+            print(f"E-1 {args.process}: resuming; {len(done)} replicates already at {args.out}, "
+                  f"{len(todo)} to run", file=sys.stderr, flush=True)
+        for k, i in enumerate(todo):
+            t0 = time.monotonic()
+            rows.extend(study.replicate_rows(i, args.sr))
+            if k == 0:
+                per = time.monotonic() - t0
+                print(
+                    f"E-1 {args.process}: source built in {build_seconds:.1f}s; first replicate "
+                    f"({len(args.sr)} sr values) took {per:.1f}s; estimated total for "
+                    f"{len(todo)} replicates: {build_seconds + per * len(todo):.0f}s "
+                    f"(~{(build_seconds + per * len(todo)) / 3600:.2f}h)",
+                    file=sys.stderr, flush=True,
+                )
+            rows.sort(key=lambda r: (order[r["sr"]], r["replicate"]))
+            if k + 1 < len(todo):
+                # Checkpoint after every replicate: an interrupted run resumes here.
+                _write_result(args.out, header, rows, started, build_seconds, partial=True)
+        rows.sort(key=lambda r: (order[r["sr"]], r["replicate"]))
+    else:
+        rows = [
+            run_one(process=args.process, sr=sr, replicate=i, config=config, base_seed=args.seed,
+                    gate_set=gate_set, ladder_mode=args.ladder_mode)
+            for sr in args.sr
+            for i in range(start, end)
+        ]
+    result = _write_result(args.out, header, rows, started, build_seconds, partial=False)
+    print(json.dumps(result["summary"], indent=2, sort_keys=True))
+    return 0
+
+
+def _per_gate_set(rows: Sequence[Mapping[str, Any]], header: Mapping[str, Any]) -> dict[str, Any]:
+    """Summary and secondary metrics under every judged set (measuring mode only)."""
+    if header.get("ladder_mode") != "measuring" or not rows:
+        return {}
+    names = sorted(header.get("judged_gate_sets", {}))
+    out = {
+        "summary_by_gate_set": {n: summarise(rows_under(rows, n)) for n in names},
+        "secondary_by_gate_set": {n: secondary(rows_under(rows, n)) for n in names},
+    }
+    if GATE_SET_V2.version in names and "rung_outcomes" in rows[0]:
+        out["gate_removal_v2"] = gate_removal_table(rows)
+    return out
+
+
+def gate_removal_table(rows: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
+    """GATE_SET_V2's rates with each gate removed one at a time, from the same
+    measurement: E-1's path 2 ("tighten only the gate(s) whose removal most
+    reduces size") and E-2's ``metrics.gate_removal``. Diagnostic only: no gate
+    set is minted here, and the removal sets carry a non-promotable version."""
+    table: dict[str, Any] = {}
+    for gate in GATE_SET_V2.gates:
+        without = GateSet(
+            version=f"{CANDIDATE_VERSION_PREFIX}v2_without_{gate.name}",
+            gates=tuple(g for g in GATE_SET_V2.gates if g.name != gate.name),
+            description=f"{GATE_SET_V2.version} with {gate.name} removed: a diagnostic, never a bar",
+        )
+        table[gate.name] = summarise(judge_rows(rows, without))
+    return table
+
+
+def _write_result(
+    out: Path, header: Mapping[str, Any], rows: Sequence[Mapping[str, Any]],
+    started: float, build_seconds: float, *, partial: bool,
+) -> dict[str, Any]:
+    """The study output; ``partial`` marks a checkpoint whose rates must not be read."""
+    elapsed = time.monotonic() - started
+    result: dict[str, Any] = {
+        **header,
+        "partial": partial,
         "summary": summarise(rows),
         "secondary": secondary(rows),
-        "runs": rows,
+        **_per_gate_set(rows, header),
+        "runs": list(rows),
         "wall_seconds": round(elapsed, 3),
         "wall_seconds_source_build": round(build_seconds, 3),
         "wall_seconds_per_ladder_run": round((elapsed - build_seconds) / max(1, len(rows)), 3),
     }
+    tmp = out.with_name(out.name + ".tmp")
+    tmp.write_text(json.dumps(result, indent=2, sort_keys=True), encoding="utf-8")
+    os.replace(tmp, out)
+    return result
+
+
+#: Header fields a checkpoint or a shard must share with the run it is merged into.
+#: ``source.data_root`` is excluded: the same bars live at different paths on
+#: different machines, and every other ``source`` field (series digests, calendar
+#: hash, document hashes, engine) still has to match.
+_IDENTITY_KEYS = ("study", "preregistration", "evidence", "gate_set_version",
+                  "gate_set_fingerprint", "ladder_mode", "judged_gate_sets", "process", "config")
+
+
+def _identity(doc: Mapping[str, Any]) -> dict[str, Any]:
+    ident = {k: doc.get(k) for k in _IDENTITY_KEYS}
+    source = doc.get("source")
     if source is not None:
-        result["source"] = source
-    args.out.write_text(json.dumps(result, indent=2, sort_keys=True), encoding="utf-8")
-    print(json.dumps(result["summary"], indent=2, sort_keys=True))
-    return 0
+        ident["source"] = {k: v for k, v in source.items() if k != "data_root"}
+    # Through JSON, so an in-memory header (integer dict keys, tuples) compares
+    # equal to the same header read back from disk.
+    return json.loads(json.dumps(ident, sort_keys=True))
+
+
+def _resume_rows(out: Path, header: Mapping[str, Any]) -> tuple[list[dict[str, Any]], set[int]]:
+    """Rows already at ``out`` and the replicates they cover; empty when there is no checkpoint."""
+    if not out.exists():
+        return [], set()
+    prior = json.loads(out.read_text(encoding="utf-8"))
+    if _identity(prior) != _identity(header):
+        raise ValueError(
+            f"{out} was produced by a different run (process, gate set, config or source "
+            "differ); refusing to resume from it"
+        )
+    if prior.get("shard") != header.get("shard"):
+        raise ValueError(f"{out} covers replicates {prior.get('shard')}, not {header.get('shard')}")
+    rows = list(prior["runs"])
+    srs = set(header["config"]["sr_grid"])
+    by_rep: dict[int, set[float]] = {}
+    for r in rows:
+        by_rep.setdefault(int(r["replicate"]), set()).add(float(r["sr"]))
+    incomplete = {rep for rep, seen in by_rep.items() if seen != srs}
+    if incomplete:
+        raise ValueError(f"{out} holds incomplete replicates {sorted(incomplete)}; not resumable")
+    return rows, set(by_rep)
+
+
+def merge_shards(paths: Sequence[Path]) -> dict[str, Any]:
+    """One study output from shard outputs that together cover every replicate exactly once.
+
+    Every shard must carry the same identity (:data:`_IDENTITY_KEYS` and
+    ``source`` less ``data_root``), none may be a partial checkpoint, and their
+    replicate ranges must tile ``[0, replicates)`` without overlap. The merged
+    rows are sorted as a single run sorts them, so the rates are what one
+    uninterrupted run would have printed; wall-clock fields are summed.
+    """
+    if not paths:
+        raise ValueError("nothing to merge")
+    docs = [json.loads(Path(p).read_text(encoding="utf-8")) for p in paths]
+    first = docs[0]
+    ident = _identity(first)
+    covered: dict[int, Path] = {}
+    rows: list[dict[str, Any]] = []
+    data_roots: list[str] = []
+    wall = build = 0.0
+    for path, doc in zip(paths, docs, strict=True):
+        if _identity(doc) != ident:
+            raise ValueError(f"{path} is not the same study as {paths[0]} (identity differs)")
+        if doc.get("partial"):
+            raise ValueError(f"{path} is a partial checkpoint; finish or resume it before merging")
+        shard = doc.get("shard") or {"start": 0, "end": doc["config"]["replicates"]}
+        for rep in range(int(shard["start"]), int(shard["end"])):
+            if rep in covered:
+                raise ValueError(f"replicate {rep} is in both {covered[rep]} and {path}")
+            covered[rep] = Path(path)
+        got = {int(r["replicate"]) for r in doc["runs"]}
+        want = set(range(int(shard["start"]), int(shard["end"])))
+        if got != want:
+            raise ValueError(f"{path} declares replicates {sorted(want)} but holds {sorted(got)}")
+        rows.extend(doc["runs"])
+        root = (doc.get("source") or {}).get("data_root")
+        if root is not None and root not in data_roots:
+            data_roots.append(root)
+        wall += float(doc.get("wall_seconds", 0.0))
+        build += float(doc.get("wall_seconds_source_build", 0.0))
+    total = int(first["config"]["replicates"])
+    missing = sorted(set(range(total)) - set(covered))
+    if missing:
+        raise ValueError(f"replicates not covered by any shard: {missing[:20]}{'...' if len(missing) > 20 else ''}")
+    order = {sr: k for k, sr in enumerate(first["config"]["sr_grid"])}
+    rows.sort(key=lambda r: (order[float(r["sr"])], int(r["replicate"])))
+    merged: dict[str, Any] = {
+        k: v for k, v in first.items()
+        if k not in ("runs", "summary", "secondary", "summary_by_gate_set", "secondary_by_gate_set",
+                     "shard", "partial", "wall_seconds", "wall_seconds_source_build",
+                     "wall_seconds_per_ladder_run")
+    }
+    if "source" in merged and data_roots:
+        merged["source"] = {**merged["source"], "data_root": data_roots if len(data_roots) > 1 else data_roots[0]}
+    merged.update(
+        merged_from=[str(p) for p in paths],
+        partial=False,
+        summary=summarise(rows),
+        secondary=secondary(rows),
+        **_per_gate_set(rows, first),
+        runs=rows,
+        wall_seconds=round(wall, 3),
+        wall_seconds_source_build=round(build, 3),
+        wall_seconds_per_ladder_run=round((wall - build) / max(1, len(rows)), 3),
+    )
+    return merged
 
 
 if __name__ == "__main__":

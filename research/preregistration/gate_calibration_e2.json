@@ -1,0 +1,106 @@
+{
+  "schema": "fiboki-preregistration:1",
+  "id": "gate_calibration_e2",
+  "status": "DRAFT (not filed). Written 2026-10-01 before any candidate-set result was read. Filing is the operator's act: set status to FILED with a date, filed_at, filed_commit and decision_date; until then no candidate-set rate may be quoted anywhere. This file changes nothing in validation/gates.py.",
+  "experiment": "E-2: calibration of the promotion gates, the step E-1's decision rule (paths 2 and 3) calls for",
+  "plan_reference": "research/preregistration/gate_calibration_e1.json decision_rule; research/reports/due_diligence_2026-09-28/F_backend_audit.md section 3.1; research/reports/RESEARCH_LEDGER.md E-1 (interim reading of process 1)",
+  "depends_on": {
+    "e1": "Both E-1 evidence processes complete under GATE_SET_V2 (v2.0.0-audit) and the E-1 decision rule applied on or after 2026-10-02. E-2's measurement is the SAME measurement as E-1's: a measuring-mode run judges every set at once (code.ladder_mode), so E-1 process 2 and E-2 share one run and E-2's process-1 rows are the E-1 process-1 replay.",
+    "if_e1_path_1": "E-1 keeps GATE_SET_V2 unchanged (size <= 0.05 and power(0.08) >= 0.5 on both processes): E-2 is not run for a decision; its rows are published as a sensitivity table only.",
+    "if_e1_path_2": "size > 0.05 on either process: E-2 tightens only, per E-1; the candidate sets below are NOT admitted in that step (none of them tightens the gate that would then be at fault), and the tightening is chosen by the gate-removal analysis in metrics.gate_removal.",
+    "if_e1_path_3": "size <= 0.05 but power(0.08) < 0.5 (the interim reading of process 1 points here): the decision rule below applies."
+  },
+  "code": {
+    "candidate_gate_sets": "fiboki.validation.gates.GATE_SET_V2_1_CANDIDATES (version prefix v2.1.0-candidate:, NOT FOR PROMOTION; lifecycle.promotion accepts only GATE_SET_V2's fingerprint)",
+    "ladder_mode": "fiboki.validation.ladder.ValidationLadder.run_measuring: every rung runs once on a 150-trade rung-0 floor and the measurement is judged under every candidate set and under GATE_SET_V2; verdict equivalence with the fail-fast ladder is pinned by tests/unit/test_ladder_measuring.py and by the E-1 process-1 replay (metrics.equivalence)",
+    "study_script": "scripts/gate_power_study.py --ladder-mode measuring (the default); --replicate-range/--merge for shards; judge_rows() re-judges the recorded measurement under any gate set without a re-run",
+    "engine_version": "engine_v3_realism",
+    "base_gate_set": "GATE_SET_V2 v2.0.0-audit fe7daa4c71e886b120f7ebe2e14cd5331e0c906b89e473f290f394e6de6e3ea2"
+  },
+  "question": "Which of the audit's section 3.1 replacements, applied to GATE_SET_V2 one at a time and together, keep the per-candidate size at or below 0.05 on both E-1 evidence processes, and what power at per-trade Sharpe 0.08 does each give? Separately: how much of the power loss is the deflation's trial count, and is any admissible trial-count design available without a new experiment?",
+  "candidate_gate_sets": {
+    "c_min_trl": {
+      "fingerprint": "0a3ffe0dc78815b61a37df391fc733b3b639c404456dd86e6ecd19d74542d395",
+      "replaces": "min_trades (n_trades >= 400)",
+      "with": "min_track_record: n_trades / max(150, MinTRL_95(SR_hat, skew, kurtosis)) >= 1 (Bailey and Lopez de Prado 2012, SR* = 0, one-sided 95%); NOT_EVALUATED (blocks) for SR_hat <= 0",
+      "expectation_stated_before_results": "MinTRL_95 is 425 trades at SR 0.08, 190 at 0.12, 1,085 at 0.05 (gamma3 0, gamma4 3). At the target edge it is NOT a loosening of 400; it admits a candidate below 400 trades only when the realised per-trade Sharpe exceeds about 0.09 (a candidate with the E-1 median 326 trades passes iff SR_hat >= 0.092). Expected: some power gain at 0.08 and 0.12 from candidates whose realised Sharpe runs above the injected one; size unchanged or lower at sr = 0, where SR_hat <= 0 is NOT_EVALUATED and SR_hat > 0 needs at least 150 trades and a Sharpe that 150 trades make significant."
+    },
+    "c_wfe_log": {
+      "fingerprint": "1ab15ac57936a490522a58292f02006c13031e4946250ee6967e8d2d34428cda",
+      "replaces": "walk_forward_efficiency (profit-per-day WFE >= 50%)",
+      "with": "walk_forward_min_oos_trades >= 30 (declared first, so it is the binding name when both block) AND walk_forward_efficiency_log_growth >= 50% on log growth per day with no money-per-day fallback (audit P2-11)",
+      "expectation_stated_before_results": "Removes the compounding bias, which understates OOS efficiency; expected to admit slightly more at every sr. The 30-trade floor per OOS fold: in E-1 process 1 only candidates with >= 400 trades reached rung 2, and their OOS folds held 70 trades at p10 (median 95); candidates in the 150..400 band, which the measuring run and c_min_trl now carry to rung 2, hold roughly 25 to 70 per fold, so the floor will bind for some of them. Kept because a WFE on 10 trades is not a measurement."
+    },
+    "c_hit_wilson": {
+      "fingerprint": "518fe31b6d24c408d77d77882f2be400a9a3bba6babc4d0646e31d21f8584c7f",
+      "replaces": "oos_window_hit_rate (>= 0.60, i.e. 3 of 5 folds)",
+      "with": "oos_window_hit_rate_wilson: one-sided 95% Wilson lower bound of the profitable-fold rate > 0.5",
+      "expectation_stated_before_results": "With 5 folds the Wilson lower bound exceeds 0.5 only at 5 of 5 (0.649; 4 of 5 gives 0.435), so this is a TIGHTENING: P(5 of 5) is 0.05 at a 55% per-window hit rate and 0.17 at 70%, against 0.59 and 0.84 for 3 of 5. Expected: size lower, power sharply lower. Measured because the audit proposed it and because the number says how sure five folds can make anyone; not expected to be admitted."
+    },
+    "c_hit_8fold": {
+      "fingerprint": "33fd7bdd5a502bad2af13777c535e6b874a413bddb7398846e0b4c86f3aa8316",
+      "replaces": "oos_window_hit_rate threshold 0.60 with 5 folds",
+      "with": "0.625 (5 of 8) with walk_forward_folds = 8; judged only in a run with 8 folds (CANDIDATE_LADDER_FOLDS), where GATE_SET_V2 and every other set are judged at 8 folds too and reported as the 8-fold arm",
+      "expectation_stated_before_results": "P(>= 5 of 8) is 0.48 at a 55% hit rate and 0.81 at 70%, against 0.59 and 0.84 for 3 of 5: roughly equal discrimination, slightly stricter for weak edges. Eight folds also shrink each OOS window (about 1/9 of the research window under the anchored scheme), which lowers the OOS trade counts every rung-2 metric rests on. Expected: no material power gain; measured because E-1's decision rule names it."
+    },
+    "c_plateau_median": {
+      "fingerprint": "c5ea7c7f211cded1fe575fba7e5efdc069a3e158c3b31c214f0e7c56d68526bb",
+      "replaces": "parameter_plateau (point_plateau_ratio <= 1.25, the point in its own denominator)",
+      "with": "plateau_neighbourhood_median_ratio >= 0.6 (median of the neighbours excluding the point, over the point's score; NOT_EVALUATED for a non-positive score) AND plateau_neighbourhood_min > 0 (every neighbour above zero)",
+      "expectation_stated_before_results": "Scale-free, so near-zero scores no longer explode the ratio; the min > 0 condition is new and strict for an 8-point grid where one neighbour at a loss is common at sr = 0 (helps size) and not rare at sr = 0.08 (costs power). Expected: size lower or equal; power effect uncertain in sign."
+    },
+    "c_dsr_family": {
+      "fingerprint": "c27441e43a964e0f7fd1dc46537c429ad2e4fb50230564445d05cd5e28d68be0",
+      "replaces": "deflated_sharpe (DSR > 0.95 at N = clustered own trials + external_trial_count 20,896)",
+      "with": "deflated_sharpe_family_n > 0.95 at N = the candidate's own grid points plus its walk-forward and purged-CV re-fits (about 8 + 5 + 15), charging nothing for the campaign",
+      "expectation_stated_before_results": "The E-1 interim reading attributes most of the power loss to this gate: at 20,896 trials the expected maximum of the null Sharpe distribution is about 3.9 cross-trial standard deviations, several times a 0.08 per-trade edge, so a true 0.08 edge clears DSR > 0.95 only by luck. With N about 28 the same edge clears it often. Expected: the largest single power gain, AND an inadmissible number as it stands: it does not deflate against the search that produced the candidate. It is measured to bound what the trial count costs, not to be adopted. NOT ADMISSIBLE under the decision rule below whatever it measures."
+    },
+    "c_all": {
+      "fingerprint": "50d8e29d683441a866e66a6d6a63ac493f90bb936cd931a341f9228be143ddf8",
+      "replaces": "every gate above at once (c_min_trl, c_wfe_log, c_hit_wilson, c_plateau_median, c_dsr_family), 5 folds",
+      "expectation_stated_before_results": "An upper envelope of what the section 3.1 proposals could do together, including the inadmissible c_dsr_family; reported, never adopted as a set."
+    }
+  },
+  "hypotheses": {
+    "H0_size_per_candidate": "For each candidate set C, with per-trade Sharpe 0 injected, the per-candidate promotion probability p0(C) is at most 0.05 on BOTH evidence processes (the same per-candidate basis as E-1; the family-wise union bound 1 - (1 - p0)^106 is reported beside it and stated, as E-1 states it, to be unresolvable at 400 replicates).",
+    "H1_power_per_candidate": "For each candidate set C admitted under H0, the probability that a candidate with per-trade Sharpe 0.08 is promoted is at least 0.50.",
+    "H2_trial_count": "The power gap between GATE_SET_V2 and c_dsr_family at sr 0.08 exceeds the power gap between GATE_SET_V2 and any other single candidate. If true, no admissible section 3.1 change reaches H1, and the calibrated set's power is decided by the trial-count design, which this experiment measures but does not decide.",
+    "note": "All claims are about the procedure. Thresholds are the audit's, fixed in code (fingerprints above) before any result of a candidate set was read."
+  },
+  "injected_sharpe_grid": {
+    "unit": "per-trade Sharpe ratio, as E-1",
+    "values": [0.0, 0.03, 0.05, 0.08, 0.12],
+    "eight_fold_arm": "process 1: the full grid at 400 replicates; process 2: sr in {0.0, 0.08} at 100 replicates (SE at 0.05: 0.022), the compute-bounded design stated here rather than chosen after the 5-fold result"
+  },
+  "data_generating_processes": "E-1's two evidence processes, same data root, same seeds, same 400 replicates per (sr, process); the perturbed_price_paths run is E-1's own (a measuring run judges every set), so no additional process-2 compute is spent on E-2 beyond the 8-fold arm.",
+  "search_size": "E-1's: 106 campaign candidates, 8 grid points per candidate, external_trial_count 20,896 for every gate that deflates against the campaign (c_dsr_family is the stated exception and is inadmissible).",
+  "replicates": {
+    "per_cell": 400,
+    "rule": "as E-1: if a candidate set's size point estimate lies within 2 SE of 0.05, double that cell once and report both."
+  },
+  "metrics": {
+    "primary": [
+      "size(C) = P(promoted | sr = 0) per candidate set C, per process",
+      "power(C, 0.08) per candidate set C, per process"
+    ],
+    "secondary": [
+      "power(C, sr) at sr in {0.03, 0.05, 0.12}",
+      "the binding gate's distribution under each set at each sr",
+      "the gate_values distribution of every replacement gate at sr = 0 and 0.08",
+      "the 8-fold arm: GATE_SET_V2 and every set at 8 folds"
+    ],
+    "gate_removal": "For GATE_SET_V2, the size and power with each gate removed one at a time, judged from the same measurement (judge_rows), which is the analysis E-1's path 2 needs ('the gate(s) whose removal most reduces size'): no gate set is minted from it; it names which gate a tightening would go to.",
+    "equivalence": "The measuring-mode replay of E-1 process 1 must reproduce the stored fail-fast result row for row in verdict and binding constraint (research/reports/e1/e1_block_bootstrap_real_returns.json, 2,000 rows); a single disagreement invalidates measuring mode as E-1/E-2 evidence and is reported as such."
+  },
+  "targets": {"size_max": 0.05, "power_at_sr_0_08_min": 0.5},
+  "decision_rule": "1. A replacement is ADMITTED only if its single-replacement set (c_min_trl, c_wfe_log, c_hit_wilson, c_hit_8fold, c_plateau_median) has size <= 0.05 on BOTH processes. c_dsr_family is never admitted: an N that ignores the campaign is not a deflation. 2. The calibrated candidate is GATE_SET_V2 with every admitted replacement applied together, judged from the same measurement (judge_rows); it is published as v2.1.0-calibrated only if ITS size is <= 0.05 on both processes (admitted one at a time does not imply admitted together). 3. Its power at 0.08 is reported whatever it is; if it is below 0.5 the calibrated set is still published (it is the best admissible set) and the shortfall is attributed, using H2 and the gate-removal table, to the trial count or to a named gate. 4. The trial-count design (deflate against the campaign's raw count, as now, or against an effective count of the campaign's correlated trials, which needs the campaign's trial-return matrix) is NOT decided here: it is the subject of a separate pre-registration (E-3) if H2 holds. 5. No threshold is moved by looking at how any real strategy scores; the candidate thresholds are the audit's as filed in code, and no new threshold value is introduced by this experiment.",
+  "data_rules": [
+    "The measurement is E-1's; no extra ladder run is made for a candidate set (judged from the one measurement).",
+    "Candidate-set rates are not read or quoted before this file is FILED; the E-1 process-1 replay is used before filing only for metrics.equivalence (the audited set's verdicts).",
+    "Seeds and replicate indices are E-1's; shards merged with --merge must tile the replicate range exactly."
+  ],
+  "decision_date": null,
+  "filed_at": null,
+  "filed_commit": null,
+  "filing_note": "To be written by the operator at filing."
+}

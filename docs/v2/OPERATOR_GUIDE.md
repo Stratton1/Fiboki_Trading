@@ -124,6 +124,9 @@ could plausibly find, because `min_trades` ends 60% of ladders before any edge m
 deflation charged 20,896 trials rejects nearly all of the rest. The decision waits for the second
 process (the filing's rule), and no threshold is moved by looking at a real strategy's score
 (pre-registration rule 5).
+The step after E-1 is prepared: the loosenings the audit proposed exist as candidate gate sets
+that cannot promote anything, and `research/preregistration/gate_calibration_e2.json` (a draft you
+file) fixes, before any result is read, which of them may be admitted and on what evidence.
 
 ## 8. The workstation
 
