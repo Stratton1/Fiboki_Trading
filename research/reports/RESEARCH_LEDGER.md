@@ -295,3 +295,25 @@ looking at a hundred things.
 **Multiple-testing warning, stated before the numbers.** The true N will be on the order of
 20,000 once K5's planned trials are added; every later campaign on these bars declares at
 least that.
+
+**K5 result (2026-09-30, `research/reports/campaign_k5/`).** Planned 12,408 (`--generations 0`),
+true N 20,904, 1,955 cells (6 seeds + 100 generated over 16 OANDA MID series on H4 and D1),
+2,947 engine backtests, deflation threshold 0.0308 per bar, `survivors: []`, holdout unspent.
+Died at: rung 0 sanity 1,920 (1,706 on `min_trades`, observed median 90, maximum 399, **not one
+cell reached 400**; 214 on non-positive default expectancy), rung 1: 6, rung 2 walk-forward: 25,
+rung 4 robustness: 4 (all on `parameter_plateau`, observed 1.61 to 1.83 against 1.25: two
+XAUUSD H4 cells, one GBPJPY H4, and the Donchian seed on XAUUSD H4). Nothing reached deflation.
+Every one of the 781 D1 cells died at rung 0: at a daily horizon these rules produce tens of
+trades, not hundreds. The 35 H4 cells that passed rung 0 came from the Ichimoku-variant (12),
+momentum-oscillator (8), trend-pullback (5), session-breakout (2) families and the Donchian seed
+(2); none from band mean reversion or volatility breakout.
+
+**Reading across K3, K4 and K5 (7,376 → 8,496 → 20,904 trials; 2,577 cells; zero survivors).**
+The dominant cause is not the strategies, it is the evidence bar meeting the sample: `min_trades
+>= 400` has now killed 2,173 of 2,577 cells before any statistical test ran, and the plateau
+ratio has killed every cell that survived it. Neither threshold has been calibrated (E-1,
+`research/preregistration/gate_calibration_e1.json`, has not run), so the platform currently
+cannot say whether these families have an edge; it can only say they do not clear an
+uncalibrated bar. **Decision recorded:** no threshold moves; the next research action is E-1,
+pre-registered, run on the OANDA MID bars, before any further campaign. A gate lowered until
+something passes would be V1 again. Every later campaign on these bars declares at least 20,904.
