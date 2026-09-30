@@ -25,12 +25,12 @@
     {
       "name": "block_bootstrap_real_returns",
       "definition": "Per-trade net returns of the five seed documents on the validated HistData universe (engine_v3_realism, GBP account, IG_REALISTIC), stationary-block-bootstrapped (Politis-Romano, block length from optimal_block_length) to remove any edge, demeaned, then shifted by sr * sd so the injected per-trade Sharpe is exactly sr. The parameter surface is kept by applying the same shift to every grid point within one grid step of the declared defaults and a linearly decaying shift beyond.",
-      "status": "not implemented in the skeleton: scripts/gate_power_study.py raises NotImplementedError for this source until the validated universe is ingested"
+      "status": "implemented in scripts/gate_power_study.py (2026-09-30)"
     },
     {
       "name": "perturbed_price_paths",
       "definition": "Real OHLC paths with their log returns block-bootstrapped (destroying serial structure a strategy could exploit) and the documents re-run through the real engine; the edge is injected by a known deterministic signal overlay whose per-trade Sharpe is sr.",
-      "status": "not implemented in the skeleton"
+      "status": "implemented in scripts/gate_power_study.py (2026-09-30)"
     },
     {
       "name": "synthetic_gaussian_plateau",
@@ -40,8 +40,9 @@
   ],
   "search_size": {
     "rule": "Each simulated campaign has the same number of candidates and grid points per candidate as the largest campaign run on real data at filing time, and every candidate's ladder receives external_trial_count = (campaign trials - its own), exactly as discovery.campaign does.",
-    "campaign_candidates": "TO_BE_FILLED_AT_FILING",
-    "grid_points_per_candidate": "TO_BE_FILLED_AT_FILING"
+    "campaign_candidates": 106,
+    "grid_points_per_candidate": 8,
+    "filing_note": "campaign_candidates and grid_points_per_candidate were filled on 2026-09-30 from K5 (k5_generated_families_oanda_mid, the largest campaign run on real data: 106 documents, 8 grid points per cell; research/reports/RESEARCH_LEDGER.md K5). decision_date, filed_at and filed_commit are set by the operator at filing."
   },
   "replicates": {
     "per_cell": 400,

@@ -79,11 +79,20 @@ def test_the_skeleton_is_deterministic(tmp_path: Path) -> None:
     module.main([*args, "--out", str(a)])
     module.main([*args, "--out", str(b)])
     ra, rb = (json.loads(p.read_text()) for p in (a, b))
-    ra.pop("wall_seconds"), rb.pop("wall_seconds")
+    # Wall-clock fields (every key starting "wall_") are the only permitted difference.
+    for r in (ra, rb):
+        for key in [k for k in r if k.startswith("wall_")]:
+            r.pop(key)
     assert ra == rb
 
 
 @pytest.mark.parametrize("process", ["block_bootstrap_real_returns", "perturbed_price_paths"])
 def test_the_evidence_processes_are_not_faked(process: str) -> None:
-    with pytest.raises(NotImplementedError, match="pre-registered but not implemented"):
-        _script().make_evaluator(process, 0.08, 1)
+    """Without real bars there is no stand-in: an evidence process refuses.
+
+    Both are implemented now (tests/unit/test_gate_power_study_real.py); what
+    this pins is that neither can be produced from the synthetic machinery.
+    """
+    module = _script()
+    with pytest.raises(module.RealDataRequired, match="built from real bars"):
+        module.make_evaluator(process, 0.08, 1)

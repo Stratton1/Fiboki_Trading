@@ -407,3 +407,63 @@ restricts documents to H4 because D1 has no intraday hours; and the swing-struct
 into long-only and short-only documents because `StopModel` has one `level` operand for both
 sides, so a both-sided swing stop would silently fall back to the minimum-distance floor on one
 side.
+
+## 12. E-1 processes (2026-09-30)
+
+`scripts/gate_power_study.py` implements the two data-generating processes that the E-1
+pre-registration (`research/preregistration/gate_calibration_e1.json`) counts as evidence. Both run
+the unchanged `ValidationLadder` and `GATE_SET_V2`, read bars from a marked data root
+(`--data-root`, default universe and `bars_from` are K5's) or, for tests and pilots only, from
+`data/starter/histdata` (`--starter`, output `"evidence": false`). The holdout of every source
+series is fixed exactly as `run_validation` fixes it (`HoldoutRegistry.define(first bar, last bar,
+0.20)`) and never read. Resamples depend on the replicate only, not on `sr`, so every `sr` cell of
+a replicate sees the same simulated data (common random numbers). The output records seeds, block
+lengths, sample sizes, dataset version ids or starter file hashes, per-gate status counts, the
+per-window trade-count distribution and the DSR/PBO/SPA distributions; a re-run is identical except
+the `wall_*` fields (`tests/unit/test_gate_power_study_real.py`).
+
+**Block length.** `fiboki.stats.bootstrap.optimal_block_length`: Politis and White (2004) with the
+Patton, Politis and White (2009) correction, stationary-bootstrap constant `D_SB = 2 g(0)^2`. The
+resampling is the Politis and Romano (1994) stationary bootstrap (geometric blocks, circular wrap).
+
+**`block_bootstrap_real_returns`.** Fresh `engine_v3_realism` runs of each seed's default binding
+over each series' research window (GBP 10,000, IG_REALISTIC, `fixed_fractional_v2`, research
+construction, official calendar where it has events). A trade's record is its net return as a
+fraction of equity at the bar before entry, its cost shares, the gap since the previous entry and
+its holding time. Each seed is bootstrapped separately and replicate `r` draws from seed
+`r mod n_seeds`, so seeds are weighted equally and a simulated candidate carries one real seed's
+fat tails and trade frequency. Returns are demeaned by the seed's MEAN (the bootstrap
+distribution's, not each window's sample mean, which would erase the window-to-window noise the
+gates judge) and shifted by `sr * sd` in full within one grid step of the defaults, decaying by 15%
+of it per further step. The candidate has K5's grid shape (2 x 2 x 2 = 8 points, checked against the
+filed `grid_points_per_candidate`). All grid points share one trade calendar; each takes the common
+draw's record with probability `sqrt(0.7)` and an independent draw otherwise, so any two correlate at
+0.7 (declared, the synthetic process's value; the real cross-binding correlation is not measured).
+Returns reach the ladder on a regular bar calendar (one element per bar, zero except at exits), the
+production evaluator's `"period"` basis. Approximations: non-compounding account; a trade still open
+at a window's end is closed inside it with its whole return; the regular calendar includes weekend
+bars.
+
+**`perturbed_price_paths`.** Replicate `r` takes cell `r mod n_cells` (seed x instrument). The
+research-window bars are described relative to the previous close (open, high, low and close
+ratios) and stationary-bootstrapped (block length from the log close-to-close returns) into a path
+with the real first bar, the real timestamps and the real bar count; each bar is the previous
+simulated close times the drawn bar's ratios. Approximations: open, high and low are rebuilt
+proportionally to the resampled close-to-close move; weekend and session structure is scrambled
+with the serial structure; the path keeps the research window's drift; FX conversion uses the real
+GBP rates. The seed document then runs through the real engine with its K5 grid. The edge is a
+deterministic overlay: an entry is marked when a hash of (replicate seed, entry time, direction) is
+below 0.5, so the same entry is marked in every binding, and a marked trade's P&L gains a GBP
+mark-up. The mark-up is solved exactly (a quadratic in the mark-up) so the per-trade Sharpe of the
+defaults' untouched trades, pooled over four INDEPENDENT perturbed paths of the same cell, equals
+`sr`; calibrating on the evaluated path itself would fix rung 0's expectancy at exactly `sr * sd`
+and delete its sampling noise. At `sr = 0` the overlay removes the expected net expectancy, so
+the null is zero net expectancy, as in the bootstrap process. An unreachable `sr` aborts rather
+than running uncalibrated (the one exception is a candidate whose defaults trade fewer than
+`min_trades` times, which rung 0 rejects whatever the mark-up; the row says so). Approximation: the mark-up is added after the run and does not feed
+back into sizing.
+
+**What the output is not.** `size` and `power` are per-candidate promotion rates; the
+pre-registration's H0 is family-wise over 106 candidates, which one candidate per replicate
+cannot establish on its own (the output carries `size_basis_note`). A `--starter` run is a harness
+pilot on two years of HistData FX and is not evidence about any gate threshold.
