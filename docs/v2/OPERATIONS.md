@@ -294,6 +294,47 @@ UTC, `price_basis = BID` declared, both recorded as adjustments, integrity valid
 repaired**. The V1 store contains genuinely broken bars and the point is that they arrive
 labelled as broken.
 
+### 6.1 OANDA candle backfill (`fiboki data oanda-backfill`)
+
+Writes OANDA practice **MID** candles (H1, H4 and D, stored as D1) as source `oanda_practice`,
+beside the HistData versions. Read `DATA_ARCHITECTURE.md` §16 first: research reads the newest
+validated version regardless of source, so **every pair backfilled switches research from HistData
+BID to OANDA MID**, and results from before and after are not comparable. The dry run prints one
+warning per pair that will switch; read them.
+
+Needs `FIBOKI_OANDA_PRACTICE_TOKEN` in the environment (from `~/.fiboki/env`; `--dry-run` needs no
+token and makes no request) and a marked data root. The transport can reach
+`api-fxpractice.oanda.com` only. Instruments and granularities are **repeated flags or
+comma-separated** (`-i EURUSD,GBPUSD`, `-g H1 -g D`), not space-separated. Defaults: `--from
+2005-01-01`, `-g H1,H4,D`, 2 requests/s. Exit 1 if any job was refused (the table names it and
+the HTTP status); a rerun resumes, and a rerun with nothing new writes nothing.
+
+```bash
+set -a; . ~/.fiboki/env; set +a              # token into this shell only
+export FIBOKI_DATA_ROOT=<the Mac's data root>
+
+# 1. GBPNZD first: research FX needs it for every NZD-quoted instrument (DATA_ARCHITECTURE §15).
+.venv/bin/fiboki data oanda-backfill -i GBPNZD --dry-run
+.venv/bin/fiboki data oanda-backfill -i GBPNZD                       # ≤ 51 requests
+
+# 2. The seed universes (union of research/strategies/*.json as of 2026-09-30; 15 symbols).
+SEEDS=EURUSD,GBPUSD,USDJPY,AUDUSD,USDCAD,USDCHF,NZDUSD,EURJPY,GBPJPY,XAUUSD,US500,DE40,EURGBP,AUDNZD,EURCHF
+.venv/bin/fiboki data oanda-backfill -i "$SEEDS" --dry-run           # read the switch warnings
+.venv/bin/fiboki data oanda-backfill -i "$SEEDS"                     # ≤ 765 requests, ~7 min
+
+# 3. Everything registered, in batches. ≤ 6,273 requests in total (~52 min at 2/s).
+#    Jobs already done plan as `current` (0 requests); whole jobs over the budget are deferred.
+.venv/bin/fiboki data oanda-backfill --all-registered --dry-run --max-requests 1500
+.venv/bin/fiboki data oanda-backfill --all-registered --max-requests 1500    # repeat until
+                                                                             # "deferred 0"
+```
+
+Check afterwards: `.venv/bin/fiboki data version --catalogue "$FIBOKI_DATA_ROOT/catalogue.db"`
+lists the new versions (source `oanda_practice`, basis `mid`). Any row whose quality is not
+`validated` makes `read_latest` raise `DirtyDataError` for that pair: read its integrity report
+before running research on it. A 401 means the token is wrong or is a live (fxTrade) token; a 400
+naming an instrument is OANDA refusing that instrument or granularity and is not retried.
+
 ## 7. Research operations
 
 ```bash

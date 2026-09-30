@@ -904,3 +904,94 @@ backfill (the next step, by another agent):
 GBPNZD is the one to backfill first: research FX needs it for every NZD-quoted instrument
 (above). Of the 41 original instruments, which have validated bars in the Mac's store was also not
 verified here.
+
+## 16. OANDA candle backfill
+
+`fiboki data oanda-backfill` (`src/fiboki/data/backfill.py`, CLI in `src/fiboki/cli.py`) fills the
+store with OANDA practice candles, as a source of its own, beside HistData. Added 2026-09-30.
+Tested against recorded practice-API fixtures and synthetic continuations
+(`tests/unit/test_oanda_backfill.py`); **not yet run against the live practice API from this
+checkout** (no token here).
+
+### What is stored
+
+* Per (instrument, granularity): one **RAW** version, then one **VALIDATED** version derived from
+  it by the same integrity path the V1 migration uses (`validate` against the instrument's session
+  calendar; nothing repaired; the verdict is the version's quality). `source = "oanda_practice"`.
+* Granularities `H1`, `H4` and `D` (OANDA's names), stored as `H1`, `H4` and **`D1`**. The store
+  had no D1 before this.
+* **`price_basis = MID` only**, requested with `price=M`. A version has one basis, and mid is what
+  the engine executes on. No bid or ask columns are stored, even if a response carried them.
+* `tick_volume` = v20 `volume` (a broker tick count). There is **no `volume` column**.
+* **Alignment**: every request carries `dailyAlignment=0&alignmentTimezone=UTC`
+  (`assert_backfill_params` refuses one that does not), so H4 bars open at 00/04/…/20Z and D bars
+  at 00:00Z, matching the epoch-anchored research frames.
+* Only **complete** candles: the window's end is the current bar's open, and any
+  `complete: false` candle is dropped and counted in the lineage.
+* Lineage (`oanda_v20_candles_backfill`): endpoint, host, the exact query parameters, the window
+  (`from`, `to_exclusive`), `requested_from`, `page_count`, candles received, incomplete /
+  duplicate / out-of-window drops, and `extends_version` on a resume.
+
+### Paging, refusal, resume
+
+Pages are `from` + `count=5000`; each page starts from the previous page's last candle, so pages
+overlap by one candle, which is deduplicated. A candle that arrives twice with different values,
+or timestamps that are not strictly increasing, refuse the job (never a silent sort). A short page,
+or a page reaching the window end, ends the job. Every attempt goes through a client-side limiter
+(2 requests/s by default) and `broker.retry.ReadRetry`: 429, 5xx and transport failures are retried
+with bounded backoff (5 attempts, 120 s deadline); any other 4xx refuses the job, naming the
+instrument. **A job that fails part-way writes nothing**, because a truncated series registered
+as the newest version would be read as the whole history.
+
+Resume: if an `oanda_practice` RAW version exists that was requested from the same or an earlier
+start, the job fetches from its last bar plus one bar and writes a new version holding the prior
+bars plus the new ones, so the newest version is always the whole series. Nothing new (for example
+over a weekend) writes nothing and says so; a rerun straight after completion plans every job as
+`current` and makes no request. An earlier `--from` than the stored one refetches in full. A RAW
+version whose VALIDATED child is missing (a crash between the two writes) is re-validated without
+a fetch.
+
+### Which version research reads when HistData and OANDA both exist
+
+`DataStore.read_latest` → `DatasetCatalogue.latest`: the **newest VALIDATED version by
+`created_at`, regardless of source or price basis**. It cannot filter by either, and it was not
+changed. Therefore, for every instrument and timeframe the backfill writes, **research, validation,
+campaigns and the markets API read the OANDA MID version from then on**; the HistData version stays
+stored and resolvable by its id. `--dry-run` prints a warning naming both version ids for every
+pair that will switch. Consequences, stated:
+
+* Results computed before the backfill reference HistData version ids and remain reproducible;
+  new runs use OANDA bars. The two are **not comparable**: HistData is BID converted by
+  `validation/run.research_mid_frame` to `synthetic_mid` (bid + half the registered typical
+  spread); OANDA is the quoted mid, not converted.
+* The research FX source (`validation/run.py`) prefers **D1**, then H4, then H1. Once D is
+  backfilled for a conversion pair, account-currency conversion switches from "last intraday close
+  per UTC day" (HistData H4/H1) to OANDA D1 closes, for every instrument that converts through it.
+* A backfilled version whose integrity verdict is SUSPECT or REJECTED is still the newest, so
+  `read_latest` raises `DirtyDataError` for that pair rather than falling back to HistData. The
+  final table prints the quality; do not run research on a pair whose quality is not `validated`
+  before reading its report.
+* Precedence is by time, not by source: re-migrating HistData later would make it the newest again.
+
+### Request volume
+
+Estimates are upper bounds over aligned bar slots (weekends make the real figure lower). From
+2005-01-01 to 2026-09-30, H1 is about 190k slots, **39 requests** per instrument (a 24/5 FX pair
+has roughly 135k real H1 bars, about 28 requests); H4 is 10 and D is 2, so 51 per instrument.
+`--all-registered` (123 instruments × 3 granularities) plans **6,273** requests, about 52 minutes
+at 2 requests/s; the operator runs it in batches with `--max-requests`, which defers whole jobs and
+never splits one.
+
+### Approximations and unknowns
+
+* OANDA practice candles come from OANDA's pricing engine, not necessarily the tier the account
+  deals on (§8). Mid only: no spread history is stored, so static spreads remain the cost model.
+* **Depth is verified for one series only**: EUR_USD H4 back to 2005-01-03T00:00Z
+  (`tests/fixtures/oanda/candles_EUR_USD_H4_M_from2005.json`). Many instruments, especially the 82
+  registered on 2026-09-30 (§15), will start later; the first stored bar is whatever OANDA returns
+  first, and `first_timestamp` on the version says which.
+* **Not verified**: whether a UTC-aligned `D` series includes a short Sunday candle (FX opens
+  about 21:00Z Sunday). If it does, integrity reports those 00:00Z Sunday bars as `off_session_bar`
+  warnings (not blocking), and D1 indicators see one extra short bar per week. No D fixture has been
+  recorded.
+* The session calendars' own approximations (§7, §15) apply to the integrity verdict unchanged.

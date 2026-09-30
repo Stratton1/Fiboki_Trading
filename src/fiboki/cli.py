@@ -470,6 +470,185 @@ def data_migrate_v1(
         raise typer.Exit(EXIT_FAIL)
 
 
+def _split_values(values: list[str] | None) -> list[str]:
+    """``-i EURUSD -i GBPUSD`` and ``-i EURUSD,GBPUSD`` both give two values."""
+    out: list[str] = []
+    for value in values or []:
+        out.extend(part.strip() for part in value.split(",") if part.strip())
+    return out
+
+
+@data_app.command("oanda-backfill")
+def data_oanda_backfill(
+    instruments: list[str] | None = typer.Option(
+        None, "--instruments", "-i",
+        help="Registered symbols; repeat the flag or comma-separate (EURUSD,GBPUSD).",
+    ),
+    all_registered: bool = typer.Option(
+        False, "--all-registered", help="Every registered instrument (123)."
+    ),
+    granularities: list[str] = typer.Option(
+        ["H1", "H4", "D"], "--granularities", "-g",
+        help="OANDA names: H1, H4, D (stored as D1). Repeat or comma-separate.",
+    ),
+    start: str = typer.Option("2005-01-01", "--from", help="First bar, UTC (ISO date)."),
+    root: Path | None = typer.Option(
+        None, "--data-root", help=f"Marked data root; overrides ${ENV_DATA_ROOT}."
+    ),
+    dry_run: bool = typer.Option(False, "--dry-run", help="Print the plan; no network."),
+    max_requests: int | None = typer.Option(
+        None, "--max-requests",
+        help="Request budget for this run (upper-bound estimates); whole jobs that "
+        "do not fit are deferred to the next run.",
+    ),
+    requests_per_second: float = typer.Option(
+        2.0, "--requests-per-second", help="Client-side pace (at most 10)."
+    ),
+    as_json: bool = typer.Option(False, "--json"),
+) -> None:
+    """Backfill OANDA practice MID candles into the store as source ``oanda_practice``.
+
+    Writes one RAW and one VALIDATED version per instrument and granularity,
+    beside (never over) HistData versions. research reads the NEWEST validated
+    version regardless of source, so the plan warns for every pair it will
+    switch. Resumes from the last stored OANDA bar; a rerun with nothing new
+    writes nothing. Exits 1 if any job was refused.
+    """
+    from fiboki.core import instruments as instrument_registry
+    from fiboki.data import backfill as bf
+    from fiboki.data.store import DataStore
+
+    if all_registered and instruments:
+        _fail("pass --instruments or --all-registered, not both", EXIT_MISUSE)
+    symbols = (
+        instrument_registry.all_symbols() if all_registered else _split_values(instruments)
+    )
+    if not symbols:
+        _fail("no instruments: pass --instruments or --all-registered", EXIT_MISUSE)
+    if not 0 < requests_per_second <= 10:
+        _fail("--requests-per-second must be in (0, 10]", EXIT_MISUSE)
+    target = root or data_root()
+    if target is None:
+        _fail(f"no data root: pass --data-root or set ${ENV_DATA_ROOT}", EXIT_MISUSE)
+    assert target is not None
+    try:
+        store = DataStore(target)
+    except Exception as exc:
+        _fail(f"could not open the data store at {target}: {exc}", EXIT_MISUSE)
+
+    try:
+        jobs = bf.plan_backfill(store, symbols, _split_values(granularities), start)
+        selected, deferred = bf.select_within_budget(jobs, max_requests)
+    except (bf.BackfillRefused, ValueError) as exc:
+        _fail(str(exc), EXIT_MISUSE)
+
+    plan_rows = [
+        {
+            "instrument": j.instrument,
+            "granularity": j.granularity,
+            "action": j.action,
+            "from": j.start.isoformat(),
+            "to_exclusive": j.end.isoformat(),
+            "estimated_requests": j.estimated_requests(),
+            "deferred": j in deferred,
+            "warnings": list(j.warnings),
+        }
+        for j in jobs
+    ]
+    estimate = bf.estimate_total(selected)
+    if not as_json:
+        table = Table(title=f"oanda-backfill plan -> {store.root}")
+        for column in ("instrument", "gran", "action", "from", "to (excl.)", "≤ requests"):
+            table.add_column(column)
+        for j, row in zip(jobs, plan_rows, strict=True):
+            table.add_row(
+                j.instrument, j.granularity,
+                j.action + (" (deferred)" if row["deferred"] else ""),
+                j.start.strftime("%Y-%m-%d %H:%M"), j.end.strftime("%Y-%m-%d %H:%M"),
+                str(row["estimated_requests"]),
+            )
+        console.print(table)
+        for j in jobs:
+            for warning in j.warnings:
+                _warn(f"{j.instrument} {j.granularity}: {warning}")
+        console.print(
+            f"{len(selected)} job(s), at most {estimate} request(s) at "
+            f"{requests_per_second:g}/s; {len(deferred)} deferred"
+        )
+
+    if dry_run:
+        if as_json:
+            _emit({"dry_run": True, "plan": plan_rows, "estimated_requests": estimate},
+                  as_json=True, render=lambda: None)
+        else:
+            _ok(f"dry run: nothing fetched, nothing written in {store.root}")
+        return
+
+    from fiboki.broker.http_transport import (
+        HttpxTransport,
+        MissingCredential,
+        bearer_token_from_env,
+    )
+    from fiboki.broker.oanda import OANDA_PRACTICE_HOST
+    from fiboki.broker.retry import ReadRetry
+    from fiboki.data.providers.oanda import OandaCandlesProvider
+    from fiboki.data.providers.ratelimit import SlidingWindowLimiter
+    from fiboki.data.schema import PriceBasis
+    from fiboki.workers.feeds import TransportHttpClient
+
+    try:
+        token = bearer_token_from_env(os.environ, "FIBOKI_OANDA_PRACTICE_TOKEN")
+    except MissingCredential as exc:
+        _fail(str(exc), EXIT_MISUSE)
+
+    # The practice host is the ONLY host this transport can reach.
+    with HttpxTransport(
+        allowed_hosts=(OANDA_PRACTICE_HOST,), user_agent="fiboki/2 oanda-backfill"
+    ) as transport:
+        provider = OandaCandlesProvider(
+            api_token=token,
+            price_basis=PriceBasis.MID,
+            http_client=TransportHttpClient(transport, timeout=30.0),
+        )
+        fetch = bf.make_v20_fetch(provider)
+        limiter = SlidingWindowLimiter(
+            1, 1.0 / requests_per_second, name="oanda-backfill"
+        )
+        retry = ReadRetry(max_attempts=5, deadline_s=120.0, base_delay_s=1.0, max_delay_s=30.0)
+        report = bf.run_backfill(
+            selected, fetch, store, limiter=limiter, retry=retry,
+            log=(lambda _m: None) if as_json else console.print,
+            deferred=deferred,
+        )
+
+    payload = report.to_dict()
+
+    def _render() -> None:
+        table = Table(title=f"oanda-backfill: {report.requests} request(s)")
+        for column in ("instrument", "gran", "status", "new bars", "rows", "raw", "validated",
+                       "quality", "reason"):
+            table.add_column(column, overflow="fold")
+        colours = {"written": "green", "skipped": "white", "refused": "red",
+                   "deferred": "yellow"}
+        for o in report.outcomes:
+            table.add_row(
+                o.job.instrument, o.job.granularity,
+                Text(o.status, style=colours.get(o.status, "white")),
+                str(o.new_bars), str(o.total_rows),
+                o.raw_version_id or "", o.validated_version_id or "",
+                o.quality or "", o.reason,
+            )
+        console.print(table)
+        console.print(
+            f"written {payload['written']}, skipped-as-current {payload['skipped']}, "
+            f"refused {payload['refused']}, deferred {payload['deferred']}"
+        )
+
+    _emit(payload, as_json=as_json, render=_render)
+    if report.refused:
+        raise typer.Exit(EXIT_FAIL)
+
+
 # ---------------------------------------------------------------------------
 # research
 # ---------------------------------------------------------------------------
