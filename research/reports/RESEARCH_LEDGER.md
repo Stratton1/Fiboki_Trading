@@ -261,3 +261,37 @@ both stated: the sign-of-returns family trades four to five times as often on H4
 families (median 315 against 68) and still does not reach the uncalibrated 400 bar; and where it
 does trade enough, its default expectancy on H4 is not positive net of costs. Neither is
 evidence about the D1 bet, which the store cannot yet test. No threshold is being moved.
+
+## Pre-registration: K5, `k5_generated_families_oanda_mid` (filed 2026-09-30, before any K5 compute)
+
+K5 is the first campaign on OANDA practice MID bars (`fiboki data oanda-backfill`, 2026-09-30:
+123 instruments, H1/H4/D1, 2005-01 to 2026-09-29, source `oanda_practice`; `read_latest` now
+returns these versions for every pair, so HistData BID with synthetic mid is no longer what
+research reads). It carries two rosters at once: the six seed documents, re-run on the broker's
+own prices, and the 100 generated documents from `research/generate_families.py`
+(`research/generated/`, manifest sha256 `4f87aaedb5fbb63887e462953793d006a6d28f68fa0188f3d27233d6f513148e`, generator families-v1, RNG seed 20260930,
+310 grammar cells sampled to 100, at least 12 per family). Nothing below may be edited after the
+first K5 cell runs; a change is a new campaign id.
+
+**What is fixed**
+
+| | |
+|---|---|
+| Campaign id | `k5_generated_families_oanda_mid` |
+| Universe | K3's 16 series, now OANDA MID: AUDJPY AUDUSD DE40 EURGBP EURJPY EURUSD GBPJPY GBPUSD NZDUSD UK100 US500 USDCAD USDCHF USDJPY XAGUSD XAUUSD |
+| Timeframes | **H4 and D1** (D1 exists for the first time; the TSMOM D1 bet and every generated document that declares D1 are tested at their intended horizon) |
+| Roster | 6 seeds (content hashes as committed at c0f1521) + 100 generated (`--generated-dir research/generated`), out-of-universe cells skipped |
+| Search, gates, account, FX, calendar, construction, holdout | as K3/K4 (`--gates production`, `v2.0.0-audit`, GBP, official calendar enforce-where-covered, construction_v2, one-look holdout); FX now converts through D1 GBP crosses where stored |
+| Bars from | 2006-01-04 (K3's trim, kept so the FX coverage argument stays the same) |
+| External prior trials | **8,496** = K4's true N (which contains K3's 7,376 and the 4,026 before it). The OANDA versions are new dataset ids, so the ledger sees no prior; the prior is declared because these are the same sixteen markets and the same question |
+
+**What K5 can say.** Two things, separately: whether any seed clears the ladder on the
+broker's own mid prices (K3 said no on HistData); and whether any of 100 recombinations of
+known mechanisms clears it. A generated survivor is a HYPOTHESIS, not a strategy: it must be
+re-authored as a seed with a written economic story, and its holdout look is spent then, not
+here. The deflation threshold rises with the 100 documents, deliberately: that is the price of
+looking at a hundred things.
+
+**Multiple-testing warning, stated before the numbers.** The true N will be on the order of
+20,000 once K5's planned trials are added; every later campaign on these bars declares at
+least that.
