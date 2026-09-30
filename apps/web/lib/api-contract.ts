@@ -60,6 +60,18 @@ export type Checks = [
   SameKeys<T.DataQualityRow, S["DataQualityRow"]>,
   SameKeys<T.AuditIntegrityView, S["AuditIntegrityView"]>,
   SameKeys<T.ResearchMemoryView, S["ResearchMemoryView"]>,
+  // Chart workstation (GET /api/markets/overlays/{symbol}). BarsView has no
+  // schema to check against: the bars route's response model is Envelope[dict].
+  SameKeys<T.OverlayView, S["OverlayView"]>,
+  SameKeys<T.OverlaySource, S["OverlaySource"]>,
+  SameKeys<T.SignalOverlay, S["SignalOverlay"]>,
+  SameKeys<T.FillOverlay, S["FillOverlay"]>,
+  SameKeys<T.LevelOverlay, S["LevelOverlay"]>,
+  SameKeys<T.RegimeOverlay, S["RegimeOverlay"]>,
+  SameKeys<T.SeriesOverlay, S["SeriesOverlay"]>,
+  SameKeys<T.EventOverlay, S["EventOverlay"]>,
+  SameKeys<T.HeadlineOverlay, S["HeadlineOverlay"]>,
+  SameKeys<T.SectionStatus, S["SectionStatus"]>,
 ];
 
 type AllTrue<L extends unknown[]> = L[number] extends true ? true : false;

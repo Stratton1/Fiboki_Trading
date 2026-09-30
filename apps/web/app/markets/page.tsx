@@ -1,5 +1,7 @@
 "use client";
 
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { GridPage } from "@/components/GridPage";
 import type { GridColumn } from "@/components/grid";
 import type { InstrumentRow } from "@/lib/types";
@@ -8,14 +10,29 @@ import type { InstrumentRow } from "@/lib/types";
  * MARKETS · Explorer: the instrument universe and its declared frictions.
  * Wave 3: a DataGrid (sort, filter, columns, keyboard, CSV with provenance);
  * `?row=EURUSD` selects an instrument (the palette's "open by id").
+ * The symbol links to its chart workstation (/markets/EURUSD); Enter on a
+ * row opens it too.
  */
+function chartHref(symbol: string) {
+  return `/markets/${encodeURIComponent(symbol)}`;
+}
+
 export default function MarketsExplorerPage() {
+  const router = useRouter();
   const columns: GridColumn<InstrumentRow>[] = [
     {
       id: "symbol",
       header: "Symbol",
       value: (row) => row.symbol,
-      cell: (row) => <strong>{row.symbol}</strong>,
+      cell: (row) => (
+        <Link
+          href={chartHref(row.symbol)}
+          data-testid="instrument-chart-link"
+          aria-label={`Open the ${row.symbol} chart`}
+        >
+          <strong>{row.symbol}</strong>
+        </Link>
+      ),
       width: 110,
       pin: true,
     },
@@ -39,6 +56,7 @@ export default function MarketsExplorerPage() {
       gridId="instruments"
       columns={columns}
       rowKey={(row) => row.symbol}
+      onRowActivate={(row) => router.push(chartHref(row.symbol))}
     />
   );
 }

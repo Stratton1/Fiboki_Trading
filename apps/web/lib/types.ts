@@ -412,6 +412,184 @@ export interface CorrelationView {
   available: boolean;
 }
 
+// ------------------------------------------------- markets: chart workstation
+
+/**
+ * One bar as `GET /api/markets/bars/{symbol}` serialises it (routers/markets.py
+ * `bars`): open time `t` (ISO, UTC) and raw OHLC floats. The route's response
+ * model is `Envelope[dict]`, so the OpenAPI schema says nothing about these
+ * fields and lib/api-contract.ts cannot check them; this mirror is read from
+ * the Python. Bars are market data, not a result, so they carry no per-value
+ * provenance: the envelope's SourceNote is their label.
+ *
+ * `v` is present only when the dataset carries volume (`volume_kind`), and is
+ * null for a bar whose volume is missing. The API sends no "forming" flag:
+ * every bar it serves is treated as closed, and none is drawn as forming.
+ */
+export interface Bar {
+  t: string;
+  o: number;
+  h: number;
+  l: number;
+  c: number;
+  v?: number | null;
+}
+
+/** `volume` is exchange volume, `tick_volume` a count of price updates, null neither. */
+export type VolumeKind = "volume" | "tick_volume";
+
+export interface BarsView {
+  symbol: string;
+  timeframe: string;
+  dataset_version_id: string;
+  volume_kind: VolumeKind | null;
+  bars: Bar[];
+}
+
+/** Where an overlay item came from (bar_store, marketstate, paper_journal, …). */
+export interface OverlaySource {
+  kind: string;
+  detail: string;
+}
+
+/** A gateway attempt from a paper session's telemetry, at its decision time. */
+export interface SignalOverlay {
+  kind: string;
+  t: string;
+  side: "long" | "short" | "unknown";
+  strategy_id: string;
+  outcome: "accepted" | "blocked";
+  reason: string;
+  signal_id: string;
+  session_id: string;
+  timeframe: string;
+  requested_price: Figure;
+  provenance: Provenance;
+  dataset_version_id: string | null;
+  source: OverlaySource;
+}
+
+export interface FillOverlay {
+  kind: string;
+  t: string;
+  role: "entry" | "exit";
+  side: "buy" | "sell";
+  price: Figure;
+  trade_id: string;
+  strategy_id: string;
+  session_id: string;
+  exit_reason: string | null;
+  net_pnl: Figure | null;
+  provenance: Provenance;
+  dataset_version_id: string | null;
+  source: OverlaySource;
+}
+
+export interface LevelOverlay {
+  kind: string;
+  role: "entry" | "stop" | "target";
+  price: Figure;
+  /** Serialised by alias: the Python field is `from_`. */
+  from: string;
+  to: string | null;
+  position_id: string;
+  strategy_id: string;
+  provenance: Provenance;
+  dataset_version_id: string | null;
+  source: OverlaySource;
+}
+
+/**
+ * A run of one regime key. `to` is the first bar of the NEXT run for every
+ * segment but the last, whose `to` is the window's last bar (routers/markets.py
+ * `overlays`). Market state, not a result: `provenance` is null.
+ */
+export interface RegimeOverlay {
+  kind: string;
+  from: string;
+  to: string;
+  label: "trend" | "range" | "stress" | "unknown";
+  regime_key: string;
+  axes: Record<string, string>;
+  provenance?: Provenance | null;
+  dataset_version_id: string | null;
+  classifier_fingerprint: string;
+  source: OverlaySource;
+}
+
+/**
+ * One output column of a backend indicator (`fiboki.indicators`). `pane` is
+ * "price" (its values are prices), "state:<indicator>" (a state or ratio
+ * column of a price indicator) or the indicator's own name (its own pane).
+ * The API supplies no colour or style; the chart assigns neutral series
+ * roles by order. `display_only` series are NOT causal (the displayed chikou
+ * span) and are never read by a strategy.
+ */
+export interface SeriesOverlay {
+  kind: string;
+  pane: string;
+  name: string;
+  indicator_id: string;
+  indicator_key: string;
+  params: Record<string, unknown>;
+  display_only: boolean;
+  points: SeriesPoint[];
+  provenance?: Provenance | null;
+  dataset_version_id: string | null;
+  source: OverlaySource;
+}
+
+export interface EventOverlay {
+  kind: string;
+  t: string;
+  window_end: string | null;
+  time_known: boolean;
+  currency: string;
+  name: string;
+  impact: string;
+  event_id: string;
+  source_url: string;
+  provenance?: Provenance | null;
+  dataset_version_id: string | null;
+  source: OverlaySource;
+}
+
+export interface HeadlineOverlay {
+  kind: string;
+  t: string;
+  vendor_published_at: string | null;
+  news_source: string;
+  currency: string | null;
+  title: string;
+  url: string;
+  provenance?: Provenance | null;
+  dataset_version_id: string | null;
+  source: OverlaySource;
+}
+
+export interface SectionStatus {
+  available: boolean;
+  detail: string;
+}
+
+/** GET /api/markets/overlays/{symbol} (Envelope). Everything the chart draws over candles. */
+export interface OverlayView {
+  symbol: string;
+  timeframe: string;
+  window_from: string | null;
+  window_to: string | null;
+  bars_dataset_version_id: string | null;
+  signals: SignalOverlay[];
+  fills: FillOverlay[];
+  levels: LevelOverlay[];
+  regimes: RegimeOverlay[];
+  series: SeriesOverlay[];
+  events: EventOverlay[];
+  headlines: HeadlineOverlay[];
+  /** Per section: available, and why not when it is not. */
+  sections: Record<string, SectionStatus>;
+}
+
 // ----------------------------------------------------------- intelligence
 
 export type AgentRoleRow = Schemas["AgentRoleView"];

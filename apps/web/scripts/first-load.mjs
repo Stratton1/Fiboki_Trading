@@ -90,25 +90,66 @@ export function gzipBytes(file) {
 }
 
 /**
- * One row per prerendered route: its first-load JS files and their gzip total.
+ * The route PATTERN each prerendered path belongs to, from Next's own
+ * prerender manifest: `/markets/EURUSD` → `/markets/[symbol]`. A dynamic
+ * route is measured through the page(s) its generateStaticParams prerendered
+ * (their first-load JavaScript is the route's; only the data differs).
+ */
+function srcRoutes() {
+  const file = join(NEXT, "prerender-manifest.json");
+  if (!existsSync(file)) return { get: () => undefined };
+  const manifest = JSON.parse(readFileSync(file, "utf8"));
+  const exact = new Map();
+  for (const [path, entry] of Object.entries(manifest.routes ?? {})) {
+    if (entry && typeof entry.srcRoute === "string") exact.set(path, entry.srcRoute);
+  }
+  // A dynamic route's pages rendered ON DEMAND by a running server (a test
+  // visiting /markets/GBPUSD) land in the same cache directory without a
+  // manifest entry; they belong to their pattern just the same.
+  const dynamic = Object.entries(manifest.dynamicRoutes ?? {}).map(([pattern, entry]) => ({
+    pattern,
+    regex: new RegExp(entry.routeRegex),
+  }));
+  return {
+    get(path) {
+      const hit = exact.get(path);
+      if (hit) return hit;
+      const match = dynamic.find((d) => d.regex.test(path));
+      return match ? match.pattern : undefined;
+    },
+  };
+}
+
+/**
+ * One row per route pattern: its first-load JS files and their gzip total.
  * Framework-internal routes (`/_not-found`, `/_global-error`) are omitted.
+ * `sample` is the prerendered path measured when it differs from the pattern;
+ * when several paths of one pattern were prerendered the largest is kept.
  */
 export function measureRoutes() {
   if (!existsSync(APP_HTML)) {
     throw new Error(`No production build at ${APP_HTML}. Run \`npm run build\` first.`);
   }
-  return htmlFiles(APP_HTML)
+  const patterns = srcRoutes();
+  const rows = htmlFiles(APP_HTML)
     .map((file) => {
-      const route = routeOf(file);
+      const path = routeOf(file);
+      const route = patterns.get(path) ?? path;
       const html = readFileSync(file, "utf8");
       const js = scriptsIn(html).map(assetPath);
       const css = stylesheetsIn(html).map(assetPath);
       const jsGzip = js.reduce((sum, f) => sum + gzipBytes(f), 0);
       const cssGzip = css.reduce((sum, f) => sum + gzipBytes(f), 0);
-      return { route, js, css, jsGzip, cssGzip, budgetKb: budgetFor(route) };
+      const sample = route === path ? null : path;
+      return { route, sample, js, css, jsGzip, cssGzip, budgetKb: budgetFor(route) };
     })
-    .filter((row) => !row.route.startsWith("/_"))
-    .sort((a, b) => a.route.localeCompare(b.route));
+    .filter((row) => !row.route.startsWith("/_"));
+  const byRoute = new Map();
+  for (const row of rows) {
+    const seen = byRoute.get(row.route);
+    if (seen === undefined || row.jsGzip > seen.jsGzip) byRoute.set(row.route, row);
+  }
+  return [...byRoute.values()].sort((a, b) => a.route.localeCompare(b.route));
 }
 
 const kb = (bytes) => (bytes / 1024).toFixed(1);
@@ -120,9 +161,8 @@ export function formatTable(rows) {
   ];
   for (const r of rows) {
     const within = r.jsGzip / 1024 <= r.budgetKb ? "yes" : "NO";
-    lines.push(
-      `| \`${r.route}\` | ${kb(r.jsGzip)} | ${r.budgetKb} | ${kb(r.cssGzip)} | ${within} |`,
-    );
+    const route = r.sample ? `\`${r.route}\` (as \`${r.sample}\`)` : `\`${r.route}\``;
+    lines.push(`| ${route} | ${kb(r.jsGzip)} | ${r.budgetKb} | ${kb(r.cssGzip)} | ${within} |`);
   }
   return lines.join("\n");
 }

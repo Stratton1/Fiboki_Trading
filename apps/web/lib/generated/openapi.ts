@@ -56,6 +56,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/command/attention": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Attention
+         * @description What needs a human, most urgent first. The order IS the ranking.
+         */
+        get: operations["attention_api_command_attention_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/health": {
         parameters: {
             query?: never;
@@ -246,6 +266,31 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/markets/overlays/{symbol}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Overlays
+         * @description Signals, fills, levels, regimes, indicator series, events and headlines.
+         *
+         *     The window is the last ``limit`` bars at or before ``to`` and at or after
+         *     ``from``. With no bar store mounted the bar-derived sections are reported
+         *     unavailable and the journal, calendar and headline sections use
+         *     ``[from, to]`` as given.
+         */
+        get: operations["overlays_api_markets_overlays__symbol__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/markets/regimes": {
         parameters: {
             query?: never;
@@ -393,6 +438,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/stream": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Stream
+         * @description The workstation's live feed. Snapshot, then deltas, then heartbeats.
+         */
+        get: operations["stream_api_stream_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/system/broker-health": {
         parameters: {
             query?: never;
@@ -477,6 +542,80 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/system/incidents": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Incidents */
+        get: operations["incidents_api_system_incidents_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/system/incidents/{incident_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Incident */
+        get: operations["incident_api_system_incidents__incident_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/system/incidents/{incident_id}/ack": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Acknowledge
+         * @description Record that a named human has seen this incident. Does not resolve it.
+         */
+        post: operations["acknowledge_api_system_incidents__incident_id__ack_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/system/incidents/{incident_id}/note": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Annotate
+         * @description Append a note to the incident's timeline. Audited; never edits anything.
+         */
+        post: operations["annotate_api_system_incidents__incident_id__note_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/system/kill-switch": {
         parameters: {
             query?: never;
@@ -522,6 +661,31 @@ export interface paths {
         put?: never;
         /** Disarm Kill Switch */
         post: operations["disarm_kill_switch_api_system_kill_switch_disarm_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/system/kill-switch/disarm/preflight": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Kill Switch Disarm Preflight
+         * @description Server-computed consequences of ``POST /api/system/kill-switch/disarm``.
+         *
+         *     The canonical path, beside the switch it describes. The earlier path
+         *     ``GET /api/trading/preflight/kill-switch-disarm`` serves the identical body
+         *     and is kept as an alias for one release. One implementation: this route
+         *     delegates, so the two can never disagree.
+         */
+        get: operations["kill_switch_disarm_preflight_api_system_kill_switch_disarm_preflight_get"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -919,6 +1083,27 @@ export interface components {
             /** Role */
             role: string;
         };
+        /**
+         * AttentionItem
+         * @description One thing an operator should look at, with where to go to act on it.
+         */
+        AttentionItem: {
+            /** As Of */
+            as_of: string | null;
+            /** Category */
+            category: string;
+            /** Deep Link */
+            deep_link: string;
+            /** Id */
+            id: string;
+            /** Reason */
+            reason: string;
+            score: components["schemas"]["Figure"];
+            /** Severity */
+            severity: string;
+            /** Title */
+            title: string;
+        };
         /** AuditEntryView */
         AuditEntryView: {
             /** Action */
@@ -1098,6 +1283,16 @@ export interface components {
             data: components["schemas"]["ExecutionModeBanner"];
             source: components["schemas"]["SourceNote"];
         };
+        /** Envelope[IncidentView] */
+        Envelope_IncidentView_: {
+            /**
+             * Caveats
+             * @default []
+             */
+            caveats: components["schemas"]["Caveat"][];
+            data: components["schemas"]["IncidentView"];
+            source: components["schemas"]["SourceNote"];
+        };
         /** Envelope[KillSwitchDisarmPreflightView] */
         Envelope_KillSwitchDisarmPreflightView_: {
             /**
@@ -1126,6 +1321,16 @@ export interface components {
              */
             caveats: components["schemas"]["Caveat"][];
             data: components["schemas"]["LifecycleEvaluationView"];
+            source: components["schemas"]["SourceNote"];
+        };
+        /** Envelope[OverlayView] */
+        Envelope_OverlayView_: {
+            /**
+             * Caveats
+             * @default []
+             */
+            caveats: components["schemas"]["Caveat"][];
+            data: components["schemas"]["OverlayView"];
             source: components["schemas"]["SourceNote"];
         };
         /** Envelope[ParameterLabView] */
@@ -1207,6 +1412,37 @@ export interface components {
             caveats: components["schemas"]["Caveat"][];
             data: components["schemas"]["StrategyView"];
             source: components["schemas"]["SourceNote"];
+        };
+        /** EventOverlay */
+        EventOverlay: {
+            /** Currency */
+            currency: string;
+            /** Dataset Version Id */
+            dataset_version_id: string | null;
+            /** Event Id */
+            event_id: string;
+            /** Impact */
+            impact: string;
+            /**
+             * Kind
+             * @default event
+             */
+            kind: string;
+            /** Name */
+            name: string;
+            provenance?: components["schemas"]["Provenance"] | null;
+            source: components["schemas"]["OverlaySource"];
+            /** Source Url */
+            source_url: string;
+            /**
+             * T
+             * Format: date-time
+             */
+            t: string;
+            /** Time Known */
+            time_known: boolean;
+            /** Window End */
+            window_end: string | null;
         };
         /**
          * ExecutionMode
@@ -1321,6 +1557,64 @@ export interface components {
             /** Value */
             value: number | null;
         };
+        /** FillOverlay */
+        FillOverlay: {
+            /** Dataset Version Id */
+            dataset_version_id: string | null;
+            /** Exit Reason */
+            exit_reason?: string | null;
+            /**
+             * Kind
+             * @default fill
+             */
+            kind: string;
+            net_pnl?: components["schemas"]["Figure"] | null;
+            price: components["schemas"]["Figure"];
+            provenance: components["schemas"]["Provenance"];
+            /** Role */
+            role: string;
+            /** Session Id */
+            session_id: string;
+            /** Side */
+            side: string;
+            source: components["schemas"]["OverlaySource"];
+            /** Strategy Id */
+            strategy_id: string;
+            /**
+             * T
+             * Format: date-time
+             */
+            t: string;
+            /** Trade Id */
+            trade_id: string;
+        };
+        /** HeadlineOverlay */
+        HeadlineOverlay: {
+            /** Currency */
+            currency: string | null;
+            /** Dataset Version Id */
+            dataset_version_id: string | null;
+            /**
+             * Kind
+             * @default headline
+             */
+            kind: string;
+            /** News Source */
+            news_source: string;
+            provenance?: components["schemas"]["Provenance"] | null;
+            source: components["schemas"]["OverlaySource"];
+            /**
+             * T
+             * Format: date-time
+             */
+            t: string;
+            /** Title */
+            title: string;
+            /** Url */
+            url: string;
+            /** Vendor Published At */
+            vendor_published_at: string | null;
+        };
         /** HealthCheck */
         HealthCheck: {
             /**
@@ -1386,6 +1680,62 @@ export interface components {
             supporting_experiments: components["schemas"]["Figure"];
             /** Tested */
             tested: boolean;
+        };
+        /** IncidentAckRequest */
+        IncidentAckRequest: {
+            /** Reason */
+            reason: string;
+        };
+        /** IncidentNoteRequest */
+        IncidentNoteRequest: {
+            /** Text */
+            text: string;
+        };
+        /**
+         * IncidentView
+         * @description One deduplicated incident with its full timeline.
+         */
+        IncidentView: {
+            /** Acknowledged At */
+            acknowledged_at?: string | null;
+            /** Acknowledged By */
+            acknowledged_by?: string | null;
+            /**
+             * As Of
+             * Format: date-time
+             */
+            as_of: string;
+            /** Deep Link */
+            deep_link: string;
+            /** Event */
+            event: string;
+            /**
+             * First Seen
+             * Format: date-time
+             */
+            first_seen: string;
+            /** Id */
+            id: string;
+            /** Key */
+            key: string;
+            /**
+             * Last Seen
+             * Format: date-time
+             */
+            last_seen: string;
+            occurrences: components["schemas"]["Figure"];
+            /** Resolved At */
+            resolved_at?: string | null;
+            /** Severity */
+            severity: string;
+            /** Source */
+            source: string;
+            /** Status */
+            status: string;
+            /** Timeline */
+            timeline: components["schemas"]["TimelineEntry"][];
+            /** Title */
+            title: string;
         };
         /** InstrumentView */
         InstrumentView: {
@@ -1468,6 +1818,32 @@ export interface components {
             /** Since */
             since: string | null;
         };
+        /** LevelOverlay */
+        LevelOverlay: {
+            /** Dataset Version Id */
+            dataset_version_id: string | null;
+            /**
+             * From
+             * Format: date-time
+             */
+            from: string;
+            /**
+             * Kind
+             * @default level
+             */
+            kind: string;
+            /** Position Id */
+            position_id: string;
+            price: components["schemas"]["Figure"];
+            provenance: components["schemas"]["Provenance"];
+            /** Role */
+            role: string;
+            source: components["schemas"]["OverlaySource"];
+            /** Strategy Id */
+            strategy_id: string;
+            /** To */
+            to: string | null;
+        };
         /**
          * LifecycleEvaluationView
          * @description Everything one monitoring tick concluded about one strategy.
@@ -1506,6 +1882,47 @@ export interface components {
             /** Username */
             username: string;
         };
+        /** OverlaySource */
+        OverlaySource: {
+            /**
+             * Detail
+             * @default
+             */
+            detail: string;
+            /** Kind */
+            kind: string;
+        };
+        /** OverlayView */
+        OverlayView: {
+            /** Bars Dataset Version Id */
+            bars_dataset_version_id: string | null;
+            /** Events */
+            events: components["schemas"]["EventOverlay"][];
+            /** Fills */
+            fills: components["schemas"]["FillOverlay"][];
+            /** Headlines */
+            headlines: components["schemas"]["HeadlineOverlay"][];
+            /** Levels */
+            levels: components["schemas"]["LevelOverlay"][];
+            /** Regimes */
+            regimes: components["schemas"]["RegimeOverlay"][];
+            /** Sections */
+            sections: {
+                [key: string]: components["schemas"]["SectionStatus"];
+            };
+            /** Series */
+            series: components["schemas"]["SeriesOverlay"][];
+            /** Signals */
+            signals: components["schemas"]["SignalOverlay"][];
+            /** Symbol */
+            symbol: string;
+            /** Timeframe */
+            timeframe: string;
+            /** Window From */
+            window_from: string | null;
+            /** Window To */
+            window_to: string | null;
+        };
         /** Page[AgentRoleView] */
         Page_AgentRoleView_: {
             /**
@@ -1515,6 +1932,29 @@ export interface components {
             caveats: components["schemas"]["Caveat"][];
             /** Items */
             items: components["schemas"]["AgentRoleView"][];
+            /**
+             * Limit
+             * @default 100
+             */
+            limit: number;
+            /**
+             * Offset
+             * @default 0
+             */
+            offset: number;
+            source: components["schemas"]["SourceNote"];
+            /** Total */
+            total: number;
+        };
+        /** Page[AttentionItem] */
+        Page_AttentionItem_: {
+            /**
+             * Caveats
+             * @default []
+             */
+            caveats: components["schemas"]["Caveat"][];
+            /** Items */
+            items: components["schemas"]["AttentionItem"][];
             /**
              * Limit
              * @default 100
@@ -1676,6 +2116,29 @@ export interface components {
             caveats: components["schemas"]["Caveat"][];
             /** Items */
             items: components["schemas"]["HypothesisView"][];
+            /**
+             * Limit
+             * @default 100
+             */
+            limit: number;
+            /**
+             * Offset
+             * @default 0
+             */
+            offset: number;
+            source: components["schemas"]["SourceNote"];
+            /** Total */
+            total: number;
+        };
+        /** Page[IncidentView] */
+        Page_IncidentView_: {
+            /**
+             * Caveats
+             * @default []
+             */
+            caveats: components["schemas"]["Caveat"][];
+            /** Items */
+            items: components["schemas"]["IncidentView"][];
             /**
              * Limit
              * @default 100
@@ -2044,6 +2507,38 @@ export interface components {
          * @enum {string}
          */
         Provenance: "backtest" | "walkforward" | "out_of_sample" | "holdout" | "paper" | "shadow" | "broker_demo" | "broker_live";
+        /** RegimeOverlay */
+        RegimeOverlay: {
+            /** Axes */
+            axes: {
+                [key: string]: string;
+            };
+            /** Classifier Fingerprint */
+            classifier_fingerprint: string;
+            /** Dataset Version Id */
+            dataset_version_id: string | null;
+            /**
+             * From
+             * Format: date-time
+             */
+            from: string;
+            /**
+             * Kind
+             * @default regime
+             */
+            kind: string;
+            /** Label */
+            label: string;
+            provenance?: components["schemas"]["Provenance"] | null;
+            /** Regime Key */
+            regime_key: string;
+            source: components["schemas"]["OverlaySource"];
+            /**
+             * To
+             * Format: date-time
+             */
+            to: string;
+        };
         /** RegimeView */
         RegimeView: {
             /** Available */
@@ -2119,6 +2614,13 @@ export interface components {
             statistic: components["schemas"]["Figure"];
             threshold: components["schemas"]["Figure"];
         };
+        /** SectionStatus */
+        SectionStatus: {
+            /** Available */
+            available: boolean;
+            /** Detail */
+            detail: string;
+        };
         /**
          * Series
          * @description A labelled time series. The label belongs to the series, not the chart.
@@ -2142,6 +2644,35 @@ export interface components {
              * @default
              */
             unit: string;
+        };
+        /** SeriesOverlay */
+        SeriesOverlay: {
+            /** Dataset Version Id */
+            dataset_version_id: string | null;
+            /**
+             * Display Only
+             * @default false
+             */
+            display_only: boolean;
+            /** Indicator Id */
+            indicator_id: string;
+            /** Indicator Key */
+            indicator_key: string;
+            /**
+             * Kind
+             * @default series
+             */
+            kind: string;
+            /** Name */
+            name: string;
+            /** Pane */
+            pane: string;
+            /** Params */
+            params: Record<string, never>;
+            /** Points */
+            points: components["schemas"]["SeriesPoint"][];
+            provenance?: components["schemas"]["Provenance"] | null;
+            source: components["schemas"]["OverlaySource"];
         };
         /** SeriesPoint */
         SeriesPoint: {
@@ -2193,6 +2724,38 @@ export interface components {
             };
             /** Session Ttl Seconds */
             session_ttl_seconds: number;
+        };
+        /** SignalOverlay */
+        SignalOverlay: {
+            /** Dataset Version Id */
+            dataset_version_id: string | null;
+            /**
+             * Kind
+             * @default signal
+             */
+            kind: string;
+            /** Outcome */
+            outcome: string;
+            provenance: components["schemas"]["Provenance"];
+            /** Reason */
+            reason: string;
+            requested_price: components["schemas"]["Figure"];
+            /** Session Id */
+            session_id: string;
+            /** Side */
+            side: string;
+            /** Signal Id */
+            signal_id: string;
+            source: components["schemas"]["OverlaySource"];
+            /** Strategy Id */
+            strategy_id: string;
+            /**
+             * T
+             * Format: date-time
+             */
+            t: string;
+            /** Timeframe */
+            timeframe: string;
         };
         /**
          * SourceNote
@@ -2282,6 +2845,30 @@ export interface components {
             provenance: components["schemas"]["Provenance"];
             requested_price: components["schemas"]["Figure"];
             slippage: components["schemas"]["Figure"];
+        };
+        /** TimelineEntry */
+        TimelineEntry: {
+            /**
+             * Actor
+             * @default
+             */
+            actor: string;
+            /**
+             * At
+             * Format: date-time
+             */
+            at: string;
+            /**
+             * Correlation Id
+             * @default
+             */
+            correlation_id: string;
+            /** Kind */
+            kind: string;
+            /** Severity */
+            severity?: string | null;
+            /** Text */
+            text: string;
         };
         /**
          * TradeRowView
@@ -2437,6 +3024,26 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PrincipalView"];
+                };
+            };
+        };
+    };
+    attention_api_command_attention_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Page_AttentionItem_"];
                 };
             };
         };
@@ -2722,6 +3329,44 @@ export interface operations {
             };
         };
     };
+    overlays_api_markets_overlays__symbol__get: {
+        parameters: {
+            query?: {
+                from?: string | null;
+                include_indicators?: boolean;
+                limit?: number;
+                strategy_id?: string[] | null;
+                timeframe?: string;
+                to?: string | null;
+            };
+            header?: never;
+            path: {
+                symbol: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_OverlayView_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     regimes_api_markets_regimes_get: {
         parameters: {
             query?: never;
@@ -2948,6 +3593,54 @@ export interface operations {
             };
         };
     };
+    stream_api_stream_get: {
+        parameters: {
+            query?: {
+                /** @description Comma-separated subset of: mode,killswitch,health,fleet,positions,marks,incidents,risk */
+                topics?: string | null;
+            };
+            header?: {
+                "Last-Event-ID"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description text/event-stream of topic envelopes; see module docs. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/event-stream": unknown;
+                };
+            };
+            /** @description No valid session cookie. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Origin/Referer present and not allowed. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     broker_health_api_system_broker_health_get: {
         parameters: {
             query?: never;
@@ -3048,6 +3741,140 @@ export interface operations {
             };
         };
     };
+    incidents_api_system_incidents_get: {
+        parameters: {
+            query?: {
+                limit?: number;
+                offset?: number;
+                status?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Page_IncidentView_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    incident_api_system_incidents__incident_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                incident_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_IncidentView_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    acknowledge_api_system_incidents__incident_id__ack_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                incident_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["IncidentAckRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_IncidentView_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    annotate_api_system_incidents__incident_id__note_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                incident_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["IncidentNoteRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_IncidentView_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     kill_switch_api_system_kill_switch_get: {
         parameters: {
             query?: never;
@@ -3130,6 +3957,26 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    kill_switch_disarm_preflight_api_system_kill_switch_disarm_preflight_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_KillSwitchDisarmPreflightView_"];
                 };
             };
         };

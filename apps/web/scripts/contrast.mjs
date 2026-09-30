@@ -254,6 +254,19 @@ export const PAIRS = [
   ...["--div-neg", "--div-pos"].flatMap((fg) => on(fg, ["--bg-surface"], "graphics", "heatmap end")),
   // Chart ink for LIVE is the mode colour (magenta), never loss red.
   ...on("--mode-live", ["--bg-surface"], "graphics", "LIVE chart series"),
+  // Price chart (components/charts/PriceChart.tsx): the neutral candle ink on
+  // the chart background, the provenance marker inks, the P&L connector
+  // colours, and the regime ribbon label (fg-muted) over each regime tint.
+  ...on("--chart-candle", ["--chart-bg"], "graphics", "candle ink"),
+  ...["--prov-sim", "--prov-paper", "--prov-shadow", "--prov-demo", "--mode-live"].flatMap((fg) =>
+    on(fg, ["--chart-bg"], "graphics", "price-chart marker"),
+  ),
+  ...["--pnl-up", "--pnl-down"].flatMap((fg) =>
+    on(fg, ["--chart-bg"], "graphics", "trade connector"),
+  ),
+  ...["--regime-trend", "--regime-range", "--regime-stress", "--regime-unknown"].flatMap((tint) =>
+    on("--fg-muted", [["--chart-bg", tint]], "text", "regime ribbon label"),
+  ),
 ];
 
 /**

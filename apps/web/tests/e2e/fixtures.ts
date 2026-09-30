@@ -530,3 +530,246 @@ export function riskState(overrides: Record<string, unknown> = {}) {
     ...overrides,
   };
 }
+
+// ------------------------------------------------------ chart workstation
+
+/** Round to the 5 decimals an EURUSD price is quoted in, so fixtures are exact. */
+const px = (value: number) => Number(value.toFixed(5));
+
+/** The open time (ISO, UTC) of H1 bar `i` in the chart fixtures. */
+export function barTime(i: number, start = "2026-09-21T00:00:00Z") {
+  return new Date(Date.parse(start) + i * 3_600_000).toISOString().replace(".000Z", "Z");
+}
+
+/** One synthetic bar, deterministic, as routers/markets.py `bars` serialises it. */
+export function chartBar(i: number) {
+  const o = px(1.1 + i * 0.0002);
+  const c = px(o + (i % 2 === 0 ? 0.0003 : -0.0002));
+  return {
+    t: barTime(i),
+    o,
+    h: px(Math.max(o, c) + 0.0004),
+    l: px(Math.min(o, c) - 0.0003),
+    c,
+    // Bar 5 has no recorded volume: null, never 0.
+    v: i === 5 ? null : 100 + i,
+  };
+}
+
+/** GET /api/markets/bars/{symbol}: `count` H1 bars with tick volume. */
+export function chartBars(
+  options: { count?: number; symbol?: string; timeframe?: string; version?: string; volume?: boolean } = {},
+) {
+  const count = options.count ?? 120;
+  const volume = options.volume ?? true;
+  const bars = Array.from({ length: count }, (_, i) => {
+    const bar = chartBar(i);
+    if (!volume) {
+      const { v: _v, ...rest } = bar;
+      return rest;
+    }
+    return bar;
+  });
+  return {
+    data: {
+      symbol: options.symbol ?? "EURUSD",
+      timeframe: options.timeframe ?? "H1",
+      dataset_version_id: options.version ?? "dsv_eurusd_h1_0007abcdef",
+      volume_kind: volume ? "tick_volume" : null,
+      bars,
+    },
+    source: source("live", "Canonical bar store."),
+    caveats: [],
+  };
+}
+
+const overlaySource = (kind: string, detail: string) => ({ kind, detail });
+
+function seriesItem(
+  name: string,
+  indicator: string,
+  key: string,
+  pane: string,
+  value: (i: number) => number | null,
+  count: number,
+  displayOnly = false,
+) {
+  return {
+    kind: "series",
+    pane,
+    name,
+    indicator_id: indicator,
+    indicator_key: key,
+    params: {},
+    display_only: displayOnly,
+    points: Array.from({ length: count }, (_, i) => ({ t: barTime(i), v: value(i) })),
+    provenance: null,
+    dataset_version_id: "dsv_eurusd_h1_0007abcdef",
+    source: overlaySource("bar_store", "Canonical bar store, dataset dsv_eurusd_h1_0007abcdef; computed by fiboki.indicators."),
+  };
+}
+
+/**
+ * GET /api/markets/overlays/{symbol}, shaped as routers/markets.py OverlayView:
+ * four signals (one before the first bar, so outside the window), one closed
+ * trade (entry and exit) and one open position with its three levels, three
+ * regime runs (trend, range, unknown), four indicator series across the price
+ * pane, a state pane and an own pane, and the sections the API reports.
+ */
+export function chartOverlays(options: { count?: number; version?: string | null } = {}) {
+  const count = options.count ?? 120;
+  const ichimoku = "ichimoku_9_26_52_26_26";
+  const journal = overlaySource("paper_journal", "session ps_001 (H1), replayed dataset dsv_eurusd_h1_0007abcdef");
+  const common = {
+    session_id: "ps_001",
+    provenance: "paper",
+    dataset_version_id: "dsv_eurusd_h1_0007abcdef",
+    source: journal,
+  };
+  const signal = (t: string, side: string, outcome: string, reason: string, id: string, price: number | null) => ({
+    kind: "signal",
+    t,
+    side,
+    strategy_id: "ichimoku_kumo_trend",
+    outcome,
+    reason,
+    signal_id: id,
+    timeframe: "H1",
+    requested_price: figure(price, "paper"),
+    ...common,
+  });
+  const fill = (t: string, role: string, side: string, price: number, trade: string, pnl: number | null) => ({
+    kind: "fill",
+    t,
+    role,
+    side,
+    price: figure(price, "paper"),
+    trade_id: trade,
+    strategy_id: "ichimoku_kumo_trend",
+    exit_reason: role === "exit" ? "take_profit" : null,
+    net_pnl: pnl === null ? null : figure(pnl, "paper", "GBP"),
+    ...common,
+  });
+  const level = (role: string, price: number) => ({
+    kind: "level",
+    role,
+    price: figure(price, "paper"),
+    from: barTime(100),
+    to: null,
+    position_id: "pos_0001",
+    strategy_id: "ichimoku_kumo_trend",
+    ...common,
+  });
+  const regime = (from: number, to: number, label: string) => ({
+    kind: "regime",
+    from: barTime(from),
+    to: barTime(to),
+    label,
+    regime_key: `${label}|normal|liquid|calm|neutral`,
+    axes: { direction: label === "trend" ? "up" : "flat", volatility: "normal" },
+    provenance: null,
+    dataset_version_id: "dsv_eurusd_h1_0007abcdef",
+    classifier_fingerprint: "rc_v1_3f2a",
+    source: overlaySource("marketstate", "RegimeClassifier"),
+  });
+  const last = count - 1;
+  return {
+    data: {
+      symbol: "EURUSD",
+      timeframe: "H1",
+      window_from: barTime(0),
+      window_to: barTime(last),
+      bars_dataset_version_id:
+        options.version === undefined ? "dsv_eurusd_h1_0007abcdef" : options.version,
+      signals: [
+        signal("2026-09-20T12:00:00Z", "long", "accepted", "open accepted by the gateway", "sig_0", 1.0999),
+        signal(`${barTime(10).slice(0, -1)}.500Z`, "long", "accepted", "open accepted by the gateway", "sig_1", 1.102),
+        signal(barTime(30), "short", "blocked", "max_open_positions", "sig_2", 1.106),
+        signal(barTime(50), "unknown", "accepted", "open accepted by the gateway", "sig_3", null),
+      ],
+      fills: [
+        fill(barTime(11), "entry", "buy", 1.1025, "trd_0001", null),
+        fill(barTime(20), "exit", "sell", 1.1045, "trd_0001", 12.5),
+        fill(barTime(100), "entry", "buy", 1.12, "pos_0001", null),
+      ],
+      levels: [level("entry", 1.12), level("stop", 1.118), level("target", 1.125)],
+      regimes: [regime(0, 40, "trend"), regime(40, 80, "range"), regime(80, last, "unknown")],
+      series: [
+        seriesItem(`${ichimoku}_tenkan`, ichimoku, "ichimoku", "price", (i) => px(chartBar(i).c - 0.0001), count),
+        seriesItem(`${ichimoku}_kijun`, ichimoku, "ichimoku", "price", (i) => (i < 25 ? null : px(chartBar(i).c - 0.0005)), count),
+        seriesItem(`${ichimoku}_chikou_span_display`, ichimoku, "ichimoku", "price", (i) => (i > last - 26 ? null : chartBar(i + 26).c), count, true),
+        seriesItem(`${ichimoku}_price_vs_cloud`, ichimoku, "ichimoku", `state:${ichimoku}`, (i) => (i % 3 === 0 ? -1 : 1), count),
+        seriesItem("atr_14", "atr_14", "atr", "atr_14", (i) => (i < 13 ? null : px(0.0012 + i * 0.00001)), count),
+      ],
+      events: [
+        {
+          kind: "event",
+          t: barTime(60),
+          window_end: null,
+          time_known: true,
+          currency: "USD",
+          name: "Non-farm payrolls",
+          impact: "high",
+          event_id: "ev_1",
+          source_url: "https://www.bls.gov/",
+          provenance: null,
+          dataset_version_id: "sha256:abc",
+          source: overlaySource("official_calendar", "BLS"),
+        },
+      ],
+      headlines: [],
+      sections: {
+        series: { available: true, detail: "5 series from 2 indicator(s)." },
+        regimes: { available: true, detail: "3 segment(s); classifier warm-up 200 bars." },
+        fills: { available: true, detail: "3 fill(s) from 1 paper session(s) on EURUSD." },
+        levels: { available: true, detail: "Entry, stop and target of positions open at the end of each session." },
+        signals: { available: true, detail: "Gateway attempts from each session's telemetry.jsonl." },
+        backtest_fills: {
+          available: false,
+          detail:
+            "The research ledger records experiment metrics, not per-trade fills, so no backtest trade can be drawn.",
+        },
+        stop_moves: {
+          available: false,
+          detail:
+            "The paper journal persists each open position's current stop but not when it moved; a stop-move history would have to invent times.",
+        },
+        events: { available: true, detail: "1 scheduled event(s) for EUR, USD." },
+        headlines: { available: false, detail: "No headline store has been recorded on this deployment." },
+      },
+    },
+    source: source("mixed", "Bar store (series, regimes), paper journal (signals, fills, levels), official calendar and headline store; computed now."),
+    caveats: [],
+  };
+}
+
+/**
+ * Mock the shell plus the chart workstation's two reads for any symbol and
+ * timeframe. Each request's URL is recorded so a test can assert the query.
+ */
+export async function mockChart(
+  page: Page,
+  options: {
+    bars?: (url: URL) => unknown;
+    overlays?: (url: URL) => unknown;
+    barsStatus?: number;
+    overlaysStatus?: number;
+  } = {},
+) {
+  await mockShell(page);
+  const requests: URL[] = [];
+  await page.route((url) => url.pathname.startsWith("/api/markets/bars/"), (route: Route) => {
+    const url = new URL(route.request().url());
+    requests.push(url);
+    const timeframe = url.searchParams.get("timeframe") ?? "H1";
+    const body = options.bars ? options.bars(url) : chartBars({ timeframe });
+    return route.fulfill({ status: options.barsStatus ?? 200, json: body });
+  });
+  await page.route((url) => url.pathname.startsWith("/api/markets/overlays/"), (route: Route) => {
+    const url = new URL(route.request().url());
+    requests.push(url);
+    const body = options.overlays ? options.overlays(url) : chartOverlays();
+    return route.fulfill({ status: options.overlaysStatus ?? 200, json: body });
+  });
+  return requests;
+}

@@ -2,6 +2,7 @@
 
 import { Group, Panel, Separator, useDefaultLayout } from "react-resizable-panels";
 import type { ReactNode } from "react";
+import { cn } from "./cn";
 
 const storage = {
   getItem(key: string) {
@@ -35,6 +36,8 @@ export function SplitPane({
   defaultFirst = 60,
   minFirst = 20,
   minSecond = 20,
+  className,
+  padded = true,
 }: {
   id: string;
   orientation?: "horizontal" | "vertical";
@@ -45,6 +48,10 @@ export function SplitPane({
   defaultFirst?: number;
   minFirst?: number;
   minSecond?: number;
+  /** Extra classes on the group (e.g. a height when it must fill its box). */
+  className?: string;
+  /** Pad each pane (default); a chart that draws edge to edge sets false. */
+  padded?: boolean;
 }) {
   const { defaultLayout, onLayoutChanged } = useDefaultLayout({ id, storage });
   const vertical = orientation === "vertical";
@@ -54,7 +61,7 @@ export function SplitPane({
       orientation={orientation}
       defaultLayout={defaultLayout}
       onLayoutChanged={onLayoutChanged}
-      className="min-h-40 rounded-md border border-line-subtle"
+      className={cn("min-h-40 rounded-md border border-line-subtle", className)}
     >
       <Panel
         id={`${id}-a`}
@@ -62,7 +69,7 @@ export function SplitPane({
         minSize={`${minFirst}`}
         aria-label={firstLabel}
       >
-        <div className="h-full overflow-auto p-3">{first}</div>
+        <div className={cn("h-full overflow-auto", padded && "p-3")}>{first}</div>
       </Panel>
       <Separator
         aria-label={`Resize ${firstLabel} and ${secondLabel}`}
@@ -73,7 +80,7 @@ export function SplitPane({
         }
       />
       <Panel id={`${id}-b`} minSize={`${minSecond}`} aria-label={secondLabel}>
-        <div className="h-full overflow-auto p-3">{second}</div>
+        <div className={cn("h-full overflow-auto", padded && "p-3")}>{second}</div>
       </Panel>
     </Group>
   );

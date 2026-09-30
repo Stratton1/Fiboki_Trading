@@ -2,6 +2,7 @@
 
 import { lazy, Suspense } from "react";
 import type { Series } from "@/lib/types";
+import type { PriceChartProps } from "./charts/PriceChart";
 
 /**
  * The line chart, loaded after the page's first paint. On the Overview it is
@@ -21,6 +22,31 @@ export function LazyLineChart({ series }: { series: Series }) {
       }
     >
       <Impl series={series} />
+    </Suspense>
+  );
+}
+
+/**
+ * The price chart (TradingView Lightweight Charts, plan D-F5), behind a
+ * dynamic import: the engine is fetched when the chart workstation first
+ * draws, so it is in no route's first-load JavaScript, the shell's included.
+ * `preloadPriceChart()` starts the fetch while the bars are still loading.
+ * source-rules.spec.ts fails if anything imports ./charts/PriceChart
+ * statically.
+ */
+export const preloadPriceChart = () => import("./charts/PriceChart");
+const PriceChartImpl = lazy(preloadPriceChart);
+
+export function LazyPriceChart(props: PriceChartProps) {
+  return (
+    <Suspense
+      fallback={
+        <div className="price-chart price-chart--pending" data-testid="price-chart-pending" role="status">
+          Loading the price chart engine to draw {props.model.times.length.toLocaleString("en-GB")} bars…
+        </div>
+      }
+    >
+      <PriceChartImpl {...props} />
     </Suspense>
   );
 }

@@ -32,6 +32,63 @@
         "title": "AgentRoleView",
         "type": "object"
       },
+      "AttentionItem": {
+        "description": "One thing an operator should look at, with where to go to act on it.",
+        "properties": {
+          "as_of": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "As Of"
+          },
+          "category": {
+            "title": "Category",
+            "type": "string"
+          },
+          "deep_link": {
+            "title": "Deep Link",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "reason": {
+            "title": "Reason",
+            "type": "string"
+          },
+          "score": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "severity": {
+            "pattern": "^(info|warning|error|critical)$",
+            "title": "Severity",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "category",
+          "severity",
+          "title",
+          "reason",
+          "deep_link",
+          "as_of",
+          "score"
+        ],
+        "title": "AttentionItem",
+        "type": "object"
+      },
       "AuditEntryView": {
         "properties": {
           "action": {
@@ -427,6 +484,30 @@
         "title": "Envelope[ExecutionModeBanner]",
         "type": "object"
       },
+      "Envelope_IncidentView_": {
+        "properties": {
+          "caveats": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/Caveat"
+            },
+            "title": "Caveats",
+            "type": "array"
+          },
+          "data": {
+            "$ref": "#/components/schemas/IncidentView"
+          },
+          "source": {
+            "$ref": "#/components/schemas/SourceNote"
+          }
+        },
+        "required": [
+          "data",
+          "source"
+        ],
+        "title": "Envelope[IncidentView]",
+        "type": "object"
+      },
       "Envelope_KillSwitchDisarmPreflightView_": {
         "properties": {
           "caveats": {
@@ -497,6 +578,30 @@
           "source"
         ],
         "title": "Envelope[LifecycleEvaluationView]",
+        "type": "object"
+      },
+      "Envelope_OverlayView_": {
+        "properties": {
+          "caveats": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/Caveat"
+            },
+            "title": "Caveats",
+            "type": "array"
+          },
+          "data": {
+            "$ref": "#/components/schemas/OverlayView"
+          },
+          "source": {
+            "$ref": "#/components/schemas/SourceNote"
+          }
+        },
+        "required": [
+          "data",
+          "source"
+        ],
+        "title": "Envelope[OverlayView]",
         "type": "object"
       },
       "Envelope_ParameterLabView_": {
@@ -714,6 +819,94 @@
           "source"
         ],
         "title": "Envelope[dict]",
+        "type": "object"
+      },
+      "EventOverlay": {
+        "properties": {
+          "currency": {
+            "title": "Currency",
+            "type": "string"
+          },
+          "dataset_version_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dataset Version Id"
+          },
+          "event_id": {
+            "title": "Event Id",
+            "type": "string"
+          },
+          "impact": {
+            "title": "Impact",
+            "type": "string"
+          },
+          "kind": {
+            "default": "event",
+            "title": "Kind",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "provenance": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Provenance"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "source": {
+            "$ref": "#/components/schemas/OverlaySource"
+          },
+          "source_url": {
+            "title": "Source Url",
+            "type": "string"
+          },
+          "t": {
+            "format": "date-time",
+            "title": "T",
+            "type": "string"
+          },
+          "time_known": {
+            "title": "Time Known",
+            "type": "boolean"
+          },
+          "window_end": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Window End"
+          }
+        },
+        "required": [
+          "t",
+          "window_end",
+          "time_known",
+          "currency",
+          "name",
+          "impact",
+          "event_id",
+          "source_url",
+          "dataset_version_id",
+          "source"
+        ],
+        "title": "EventOverlay",
         "type": "object"
       },
       "ExecutionMode": {
@@ -987,6 +1180,97 @@
         "title": "Figure",
         "type": "object"
       },
+      "FillOverlay": {
+        "properties": {
+          "dataset_version_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dataset Version Id"
+          },
+          "exit_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Exit Reason"
+          },
+          "kind": {
+            "default": "fill",
+            "title": "Kind",
+            "type": "string"
+          },
+          "net_pnl": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Figure"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "price": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "provenance": {
+            "$ref": "#/components/schemas/Provenance"
+          },
+          "role": {
+            "pattern": "^(entry|exit)$",
+            "title": "Role",
+            "type": "string"
+          },
+          "session_id": {
+            "title": "Session Id",
+            "type": "string"
+          },
+          "side": {
+            "pattern": "^(buy|sell)$",
+            "title": "Side",
+            "type": "string"
+          },
+          "source": {
+            "$ref": "#/components/schemas/OverlaySource"
+          },
+          "strategy_id": {
+            "title": "Strategy Id",
+            "type": "string"
+          },
+          "t": {
+            "format": "date-time",
+            "title": "T",
+            "type": "string"
+          },
+          "trade_id": {
+            "title": "Trade Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "t",
+          "role",
+          "side",
+          "price",
+          "trade_id",
+          "strategy_id",
+          "session_id",
+          "provenance",
+          "dataset_version_id",
+          "source"
+        ],
+        "title": "FillOverlay",
+        "type": "object"
+      },
       "HTTPValidationError": {
         "properties": {
           "detail": {
@@ -998,6 +1282,91 @@
           }
         },
         "title": "HTTPValidationError",
+        "type": "object"
+      },
+      "HeadlineOverlay": {
+        "properties": {
+          "currency": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Currency"
+          },
+          "dataset_version_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dataset Version Id"
+          },
+          "kind": {
+            "default": "headline",
+            "title": "Kind",
+            "type": "string"
+          },
+          "news_source": {
+            "title": "News Source",
+            "type": "string"
+          },
+          "provenance": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Provenance"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "source": {
+            "$ref": "#/components/schemas/OverlaySource"
+          },
+          "t": {
+            "format": "date-time",
+            "title": "T",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "url": {
+            "title": "Url",
+            "type": "string"
+          },
+          "vendor_published_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Vendor Published At"
+          }
+        },
+        "required": [
+          "t",
+          "vendor_published_at",
+          "news_source",
+          "currency",
+          "title",
+          "url",
+          "dataset_version_id",
+          "source"
+        ],
+        "title": "HeadlineOverlay",
         "type": "object"
       },
       "HealthCheck": {
@@ -1174,6 +1543,152 @@
           "supporting_experiments"
         ],
         "title": "HypothesisView",
+        "type": "object"
+      },
+      "IncidentAckRequest": {
+        "properties": {
+          "reason": {
+            "maxLength": 500,
+            "minLength": 8,
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "reason"
+        ],
+        "title": "IncidentAckRequest",
+        "type": "object"
+      },
+      "IncidentNoteRequest": {
+        "properties": {
+          "text": {
+            "maxLength": 2000,
+            "minLength": 1,
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "text"
+        ],
+        "title": "IncidentNoteRequest",
+        "type": "object"
+      },
+      "IncidentView": {
+        "description": "One deduplicated incident with its full timeline.",
+        "properties": {
+          "acknowledged_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Acknowledged At"
+          },
+          "acknowledged_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Acknowledged By"
+          },
+          "as_of": {
+            "format": "date-time",
+            "title": "As Of",
+            "type": "string"
+          },
+          "deep_link": {
+            "title": "Deep Link",
+            "type": "string"
+          },
+          "event": {
+            "title": "Event",
+            "type": "string"
+          },
+          "first_seen": {
+            "format": "date-time",
+            "title": "First Seen",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "key": {
+            "title": "Key",
+            "type": "string"
+          },
+          "last_seen": {
+            "format": "date-time",
+            "title": "Last Seen",
+            "type": "string"
+          },
+          "occurrences": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "resolved_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Resolved At"
+          },
+          "severity": {
+            "pattern": "^(info|warning|error|critical)$",
+            "title": "Severity",
+            "type": "string"
+          },
+          "source": {
+            "title": "Source",
+            "type": "string"
+          },
+          "status": {
+            "pattern": "^(open|acknowledged|resolved)$",
+            "title": "Status",
+            "type": "string"
+          },
+          "timeline": {
+            "items": {
+              "$ref": "#/components/schemas/TimelineEntry"
+            },
+            "title": "Timeline",
+            "type": "array"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "key",
+          "event",
+          "source",
+          "title",
+          "severity",
+          "status",
+          "first_seen",
+          "last_seen",
+          "occurrences",
+          "deep_link",
+          "as_of",
+          "timeline"
+        ],
+        "title": "IncidentView",
         "type": "object"
       },
       "InstrumentView": {
@@ -1413,6 +1928,78 @@
         "title": "KillSwitchView",
         "type": "object"
       },
+      "LevelOverlay": {
+        "properties": {
+          "dataset_version_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dataset Version Id"
+          },
+          "from": {
+            "format": "date-time",
+            "title": "From",
+            "type": "string"
+          },
+          "kind": {
+            "default": "level",
+            "title": "Kind",
+            "type": "string"
+          },
+          "position_id": {
+            "title": "Position Id",
+            "type": "string"
+          },
+          "price": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "provenance": {
+            "$ref": "#/components/schemas/Provenance"
+          },
+          "role": {
+            "pattern": "^(entry|stop|target)$",
+            "title": "Role",
+            "type": "string"
+          },
+          "source": {
+            "$ref": "#/components/schemas/OverlaySource"
+          },
+          "strategy_id": {
+            "title": "Strategy Id",
+            "type": "string"
+          },
+          "to": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "To"
+          }
+        },
+        "required": [
+          "role",
+          "price",
+          "from",
+          "to",
+          "position_id",
+          "strategy_id",
+          "provenance",
+          "dataset_version_id",
+          "source"
+        ],
+        "title": "LevelOverlay",
+        "type": "object"
+      },
       "LifecycleEvaluationView": {
         "description": "Everything one monitoring tick concluded about one strategy.",
         "properties": {
@@ -1515,6 +2102,144 @@
         "title": "LoginRequest",
         "type": "object"
       },
+      "OverlaySource": {
+        "properties": {
+          "detail": {
+            "default": "",
+            "title": "Detail",
+            "type": "string"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind"
+        ],
+        "title": "OverlaySource",
+        "type": "object"
+      },
+      "OverlayView": {
+        "properties": {
+          "bars_dataset_version_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bars Dataset Version Id"
+          },
+          "events": {
+            "items": {
+              "$ref": "#/components/schemas/EventOverlay"
+            },
+            "title": "Events",
+            "type": "array"
+          },
+          "fills": {
+            "items": {
+              "$ref": "#/components/schemas/FillOverlay"
+            },
+            "title": "Fills",
+            "type": "array"
+          },
+          "headlines": {
+            "items": {
+              "$ref": "#/components/schemas/HeadlineOverlay"
+            },
+            "title": "Headlines",
+            "type": "array"
+          },
+          "levels": {
+            "items": {
+              "$ref": "#/components/schemas/LevelOverlay"
+            },
+            "title": "Levels",
+            "type": "array"
+          },
+          "regimes": {
+            "items": {
+              "$ref": "#/components/schemas/RegimeOverlay"
+            },
+            "title": "Regimes",
+            "type": "array"
+          },
+          "sections": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/SectionStatus"
+            },
+            "title": "Sections",
+            "type": "object"
+          },
+          "series": {
+            "items": {
+              "$ref": "#/components/schemas/SeriesOverlay"
+            },
+            "title": "Series",
+            "type": "array"
+          },
+          "signals": {
+            "items": {
+              "$ref": "#/components/schemas/SignalOverlay"
+            },
+            "title": "Signals",
+            "type": "array"
+          },
+          "symbol": {
+            "title": "Symbol",
+            "type": "string"
+          },
+          "timeframe": {
+            "title": "Timeframe",
+            "type": "string"
+          },
+          "window_from": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Window From"
+          },
+          "window_to": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Window To"
+          }
+        },
+        "required": [
+          "symbol",
+          "timeframe",
+          "window_from",
+          "window_to",
+          "bars_dataset_version_id",
+          "signals",
+          "fills",
+          "levels",
+          "regimes",
+          "series",
+          "events",
+          "headlines",
+          "sections"
+        ],
+        "title": "OverlayView",
+        "type": "object"
+      },
       "Page_AgentRoleView_": {
         "properties": {
           "caveats": {
@@ -1556,6 +2281,49 @@
           "source"
         ],
         "title": "Page[AgentRoleView]",
+        "type": "object"
+      },
+      "Page_AttentionItem_": {
+        "properties": {
+          "caveats": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/Caveat"
+            },
+            "title": "Caveats",
+            "type": "array"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/AttentionItem"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "limit": {
+            "default": 100,
+            "title": "Limit",
+            "type": "integer"
+          },
+          "offset": {
+            "default": 0,
+            "title": "Offset",
+            "type": "integer"
+          },
+          "source": {
+            "$ref": "#/components/schemas/SourceNote"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "total",
+          "source"
+        ],
+        "title": "Page[AttentionItem]",
         "type": "object"
       },
       "Page_AuditEntryView_": {
@@ -1814,6 +2582,49 @@
           "source"
         ],
         "title": "Page[HypothesisView]",
+        "type": "object"
+      },
+      "Page_IncidentView_": {
+        "properties": {
+          "caveats": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/Caveat"
+            },
+            "title": "Caveats",
+            "type": "array"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/IncidentView"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "limit": {
+            "default": 100,
+            "title": "Limit",
+            "type": "integer"
+          },
+          "offset": {
+            "default": 0,
+            "title": "Offset",
+            "type": "integer"
+          },
+          "source": {
+            "$ref": "#/components/schemas/SourceNote"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "total",
+          "source"
+        ],
+        "title": "Page[IncidentView]",
         "type": "object"
       },
       "Page_InstrumentView_": {
@@ -2614,6 +3425,81 @@
         "title": "Provenance",
         "type": "string"
       },
+      "RegimeOverlay": {
+        "properties": {
+          "axes": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "title": "Axes",
+            "type": "object"
+          },
+          "classifier_fingerprint": {
+            "title": "Classifier Fingerprint",
+            "type": "string"
+          },
+          "dataset_version_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dataset Version Id"
+          },
+          "from": {
+            "format": "date-time",
+            "title": "From",
+            "type": "string"
+          },
+          "kind": {
+            "default": "regime",
+            "title": "Kind",
+            "type": "string"
+          },
+          "label": {
+            "pattern": "^(trend|range|stress|unknown)$",
+            "title": "Label",
+            "type": "string"
+          },
+          "provenance": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Provenance"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "regime_key": {
+            "title": "Regime Key",
+            "type": "string"
+          },
+          "source": {
+            "$ref": "#/components/schemas/OverlaySource"
+          },
+          "to": {
+            "format": "date-time",
+            "title": "To",
+            "type": "string"
+          }
+        },
+        "required": [
+          "from",
+          "to",
+          "label",
+          "regime_key",
+          "axes",
+          "dataset_version_id",
+          "classifier_fingerprint",
+          "source"
+        ],
+        "title": "RegimeOverlay",
+        "type": "object"
+      },
       "RegimeView": {
         "properties": {
           "available": {
@@ -2856,6 +3742,24 @@
         "title": "RuleEvaluationView",
         "type": "object"
       },
+      "SectionStatus": {
+        "properties": {
+          "available": {
+            "title": "Available",
+            "type": "boolean"
+          },
+          "detail": {
+            "title": "Detail",
+            "type": "string"
+          }
+        },
+        "required": [
+          "available",
+          "detail"
+        ],
+        "title": "SectionStatus",
+        "type": "object"
+      },
       "Series": {
         "description": "A labelled time series. The label belongs to the series, not the chart.",
         "properties": {
@@ -2893,6 +3797,83 @@
           "provenance"
         ],
         "title": "Series",
+        "type": "object"
+      },
+      "SeriesOverlay": {
+        "properties": {
+          "dataset_version_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dataset Version Id"
+          },
+          "display_only": {
+            "default": false,
+            "title": "Display Only",
+            "type": "boolean"
+          },
+          "indicator_id": {
+            "title": "Indicator Id",
+            "type": "string"
+          },
+          "indicator_key": {
+            "title": "Indicator Key",
+            "type": "string"
+          },
+          "kind": {
+            "default": "series",
+            "title": "Kind",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "pane": {
+            "title": "Pane",
+            "type": "string"
+          },
+          "params": {
+            "title": "Params",
+            "type": "object"
+          },
+          "points": {
+            "items": {
+              "$ref": "#/components/schemas/SeriesPoint"
+            },
+            "title": "Points",
+            "type": "array"
+          },
+          "provenance": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Provenance"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "source": {
+            "$ref": "#/components/schemas/OverlaySource"
+          }
+        },
+        "required": [
+          "pane",
+          "name",
+          "indicator_id",
+          "indicator_key",
+          "params",
+          "points",
+          "dataset_version_id",
+          "source"
+        ],
+        "title": "SeriesOverlay",
         "type": "object"
       },
       "SeriesPoint": {
@@ -3029,6 +4010,86 @@
           "build_sha"
         ],
         "title": "SettingsView",
+        "type": "object"
+      },
+      "SignalOverlay": {
+        "properties": {
+          "dataset_version_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dataset Version Id"
+          },
+          "kind": {
+            "default": "signal",
+            "title": "Kind",
+            "type": "string"
+          },
+          "outcome": {
+            "pattern": "^(accepted|blocked)$",
+            "title": "Outcome",
+            "type": "string"
+          },
+          "provenance": {
+            "$ref": "#/components/schemas/Provenance"
+          },
+          "reason": {
+            "title": "Reason",
+            "type": "string"
+          },
+          "requested_price": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "session_id": {
+            "title": "Session Id",
+            "type": "string"
+          },
+          "side": {
+            "pattern": "^(long|short|unknown)$",
+            "title": "Side",
+            "type": "string"
+          },
+          "signal_id": {
+            "title": "Signal Id",
+            "type": "string"
+          },
+          "source": {
+            "$ref": "#/components/schemas/OverlaySource"
+          },
+          "strategy_id": {
+            "title": "Strategy Id",
+            "type": "string"
+          },
+          "t": {
+            "format": "date-time",
+            "title": "T",
+            "type": "string"
+          },
+          "timeframe": {
+            "title": "Timeframe",
+            "type": "string"
+          }
+        },
+        "required": [
+          "t",
+          "side",
+          "strategy_id",
+          "outcome",
+          "reason",
+          "signal_id",
+          "session_id",
+          "timeframe",
+          "requested_price",
+          "provenance",
+          "dataset_version_id",
+          "source"
+        ],
+        "title": "SignalOverlay",
         "type": "object"
       },
       "SourceNote": {
@@ -3285,6 +4346,52 @@
         "title": "TelemetryRow",
         "type": "object"
       },
+      "TimelineEntry": {
+        "properties": {
+          "actor": {
+            "default": "",
+            "title": "Actor",
+            "type": "string"
+          },
+          "at": {
+            "format": "date-time",
+            "title": "At",
+            "type": "string"
+          },
+          "correlation_id": {
+            "default": "",
+            "title": "Correlation Id",
+            "type": "string"
+          },
+          "kind": {
+            "pattern": "^(occurrence|resolved|ack|note)$",
+            "title": "Kind",
+            "type": "string"
+          },
+          "severity": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Severity"
+          },
+          "text": {
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "at",
+          "kind",
+          "text"
+        ],
+        "title": "TimelineEntry",
+        "type": "object"
+      },
       "TradeRowView": {
         "description": "One closed trade. ``provenance`` is a field, not a section heading.",
         "properties": {
@@ -3488,10 +4595,24 @@
         "title": "WorkerRow",
         "type": "object"
       }
+    },
+    "securitySchemes": {
+      "csrfHeader": {
+        "description": "Must equal the fiboki_csrf cookie. Mutating requests also need an allow-listed Origin or Referer.",
+        "in": "header",
+        "name": "X-Fiboki-CSRF",
+        "type": "apiKey"
+      },
+      "sessionCookie": {
+        "description": "httpOnly session cookie from POST /api/auth/login.",
+        "in": "cookie",
+        "name": "fiboki_session",
+        "type": "apiKey"
+      }
     }
   },
   "info": {
-    "description": "Every numeric field in every response carries a Provenance. There is no endpoint that can enable live execution.",
+    "description": "Every numeric field in every response carries a Provenance. There is no endpoint that can enable live execution.\n\n**Authentication.** A session is an httpOnly cookie issued by `POST /api/auth/login` (`sessionCookie`). Every mutating request additionally needs the double-submit CSRF header (`csrfHeader`, equal to the readable `fiboki_csrf` cookie) and an `Origin` (or `Referer`) on the deployment's exact allow-list. `x-fiboki-auth` on each operation states the requirement: `public` (no session), `session` (any signed-in role), `operator` or `admin` (role plus CSRF plus Origin); login is `origin` (allow-listed Origin, no session) and logout `csrf`. `GET /api/stream` is `session`; it also refuses a present Origin/Referer that is not allow-listed. Nothing here reads a credential from a URL.",
     "title": "Fiboki V2 API",
     "version": "2.0.0"
   },
@@ -3532,10 +4653,12 @@
             "description": "Validation Error"
           }
         },
+        "security": [],
         "summary": "Login",
         "tags": [
           "auth"
-        ]
+        ],
+        "x-fiboki-auth": "origin"
       }
     },
     "/api/auth/logout": {
@@ -3546,10 +4669,16 @@
             "description": "Successful Response"
           }
         },
+        "security": [
+          {
+            "csrfHeader": []
+          }
+        ],
         "summary": "Logout",
         "tags": [
           "auth"
-        ]
+        ],
+        "x-fiboki-auth": "csrf"
       }
     },
     "/api/auth/me": {
@@ -3567,10 +4696,40 @@
             "description": "Successful Response"
           }
         },
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
         "summary": "Me",
         "tags": [
           "auth"
-        ]
+        ],
+        "x-fiboki-auth": "session"
+      }
+    },
+    "/api/command/attention": {
+      "get": {
+        "description": "What needs a human, most urgent first. The order IS the ranking.",
+        "operationId": "attention_api_command_attention_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Page_AttentionItem_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [],
+        "summary": "Attention",
+        "tags": [
+          "command"
+        ],
+        "x-fiboki-auth": "public"
       }
     },
     "/api/health": {
@@ -3589,10 +4748,12 @@
             "description": "Successful Response"
           }
         },
+        "security": [],
         "summary": "Health",
         "tags": [
           "system"
-        ]
+        ],
+        "x-fiboki-auth": "public"
       }
     },
     "/api/intelligence/agents": {
@@ -3610,10 +4771,12 @@
             "description": "Successful Response"
           }
         },
+        "security": [],
         "summary": "Agents",
         "tags": [
           "intelligence"
-        ]
+        ],
+        "x-fiboki-auth": "public"
       }
     },
     "/api/intelligence/audit": {
@@ -3655,10 +4818,12 @@
             "description": "Validation Error"
           }
         },
+        "security": [],
         "summary": "Audit Ledger",
         "tags": [
           "intelligence"
-        ]
+        ],
+        "x-fiboki-auth": "public"
       }
     },
     "/api/intelligence/audit/integrity": {
@@ -3676,10 +4841,12 @@
             "description": "Successful Response"
           }
         },
+        "security": [],
         "summary": "Audit Integrity",
         "tags": [
           "intelligence"
-        ]
+        ],
+        "x-fiboki-auth": "public"
       }
     },
     "/api/intelligence/research-memory": {
@@ -3697,10 +4864,12 @@
             "description": "Successful Response"
           }
         },
+        "security": [],
         "summary": "Research Memory",
         "tags": [
           "intelligence"
-        ]
+        ],
+        "x-fiboki-auth": "public"
       }
     },
     "/api/intelligence/research-memory/notes": {
@@ -3738,10 +4907,17 @@
             "description": "Validation Error"
           }
         },
+        "security": [
+          {
+            "csrfHeader": [],
+            "sessionCookie": []
+          }
+        ],
         "summary": "Add Research Note",
         "tags": [
           "intelligence"
-        ]
+        ],
+        "x-fiboki-auth": "admin"
       }
     },
     "/api/intelligence/runs": {
@@ -3759,10 +4935,12 @@
             "description": "Successful Response"
           }
         },
+        "security": [],
         "summary": "Runs",
         "tags": [
           "intelligence"
-        ]
+        ],
+        "x-fiboki-auth": "public"
       }
     },
     "/api/markets/bars/{symbol}": {
@@ -3823,10 +5001,12 @@
             "description": "Validation Error"
           }
         },
+        "security": [],
         "summary": "Bars",
         "tags": [
           "markets"
-        ]
+        ],
+        "x-fiboki-auth": "public"
       }
     },
     "/api/markets/correlations": {
@@ -3844,10 +5024,12 @@
             "description": "Successful Response"
           }
         },
+        "security": [],
         "summary": "Correlations",
         "tags": [
           "markets"
-        ]
+        ],
+        "x-fiboki-auth": "public"
       }
     },
     "/api/markets/data-quality": {
@@ -3889,10 +5071,12 @@
             "description": "Validation Error"
           }
         },
+        "security": [],
         "summary": "Data Quality",
         "tags": [
           "markets"
-        ]
+        ],
+        "x-fiboki-auth": "public"
       }
     },
     "/api/markets/instruments": {
@@ -3950,10 +5134,142 @@
             "description": "Validation Error"
           }
         },
+        "security": [],
         "summary": "Instruments",
         "tags": [
           "markets"
-        ]
+        ],
+        "x-fiboki-auth": "public"
+      }
+    },
+    "/api/markets/overlays/{symbol}": {
+      "get": {
+        "description": "Signals, fills, levels, regimes, indicator series, events and headlines.\n\nThe window is the last ``limit`` bars at or before ``to`` and at or after\n``from``. With no bar store mounted the bar-derived sections are reported\nunavailable and the journal, calendar and headline sections use\n``[from, to]`` as given.",
+        "operationId": "overlays_api_markets_overlays__symbol__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "symbol",
+            "required": true,
+            "schema": {
+              "title": "Symbol",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "from",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "From"
+            }
+          },
+          {
+            "in": "query",
+            "name": "to",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "To"
+            }
+          },
+          {
+            "in": "query",
+            "name": "strategy_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Strategy Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "timeframe",
+            "required": false,
+            "schema": {
+              "default": "H1",
+              "title": "Timeframe",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 500,
+              "maximum": 5000,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "include_indicators",
+            "required": false,
+            "schema": {
+              "default": true,
+              "title": "Include Indicators",
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_OverlayView_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [],
+        "summary": "Overlays",
+        "tags": [
+          "markets"
+        ],
+        "x-fiboki-auth": "public"
       }
     },
     "/api/markets/regimes": {
@@ -3971,10 +5287,12 @@
             "description": "Successful Response"
           }
         },
+        "security": [],
         "summary": "Regimes",
         "tags": [
           "markets"
-        ]
+        ],
+        "x-fiboki-auth": "public"
       }
     },
     "/api/research/datasets": {
@@ -3992,10 +5310,12 @@
             "description": "Successful Response"
           }
         },
+        "security": [],
         "summary": "Datasets",
         "tags": [
           "research"
-        ]
+        ],
+        "x-fiboki-auth": "public"
       }
     },
     "/api/research/experiments": {
@@ -4037,10 +5357,12 @@
             "description": "Validation Error"
           }
         },
+        "security": [],
         "summary": "Experiments",
         "tags": [
           "research"
-        ]
+        ],
+        "x-fiboki-auth": "public"
       },
       "post": {
         "description": "Queue an experiment. Admin-gated and audited: it consumes compute and,\nthrough the multiple-testing count, dilutes every later claim of edge.",
@@ -4077,10 +5399,17 @@
             "description": "Validation Error"
           }
         },
+        "security": [
+          {
+            "csrfHeader": [],
+            "sessionCookie": []
+          }
+        ],
         "summary": "Queue Experiment",
         "tags": [
           "research"
-        ]
+        ],
+        "x-fiboki-auth": "admin"
       }
     },
     "/api/research/hypotheses": {
@@ -4098,10 +5427,12 @@
             "description": "Successful Response"
           }
         },
+        "security": [],
         "summary": "Hypotheses",
         "tags": [
           "research"
-        ]
+        ],
+        "x-fiboki-auth": "public"
       }
     },
     "/api/research/parameter-lab/{strategy_id}": {
@@ -4140,10 +5471,12 @@
             "description": "Validation Error"
           }
         },
+        "security": [],
         "summary": "Parameter Lab",
         "tags": [
           "research"
-        ]
+        ],
+        "x-fiboki-auth": "public"
       }
     },
     "/api/research/strategies": {
@@ -4161,10 +5494,12 @@
             "description": "Successful Response"
           }
         },
+        "security": [],
         "summary": "Strategies",
         "tags": [
           "research"
-        ]
+        ],
+        "x-fiboki-auth": "public"
       }
     },
     "/api/research/strategies/{strategy_id}": {
@@ -4203,10 +5538,12 @@
             "description": "Validation Error"
           }
         },
+        "security": [],
         "summary": "Strategy Detail",
         "tags": [
           "research"
-        ]
+        ],
+        "x-fiboki-auth": "public"
       }
     },
     "/api/research/validation": {
@@ -4225,10 +5562,88 @@
             "description": "Successful Response"
           }
         },
+        "security": [],
         "summary": "Validation Reports",
         "tags": [
           "research"
-        ]
+        ],
+        "x-fiboki-auth": "public"
+      }
+    },
+    "/api/stream": {
+      "get": {
+        "description": "The workstation's live feed. Snapshot, then deltas, then heartbeats.",
+        "operationId": "stream_api_stream_get",
+        "parameters": [
+          {
+            "description": "Comma-separated subset of: mode,killswitch,health,fleet,positions,marks,incidents,risk",
+            "in": "query",
+            "name": "topics",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Comma-separated subset of: mode,killswitch,health,fleet,positions,marks,incidents,risk",
+              "title": "Topics"
+            }
+          },
+          {
+            "in": "header",
+            "name": "Last-Event-ID",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Last-Event-Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "text/event-stream": {}
+            },
+            "description": "text/event-stream of topic envelopes; see module docs."
+          },
+          "401": {
+            "description": "No valid session cookie."
+          },
+          "403": {
+            "description": "Origin/Referer present and not allowed."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "summary": "Stream",
+        "tags": [
+          "stream"
+        ],
+        "x-fiboki-auth": "session"
       }
     },
     "/api/system/broker-health": {
@@ -4246,10 +5661,12 @@
             "description": "Successful Response"
           }
         },
+        "security": [],
         "summary": "Broker Health",
         "tags": [
           "system"
-        ]
+        ],
+        "x-fiboki-auth": "public"
       }
     },
     "/api/system/data-health": {
@@ -4267,10 +5684,12 @@
             "description": "Successful Response"
           }
         },
+        "security": [],
         "summary": "Data Health",
         "tags": [
           "system"
-        ]
+        ],
+        "x-fiboki-auth": "public"
       }
     },
     "/api/system/execution-mode": {
@@ -4289,10 +5708,12 @@
             "description": "Successful Response"
           }
         },
+        "security": [],
         "summary": "Execution Mode",
         "tags": [
           "system"
-        ]
+        ],
+        "x-fiboki-auth": "public"
       },
       "post": {
         "description": "Always refuses. Documented, discoverable, and audited.\n\nAn endpoint that could switch this deployment to LIVE would be a single\nreviewable string away from moving real money. It does not exist, and this\nhandler exists so that asking gets an explanation rather than a 404 that\ninvites someone to add one.",
@@ -4310,10 +5731,17 @@
             "description": "Successful Response"
           }
         },
+        "security": [
+          {
+            "csrfHeader": [],
+            "sessionCookie": []
+          }
+        ],
         "summary": "Set Execution Mode",
         "tags": [
           "system"
-        ]
+        ],
+        "x-fiboki-auth": "admin"
       }
     },
     "/api/system/health": {
@@ -4331,10 +5759,255 @@
             "description": "Successful Response"
           }
         },
+        "security": [],
         "summary": "Health",
         "tags": [
           "system"
-        ]
+        ],
+        "x-fiboki-auth": "public"
+      }
+    },
+    "/api/system/incidents": {
+      "get": {
+        "operationId": "incidents_api_system_incidents_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "pattern": "^(open|acknowledged|resolved)$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 100,
+              "maximum": 500,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Page_IncidentView_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [],
+        "summary": "Incidents",
+        "tags": [
+          "system",
+          "incidents"
+        ],
+        "x-fiboki-auth": "public"
+      }
+    },
+    "/api/system/incidents/{incident_id}": {
+      "get": {
+        "operationId": "incident_api_system_incidents__incident_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "incident_id",
+            "required": true,
+            "schema": {
+              "title": "Incident Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_IncidentView_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [],
+        "summary": "Incident",
+        "tags": [
+          "system",
+          "incidents"
+        ],
+        "x-fiboki-auth": "public"
+      }
+    },
+    "/api/system/incidents/{incident_id}/ack": {
+      "post": {
+        "description": "Record that a named human has seen this incident. Does not resolve it.",
+        "operationId": "acknowledge_api_system_incidents__incident_id__ack_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "incident_id",
+            "required": true,
+            "schema": {
+              "title": "Incident Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/IncidentAckRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_IncidentView_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "csrfHeader": [],
+            "sessionCookie": []
+          }
+        ],
+        "summary": "Acknowledge",
+        "tags": [
+          "system",
+          "incidents"
+        ],
+        "x-fiboki-auth": "admin"
+      }
+    },
+    "/api/system/incidents/{incident_id}/note": {
+      "post": {
+        "description": "Append a note to the incident's timeline. Audited; never edits anything.",
+        "operationId": "annotate_api_system_incidents__incident_id__note_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "incident_id",
+            "required": true,
+            "schema": {
+              "title": "Incident Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/IncidentNoteRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_IncidentView_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "csrfHeader": [],
+            "sessionCookie": []
+          }
+        ],
+        "summary": "Annotate",
+        "tags": [
+          "system",
+          "incidents"
+        ],
+        "x-fiboki-auth": "admin"
       }
     },
     "/api/system/kill-switch": {
@@ -4352,10 +6025,12 @@
             "description": "Successful Response"
           }
         },
+        "security": [],
         "summary": "Kill Switch",
         "tags": [
           "system"
-        ]
+        ],
+        "x-fiboki-auth": "public"
       }
     },
     "/api/system/kill-switch/arm": {
@@ -4393,10 +6068,17 @@
             "description": "Validation Error"
           }
         },
+        "security": [
+          {
+            "csrfHeader": [],
+            "sessionCookie": []
+          }
+        ],
         "summary": "Arm Kill Switch",
         "tags": [
           "system"
-        ]
+        ],
+        "x-fiboki-auth": "admin"
       }
     },
     "/api/system/kill-switch/disarm": {
@@ -4434,10 +6116,41 @@
             "description": "Validation Error"
           }
         },
+        "security": [
+          {
+            "csrfHeader": [],
+            "sessionCookie": []
+          }
+        ],
         "summary": "Disarm Kill Switch",
         "tags": [
           "system"
-        ]
+        ],
+        "x-fiboki-auth": "admin"
+      }
+    },
+    "/api/system/kill-switch/disarm/preflight": {
+      "get": {
+        "description": "Server-computed consequences of ``POST /api/system/kill-switch/disarm``.\n\nThe canonical path, beside the switch it describes. The earlier path\n``GET /api/trading/preflight/kill-switch-disarm`` serves the identical body\nand is kept as an alias for one release. One implementation: this route\ndelegates, so the two can never disagree.",
+        "operationId": "kill_switch_disarm_preflight_api_system_kill_switch_disarm_preflight_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_KillSwitchDisarmPreflightView_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [],
+        "summary": "Kill Switch Disarm Preflight",
+        "tags": [
+          "system"
+        ],
+        "x-fiboki-auth": "public"
       }
     },
     "/api/system/kill-switch/history": {
@@ -4478,10 +6191,12 @@
             "description": "Validation Error"
           }
         },
+        "security": [],
         "summary": "Kill Switch History",
         "tags": [
           "system"
-        ]
+        ],
+        "x-fiboki-auth": "public"
       }
     },
     "/api/system/queues": {
@@ -4500,10 +6215,12 @@
             "description": "Successful Response"
           }
         },
+        "security": [],
         "summary": "Queues",
         "tags": [
           "system"
-        ]
+        ],
+        "x-fiboki-auth": "public"
       }
     },
     "/api/system/services": {
@@ -4521,10 +6238,12 @@
             "description": "Successful Response"
           }
         },
+        "security": [],
         "summary": "Services",
         "tags": [
           "system"
-        ]
+        ],
+        "x-fiboki-auth": "public"
       }
     },
     "/api/system/settings": {
@@ -4542,10 +6261,12 @@
             "description": "Successful Response"
           }
         },
+        "security": [],
         "summary": "Settings View",
         "tags": [
           "system"
-        ]
+        ],
+        "x-fiboki-auth": "public"
       }
     },
     "/api/system/workers": {
@@ -4564,10 +6285,12 @@
             "description": "Successful Response"
           }
         },
+        "security": [],
         "summary": "Workers",
         "tags": [
           "system"
-        ]
+        ],
+        "x-fiboki-auth": "public"
       }
     },
     "/api/trading/candidates": {
@@ -4586,10 +6309,12 @@
             "description": "Successful Response"
           }
         },
+        "security": [],
         "summary": "Candidates",
         "tags": [
           "trading"
-        ]
+        ],
+        "x-fiboki-auth": "public"
       }
     },
     "/api/trading/candidates/{strategy_id}/promote": {
@@ -4639,10 +6364,17 @@
             "description": "Validation Error"
           }
         },
+        "security": [
+          {
+            "csrfHeader": [],
+            "sessionCookie": []
+          }
+        ],
         "summary": "Promote Candidate",
         "tags": [
           "trading"
-        ]
+        ],
+        "x-fiboki-auth": "admin"
       }
     },
     "/api/trading/candidates/{strategy_id}/promote/preflight": {
@@ -4682,10 +6414,12 @@
             "description": "Validation Error"
           }
         },
+        "security": [],
         "summary": "Promote Preflight",
         "tags": [
           "trading"
-        ]
+        ],
+        "x-fiboki-auth": "public"
       }
     },
     "/api/trading/execution-telemetry": {
@@ -4727,10 +6461,12 @@
             "description": "Validation Error"
           }
         },
+        "security": [],
         "summary": "Execution Telemetry",
         "tags": [
           "trading"
-        ]
+        ],
+        "x-fiboki-auth": "public"
       }
     },
     "/api/trading/exposure": {
@@ -4748,10 +6484,12 @@
             "description": "Successful Response"
           }
         },
+        "security": [],
         "summary": "Exposure",
         "tags": [
           "trading"
-        ]
+        ],
+        "x-fiboki-auth": "public"
       }
     },
     "/api/trading/lifecycle/strategies": {
@@ -4817,11 +6555,13 @@
             "description": "Validation Error"
           }
         },
+        "security": [],
         "summary": "Strategies",
         "tags": [
           "trading",
           "lifecycle"
-        ]
+        ],
+        "x-fiboki-auth": "public"
       }
     },
     "/api/trading/lifecycle/strategies/{content_hash}": {
@@ -4860,11 +6600,13 @@
             "description": "Validation Error"
           }
         },
+        "security": [],
         "summary": "Strategy",
         "tags": [
           "trading",
           "lifecycle"
-        ]
+        ],
+        "x-fiboki-auth": "public"
       }
     },
     "/api/trading/lifecycle/strategies/{content_hash}/evaluation": {
@@ -4904,11 +6646,13 @@
             "description": "Validation Error"
           }
         },
+        "security": [],
         "summary": "Last Evaluation",
         "tags": [
           "trading",
           "lifecycle"
-        ]
+        ],
+        "x-fiboki-auth": "public"
       }
     },
     "/api/trading/portfolio": {
@@ -4926,10 +6670,12 @@
             "description": "Successful Response"
           }
         },
+        "security": [],
         "summary": "Portfolio",
         "tags": [
           "trading"
-        ]
+        ],
+        "x-fiboki-auth": "public"
       }
     },
     "/api/trading/positions": {
@@ -4947,10 +6693,12 @@
             "description": "Successful Response"
           }
         },
+        "security": [],
         "summary": "Positions",
         "tags": [
           "trading"
-        ]
+        ],
+        "x-fiboki-auth": "public"
       }
     },
     "/api/trading/preflight/kill-switch-disarm": {
@@ -4969,10 +6717,12 @@
             "description": "Successful Response"
           }
         },
+        "security": [],
         "summary": "Kill Switch Disarm Preflight",
         "tags": [
           "trading"
-        ]
+        ],
+        "x-fiboki-auth": "public"
       }
     },
     "/api/trading/risk": {
@@ -4990,10 +6740,12 @@
             "description": "Successful Response"
           }
         },
+        "security": [],
         "summary": "Risk State",
         "tags": [
           "trading"
-        ]
+        ],
+        "x-fiboki-auth": "public"
       }
     },
     "/api/trading/trades": {
@@ -5098,10 +6850,12 @@
             "description": "Validation Error"
           }
         },
+        "security": [],
         "summary": "Trades",
         "tags": [
           "trading"
-        ]
+        ],
+        "x-fiboki-auth": "public"
       }
     },
     "/api/version": {
@@ -5120,10 +6874,12 @@
             "description": "Successful Response"
           }
         },
+        "security": [],
         "summary": "Version",
         "tags": [
           "system"
-        ]
+        ],
+        "x-fiboki-auth": "public"
       }
     }
   }

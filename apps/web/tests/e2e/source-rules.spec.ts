@@ -193,7 +193,17 @@ test.describe("source rules", () => {
   test("no charting library is bundled", async () => {
     // V1 shipped ~4.5MB of Plotly, including mapbox-gl, to draw line charts.
     // Checked in package.json AND the lockfile, so a transitive copy fails too.
-    const banned = ["plotly.js", "react-plotly.js", "mapbox-gl", "chart.js", "d3", "echarts"];
+    // KLineChart: its in-browser indicator engine is exactly the maths the
+    // backend owns (plan D-F5; AGENTS.md §7 "no KLineChart").
+    const banned = [
+      "plotly.js",
+      "react-plotly.js",
+      "mapbox-gl",
+      "chart.js",
+      "d3",
+      "echarts",
+      "klinecharts",
+    ];
     const pkg = JSON.parse(readFileSync(join(ROOT, "package.json"), "utf8"));
     const deps = Object.keys({ ...pkg.dependencies, ...pkg.devDependencies });
     for (const name of banned) {
@@ -258,12 +268,59 @@ test.describe("source rules", () => {
       "@tanstack/react-table": "DataGrid model: sort, filter, visibility (D-F4, Wave 3); lazy-loaded",
       "@tanstack/react-virtual": "DataGrid row virtualisation (D-F4, Wave 3); lazy-loaded",
       cmdk: "command palette (D-F4, Wave 3); loaded on first ⌘K",
+      "lightweight-charts": "price chart engine (D-F5); lazy-loaded on /markets/[symbol] only",
     };
     const pkg = JSON.parse(readFileSync(join(ROOT, "package.json"), "utf8"));
     const runtime = Object.keys(pkg.dependencies).sort();
     expect(runtime, "every runtime dependency must be on the allow-list").toEqual(
       Object.keys(ALLOWED).sort(),
     );
+  });
+
+  test("the price chart engine is reachable only through the lazy chart import", async () => {
+    // Lightweight Charts (D-F5) is ~50 KiB gzip. It must be fetched when the
+    // chart workstation draws, never in a route's first load: one module
+    // imports it (components/charts/PriceChart.tsx), and that module is only
+    // ever imported dynamically (components/LazyChart.tsx).
+    const engine = /^\s*import\s+(?!type\b)[^;]*?from\s+["']lightweight-charts["']/m;
+    const importers = sources(ROOT)
+      .filter((file) => engine.test(stripComments(readFileSync(file, "utf8"))))
+      .map((file) => file.replace(ROOT, ""));
+    expect(importers, "only PriceChart.tsx may import the chart engine").toEqual([
+      join("/components", "charts", "PriceChart.tsx"),
+    ]);
+    const staticImport = /^\s*(?:import|export)\s+(?!type\b)[^;]*?from\s+["'][^"']*charts\/PriceChart["']/m;
+    const staticImporters = sources(ROOT)
+      .filter((file) => staticImport.test(stripComments(readFileSync(file, "utf8"))))
+      .map((file) => file.replace(ROOT, ""));
+    expect(staticImporters, "PriceChart must be imported with import(), never statically").toEqual([]);
+    const lazy = stripComments(readFileSync(join(ROOT, "components", "LazyChart.tsx"), "utf8"));
+    expect(lazy).toMatch(/import\(\s*["']\.\/charts\/PriceChart["']\s*\)/);
+    // Self-test: the patterns catch a static import and pass a type import.
+    expect(engine.test('import { createChart } from "lightweight-charts";')).toBe(true);
+    expect(engine.test('import type { Time } from "lightweight-charts";')).toBe(false);
+    expect(staticImport.test('import PriceChart from "./charts/PriceChart";')).toBe(true);
+    expect(staticImport.test('import type { PriceChartProps } from "./charts/PriceChart";')).toBe(false);
+  });
+
+  test("no route's first-load JavaScript contains the chart engine", async () => {
+    // The build-level half of the rule above: the engine's code is in a chunk
+    // of its own that no prerendered page references. "tv-attr-logo" is a
+    // string literal inside Lightweight Charts, so it marks the engine's chunk.
+    const { measureRoutes, WEB_ROOT } = await import("../../scripts/first-load.mjs");
+    const rows: { route: string; js: string[] }[] = measureRoutes();
+    const marker = "tv-attr-logo";
+    const carrying = rows
+      .filter((r) => r.js.some((file) => readFileSync(file, "utf8").includes(marker)))
+      .map((r) => r.route);
+    expect(carrying, "routes whose first load includes the chart engine").toEqual([]);
+    // Not vacuous: the engine IS in the build, in a chunk loaded on demand.
+    const chunks = join(WEB_ROOT, ".next", "static", "chunks");
+    const found = readdirSync(chunks, { recursive: true })
+      .map(String)
+      .filter((name) => name.endsWith(".js"))
+      .some((name) => readFileSync(join(chunks, name), "utf8").includes(marker));
+    expect(found, "the chart engine's chunk exists in the build").toBe(true);
   });
 
   test("every route's first-load JavaScript is within its gzip budget", async () => {

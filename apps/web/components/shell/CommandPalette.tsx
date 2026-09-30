@@ -18,6 +18,7 @@ import { SECTIONS } from "./sections";
  *  - Open by id: what you typed, as a trade, strategy, instrument, audit
  *    entry or parameter space; the target screen selects that row (the
  *    platform decides whether it exists, the palette does not guess);
+ *    "Open chart: SYMBOL" opens that instrument's chart workstation;
  *  - Actions: each OPENS a dialog. "Halt trading…" opens the kill-switch
  *    dialog exactly as ⇧K does; the arm still needs a choice and a reason.
  */
@@ -65,6 +66,11 @@ export default function CommandPalette({
             key: "instrument",
             label: `Open instrument ${id.toUpperCase()}`,
             href: `/markets?row=${encodeURIComponent(id.toUpperCase())}`,
+          },
+          {
+            key: "chart",
+            label: `Open chart: ${id.toUpperCase()}`,
+            href: `/markets/${encodeURIComponent(id.toUpperCase())}`,
           },
           {
             key: "parameters",

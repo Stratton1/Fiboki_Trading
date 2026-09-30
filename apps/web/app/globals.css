@@ -103,6 +103,19 @@
   --regime-trend: oklch(0.720 0.130 235 / 0.08);
   --regime-range: oklch(0.800 0.150 70 / 0.08);
   --regime-stress: oklch(0.650 0.220 20 / 0.10);
+  /* `unknown` is hatched on the chart, never drawn as range (report G C6). */
+  --regime-unknown: oklch(0.680 0.020 255 / 0.14);
+
+  /* Price chart (components/charts/PriceChart.tsx reads these at mount and
+     on every theme or P&L-preset change). Candles are neutral ink: rising
+     bars hollow, falling bars filled, so direction is a shape and green/red
+     stay reserved for P&L. Markers take the provenance inks (.chart-ink). */
+  --chart-bg: var(--bg-surface);
+  --chart-grid: var(--border-subtle);
+  --chart-axis: var(--border);
+  --chart-candle: var(--fg-muted);
+  --chart-volume: oklch(0.680 0.012 255 / 0.45);
+  --chart-crosshair: var(--fg-subtle);
 
   /* View states (report G §2.5): eight, each a token AND a glyph and border
      style (ViewStateTag, /system/legend), so none depends on colour alone. */
@@ -186,6 +199,7 @@
   --series-6: oklch(0.580 0.170 45);
   --div-neg: oklch(0.520 0.150 245);
   --div-pos: oklch(0.600 0.160 50);
+  --chart-volume: oklch(0.500 0.012 255 / 0.40);
   --state-replay: oklch(0.500 0.150 285);
 
   --elevation-2: 0 1px 2px oklch(0 0 0 / 0.06);
@@ -2200,6 +2214,349 @@
     width: 14px;
     height: 10px;
     border: 1px solid var(--border-subtle);
+  }
+
+  /* ------------------------------------------------- chart workstation */
+
+  /* /markets/[symbol]: the chart fills the viewport under the page header,
+     the legend above it and the readout below. Quiet chrome: neutral
+     surfaces; colour appears only as provenance ink, P&L and state. */
+  .cw {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    height: calc(100dvh - var(--banner-h) - var(--statusbar-h) - 100px);
+    min-height: 560px;
+  }
+  .cw__head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    gap: 8px 16px;
+  }
+  .cw__title {
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+  }
+  .cw__title h1 {
+    margin: 0;
+    font-size: 20px;
+    line-height: 28px;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+  }
+  .cw__back {
+    font-size: 12px;
+  }
+  .cw__meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    margin-left: auto;
+  }
+  .cw__chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    min-height: 22px;
+    padding: 0 6px;
+    border: 1px solid var(--border);
+    border-radius: var(--r-sm);
+    font-size: 11.5px;
+    color: var(--fg-muted);
+    white-space: nowrap;
+  }
+  .cw__legend-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+  }
+  .cw__body {
+    flex: 1 1 auto;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+  }
+  .cw__body > [data-testid="state-success"] {
+    flex: 1 1 auto;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .cw__area {
+    flex: 1 1 auto;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .cw__chart {
+    position: relative;
+    flex: 1 1 auto;
+    min-height: 280px;
+    height: 100%;
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--r-md);
+    background: var(--chart-bg);
+    overflow: hidden;
+  }
+  .cw__split {
+    flex: 1 1 auto;
+    min-height: 0;
+  }
+  .cw__split .cw__chart {
+    border: 0;
+    border-radius: 0;
+  }
+  .cw__data {
+    height: 100%;
+    padding: 8px;
+    background: var(--bg-surface);
+  }
+  .cw__note {
+    margin: 0;
+    font-size: 12px;
+    color: var(--fg-muted);
+  }
+  .cw__note--error {
+    padding: 8px;
+    border: 1px solid var(--critical);
+    border-radius: var(--r-md);
+    background: var(--critical-bg);
+    color: var(--fg);
+  }
+  .cw__summary {
+    margin: 0;
+    font-size: 11.5px;
+    color: var(--fg-subtle);
+  }
+  .cw-sources {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    max-width: 520px;
+    font-size: 12.5px;
+  }
+  .cw-sources code {
+    font-family: var(--font-code);
+    font-size: 11.5px;
+    overflow-wrap: anywhere;
+  }
+  .cw-sources__list {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .price-chart {
+    width: 100%;
+    height: 100%;
+    outline: none;
+  }
+  .price-chart:focus-visible {
+    outline: 2px solid var(--focus-ring);
+    outline-offset: -2px;
+  }
+  .price-chart--pending {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--fg-muted);
+    font-size: 12.5px;
+  }
+
+  .readout {
+    flex: none;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    max-height: 30vh;
+    overflow: auto;
+    padding: 6px 8px;
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--r-md);
+    background: var(--bg-surface);
+    font-family: var(--font-code);
+    font-size: 11.5px;
+    line-height: 18px;
+  }
+  .readout__row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 2px 14px;
+  }
+  .readout__time {
+    color: var(--fg);
+    font-weight: 600;
+  }
+  .readout__tag {
+    color: var(--fg-subtle);
+    font-size: 10px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+  .readout__pair {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+  }
+  .readout__key {
+    color: var(--fg-subtle);
+  }
+  .readout__num {
+    color: var(--fg);
+    font-variant-numeric: tabular-nums;
+  }
+  .readout__group {
+    color: var(--fg-muted);
+  }
+
+  .legend {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .legend__row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+  }
+  .legend__toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    min-height: 24px;
+    padding: 0 8px;
+    border: 1px dashed var(--border-control);
+    border-radius: var(--r-sm);
+    background: transparent;
+    color: var(--fg-muted);
+    font-size: 12px;
+    transition: background-color var(--dur-md) var(--easing-standard),
+      color var(--dur-md) var(--easing-standard);
+  }
+  .legend__toggle[aria-pressed="true"] {
+    border-style: solid;
+    background: var(--bg-raised);
+    color: var(--fg);
+  }
+  .legend__toggle:hover {
+    color: var(--fg);
+  }
+  .legend__count {
+    color: var(--fg-subtle);
+    font-variant-numeric: tabular-nums;
+  }
+  .legend__details {
+    font-size: 12px;
+    color: var(--fg-muted);
+  }
+  .legend__summary {
+    width: fit-content;
+    cursor: pointer;
+    color: var(--fg-muted);
+  }
+  .legend__summary:hover {
+    color: var(--fg);
+  }
+  .legend__details[open] .legend__summary {
+    margin-bottom: 4px;
+  }
+  .legend__notes {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    font-size: 12px;
+    color: var(--fg-muted);
+  }
+  .legend__key {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    max-width: 440px;
+    font-size: 12.5px;
+  }
+
+  .glyph {
+    display: inline-block;
+    width: 12px;
+    height: 12px;
+    vertical-align: -1px;
+  }
+  .glyph path {
+    fill: currentColor;
+    stroke: none;
+  }
+  .glyph[data-fill="hollow"] path {
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.5;
+  }
+  .glyph .glyph__strike,
+  .glyph[data-fill="hollow"] .glyph__strike {
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.5;
+  }
+
+  .series-swatch {
+    --swatch: var(--fg-muted);
+    display: inline-block;
+    flex: none;
+    width: 14px;
+    height: 0;
+    border-top: 2px solid var(--swatch);
+  }
+  .series-swatch[data-role="series-1"] { --swatch: var(--series-1); }
+  .series-swatch[data-role="series-2"] { --swatch: var(--series-2); }
+  .series-swatch[data-role="series-3"] { --swatch: var(--series-3); }
+  .series-swatch[data-role="series-4"] { --swatch: var(--series-4); }
+  .series-swatch[data-role="series-5"] { --swatch: var(--series-5); }
+  .series-swatch[data-role="series-6"] { --swatch: var(--series-6); }
+  .series-swatch[data-style="dashed"],
+  .series-swatch[data-style="large-dashed"] {
+    border-top-style: dashed;
+  }
+  .series-swatch[data-style="dotted"],
+  .series-swatch[data-style="sparse-dotted"] {
+    border-top-style: dotted;
+  }
+
+  @media (max-width: 639px) {
+    .cw {
+      height: auto;
+      min-height: 0;
+    }
+    .cw__meta {
+      margin-left: 0;
+    }
+    .cw__chart {
+      flex: none;
+      height: 56vh;
+      min-height: 300px;
+    }
+    .cw__split {
+      flex: none;
+      height: 80vh;
+    }
+    .readout {
+      max-height: none;
+    }
   }
 
   /* ------------------------------------------------------------ stat tiles */
