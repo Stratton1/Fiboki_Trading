@@ -41,7 +41,7 @@ def _run(argv: list[str], env: dict[str, str] | None = None, cwd: Path = REPO,
 
 @pytest.mark.parametrize(
     "name", [*NEW_SCRIPTS, "desktop/Start Fiboki.command", "desktop/fiboki-launch.sh",
-             "desktop/install-launcher.sh"]
+             "desktop/install-launcher.sh", "oanda-backfill.sh"]
 )
 def test_every_script_parses_and_sets_no_live_control(name: str) -> None:
     path = SCRIPTS / name
