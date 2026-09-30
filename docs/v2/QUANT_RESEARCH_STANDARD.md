@@ -356,3 +356,54 @@ bias against longer anchored train windows. The plateau ratio excludes the point
 neighbourhood and uses the additive floor `c = |score|`, so `<= 1.25` means "the neighbours keep
 at least 60% of the point's score" at any scale. Neither gate threshold moved; E-1
 (`research/preregistration/gate_calibration_e1.json`) will measure whether they should.
+
+## 11. Generated strategy families (2026-09-30)
+
+**What the grammar is.** `research/generate_families.py` enumerates a closed grammar
+FAMILY × ENTRY_EVENT × FILTER × EXIT_MODEL in which every axis is structural: a different rule,
+indicator, rule section or exit kind, never a different number. Six families, each with one
+hand-written economic story and its evidence against (`trend_pullback`, `breakout_vol`,
+`mean_reversion_band`, `momentum_oscillator`, `ichimoku_variants`, `session_breakout`); two or
+three entry events per family; filters `none`, a realised-volatility regime gate, an ADX regime
+gate, or a session restriction (fixed literals: a filter is a claim about market state, not a knob);
+exits `time_exit`, `tp_r`, `trail`, and a swing-structure stop with one R-multiple target. The
+grammar has 310 cells; every cell's `structure_hash` is computed and any that equals another
+cell's or a seed's is dropped (none did: 310 after dedupe), and a seeded (`rng_seed` 20260930),
+stratified sample of exactly 100 is written to `research/generated/` with at least 12 per family.
+Each document declares at most three `choice` parameters (at most 18 declared cells, so the
+runner's default 8-point grid covers every axis). `MANIFEST.json` records the generator version,
+the grammar size before and after dedupe, the seed, every id with its structure and content hash,
+and the SHA-256 of the generator source; regeneration is byte-identical
+(`tests/unit/test_generated_families.py`).
+
+**All 100 are ONE pre-registered campaign, K5.** They enter a campaign only through
+`research/run_discovery_campaign.py --generated-dir research/generated`, which records the count,
+the directory and the manifest sha256 in `run.log` and in the report notes. Every document raises
+the trial count against which **every** strategy in the project is deflated, the six seeds
+included; K5's planned trials must be added to the external prior of any later campaign on the
+same bars, exactly as K3's were declared for K4. A campaign that ran the 100 and reported only the
+best, or ran them in batches under separate campaign ids, would deflate against a fraction of the
+search it actually did.
+
+**A survivor is a hypothesis, not a result.** A generated document shares its family's story with
+every other member of the family; nothing about the particular recombination was argued for before
+it was tested. A generated document that survives the ladder must be re-authored as a seed in
+`research/strategies/` with its own written economic story and evidence against, justified as a
+different bet by `is_reparameterisation`, and tested in a NEW pre-registered campaign on data K5
+did not select on, before anything about it is trusted.
+
+**Known limitation: the generator cannot invent a mechanism.** It only recombines entry events,
+filters and exits under six stories written by hand. Two recombinations are cheap and several
+families borrow a seed's mechanism (`ichimoku_variants` re-uses the seed's pieces; `breakout_vol`
+re-uses the Donchian break behind a compression setup; `mean_reversion_band` overlaps
+`rsi_band_mean_reversion`), so correlated survivors across a family and its seed are closer to one
+bet counted several times than to independent confirmation.
+
+Named approximations the grammar adds: the `breakout_vol` compression setup compares 20-bar with
+100-bar realised volatility, a proxy for "below its 100-bar median" (there is no rolling
+percentile indicator); the realised-volatility regime gate is the seeds' absolute per-bar band
+`[0.0015, 0.05]`, which binds much more often on H4 FX than on D1 or on metals; the session filter
+restricts documents to H4 because D1 has no intraday hours; and the swing-structure exit is split
+into long-only and short-only documents because `StopModel` has one `level` operand for both
+sides, so a both-sided swing stop would silently fall back to the minimum-distance floor on one
+side.

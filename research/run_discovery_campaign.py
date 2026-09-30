@@ -85,6 +85,7 @@ from __future__ import annotations
 
 import argparse
 import contextlib
+import hashlib
 import json
 import sys
 import time
@@ -674,6 +675,51 @@ def _run_log(path: Path) -> Iterator[None]:
         yield
 
 
+#: The provenance file ``research/generate_families.py`` writes beside its documents.
+GENERATED_MANIFEST = "MANIFEST.json"
+
+
+class GeneratedRoster(NamedTuple):
+    documents: tuple[StrategyDocument, ...]
+    path: Path
+    manifest_sha256: str
+
+    def describe(self) -> str:
+        return (
+            f"{len(self.documents)} from {self.path}, manifest sha256 {self.manifest_sha256}"
+        )
+
+
+def load_generated(path: Path, seeds: Sequence[StrategyDocument]) -> GeneratedRoster:
+    """The ``--generated-dir`` documents, which the planner treats as seeds.
+
+    Every ``*.json`` except the manifest, ordered by id. The manifest's sha256 is
+    recorded (``absent`` when there is none) so a report says exactly which
+    generated set it planned from. A generated id that collides with a seed id is
+    refused rather than letting one silently shadow the other.
+    """
+    if not path.is_dir():
+        raise ValueError(f"--generated-dir {path} is not a directory")
+    found = sorted(
+        (
+            StrategyDocument.from_json(p.read_text(encoding="utf-8"))
+            for p in sorted(path.glob("*.json"))
+            if p.name != GENERATED_MANIFEST
+        ),
+        key=lambda d: d.strategy_id,
+    )
+    if not found:
+        raise ValueError(f"--generated-dir {path} holds no strategy documents")
+    clash = sorted({d.strategy_id for d in found} & {d.strategy_id for d in seeds})
+    if clash:
+        raise ValueError(f"--generated-dir {path} reuses seed id(s) {clash}")
+    manifest = path / GENERATED_MANIFEST
+    digest = (
+        hashlib.sha256(manifest.read_bytes()).hexdigest() if manifest.is_file() else "absent"
+    )
+    return GeneratedRoster(tuple(found), path, digest)
+
+
 def _construction_label() -> str:
     fp = research_construction_policy().fingerprint()
     return (
@@ -706,6 +752,17 @@ def main(argv: list[str] | None = None) -> int:
             "Restrict the campaign to these seed documents (default: every document in "
             "research/strategies). Hypotheses are unaffected. An unknown id is an error, "
             "so a typo cannot silently run the whole roster. Recorded in run.log."
+        ),
+    )
+    parser.add_argument(
+        "--generated-dir",
+        default=None,
+        type=Path,
+        metavar="PATH",
+        help=(
+            "ADD the documents in this directory (research/generate_families.py output) "
+            "to the seed roster for planning. Recorded in run.log and the report notes "
+            "with the directory's MANIFEST.json sha256. --seeds filters the combined roster."
         ),
     )
     parser.add_argument("--instruments", nargs="+", default=["XAUUSD"])
@@ -802,9 +859,18 @@ def main(argv: list[str] | None = None) -> int:
         )
         return EXIT_ENGINE_VERSION
 
+    # Likewise an unreadable --generated-dir: refused before the out dir exists.
+    roster = seed_documents(SEED_DIR)
+    if args.generated_dir is not None:
+        try:
+            roster = roster + load_generated(args.generated_dir, roster).documents
+        except ValueError as exc:
+            print(f"REFUSED: {exc}", file=sys.stderr)
+            return 2
+
     # Likewise an unknown --seeds id: refused before the out dir exists.
     if args.seeds:
-        known = sorted(d.strategy_id for d in seed_documents(SEED_DIR))
+        known = sorted(d.strategy_id for d in roster)
         unknown = sorted(set(args.seeds) - set(known))
         if unknown:
             print(
@@ -829,6 +895,11 @@ def _run(args: argparse.Namespace) -> int:
 def _run_with_store(args: argparse.Namespace, store: DataStore) -> int:
     gates = gate_set_for(args.gates)
     seeds = seed_documents(SEED_DIR)
+    generated = (
+        load_generated(args.generated_dir, seeds) if args.generated_dir is not None else None
+    )
+    if generated is not None:  # validated in main() before any side effect
+        seeds = seeds + generated.documents
     if args.seeds:  # validated in main() before any side effect
         known = {d.strategy_id: d for d in seeds}
         seeds = tuple(known[s] for s in sorted(set(args.seeds)))
@@ -894,8 +965,15 @@ def _run_with_store(args: argparse.Namespace, store: DataStore) -> int:
     print(f"universe: {len(instruments)} instrument(s) {' '.join(instruments)}; timeframes {' '.join(args.timeframes)}")
     print(
         "seeds_requested: "
-        + (" ".join(d.strategy_id for d in seeds) if args.seeds else "all (every document in research/strategies)")
+        + (
+            " ".join(d.strategy_id for d in seeds)
+            if args.seeds
+            else "all (every document in research/strategies"
+            + (" and --generated-dir)" if generated is not None else ")")
+        )
     )
+    if generated is not None:
+        print(f"generated_documents: {generated.describe()}")
     print(
         f"budget: max_evaluations={args.max_evaluations} generations={args.generations} "
         f"grid={args.max_grid_points}x{args.max_values_per_axis} folds={args.folds}"
@@ -975,6 +1053,11 @@ def _run_with_store(args: argparse.Namespace, store: DataStore) -> int:
             + cal.notes
             + " Every cell is deflated against the campaign's true trial count, "
             "not against its own parameter sweep."
+            + (
+                f" Generated documents added to the seed roster: {generated.describe()}."
+                if generated is not None
+                else ""
+            )
         ),
     )
 

@@ -295,3 +295,42 @@ def test_seeds_restricts_the_roster_and_refuses_an_unknown_id(
     err = capsys.readouterr().err
     assert "REFUSED: --seeds names unknown document(s) ['nope']" in err
     assert not (bad / "run.log").exists()
+
+
+def test_generated_dir_adds_documents_to_the_roster_and_is_recorded(
+    script: ModuleType, tmp_path: Path
+) -> None:
+    """``--generated-dir`` adds generated documents to the seed roster, ``--seeds``
+    filters the combined roster, and run.log and the report notes carry the
+    count, the directory and the manifest sha256."""
+    import hashlib
+    import shutil
+
+    source = SCRIPT.parent / "generated"
+    picked = sorted(p for p in source.glob("*__*.json"))[:2]
+    assert len(picked) == 2
+    generated = tmp_path / "generated"
+    generated.mkdir()
+    for path in (*picked, source / "MANIFEST.json"):
+        shutil.copy(path, generated / path.name)
+    ids = sorted(json.loads(p.read_text(encoding="utf-8"))["strategy_id"] for p in picked)
+    digest = hashlib.sha256((generated / "MANIFEST.json").read_bytes()).hexdigest()
+
+    root = _data_root(tmp_path)
+    out = tmp_path / "out"
+    argv = _argv(root, out, tmp_path, "--generated-dir", str(generated), "--generations", "0",
+                 "--seeds", *ids)
+    assert script.main(argv) == 0
+
+    log = (out / "run.log").read_text(encoding="utf-8")
+    line = f"generated_documents: 2 from {generated}, manifest sha256 {digest}"
+    assert line in log.splitlines()
+    assert f"seeds: {ids}" in log
+    assert f"seeds_requested: {' '.join(ids)}" in log
+    report = json.loads((out / "campaign_k3_smoke.json").read_text(encoding="utf-8"))
+    assert f"manifest sha256 {digest}" in report["notes"]
+    # Both reached the planner as seeds (a two-trial budget defers eight-point
+    # grids, so they are planned and skipped over_budget rather than run).
+    planned = {c["strategy_id"] for c in (*report["attempted"], *report["skipped"])}
+    assert planned == set(ids)
+    assert {c["origin"] for c in report["skipped"]} <= {"seed"}
