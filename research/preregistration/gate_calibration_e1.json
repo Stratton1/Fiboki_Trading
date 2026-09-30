@@ -78,7 +78,7 @@
   ],
   "decision_date": "2026-10-02",
   "filed_at": "2026-09-30T20:40:00Z",
-  "filed_commit": "recorded in the commit that follows this file's filing commit (see filing_note)",
+  "filed_commit": "efb5fce",
   "filing_decisions": {
     "external_trial_count_per_candidate": 20896,
     "external_trial_count_rule": "K5's true trial count 20,904 minus the candidate's own 8 grid points, per the search_size rule; this is the count every candidate in a K5-sized campaign was actually deflated against.",
