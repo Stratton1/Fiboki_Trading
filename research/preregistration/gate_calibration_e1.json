@@ -1,7 +1,7 @@
 {
   "schema": "fiboki-preregistration:1",
   "id": "gate_calibration_e1",
-  "status": "draft: not yet filed. Filing = operator fills decision_date and the campaign search size, commits this file, and records the commit BEFORE any E-1 result is read. No gate threshold in validation/gates.py changes until the filed study has been run and its decision rule applied.",
+  "status": "FILED 2026-09-30 (this commit). No gate threshold in validation/gates.py changes until the study has run under this file and the decision rule has been applied.",
   "experiment": "E-1: pipeline power and size study of the promotion gates",
   "plan_reference": "research/reports/F_backend_audit.md section 3.1 (E-1) and section 8 (B-21)",
   "code": {
@@ -19,7 +19,13 @@
   },
   "injected_sharpe_grid": {
     "unit": "per-trade Sharpe ratio (mean / sd of per-trade return), not annualised",
-    "values": [0.0, 0.03, 0.05, 0.08, 0.12]
+    "values": [
+      0.0,
+      0.03,
+      0.05,
+      0.08,
+      0.12
+    ]
   },
   "data_generating_processes": [
     {
@@ -70,7 +76,16 @@
     "The holdout segment of every dataset version is excluded from the bootstrap source.",
     "Seeds are fixed in the script and recorded in the output; a re-run must reproduce the output byte for byte."
   ],
-  "decision_date": "TO_BE_SET_AT_FILING (YYYY-MM-DD)",
-  "filed_at": null,
-  "filed_commit": null
+  "decision_date": "2026-10-02",
+  "filed_at": "2026-09-30T20:40:00Z",
+  "filed_commit": "recorded in the commit that follows this file's filing commit (see filing_note)",
+  "filing_decisions": {
+    "external_trial_count_per_candidate": 20896,
+    "external_trial_count_rule": "K5's true trial count 20,904 minus the candidate's own 8 grid points, per the search_size rule; this is the count every candidate in a K5-sized campaign was actually deflated against.",
+    "size_basis": "The script measures per-candidate promotion probability p0 at sr = 0. Family-wise size for a 106-candidate campaign is reported as the union bound 1 - (1 - p0)^106 (conservative; exact under independence) beside p0 itself, and H0_size is judged on that bound. Simulating whole 106-candidate campaigns (400 x 106 ladder runs) is deferred to the desktop.",
+    "process_order": "block_bootstrap_real_returns first (about 3 to 4 hours on the cloud sandbox, 2 cores); perturbed_price_paths afterwards on the Mac or desktop (7 to 60 hours). The decision rule is applied only when BOTH have run; an interim reading from the first process is published as interim and moves nothing.",
+    "data": "OANDA practice MID bars, H4, the K5 universe of 16 series, research window only (holdout excluded by the ladder's own definition), bars from 2006-01-04 as K3 to K5.",
+    "replicates": "400 per (sr, process) as pre-registered; sr grid unchanged."
+  },
+  "filing_note": " Filed 2026-09-30 by the operator's instruction ('file E-1'); decisions above were taken at filing, before any result was read."
 }
