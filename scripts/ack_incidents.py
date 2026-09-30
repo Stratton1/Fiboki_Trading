@@ -33,7 +33,8 @@ def main() -> int:
         help="acknowledge every open incident whose key/title contains SUBSTRING with REASON",
     )
     args = ap.parse_args()
-    with httpx.Client(base_url=args.base, timeout=60.0) as client:
+    # The API refuses state-changing requests without a browser-like Origin.
+    with httpx.Client(base_url=args.base, timeout=60.0, headers={"Origin": args.base}) as client:
         r = client.post("/api/auth/login", json={"username": args.user, "password": args.password})
         if r.status_code != 200:
             print(f"login failed: {r.status_code}", file=sys.stderr)
