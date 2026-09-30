@@ -1,190 +1,101 @@
 "use client";
 
-import { useApi } from "@/lib/query";
-import { useHealth } from "@/components/shell/platform";
-import { AttentionPanel } from "@/components/command/AttentionPanel";
-import { IncidentsPanel } from "@/components/command/IncidentsPanel";
+import Link from "next/link";
+import type { ReactNode } from "react";
 import { AsyncBoundary } from "@/components/AsyncBoundary";
-import { KillSwitchPanel } from "@/components/KillSwitch";
-import { LazyLineChart } from "@/components/LazyChart";
-import {
-  CaveatList,
-  Card,
-  PageHead,
-  SourceBadge,
-  StatusBadge,
-  Tile,
-} from "@/components/primitives";
+import { AttentionPanel } from "@/components/command/AttentionPanel";
+import { FleetStrip } from "@/components/command/FleetStrip";
+import { IncidentsPanel } from "@/components/command/IncidentsPanel";
 import { FigureValue } from "@/components/FigureValue";
-import { ProvenanceChip } from "@/components/ProvenanceChip";
-import { formatAge, formatTimestamp } from "@/lib/format";
-import type {
-  Envelope,
-  PortfolioView,
-  RiskStateView,
-} from "@/lib/types";
+import { Card, PageHead } from "@/components/primitives";
+import { Stat } from "@/components/Stat";
+import { ViewStateTag } from "@/components/ui/ViewStateTag";
+import { useApi } from "@/lib/query";
+import type { Envelope, RiskStateView } from "@/lib/types";
 
 /**
- * COMMAND · Overview.
+ * COMMAND (Wave 4a): "Is anything wrong, and what needs me now?"
  *
- * The first thing on the page is platform health, not P&L. V1's dashboard led
- * with "Fleet PnL (live)" — which was a backtest number — above "Recent
- * Execution", which was the same backtest trades again, beside hardcoded
- * "Online" and "Connected" badges. An operator could not tell a dead backend
- * from a quiet one.
+ * The hero is the server-ranked attention queue as triage rows, rendered in
+ * the order given (components/command/AttentionPanel.tsx). Below it, the
+ * three numbers an operator wants first and the fleet strip, then incidents.
+ * V1's dashboard led with "Fleet PnL (live)", which was a backtest number;
+ * this page leads with what needs a human, and every figure carries the
+ * provenance the API gave it.
  *
- * Command v1 (Wave 2): the top panel is the server-ranked attention queue,
- * then open incidents, then health. The ranking is the server's; this page
- * only renders it in order.
+ * The three numbers, from GET /api/trading/risk:
+ *  - open risk: the API reports no open-risk (risk at stop) figure, so the
+ *    tile says NOT REPORTED rather than borrowing a different number;
+ *  - today's P&L: `daily_loss_pct`, the day's net P&L as a percentage of the
+ *    starting balance, with its provenance;
+ *  - drawdown throttle: the API does not report the step in force, so NOT
+ *    REPORTED, with the drawdown the API does report beside it.
  */
-export default function OverviewPage() {
-  // Shared with the status bar: one /api/health poll for the whole shell.
-  const health = useHealth();
-  const portfolio = useApi<Envelope<PortfolioView>>("/api/trading/portfolio");
+export default function CommandPage() {
   const risk = useApi<Envelope<RiskStateView>>("/api/trading/risk");
-
   return (
     <>
       <PageHead
-        title="Overview"
-        intro="What needs you first, then platform health, then the book. Every figure below carries the provenance of the run that produced it."
+        title="Command"
+        intro="What needs you now, in the platform's own order. Then the three numbers, the fleet and incidents."
       />
 
       <Card title="Needs attention">
         <AttentionPanel />
       </Card>
 
+      <div className="command__grid">
+        <section className="card" aria-labelledby="command-book">
+          <h2 id="command-book" className="card__title">
+            First numbers
+          </h2>
+          <AsyncBoundary state={risk} label="risk state" onRetry={risk.reload}>
+            {(envelope) => (
+              <div className="tiles command__tiles">
+                <AbsentStat label="Open risk">
+                  The API reports no open-risk (risk at stop) figure.{" "}
+                  <Link href="/trading/risk">Risk &amp; Exposure</Link> shows every limit it does report.
+                </AbsentStat>
+                <Stat
+                  label="Today's P&L"
+                  figure={envelope.data.daily_loss_pct}
+                  signed
+                  help="Day net P&L as % of the starting balance. For a replayed journal, its last replayed day."
+                />
+                <AbsentStat label="Drawdown throttle">
+                  The step in force is not reported. Drawdown:{" "}
+                  <FigureValue figure={envelope.data.drawdown_pct} /> of a{" "}
+                  <FigureValue figure={envelope.data.max_drawdown_limit_pct} showChip={false} /> limit.
+                </AbsentStat>
+              </div>
+            )}
+          </AsyncBoundary>
+        </section>
+
+        <section className="card" aria-labelledby="command-fleet">
+          <h2 id="command-fleet" className="card__title">
+            Fleet
+          </h2>
+          <FleetStrip />
+        </section>
+      </div>
+
       <Card title="Incidents">
         <IncidentsPanel />
       </Card>
-
-      <Card title="Platform health">
-        <AsyncBoundary state={health} label="platform health" onRetry={health.reload}>
-          {(report) => (
-            <div data-testid="health-panel">
-              <div className="row mb-2.5">
-                <StatusBadge status={report.status} />
-                <span className="muted">
-                  build {report.build_sha ?? "unknown"} · mode {report.execution_mode} ·
-                  migration {report.migration_revision ?? "unknown"} · worker heartbeat{" "}
-                  <span data-testid="health-heartbeat">
-                    {formatAge(report.worker_heartbeat_age_seconds)}
-                  </span>{" "}
-                  · checked {formatTimestamp(report.checked_at)}
-                </span>
-              </div>
-              {report.advisory ? (
-                <p className="state state--error" data-testid="health-advisory">
-                  {report.advisory}
-                </p>
-              ) : null}
-              <div className="table-wrap">
-                <table>
-                  <thead>
-                    <tr>
-                      <th>Check</th>
-                      <th>Status</th>
-                      <th>Detail</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {report.checks.map((check) => (
-                      <tr key={check.name}>
-                        <td className="mono">{check.name}</td>
-                        <td>
-                          <StatusBadge status={check.status} />
-                        </td>
-                        <td className="wrap">{check.detail}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          )}
-        </AsyncBoundary>
-      </Card>
-
-      <Card title="Account">
-        <AsyncBoundary
-          state={portfolio}
-          label="the portfolio"
-          onRetry={portfolio.reload}
-        >
-          {(envelope) => (
-            <>
-              <SourceBadge source={envelope.source} />
-              <div className="tiles">
-                <Tile label="Balance" figure={envelope.data.balance} />
-                <Tile label="Equity" figure={envelope.data.equity} />
-                <Tile
-                  label="Realised P&L"
-                  figure={envelope.data.realised_pnl}
-                  colourSign
-                />
-                <Tile
-                  label="Unrealised P&L"
-                  figure={envelope.data.unrealised_pnl}
-                  colourSign
-                />
-                <Tile label="Open positions" figure={envelope.data.open_positions} />
-                <Tile
-                  label="Max drawdown"
-                  figure={envelope.data.max_drawdown_pct}
-                />
-              </div>
-              <p className="muted">
-                Trade record by provenance:{" "}
-                {Object.entries(envelope.data.provenance_mix).map(([key, count]) => (
-                  <span key={key} className="mr-2.5 inline-flex items-center gap-1">
-                    <ProvenanceChip provenance={key as never} /> {count}
-                  </span>
-                ))}
-              </p>
-              <LazyLineChart series={envelope.data.equity_curve} />
-              <CaveatList caveats={envelope.data.equity_curve.caveats} />
-            </>
-          )}
-        </AsyncBoundary>
-      </Card>
-
-      <Card title="Risk">
-        <AsyncBoundary state={risk} label="risk state" onRetry={risk.reload}>
-          {(envelope) => (
-            <>
-              <div className="tiles">
-                <Tile label="Daily P&L" figure={envelope.data.daily_loss_pct} colourSign />
-                <Tile label="Daily loss limit" figure={envelope.data.max_daily_loss_pct} />
-                <Tile label="Drawdown" figure={envelope.data.drawdown_pct} />
-                <Tile
-                  label="Margin utilisation"
-                  figure={envelope.data.margin_utilisation_pct}
-                  help="Unknown without a broker account snapshot."
-                />
-              </div>
-              {envelope.data.breaches.length > 0 ? (
-                <div className="state state--error">
-                  <div className="state__title">Limit breaches</div>
-                  <ul>
-                    {envelope.data.breaches.map((b) => (
-                      <li key={b}>{b}</li>
-                    ))}
-                  </ul>
-                </div>
-              ) : (
-                <p className="muted">
-                  No limit breach against limit set{" "}
-                  <span className="mono">{envelope.data.limits_version}</span>.
-                </p>
-              )}
-            </>
-          )}
-        </AsyncBoundary>
-      </Card>
-
-      <Card title="Kill switch">
-        <KillSwitchPanel />
-      </Card>
     </>
+  );
+}
+
+/** A stat tile for a number the API does not report: the reason, never a zero. */
+function AbsentStat({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <div className="tile stat" data-testid="tile" data-label={label} data-state="absent">
+      <div className="tile__label">{label}</div>
+      <div className="tile__value">
+        <ViewStateTag state="absent">NOT REPORTED</ViewStateTag>
+      </div>
+      <div className="tile__help">{children}</div>
+    </div>
   );
 }

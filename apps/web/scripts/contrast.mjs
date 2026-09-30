@@ -252,6 +252,19 @@ export const PAIRS = [
   ].flatMap((fg) => on(fg, PANELS, "text", "view-state tag")),
   // The diverging correlation scale's ends against the surface they sit on.
   ...["--div-neg", "--div-pos"].flatMap((fg) => on(fg, ["--bg-surface"], "graphics", "heatmap end")),
+  // Exposure utilisation matrix (components/risk/ExposureMatrix.tsx): --fg
+  // text on every heat step. The warn/critical band outlines are drawn outside
+  // the cell, on --bg-surface, which the health-label pairs above already check.
+  ...[1, 2, 3, 4, 5].map((n) => ({
+    fg: "--fg",
+    bg: ["--bg-surface", `--heat-util-${n}`],
+    kind: "text",
+    note: `exposure heat step ${n}`,
+  })),
+  // Limit bars (components/risk/LimitBoard.tsx): the fill against its track.
+  ...["--warn", "--critical", "--prov-paper", "--prov-sim", "--mode-live"].flatMap((fg) =>
+    on(fg, ["--bg-sunken"], "graphics", "limit bar fill on its track"),
+  ),
   // Chart ink for LIVE is the mode colour (magenta), never loss red.
   ...on("--mode-live", ["--bg-surface"], "graphics", "LIVE chart series"),
   // Price chart (components/charts/PriceChart.tsx): the neutral candle ink on

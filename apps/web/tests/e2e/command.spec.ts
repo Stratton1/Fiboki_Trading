@@ -1,5 +1,6 @@
 import { expect, test, type Route } from "@playwright/test";
-import { API, attentionItem, attentionPage, incident, incidentsPage, mockShell } from "./fixtures";
+import AxeBuilder from "@axe-core/playwright";
+import { API, attentionItem, attentionPage, figure, incident, incidentsPage, mockShell, riskState, source } from "./fixtures";
 
 /**
  * Command screen v1 (Wave 2): the server-ranked attention queue as the top
@@ -181,5 +182,217 @@ test.describe("incidents", () => {
     await expect(
       page.locator('[data-testid="incident-row"][data-incident-id="inc-1"]'),
     ).toHaveAttribute("data-status", "open");
+  });
+});
+
+// ------------------------------------------------------------ Command v2 (Wave 4a)
+
+const incidentItem = () =>
+  attentionItem("incident:inc-1", "warning", "/system/incidents/inc-1", {
+    category: "incident",
+    title: "Worker heartbeat late",
+    reason: "worker.heartbeat_late: 3 occurrence(s); not acknowledged.",
+  });
+
+test.describe("triage rows", () => {
+  test("each row has a severity glyph, its age, the provenance it came from and its deep link", async ({ page }) => {
+    await mockShell(page);
+    await page.goto("/");
+    const first = page.getByTestId("attention-item").first();
+    await expect(first.locator(".triage__glyph")).toHaveText("◆");
+    await expect(first.locator(".triage__glyph")).toHaveAttribute("data-severity", "critical");
+    await expect(first.getByTestId("attention-age")).toHaveText(/^\d+[smhd] old$/);
+    await expect(first.getByTestId("attention-mode").getByTestId("provenance-chip")).toHaveAttribute(
+      "data-provenance",
+      "paper",
+    );
+    await expect(first.getByTestId("attention-link-kill_switch:armed")).toHaveAttribute("href", "/trading/risk");
+    // Only an incident can be acknowledged; nothing else on a row mutates.
+    await expect(page.locator('[data-testid^="attention-ack-"]')).toHaveCount(0);
+  });
+
+  test("an item with no as-of says its age is unknown rather than inventing one", async ({ page }) => {
+    await mockShell(page);
+    await page.route(`${API}/api/command/attention`, (route: Route) =>
+      route.fulfill({ json: attentionPage([attentionItem("h", "warning", "/system", { as_of: null })]) }),
+    );
+    await page.goto("/");
+    await expect(page.getByTestId("attention-age")).toHaveText("age unknown: no as-of");
+  });
+
+  test("acknowledge posts the reason with the CSRF header, then shows the platform's queue", async ({
+    page,
+    context,
+  }) => {
+    await context.addCookies([{ name: "fiboki_csrf", value: "csrf-token-42", url: "http://127.0.0.1:3100" }]);
+    await mockShell(page);
+    let acknowledged: { body: unknown; csrf: string | undefined } | null = null;
+    let queueReads = 0;
+    await page.route(`${API}/api/command/attention`, (route: Route) => {
+      queueReads += 1;
+      return route.fulfill({
+        json: attentionPage(
+          acknowledged
+            ? [attentionItem("strategy_review:abc:candidate", "info", "/trading/candidates")]
+            : [incidentItem(), attentionItem("strategy_review:abc:candidate", "info", "/trading/candidates")],
+        ),
+      });
+    });
+    await page.route(`${API}/api/system/incidents`, (route: Route) =>
+      route.fulfill({
+        json: incidentsPage([
+          acknowledged ? incident({ status: "acknowledged", acknowledged_by: "joe" }) : incident(),
+        ]),
+      }),
+    );
+    await page.route(`${API}/api/system/incidents/inc-1/ack`, async (route: Route) => {
+      const request = route.request();
+      acknowledged = { body: request.postDataJSON(), csrf: await request.headerValue("x-fiboki-csrf") ?? undefined };
+      await route.fulfill({
+        json: { data: incident({ status: "acknowledged", acknowledged_by: "joe" }), source: source("live"), caveats: [] },
+      });
+    });
+
+    await page.goto("/");
+    const row = page.locator('[data-testid="attention-item"][data-item-id="incident:inc-1"]');
+    await expect(row).toBeVisible();
+    await page.getByTestId("attention-ack-incident:inc-1").click();
+    const reason = page.getByTestId("attention-ack-reason-incident:inc-1");
+    const submit = page.getByTestId("attention-ack-submit-incident:inc-1");
+    await reason.fill("short");
+    await expect(submit).toBeDisabled();
+    // j and k typed into the reason are text, not row navigation.
+    await reason.fill("joked; kicked the worker by hand");
+    await expect(reason).toHaveValue("joked; kicked the worker by hand");
+    await expect(submit).toBeEnabled();
+    const readsBefore = queueReads;
+    await submit.click();
+
+    await expect.poll(() => acknowledged).not.toBeNull();
+    expect(acknowledged!.body).toEqual({ reason: "joked; kicked the worker by hand" });
+    expect(acknowledged!.csrf).toBe("csrf-token-42");
+    // The row re-renders from the platform: the queue is re-read and no
+    // longer lists the incident; nothing was removed on the client's say-so.
+    await expect(row).toHaveCount(0);
+    expect(queueReads).toBeGreaterThan(readsBefore);
+    await expect(page.getByTestId("attention-item")).toHaveCount(1);
+    await expect(
+      page.locator('[data-testid="incident-row"][data-incident-id="inc-1"]'),
+    ).toHaveAttribute("data-status", "acknowledged");
+  });
+
+  test("a refused acknowledgement keeps the row, the reason and says why", async ({ page }) => {
+    await mockShell(page);
+    await page.route(`${API}/api/command/attention`, (route: Route) =>
+      route.fulfill({ json: attentionPage([incidentItem()]) }),
+    );
+    await page.route(`${API}/api/system/incidents/inc-1/ack`, (route: Route) =>
+      route.fulfill({
+        status: 409,
+        json: {
+          code: "incident_already_acknowledged",
+          detail: "Incident inc-1 was already acknowledged by tom.",
+          correlation_id: "cid-ack",
+          context: {},
+        },
+      }),
+    );
+    await page.goto("/");
+    await page.getByTestId("attention-ack-incident:inc-1").click();
+    await page.getByTestId("attention-ack-reason-incident:inc-1").fill("seen it, restarting");
+    await page.getByTestId("attention-ack-submit-incident:inc-1").click();
+    await expect(page.getByTestId("attention-ack-error-incident:inc-1")).toContainText("already acknowledged by tom");
+    await expect(page.getByTestId("attention-ack-reason-incident:inc-1")).toHaveValue("seen it, restarting");
+    await expect(page.locator('[data-testid="attention-item"][data-item-id="incident:inc-1"]')).toBeVisible();
+  });
+
+  test("a role that cannot acknowledge sees the action disabled with the reason", async ({ page }) => {
+    await mockShell(page, {
+      operator: { role: "operator", display_name: "Tom", can_arm_kill_switch: true, can_promote: false },
+    });
+    await page.route(`${API}/api/command/attention`, (route: Route) =>
+      route.fulfill({ json: attentionPage([incidentItem()]) }),
+    );
+    await page.goto("/");
+    await expect(page.getByTestId("attention-ack-incident:inc-1")).toBeDisabled();
+    await expect(page.getByTestId("attention-role-blocked")).toContainText("Tom (operator)");
+  });
+
+  test("the empty queue says so plainly", async ({ page }) => {
+    await mockShell(page);
+    await page.route(`${API}/api/command/attention`, (route: Route) => route.fulfill({ json: attentionPage([]) }));
+    await page.goto("/");
+    const empty = page.getByTestId("state-empty").filter({ hasText: "Nothing needs you" });
+    await expect(empty).toBeVisible();
+    await expect(empty).toContainText("no open incident");
+  });
+});
+
+test.describe("first numbers and fleet", () => {
+  test("open risk and the throttle are NOT REPORTED; today's P&L carries its provenance", async ({ page }) => {
+    await mockShell(page);
+    await page.route(`${API}/api/trading/risk`, (route: Route) =>
+      route.fulfill({
+        json: { data: riskState({ daily_loss_pct: figure(-0.42, "paper", "pct") }), source: source("live"), caveats: [] },
+      }),
+    );
+    await page.goto("/");
+    const tile = (label: string) => page.locator(`[data-testid="tile"][data-label="${label}"]`);
+    await expect(tile("Open risk")).toHaveAttribute("data-state", "absent");
+    await expect(tile("Open risk").getByTestId("view-state-absent")).toHaveText("⊘NOT REPORTED");
+    await expect(tile("Today's P&L").getByTestId("figure-value")).toHaveText("▼−0.42%");
+    await expect(tile("Today's P&L").getByTestId("provenance-chip")).toHaveAttribute("data-provenance", "paper");
+    await expect(tile("Drawdown throttle")).toHaveAttribute("data-state", "absent");
+    await expect(tile("Drawdown throttle")).toContainText("1.10%");
+  });
+
+  test("the fleet strip shows the worker, the paper session, and what is not reported", async ({ page }) => {
+    await mockShell(page);
+    await page.goto("/");
+    await expect(page.getByTestId("fleet-worker")).toHaveAttribute("data-tone", /ok|warn|critical|unknown/);
+    await expect(page.getByTestId("health-heartbeat")).toHaveText("12s ago");
+    // The mocked report has no paper_journal check: no session, said as such.
+    await expect(page.getByTestId("fleet-paper")).toContainText("NONE");
+    await expect(page.getByTestId("fleet-news")).toHaveAttribute("data-tone", "absent");
+    await expect(page.getByTestId("fleet-news")).toContainText("NOT REPORTED");
+    await expect(page.getByTestId("fleet-model")).toContainText("NOT REPORTED");
+  });
+
+  test("axe: zero serious with the acknowledge form open", async ({ page }, testInfo) => {
+    test.skip(testInfo.project.name !== "desktop", "one audit, on the desktop project");
+    await mockShell(page);
+    await page.route(`${API}/api/command/attention`, (route: Route) =>
+      route.fulfill({ json: attentionPage([incidentItem(), attentionItem("x", "critical", "/risk")]) }),
+    );
+    await page.route(`${API}/api/trading/risk`, (route: Route) =>
+      route.fulfill({ json: { data: riskState(), source: source("live"), caveats: [] } }),
+    );
+    await page.goto("/");
+    await page.getByTestId("attention-ack-incident:inc-1").click();
+    await expect(page.getByTestId("attention-ack-reason-incident:inc-1")).toBeVisible();
+    await page.evaluate(() => document.fonts.ready);
+    const results = await new AxeBuilder({ page })
+      .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"])
+      .analyze();
+    const blocking = results.violations
+      .filter((v) => v.impact === "serious" || v.impact === "critical")
+      .map((v) => ({ id: v.id, targets: v.nodes.slice(0, 5).map((n) => n.target.join(" ")) }));
+    expect(blocking).toEqual([]);
+  });
+
+  test("at 390 px the triage rows and the strip fit without sideways scroll", async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await mockShell(page);
+    await page.route(`${API}/api/command/attention`, (route: Route) =>
+      route.fulfill({ json: attentionPage([incidentItem()]) }),
+    );
+    await page.goto("/");
+    await expect(page.getByTestId("attention-ack-incident:inc-1")).toBeVisible();
+    await page.getByTestId("attention-ack-incident:inc-1").click();
+    await expect(page.getByTestId("attention-ack-reason-incident:inc-1")).toBeInViewport();
+    const overflow = await page.evaluate(
+      () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+    );
+    expect(overflow).toBeLessThanOrEqual(1);
   });
 });

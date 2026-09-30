@@ -773,3 +773,84 @@ export async function mockChart(
   });
   return requests;
 }
+
+// --------------------------------------------------- risk & exposure v2
+
+/** One ExposureRow (routers/trading.py), with the API's own utilisation. */
+export function exposureRow(
+  key: string,
+  exposure: number | null,
+  limit: number,
+  utilisation: number | null,
+  options: { provenance?: string; breached?: boolean } = {},
+) {
+  const provenance = options.provenance ?? "paper";
+  return {
+    key,
+    label: key.slice(key.indexOf(":") + 1),
+    exposure_pct: figure(exposure, provenance, "pct"),
+    limit_pct: figure(limit, provenance, "pct"),
+    utilisation_pct: figure(utilisation, provenance, "pct"),
+    breached: options.breached ?? false,
+  };
+}
+
+/** GET /api/trading/exposure: instrument, strategy and currency buckets, in the API's order. */
+export function exposurePage(items?: Record<string, unknown>[]) {
+  const list = items ?? [
+    exposureRow("instrument:EURUSD", 7.5, 10, 75),
+    exposureRow("instrument:USDJPY", 2.4, 10, 24),
+    exposureRow("strategy:ichimoku_kumo_trend", 9.9, 15, 66),
+    exposureRow("currency:EUR", 7.5, 15, 50),
+    exposureRow("currency:JPY", 2.4, 15, 16),
+    exposureRow("currency:USD", 14.1, 15, 94),
+  ];
+  return {
+    items: list,
+    total: list.length,
+    offset: 0,
+    limit: list.length,
+    source: source("live", "Notional exposure against limit set limits_v1_paper."),
+    caveats: [],
+  };
+}
+
+/** GET /api/trading/positions (PositionRowView rows). */
+export function positionsPage() {
+  const make = (id: string, instrument: string, pnl: number) => ({
+    position_id: id,
+    strategy_id: "ichimoku_kumo_trend",
+    instrument,
+    direction: "long",
+    provenance: "paper",
+    entry_time: "2026-09-19T08:00:00Z",
+    size: figure(0.5, "paper", "lots"),
+    entry_price: figure(1.1, "paper"),
+    mark_price: figure(1.102, "paper", "", { estimated: true }),
+    stop_loss: figure(1.095, "paper"),
+    take_profit: figure(1.12, "paper"),
+    unrealised_pnl: figure(pnl, "paper", "GBP"),
+    distance_to_stop_pct: figure(0.64, "paper", "pct"),
+  });
+  const items = [make("pos_0001", "EURUSD", 42.5), make("pos_0002", "USDJPY", -12.25)];
+  return { items, total: items.length, offset: 0, limit: 100, source: source("live"), caveats: [] };
+}
+
+/** Mock the shell plus the Risk & Exposure reads. */
+export async function mockRisk(
+  page: Page,
+  options: { risk?: Record<string, unknown>; exposure?: Record<string, unknown>[] } = {},
+) {
+  await mockShell(page);
+  await page.route(`${API}/api/trading/risk`, (route: Route) =>
+    route.fulfill({
+      json: { data: riskState(options.risk), source: source("live", "Limit set limits_v1_paper."), caveats: [] },
+    }),
+  );
+  await page.route(`${API}/api/trading/exposure`, (route: Route) =>
+    route.fulfill({ json: exposurePage(options.exposure) }),
+  );
+  await page.route(`${API}/api/trading/positions`, (route: Route) =>
+    route.fulfill({ json: positionsPage() }),
+  );
+}
