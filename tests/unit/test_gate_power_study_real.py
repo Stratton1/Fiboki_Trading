@@ -62,14 +62,20 @@ def _strip_wall(obj: Any) -> Any:
 # ------------------------------------------------------------ pre-registration
 
 
-def test_the_search_size_is_filled_from_k5_and_the_filing_is_left_to_the_operator() -> None:
+def test_the_search_size_is_filled_from_k5_and_the_filing_decisions_follow_it() -> None:
     doc = json.loads(PREREG.read_text(encoding="utf-8"))
     size = doc["search_size"]
     assert size["campaign_candidates"] == 106
     assert size["grid_points_per_candidate"] == 8
     assert "K5" in size["filing_note"] and "operator" in size["filing_note"]
-    assert doc["decision_date"].startswith("TO_BE_SET_AT_FILING")
-    assert doc["filed_at"] is None and doc["filed_commit"] is None
+    # Filed: the external trial count per candidate is K5's true count less the
+    # candidate's own grid, exactly as the search_size rule prescribes.
+    fd = doc["filing_decisions"]
+    k5_true_trials = 20_904  # research/reports/RESEARCH_LEDGER.md, K5 result
+    assert fd["external_trial_count_per_candidate"] == k5_true_trials - size["grid_points_per_candidate"]
+    assert "1 - (1 - p0)^106" in fd["size_basis"]
+    assert fd["process_order"].startswith("block_bootstrap_real_returns first")
+    assert doc["filed_at"] is not None and doc["filed_commit"] is not None
     status = {p["name"]: p["status"] for p in doc["data_generating_processes"]}
     for name in ("block_bootstrap_real_returns", "perturbed_price_paths"):
         assert status[name] == "implemented in scripts/gate_power_study.py (2026-09-30)"

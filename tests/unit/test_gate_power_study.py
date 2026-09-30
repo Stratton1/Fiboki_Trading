@@ -33,7 +33,9 @@ def _script():
     return module
 
 
-def test_the_preregistration_is_complete_and_unfiled() -> None:
+def test_the_preregistration_is_complete_and_filed() -> None:
+    """Filed 2026-09-30: the fields the draft left to the operator are now set,
+    and once set they are frozen (a change here is a re-filing, not an edit)."""
     doc = json.loads(PREREG.read_text(encoding="utf-8"))
     assert doc["schema"] == "fiboki-preregistration:1"
     assert doc["id"] == "gate_calibration_e1"
@@ -41,8 +43,36 @@ def test_the_preregistration_is_complete_and_unfiled() -> None:
     assert doc["targets"] == {"size_max": 0.05, "power_at_sr_0_08_min": 0.5}
     assert {"H0_size", "H1_power"} <= set(doc["hypotheses"])
     assert "decision_rule" in doc and "v2.1.0-calibrated" in doc["decision_rule"]
-    assert doc["filed_at"] is None and doc["filed_commit"] is None
+    assert doc["status"].startswith("FILED 2026-09-30")
+    assert doc["filed_at"] == "2026-09-30T20:40:00Z"
+    assert doc["filed_commit"] == "efb5fce"
+    assert doc["decision_date"] == "2026-10-02"  # after filing; before any result
+    assert doc["decision_date"] > doc["filed_at"][:10]
     assert doc["code"]["gate_set_version_under_test"] == GATE_SET_V2.version
+
+
+def test_the_filed_commit_is_in_this_repository_history() -> None:
+    """filed_commit must name a commit that exists, and that commit must already
+    carry the FILED status (the filing and its record are the same content)."""
+    import subprocess
+
+    doc = json.loads(PREREG.read_text(encoding="utf-8"))
+    sha = doc["filed_commit"]
+    if subprocess.run(["git", "-C", str(ROOT), "rev-parse", "--is-inside-work-tree"],
+                      capture_output=True).returncode != 0:
+        pytest.skip("not a git checkout")
+    if subprocess.run(["git", "-C", str(ROOT), "cat-file", "-e", f"{sha}^{{commit}}"],
+                      capture_output=True).returncode != 0:
+        pytest.skip(f"commit {sha} not present in this checkout (shallow or unfetched)")
+    shown = subprocess.run(
+        ["git", "-C", str(ROOT), "show", f"{sha}:research/preregistration/gate_calibration_e1.json"],
+        capture_output=True, text=True, check=True,
+    ).stdout
+    at_filing = json.loads(shown)
+    assert at_filing["status"].startswith("FILED 2026-09-30")
+    assert at_filing["filed_at"] == doc["filed_at"]
+    assert at_filing["decision_date"] == doc["decision_date"]
+    assert at_filing["filing_decisions"] == doc["filing_decisions"]
 
 
 def test_no_gate_threshold_moved_while_e1_is_pending() -> None:
