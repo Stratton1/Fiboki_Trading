@@ -116,11 +116,14 @@ reached deflation. On twenty years of H4 bars, a rule with a regime gate and an 
 trades every 100 to 300 bars; 400 trades needs one every 75 bars. So the gate demands a trading
 frequency at which spreads dominate, and rejects everything slower before any statistical
 test runs. The E-1 calibration study exists precisely to measure whether the gate set has
-acceptable false-discovery rate and power; its pilot on starter data died entirely at
-`min_trades` too. Until E-1 runs on the real bars, the honest statement is: the platform cannot
-yet tell whether these families have an edge; it can only say they do not clear an
-uncalibrated bar. No threshold is moved by looking at a real strategy's score (pre-registration
-rule 5).
+acceptable false-discovery rate and power. Its first real-data process ran on 2026-09-30
+(`research/reports/e1/`): with a true per-trade Sharpe of 0.08 injected into a candidate, the
+gate set promoted it 0 times in 400; at 0.12, four times. Size was 0 in 400. So the honest
+statement is now sharper: the ladder as configured cannot see an edge of the size this platform
+could plausibly find, because `min_trades` ends 60% of ladders before any edge matters and the
+deflation charged 20,896 trials rejects nearly all of the rest. The decision waits for the second
+process (the filing's rule), and no threshold is moved by looking at a real strategy's score
+(pre-registration rule 5).
 
 ## 8. The workstation
 
@@ -148,5 +151,5 @@ the Keychain. `scripts/oanda-backfill.sh` refreshes the data store.
 
 Live execution (by design). Agent Desk screen. Phone kill-switch view. Chart replay, drawings,
 calendar markers on the chart. Per-family holdout budgets. Measured spreads (needs four weeks
-of the quote recorder). Pre-2024 calendar. E-1 has not run on real bars. Nothing has traded
+of the quote recorder). Pre-2024 calendar. E-1's second process (`perturbed_price_paths`) has not run. Nothing has traded
 forward yet. No strategy has an edge demonstrated by this pipeline.
