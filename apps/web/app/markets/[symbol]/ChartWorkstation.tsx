@@ -163,19 +163,11 @@ function Workstation({
         <div className="cw__meta">
           <Freshness bars={bars} overlays={overlays} />
           {barsEnv ? (
-            <span
-              className="cw__chip num"
-              data-testid="dataset-version"
-              data-version={barsEnv.data.dataset_version_id}
-              title={`Bar dataset version ${barsEnv.data.dataset_version_id}`}
-            >
-              <Layers size={12} aria-hidden="true" />
-              dataset {barsEnv.data.dataset_version_id ? barsEnv.data.dataset_version_id.slice(0, 12) : "not reported"}
-            </span>
+            <DatasetChip version={barsEnv.data.dataset_version_id} />
           ) : null}
           {datasetMismatch && overlayEnv ? (
             <span className="badge badge--degraded" data-testid="dataset-mismatch" role="status">
-              overlays from dataset {overlayEnv.data.bars_dataset_version_id?.slice(0, 12)}
+              overlays from dataset {overlayEnv.data.bars_dataset_version_id}
             </span>
           ) : null}
           {barsEnv ? (
@@ -631,5 +623,48 @@ function ChartArea({
         {model.hasVolume ? ` (with ${bars.data.volume_kind === "tick_volume" ? "tick volume" : "volume"})` : ""}
       </p>
     </div>
+  );
+}
+
+/**
+ * A dataset version id cut in the MIDDLE, so the part that names the market
+ * and timeframe (`dsv_eurusd_h1_`) and the distinguishing tail both survive:
+ * `dsv_eurusd_h1_0007abcdef` → `dsv_eurusd_h1_…abcdef`. Cutting the end
+ * (inventory F-8) dropped the timeframe.
+ */
+export function middleTruncate(id: string, head = 14, tail = 6): string {
+  return id.length <= head + tail + 1 ? id : `${id.slice(0, head)}…${id.slice(-tail)}`;
+}
+
+/** The bar dataset chip: the id cut in the middle, the full id on hover and on focus. */
+function DatasetChip({ version }: { version: string | null }) {
+  if (!version) {
+    return (
+      <span className="cw__chip num" data-testid="dataset-version" data-version="">
+        <Layers size={12} aria-hidden="true" />
+        dataset not reported
+      </span>
+    );
+  }
+  const short = middleTruncate(version);
+  return (
+    <span
+      className="cw__chip cw__chip--id num"
+      data-testid="dataset-version"
+      data-version={version}
+      data-truncated={short !== version}
+      // Focusable so a keyboard user can reveal the full id, as a pointer can.
+      tabIndex={0}
+      title={`Bar dataset version ${version}`}
+    >
+      <Layers size={12} aria-hidden="true" />
+      dataset{" "}
+      <span className="cw__id-short" aria-hidden="true" data-testid="dataset-version-short">
+        {short}
+      </span>
+      <span className="cw__id-full" data-testid="dataset-version-full">
+        {version}
+      </span>
+    </span>
   );
 }

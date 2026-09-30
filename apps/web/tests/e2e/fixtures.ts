@@ -473,6 +473,73 @@ export function incidentsPage(items?: Record<string, unknown>[]) {
   };
 }
 
+/** GET /api/system/incidents/{id}: one incident in an Envelope, with a timeline. */
+export function incidentEnvelope(overrides: Record<string, unknown> = {}) {
+  return {
+    data: incident({
+      timeline: [
+        {
+          at: "2026-09-19T11:55:00Z",
+          kind: "occurrence",
+          severity: "warning",
+          actor: "alert_log",
+          text: "worker.heartbeat_late: no heartbeat for 95 s.",
+          correlation_id: "cid-occ-1",
+        },
+        {
+          at: "2026-09-19T11:58:00Z",
+          kind: "occurrence",
+          severity: "warning",
+          actor: "alert_log",
+          text: "worker.heartbeat_late: no heartbeat for 180 s.",
+          correlation_id: "cid-occ-2",
+        },
+      ],
+      ...overrides,
+    }),
+    source: source("live", "Incident read model."),
+    caveats: [],
+  };
+}
+
+/**
+ * One kill-switch journal event (GET /api/system/kill-switch/history rows),
+ * `hoursAgo` before the test's own clock, so it always lands in the 30-day
+ * window the timeline draws.
+ */
+export function killSwitchEvent(
+  hoursAgo: number,
+  action: "activate" | "deactivate",
+  mode: "pause" | "flatten" | null,
+  operator: string,
+  reason: string,
+) {
+  return {
+    action,
+    mode,
+    operator,
+    reason,
+    at: new Date(Date.now() - hoursAgo * 3_600_000).toISOString(),
+    positions_open: 2,
+  };
+}
+
+/** GET /api/system/kill-switch/history: the journal, newest first (as the route returns it). */
+export function killSwitchHistory(items?: Record<string, unknown>[]) {
+  const list = items ?? [
+    killSwitchEvent(30, "deactivate", null, "tom", "spreads normal again after the release"),
+    killSwitchEvent(52, "activate", "pause", "joe", "NFP in ten minutes; pausing new risk"),
+  ];
+  return {
+    items: list,
+    total: list.length,
+    offset: 0,
+    limit: 500,
+    source: source("live", "Append-only kill-switch journal."),
+    caveats: [],
+  };
+}
+
 /**
  * The shell's own reads (health for the status bar, the operator, the
  * command screen's queue and incidents) on top of mockApi, so a test sees a
@@ -493,6 +560,14 @@ export async function mockShell(
   );
   await page.route(`${API}/api/system/incidents`, (route: Route) =>
     route.fulfill({ json: incidentsPage() }),
+  );
+  // One incident (its page) and the kill-switch journal (the timeline on
+  // Command and Risk). `*` stops at a slash, so .../inc-1/ack is not caught.
+  await page.route(`${API}/api/system/incidents/*`, (route: Route) =>
+    route.request().method() === "GET" ? route.fulfill({ json: incidentEnvelope() }) : route.fallback(),
+  );
+  await page.route(`${API}/api/system/kill-switch/history*`, (route: Route) =>
+    route.fulfill({ json: killSwitchHistory() }),
   );
   const op = options.operator;
   await page.route(`${API}/api/auth/me`, (route: Route) => {

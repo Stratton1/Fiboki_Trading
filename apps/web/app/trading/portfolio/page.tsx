@@ -13,6 +13,7 @@ import {
   TableWrap,
   Tile,
 } from "@/components/primitives";
+import { StopMeter, StopMeterNote } from "@/components/risk/StopMeter";
 import { formatTimestamp } from "@/lib/format";
 import type { Envelope, Page, PortfolioView, PositionRow } from "@/lib/types";
 
@@ -71,13 +72,14 @@ export default function PortfolioPage() {
                       <th>Entry</th>
                       <th>Mark</th>
                       <th>Stop</th>
+                      <th>To stop</th>
                       <th>Unrealised</th>
                       <th>Opened</th>
                     </tr>
                   </thead>
                   <tbody>
                     {page.items.map((row) => (
-                      <tr key={row.position_id}>
+                      <tr key={row.position_id} data-testid="portfolio-position-row" data-position-id={row.position_id}>
                         <td>
                           <ProvenanceChip provenance={row.provenance} />
                         </td>
@@ -96,6 +98,10 @@ export default function PortfolioPage() {
                         <td>
                           <FigureValue figure={row.stop_loss} showChip={false} />
                         </td>
+                        <td className="stopcell">
+                          <FigureValue figure={row.distance_to_stop_pct} showChip={false} />
+                          <StopMeter row={row} />
+                        </td>
                         <td>
                           <FigureValue figure={row.unrealised_pnl} showChip={false} colourSign />
                         </td>
@@ -105,6 +111,7 @@ export default function PortfolioPage() {
                   </tbody>
                 </table>
               </TableWrap>
+              <StopMeterNote />
             </>
           )}
         </AsyncBoundary>

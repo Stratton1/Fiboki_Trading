@@ -1,14 +1,8 @@
 "use client";
 
-import {
-  useEffect,
-  useId,
-  useRef,
-  useState,
-  type KeyboardEvent,
-  type ReactNode,
-} from "react";
+import { useId, useState, type KeyboardEvent, type ReactNode } from "react";
 import type { Provenance, Series } from "@/lib/types";
+import { useWidth } from "@/lib/use-width";
 import { PROVENANCE_LABEL, formatNumber, formatTimestamp, parseUtc } from "@/lib/format";
 import { singleProvenance, type ProvenanceLabel } from "@/lib/provenance";
 import { ProvenanceLabelChip } from "./ProvenanceChip";
@@ -43,24 +37,6 @@ import { ProvenanceLabelChip } from "./ProvenanceChip";
 
 const HEIGHT = 240;
 const PAD = { l: 60, r: 14, t: 12, b: 30 };
-
-function useWidth(fallback = 720) {
-  const ref = useRef<HTMLDivElement>(null);
-  const [width, setWidth] = useState(fallback);
-  useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    const measure = () => {
-      const w = Math.round(el.getBoundingClientRect().width);
-      if (w > 0) setWidth(Math.max(240, w));
-    };
-    measure();
-    const observer = new ResizeObserver(measure);
-    observer.observe(el);
-    return () => observer.disconnect();
-  }, []);
-  return [ref, width] as const;
-}
 
 function inkOf(label: ProvenanceLabel): Provenance | "neutral" {
   return label.kind === "single" ? label.provenance : "neutral";
@@ -638,6 +614,17 @@ export function Heatmap({
   );
 }
 
+/**
+ * Which side of zero a histogram bin lies on. P&L colours mean P&L, both
+ * ways (inventory F-11): a bin wholly above zero is profit, wholly below is
+ * loss, and one that spans zero is neither.
+ */
+function binSign(from: number, step: number): "up" | "down" | "zero" {
+  if (from + step <= 0) return "down";
+  if (from >= 0) return "up";
+  return "zero";
+}
+
 /** R-multiple and P&L distributions. */
 export function Distribution({
   title,
@@ -691,9 +678,11 @@ export function Distribution({
       <tbody>
         {counts.map((count, i) => {
           const from = min + i * step;
+          const sign = binSign(from, step);
           return (
-            <tr key={i}>
+            <tr key={i} data-sign={sign}>
               <td>
+                {sign === "up" ? "▲ " : sign === "down" ? "▼ " : ""}
                 {formatNumber(from, unit)} to {formatNumber(from + step, unit)}
               </td>
               <td className="num">{count}</td>
@@ -709,7 +698,7 @@ export function Distribution({
       title={title}
       provenance={provenance}
       unit={unit}
-      note={`${values.length} observations · ${formatNumber(min, unit)} to ${formatNumber(max, unit)} · bins below zero are drawn in the loss colour`}
+      note={`${values.length} observations · ${formatNumber(min, unit)} to ${formatNumber(max, unit)} · ▲ bins wholly above zero in the profit colour, ▼ bins wholly below zero in the loss colour, a bin spanning zero in the source's ink`}
       data={table}
     >
       <div ref={box} className="chart__plot-static">
@@ -717,7 +706,7 @@ export function Distribution({
           {counts.map((count, i) => {
             const h = (count / peak) * innerH;
             const binStart = min + i * step;
-            const below = binStart + step <= 0;
+            const sign = binSign(binStart, step);
             return (
               <rect
                 key={i}
@@ -725,8 +714,16 @@ export function Distribution({
                 y={PAD.t + innerH - h}
                 width={Math.max(1, barW - 1)}
                 height={h}
-                className={below ? "chart__bar chart__bar--down" : "chart__bar chart-ink"}
-                data-ink={below ? undefined : ink}
+                className={
+                  sign === "down"
+                    ? "chart__bar chart__bar--down"
+                    : sign === "up"
+                      ? "chart__bar chart__bar--up"
+                      : "chart__bar chart-ink"
+                }
+                data-sign={sign}
+                data-ink={sign === "zero" ? ink : undefined}
+                data-testid="distribution-bin"
               />
             );
           })}

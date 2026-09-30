@@ -20,8 +20,10 @@ import { ConfirmDialog, type ConfirmChoice } from "./ui/ConfirmDialog";
  *    included. The emergency brake is not behind a typing test.
  *  - FLATTEN closes every open position at market: the operator types
  *    FLATTEN, in every mode.
- *  - Disarm re-enables risk: the typed RE-ARM phrase and server-computed
- *    consequences.
+ *  - Lifting the halt (disarm) re-enables risk: the typed LIFT HALT phrase and
+ *    server-computed consequences. It was worded "re-arm trading" with the
+ *    phrase RE-ARM, which on a card where "arm" means HALT read as its
+ *    opposite (inventory F-13); every label now says what the act does.
  *
  * No optimistic UI: after the POST the dialog stays busy until the platform
  * echoes the change (lib/echo.ts). On success the execution-mode read is
@@ -31,7 +33,7 @@ import { ConfirmDialog, type ConfirmChoice } from "./ui/ConfirmDialog";
 
 export const KILL_SWITCH_PATH = "/api/system/kill-switch";
 export const FLATTEN_PHRASE = "FLATTEN";
-export const REARM_PHRASE = "RE-ARM";
+export const LIFT_HALT_PHRASE = "LIFT HALT";
 
 type Expectation = { label: string; holds: (view: KillSwitchView) => boolean };
 export type KillSwitchDialog = "arm" | "disarm" | null;
@@ -164,11 +166,11 @@ export function useKillSwitchControl(
       : [];
   const disarmNotice =
     disarmPreflight.status === "loading"
-      ? "Loading the consequences of re-arming from the platform."
+      ? "Loading the consequences of lifting the halt from the platform."
       : null;
   const disarmError =
     disarmPreflight.status === "error"
-      ? `Could not load what re-arming would do: ${disarmPreflight.error.message} (${disarmPreflight.error.code}). Nothing can be confirmed without it.`
+      ? `Could not load what lifting the halt would do: ${disarmPreflight.error.message} (${disarmPreflight.error.code}). Nothing can be confirmed without it.`
       : null;
   const armNotice =
     state.status === "loading"
@@ -199,10 +201,10 @@ export function useKillSwitchControl(
       />
       <ConfirmDialog
         open={dialog === "disarm"}
-        title="Re-arm trading"
+        title="Lift the halt and resume trading"
         executionMode={executionMode}
-        confirmPhrase={REARM_PHRASE}
-        confirmLabel="Re-arm trading"
+        confirmPhrase={LIFT_HALT_PHRASE}
+        confirmLabel="Lift the halt"
         busy={busy}
         errorMessage={error ?? disarmError}
         notice={sentNotice ?? disarmNotice}

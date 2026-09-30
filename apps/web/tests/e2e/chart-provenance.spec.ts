@@ -165,3 +165,46 @@ test.describe("chart provenance is derived from the data", () => {
     await expect(chip).not.toHaveAttribute("data-provenance", "backtest");
   });
 });
+
+test.describe("R-multiple bins use the P&L colours both ways (inventory F-11)", () => {
+  test("profit bins take the profit token with ▲, loss bins the loss token with ▼", async ({ page }) => {
+    await mockApi(page);
+    await page.goto("/trading/execution");
+    const bins = page.getByTestId("distribution-bin");
+    await expect(bins.first()).toBeAttached();
+    const up = page.locator('[data-testid="distribution-bin"][data-sign="up"]');
+    const down = page.locator('[data-testid="distribution-bin"][data-sign="down"]');
+    expect(await up.count()).toBeGreaterThan(0);
+    expect(await down.count()).toBeGreaterThan(0);
+    await expect(up.first()).toHaveClass(/chart__bar--up/);
+    await expect(down.first()).toHaveClass(/chart__bar--down/);
+    const colours = await page.evaluate(() => {
+      const probe = (token: string) => {
+        const el = document.createElement("span");
+        el.style.color = `var(${token})`;
+        document.body.appendChild(el);
+        const value = getComputedStyle(el).color;
+        el.remove();
+        return value;
+      };
+      const fill = (selector: string) => {
+        const el = document.querySelector(selector);
+        return el ? getComputedStyle(el).fill : null;
+      };
+      return {
+        up: fill('[data-testid="distribution-bin"][data-sign="up"]'),
+        down: fill('[data-testid="distribution-bin"][data-sign="down"]'),
+        pnlUp: probe("--pnl-up"),
+        pnlDown: probe("--pnl-down"),
+      };
+    });
+    expect(colours.up).toBe(colours.pnlUp);
+    expect(colours.down).toBe(colours.pnlDown);
+    expect(colours.up).not.toBe(colours.down);
+    // The table says the same without colour.
+    const chart = page.getByTestId("chart");
+    await chart.getByTestId("chart-data").locator("summary").click();
+    await expect(chart.locator('tr[data-sign="up"]').first()).toContainText("▲");
+    await expect(chart.locator('tr[data-sign="down"]').first()).toContainText("▼");
+  });
+});

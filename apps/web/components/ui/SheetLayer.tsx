@@ -18,13 +18,19 @@ export default function SheetLayer({
   title,
   children,
   testId = "sheet",
+  closeLabel,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   title: ReactNode;
   children: ReactNode;
   testId?: string;
+  /** What the close button announces; defaults to "Close <title>" for a text title. */
+  closeLabel?: string;
 }) {
+  // A close button must say WHAT it closes (inventory F-5): "Close inspector"
+  // on the positions drawer told a screen-reader user nothing.
+  const label = closeLabel ?? (typeof title === "string" && title ? `Close ${title}` : "Close panel");
   return (
     <Base.Root open={open} onOpenChange={(next) => onOpenChange(next)}>
       <Base.Portal>
@@ -40,7 +46,8 @@ export default function SheetLayer({
           <div className="flex items-center gap-2 border-b border-line px-4 py-3">
             <Base.Title className="m-0 flex-1 text-md font-semibold">{title}</Base.Title>
             <Base.Close
-              aria-label="Close inspector"
+              aria-label={label}
+              data-testid={`${testId}-close`}
               className="inline-flex h-7 w-7 items-center justify-center rounded-sm text-fg-muted hover:bg-overlay hover:text-fg"
             >
               <X size={16} aria-hidden="true" />

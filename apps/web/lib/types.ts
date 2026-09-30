@@ -240,7 +240,7 @@ export interface PromotePreflightView {
   consequences: Record<string, string[]>;
 }
 
-/** GET /api/trading/preflight/kill-switch-disarm, for the re-arm dialog. */
+/** GET /api/trading/preflight/kill-switch-disarm, for the lift-the-halt dialog. */
 export type KillSwitchDisarmPreflightView = Schemas["KillSwitchDisarmPreflightView"];
 
 export interface PortfolioView {
@@ -342,6 +342,76 @@ export interface ValidationRow {
   provenance_labels: Record<string, string>;
   available: boolean;
   detail: string;
+}
+
+/**
+ * GET /api/trading/lifecycle/strategies/{content_hash} (routers/lifecycle.py
+ * StrategyStatusView): where one strategy stands on the lifecycle ladder.
+ * `health` is 1.0 by construction when nothing has been evaluated; read it
+ * only beside `ever_evaluated`.
+ */
+export interface LifecycleStatusView {
+  strategy_id: string;
+  strategy_content_hash: string;
+  lifecycle: string;
+  band: string;
+  degraded: boolean;
+  ever_evaluated: boolean;
+  entered_state_at: string;
+  last_evaluated_at: string | null;
+  latched_halts: string[];
+  missing_rule_registrations: string[];
+  health: Figure;
+  last_score: Figure;
+  last_confidence: Figure;
+  n_transitions: Figure;
+}
+
+/** GET /api/trading/lifecycle/strategies/{hash}/evaluation: the latest monitoring tick. */
+export interface LifecycleRuleView {
+  kind: string;
+  fired: boolean;
+  registration_id: string;
+  statistic: Figure;
+  threshold: Figure;
+  detail: string;
+}
+
+export interface LifecycleDivergenceView {
+  dimension: string;
+  diverged: boolean;
+  expected: Figure;
+  observed: Figure;
+}
+
+export interface LifecycleEvaluationView {
+  strategy_content_hash: string;
+  at: string;
+  state_before: string;
+  state_after: string;
+  demoted: boolean;
+  summary: string;
+  score: Figure;
+  confidence: Figure;
+  rule_evaluations: LifecycleRuleView[];
+  divergence: LifecycleDivergenceView[];
+  latched_halts: string[];
+  notes: string[];
+}
+
+/**
+ * GET /api/system/kill-switch/history: one kill-switch journal event (the
+ * route returns Page[dict], so this has no generated schema). `action` is the
+ * journal's `activate` or `deactivate`; `mode` is `pause` or `flatten` on an
+ * activation.
+ */
+export interface KillSwitchEvent {
+  action: string;
+  mode: string | null;
+  operator: string;
+  reason: string;
+  at: string;
+  positions_open: number | null;
 }
 
 export interface ParameterRow {

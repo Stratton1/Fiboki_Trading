@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { ApiError, apiFetch } from "@/lib/api";
 import { capability } from "@/lib/auth";
+import { PHONE_QUERY, useMediaQuery } from "@/lib/media";
 import { useApi } from "@/lib/query";
 import { AsyncBoundary } from "@/components/AsyncBoundary";
 import { useExecutionMode, useOperator } from "@/components/shell/platform";
@@ -16,11 +17,14 @@ import { FigureValue } from "@/components/FigureValue";
 import { CaveatPopover } from "@/components/CaveatPopover";
 import { DataGrid, preloadGrid, type GridColumn } from "@/components/grid";
 import { CaveatList, PageHead, SourceBadge } from "@/components/primitives";
+import { RungMeter } from "@/components/research/RungMeter";
 import type {
   CandidateRow,
   Envelope,
+  Figure,
   Page,
   PromotePreflightView,
+  ValidationRow,
 } from "@/lib/types";
 
 /**
@@ -42,11 +46,23 @@ import type {
  * focusable "why" popover, not a `title` (report G W-15), and Promote is
  * `aria-disabled` rather than `disabled`, so it stays focusable and names the
  * reason it cannot be pressed.
+ *
+ * The Ladder column is each candidate's rung meter, joined by strategy id from
+ * GET /api/research/validation (the report the Validation page lists); a
+ * candidate with no report row says so. Below 640 px the grid becomes one card
+ * per candidate, so every figure and Promote are on screen (inventory F-10).
  */
 const CANDIDATES_PATH = "/api/trading/candidates";
+const VALIDATION_PATH = "/api/research/validation";
 
 export default function CandidatesPage() {
   const state = useApi<Page<CandidateRow>>(CANDIDATES_PATH);
+  const validation = useApi<Page<ValidationRow>>(VALIDATION_PATH);
+  const phone = useMediaQuery(PHONE_QUERY);
+  const reports =
+    validation.status === "success"
+      ? new Map(validation.data.items.map((row) => [row.strategy_id, row]))
+      : null;
   useEffect(() => {
     void preloadGrid();
   }, []);
@@ -122,6 +138,25 @@ export default function CandidatesPage() {
           ? `Not eligible: ${row.blocking_reasons.join(" ")}`
           : null;
 
+  const promoteButton = (row: CandidateRow) => {
+    const reason = blockedReason(row);
+    return (
+      <Button
+        size="sm"
+        data-testid={`promote-${row.strategy_id}`}
+        aria-disabled={reason !== null}
+        aria-description={reason ?? `Requires the ${row.next_action_requires_role} role.`}
+        onClick={() => {
+          if (reason !== null) return;
+          setError(null);
+          setTarget(row);
+        }}
+      >
+        Promote
+      </Button>
+    );
+  };
+
   const columns: GridColumn<CandidateRow>[] = [
     {
       id: "strategy",
@@ -173,30 +208,24 @@ export default function CandidatesPage() {
       width: 120,
     },
     {
+      id: "ladder",
+      header: "Ladder",
+      filterable: false,
+      // A join from another read, not a figure of this payload: left out of
+      // the CSV rather than exported without its own provenance columns.
+      csv: false,
+      value: (row) => reports?.get(row.strategy_id)?.rungs_passed.value ?? null,
+      cell: (row) => <LadderCell row={row} reports={reports} state={validation.status} />,
+      width: 250,
+    },
+    {
       id: "action",
       header: "Action",
       sortable: false,
       filterable: false,
       csv: false,
       value: () => null,
-      cell: (row) => {
-        const reason = blockedReason(row);
-        return (
-          <Button
-            size="sm"
-            data-testid={`promote-${row.strategy_id}`}
-            aria-disabled={reason !== null}
-            aria-description={reason ?? `Requires the ${row.next_action_requires_role} role.`}
-            onClick={() => {
-              if (reason !== null) return;
-              setError(null);
-              setTarget(row);
-            }}
-          >
-            Promote
-          </Button>
-        );
-      },
+      cell: (row) => promoteButton(row),
       width: 104,
     },
   ];
@@ -230,15 +259,59 @@ export default function CandidatesPage() {
                 disconnected, so nothing can be promoted until the platform answers.
               </p>
             ) : null}
-            <DataGrid<CandidateRow>
-              id="candidates"
-              label="candidates"
-              rows={page.items}
-              columns={columns}
-              rowKey={(row) => row.strategy_id}
-              source={{ source: page.source, path: CANDIDATES_PATH }}
-              rowTestId="candidate-row"
-            />
+            {phone ? (
+              <ol className="cand-cards" data-testid="candidate-cards" aria-label="Candidates">
+                {page.items.map((row) => (
+                  <li key={row.strategy_id} className="cand-card" data-testid="candidate-card" data-row-id={row.strategy_id}>
+                    <div className="cand-card__head">
+                      <span className="grid__stack">
+                        <strong>{row.name}</strong>
+                        <span className="mono muted">{row.strategy_id}</span>
+                      </span>
+                      <span className="row gap-1">
+                        <span
+                          className={`badge badge--${row.eligible_for_ranking ? "ok" : "degraded"}`}
+                          data-testid="candidate-eligible"
+                        >
+                          {row.eligible_for_ranking ? "ELIGIBLE" : "NOT ELIGIBLE"}
+                        </span>
+                        <CaveatPopover
+                          reasons={row.blocking_reasons}
+                          title={`Why ${row.name} is not eligible`}
+                          label="why"
+                          accessibleName={`Why ${row.name} is not eligible for ranking`}
+                          testId={`candidate-why-${row.strategy_id}`}
+                        />
+                      </span>
+                    </div>
+                    <dl className="cand-card__figures">
+                      {CARD_FIGURES.map(({ label, figure, signed }) => (
+                        <div key={label} data-testid="candidate-card-figure" data-label={label}>
+                          <dt>{label}</dt>
+                          <dd>
+                            <FigureValue figure={figure(row)} colourSign={signed} />
+                          </dd>
+                        </div>
+                      ))}
+                    </dl>
+                    <div className="cand-card__ladder">
+                      <LadderCell row={row} reports={reports} state={validation.status} />
+                    </div>
+                    <div className="cand-card__action">{promoteButton(row)}</div>
+                  </li>
+                ))}
+              </ol>
+            ) : (
+              <DataGrid<CandidateRow>
+                id="candidates"
+                label="candidates"
+                rows={page.items}
+                columns={columns}
+                rowKey={(row) => row.strategy_id}
+                source={{ source: page.source, path: CANDIDATES_PATH }}
+                rowTestId="candidate-row"
+              />
+            )}
 
             {page.items.some((row) => row.blocking_reasons.length > 0) ? (
               <div className="card">
@@ -273,4 +346,42 @@ export default function CandidatesPage() {
       />
     </>
   );
+}
+
+/** The figures a phone card shows, in the grid's column order. */
+const CARD_FIGURES: { label: string; figure: (row: CandidateRow) => Figure; signed: boolean }[] = [
+  { label: "Trades", figure: (row) => row.trades, signed: false },
+  { label: "Win rate", figure: (row) => row.win_rate, signed: false },
+  { label: "Expectancy", figure: (row) => row.expectancy_r, signed: true },
+  { label: "Net P&L", figure: (row) => row.net_pnl, signed: true },
+  { label: "Sharpe", figure: (row) => row.sharpe, signed: false },
+  { label: "Max DD", figure: (row) => row.max_drawdown_pct, signed: false },
+];
+
+/** A candidate's rung meter, or why there is none. */
+function LadderCell({
+  row,
+  reports,
+  state,
+}: {
+  row: CandidateRow;
+  reports: Map<string, ValidationRow> | null;
+  state: "loading" | "success" | "error";
+}) {
+  if (reports === null) {
+    return (
+      <span className="muted" data-testid="candidate-ladder-unavailable">
+        {state === "loading" ? "Reading validation…" : "Validation reports could not be read."}
+      </span>
+    );
+  }
+  const report = reports.get(row.strategy_id);
+  if (!report) {
+    return (
+      <span className="muted" data-testid="candidate-ladder-missing">
+        No validation row for this strategy.
+      </span>
+    );
+  }
+  return <RungMeter row={report} compact />;
 }

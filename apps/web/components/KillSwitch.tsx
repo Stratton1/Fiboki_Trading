@@ -19,8 +19,8 @@ import { Button } from "./ui/Button";
  *  - it goes through the one shared ConfirmDialog, with asymmetric friction
  *    (components/KillSwitchControl.tsx): PAUSE needs a reason only, in every
  *    mode including LIVE; FLATTEN additionally requires typing FLATTEN, in
- *    every mode; disarm requires typing RE-ARM;
- *  - the disarm (re-arm trading) consequences are server-computed too, from
+ *    every mode; lifting the halt (disarm) requires typing LIFT HALT;
+ *  - the consequences of lifting the halt are server-computed too, from
  *    GET /api/trading/preflight/kill-switch-disarm, fetched when the dialog
  *    opens so they describe the halt actually being lifted;
  *  - while the execution mode is unknown (the platform has never answered),
@@ -98,7 +98,7 @@ export function KillSwitchPanel({ compact = false }: { compact?: boolean }) {
                   disabled={blocked !== null}
                   onClick={() => control.open("disarm")}
                 >
-                  Disarm and re-arm trading
+                  Lift the halt (resume trading)
                 </Button>
               ) : null}
               {blocked && blocked.reason !== "role" ? (

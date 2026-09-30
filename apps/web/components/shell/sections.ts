@@ -25,6 +25,12 @@ export interface Section {
   /** The `g <chord>` key that goes to this section's first view. */
   chord: string;
   links: { href: string; label: string }[];
+  /**
+   * Entity routes that belong to the section without being one of its views
+   * (`/lifecycle/<hash>`, `/system/incidents/<id>`): the header and rail
+   * place them here; they are not listed as tabs.
+   */
+  entityPrefixes?: string[];
 }
 
 export const SECTIONS: Section[] = [
@@ -55,6 +61,7 @@ export const SECTIONS: Section[] = [
     question: "What should be promoted, demoted or retired?",
     icon: ArrowUpDown,
     links: [{ href: "/trading/candidates", label: "Candidates" }],
+    entityPrefixes: ["/lifecycle"],
   },
   {
     id: "research",
@@ -123,6 +130,7 @@ export const SECTIONS: Section[] = [
       { href: "/system/settings", label: "Settings" },
       { href: "/system/legend", label: "Legend" },
     ],
+    entityPrefixes: ["/system/incidents"],
   },
   {
     id: "journal",
@@ -139,16 +147,17 @@ export const CHORDS: Readonly<Record<string, { href: string; title: string }>> =
   SECTIONS.map((s) => [s.chord, { href: s.links[0]?.href ?? "/", title: s.title }]),
 );
 
-/** The section a path belongs to: exact match, else the longest route prefix. */
+/** The section a path belongs to: exact match, else the longest route or entity prefix. */
 export function sectionFor(pathname: string): Section | null {
   const exact = SECTIONS.find((s) => s.links.some((l) => l.href === pathname));
   if (exact) return exact;
   let best: { section: Section; length: number } | null = null;
   for (const section of SECTIONS) {
-    for (const link of section.links) {
-      if (link.href !== "/" && pathname.startsWith(`${link.href}/`)) {
-        if (best === null || link.href.length > best.length) {
-          best = { section, length: link.href.length };
+    const prefixes = [...section.links.map((link) => link.href), ...(section.entityPrefixes ?? [])];
+    for (const href of prefixes) {
+      if (href !== "/" && pathname.startsWith(`${href}/`)) {
+        if (best === null || href.length > best.length) {
+          best = { section, length: href.length };
         }
       }
     }

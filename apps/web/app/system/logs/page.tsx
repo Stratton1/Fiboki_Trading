@@ -48,38 +48,62 @@ export default function LogsPage() {
     { id: "seq", header: "#", kind: "number", value: (row) => row.sequence, width: 72, pin: true },
     {
       id: "at",
-      header: "When",
+      header: "When (UTC)",
       kind: "time",
       value: (row) => row.at,
-      cell: (row) => formatTimestamp(row.at),
+      // "19/09/2026, 10:00 UTC" was cut at 150 px (inventory F-9): the column
+      // is sized for the whole stamp, and the stamp is in the title too.
+      cell: (row) => <span title={formatTimestamp(row.at)}>{formatTimestamp(row.at)}</span>,
+      width: 176,
     },
     {
       id: "action",
       header: "Action",
       value: (row) => row.action,
-      cell: (row) => <span className="mono">{row.action}</span>,
+      cell: (row) => (
+        <span className="mono" title={row.action}>
+          {row.action}
+        </span>
+      ),
       width: 200,
     },
-    { id: "actor", header: "Actor", value: (row) => `${row.actor} (${row.actor_role})`, width: 140 },
+    {
+      id: "actor",
+      header: "Actor",
+      value: (row) => `${row.actor} (${row.actor_role})`,
+      cell: (row) => <span title={`${row.actor} (${row.actor_role})`}>{`${row.actor} (${row.actor_role})`}</span>,
+      width: 140,
+    },
     {
       id: "outcome",
       header: "Outcome",
       value: (row) => row.outcome,
       cell: (row) => (
-        <span className={`badge badge--${OUTCOME_TONE[row.outcome] ?? "down"}`}>
+        <span className={`badge badge--${OUTCOME_TONE[row.outcome] ?? "down"}`} title={row.outcome.toUpperCase()}>
           {row.outcome.toUpperCase()}
         </span>
       ),
-      width: 104,
+      // ALLOWED / REFUSED plus the badge's padding: 104 px overflowed.
+      width: 124,
     },
     { id: "mode", header: "Mode", value: (row) => row.execution_mode || null, width: 88 },
-    { id: "target", header: "Target", value: (row) => row.target || null, width: 160 },
+    {
+      id: "target",
+      header: "Target",
+      value: (row) => row.target || null,
+      cell: (row) => (row.target ? <span title={row.target}>{row.target}</span> : "—"),
+      width: 160,
+    },
     { id: "reason", header: "Reason", value: (row) => row.reason, wrap: true },
     {
       id: "cid",
       header: "Correlation",
       value: (row) => row.correlation_id || null,
-      cell: (row) => <span className="mono">{row.correlation_id || "—"}</span>,
+      cell: (row) => (
+        <span className="mono" title={row.correlation_id || undefined}>
+          {row.correlation_id || "—"}
+        </span>
+      ),
       width: 160,
     },
     {

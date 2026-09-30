@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { createContext, useContext, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
+import { NavToggle } from "./NavDrawer";
 import { sectionFor } from "./sections";
 
 /**
@@ -34,6 +35,7 @@ export function PageHeader() {
   const Icon = section?.icon;
   return (
     <div className="page-header" data-testid="page-header" data-section={section?.id}>
+      <NavToggle />
       {section && Icon ? (
         <span className="page-header__section" title={section.question}>
           <Icon size={14} aria-hidden="true" />

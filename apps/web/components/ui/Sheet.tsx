@@ -16,6 +16,7 @@ export function Sheet(props: {
   title: ReactNode;
   children: ReactNode;
   testId?: string;
+  closeLabel?: string;
 }) {
   const [used, setUsed] = useState(props.open);
   if (props.open && !used) setUsed(true);

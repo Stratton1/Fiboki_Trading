@@ -42,6 +42,7 @@ export default function ConfirmDialogLayer({
   choices,
   requireReason = true,
   reasonMinLength = 8,
+  reasonMaxLength,
   confirmPhrase,
   confirmLabel = "Confirm",
   busy = false,
@@ -83,7 +84,10 @@ export default function ConfirmDialogLayer({
   const dialogPhrase = confirmPhrase ?? (mode === "live" ? LIVE_CONFIRM_PHRASE : undefined);
   const requiredPhrase =
     selected && selected.phrase !== undefined ? (selected.phrase ?? undefined) : dialogPhrase;
-  const reasonOk = !requireReason || reason.trim().length >= reasonMinLength;
+  const reasonOk =
+    !requireReason ||
+    (reason.trim().length >= reasonMinLength &&
+      (reasonMaxLength === undefined || reason.length <= reasonMaxLength));
   const phraseOk = !requiredPhrase || phrase.trim() === requiredPhrase;
   const acknowledgedCodes = acknowledgements.map((a) => a.code).filter((code) => ticked.has(code));
   const acknowledgedOk = acknowledgedCodes.length === acknowledgements.length;
@@ -212,12 +216,14 @@ export default function ConfirmDialogLayer({
         {requireReason ? (
           <>
             <label htmlFor={`${id}-reason`}>
-              Reason (recorded to the audit trail, minimum {reasonMinLength} characters)
+              Reason (recorded to the audit trail, minimum {reasonMinLength}
+              {reasonMaxLength !== undefined ? `, maximum ${reasonMaxLength}` : ""} characters)
             </label>
             <textarea
               id={`${id}-reason`}
               data-testid="confirm-reason"
               rows={2}
+              maxLength={reasonMaxLength}
               value={reason}
               onChange={(e) => setReason(e.target.value)}
             />

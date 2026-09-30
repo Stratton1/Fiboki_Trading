@@ -3,20 +3,19 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { ArrowRight } from "lucide-react";
 import Link from "next/link";
-import { useState, type FormEvent, type KeyboardEvent } from "react";
-import { ApiError, apiFetch } from "@/lib/api";
+import { useState, type KeyboardEvent } from "react";
 import { capability } from "@/lib/auth";
 import { useClock } from "@/lib/clock";
 import { awaitEcho } from "@/lib/echo";
 import { formatTimestamp, parseUtc } from "@/lib/format";
-import { invalidatePath, useApi } from "@/lib/query";
+import { useApi } from "@/lib/query";
 import type { AttentionItem, Page } from "@/lib/types";
 import { AsyncBoundary } from "../AsyncBoundary";
 import { FigureValue } from "../FigureValue";
 import { ProvenanceChip } from "../ProvenanceChip";
 import { CaveatList, SourceBadge } from "../primitives";
-import { useExecutionMode, useOperator } from "../shell/platform";
-import { Button } from "../ui/Button";
+import { AcknowledgeIncident } from "../incidents/AcknowledgeIncident";
+import { useOperator } from "../shell/platform";
 import { SeverityBadge } from "./SeverityBadge";
 
 /**
@@ -31,9 +30,11 @@ import { SeverityBadge } from "./SeverityBadge";
  * link), the reason, its age from the item's `as_of`, the provenance of the
  * deployment state it was derived from (the item's only provenance, carried by
  * its score), the score, and the actions the API supports for it. The API
- * supports one: acknowledging an INCIDENT (POST /api/system/incidents/{id}/ack,
- * admin only, a reason of 8 to 500 characters, sent with the CSRF header by
- * apiFetch). Nothing else on this panel mutates anything.
+ * supports one: acknowledging an INCIDENT (POST /api/system/incidents/{id}/ack),
+ * through the shared AcknowledgeIncident control, so the friction here is the
+ * Incidents table's exactly: the confirm dialog states the execution mode,
+ * asks for REAL MONEY in LIVE, and requires a reason of 8 to 500 characters.
+ * Nothing else on this panel mutates anything.
  *
  * An incident's attention id is `incident:<incident id>` (routers/command.py
  * `collect_attention`); that prefix is how a row knows it can be acknowledged.
@@ -47,12 +48,8 @@ import { SeverityBadge } from "./SeverityBadge";
  */
 
 export const ATTENTION_PATH = "/api/command/attention";
-const INCIDENTS_PATH = "/api/system/incidents";
 const ATTENTION_REFRESH_MS = 15_000;
 const INCIDENT_PREFIX = "incident:";
-/** The backend's IncidentAckRequest bounds (routers/incidents.py). */
-const REASON_MIN = 8;
-const REASON_MAX = 500;
 
 /** Only an in-app path is followed; anything else could leave the workstation. */
 function inAppLink(link: string | null): string | null {
@@ -102,109 +99,20 @@ function moveFocus(event: KeyboardEvent<HTMLOListElement>) {
   next?.focus();
 }
 
-type Ack =
-  | { phase: "editing"; reason: string; error: string | null }
-  | { phase: "sending"; reason: string }
-  | { phase: "confirming"; reason: string };
-
-function AckForm({
-  item,
-  incidentId,
-  ack,
-  onChange,
-  onCancel,
-  onSubmit,
-}: {
-  item: AttentionItem;
-  incidentId: string;
-  ack: Ack;
-  onChange: (reason: string) => void;
-  onCancel: () => void;
-  onSubmit: () => void;
-}) {
-  const busy = ack.phase !== "editing";
-  const length = ack.reason.trim().length;
-  const valid = length >= REASON_MIN && ack.reason.length <= REASON_MAX;
-  const fieldId = `ack-reason-${item.id}`;
-  const submit = (event: FormEvent) => {
-    event.preventDefault();
-    if (valid && !busy) onSubmit();
-  };
-  return (
-    <form className="triage__ack" onSubmit={submit} data-testid={`attention-ack-form-${item.id}`}>
-      <label htmlFor={fieldId} className="triage__ack-label">
-        Acknowledge incident <span className="mono">{incidentId}</span>: what do you know or what have you done? It is
-        audited, and does not resolve the incident.
-      </label>
-      <div className="triage__ack-row">
-        <input
-          id={fieldId}
-          className="triage__ack-input"
-          value={ack.reason}
-          maxLength={REASON_MAX}
-          disabled={busy}
-          onChange={(event) => onChange(event.target.value)}
-          data-testid={`attention-ack-reason-${item.id}`}
-          aria-describedby={`${fieldId}-hint`}
-          autoComplete="off"
-        />
-        <Button
-          type="submit"
-          variant="primary"
-          size="sm"
-          disabled={!valid || busy}
-          data-testid={`attention-ack-submit-${item.id}`}
-        >
-          {busy ? "Working…" : "Acknowledge"}
-        </Button>
-        <Button size="sm" variant="ghost" onClick={onCancel} disabled={busy}>
-          Cancel
-        </Button>
-      </div>
-      <p id={`${fieldId}-hint`} className="triage__ack-hint" role="status">
-        {ack.phase === "editing" && ack.error ? (
-          <span className="triage__ack-error" data-testid={`attention-ack-error-${item.id}`}>
-            {ack.error}
-          </span>
-        ) : ack.phase === "sending" ? (
-          "Sending…"
-        ) : ack.phase === "confirming" ? (
-          "Sent. Waiting for the platform to confirm the acknowledgement."
-        ) : length < REASON_MIN ? (
-          `At least ${REASON_MIN} characters.`
-        ) : (
-          `${ack.reason.length} / ${REASON_MAX}`
-        )}
-      </p>
-    </form>
-  );
-}
-
 function Row({
   item,
   position,
   now,
-  ack,
-  canAck,
-  ackBlocked,
-  onOpenAck,
-  onChange,
-  onCancel,
-  onSubmit,
   unconfirmed,
+  onUnconfirmed,
 }: {
   item: AttentionItem;
   position: number;
   now: number;
-  ack: Ack | undefined;
-  canAck: boolean;
-  ackBlocked: string | null;
-  onOpenAck: () => void;
-  onChange: (reason: string) => void;
-  onCancel: () => void;
-  onSubmit: () => void;
   unconfirmed: boolean;
+  onUnconfirmed: () => void;
 }) {
+  const client = useQueryClient();
   const href = inAppLink(item.deep_link);
   const incidentId = incidentIdOf(item);
   const glyph = SEVERITY_GLYPH[item.severity] ?? "?";
@@ -216,7 +124,7 @@ function Row({
       data-position={position}
       data-severity={item.severity}
       data-category={item.category}
-      data-ack={ack ? ack.phase : unconfirmed ? "unconfirmed" : undefined}
+      data-ack={unconfirmed ? "unconfirmed" : undefined}
     >
       <span className="triage__glyph" data-severity={item.severity} aria-hidden="true">
         {glyph}
@@ -267,28 +175,24 @@ function Row({
             </span>
           ) : null}
         </div>
-        {incidentId && ack ? (
-          <AckForm
-            item={item}
-            incidentId={incidentId}
-            ack={ack}
-            onChange={onChange}
-            onCancel={onCancel}
-            onSubmit={onSubmit}
-          />
-        ) : null}
       </div>
       <div className="triage__actions">
-        {incidentId && !ack && !unconfirmed ? (
-          <Button
-            size="sm"
-            data-testid={`attention-ack-${item.id}`}
-            disabled={!canAck}
-            title={ackBlocked ?? undefined}
-            onClick={onOpenAck}
-          >
-            Acknowledge…
-          </Button>
+        {incidentId && !unconfirmed ? (
+          <AcknowledgeIncident
+            incidentId={incidentId}
+            title={item.title}
+            testId={`attention-ack-${item.id}`}
+            label="Acknowledge…"
+            // The echo: the platform's queue stops listing this incident.
+            echo={() =>
+              awaitEcho<Page<AttentionItem>>(
+                client,
+                ATTENTION_PATH,
+                (page) => !page.items.some((candidate) => candidate.id === item.id),
+              )
+            }
+            onUnconfirmed={onUnconfirmed}
+          />
         ) : null}
       </div>
     </li>
@@ -297,20 +201,9 @@ function Row({
 
 export function AttentionPanel() {
   const state = useApi<Page<AttentionItem>>(ATTENTION_PATH, { refreshMs: ATTENTION_REFRESH_MS });
-  const client = useQueryClient();
   const now = useClock();
-  const { mutationsAllowed } = useExecutionMode();
   const allowed = capability(useOperator(), "can_acknowledge");
-  const [acks, setAcks] = useState<ReadonlyMap<string, Ack>>(new Map());
   const [unconfirmed, setUnconfirmed] = useState<ReadonlySet<string>>(new Set());
-
-  const set = (id: string, next: Ack | null) =>
-    setAcks((previous) => {
-      const map = new Map(previous);
-      if (next === null) map.delete(id);
-      else map.set(id, next);
-      return map;
-    });
 
   // Adjusted during render: an item the platform no longer lists is no
   // longer "confirming…".
@@ -320,39 +213,6 @@ export function AttentionPanel() {
     const still = new Set<string>();
     for (const id of unconfirmed) if (listed.has(id)) still.add(id);
     if (still.size !== unconfirmed.size) setUnconfirmed(still);
-  }
-
-  const ackBlocked = !mutationsAllowed
-    ? "The execution mode is unknown or the workstation is disconnected; nothing can be confirmed."
-    : allowed.reason;
-
-  async function acknowledge(item: AttentionItem, reason: string) {
-    const incidentId = incidentIdOf(item);
-    if (!incidentId) return;
-    set(item.id, { phase: "sending", reason });
-    try {
-      await apiFetch(`${INCIDENTS_PATH}/${encodeURIComponent(incidentId)}/ack`, {
-        method: "POST",
-        body: JSON.stringify({ reason: reason.trim() }),
-      });
-    } catch (err) {
-      set(item.id, {
-        phase: "editing",
-        reason,
-        error: err instanceof ApiError ? `${err.message} (${err.code})` : "The request failed.",
-      });
-      return;
-    }
-    set(item.id, { phase: "confirming", reason });
-    void invalidatePath(client, INCIDENTS_PATH);
-    // The echo: the platform's queue stops listing this incident.
-    const echoed = await awaitEcho<Page<AttentionItem>>(
-      client,
-      ATTENTION_PATH,
-      (page) => !page.items.some((candidate) => candidate.id === item.id),
-    );
-    if (!echoed) setUnconfirmed((previous) => new Set([...previous, item.id]));
-    set(item.id, null);
   }
 
   return (
@@ -380,17 +240,8 @@ export function AttentionPanel() {
                 item={item}
                 position={index + 1}
                 now={now}
-                ack={acks.get(item.id)}
-                canAck={mutationsAllowed && allowed.allowed}
-                ackBlocked={ackBlocked}
                 unconfirmed={unconfirmed.has(item.id)}
-                onOpenAck={() => set(item.id, { phase: "editing", reason: "", error: null })}
-                onChange={(reason) => set(item.id, { phase: "editing", reason, error: null })}
-                onCancel={() => set(item.id, null)}
-                onSubmit={() => {
-                  const current = acks.get(item.id);
-                  if (current) void acknowledge(item, current.reason);
-                }}
+                onUnconfirmed={() => setUnconfirmed((previous) => new Set([...previous, item.id]))}
               />
             ))}
           </ol>

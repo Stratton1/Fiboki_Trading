@@ -282,4 +282,29 @@ test.describe("the other grids", () => {
     await page.getByTestId("grid-sort-seq").click();
     await expect(rows(page).first()).toHaveAttribute("data-row-id", "3");
   });
+
+  test("audit log at 1440 px: the time and the outcome badge fit their columns (inventory F-9)", async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.goto("/system/logs");
+    await expect(rows(page)).toHaveCount(3);
+    for (const column of ["at", "outcome"]) {
+      const cells = page.locator(`td[data-column="${column}"]`);
+      await expect(cells.first()).toBeVisible();
+      const clipped = await cells.evaluateAll((els) =>
+        els
+          .map((el) => {
+            const content = el.firstElementChild as HTMLElement | null;
+            const inner = content ? content.getBoundingClientRect() : el.getBoundingClientRect();
+            const cell = el.getBoundingClientRect();
+            const style = getComputedStyle(el);
+            const room = cell.right - parseFloat(style.paddingRight);
+            return el.scrollWidth > el.clientWidth + 1 || inner.right > room + 0.5 ? el.textContent : null;
+          })
+          .filter((text) => text !== null),
+      );
+      expect(clipped, `${column}: no cell is cut`).toEqual([]);
+    }
+    // The full stamp is also in the title, for a narrower screen.
+    await expect(page.locator('td[data-column="at"] span').first()).toHaveAttribute("title", /UTC$/);
+  });
 });

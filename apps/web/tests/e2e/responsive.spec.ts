@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { mockApi } from "./fixtures";
+import { mockApi, mockShell } from "./fixtures";
 
 /**
  * Responsive from 360px.
@@ -227,5 +227,97 @@ test.describe("density preference", () => {
     await expect(page.locator("html")).toHaveAttribute("data-density", "regular");
     await page.setViewportSize({ width: 900, height: 800 });
     await expect(page.locator("html")).toHaveAttribute("data-density", "comfortable");
+  });
+});
+
+/**
+ * Phone layout fixes (inventory F-10, 2026-09-30): the Sections button no
+ * longer floats over content, the status bar wraps instead of being cut off,
+ * Candidates are cards with every figure and Promote on screen, and the
+ * Command incidents table stacks so Acknowledge is on screen.
+ */
+test.describe("phone layout at 390 px (inventory F-10)", () => {
+  test.use({ viewport: { width: 390, height: 844 } });
+  test.beforeEach(async ({ page }, testInfo) => {
+    test.skip(testInfo.project.name !== "desktop", "viewport set per test; one project is enough");
+    await mockShell(page);
+  });
+
+  const inside = (box: { x: number; width: number } | null) =>
+    box !== null && box.x >= -0.5 && box.x + box.width <= 390.5;
+
+  test("the Sections button sits in the page header, in the flow, over nothing", async ({ page }) => {
+    await page.goto("/");
+    const toggle = page.getByTestId("nav-toggle");
+    await expect(toggle).toBeVisible();
+    await expect(page.getByTestId("page-header").getByTestId("nav-toggle")).toHaveCount(1);
+    expect(await toggle.evaluate((el) => getComputedStyle(el).position)).toBe("static");
+    const t = await toggle.boundingBox();
+    const main = await page.locator("main#main").boundingBox();
+    if (t === null || main === null) throw new Error("no boxes");
+    expect(t.y + t.height).toBeLessThanOrEqual(main.y + 0.5);
+    // Scrolled to the very bottom, nothing floats over the last content.
+    await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+    const covering = await page.evaluate(() => {
+      const main = document.querySelector("main#main");
+      const last = main?.lastElementChild?.getBoundingClientRect();
+      if (!last) return "no content";
+      const hit = document.elementFromPoint(24, Math.min(last.bottom - 4, window.innerHeight - 60));
+      return hit?.closest("[data-testid='nav-toggle']") ? "covered by Sections" : "clear";
+    });
+    expect(covering).toBe("clear");
+    // It still opens the drawer.
+    await page.evaluate(() => window.scrollTo(0, 0));
+    await toggle.click();
+    await expect(page.getByTestId("primary-nav")).toHaveAttribute("data-open", "true");
+  });
+
+  test("the status bar wraps: every item is on screen, nothing cut off", async ({ page }) => {
+    await page.goto("/");
+    const bar = page.getByTestId("status-bar");
+    await expect(bar).toBeVisible();
+    expect(await bar.evaluate((el) => el.scrollWidth - el.clientWidth)).toBeLessThanOrEqual(1);
+    for (const id of ["status-mode", "status-stream", "status-worker", "status-api", "status-as-of", "status-clock"]) {
+      expect(inside(await page.getByTestId(id).boundingBox()), `${id} is on screen`).toBe(true);
+    }
+  });
+
+  test("candidates are cards: every figure with its chip, and Promote, on screen", async ({ page }) => {
+    await page.goto("/trading/candidates");
+    const cards = page.getByTestId("candidate-card");
+    await expect(cards).toHaveCount(2);
+    await expect(page.getByTestId("grid-row")).toHaveCount(0);
+    for (let i = 0; i < 2; i += 1) {
+      const card = cards.nth(i);
+      const figures = card.getByTestId("candidate-card-figure");
+      await expect(figures).toHaveCount(6);
+      await expect(figures.getByTestId("provenance-chip")).toHaveCount(6);
+      const promote = card.locator('[data-testid^="promote-"]');
+      await promote.scrollIntoViewIfNeeded();
+      expect(inside(await promote.boundingBox())).toBe(true);
+      for (let f = 0; f < 6; f += 1) expect(inside(await figures.nth(f).boundingBox())).toBe(true);
+    }
+    // Promote from a card opens the same dialog.
+    await page.getByTestId("promote-ichimoku_kumo_trend").click();
+    await expect(page.getByTestId("confirm-dialog")).toBeVisible();
+    const overflow = await page.evaluate(
+      () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+    );
+    expect(overflow).toBeLessThanOrEqual(1);
+  });
+
+  test("on Command the incidents table stacks, so Acknowledge is on screen", async ({ page }) => {
+    await page.goto("/");
+    const ack = page.getByTestId("incident-ack-inc-1");
+    await ack.scrollIntoViewIfNeeded();
+    expect(inside(await ack.boundingBox())).toBe(true);
+    // Stacked cells grow with their content: none overflows into the next.
+    const cells = page.locator('[data-testid="incident-row"] td');
+    const overflowing = await cells.evaluateAll((els) =>
+      els.filter((el) => el.scrollHeight > el.clientHeight + 1).map((el) => el.getAttribute("data-label")),
+    );
+    expect(overflowing).toEqual([]);
+    const boxes = await cells.evaluateAll((els) => els.map((el) => el.getBoundingClientRect()).map((r) => [r.top, r.bottom]));
+    for (let i = 1; i < boxes.length; i += 1) expect(boxes[i]![0]).toBeGreaterThanOrEqual(boxes[i - 1]![1] - 0.5);
   });
 });

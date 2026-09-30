@@ -688,22 +688,20 @@
     .rail .rail__tree {
       display: block;
     }
-    /* Fixed, not a flex item: as a flex child it once stole ~66px from the
-       content column at phone width. In the thumb zone, above the status bar. */
+    /* In the page header row, in the document flow (components/shell/
+       NavDrawer.tsx). It used to float fixed above the status bar, where on
+       a phone it covered content (inventory F-10). */
     .nav-toggle {
       display: inline-flex;
       align-items: center;
       gap: 6px;
-      position: fixed;
-      left: 12px;
-      bottom: calc(var(--statusbar-h) + 12px);
-      z-index: 95;
+      flex: 0 0 auto;
       background: var(--bg-overlay);
       color: var(--fg);
       border: 1px solid var(--border-strong);
       border-radius: 999px;
-      padding: 8px 14px;
-      box-shadow: var(--elevation-3);
+      padding: 4px 12px;
+      min-height: 32px;
     }
     .nav-scrim[data-open="true"] {
       display: block;
@@ -822,6 +820,27 @@
   .status-bar__signout:hover {
     background: var(--bg-raised);
     color: var(--fg);
+  }
+  /* Phone: the bar WRAPS instead of scrolling sideways with a hidden
+     scrollbar, which cut it off at "AP…" (inventory F-10). Every item stays
+     on screen; the bar grows a line or two. */
+  @media (max-width: 639.98px) {
+    .status-bar {
+      flex-wrap: wrap;
+      white-space: normal;
+      overflow-x: visible;
+      row-gap: 0;
+      padding: 2px 4px;
+    }
+    .status-bar__item {
+      padding: 2px 6px;
+    }
+    .status-bar__item + .status-bar__item {
+      border-left: 0;
+    }
+    .status-bar__spacer {
+      display: none;
+    }
   }
   .status-bar [data-tone="ok"] {
     color: var(--ok);
@@ -2177,6 +2196,9 @@
   .chart__bar--down {
     fill: var(--pnl-down);
   }
+  .chart__bar--up {
+    fill: var(--pnl-up);
+  }
   .chart__bar--breach {
     fill: var(--critical);
   }
@@ -3134,43 +3156,6 @@
     gap: 8px;
     align-items: center;
   }
-  .triage__ack {
-    margin-top: 8px;
-    padding: 8px;
-    border: 1px solid var(--border);
-    border-radius: var(--r-md);
-    background: var(--bg-sunken);
-  }
-  .triage__ack-label {
-    display: block;
-    font-size: 12.5px;
-    color: var(--fg-muted);
-    margin-bottom: 6px;
-  }
-  .triage__ack-row {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-    align-items: center;
-  }
-  .triage__ack-input {
-    flex: 1 1 24ch;
-    min-width: 0;
-    height: var(--control-h);
-    padding: 0 8px;
-    color: var(--fg);
-    background: var(--bg-surface);
-    border: 1px solid var(--border-control);
-    border-radius: var(--r-sm);
-  }
-  .triage__ack-hint {
-    margin: 6px 0 0;
-    font-size: 11.5px;
-    color: var(--fg-muted);
-  }
-  .triage__ack-error {
-    color: var(--critical);
-  }
   @media (max-width: 639px) {
     .triage {
       grid-template-columns: 28px minmax(0, 1fr);
@@ -3276,6 +3261,481 @@
   .limit-board__note a,
   .tile__help a,
   .throttle__note a {
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+
+  /* ------------------------------------- incidents, entities, visuals (2026-09-30) */
+
+  /* The shared acknowledge control: why it cannot be pressed, in words. */
+  .ack {
+    display: inline-flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px 8px;
+  }
+  .ack__blocked {
+    font-size: 11.5px;
+    line-height: 16px;
+    color: var(--fg-muted);
+    max-width: 28ch;
+  }
+
+  /* A table that stacks one row per block below 640 px, each cell labelled
+     from data-label, so a trailing Action column is on screen on a phone. */
+  @media (max-width: 639.98px) {
+    .table--stack-sm thead {
+      display: none;
+    }
+    .table--stack-sm,
+    .table--stack-sm tbody,
+    .table--stack-sm tr,
+    .table--stack-sm td {
+      display: block;
+      width: 100%;
+    }
+    .table--stack-sm tr {
+      padding: 8px 0;
+      border-top: 1px solid var(--border-subtle);
+    }
+    .table--stack-sm td {
+      height: auto;
+      border: 0;
+      padding: 2px 0;
+      text-align: left;
+      white-space: normal;
+    }
+    .table--stack-sm td[data-label]::before {
+      content: attr(data-label);
+      display: block;
+      font-size: 10.5px;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--fg-subtle);
+    }
+  }
+
+  /* Entity pages: /system/incidents/<id>, /lifecycle/<hash>. */
+  .entity-nav {
+    margin-bottom: 8px;
+    font-size: 12.5px;
+  }
+  .entity-nav a {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .entity-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px 10px;
+    margin: 4px 0 10px;
+  }
+  .entity-head__title {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--fg);
+  }
+  .entity-hypothesis {
+    margin: 0 0 10px;
+    color: var(--fg-muted);
+    max-width: 90ch;
+  }
+  .entity-facts {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+    gap: 8px 16px;
+    margin: 0 0 10px;
+  }
+  .entity-facts dt {
+    font-size: 10.5px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--fg-subtle);
+  }
+  .entity-facts dd {
+    margin: 2px 0 0;
+    overflow-wrap: anywhere;
+  }
+  .entity-links {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 6px 16px;
+    margin: 8px 0 0;
+    font-size: 12.5px;
+  }
+  .entity-links a {
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+  .entity-actions {
+    margin-bottom: 12px;
+  }
+  .entity-rules {
+    margin: 6px 0 0;
+    padding-left: 18px;
+    font-size: 12.5px;
+  }
+  .note-form {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    max-width: 72ch;
+  }
+  .note-form__label {
+    font-size: 12.5px;
+    color: var(--fg-muted);
+  }
+  .note-form textarea {
+    width: 100%;
+    padding: 6px 8px;
+    color: var(--fg);
+    background: var(--bg-surface);
+    border: 1px solid var(--border-control);
+    border-radius: var(--r-sm);
+  }
+  .note-form__row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+  }
+
+  /* An incident's timeline: a vertical list, oldest first. */
+  .vtimeline {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+  .vtimeline__item {
+    display: grid;
+    grid-template-columns: 24px minmax(0, 1fr);
+    gap: 8px;
+    padding: 8px 0;
+    border-left: 1px solid var(--border);
+    margin-left: 11px;
+    padding-left: 0;
+  }
+  .vtimeline__glyph {
+    margin-left: -12px;
+    width: 23px;
+    height: 23px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 999px;
+    background: var(--bg-surface);
+    border: 1px solid var(--border-strong);
+    color: var(--fg-muted);
+    font-size: 12px;
+  }
+  .vtimeline__glyph[data-kind="ack"] {
+    color: var(--ok);
+  }
+  .vtimeline__glyph[data-kind="occurrence"] {
+    color: var(--warn);
+  }
+  .vtimeline__line {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px 8px;
+    font-size: 12px;
+  }
+  .vtimeline__kind {
+    font-weight: 600;
+    letter-spacing: 0.04em;
+  }
+  .vtimeline__text {
+    margin: 2px 0 0;
+    overflow-wrap: anywhere;
+  }
+  .vtimeline__cid {
+    margin: 2px 0 0;
+    font-size: 11px;
+  }
+
+  /* The promotion ladder as a step meter (V-4). */
+  .rung-meter {
+    display: inline-flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px 8px;
+    font-size: 12px;
+  }
+  .rung-meter__svg {
+    flex: 0 0 auto;
+    overflow: visible;
+  }
+  .rung-meter__text {
+    display: inline-flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px 6px;
+  }
+  .rung-meter__binding {
+    color: var(--fg-muted);
+    overflow-wrap: anywhere;
+  }
+  .rung-seg {
+    fill: var(--bg-sunken);
+    stroke: var(--border-strong);
+    stroke-width: 1;
+  }
+  .rung-seg[data-state="pass"] {
+    fill: var(--fg-muted);
+    stroke: var(--fg-muted);
+  }
+  .rung-seg[data-state="stopped"] {
+    fill: var(--critical-bg);
+    stroke: var(--critical);
+    stroke-width: 1.5;
+  }
+  .rung-seg[data-state="not_reached"] {
+    stroke-dasharray: 2 2;
+  }
+  .rung-seg__glyph {
+    fill: var(--critical);
+    font-size: 9px;
+    font-weight: 700;
+  }
+  .rung-seg__label {
+    fill: var(--fg-subtle);
+    font-size: 9px;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Distance to stop (V-5). */
+  .stopcell {
+    white-space: nowrap;
+  }
+  .stopcell .figure {
+    margin-right: 6px;
+  }
+  .stopmeter {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    vertical-align: middle;
+  }
+  .stopmeter--none {
+    font-size: 11.5px;
+  }
+  .stopmeter__track {
+    fill: var(--bg-sunken);
+    stroke: var(--border);
+    stroke-width: 1;
+  }
+  .stopmeter__fill {
+    fill: var(--fg-subtle);
+    opacity: 0.55;
+  }
+  .stopmeter__stop {
+    stroke: var(--critical);
+    stroke-width: 1.5;
+  }
+  .stopmeter__entry {
+    stroke: var(--fg-muted);
+    stroke-width: 1;
+    stroke-dasharray: 2 1;
+  }
+  .stopmeter__mark {
+    fill: var(--fg);
+  }
+  .stopmeter__dagger {
+    font-size: 11px;
+    line-height: 1;
+    padding: 2px 3px;
+    border-radius: var(--r-xs);
+    color: var(--fg-muted);
+  }
+  .stopmeter__dagger:hover {
+    background: var(--bg-raised);
+    color: var(--fg);
+  }
+  .stopmeter__note {
+    margin: 6px 0 0;
+    font-size: 11.5px;
+  }
+
+  /* Candidates on a phone: one card per candidate. */
+  .cand-cards {
+    list-style: none;
+    margin: 8px 0 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .cand-card {
+    padding: 10px;
+    border: 1px solid var(--border);
+    border-radius: var(--r-md);
+    background: var(--bg-surface);
+  }
+  .cand-card__head {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 6px;
+  }
+  .cand-card__figures {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 6px 12px;
+    margin: 10px 0 8px;
+  }
+  .cand-card__figures dt {
+    font-size: 10.5px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--fg-subtle);
+  }
+  .cand-card__figures dd {
+    margin: 0;
+  }
+  .cand-card__ladder {
+    margin-bottom: 8px;
+  }
+  .cand-card__action {
+    display: flex;
+    justify-content: flex-end;
+  }
+
+  /* The chart's dataset chip: the id cut in the middle; the full id on
+     hover and on keyboard focus (inventory F-8). */
+  .cw__chip--id:focus-visible {
+    outline: 2px solid var(--focus-ring);
+    outline-offset: 1px;
+  }
+  .cw__id-full {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+  .cw__chip--id:hover .cw__id-short,
+  .cw__chip--id:focus .cw__id-short {
+    display: none;
+  }
+  .cw__chip--id:hover .cw__id-full,
+  .cw__chip--id:focus .cw__id-full {
+    position: static;
+    width: auto;
+    height: auto;
+    overflow: visible;
+    clip-path: none;
+  }
+
+  /* The kill-switch and incident timeline (V-2). */
+  .ks-timeline {
+    margin: 8px 0 0;
+  }
+  .ks-timeline__plot svg {
+    display: block;
+  }
+  .ks-timeline__lane {
+    fill: var(--fg-subtle);
+    font-size: 11px;
+    letter-spacing: 0.04em;
+  }
+  .ks-timeline__rule {
+    stroke: var(--border-subtle);
+    stroke-width: 1;
+  }
+  .ks-timeline__axis {
+    stroke: var(--border);
+    stroke-width: 1;
+  }
+  .ks-timeline__armed {
+    fill: var(--critical-bg);
+    stroke: var(--critical);
+    stroke-width: 1;
+    stroke-opacity: 0.6;
+  }
+  .ks-timeline__armed[data-open="true"] {
+    stroke-dasharray: 4 2;
+  }
+  .ks-timeline__hit {
+    fill: var(--bg-surface);
+    stroke: var(--border-strong);
+    stroke-width: 1;
+  }
+  .ks-timeline__glyph {
+    fill: var(--fg);
+    font-size: 12px;
+  }
+  .ks-timeline__glyph[data-kind="flatten"],
+  .ks-timeline__glyph[data-kind="pause"] {
+    fill: var(--critical);
+  }
+  .ks-timeline__glyph[data-kind="lift"] {
+    fill: var(--ok);
+  }
+  .ks-timeline__tick {
+    stroke: var(--fg-muted);
+    stroke-width: 2;
+  }
+  .ks-timeline__tick[data-severity="critical"],
+  .ks-timeline__tick[data-severity="error"] {
+    stroke: var(--critical);
+  }
+  .ks-timeline__tick[data-severity="warning"] {
+    stroke: var(--warn);
+  }
+  .ks-timeline__legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 14px;
+    margin-top: 4px;
+    font-size: 11.5px;
+    color: var(--fg-muted);
+  }
+  .ks-timeline__swatch {
+    display: inline-block;
+    width: 14px;
+    height: 8px;
+    vertical-align: middle;
+    background: var(--critical-bg);
+    border: 1px solid var(--critical);
+  }
+
+  /* Regime grid (V-8): the exposure matrix's cells; unknown hatched. */
+  .regime-grid__hatch {
+    stroke: none;
+    pointer-events: none;
+  }
+  .regime-grid__value {
+    fill: var(--fg);
+    font-size: 12px;
+  }
+  .regime-grid__value[data-state="unknown"],
+  .regime-grid__value[data-state="unrecognised"] {
+    fill: var(--fg-muted);
+    font-style: italic;
+  }
+  .regime-grid__swatch-unknown {
+    background: repeating-linear-gradient(45deg, var(--bg-sunken) 0 3px, var(--border-strong) 3px 4px);
+  }
+
+  /* Command: what the API does not report, in one line. */
+  .command__absent {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px 8px;
+    margin: 10px 0 0;
+    font-size: 12.5px;
+    color: var(--fg-muted);
+  }
+  .command__absent a {
     text-decoration: underline;
     text-underline-offset: 2px;
   }

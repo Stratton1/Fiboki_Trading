@@ -218,11 +218,19 @@ test.describe("kill switch", () => {
       }),
     );
     await page.goto("/trading/risk");
+    // Worded as what it does (inventory F-13): "arm" means HALT on this card,
+    // so "re-arm trading" read as its opposite.
+    await expect(page.getByTestId("kill-switch-disarm")).toHaveText("Lift the halt (resume trading)");
     await page.getByTestId("kill-switch-disarm").click();
+    await expect(page.getByTestId("confirm-dialog").locator("h2").first()).toHaveText("Lift the halt and resume trading");
+    await expect(page.getByTestId("confirm-phrase")).toHaveAttribute("data-phrase", "LIFT HALT");
     await page.getByTestId("confirm-reason").fill("spreads have normalised again");
     await expect(page.getByTestId("confirm-submit")).toBeDisabled();
     await page.getByTestId("confirm-phrase").fill("RE-ARM");
+    await expect(page.getByTestId("confirm-submit")).toBeDisabled();
+    await page.getByTestId("confirm-phrase").fill("LIFT HALT");
     await expect(page.getByTestId("confirm-submit")).toBeEnabled();
+    await expect(page.getByTestId("confirm-submit")).toHaveText("Lift the halt");
   });
 
   test("the same dialog component is used to promote a candidate", async ({ page }) => {

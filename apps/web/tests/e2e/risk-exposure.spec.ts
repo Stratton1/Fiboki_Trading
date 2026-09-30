@@ -345,4 +345,87 @@ test.describe("at 390 px", () => {
   });
 });
 
+test.describe("inventory fixes and visuals (2026-09-30)", () => {
+  test("the positions drawer draws a distance-to-stop meter per row, marked † with its formula", async ({ page }) => {
+    await mockRisk(page, { risk: RISK });
+    await page.goto("/trading/risk");
+    await page.getByTestId("positions-open").click();
+    const sheet = page.getByTestId("positions-sheet");
+    const first = sheet.locator('[data-testid="position-row"][data-position-id="pos_0001"]');
+    const meter = first.getByTestId("stop-meter");
+    // Long: entry 1.10000, mark 1.10200, stop 1.09500 → (1.102 − 1.095) ÷ (1.1 − 1.095) = 1.4.
+    await expect(meter).toHaveAttribute("data-position", "1.400");
+    await expect(meter).toHaveAttribute("data-state", "between");
+    // The API's own distance to stop is still the number beside it.
+    await expect(first).toContainText("0.64%");
+    const dagger = meter.getByTestId("stop-meter-dagger");
+    await expect(dagger).toHaveText("†");
+    await expect(dagger).toHaveAttribute("aria-label", /\(mark − stop\) ÷ \(entry − stop\)/);
+    await dagger.hover();
+    await expect(page.locator('[data-testid="tooltip"][data-open]')).toContainText("(mark − stop) ÷ (entry − stop)");
+    await expect(sheet.getByTestId("stop-meter-note")).toContainText("(mark − stop) ÷ (entry − stop)");
+  });
+
+  test("a position with no stop has no meter, and says why", async ({ page }) => {
+    await mockRisk(page, { risk: RISK });
+    await page.route(`${API}/api/trading/positions`, (route: Route) =>
+      route.fulfill({
+        json: {
+          items: [
+            {
+              position_id: "pos_nostop",
+              strategy_id: "ichimoku_kumo_trend",
+              instrument: "EURUSD",
+              direction: "short",
+              provenance: "paper",
+              entry_time: "2026-09-19T08:00:00Z",
+              size: figure(0.5, "paper", "lots"),
+              entry_price: figure(1.1, "paper"),
+              mark_price: figure(1.099, "paper"),
+              stop_loss: figure(null, "paper"),
+              take_profit: figure(1.09, "paper"),
+              unrealised_pnl: figure(5, "paper", "GBP"),
+              distance_to_stop_pct: figure(null, "paper", "pct"),
+            },
+          ],
+          total: 1,
+          offset: 0,
+          limit: 100,
+          source: source("live"),
+          caveats: [],
+        },
+      }),
+    );
+    await page.goto("/trading/risk");
+    await page.getByTestId("positions-open").click();
+    const meter = page.getByTestId("positions-sheet").getByTestId("stop-meter");
+    await expect(meter).toHaveAttribute("data-state", "none");
+    await expect(meter).toHaveText("no stop reported");
+  });
+
+  test("the drawer's close button says what it closes (inventory F-5)", async ({ page }) => {
+    await mockRisk(page, { risk: RISK });
+    await page.goto("/trading/risk");
+    await page.getByTestId("positions-open").click();
+    const close = page.getByTestId("positions-sheet-close");
+    await expect(close).toHaveAttribute("aria-label", "Close Open positions");
+    await expect(page.getByRole("button", { name: "Close inspector" })).toHaveCount(0);
+    await close.click();
+    await expect(page.getByTestId("positions-sheet")).toHaveCount(0);
+    // The status bar's inspector names its own content too.
+    await page.getByTestId("status-api").click();
+    await expect(page.getByTestId("inspector-close")).toHaveAttribute("aria-label", "Close Platform health");
+  });
+
+  test("the kill-switch timeline is on Risk & Exposure too (V-2)", async ({ page }) => {
+    await mockRisk(page, { risk: RISK });
+    await page.goto("/trading/risk");
+    const timeline = page.getByTestId("ks-timeline");
+    await expect(timeline).toHaveAttribute("data-events", "2");
+    await expect(timeline.getByTestId("ks-event").first()).toHaveAttribute("data-operator", "joe");
+    await expect(timeline.getByTestId("ks-armed-span")).toHaveCount(1);
+    await expect(timeline.getByTestId("ks-armed-span")).toHaveAttribute("data-open", "false");
+  });
+});
+
 void riskState;

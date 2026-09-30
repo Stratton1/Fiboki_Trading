@@ -9,6 +9,7 @@ import { CaveatList, PageHead, SourceBadge, Tile } from "../primitives";
 import { PageActions } from "../shell/PageHeader";
 import { ViewStateTag } from "../ui/ViewStateTag";
 import { ExposureMatrix } from "./ExposureMatrix";
+import { LazyKillSwitchTimeline } from "../LazyChart";
 import { LimitBoard } from "./LimitBoard";
 import { PositionsDrawer } from "./PositionsDrawer";
 import { ThrottleMeter } from "./ThrottleMeter";
@@ -25,7 +26,8 @@ export const EXPOSURE_PATH = "/api/trading/exposure";
  * drawdown, margin, breaches, kill switch) and GET /api/trading/exposure
  * (per-bucket exposure against its limit, with the API's utilisation), both
  * kept current by the `risk` stream topic; GET /api/trading/positions in the
- * drawer. The kill switch is the shell's own control (KillSwitchPanel over
+ * drawer; GET /api/system/kill-switch/history and GET /api/system/incidents
+ * for the kill-switch timeline (V-2). The kill switch is the shell's own control (KillSwitchPanel over
  * useKillSwitchControl); ⇧K opens the same dialog from anywhere and never arms.
  *
  * Each read keeps its own view state. The gateway panel and the exposure
@@ -81,6 +83,7 @@ export function RiskExposureScreen({ focus }: { focus: "risk" | "exposure" }) {
           </section>
         </aside>
       </div>
+      <LazyKillSwitchTimeline />
       <section className="card rx__exposure" id="exposure" aria-labelledby="rx-exposure">
         <h2 id="rx-exposure" className="card__title">
           Exposure by instrument, currency and strategy

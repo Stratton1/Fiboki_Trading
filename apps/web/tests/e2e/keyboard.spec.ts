@@ -299,6 +299,49 @@ test.describe("dialog focus", () => {
   });
 });
 
+test.describe("closing a popover leaves no dead zone (inventory F-6)", () => {
+  // Base UI returns focus when a popup UNMOUNTS, at the end of its exit
+  // transition. With an unconditional return, a control opened during that
+  // transition had focus pulled back to the old trigger and closed: a click
+  // in the first ~150 ms after Escape was swallowed. Transitions are slowed
+  // tenfold here so the click lands inside the exit every time.
+  test("a Select opened while a closed popover is still animating out stays open, with focus in it", async ({
+    page,
+  }) => {
+    await page.goto("/system/legend?tab=controls");
+    await expect(page.getByTestId("legend-controls")).toBeVisible();
+    const cdp = await page.context().newCDPSession(page);
+    await cdp.send("Animation.enable");
+    await cdp.send("Animation.setPlaybackRate", { playbackRate: 0.1 });
+    const trigger = page.getByRole("button", { name: "Popover", exact: true });
+    const select = page.getByRole("combobox").first();
+    await trigger.click();
+    await expect(page.getByRole("dialog")).toBeVisible();
+    await page.keyboard.press("Escape");
+    // The popover is still mounted, animating out.
+    await expect(page.locator("[data-ending-style]")).toHaveCount(1);
+    await select.click();
+    // Let the popover finish closing (its focus return runs now).
+    await expect(page.locator(".popover-body")).toHaveCount(0, { timeout: 10_000 });
+    await expect(select).toHaveAttribute("aria-expanded", "true");
+    const focusInList = await page.evaluate(
+      () => document.activeElement?.closest('[role="listbox"]') !== null,
+    );
+    expect(focusInList, "focus stays in the Select the operator opened").toBe(true);
+  });
+
+  test("Escape on a popover still returns focus to its trigger when nothing else was touched", async ({ page }) => {
+    await page.goto("/system/legend?tab=controls");
+    await expect(page.getByTestId("legend-controls")).toBeVisible();
+    const trigger = page.getByRole("button", { name: "Popover", exact: true });
+    await trigger.click();
+    await expect(page.getByRole("dialog")).toBeVisible();
+    await page.keyboard.press("Escape");
+    await expect(page.locator(".popover-body")).toHaveCount(0);
+    await expect(trigger).toBeFocused();
+  });
+});
+
 test.describe("tooltips", () => {
   test("open on keyboard focus", async ({ page }) => {
     await page.goto("/trading/risk");

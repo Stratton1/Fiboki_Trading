@@ -8,6 +8,10 @@ import { join } from "node:path";
  */
 export const SAMPLE_PARAMS: Readonly<Record<string, string>> = {
   symbol: "EURUSD",
+  // /system/incidents/[id]: the incident the shared fixtures return.
+  id: "inc-1",
+  // /lifecycle/[hash]: the content hash the fixtures' strategy-review item links to.
+  hash: "abc123def456",
 };
 
 /** `/markets/[symbol]` → `/markets/EURUSD`. */

@@ -50,3 +50,29 @@ export function LazyPriceChart(props: PriceChartProps) {
     </Suspense>
   );
 }
+
+/**
+ * The kill-switch and incident timeline (V-2), after first paint: on Command
+ * it is the last card, and the Overview's 180 KiB first-load budget goes to
+ * the attention queue and the limits first. The placeholder says what is
+ * coming; it is never an empty timeline (which would read as a quiet month).
+ */
+const KillSwitchTimelineImpl = lazy(() =>
+  import("./risk/KillSwitchTimeline").then((m) => ({ default: m.KillSwitchTimelineCard })),
+);
+
+export function LazyKillSwitchTimeline() {
+  return (
+    <Suspense
+      fallback={
+        <section className="card" aria-busy="true">
+          <p className="muted" data-testid="chart-pending" role="status">
+            Loading the kill-switch timeline…
+          </p>
+        </section>
+      }
+    >
+      <KillSwitchTimelineImpl />
+    </Suspense>
+  );
+}

@@ -40,6 +40,8 @@ export interface ConfirmDialogProps {
   choices: ConfirmChoice[];
   requireReason?: boolean;
   reasonMinLength?: number;
+  /** The server's upper bound on the reason, when it has one (e.g. 500 for an acknowledgement). */
+  reasonMaxLength?: number;
   confirmPhrase?: string;
   confirmLabel?: string;
   busy?: boolean;

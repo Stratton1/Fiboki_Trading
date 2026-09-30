@@ -35,7 +35,13 @@ export function InspectorProvider({ children }: { children: ReactNode }) {
   return (
     <InspectorContext.Provider value={{ open, close }}>
       {children}
-      <Sheet open={isOpen} onOpenChange={setIsOpen} title={content?.title} testId="inspector">
+      <Sheet
+        open={isOpen}
+        onOpenChange={setIsOpen}
+        title={content?.title}
+        testId="inspector"
+        closeLabel={typeof content?.title === "string" ? `Close ${content.title}` : "Close inspector"}
+      >
         {content?.body}
       </Sheet>
     </InspectorContext.Provider>

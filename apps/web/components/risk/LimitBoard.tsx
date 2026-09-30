@@ -1,14 +1,11 @@
 "use client";
 
-import Link from "next/link";
 import type { ReactNode } from "react";
 import { isStale } from "@/lib/freshness";
-import { formatNumber } from "@/lib/format";
 import {
   CRITICAL_AT_PCT,
   FAMILIES,
   WARN_AT_PCT,
-  barLength,
   closestToLimit,
   exposureRows,
   groupFamilies,
@@ -17,16 +14,17 @@ import {
   type FamilyGroup,
   type FamilyId,
   type LimitRow,
-  type LimitState,
 } from "@/lib/limits";
 import { deriveProvenance } from "@/lib/provenance";
 import type { ApiHandle } from "@/lib/query";
 import type { Envelope, ExposureRow, Page, Provenance, RiskStateView } from "@/lib/types";
-import { FigureValue } from "../FigureValue";
 import { ProvenanceChip, ProvenanceLabelChip } from "../ProvenanceChip";
 import { Button } from "../ui/Button";
 import { StaleBadge } from "../ui/StaleBadge";
 import { ViewStateTag } from "../ui/ViewStateTag";
+import { DerivedNote, LimitRowItem, LimitStateTag, pct } from "./LimitRow";
+
+export { DerivedNote, LimitRowItem, LimitStateTag } from "./LimitRow";
 
 /**
  * The limit board: "how close are we to any limit?" (plan §4, Risk & Exposure).
@@ -49,140 +47,8 @@ import { ViewStateTag } from "../ui/ViewStateTag";
  * also has a glyph and a word, so none rests on colour.
  */
 
-const STATE_META: Record<LimitState, { glyph: string; word: string }> = {
-  ok: { glyph: "✓", word: "OK" },
-  warn: { glyph: "◐", word: "NEAR" },
-  critical: { glyph: "◆", word: "CRITICAL" },
-  breached: { glyph: "✕", word: "BREACHED" },
-  absent: { glyph: "⊘", word: "NOT REPORTED" },
-};
-
 /** Exposure buckets listed on the board; the matrix below lists every one. */
 const EXPOSURE_ON_BOARD = 6;
-
-export function LimitStateTag({ state }: { state: LimitState }) {
-  const meta = STATE_META[state];
-  return (
-    <span className="limit-state" data-state={state} data-testid="limit-state">
-      <span aria-hidden="true">{meta.glyph}</span>
-      {meta.word}
-    </span>
-  );
-}
-
-function pct(value: number, decimals = 1): string {
-  return formatNumber(value, "pct", { decimals });
-}
-
-/** Headroom in percentage points; a negative headroom is "over by". */
-function headroomText(row: LimitRow): string {
-  if (row.headroom === null) return "not known";
-  if (row.headroom < 0) return `over by ${formatNumber(-row.headroom, "pct", { bare: true })} pp`;
-  return `${formatNumber(row.headroom, "pct", { bare: true })} pp`;
-}
-
-function Bar({ row }: { row: LimitRow }) {
-  const length = barLength(row);
-  const ink = row.state === "ok" ? row.provenance : null;
-  const fillClass =
-    row.state === "breached"
-      ? "chart__bar chart__bar--breach"
-      : row.state === "critical"
-        ? "chart__bar limit-bar__fill limit-bar__fill--critical"
-        : row.state === "warn"
-          ? "chart__bar limit-bar__fill limit-bar__fill--warn"
-          : "chart__bar chart-ink limit-bar__fill";
-  return (
-    <svg
-      className="limit-bar"
-      viewBox="0 0 100 12"
-      preserveAspectRatio="none"
-      aria-hidden="true"
-      data-testid="limit-bar"
-      data-length={length.toFixed(1)}
-    >
-      <rect className="limit-bar__track" x="0" y="0" width="100" height="12" />
-      <rect className={fillClass} data-ink={ink ?? undefined} x="0" y="0" width={length} height="12" />
-      <line className="limit-bar__tick" x1={WARN_AT_PCT} x2={WARN_AT_PCT} y1="0" y2="12" />
-      <line className="limit-bar__tick" x1={CRITICAL_AT_PCT} x2={CRITICAL_AT_PCT} y1="0" y2="12" />
-      <line className="limit-bar__limit" x1="99.6" x2="99.6" y1="0" y2="12" />
-    </svg>
-  );
-}
-
-function Row({ row, signed }: { row: LimitRow; signed: boolean }) {
-  const util = row.utilisation;
-  return (
-    <li
-      className="limit-row"
-      data-testid="limit-row"
-      data-key={row.key}
-      data-family={row.family}
-      data-state={row.state}
-      data-utilisation={util === null ? undefined : util.toFixed(1)}
-      data-derived={row.utilisationFrom === "derived" || undefined}
-    >
-      <div className="limit-row__head">
-        <span className="limit-row__label">
-          {row.label}
-          {row.kind ? <span className="limit-row__kind">{row.kind}</span> : null}
-        </span>
-        {util !== null ? (
-          <span className="limit-row__used num" data-testid="limit-used">
-            {pct(util)}
-            {row.utilisationFrom === "derived" ? (
-              <sup className="limit-row__dagger" aria-label="computed here, see the note below the board">
-                †
-              </sup>
-            ) : null}
-            <span className="limit-row__used-word"> used</span>
-          </span>
-        ) : null}
-        <LimitStateTag state={row.state} />
-      </div>
-      {row.state === "absent" && util === null ? (
-        <p className="limit-row__absent" data-testid="limit-absent">
-          {row.value && row.value.value !== null ? (
-            <>
-              <FigureValue figure={row.value} showChip={false} />{" "}
-            </>
-          ) : null}
-          {row.absentReason}
-          {row.seeAlso ? (
-            <>
-              {" "}
-              <Link href={row.seeAlso.href}>Open {row.seeAlso.label}</Link>
-            </>
-          ) : null}
-        </p>
-      ) : (
-        <>
-          <Bar row={row} />
-          <dl className="limit-row__nums">
-            <div>
-              <dt>{signed ? "day P&L" : "now"}</dt>
-              <dd data-testid="limit-value">
-                {row.value ? <FigureValue figure={row.value} showChip={false} colourSign={signed} /> : "—"}
-              </dd>
-            </div>
-            <div>
-              <dt>limit</dt>
-              <dd data-testid="limit-limit">
-                {row.limit ? <FigureValue figure={row.limit} showChip={false} /> : "—"}
-              </dd>
-            </div>
-            <div>
-              <dt>headroom</dt>
-              <dd className="num" data-testid="limit-headroom">
-                {headroomText(row)}
-              </dd>
-            </div>
-          </dl>
-        </>
-      )}
-    </li>
-  );
-}
 
 /** The provenance label for a family: derived from the figures its rows drew. */
 function familyProvenance(rows: readonly LimitRow[], exposure: readonly ExposureRow[] | null) {
@@ -276,7 +142,7 @@ function FamilyBlock({
       {!problem && rows.length > 0 ? (
         <ul className="limit-family__rows">
           {rows.map((row) => (
-            <Row key={row.key} row={row} signed={signed} />
+            <LimitRowItem key={row.key} row={row} signed={signed} />
           ))}
         </ul>
       ) : null}
@@ -427,11 +293,7 @@ export function LimitBoard({
         {groups.map((group) => block(group))}
         {waiting.map((meta) => block({ meta, rows: [], worst: null }))}
       </div>
-      <p className="limit-board__note">
-        † Computed in the workstation from the two API figures shown beside it, by the rule the API applies when it
-        lists a breach: daily loss used = the day&apos;s loss ÷ the limit, headroom = day P&amp;L + limit; drawdown
-        used = drawdown ÷ limit, headroom = limit − drawdown. Exposure utilisation is the API&apos;s own.
-      </p>
+      <DerivedNote />
     </section>
   );
 }

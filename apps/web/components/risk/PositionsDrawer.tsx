@@ -11,6 +11,7 @@ import { ProvenanceChip } from "../ProvenanceChip";
 import { CaveatList, SourceBadge, TableWrap } from "../primitives";
 import { Button } from "../ui/Button";
 import { Sheet } from "../ui/Sheet";
+import { StopMeter, StopMeterNote } from "./StopMeter";
 
 export const POSITIONS_PATH = "/api/trading/positions";
 
@@ -95,8 +96,9 @@ export function PositionsDrawer() {
                         <td>
                           <FigureValue figure={row.stop_loss} showChip={false} />
                         </td>
-                        <td>
+                        <td className="stopcell">
                           <FigureValue figure={row.distance_to_stop_pct} showChip={false} />
+                          <StopMeter row={row} />
                         </td>
                         <td>
                           <FigureValue figure={row.unrealised_pnl} showChip={false} colourSign />
@@ -108,6 +110,7 @@ export function PositionsDrawer() {
                   </tbody>
                 </table>
               </TableWrap>
+              <StopMeterNote />
             </>
           )}
         </AsyncBoundary>

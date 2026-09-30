@@ -2,11 +2,12 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Menu, PanelLeftClose, PanelLeftOpen } from "lucide-react";
+import { PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import { useState } from "react";
 import { uiPrefs, useUiPrefs } from "@/lib/ui-prefs";
 import { IconButton } from "../ui/IconButton";
 import { Tooltip } from "../ui/Tooltip";
+import { useNavDrawer } from "./NavDrawer";
 import { SECTIONS, sectionFor } from "./sections";
 
 /**
@@ -21,7 +22,7 @@ import { SECTIONS, sectionFor } from "./sections";
 export function Rail() {
   const pathname = usePathname();
   const { railExpanded } = useUiPrefs();
-  const [open, setOpen] = useState(false);
+  const { open, setOpen } = useNavDrawer();
   // Close the drawer when the route changes, adjusting state during render
   // rather than in an effect: an effect leaves the drawer covering the new page
   // for a frame, which at 390px is the whole screen.
@@ -34,17 +35,6 @@ export function Rail() {
 
   return (
     <>
-      <button
-        type="button"
-        className="nav-toggle"
-        data-testid="nav-toggle"
-        aria-expanded={open}
-        aria-controls="primary-nav"
-        onClick={() => setOpen((v) => !v)}
-      >
-        <Menu size={16} aria-hidden="true" />
-        Sections
-      </button>
       <div
         className="nav-scrim"
         data-open={open}

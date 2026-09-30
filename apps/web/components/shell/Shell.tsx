@@ -11,6 +11,7 @@ import { ShellHotkeys } from "./Hotkeys";
 import { ShellCommands } from "./ShellCommands";
 import { InspectorProvider } from "./Inspector";
 import { ModeFrame, ModeHead } from "./Mode";
+import { NavDrawerProvider } from "./NavDrawer";
 import { PageHeader, PageHeaderProvider } from "./PageHeader";
 import { PlatformProvider } from "./platform";
 import { QueryProvider } from "./QueryProvider";
@@ -60,15 +61,17 @@ export function Shell({ children }: { children: ReactNode }) {
               ) : (
                 <>
                   <StreamBanner />
-                  <div className="shell" data-rail={railExpanded ? "expanded" : "collapsed"}>
-                    <Rail />
-                    <div className="shell__main">
-                      <PageHeader />
-                      <main id="main" className="content" tabIndex={-1}>
-                        {children}
-                      </main>
+                  <NavDrawerProvider>
+                    <div className="shell" data-rail={railExpanded ? "expanded" : "collapsed"}>
+                      <Rail />
+                      <div className="shell__main">
+                        <PageHeader />
+                        <main id="main" className="content" tabIndex={-1}>
+                          {children}
+                        </main>
+                      </div>
                     </div>
-                  </div>
+                  </NavDrawerProvider>
                   <StatusBar />
                   <ShellHotkeys />
                   <ShellCommands />

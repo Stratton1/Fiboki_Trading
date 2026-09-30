@@ -1,15 +1,15 @@
 "use client";
 
 import Link from "next/link";
-import type { ReactNode } from "react";
 import { AsyncBoundary } from "@/components/AsyncBoundary";
 import { AttentionPanel } from "@/components/command/AttentionPanel";
 import { FleetStrip } from "@/components/command/FleetStrip";
 import { IncidentsPanel } from "@/components/command/IncidentsPanel";
-import { FigureValue } from "@/components/FigureValue";
 import { Card, PageHead } from "@/components/primitives";
-import { Stat } from "@/components/Stat";
+import { LazyKillSwitchTimeline } from "@/components/LazyChart";
+import { DerivedNote, LimitRowItem } from "@/components/risk/LimitRow";
 import { ViewStateTag } from "@/components/ui/ViewStateTag";
+import { lossRows } from "@/lib/limits-core";
 import { useApi } from "@/lib/query";
 import type { Envelope, RiskStateView } from "@/lib/types";
 
@@ -17,19 +17,20 @@ import type { Envelope, RiskStateView } from "@/lib/types";
  * COMMAND (Wave 4a): "Is anything wrong, and what needs me now?"
  *
  * The hero is the server-ranked attention queue as triage rows, rendered in
- * the order given (components/command/AttentionPanel.tsx). Below it, the
- * three numbers an operator wants first and the fleet strip, then incidents.
- * V1's dashboard led with "Fleet PnL (live)", which was a backtest number;
- * this page leads with what needs a human, and every figure carries the
- * provenance the API gave it.
+ * the order given (components/command/AttentionPanel.tsx). Below it, how close
+ * the book is to its two loss limits and the fleet strip, then incidents and
+ * the kill-switch timeline. V1's dashboard led with "Fleet PnL (live)", which
+ * was a backtest number; this page leads with what needs a human, and every
+ * figure carries the provenance the API gave it.
  *
- * The three numbers, from GET /api/trading/risk:
- *  - open risk: the API reports no open-risk (risk at stop) figure, so the
- *    tile says NOT REPORTED rather than borrowing a different number;
- *  - today's P&L: `daily_loss_pct`, the day's net P&L as a percentage of the
- *    starting balance, with its provenance;
- *  - drawdown throttle: the API does not report the step in force, so NOT
- *    REPORTED, with the drawdown the API does report beside it.
+ * The limits, from GET /api/trading/risk (V-1): the Risk page's own daily-loss
+ * and drawdown bars (LimitRowItem over lib/limits-core.ts `lossRows`, which
+ * the Risk page's `riskRows` is built from), so the two
+ * screens cannot draw the same limit differently: an OK bar in the figure's
+ * provenance ink, NEAR and CRITICAL in the health tokens, BREACHED filled,
+ * the utilisation marked † because the workstation divides two API figures.
+ * Open risk and the drawdown throttle are not reported by the API; one line
+ * says so rather than two tiles leading the page with absences.
  */
 export default function CommandPage() {
   const risk = useApi<Envelope<RiskStateView>>("/api/trading/risk");
@@ -37,7 +38,7 @@ export default function CommandPage() {
     <>
       <PageHead
         title="Command"
-        intro="What needs you now, in the platform's own order. Then the three numbers, the fleet and incidents."
+        intro="What needs you now, in the platform's own order. Then how close the book is to its loss limits, the fleet, incidents and the kill switch's month."
       />
 
       <Card title="Needs attention">
@@ -47,28 +48,27 @@ export default function CommandPage() {
       <div className="command__grid">
         <section className="card" aria-labelledby="command-book">
           <h2 id="command-book" className="card__title">
-            First numbers
+            Loss limits
           </h2>
           <AsyncBoundary state={risk} label="risk state" onRetry={risk.reload}>
-            {(envelope) => (
-              <div className="tiles command__tiles">
-                <AbsentStat label="Open risk">
-                  The API reports no open-risk (risk at stop) figure.{" "}
-                  <Link href="/trading/risk">Risk &amp; Exposure</Link> shows every limit it does report.
-                </AbsentStat>
-                <Stat
-                  label="Today's P&L"
-                  figure={envelope.data.daily_loss_pct}
-                  signed
-                  help="Day net P&L as % of the starting balance. For a replayed journal, its last replayed day."
-                />
-                <AbsentStat label="Drawdown throttle">
-                  The step in force is not reported. Drawdown:{" "}
-                  <FigureValue figure={envelope.data.drawdown_pct} /> of a{" "}
-                  <FigureValue figure={envelope.data.max_drawdown_limit_pct} showChip={false} /> limit.
-                </AbsentStat>
-              </div>
-            )}
+            {(envelope) => {
+              const rows = lossRows(envelope.data);
+              return (
+                <div data-testid="command-limits">
+                  <ul className="limit-family__rows">
+                    {rows.map((row) => (
+                      <LimitRowItem key={row.key} row={row} signed={row.family === "loss"} showChip />
+                    ))}
+                  </ul>
+                  <DerivedNote exposure={false} />
+                  <p className="command__absent" data-testid="command-absent" data-state="absent">
+                    <ViewStateTag state="absent">NOT REPORTED</ViewStateTag> Open risk (risk at stop) and the drawdown
+                    throttle step are not reported by the API, so neither is shown.{" "}
+                    <Link href="/trading/risk">Risk &amp; Exposure</Link> lists every limit it does report.
+                  </p>
+                </div>
+              );
+            }}
           </AsyncBoundary>
         </section>
 
@@ -83,19 +83,8 @@ export default function CommandPage() {
       <Card title="Incidents">
         <IncidentsPanel />
       </Card>
-    </>
-  );
-}
 
-/** A stat tile for a number the API does not report: the reason, never a zero. */
-function AbsentStat({ label, children }: { label: string; children: ReactNode }) {
-  return (
-    <div className="tile stat" data-testid="tile" data-label={label} data-state="absent">
-      <div className="tile__label">{label}</div>
-      <div className="tile__value">
-        <ViewStateTag state="absent">NOT REPORTED</ViewStateTag>
-      </div>
-      <div className="tile__help">{children}</div>
-    </div>
+      <LazyKillSwitchTimeline />
+    </>
   );
 }

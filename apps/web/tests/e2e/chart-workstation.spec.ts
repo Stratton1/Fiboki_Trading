@@ -481,3 +481,43 @@ test("an unmocked chart route answers with its error state, not a blank page", a
   await page.goto(EURUSD);
   await expect(page.getByTestId("state-error")).toBeVisible();
 });
+
+test.describe("dataset chip (inventory F-8)", () => {
+  test("the id is cut in the middle, keeping the timeframe, and shown whole on hover and on focus", async ({ page }) => {
+    await mockChart(page);
+    await page.goto(EURUSD);
+    await ready(page);
+    const chip = page.getByTestId("dataset-version");
+    await expect(chip).toHaveAttribute("data-version", "dsv_eurusd_h1_0007abcdef");
+    const short = chip.getByTestId("dataset-version-short");
+    const full = chip.getByTestId("dataset-version-full");
+    // Was "dsv_eurusd_h" (first 12): the timeframe was lost.
+    await expect(short).toHaveText("dsv_eurusd_h1_…abcdef");
+    await expect(short).toBeVisible();
+    const width = async () => {
+      const box = await full.boundingBox();
+      if (box === null) throw new Error("the full id has no box");
+      return box.width;
+    };
+    expect(await width()).toBeLessThanOrEqual(1);
+    // Keyboard: the chip is focusable and focus reveals the whole id.
+    await chip.focus();
+    await expect(short).toBeHidden();
+    expect(await width()).toBeGreaterThan(60);
+    await expect(full).toHaveText("dsv_eurusd_h1_0007abcdef");
+    await chip.blur();
+    await expect(short).toBeVisible();
+    // Pointer: hover reveals it too.
+    await chip.hover();
+    await expect(short).toBeHidden();
+    expect(await width()).toBeGreaterThan(60);
+  });
+
+  test("a short id is shown whole", async ({ page }) => {
+    await mockChart(page, { bars: () => chartBars({ version: "dsv_short_01" }) });
+    await page.goto(EURUSD);
+    await ready(page);
+    await expect(page.getByTestId("dataset-version-short")).toHaveText("dsv_short_01");
+    await expect(page.getByTestId("dataset-version")).toHaveAttribute("data-truncated", "false");
+  });
+});
