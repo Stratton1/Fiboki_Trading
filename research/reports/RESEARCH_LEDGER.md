@@ -317,3 +317,53 @@ cannot say whether these families have an edge; it can only say they do not clea
 uncalibrated bar. **Decision recorded:** no threshold moves; the next research action is E-1,
 pre-registered, run on the OANDA MID bars, before any further campaign. A gate lowered until
 something passes would be V1 again. Every later campaign on these bars declares at least 20,904.
+
+## E-1 gate calibration, `gate_calibration_e1` (filed 2026-09-30 at efb5fce; first process run 2026-09-30)
+
+**Filed before compute.** `research/preregistration/gate_calibration_e1.json`, status FILED
+2026-09-30, decision date 2026-10-02, external trials per candidate 20,896 (K5's 20,904 less the
+candidate's own 8 grid points), family-wise size reported as the union bound
+1 − (1 − p0)^106, 400 replicates per (sr, process) cell, sr grid {0, 0.03, 0.05, 0.08, 0.12}
+per-trade Sharpe. Process order: `block_bootstrap_real_returns` first (cloud), then
+`perturbed_price_paths` (Mac/desktop). **The decision rule is applied only when both have run;
+this entry is the INTERIM reading from the first process and moves nothing.**
+
+**Process 1 result, INTERIM (2026-09-30, `research/reports/e1/e1_block_bootstrap_real_returns.json`,
+`run_bootstrap.sh` beside it is the exact command).** Data: OANDA practice MID H4, K5's 16 series
+(USDCAD and USDCHF converted through GBPCAD/GBPCHF D1), bars from 2006-01-04, holdout excluded by
+the ladder's own definition; source built from the six seeds' own trades (54 cells, 18,753 trades,
+demeaned per seed, stationary block bootstrap with Politis–White block lengths); 2,000 ladder
+runs in 1,423 s (0.42 s each, after a 580 s source build) on the 2-core sandbox.
+
+| injected per-trade Sharpe | promoted / 400 | rate | role |
+|---|---|---|---|
+| 0.00 | 0 | 0.000 (95% upper bound 0.0075, rule of three) | size (per candidate) |
+| 0.03 | 0 | 0.000 | power |
+| 0.05 | 0 | 0.000 | power |
+| **0.08** | **0** | **0.000** (target ≥ 0.50) | **power, the pre-registered target** |
+| 0.12 | 4 | 0.010 | power |
+
+**What binds, by injected edge** (share of replicates whose ladder ended on that gate): `min_trades`
+0.60 at every sr, unchanged by the edge because it is decided before any return is looked at
+(the median default-binding cell produced 326 trades on 20 years of H4; p10 86, p90 696);
+then, of the 40% that reach the statistical rungs, `deflated_sharpe` at 20,896 external trials
+rejects 97.5% of true 0.08 edges (binding 0.155), `walk_forward_efficiency` binds 0.14,
+`parameter_plateau` 0.045, `pbo` 0.025. At sr 0.12, `deflated_sharpe` still rejects 88% and
+`pbo` 97% of the candidates that reach them.
+
+**Interim reading, stated with its limits.** (i) The per-candidate size of 0/400 is consistent
+with H0_size but cannot resolve the family-wise bound on its own: 1 − (1 − 0.0075)^106 = 0.55 at
+the rule-of-three upper bound, exactly the limitation the filing recorded. (ii) H1_power fails on
+this process by a margin no second process can reverse: 0 promotions in 400 at the target edge,
+1% at an edge half again as large. On these bars the gate set has essentially no power against
+edges of the size the platform could plausibly find, and two gates account for it: a `min_trades`
+floor that is decided before the edge can matter, and a deflation charged 20,896 trials against a
+single candidate's 8-point grid. (iii) Nothing is moved by this entry. Per the decision rule, if
+process 2 confirms size ≤ 0.05, path 3 applies: the §3.1 loosenings (MinTRL-based `min_trades`,
+plateau median rule, WFE on log growth, 8-fold OOS hit rate) are each admitted only if size stays
+≤ 0.05 with them, and the result is published as `v2.1.0-calibrated` before any real strategy is
+re-scored. The 400-trade floor and the 20,896-trial deflation are the two candidates for that
+step; the trial-count question is a design question (deflate against the candidate's own search
+plus the family's, or against the whole campaign's) and must be argued in the pre-registration
+of the calibrated set, not tuned. **Next:** `perturbed_price_paths` on the Mac or desktop; then
+the decision on 2026-10-02 or the first day both results exist.

@@ -1,0 +1,38 @@
+E-1 block_bootstrap_real_returns: source built in 580.5s; first replicate (5 sr values) took 7.6s; estimated total for 400 replicates: 3617s (~1.00h)
+{
+  "0": {
+    "monte_carlo_se": 0.0,
+    "n": 400,
+    "promoted": 0,
+    "rate": 0.0,
+    "role": "size"
+  },
+  "0.03": {
+    "monte_carlo_se": 0.0,
+    "n": 400,
+    "promoted": 0,
+    "rate": 0.0,
+    "role": "power"
+  },
+  "0.05": {
+    "monte_carlo_se": 0.0,
+    "n": 400,
+    "promoted": 0,
+    "rate": 0.0,
+    "role": "power"
+  },
+  "0.08": {
+    "monte_carlo_se": 0.0,
+    "n": 400,
+    "promoted": 0,
+    "rate": 0.0,
+    "role": "power"
+  },
+  "0.12": {
+    "monte_carlo_se": 0.0049749371855331,
+    "n": 400,
+    "promoted": 4,
+    "rate": 0.01,
+    "role": "power"
+  }
+}
