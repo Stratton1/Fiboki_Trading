@@ -16,11 +16,43 @@ Items are ordered by when they block you, not by effort.
 
 You chose "V2 is the repository": `main` was fast-forwarded to `v2/integration`, V1 is preserved under `legacy/v1/` and at the tag `v1-final` (commit ccc3af2). Nothing in V2 imports anything from `legacy/`.
 
-### C2. Decide what happens to the V1 production deployment
+### C2. Decide what happens to the V1 production deployment — DECIDED 2026-09-30: take V1 down; one click is yours
 
-`fiboki.uk` and `api.fiboki.uk` are still serving the V1 build from 25 June 2026, including the defects in the audit. V2 does not deploy anywhere yet and has no production environment.
+You decided on 2026-09-30 to take V1 down and make V2 the live site. `fiboki.uk` and `www.fiboki.uk`
+still serve the V1 build (Vercel project `fiboki-trading`, every build since main moved to V2 fails
+with "Root Directory 'frontend' does not exist", so the last successful V1 deployment is what is
+served); `api.fiboki.uk` answers 404 on `/health` (Railway V1 API).
 
-Your options are to leave V1 running as-is, take it down, or put a holding page on it. I would not leave a system running that presents numbers we now know are wrong, but it is your product and your call.
+- [ ] **Pause the Vercel project** (this takes V1 down and stops the failure e-mails; it is reversible
+  with Unpause). The API token this session holds is read-only for project updates (403 on pause), so
+  it is one click for you: vercel.com → `fiboki-trading` → Settings → General → **Pause Project**.
+  Alternative with the same effect: Settings → Git → disconnect the repository, then delete the
+  production deployment.
+- [ ] Railway: stop or delete the V1 API service (`api.fiboki.uk`).
+
+**V2 cannot be "the live site" on Vercel as it stands, and this is a design property, not a bug.**
+V2's web tier is thin (display and controls); every number comes from the FastAPI service and the
+workers that run on your Mac against the local data store, the ledgers and the OANDA practice
+account. A Vercel deployment of `apps/web` would render nothing without an API it can reach. The
+honest routes to a public V2, in order of preference:
+
+1. **Private access to the Mac** (recommended for the operator phase): Cloudflare Tunnel from the
+   Mac to `fiboki.uk` with Cloudflare Access in front (your Google account as the identity; Tom's
+   later). No inbound port, no public exposure of the API, the workstation you already run. Cost:
+   free tier. Needs: the fiboki.uk DNS moved to Cloudflare (where it is hosted today is not known to
+   me), `cloudflared` as a launchd service (`uk.fiboki.tunnel`), and the web/API CORS origin set to
+   `https://fiboki.uk`. Half a day including tests; I can do all of it except the DNS transfer and
+   the Access policy sign-off.
+2. **Hosted API + web** (Railway/Fly for the API and workers, Vercel for the web, Postgres for the
+   ledgers, the data store on a volume or S3): the "real" deployment, but it moves the paper engine,
+   the OANDA credentials and 2 GB of bars off the Mac and onto a paid host, and the workers need a
+   machine that runs 24/7 anyway. £20–60/month. Only worth it once a strategy has survived and the
+   paper forward is worth keeping alive without your laptop. Not now.
+3. A public V2 with no API (static marketing page) is possible today but is not "V2 live"; it is a
+   brochure.
+
+Until one of these is done, `fiboki.uk` paused is the truthful state: nothing public claims numbers
+we cannot stand behind.
 
 ### C3. Remove the committed live-execution flag from V1
 
