@@ -81,34 +81,45 @@ def test_staleness_is_four_days_not_seven() -> None:
         ("CHF", ("GBPCHF",)),
         ("CAD", ("GBPCAD",)),
         ("AUD", ("GBPAUD",)),
-        ("NZD", ("NZDUSD", "GBPUSD")),  # no GBP/NZD cross is registered
+        # GBPNZD is registered since the OANDA registry (2026-09-30), so NZD
+        # now converts through the direct cross. It triangulated through USD
+        # (NZDUSD, GBPUSD) while no GBP/NZD cross was registered.
+        ("NZD", ("GBPNZD",)),
+        # SEK has no GBP cross on OANDA, so it still triangulates.
+        ("SEK", ("USDSEK", "GBPUSD")),
     ],
 )
 def test_research_fx_pairs(quote: str, pairs: tuple[str, ...]) -> None:
     assert research_fx_pairs(quote) == pairs
 
 
-def test_hkd_has_no_route_and_says_which_pair_to_register() -> None:
+def test_a_currency_with_no_route_says_which_pair_to_register() -> None:
+    # This was HKD until 2026-09-30; OANDA offers GBP_HKD and USD_HKD, both now
+    # registered. ILS is a currency the registry knows with no pair on OANDA.
     with pytest.raises(FxSourceUnavailable) as exc:
-        research_fx_pairs("HKD")
-    assert exc.value.missing == ("USDHKD",)
+        research_fx_pairs("ILS")
+    assert exc.value.missing == ("USDILS",)
 
 
 def test_triangulation_through_usd() -> None:
-    """NZD->GBP = NZDUSD * (1 / GBPUSD) = 0.60 / 1.25 = 0.48."""
-    store = FakeStore({"NZDUSD": daily(0.60), "GBPUSD": daily(1.25)})
-    fx, label = build_research_fx_source(store, quote_currencies=("NZD",))
-    assert fx.rate("NZD", "GBP", T("2024-01-10 12:00")) == pytest.approx(0.48, abs=1e-15)
-    assert "NZDUSD@ds_NZDUSD" in label and "GBPUSD@ds_GBPUSD" in label
+    """SEK->GBP = (1 / USDSEK) * (1 / GBPUSD) = 1 / (10.00 x 1.25) = 0.08.
+
+    (The example was NZD via NZDUSD until GBPNZD was registered from OANDA.)
+    """
+    store = FakeStore({"USDSEK": daily(10.0), "GBPUSD": daily(1.25)})
+    fx, label = build_research_fx_source(store, quote_currencies=("SEK",))
+    assert fx.rate("SEK", "GBP", T("2024-01-10 12:00")) == pytest.approx(0.08, abs=1e-15)
+    assert "USDSEK@ds_USDSEK" in label and "GBPUSD@ds_GBPUSD" in label
 
 
 def test_a_missing_cross_is_refused_listing_every_instrument_to_ingest() -> None:
     store = FakeStore({"GBPUSD": daily(1.25)})
     with pytest.raises(FxSourceUnavailable) as exc:
         build_research_fx_source(store, quote_currencies=("USD", "JPY", "NZD", "EUR"))
-    # GBPJPY, NZDUSD and EURGBP are all missing; they are named together.
-    assert exc.value.missing == ("EURGBP", "GBPJPY", "NZDUSD")
-    assert "ingest EURGBP, GBPJPY, NZDUSD" in str(exc.value)
+    # GBPJPY, GBPNZD and EURGBP are all missing; they are named together.
+    # (NZD needed NZDUSD before GBPNZD was registered from OANDA, 2026-09-30.)
+    assert exc.value.missing == ("EURGBP", "GBPJPY", "GBPNZD")
+    assert "ingest EURGBP, GBPJPY, GBPNZD" in str(exc.value)
 
 
 def test_a_daily_close_is_known_only_at_the_bar_close() -> None:
@@ -159,7 +170,8 @@ def test_a_store_backed_campaign_refuses_up_front_when_a_cross_is_missing() -> N
     store = FakeStore({"GBPUSD": daily(1.25)})
     with pytest.raises(FxSourceUnavailable) as exc:
         _runner(store, ("EURUSD", "GBPJPY", "AUDNZD"))
-    assert exc.value.missing == ("GBPJPY", "NZDUSD")
+    # GBPNZD, not NZDUSD, since GBPNZD was registered from OANDA (2026-09-30).
+    assert exc.value.missing == ("GBPJPY", "GBPNZD")
 
 
 def test_a_gbp_quoted_universe_needs_no_fx() -> None:

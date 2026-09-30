@@ -313,7 +313,7 @@ falsified; a rule set with none is a curve fit waiting to be discovered.
 | No look-ahead in the engine or compiler | `test_no_lookahead.py`, `test_compiler_causality.py` |
 | Hand-calculated indicator and P&L values | `tests/golden/`, `golden` marker |
 | Honest `external_trial_count` | **Not enforced in the ladder.** Researcher obligation; recorded on the report. The agent `validation_handler` takes `N` from `ExperimentLedger.count_trials` (family and campaign) and never from its payload; unknown `N` is `NOT_EVALUATED`. |
-| Retail leverage caps by the ESMA currency set | `tests/golden/test_golden_retail_leverage.py` (all 41 instruments) |
+| Retail leverage caps by the ESMA currency set | `tests/golden/test_golden_retail_leverage.py` (all 123 registered instruments; OANDA marginRate cross-checked against the ESMA class, 12 stricter exceptions listed) |
 | BID bars never traded as mid | `backtest/engine._validate_frame`, `tests/unit/test_price_basis_and_utc.py` |
 | Resampling statistics are seeded | `tests/unit/test_stats_rng_required.py` (AST) |
 | Backtest regression pins over a realistic run | **Not enforced.** Gap. |

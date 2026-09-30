@@ -331,8 +331,20 @@ def test_instrument_name_mapping():
     assert to_oanda_instrument("EURUSD") == "EUR_USD"
     assert to_oanda_instrument("XAUUSD") == "XAU_USD"
     assert from_oanda_instrument("EUR_USD") == "EURUSD"
+    # Until 2026-09-30 this provider split six-character symbols and refused
+    # everything else, so US30 raised. It now delegates to the one OANDA
+    # mapping (core/instruments.oanda_name_for, generated from OANDA's own
+    # instruments endpoint), which knows every CFD explicitly.
+    assert to_oanda_instrument("US30") == "US30_USD"
+    assert to_oanda_instrument("DE40") == "DE30_EUR"
+    assert from_oanda_instrument("SPX500_USD") == "US500"
+    # A v20 name is accepted unchanged.
+    assert to_oanda_instrument("US30_USD") == "US30_USD"
+    # Unknown on either side still refuses rather than guessing.
     with pytest.raises(ProviderError, match="cannot map"):
-        to_oanda_instrument("US30")
+        to_oanda_instrument("NOTREAL")
+    with pytest.raises(ProviderError):
+        from_oanda_instrument("NOT_REAL")
 
 
 def test_incomplete_candles_are_dropped_by_default():

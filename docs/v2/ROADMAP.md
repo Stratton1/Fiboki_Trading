@@ -29,8 +29,9 @@ claims a test that does not exist, that is recorded in §5.
 
 Contracts for the ALPHA → PORTFOLIO → RISK → EXECUTION layering, with self-validating `Signal`
 (positive prices, stop on the correct side, tz-aware bar time) and an `Order` that refuses to
-exist without a `client_ref`. 41 registered instruments (7 FX majors, 20 FX crosses, 2 metals,
-2 energy, 10 indices) with FCA/ESMA retail leverage caps as market facts. Mandatory, explicit FX
+exist without a `client_ref`. Registered instruments with FCA/ESMA retail leverage caps as market facts (41 hand-registered at
+this milestone; since 2026-09-30 all 123 that OANDA practice offers, from the recorded instruments
+endpoint, `DATA_ARCHITECTURE.md` §15). Mandatory, explicit FX
 conversion: `IdentityFxSource` raises on a currency mismatch unless `allow_mismatch=True` was
 set deliberately, and `SeriesFxSource` does as-of lookup with a staleness ceiling.
 

@@ -25,6 +25,12 @@ class AssetClass(str, Enum):
     INDEX = "index"
     CRYPTO = "crypto"
     EQUITY = "equity"
+    #: Government-bond CFDs (OANDA DE10YB, UK10YB, USB02Y/05Y/10Y/30Y). ESMA
+    #: 2018/796 Annex II puts them under "other underlyings" (5:1).
+    BOND = "bond"
+    #: Commodities other than gold that are neither energy nor a registered
+    #: METAL: the agricultural CFDs and copper, platinum and palladium.
+    COMMODITY = "commodity"
 
 
 class Timeframe(str, Enum):

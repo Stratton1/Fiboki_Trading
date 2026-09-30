@@ -55,6 +55,7 @@ from typing import Any
 
 import pandas as pd
 
+from fiboki.core import instruments as instrument_registry
 from fiboki.core.enums import DataQuality, Timeframe
 from fiboki.data.providers.base import (
     AuthenticationRequired,
@@ -97,18 +98,29 @@ ABSENT_VOLUME = -1
 
 
 def to_oanda_instrument(symbol: str) -> str:
-    """``EURUSD`` -> ``EUR_USD``, ``XAUUSD`` -> ``XAU_USD``."""
-    sym = symbol.upper().replace("_", "")
-    if len(sym) != 6:
+    """``EURUSD`` -> ``EUR_USD``, ``US500`` -> ``SPX500_USD``.
+
+    Delegates to THE mapping, :func:`fiboki.core.instruments.oanda_name_for`
+    (the committed OANDA table; ``fiboki.broker.oanda_instruments`` documents
+    the rules that generate it). An exact OANDA name is accepted unchanged, so
+    a caller holding a v20 name need not translate it back first.
+    """
+    if symbol in instrument_registry.oanda_names():
+        return symbol
+    try:
+        return instrument_registry.oanda_name_for(symbol.replace("_", ""))
+    except KeyError as exc:
         raise ProviderError(
-            f"cannot map {symbol!r} to an OANDA instrument name; pass the v20 name "
-            "directly (e.g. 'US30_USD') if it is not a six-character pair"
-        )
-    return f"{sym[:3]}_{sym[3:]}"
+            f"cannot map {symbol!r} to an OANDA instrument name: {exc.args[0]}"
+        ) from exc
 
 
 def from_oanda_instrument(name: str) -> str:
-    return name.replace("_", "").upper()
+    """``EUR_USD`` -> ``EURUSD``, ``DE30_EUR`` -> ``DE40``. Unknown names raise."""
+    try:
+        return instrument_registry.symbol_for_oanda_name(name)
+    except KeyError as exc:
+        raise ProviderError(str(exc.args[0])) from exc
 
 
 def _side(candle: dict[str, Any], key: str) -> dict[str, float] | None:

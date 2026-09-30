@@ -153,7 +153,7 @@ class EvaluatorConfig:
     initial_balance: float = 10_000.0
     #: GBP because the operator's account is GBP. Research used to run in USD
     #: while paper ran in GBP, so every monetary limit and every size differed
-    #: between the two for the 30 of 41 instruments not quoted in GBP. A
+    #: between the two for the registered instruments not quoted in GBP (most of them). A
     #: non-GBP-quoted instrument therefore needs a real rate source: see
     #: :func:`fiboki.validation.run.build_research_fx_source`.
     account_ccy: str = "GBP"

@@ -128,10 +128,14 @@ def research_fx_pairs(quote_ccy: str, account_ccy: str = RESEARCH_ACCOUNT_CCY) -
     """The FX series needed to convert ``quote_ccy`` into ``account_ccy``.
 
     The registered cross when one exists (USD->GBP is GBPUSD, JPY->GBP is
-    GBPJPY, EUR->GBP is EURGBP), else one triangulation through USD (NZD->GBP
-    is NZDUSD and GBPUSD). Raises :class:`FxSourceUnavailable` naming the pair
-    that would have to be REGISTERED when even that is impossible (HKD: there
-    is no USDHKD in ``core/instruments.py``).
+    GBPJPY, EUR->GBP is EURGBP, NZD->GBP is GBPNZD), else one triangulation
+    through USD (SEK->GBP is USDSEK and GBPUSD). Raises
+    :class:`FxSourceUnavailable` naming the pair that would have to be
+    REGISTERED when even that is impossible (ILS: OANDA offers no ILS pair).
+
+    "Registered" is not "stored": since the registry lists every OANDA
+    instrument (2026-09-30), a direct cross can be registered before its bars
+    are backfilled, and :func:`build_research_fx_source` then refuses naming it.
     """
     q, a = quote_ccy.upper(), account_ccy.upper()
     if q == a:

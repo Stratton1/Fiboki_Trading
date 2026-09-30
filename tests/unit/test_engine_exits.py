@@ -996,8 +996,9 @@ def test_month_end_needs_no_calendar_either():
 def _toy_instrument(**kwargs) -> Instrument:
     """An instrument whose minimum size EXCEEDS its size step.
 
-    No instrument in ``core/instruments.py`` is like this today — all 41
-    registered instruments have ``min_size == size_step``, so a partial can
+    No instrument in ``core/instruments.py`` is like this today — all 123
+    registered instruments (every one OANDA offers, 2026-09-30) have
+    ``min_size == size_step``, so a partial can
     never leave a residue below the minimum. The guard is written anyway,
     because the registry is data and a venue with a 0.5-lot minimum and a
     0.1-lot step is an ordinary thing for it to acquire.

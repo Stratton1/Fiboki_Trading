@@ -132,6 +132,16 @@ CRYPTO_CALENDAR = SessionCalendar(
     name="crypto_24_7", continuous=True, holidays=frozenset()
 )
 
+# Bond and agricultural/industrial-metal CFDs (registered from OANDA 2026-09-30).
+# KNOWN APPROXIMATION: their real sessions are far shorter than this (the
+# pricing fixture shows CORN, SOYBN and WHEAT last quoted at 18:19Z, UK10YB at
+# 16:59Z, DE10YB at 19:59Z), and no session times are recorded anywhere in the
+# repository to model them from. Modelled as the energy week, so gap detection
+# EXPECTS bars in hours these markets are shut: false alarms, which is the
+# direction this module chooses to be wrong in (module docstring).
+COMMODITY_CALENDAR = SessionCalendar(name="commodity_cfd", daily_break=(17, 18))
+BOND_CALENDAR = SessionCalendar(name="bond_cfd", daily_break=(17, 18))
+
 _BY_ASSET_CLASS = {
     AssetClass.FX_MAJOR: FX_CALENDAR,
     AssetClass.FX_CROSS: FX_CALENDAR,
@@ -140,6 +150,8 @@ _BY_ASSET_CLASS = {
     AssetClass.INDEX: INDEX_CALENDAR,
     AssetClass.CRYPTO: CRYPTO_CALENDAR,
     AssetClass.EQUITY: INDEX_CALENDAR,
+    AssetClass.COMMODITY: COMMODITY_CALENDAR,
+    AssetClass.BOND: BOND_CALENDAR,
 }
 
 

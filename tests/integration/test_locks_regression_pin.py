@@ -194,31 +194,39 @@ def _run(strategy_id: str, bars: pd.DataFrame):
 #: what shows the move is sizing and financing and not entries or exits. Re-run
 #: under ``fixed_fractional_v1`` the hashes still differ from the old pins
 #: (financing), so both changes contribute.
+#:
+#: RE-PINNED AGAIN 2026-09-30 for the four XAUUSD documents: XAUUSD's size step
+#: went from 0.01 to 0.1 oz to match OANDA (XAU_USD ``tradeUnitsPrecision`` 1,
+#: ``minimumTradeSize`` "0.1", tests/fixtures/oanda/
+#: practice_instruments_2026-09-30.json), so sizes round down to 0.1 oz. Counts,
+#: rejections and ``signals_seen`` are unchanged; with the step set back to 0.01
+#: the previous hashes reproduce exactly. rsi_band_mean_reversion (EURUSD) did
+#: not move. The same change re-pinned tests/golden/test_golden_construction_engine.py.
 _LEDGER: dict[str, tuple[str, str, int, dict[str, int], int]] = {
     "donchian_breakout_atr": (
-        "09e5ab35987d343e3884ba06734bd5d1795ccc8f60af10b2c82ac79f8147153a",
-        "cceb31e71cdaa6d1193a046d5fb39c01af4f8f4cd4996d98c1c2b7f79946020d",
+        "f20272bea90a6759e2e2377fa8ffbc93ec3b5c28494f10d0ba3704fc37df76c0",
+        "51fdfe5cdf26de158f166812ba6f6564b10fc8c9a27ac0b702d8885ee0d03d9b",
         106,
         {"cooldown": 2, "max_concurrent": 284},
         392,
     ),
     "fib_golden_pocket_pullback": (
-        "4325aabf1a443c414a54ce05db32c5f6f2e763d0ec73caec34d95bbc53529c53",
-        "17cd1ed9d47879700d119057b8a1e6bea55798cd163b8cabd96f603d32acb482",
+        "5e3614dab2ba101010038a99b381bb77b945e08cb6fe4e209c2f55e01c21fc11",
+        "82a33dc29e76c0dfe1d15313531a6e1362d64416ef3910880a49983b51023457",
         32,
         {"cooldown": 4, "max_concurrent": 24},
         60,
     ),
     "ichimoku_kumo_trend": (
-        "93243358e5127fb8c106763771805dcfa608f9f68fcc1f9a719d22e3f91e2b20",
-        "a0230387f492ef4c72f479ce9fad0a73774d08e0494f4224a9f6377e8b34f858",
+        "b8c809062ae39448230b25043f0f28624190de94f454ac40e97af1f5a21a1d09",
+        "4836ead7c070efae38c0e0c4058527c17f53c42aa1f37f77bd948fdb6c13b0df",
         12,
         {},
         12,
     ),
     "macd_ema_trend_hybrid": (
-        "5181b77b32a1a7fd93bd117fe57fe5d9d82e06ae259c6e2f6e4056904780997e",
-        "9b6d2e318d28e48f94bc71f88a3575d4522fe99a1dfb04f426e086e1189ca2d7",
+        "3c24bb0bf62b329d73d84b1dc9cdc7c5985124258098a207c777dd92a15f6f50",
+        "52dac09ea4c62a9a02ea939fa66ff763dad2b738e73e7ac6fbdb0a929ed6d8c4",
         5,
         {},
         5,

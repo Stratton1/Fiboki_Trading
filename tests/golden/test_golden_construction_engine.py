@@ -137,38 +137,50 @@ def _run(strategy_id: str, bars: pd.DataFrame, *, construction=True):
 #: ``(ledger_sha256, leg_ledger_sha256, allocation_ledger_sha256, n_trades,
 #: rejections, signals_seen, allocation_decisions)`` under the default policy.
 #: Trade counts and signals_seen equal ``test_locks_regression_pin._LEDGER``.
+#:
+#: RE-PINNED 2026-09-30 for the four XAUUSD documents (the fifth,
+#: rsi_band_mean_reversion, runs on EURUSD and did not move). Reason: XAUUSD's
+#: ``size_step``/``min_size`` went from 0.01 to 0.1 oz because OANDA, the only
+#: broker, accepts gold in 0.1-oz increments (practice instruments endpoint,
+#: XAU_USD ``tradeUnitsPrecision`` 1, ``minimumTradeSize`` "0.1", fixture
+#: tests/fixtures/oanda/practice_instruments_2026-09-30.json). Sizes now round
+#: down to 0.1 oz (ichimoku_kumo_trend's flat run, first three trades: 89.13 ->
+#: 89.1, 59.33 -> 59.3, 38.69 -> 38.6 oz), so every monetary column moved. Trade
+#: counts, rejection counts, ``signals_seen`` and allocation-decision counts are
+#: unchanged for all five, and with the step set back to 0.01 all five old
+#: hashes reproduce exactly, which is what shows the step is the only cause.
 _PINS: dict[str, tuple[str, str, str, int, dict[str, int], int, int]] = {
     "donchian_breakout_atr": (
-        "4b8862a98555814d8724b518ffc6c5e985e2e3714d52e8095bab3fd9744410ab",
-        "20dec9a42fdcf232b6330b6c511aec8eeac24cdad6731af5ea7754dc42dbb229",
-        "f9dab1cebe69ba0d0742bb9b619a2e8751ca6a7012b938d231abe9d7d09f759d",
+        "8224d20fa882556f378fd811dc68b8abbaa9ab0a27738195a224cc463e480d80",
+        "39e841e3a26da2fa7f82e220739d47a62f0a90431bc2411e0b19f19bc187a25a",
+        "1ba4c1c18761a9759f6588faa1ac049731db1acd589478c3451a284a29715d8a",
         106,
         {"allocation_dropped": 284, "cooldown": 2},
         392,
         392,
     ),
     "fib_golden_pocket_pullback": (
-        "6f50f038e707a41d8949c49ed0c1cf4dba6cc3644acb85068b4fed53a756ec81",
-        "30f7df77f45479037646b52b3a5ce7252bce16a1ef056b97866d29d2956a4463",
-        "913106f76230d0ef1005f24c05dd955f2236d03591b04ff98464539ae0215a8b",
+        "3aa814f82618200999160e540895297f140172a3039cf2bf7409a69bf7406b5d",
+        "80155aff42bdc67dce84c1dceb6f7c3cd4e3654411fe89833c04ae3bba2dd13e",
+        "6f7a58b1d3a0176ea5db97cb36461863a68602168e746e58b8c1e55bcb55d7c8",
         32,
         {"allocation_dropped": 24, "cooldown": 4},
         60,
         60,
     ),
     "ichimoku_kumo_trend": (
-        "53c1fdcef18012c7327cb3e93e78223cd39a66f70d375216a7d280c309ccedf0",
-        "5c635a9cb44f9521d0f1ceee33ff2d59f182869cfbee259fc04d3ff77f495042",
-        "a9c359476608f4f84a92ad8f8ac05b945808efbac2b9950dec485a67459660ff",
+        "298ccf7674b69bcc45e2a6b159c11de1d4158d16bafc7599f02b1b67cce731a0",
+        "48003fe57eb705bd4fa945c657ab72ac3314026be3785208aa21cb0e42ed33c3",
+        "1750d35d28d1794e4f1250c8b68ff51fc13a89e0b82e2a7730be8b00761587ec",
         12,
         {},
         12,
         12,
     ),
     "macd_ema_trend_hybrid": (
-        "4ec6f4efb73f109ff4cee84ae58c951a76f18bbe69461e01c277072f23e51eea",
-        "c25ce08d60d84ad853bb8d54cdea36290fb148c7a527e52d3e5ee47b6ba287e9",
-        "f257d67d62668102c6b0795b39f80381e6352a125b3ddfea4657c50efead0acd",
+        "04030a759881f079c233c51ed41b0c0d3993a0deb2ab65727bc4f579f28ee088",
+        "8b19685fb78a90840bb977eea5b2917820443c9f32105b5d41e4745a0ef4069b",
+        "30d83947b015300eeccb137a738ce199bf99a6f9e2bf1014a38cea0ae9578e59",
         5,
         {},
         5,
@@ -245,7 +257,7 @@ def test_the_flat_pins_are_the_none_path(bars: pd.DataFrame) -> None:
     flat, _r, _s = _run("ichimoku_kumo_trend", bars, construction=False)
     assert flat.config_fingerprint["construction"] == "none"
     assert flat.ledger_sha256() == (
-        "93243358e5127fb8c106763771805dcfa608f9f68fcc1f9a719d22e3f91e2b20"
+        "b8c809062ae39448230b25043f0f28624190de94f454ac40e97af1f5a21a1d09"
     )
     assert flat.allocation_ledger == [] and flat.trade_allocation_index == []
     assert "allocation" not in flat.ledger_frame().columns

@@ -749,3 +749,158 @@ public domain (Federal Reserve Board, EIA).
 belonged to another item), no API route for `describe_sources()`, no worker supervision of the
 positioning recorder. GDELT, Finnhub and BIS reach `fiboki news record` through
 `vendor_clients_from_env` and `OFFICIAL_FEEDS` without a CLI change.
+
+## 15. Instrument registry: OANDA is the source of truth
+
+*Added 2026-09-30.* The operator decided that OANDA is the only broker, so every instrument the
+OANDA practice account offers (123: 68 `CURRENCY`, 34 `CFD`, 21 `METAL`) is registered in
+`core/instruments.py`, from OANDA's own facts, with citations. Before this the registry held 41
+hand-typed entries.
+
+### How it is built (and why it is split across three places)
+
+| Piece | Where | What it is |
+|---|---|---|
+| Recorded facts | `tests/fixtures/oanda/practice_instruments_2026-09-30.json`, `practice_pricing_2026-09-29T2352Z.json` | Real practice-API responses (`GET /v3/accounts/{id}/instruments`, `/pricing` for all 123). |
+| Rules | `broker/oanda_instruments.py` | Pure parsers (`OandaInstrumentSpec`, `OandaSpreadSnapshot`, decimal strings parsed once), the naming rule (`derive_fiboki_symbol`, `CFD_SYMBOLS`), `asset_class_for`, `instrument_from_oanda`. No network, no I/O. |
+| Generated table | `core/instruments_oanda_table.py` | `OANDA_INSTRUMENTS_2026_09_30`, written by `scripts/oanda_instrument_table.py` from the two fixtures through the rules. Committed. `tests/unit/test_oanda_instruments.py` regenerates it and fails on any byte of difference. |
+| Registry | `core/instruments.py` | The 41 hand entries (reconciled, below) plus a delimited block that builds the other 82 from the table. `oanda_name_for` / `symbol_for_oanda_name` are **the** runtime mapping. |
+
+The mapping lives in `core`, not `broker`, because `data` (rank 10) and `core` (rank 0) both need
+it and may not import `broker` (rank 80; `tests/unit/test_layering.py`). There is one mapping:
+`broker.oanda.to_oanda_instrument`/`from_oanda_instrument`, `data.providers.oanda.to_oanda_instrument`/
+`from_oanda_instrument` and `broker.oanda_instruments.to_oanda_name`/`to_fiboki_symbol` all delegate to
+it (the adapter's old `_SPECIAL_TO_OANDA` table and the provider's six-character split are gone;
+an AST test holds that). Unknown names raise on both sides. Nothing touches the network at import
+time, and a test parses the three modules to hold that.
+
+### Mapping rules
+
+* `CURRENCY` `AAA_BBB` -> `AAABBB`. `METAL` `XAU_USD` -> `XAUUSD`, `XAU_XAG` -> `XAUXAG`.
+* `CFD`: an explicit 31-row table. Names that are **not** a mechanical rename: `SPX500_USD` -> `US500`,
+  `NAS100_USD` -> `US100`, `DE30_EUR` -> `DE40` (the DAX has had 40 members since 2021),
+  `HK33_HKD` -> `HK50` (Hang Seng), `ESPIX_EUR` -> `ES35` (IBEX 35), `WTICO_USD` -> `WTIUSD`,
+  `JP225_USD` -> `JP225` and `JP225Y_JPY` -> `JP225Y` (the same Nikkei 225 in two settlement
+  currencies), bonds and grains drop the suffix or append `USD` as listed in `CFD_SYMBOLS`.
+* `XCU_USD`, `XPT_USD`, `XPD_USD` are typed `CFD` by OANDA but named by the metal rule (`XCUUSD` ...).
+* **DXY is not registered**: OANDA does not offer it.
+* The mapping is complete (all 123), bidirectional and collision-free, by test.
+
+### Asset classes
+
+Two values were added to `AssetClass`: `BOND` (DE10YB, UK10YB, USB02Y/05Y/10Y/30Y) and `COMMODITY`
+(CORN, SOYBN, SUGAR, WHEAT, XCU, XPT, XPD). Copper, platinum and palladium are `COMMODITY`, not
+`METAL`, because the class decides the leverage class and ESMA's carve-out is for **gold only**.
+Silver stays `METAL` (OANDA types it so, and XAGUSD already was) with the commodity cap. Every
+consumer of `AssetClass` handles the new values explicitly: financing days
+(`backtest/position.TRIPLE_ROLLOVER_WEEKDAY`: every calendar night, from OANDA's
+`financingDaysOfWeek`), session calendars (`data/calendars`), lock clocks
+(`backtest/locks.SESSION_CLOSURES`: new labels `commodity_cfd`, `bond_cfd`), per-class minimum
+stops (`sim/profiles`), event buckets and economic-calendar currencies (`marketstate`). New index
+and energy CFDs reuse the existing `index` / `energy` trading-hours labels, so an old and a new
+index cannot disagree about their session.
+
+### Leverage: OANDA binds, ESMA cross-checks
+
+`retail_leverage = round(1 / marginRate, 6)`: OANDA's figure is the binding constraint for this
+account. The ESMA table (`esma_retail_leverage`) is kept as the cross-check, and
+`tests/unit/test_oanda_instruments.py::test_oanda_margin_against_the_esma_table_lists_every_exception`
+lists every disagreement. Result on the 2026-09-30 fixture:
+
+* **The 41 hand entries: OANDA agrees with every one.** None of their leverage values moved.
+* **12 exceptions, all OANDA stricter than ESMA's 20:1 for a non-major pair**: AUD_HKD, CAD_HKD,
+  CHF_HKD, EUR_HKD, GBP_HKD, HKD_JPY, NZD_HKD, USD_HKD, EUR_DKK at **10:1** (marginRate 0.1), and
+  EUR_TRY, TRY_JPY, USD_TRY at **4:1** (0.25).
+* **OANDA is never looser than ESMA** for any of the 123.
+* `tests/golden/test_golden_retail_leverage.py` pins all 123; each of the 82 new rows cites "OANDA
+  practice instruments endpoint, marginRate, fixture 2026-09-30" with the OANDA name and the
+  marginRate string verbatim, and the golden module re-reads the fixture to check the transcription.
+
+### The 41 hand entries, reconciled
+
+Every field except `typical_spread_pips` now equals the OANDA derivation (test-enforced). Where
+OANDA disagreed, OANDA's value was taken:
+
+| Symbol | Field(s): old -> OANDA |
+|---|---|
+| XAUUSD | `min_size`/`size_step` 0.01 -> 0.1; `price_precision` 2 -> 3 |
+| XAGUSD | `pip_size` 0.001 -> 0.0001 (so `typical_spread_pips` 25 -> 250: the same 0.025 price); `min_size`/`size_step` 0.05 -> 1; `price_precision` 3 -> 5 |
+| WTIUSD, BCOUSD | `min_size`/`size_step` 0.1 -> 1; `price_precision` 2 -> 3 |
+| US500, US100, US30, DE40 | `min_size`/`size_step` 0.1 -> 0.01 |
+| JP225 | **`quote` JPY -> USD** (OANDA's JP225_USD settles in USD; the old value would have converted every point at the JPY rate, about 157x too small); `min_size`/`size_step` 0.1 -> 0.01; `price_precision` 0 -> 1 |
+
+`OandaAdapter.market_spec` raises when OANDA's pip size disagrees with the registry, and
+`_units_for` refuses a size the venue cannot represent, so the old XAGUSD pip and the old XAU,
+XAG, WTI and BCO steps would have made those instruments untradeable on OANDA, not merely approximate.
+JP225's event buckets and calendar currencies still read Japan (`INDEX_HOME_CURRENCY`); only money
+conversion reads the new quote.
+
+**Stored results invalidated by this:** every stored backtest/research result on XAUUSD, XAGUSD,
+WTIUSD, BCOUSD, US500, US100, US30, DE40 (sizes now round to a different step) and above all
+JP225 (P&L currency). The four XAUUSD seed-document ledger pins were re-pinned with the reason
+written beside them (counts, rejections and `signals_seen` unchanged; setting the step back to
+0.01 reproduces the old hashes exactly). The canonical execution profiles' fingerprints gained two
+per-class min-stop entries (`bond`, `commodity`), so a stored record compared by profile
+fingerprint equality will read as a different profile even on an FX pair whose numbers did not move.
+
+### Spreads: provenance, and why top of book
+
+The 41 keep their hand-entered London-session typicals (`SPREAD_PROVENANCE` says so). The 82 new
+instruments take the pricing snapshot's spread, rounded **up** to 0.1 pip, labelled
+`"snapshot 2026-09-29T23:52Z (late-NY session, wider than London); top of book"`. That is a
+single instant in the late New York / early Asia session, **wider than London**, so for most FX
+it overstates the typical cost; 15 of the 82 (CH20, CHINAH, CN50, CORNUSD, DE10YB, ES35, EURTRY,
+NL25, SG30, SOYBNUSD, SUGARUSD, TRYJPY, UK10YB, USDTRY, WHEATUSD) were not even tradeable at the
+snapshot and carry their last quote time in the label. The quote recorder (§9) is the
+replacement.
+
+The spread is `asks[0] - bids[0]`, **not** `closeoutAsk - closeoutBid`. OANDA's closeout prices
+are for closing a position when there is no liquidity and are never used to open one; in the
+fixture they sit at or beyond the deepest ladder level (EUR_USD 2.7 pips closeout vs 0.8 top of
+book; USD_MXN 373.5 vs 53.4). As a "typical" spread they would overstate cost several-fold AND
+loosen the gateway's abnormal-spread check by the same factor, because that check divides the live
+top-of-book spread (`broker/oanda_pricing.py`) by `typical_spread_pips * pip_size`. The table keeps
+the closeout figure in its own column for comparison.
+
+### Named approximations this adds
+
+* **Financing**: `annual_financing_bps` keeps the per-class defaults. OANDA's endpoint does carry
+  per-instrument long/short rates, but as a daily-moving, asymmetric snapshot; it is parsed and not
+  frozen into a constant. BOND (300) and COMMODITY (350) had no default and borrow the nearest CFD
+  figure: placeholders, not measurements.
+* **Financing days**: OANDA charges WTICO/BCO/NATGAS every calendar night where the table says
+  Friday-triple (same total for a position held inside the trading week), and charges AUD pairs a
+  four-day Wednesday, HKD pairs two on Monday and three on Tuesday, USD_CAD three on Thursday, USD_CNH eight on Monday, all
+  where the table says FX Wednesday-triple. Not changed here; stated.
+* **Sessions**: bond and commodity CFDs trade far shorter hours than the energy week they are
+  modelled on (in the fixture CORN's last quote was 18:19Z, UK10YB's 16:59Z). Gap detection will
+  therefore expect bars that cannot exist: false alarms, the direction §7 chooses to be wrong in.
+* **CN50** (FTSE China A50, USD-settled) has no home-market mapping; its event buckets read USD.
+* **Research FX routing** prefers a registered direct cross. GBPNZD and GBPHKD are now registered,
+  so NZD- and HKD-quoted instruments convert through them; until GBPNZD is backfilled a
+  store-backed campaign containing AUDNZD or EURNZD refuses up front naming GBPNZD (previously it
+  triangulated through NZDUSD and GBPUSD). It refuses; it does not guess.
+
+### Registered, but no bars yet
+
+**Not verified in this session**: the data store lives on the operator's Mac, not in this checkout
+(whose `data/` holds only seven HistData starter pairs: EURUSD, GBPUSD, NZDUSD, AUDUSD, USDJPY,
+USDCHF, USDCAD). Check with `fiboki data version --catalogue <catalogue.db> --json`. What is known:
+the 82 instruments below were not registered before 2026-09-30, so no V2 research, validation or
+paper path has used bars for them, and all 82 are to be treated as needing the OANDA candle
+backfill (the next step, by another agent):
+
+* **FX (41)**: AUDHKD, AUDSGD, CADHKD, CADSGD, CHFHKD, CHFZAR, EURCZK, EURDKK, EURHKD, EURHUF,
+  EURNOK, EURPLN, EURSEK, EURSGD, EURTRY, EURZAR, GBPHKD, GBPNZD, GBPPLN, GBPSGD, GBPZAR, HKDJPY,
+  NZDHKD, NZDSGD, SGDCHF, SGDJPY, TRYJPY, USDCNH, USDCZK, USDDKK, USDHKD, USDHUF, USDMXN, USDNOK,
+  USDPLN, USDSEK, USDSGD, USDTHB, USDTRY, USDZAR, ZARJPY
+* **Metals (19)**: XAGAUD, XAGCAD, XAGCHF, XAGEUR, XAGGBP, XAGHKD, XAGJPY, XAGNZD, XAGSGD, XAUAUD,
+  XAUCAD, XAUCHF, XAUEUR, XAUGBP, XAUHKD, XAUJPY, XAUNZD, XAUSGD, XAUXAG
+* **Indices (8)**: CH20, CHINAH, CN50, ES35, JP225Y, NL25, SG30, US2000
+* **Energy (1)**: NATGASUSD
+* **Commodities (7)**: CORNUSD, SOYBNUSD, SUGARUSD, WHEATUSD, XCUUSD, XPDUSD, XPTUSD
+* **Bonds (6)**: DE10YB, UK10YB, USB02Y, USB05Y, USB10Y, USB30Y
+
+GBPNZD is the one to backfill first: research FX needs it for every NZD-quoted instrument
+(above). Of the 41 original instruments, which have validated bars in the Mac's store was also not
+verified here.

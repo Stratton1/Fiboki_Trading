@@ -1274,6 +1274,14 @@ FINANCING_DAY_RULE = "business_day_triple_v1"
 #: date from Friday to Monday and is charged three nights. CFD indices,
 #: energy and single equities charge the weekend on Friday. Crypto trades seven
 #: days and is charged every calendar night, with no triple day (``None``).
+#: Bond and commodity CFDs are also charged every calendar night: OANDA's
+#: instruments endpoint lists ``daysCharged`` 1 for all seven days on every
+#: BOND and COMMODITY instrument (fixture practice_instruments_2026-09-30.json,
+#: ``financing.financingDaysOfWeek``). The same fixture lists that pattern for
+#: WTICO_USD, BCO_USD and NATGAS_USD too, where this table says Friday-triple;
+#: for a position opened and closed inside the trading week the two charge the
+#: same number of nights, so ``energy`` is left as it was and the difference is
+#: recorded in docs/v2/DATA_ARCHITECTURE.md.
 TRIPLE_ROLLOVER_WEEKDAY: dict[str, int | None] = {
     "fx_major": 2,
     "fx_cross": 2,
@@ -1282,6 +1290,8 @@ TRIPLE_ROLLOVER_WEEKDAY: dict[str, int | None] = {
     "energy": 4,
     "equity": 4,
     "crypto": None,
+    "bond": None,
+    "commodity": None,
 }
 
 

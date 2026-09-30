@@ -142,12 +142,22 @@ def instrument_buckets(symbol: str) -> frozenset[str]:
     inst = instrument_registry.get(symbol)
     base, quote = inst.base.upper(), inst.quote.upper()
     out: set[str] = set()
-    if inst.asset_class is AssetClass.INDEX:
+    cls = inst.asset_class
+    if cls is AssetClass.INDEX:
+        # The index's home economy, not its settlement currency: JP225 is
+        # USD-settled on OANDA and still moves on Japanese releases.
+        quote = instrument_registry.home_currency(inst).upper()
         region = _INDEX_REGION.get(quote)
         if region is not None:
             out.add(region)
-    elif inst.asset_class is AssetClass.ENERGY or base in _ENERGY_BASES:
+    elif cls is AssetClass.ENERGY or base in _ENERGY_BASES:
         out.add("OIL")
+    elif cls in (AssetClass.BOND, AssetClass.COMMODITY):
+        # No bond or non-energy commodity bucket exists. A government bond is
+        # moved by its issuer's rate releases, which are the quote currency's
+        # bucket (added below); a grain or base-metal CFD gets only the
+        # currency it is priced in. Stated, not guessed.
+        pass
     elif base in ("XAU", "XAG") or base in _CURRENCY_BUCKETS:
         out.add(base)
     if quote in _CURRENCY_BUCKETS:

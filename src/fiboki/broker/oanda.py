@@ -75,7 +75,7 @@ from fiboki.broker.base import (
 from fiboki.broker.retry import ReadRetry, retry_idempotent_read
 from fiboki.core.contracts import AccountState, Fill, Order, Position
 from fiboki.core.enums import Direction, ExecutionMode
-from fiboki.core.instruments import Instrument
+from fiboki.core.instruments import Instrument, oanda_name_for, symbol_for_oanda_name
 from fiboki.core.instruments import get as get_instrument
 
 __all__ = [
@@ -245,43 +245,21 @@ class RateLimiter:
 # Instrument mapping
 # --------------------------------------------------------------------------
 
-#: Non-FX symbols whose OANDA name cannot be derived by splitting.
-_SPECIAL_TO_OANDA = {
-    "XAUUSD": "XAU_USD",
-    "XAGUSD": "XAG_USD",
-    "WTIUSD": "WTICO_USD",
-    "BCOUSD": "BCO_USD",
-    "US500": "SPX500_USD",
-    "US100": "NAS100_USD",
-    "US30": "US30_USD",
-    "UK100": "UK100_GBP",
-    "DE40": "DE30_EUR",
-    "FR40": "FR40_EUR",
-    "JP225": "JP225_USD",
-    "AU200": "AU200_AUD",
-    "HK50": "HK33_HKD",
-    "EU50": "EU50_EUR",
-}
-_SPECIAL_FROM_OANDA = {v: k for k, v in _SPECIAL_TO_OANDA.items()}
-
-
 def to_oanda_instrument(symbol: str) -> str:
-    key = symbol.upper()
-    if key in _SPECIAL_TO_OANDA:
-        return _SPECIAL_TO_OANDA[key]
-    instrument = get_instrument(key)
-    if instrument.is_fx and len(key) == 6:
-        return f"{key[:3]}_{key[3:]}"
-    raise KeyError(
-        f"No OANDA instrument mapping for {symbol!r}. Add it to _SPECIAL_TO_OANDA "
-        "rather than guessing: a wrong mapping trades the wrong market."
-    )
+    """Our symbol -> OANDA's v20 name. Delegates to THE mapping.
+
+    :func:`fiboki.core.instruments.oanda_name_for` reads the committed table
+    generated from OANDA's own instruments endpoint (see
+    :mod:`fiboki.broker.oanda_instruments`). An unknown symbol raises
+    ``KeyError``: a wrong mapping trades the wrong market.
+    """
+    return oanda_name_for(symbol)
 
 
 def from_oanda_instrument(name: str) -> str:
-    if name in _SPECIAL_FROM_OANDA:
-        return _SPECIAL_FROM_OANDA[name]
-    return name.replace("_", "").upper()
+    """OANDA's v20 name -> our symbol. An unknown name raises ``KeyError``
+    rather than being split into a symbol nobody registered."""
+    return symbol_for_oanda_name(name)
 
 
 # --------------------------------------------------------------------------

@@ -73,7 +73,9 @@ def test_risk_fraction_produces_the_intended_loss_at_the_stop() -> None:
 
 def test_size_is_rounded_DOWN_to_the_instrument_step() -> None:
     """Never up. Rounding up manufactures risk the rule did not intend."""
-    instrument = get_instrument("XAUUSD")  # size_step 0.01
+    # size_step 0.1 since 2026-09-30 (OANDA XAU_USD tradeUnitsPrecision 1,
+    # tests/fixtures/oanda/practice_instruments_2026-09-30.json); it was 0.01.
+    instrument = get_instrument("XAUUSD")
     sig = make_signal(instrument="XAUUSD", reference_price=2000.0, stop_distance=7.0,
                       take_profit_distance=50.0)
     out = size_trade(
@@ -86,7 +88,8 @@ def test_size_is_rounded_DOWN_to_the_instrument_step() -> None:
     plan = out.require()
     raw = 100.0 / 7.0  # 14.2857...
     assert plan.size == round_size(instrument, raw)
-    assert plan.size == pytest.approx(14.28)
+    # 14.2857 rounded DOWN to a 0.1 step is 14.2 (it was 14.28 at a 0.01 step).
+    assert plan.size == pytest.approx(14.2)
     assert plan.size < raw, "rounding must never increase the position"
 
 

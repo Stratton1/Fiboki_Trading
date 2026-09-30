@@ -407,14 +407,21 @@ def instrument_currencies(symbol: str) -> tuple[str, ...]:
     """
     inst = instrument_registry.get(symbol)
     out: list[str] = []
-    for code in (inst.base, inst.quote):
+    # For an index the economy that moves it, not its settlement currency
+    # (JP225 is USD-settled on OANDA; ``core.instruments.INDEX_HOME_CURRENCY``).
+    quote = (
+        instrument_registry.home_currency(inst)
+        if inst.asset_class is AssetClass.INDEX
+        else inst.quote
+    )
+    for code in (inst.base, quote):
         c = code.upper()
         if c in _NON_CURRENCY_BASES:
             continue
         if instrument_registry.is_iso_currency(c):
             out.append(c)
     if inst.asset_class is AssetClass.INDEX and not out:
-        out.append(inst.quote.upper())
+        out.append(quote.upper())
     return tuple(dict.fromkeys(out))
 
 

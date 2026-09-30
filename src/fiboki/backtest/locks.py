@@ -164,6 +164,13 @@ SESSION_CLOSURES: dict[str, FxSessionCalendar] = {
     "fx_24_5": _INTERBANK_WEEKEND,
     "index": _INTERBANK_WEEKEND,
     "energy": _INTERBANK_WEEKEND,
+    # Bond and commodity CFDs (OANDA-derived, 2026-09-30). Their real sessions
+    # are much shorter than the interbank week (in the pricing fixture CORN's
+    # last quote was 18:19Z and UK10YB's 16:59Z), so the interbank clock counts
+    # closed hours as bars for them: the same unmodelled-daily-break
+    # approximation index and energy already carry.
+    "commodity_cfd": _INTERBANK_WEEKEND,
+    "bond_cfd": _INTERBANK_WEEKEND,
 }
 
 #: What a lock fingerprint says the bars were counted on.

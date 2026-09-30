@@ -68,8 +68,22 @@ def test_a_full_week_matches_the_calendar_count() -> None:
 
 
 def test_an_unknown_asset_class_raises_rather_than_charging_calendar_nights() -> None:
+    # This used "bond" as its example of an unknown class until 2026-09-30, when
+    # AssetClass.BOND was registered from OANDA (with a rule, below). The
+    # property under test is unchanged: an unknown class still raises.
     with pytest.raises(KeyError, match="no financing-day rule"):
-        financing_nights(T("2024-01-01 12:00"), T("2024-01-03 12:00"), 21, "bond")
+        financing_nights(T("2024-01-01 12:00"), T("2024-01-03 12:00"), 21, "not_a_class")
+
+
+@pytest.mark.parametrize("cls", [AssetClass.BOND, AssetClass.COMMODITY])
+def test_bond_and_commodity_cfds_are_charged_every_calendar_night(cls: AssetClass) -> None:
+    """OANDA lists ``daysCharged`` 1 on all seven days for every BOND and
+    COMMODITY instrument (tests/fixtures/oanda/practice_instruments_2026-09-30.json,
+    ``financing.financingDaysOfWeek``). Friday 12:00 to Monday 12:00 crosses the
+    21:00 rollover on Friday, Saturday and Sunday: 1 + 1 + 1 = 3."""
+    assert financing_nights(T("2024-01-05 12:00"), T("2024-01-08 12:00"), 21, cls) == 3
+    # Monday to Monday: seven crossings, one night each, no triple day.
+    assert financing_nights(T("2024-01-01 12:00"), T("2024-01-08 12:00"), 21, cls) == 7
 
 
 # --------------------------------------------------------------- sessions

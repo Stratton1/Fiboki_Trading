@@ -551,6 +551,10 @@ def _per_class_min_stop(
                 "energy": other,
                 "equity": other,
                 "crypto": other,
+                # Registered from OANDA 2026-09-30: non-FX, so on the
+                # instrument's own spread scale like every other non-FX class.
+                "bond": other,
+                "commodity": other,
             }.items()
         )
     )
