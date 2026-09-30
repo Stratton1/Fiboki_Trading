@@ -40,7 +40,7 @@ def main() -> int:
             print(f"login failed: {r.status_code}", file=sys.stderr)
             return 1
         csrf = client.cookies.get(CSRF_COOKIE)
-        page = client.get("/api/incidents", params={"status": "open", "limit": 200}).json()
+        page = client.get("/api/system/incidents", params={"status": "open", "limit": 200}).json()
         items = page.get("items") or page.get("data") or []
         done = 0
         for inc in items:
@@ -48,7 +48,7 @@ def main() -> int:
             for needle, reason in args.match:
                 if needle in key:
                     resp = client.post(
-                        f"/api/incidents/{inc['id']}/ack",
+                        f"/api/system/incidents/{inc['id']}/ack",
                         json={"reason": reason},
                         headers={CSRF_HEADER: csrf or ""},
                     )
