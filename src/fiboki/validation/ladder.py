@@ -646,6 +646,7 @@ class PurgedCVRung(Rung):
 
         path_sharpes: list[float] = []
         path_columns: list[list[int]] = []
+        n_undefined_paths = 0
         for path in cv.path_map():
             segments = []
             columns = []
@@ -655,9 +656,15 @@ class PurgedCVRung(Rung):
                 segments.append(matrix[cv.group_indices(group), col])
             joined = np.concatenate(segments) if segments else np.zeros(0)
             path_columns.append(columns)
-            path_sharpes.append(
-                float(sharpe_moments(joined).sr_hat) if joined.size > 1 else 0.0
-            )
+            # A path whose selected trials never moved (zero dispersion, as when
+            # every split picked a trial that did not trade in its test group)
+            # has no Sharpe; it is scored 0.0, the convention for a path too
+            # short to estimate one, which counts as NOT positive below.
+            sharpe = _sharpe_or_nan(joined) if joined.size > 1 else 0.0
+            if math.isnan(sharpe):
+                n_undefined_paths += 1
+                sharpe = 0.0
+            path_sharpes.append(sharpe)
 
         arr = np.array(path_sharpes, dtype=float)
         positive = float(np.mean(arr > 0.0)) if arr.size else 0.0
@@ -680,6 +687,7 @@ class PurgedCVRung(Rung):
             "n_distinct_column_selections": len(set(chosen_per_split)),
             "path_columns": path_columns,
             "path_sharpes": [float(x) for x in arr],
+            "n_undefined_path_sharpes": n_undefined_paths,
             "mean_path_sharpe": float(arr.mean()) if arr.size else 0.0,
             "min_path_sharpe": float(arr.min()) if arr.size else 0.0,
             "path_sharpe_variance": variance,
@@ -932,7 +940,19 @@ class DeflationRung(Rung):
         metrics["sr_variance_cpcv_paths"] = path_var
         metrics["sr_variance_cross_trial"] = cross_var
 
-        moments = sharpe_moments(matrix[:, best])
+        try:
+            moments = sharpe_moments(matrix[:, best])
+        except ValueError as exc:
+            for name in (
+                "deflated_sharpe_ratio", "pbo", "spa_p_consistent", "stepm_member",
+                "deflated_sharpe_ratio_family_n",
+            ):
+                ctx.gate_values[name] = None
+            return self._error(
+                f"the selected trial's returns cannot be deflated ({exc}); "
+                "a trial that did not move has no Sharpe to deflate",
+                metrics,
+            )
         dsr = deflated_sharpe_ratio(
             moments.sr_hat,
             moments.n_obs,
@@ -1546,14 +1566,24 @@ def _select_column(block: np.ndarray, metric: str) -> int:
         scores = block.mean(axis=0)
     else:
         scores = np.array(
-            [
-                sharpe_moments(block[:, j]).sr_hat if block.shape[0] > 1 else 0.0
-                for j in range(block.shape[1])
-            ],
+            [_sharpe_or_nan(block[:, j]) if block.shape[0] > 1 else 0.0 for j in range(block.shape[1])],
             dtype=float,
         )
+    # An undefined score (zero dispersion: a trial that did not trade in this
+    # block, say) is never the best column; it ranks below every defined one.
     scores = np.nan_to_num(scores, nan=-np.inf, posinf=-np.inf, neginf=-np.inf)
     return int(np.argmax(scores))
+
+
+def _sharpe_or_nan(returns: np.ndarray) -> float:
+    """Per-observation Sharpe, or ``nan`` where it is undefined (zero dispersion,
+    fewer than two observations). The caller decides what undefined means;
+    :func:`fiboki.stats.sharpe.sharpe_moments` itself refuses, which is right
+    for a number that will be reported and wrong for a ranking step."""
+    try:
+        return float(sharpe_moments(returns).sr_hat)
+    except ValueError:
+        return float("nan")
 
 
 def _trials_matrix(sweep: Sequence[WindowEvaluation]) -> tuple[np.ndarray | None, str]:

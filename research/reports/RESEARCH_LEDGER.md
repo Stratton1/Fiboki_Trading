@@ -419,4 +419,18 @@ count; 0 disagreements.** The replay took 3,093 s (1.2 s per ladder run with eve
 against 0.42 s fail-fast). Measuring mode is therefore admissible as E-1/E-2 evidence under the
 draft's `metrics.equivalence`. Process 2 was started on the MacBook at 00:37 UTC as four shards of
 100 replicates (`run_paths_mac.sh`, measuring mode); the first replicates took 25 s to 276 s
-depending on the cell's trade count. Nothing is moved by this entry.
+depending on the cell's trade count. **Defect found by that run (2026-10-01 01:30 UTC):** three of
+the four shards died in rung 3 with `returns have zero dispersion; Sharpe ratio undefined`, raised
+while RANKING the trials of a purged-CV train block in which one grid point had not traded (the
+defaults had; rung 0 checks only them). Latent in the fail-fast ladder too (any sparse candidate
+reaching rung 3 with a non-trading neighbour would have crashed its campaign cell); surfaced now
+because the 150-trade measuring floor carries sparse candidates to rung 3. Fix in `ladder.py`: an
+undefined score never ranks best (`_select_column`), a CPCV path whose selected trials never moved
+scores 0.0 and is counted (`n_undefined_path_sharpes`), and deflation of a trial with no dispersion
+is an honest rung ERROR rather than an exception. `tests/unit/test_ladder_degenerate_trials.py`
+reproduces the crash on the previous ladder (3 of 5 tests fail there) and passes on the fix.
+**No stored result changes:** the only behaviour altered is one that previously raised, so no
+completed ladder run, K1 to K5 or E-1 process 1 (replay re-checked: still 2,000/2,000), could have
+exercised it. The shard that survived kept running on the previous code; its completed rows are
+unaffected for the same reason, and the three others resumed from their checkpoints on the fix.
+Nothing is moved by this entry.
