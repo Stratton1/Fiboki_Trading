@@ -389,7 +389,7 @@ and deflation rejections and promotions, every set). It is what makes E-2 afford
 and E-2 are ONE run, and E-1's path 2 ("the gate whose removal most reduces size") is readable from
 the same rows (`gate_removal_v2` in the output; `judge_rows` re-judges any gate set post hoc, pinned
 equal to the ladder's own verdicts by `test_gate_power_study.py`). (iii) The study shards
-(`--replicate-range`), checkpoints after every replicate, resumes (`--resume`) and merges
+(`--replicate-range`), checkpoints as it goes (at most once a minute), resumes (`--resume`) and merges
 (`--merge`; refuses overlaps, gaps, partials and mismatched identity; shards merged equal the
 unsharded run row for row, `test_gate_power_study_real.py`). `research/reports/e1/run_paths_mac.sh`
 runs process 2 as shards on the Mac.
@@ -412,4 +412,11 @@ count is E-3, not a knob. The E-1 process-1 measuring replay
 (`research/reports/e1/e1_block_bootstrap_real_returns.measuring.json`) is run before filing for
 ONE purpose, the equivalence check of the audited set's 2,000 verdicts against the stored fail-fast
 result (`scripts/e1_equivalence.py`); its candidate-set summaries are not read until E-2 is FILED
-(USER_ACTIONS R1). Nothing is moved by this entry.
+(USER_ACTIONS R1). **Equivalence result (2026-10-01 01:29 UTC,
+`research/reports/e1/e1_equivalence_block_bootstrap.json`): 2,000 of 2,000 rows agree in verdict,
+binding constraint, every gate status and value the fail-fast ladder reached, and the sanity trade
+count; 0 disagreements.** The replay took 3,093 s (1.2 s per ladder run with every rung measured,
+against 0.42 s fail-fast). Measuring mode is therefore admissible as E-1/E-2 evidence under the
+draft's `metrics.equivalence`. Process 2 was started on the MacBook at 00:37 UTC as four shards of
+100 replicates (`run_paths_mac.sh`, measuring mode); the first replicates took 25 s to 276 s
+depending on the cell's trade count. Nothing is moved by this entry.

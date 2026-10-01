@@ -64,8 +64,8 @@ resample is seeded by its index alone, so the merged output holds the rows one
 uninterrupted run would have produced, in the same order; the merge refuses
 shards whose identity (process, gate set, config, source digests) differs, that
 overlap, that leave a replicate uncovered, or that are partial. Every real-data
-run checkpoints ``--out`` after each replicate (``"partial": true`` until the
-last one) and ``--resume`` continues from that checkpoint. A partial file's
+run checkpoints ``--out`` as it goes (at most once a minute; ``"partial": true``
+until the last replicate) and ``--resume`` continues from that checkpoint. A partial file's
 rates are not a result.
 
 Gate sets (E-2)
@@ -329,6 +329,8 @@ def gate_set_named(name: str) -> GateSet:
 #: rejected at rung 0 for a candidate it would admit.
 MEASURING_BASE = GATE_SET_V2_1_CANDIDATES["c_all"]
 LADDER_MODES = ("measuring", "fail_fast")
+#: Minimum seconds between checkpoints of a real-data run.
+CHECKPOINT_SECONDS = 60.0
 
 
 def _verdict_fields(report: Any, *, all_values: bool) -> dict[str, Any]:
@@ -1839,6 +1841,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         if done:
             print(f"E-1 {args.process}: resuming; {len(done)} replicates already at {args.out}, "
                   f"{len(todo)} to run", file=sys.stderr, flush=True)
+        last_checkpoint = time.monotonic()
         for k, i in enumerate(todo):
             t0 = time.monotonic()
             rows.extend(study.replicate_rows(i, args.sr))
@@ -1852,9 +1855,11 @@ def main(argv: Sequence[str] | None = None) -> int:
                     file=sys.stderr, flush=True,
                 )
             rows.sort(key=lambda r: (order[r["sr"]], r["replicate"]))
-            if k + 1 < len(todo):
-                # Checkpoint after every replicate: an interrupted run resumes here.
+            if k + 1 < len(todo) and time.monotonic() - last_checkpoint >= CHECKPOINT_SECONDS:
+                # Checkpoint: an interrupted run resumes here. At most one a minute,
+                # since a checkpoint rewrites the whole file.
                 _write_result(args.out, header, rows, started, build_seconds, partial=True)
+                last_checkpoint = time.monotonic()
         rows.sort(key=lambda r: (order[r["sr"]], r["replicate"]))
     else:
         rows = [

@@ -192,8 +192,8 @@ on the table, and that the deflation's trial count is a separate experiment (E-3
 
 `perturbed_price_paths` costs about 500 s of engine time per replicate on a single core (60-odd
 `engine_v3_realism` backtests per replicate; the ladder statistics are negligible), so 400
-replicates are about 58 core-hours. The study now shards (`--replicate-range`), checkpoints after
-every replicate and resumes (`--resume`), and merges (`--merge`); `research/reports/e1/run_paths_mac.sh`
+replicates are about 58 core-hours. The study now shards (`--replicate-range`), checkpoints as it
+goes and resumes (`--resume`), and merges (`--merge`); `research/reports/e1/run_paths_mac.sh`
 launches the shards. Leave the MacBook on mains and awake; a sleep interrupts nothing that
 `--resume` cannot continue.
 

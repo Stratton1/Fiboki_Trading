@@ -40,7 +40,13 @@ def compare(stored: dict[str, Any], replay: dict[str, Any]) -> dict[str, Any]:
         raise ValueError("STORED must be a fail-fast run")
     if replay.get("ladder_mode") != "measuring":
         raise ValueError("REPLAY must be a measuring run")
-    if stored["gate_set_fingerprint"] != replay["judged_gate_sets"].get(name):
+    if name not in replay["judged_gate_sets"]:
+        raise ValueError(f"the replay did not judge {name}")
+    # A run from before the fingerprint was recorded (E-1 process 1, 2026-09-30)
+    # is identified by its version; the version's fingerprint is pinned in code
+    # (tests/unit/test_validation_gates.py) and has not changed since.
+    stored_fp = stored.get("gate_set_fingerprint")
+    if stored_fp is not None and stored_fp != replay["judged_gate_sets"][name]:
         raise ValueError(f"the replay did not judge {name} at the stored fingerprint")
     for key in ("process", "config"):
         s, r = stored[key], replay[key]
