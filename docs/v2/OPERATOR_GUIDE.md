@@ -121,9 +121,11 @@ acceptable false-discovery rate and power. Its first real-data process ran on 20
 gate set promoted it 0 times in 400; at 0.12, four times. Size was 0 in 400. So the honest
 statement is now sharper: the ladder as configured cannot see an edge of the size this platform
 could plausibly find, because `min_trades` ends 60% of ladders before any edge matters and the
-deflation charged 20,896 trials rejects nearly all of the rest. The decision waits for the second
-process (the filing's rule), and no threshold is moved by looking at a real strategy's score
-(pre-registration rule 5).
+deflation charged 20,896 trials rejects nearly all of the rest. The second process (perturbed real
+price paths, 2026-10-01) gave the same answer: 0 promotions in 400 at every injected edge up to
+0.12. The filed decision rule's path 3 applies: the audited set stands, and the proposed loosenings
+are judged in E-2. No threshold is moved by looking at a real strategy's score (pre-registration
+rule 5).
 The step after E-1 is prepared: the loosenings the audit proposed exist as candidate gate sets
 that cannot promote anything, and `research/preregistration/gate_calibration_e2.json` (a draft you
 file) fixes, before any result is read, which of them may be admitted and on what evidence.
@@ -154,5 +156,5 @@ the Keychain. `scripts/oanda-backfill.sh` refreshes the data store.
 
 Live execution (by design). Agent Desk screen. Phone kill-switch view. Chart replay, drawings,
 calendar markers on the chart. Per-family holdout budgets. Measured spreads (needs four weeks
-of the quote recorder). Pre-2024 calendar. E-1's second process (`perturbed_price_paths`) has not run. Nothing has traded
+of the quote recorder). Pre-2024 calendar. E-1 is complete (both processes); E-2 awaits filing. Nothing has traded
 forward yet. No strategy has an edge demonstrated by this pipeline.

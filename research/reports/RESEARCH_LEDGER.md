@@ -434,3 +434,59 @@ completed ladder run, K1 to K5 or E-1 process 1 (replay re-checked: still 2,000/
 exercised it. The shard that survived kept running on the previous code; its completed rows are
 unaffected for the same reason, and the three others resumed from their checkpoints on the fix.
 Nothing is moved by this entry.
+
+## E-1 result: both processes complete; decision rule applied (2026-10-01; filed decision date 2026-10-02, applied on "the first day both results exist" per the filing entry above)
+
+**Process 2, `perturbed_price_paths` (`research/reports/e1/e1_perturbed_price_paths.json`, measuring
+mode, four shards of 100 replicates on the MacBook, 14.7 h wall, 26 s per ladder run; the shard
+files stay on the Mac under `research/reports/e1/shards/`, untracked).** Data: OANDA practice MID H4,
+K5's 16 series, bars from 2006-01-04, 6 seed documents, 66 (document, series) cells with bars;
+every path's bar returns stationary-block-bootstrapped from the research window (Politis–White
+block lengths 1 to 18 bars), 0 coherence clamps in 2,000 paths; every mark-up calibrated on 4
+independent paths (2,000 of 2,000 `calibrated`); the defaults' realised per-trade Sharpe on the
+evaluated path had median −0.004 at sr 0 and 0.075 at sr 0.08 (p10 −0.02, p90 0.15), so the
+injection is doing what the filing says.
+
+| injected per-trade Sharpe | promoted / 400 | rate | binding (share of replicates) |
+|---|---|---|---|
+| 0.00 | 0 | 0.000 (rule-of-three upper bound 0.0075) | `min_trades` 0.64, rung 0 expectancy 0.16, `parameter_plateau` 0.10, `walk_forward_efficiency` 0.09 |
+| 0.03 | 0 | 0.000 | `min_trades` 0.64, plateau 0.17, WFE 0.09 |
+| 0.05 | 0 | 0.000 | `min_trades` 0.64, plateau 0.22, WFE 0.09 |
+| **0.08** | **0** | **0.000** (target ≥ 0.50) | `min_trades` 0.64, plateau 0.24, WFE 0.08, `deflated_sharpe` 0.03 |
+| 0.12 | 0 | 0.000 | `min_trades` 0.64, plateau 0.25, DSR 0.06, WFE 0.05 |
+
+What binds, by document, at sr 0.08: `ichimoku_kumo_trend`, `macd_ema_trend_hybrid` and
+`rsi_band_mean_reversion` never reach 400 trades on any of their series (72, 72 and 48 of their
+replicates end on `min_trades`); `fib_golden_pocket_pullback` mostly does not (63 of 72);
+`donchian_breakout_atr` reaches the robustness rung and dies on the plateau ratio (71 of 76);
+`tsmom_dual_horizon` splits between plateau (23), WFE (26) and deflation (10). Among candidates
+with ≥ 400 trades that reached deflation, the deflated Sharpe at 20,896 external trials was at
+most 0.907 at sr 0.08 (46 candidates, median 0.25) and 0.966 at 0.12 (53, median 0.50); the one
+candidate that cleared it (tsmom@NZDUSD, sr 0.12) failed the plateau ratio. Nine replicates at
+sr ≤ 0.05 ended in an honest rung-2 error (in-sample profit rate ≤ 0, WFE undefined). The default
+trade count had median 330 (p10 74, p90 754); the research-window count median 410.
+
+**Decision rule, applied.** Per-candidate size is 0/400 on BOTH processes (H0_size per candidate
+holds; the family-wise union bound at 106 candidates remains unresolvable at 400 replicates,
+1 − (1 − 0.0075)^106 = 0.55, exactly as the filing records). Power at 0.08 is 0/400 on both
+(H1_power fails), and 0/400 at 0.12 on process 2 (1% on process 1). **Path 3 of the rule applies:**
+size ≤ 0.05 but power < 0.5, so the candidate loosenings are the section 3.1 proposals, each
+admitted only if size stays ≤ 0.05 with it, published as `v2.1.0-calibrated` before any real
+strategy is re-scored. That step is E-2 (`gate_calibration_e2.json`, DRAFT): its measurement is
+already in these two files, sealed until the operator files it. Paths 1 and 2 do not apply (no
+tightening is indicated; nothing is loosened by E-1 itself). **Nothing is moved by this entry;
+`GATE_SET_V2` stands.**
+
+**Reading, stated with its limits.** (i) `v2.0.0-audit` has essentially no power against per-trade
+edges up to 0.12 on this universe, on two different data-generating processes, and the reason is
+the same on both: 64% of candidates are decided before any edge can matter (the 400-trade floor
+against documents that trade 50 to 350 times in twenty years of H4), and the deflation charged
+20,896 trials rejects nearly everything that remains; on the perturbed paths the plateau ratio is
+the second killer (24% at 0.08), which the audit's P2-style critique of that ratio (scale-dependent,
+point in its own denominator) predicted. (ii) The two processes agree in shape, not only in the
+headline: `min_trades` 0.60 vs 0.64, deflation then the rung-2 and rung-4 gates. (iii) This is a
+property of the PROCEDURE at K5's search size; it says nothing about whether any strategy has an
+edge, and it is the strongest argument yet against tuning a threshold by hand: the fix, if there is
+one, is a pre-registered calibrated set (E-2) and a defensible trial count (E-3), in that order.
+**Next:** the operator files E-2 (USER_ACTIONS R1); the sealed candidate results are then read from
+these files without further compute.

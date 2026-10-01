@@ -184,11 +184,11 @@ both E-1 processes; the calibrated set is the audited set with every admitted re
 as `v2.1.0-calibrated` only if its own size holds; `c_dsr_family` (deflation against the candidate's
 own trials only) is measured and never admitted. Read it, change what you disagree with, then set
 `status` to `FILED <date>` with `filed_at`, `filed_commit` and a `decision_date` after both E-1
-processes have run. Until it is filed no candidate-set rate is read or quoted; the measuring-mode
-runs record them, sealed. What you are deciding: that these, and only these, are the loosenings
+processes have run. Until it is filed no candidate-set rate is read or quoted; both E-1 result files already hold
+them, sealed, so filing costs no compute: say "file E-2" and the reading follows the same day. What you are deciding: that these, and only these, are the loosenings
 on the table, and that the deflation's trial count is a separate experiment (E-3), not a knob.
 
-### R2. Run E-1 process 2 on the Mac (compute, not judgement)
+### R2. ~~Run E-1 process 2 on the Mac~~ — DONE 2026-10-01 (14.7 h, four shards; result in the ledger)
 
 `perturbed_price_paths` costs about 500 s of engine time per replicate on a single core (60-odd
 `engine_v3_realism` backtests per replicate; the ladder statistics are negligible), so 400
