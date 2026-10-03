@@ -110,6 +110,6 @@
   ],
   "decision_date": "2026-10-03",
   "filed_at": "2026-10-03T09:30:00Z",
-  "filed_commit": null,
+  "filed_commit": "aa2b071",
   "filing_note": "Filed 2026-10-03 by the operator's instruction. Decisions taken at filing, before any candidate result was read: (1) the candidate list is the seven sets in code at this commit, fingerprints as above, unchanged from the draft of 2026-10-01; (2) decision_date is the filing day, because the measurement already exists sealed in the E-1 files and the ordering the date protects (file, then read) is satisfied the moment the filing commit exists; (3) the 8-fold arm is run on process 1 only at this point (400 replicates), the process-2 arm (100 replicates at sr 0 and 0.08) is deferred until the 5-fold result shows it could change the admitted set; (4) filed_commit is recorded in the following commit, as E-1 did."
 }
