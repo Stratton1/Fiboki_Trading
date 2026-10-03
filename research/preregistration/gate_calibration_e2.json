@@ -1,7 +1,7 @@
 {
   "schema": "fiboki-preregistration:1",
   "id": "gate_calibration_e2",
-  "status": "DRAFT (not filed). Written 2026-10-01 before any candidate-set result was read. Filing is the operator's act: set status to FILED with a date, filed_at, filed_commit and decision_date; until then no candidate-set rate may be quoted anywhere. This file changes nothing in validation/gates.py.",
+  "status": "FILED 2026-10-03 (this commit). Filed by the operator's instruction ('file it', 2026-10-03) before any candidate-set rate was read; the E-1 result files that hold those rates were produced before filing and left unread (data_rules). No gate threshold in validation/gates.py changes until the decision rule below has been applied and recorded in the ledger.",
   "experiment": "E-2: calibration of the promotion gates, the step E-1's decision rule (paths 2 and 3) calls for",
   "plan_reference": "research/preregistration/gate_calibration_e1.json decision_rule; research/reports/due_diligence_2026-09-28/F_backend_audit.md section 3.1; research/reports/RESEARCH_LEDGER.md E-1 (interim reading of process 1)",
   "depends_on": {
@@ -69,7 +69,13 @@
   },
   "injected_sharpe_grid": {
     "unit": "per-trade Sharpe ratio, as E-1",
-    "values": [0.0, 0.03, 0.05, 0.08, 0.12],
+    "values": [
+      0.0,
+      0.03,
+      0.05,
+      0.08,
+      0.12
+    ],
     "eight_fold_arm": "process 1: the full grid at 400 replicates; process 2: sr in {0.0, 0.08} at 100 replicates (SE at 0.05: 0.022), the compute-bounded design stated here rather than chosen after the 5-fold result"
   },
   "data_generating_processes": "E-1's two evidence processes, same data root, same seeds, same 400 replicates per (sr, process); the perturbed_price_paths run is E-1's own (a measuring run judges every set), so no additional process-2 compute is spent on E-2 beyond the 8-fold arm.",
@@ -92,15 +98,18 @@
     "gate_removal": "For GATE_SET_V2, the size and power with each gate removed one at a time, judged from the same measurement (judge_rows), which is the analysis E-1's path 2 needs ('the gate(s) whose removal most reduces size'): no gate set is minted from it; it names which gate a tightening would go to.",
     "equivalence": "The measuring-mode replay of E-1 process 1 must reproduce the stored fail-fast result row for row in verdict and binding constraint (research/reports/e1/e1_block_bootstrap_real_returns.json, 2,000 rows); a single disagreement invalidates measuring mode as E-1/E-2 evidence and is reported as such."
   },
-  "targets": {"size_max": 0.05, "power_at_sr_0_08_min": 0.5},
+  "targets": {
+    "size_max": 0.05,
+    "power_at_sr_0_08_min": 0.5
+  },
   "decision_rule": "1. A replacement is ADMITTED only if its single-replacement set (c_min_trl, c_wfe_log, c_hit_wilson, c_hit_8fold, c_plateau_median) has size <= 0.05 on BOTH processes. c_dsr_family is never admitted: an N that ignores the campaign is not a deflation. 2. The calibrated candidate is GATE_SET_V2 with every admitted replacement applied together, judged from the same measurement (judge_rows); it is published as v2.1.0-calibrated only if ITS size is <= 0.05 on both processes (admitted one at a time does not imply admitted together). 3. Its power at 0.08 is reported whatever it is; if it is below 0.5 the calibrated set is still published (it is the best admissible set) and the shortfall is attributed, using H2 and the gate-removal table, to the trial count or to a named gate. 4. The trial-count design (deflate against the campaign's raw count, as now, or against an effective count of the campaign's correlated trials, which needs the campaign's trial-return matrix) is NOT decided here: it is the subject of a separate pre-registration (E-3) if H2 holds. 5. No threshold is moved by looking at how any real strategy scores; the candidate thresholds are the audit's as filed in code, and no new threshold value is introduced by this experiment.",
   "data_rules": [
     "The measurement is E-1's; no extra ladder run is made for a candidate set (judged from the one measurement).",
     "Candidate-set rates are not read or quoted before this file is FILED; the E-1 process-1 replay is used before filing only for metrics.equivalence (the audited set's verdicts).",
     "Seeds and replicate indices are E-1's; shards merged with --merge must tile the replicate range exactly."
   ],
-  "decision_date": null,
-  "filed_at": null,
+  "decision_date": "2026-10-03",
+  "filed_at": "2026-10-03T09:30:00Z",
   "filed_commit": null,
-  "filing_note": "To be written by the operator at filing."
+  "filing_note": "Filed 2026-10-03 by the operator's instruction. Decisions taken at filing, before any candidate result was read: (1) the candidate list is the seven sets in code at this commit, fingerprints as above, unchanged from the draft of 2026-10-01; (2) decision_date is the filing day, because the measurement already exists sealed in the E-1 files and the ordering the date protects (file, then read) is satisfied the moment the filing commit exists; (3) the 8-fold arm is run on process 1 only at this point (400 replicates), the process-2 arm (100 replicates at sr 0 and 0.08) is deferred until the 5-fold result shows it could change the admitted set; (4) filed_commit is recorded in the following commit, as E-1 did."
 }
