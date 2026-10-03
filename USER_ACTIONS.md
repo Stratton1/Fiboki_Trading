@@ -2,6 +2,16 @@
 
 **Generated:** 19 September 2026, at the end of the V2 build programme. **Updated 29 September 2026** after the agentic-integration wave (see `docs/v2/AGENTIC_INTEGRATION_PLAN.md` §3 and `docs/v2/BUILD_LOG.md`).
 
+**Status line (3 October 2026):** V1 is down (Vercel paused, Railway deployment removed). E-1 and
+E-2 are complete and decided: the audited gate set has no power against edges up to 0.12 per trade
+on either data-generating process, every proposed loosening keeps the false-promotion rate at zero,
+three are published as `v2.1.0-calibrated` (not yet the production bar, R3), and no gate design can
+restore power because the documents produce a median of 330 trades against the 425 a 0.08 edge
+needs; the recommended next experiment is pooled-universe candidates (R3). The OANDA practice token
+is in place and verified (P1). The runtime checkout `~/fiboki` is at 7e487a7, six commits behind
+`main` (f18ec8c); the paper service does not use the changed code, but pull it before the next
+campaign so the ladder fix (zero-dispersion trials) is in force there too.
+
 **Status line (29 September 2026, evening):** GitHub `main` and `v2/integration` are the same commit (V1 is under `legacy/v1/`, tag `v1-final`). The four launchd services (`uk.fiboki.api`, `worker`, `web`, `news`) run from the runtime checkout `~/fiboki` (`docs/v2/DEPLOYMENT.md` §2.6), `fiboki doctor` there reports 0 FAIL, and http://localhost:3000 serves the production web build. Ollama `qwen3:4b` passed the smoke test (P7), the agent cycles are on, and the first real-model workflow (an event scan) has run; on this 8 GB MacBook the model calls time out while K3 runs (swap-bound), so event scans are hourly until the desktop. Campaign K3 (`engine_v3_realism`, GBP, official calendar) is running in the development checkout. Backend suite 4,802 passed; Playwright 478 passed. **Still needing you:** P1 (OANDA practice token: nothing trades forward until it is in `~/.fiboki/env`), P6 (Finnhub/FRED keys), L2 (tax/capital advice), and the decisions in `docs/v2/IMPROVEMENT_BACKLOG.md` §3.
 
 Everything in this document is something the engineering programme could not do for you: it needs an account, a credential, a payment, a legal acceptance, a physical action, or a judgement that is yours rather than mine. Everything *else* has been built, and where an external dependency was missing I built the adapter, the interface, the fixtures and the tests so the platform is ready the day the dependency arrives.
@@ -62,7 +72,13 @@ Both operators now have fresh passwords stored as `scrypt$...` in `~/.fiboki/env
 
 ## REQUIRED BEFORE PAPER TRADING
 
-### P1. Open an OANDA practice account and resolve two unknowns
+### P1. OANDA practice account — TOKEN IN PLACE AND VERIFIED 2026-10-03; two unknowns remain yours
+
+`~/.fiboki/env` holds `FIBOKI_OANDA_PRACTICE_TOKEN` and `FIBOKI_OANDA_PRACTICE_ACCOUNT_ID`, and a
+read-only call to `api-fxpractice.oanda.com/v3/accounts/<id>/summary` on 2026-10-03 answered 200:
+a GBP practice account created 2026-09-22, balance 100,000, no open trades, positions or orders.
+The paper-forward service (`uk.fiboki.paper`) is running under launchd. The token is never printed
+or logged; nothing here writes to OANDA (the paper composition reads candles and pricing only).
 
 Free, no minimum, takes minutes: <https://www.oanda.com/uk-en/> → practice account → generate a personal access token from the account portal.
 
@@ -261,7 +277,7 @@ Everything here keeps the deployment in paper mode; none of it touches a live co
 - [ ] `brew install python@3.11 node git sqlite llama.cpp`.
 - [x] `git clone` the repository **outside `~/Documents`** (macOS TCC blocks LaunchAgents there; `DEPLOYMENT.md` §2.6). On the MacBook this is `~/fiboki`; on the desktop use the same path so the runbooks apply unchanged.
 - [x] `scripts/desktop-install.sh --check`, then `scripts/desktop-install.sh` until it prints no MISSING line.
-- [x] `~/.fiboki/env` (mode 600): `FIBOKI_OPERATORS` for Joe and Tom as `scrypt$` hashes (C4); the file is shared by both checkouts. Still to add: `FIBOKI_OANDA_PRACTICE_TOKEN` / `FIBOKI_OANDA_PRACTICE_ACCOUNT_ID` (P1), `FIBOKI_FINNHUB_KEY`, `FIBOKI_FRED_KEY` (P6).
+- [x] `~/.fiboki/env` (mode 600): `FIBOKI_OPERATORS` for Joe and Tom as `scrypt$` hashes (C4); the file is shared by both checkouts. `FIBOKI_OANDA_PRACTICE_TOKEN` / `FIBOKI_OANDA_PRACTICE_ACCOUNT_ID` are present and verified (P1, 2026-10-03). Still to add: `FIBOKI_FINNHUB_KEY`, `FIBOKI_FRED_KEY` (P6).
 - [x] Market-data store in `var/datastore` (60 instruments, 16.5M bars, verified by `fiboki doctor`). On the desktop: copy it again, or `scripts/backup.sh --include-datastore` on this machine first.
 - [ ] Download one model (M3) into `~/Models`, verify its SHA-256 against the Hugging Face page, `scripts/llama-server.sh --print`. On the MacBook (8 GB) Ollama `qwen3:4b` is used instead; llama.cpp with a larger model is the desktop plan.
 - [x] ~~`_build_provider` change~~ — made (`for_local_server`; detects llama.cpp by `/props`, Ollama otherwise).
