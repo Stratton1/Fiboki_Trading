@@ -31,6 +31,7 @@ __all__ = [
     "CANDIDATE_LADDER_FOLDS",
     "CANDIDATE_VERSION_PREFIX",
     "GATE_SET_V2",
+    "GATE_SET_V2_1_CALIBRATED",
     "GATE_SET_V2_1_CANDIDATES",
     "Comparison",
     "Gate",
@@ -597,3 +598,41 @@ GATE_SET_V2_1_CANDIDATES["c_hit_8fold"] = GateSet(
 #: Walk-forward fold counts a candidate set REQUIRES; every other set is judged at
 #: the run's own fold count.
 CANDIDATE_LADDER_FOLDS: dict[str, int] = {"c_hit_8fold": 8}
+
+
+# --------------------------------------------------------------------------
+# The calibrated set: E-2's output (filed aa2b071, decided 2026-10-03)
+# --------------------------------------------------------------------------
+
+#: ``GATE_SET_V2`` with the three section 3.1 LOOSENINGS E-2 admitted (each had
+#: per-candidate size 0/400 on both E-1 processes alone and together):
+#: ``min_track_record`` for ``min_trades``, the log-growth WFE pair for
+#: ``walk_forward_efficiency``, and the neighbourhood median/min pair for
+#: ``parameter_plateau``. NOT admitted: ``c_hit_wilson`` (a tightening, as the
+#: filing said before any result; measured size 0, power 0), ``c_hit_8fold``
+#: (not measured at filing), ``c_dsr_family`` (never admissible: it ignores the
+#: campaign). Measured under this set: size 0/400 and 0/400; power at per-trade
+#: Sharpe 0.08 0/400 and 0/400, at 0.12 4/400 and 0/400 -- the same as the
+#: audited set, because at the trade counts these documents produce (median 330)
+#: no 95% test of a 0.08 edge has power, whatever the gate
+#: (research/reports/RESEARCH_LEDGER.md, E-2 result). Publishing it is what the
+#: E-1 and E-2 decision rules require; it is NOT the production bar until
+#: ``lifecycle.promotion`` and the ladder default are switched to it, which is a
+#: separate, recorded change. Its rung-0 floor is 150 trades
+#: (``MIN_TRL_FLOOR_TRADES``); the ladder enforces that coupling.
+GATE_SET_V2_1_CALIBRATED = GateSet(
+    version="v2.1.0-calibrated",
+    gates=_candidate(
+        "calibrated", ("min_trades", "walk_forward_efficiency", "parameter_plateau")
+    ).gates,
+    description=(
+        "Fiboki V2 promotion gates, calibrated by E-2 (research/preregistration/"
+        "gate_calibration_e2.json, filed aa2b071): v2.0.0-audit with min_trades "
+        "replaced by the MinTRL_95 track-record gate (floor 150), walk_forward_efficiency "
+        "by the log-growth WFE with a 30-trade OOS-fold floor, and parameter_plateau "
+        "by the neighbourhood median (>= 0.6 x point) and minimum (> 0) conditions. "
+        "Measured per-candidate size 0/400 on both E-1 processes; power at per-trade "
+        "Sharpe 0.08 0/400 on both. A candidate must clear every one of these before "
+        "it may leave RESEARCH for a paper allocation."
+    ),
+)

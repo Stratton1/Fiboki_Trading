@@ -174,7 +174,7 @@ Telegram bot token and chat id, or a webhook URL. The dispatcher is built and fi
 
 ## RESEARCH DECISIONS THAT ARE YOURS
 
-### R1. File E-2 (gate calibration, the step after E-1) — a decision, not a click
+### R1. ~~File E-2 (gate calibration, the step after E-1)~~ — FILED and DECIDED 2026-10-03 (see the ledger's E-2 result; summary in R3)
 
 `research/preregistration/gate_calibration_e2.json` is a DRAFT (2026-10-01). It names the candidate
 gate sets built from the audit's section 3.1 proposals (`validation/gates.py`,
@@ -187,6 +187,23 @@ own trials only) is measured and never admitted. Read it, change what you disagr
 processes have run. Until it is filed no candidate-set rate is read or quoted; both E-1 result files already hold
 them, sealed, so filing costs no compute: say "file E-2" and the reading follows the same day. What you are deciding: that these, and only these, are the loosenings
 on the table, and that the deflation's trial count is a separate experiment (E-3), not a knob.
+
+### R3. Confirm the switch to `v2.1.0-calibrated`, and choose the next experiment
+
+E-2's answer (ledger, E-2 result): every section 3.1 loosening keeps size at 0/400 on both
+processes, so three are admitted and published as `GATE_SET_V2_1_CALIBRATED`; none of them, nor
+all of them, nor even dropping deflation entirely, gives usable power at a 0.08 per-trade edge,
+because the documents produce a median of 330 trades and a 95% test of that edge needs 425
+(MinTRL). The constraint is trades per candidate, not thresholds.
+
+- [ ] **Switch the production bar** to `v2.1.0-calibrated` (`lifecycle/promotion.py` and the
+  ladder default; one recorded change). Measured effect: no verdict changes on either process; sparse
+  candidates get measured through every rung instead of dying at rung 0. Say "switch" and I do it.
+- [ ] **Choose the next experiment.** My recommendation is to pre-register pooled-universe
+  candidates (one document across its 16 series as a single candidate, ~5,000 trades), which is the
+  only route that makes a 0.08 edge testable at all; the alternatives are to accept that only edges
+  of 0.12+ per trade can ever be certified, or lower timeframes where costs dominate. E-3 (effective
+  campaign trial count) is demoted: H2 failed.
 
 ### R2. ~~Run E-1 process 2 on the Mac~~ — DONE 2026-10-01 (14.7 h, four shards; result in the ledger)
 

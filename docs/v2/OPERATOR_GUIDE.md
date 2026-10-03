@@ -126,9 +126,11 @@ price paths, 2026-10-01) gave the same answer: 0 promotions in 400 at every inje
 0.12. The filed decision rule's path 3 applies: the audited set stands, and the proposed loosenings
 are judged in E-2. No threshold is moved by looking at a real strategy's score (pre-registration
 rule 5).
-The step after E-1 is prepared: the loosenings the audit proposed exist as candidate gate sets
-that cannot promote anything, and `research/preregistration/gate_calibration_e2.json` (a draft you
-file) fixes, before any result is read, which of them may be admitted and on what evidence.
+E-2 (filed and decided 2026-10-03) then tested the loosenings the audit proposed: all keep the
+false-promotion rate at zero, three are admitted as `v2.1.0-calibrated`, and none restores power,
+because a strategy that trades 330 times in twenty years cannot evidence a 0.08-per-trade edge at
+95% confidence under any gate (425 trades are needed). The constraint is sample size per candidate;
+the proposed answer is to judge a document across its whole instrument universe as one candidate.
 
 ## 8. The workstation
 
@@ -156,5 +158,5 @@ the Keychain. `scripts/oanda-backfill.sh` refreshes the data store.
 
 Live execution (by design). Agent Desk screen. Phone kill-switch view. Chart replay, drawings,
 calendar markers on the chart. Per-family holdout budgets. Measured spreads (needs four weeks
-of the quote recorder). Pre-2024 calendar. E-1 is complete (both processes); E-2 awaits filing. Nothing has traded
+of the quote recorder). Pre-2024 calendar. E-1 and E-2 are complete; `v2.1.0-calibrated` is published and awaits the operator's switch. Nothing has traded
 forward yet. No strategy has an edge demonstrated by this pipeline.

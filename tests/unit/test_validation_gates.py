@@ -279,3 +279,48 @@ class TestE2Candidates:
             assert "NOT FOR PROMOTION" in gates.description
             fingerprints.add(gates.fingerprint())
         assert len(fingerprints) == 1 + len(self._candidates())
+
+
+class TestCalibratedSet:
+    """E-2's output: the audited set with the three admitted loosenings. Pinned so
+    that it cannot drift from what the ledger says was measured."""
+
+    @staticmethod
+    def _c():
+        from fiboki.validation.gates import GATE_SET_V2_1_CALIBRATED
+
+        return GATE_SET_V2_1_CALIBRATED
+
+    def test_version_and_fingerprint_are_pinned(self) -> None:
+        assert self._c().version == "v2.1.0-calibrated"
+        assert self._c().fingerprint() == (
+            "9a195b2aed052b245fac2d42d99931a8bb509c6661e120de54dbacfbda6218fc"
+        )
+
+    def test_it_is_v2_with_exactly_the_three_admitted_replacements(self) -> None:
+        audited = {g.name: g.to_dict() for g in GATE_SET_V2.gates}
+        mine = {g.name: g.to_dict() for g in self._c().gates}
+        replaced = {"min_trades", "walk_forward_efficiency", "parameter_plateau"}
+        assert set(audited) - set(mine) == replaced
+        assert set(mine) - set(audited) == {
+            "min_track_record", "walk_forward_min_oos_trades",
+            "walk_forward_efficiency_log_growth", "plateau_neighbourhood_median",
+            "plateau_neighbourhood_min",
+        }
+        for name in set(audited) - replaced:
+            assert mine[name] == audited[name]  # oos_window_hit_rate and deflation untouched
+        assert "oos_window_hit_rate_wilson" not in mine and "deflated_sharpe_family_n" not in mine
+
+    def test_it_is_not_the_production_bar_until_promotion_is_switched(self) -> None:
+        from fiboki.lifecycle import promotion
+
+        assert promotion.GATE_SET_V2.fingerprint() == GATE_SET_V2.fingerprint()
+        assert self._c().fingerprint() != GATE_SET_V2.fingerprint()
+
+    def test_the_ladder_couples_its_floor_to_150(self) -> None:
+        from fiboki.validation.ladder import LadderConfig, ValidationLadder, sanity_trade_floor
+
+        assert sanity_trade_floor(self._c()) == 150
+        ValidationLadder(config=LadderConfig(min_trades=150), gate_set=self._c())
+        with pytest.raises(ValueError):
+            ValidationLadder(config=LadderConfig(min_trades=400), gate_set=self._c())

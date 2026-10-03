@@ -490,3 +490,70 @@ edge, and it is the strongest argument yet against tuning a threshold by hand: t
 one, is a pre-registered calibrated set (E-2) and a defensible trial count (E-3), in that order.
 **Next:** the operator files E-2 (USER_ACTIONS R1); the sealed candidate results are then read from
 these files without further compute.
+
+## E-2 result, `gate_calibration_e2` (filed 2026-10-03 at aa2b071; decided 2026-10-03, same day, from the sealed E-1 files; no new compute)
+
+**Read for the first time after filing.** Promotions per 400 replicates, per candidate set, on
+the two E-1 processes (block bootstrap | perturbed paths), at injected per-trade Sharpe 0 / 0.03 /
+0.05 / 0.08 / 0.12:
+
+| set | block bootstrap | perturbed paths |
+|---|---|---|
+| `v2.0.0-audit` (reference) | 0 / 0 / 0 / 0 / 4 | 0 / 0 / 0 / 0 / 0 |
+| `c_min_trl` | 0 / 0 / 0 / 0 / 4 | 0 / 0 / 0 / 0 / 0 |
+| `c_wfe_log` | 0 / 0 / 0 / 0 / 4 | 0 / 0 / 0 / 0 / 0 |
+| `c_plateau_median` | 0 / 0 / 0 / 0 / 4 | 0 / 0 / 0 / 0 / 0 |
+| `c_hit_wilson` (a tightening) | 0 / 0 / 0 / 0 / 3 | 0 / 0 / 0 / 0 / 0 |
+| `c_dsr_family` (never admissible) | 0 / 0 / 0 / 3 / 10 | 0 / 0 / 0 / 1 / 7 |
+| `c_all` | 0 / 0 / 0 / 2 / 9 | 0 / 0 / 0 / 0 / 4 |
+| **calibrated** = V2 + `min_trl` + `wfe_log` + `plateau_median` | **0 / 0 / 0 / 0 / 4** | **0 / 0 / 0 / 0 / 0** |
+
+Gate removal, `v2.0.0-audit` minus one gate, at sr 0 / 0.08 / 0.12: without `deflated_sharpe`
+0 / 3 / 11 and 1 / 2 / 8; without `pbo` 0 / 9 / 42 and 0 / 0 / 0; every other single removal
+leaves 0 / 0 / 4 and 0 / 0 / 0 (bootstrap and paths respectively).
+
+**Decision rule, applied.** Rule 1: every single-replacement set has size 0/400 on both
+processes, so each is admissible on size. Admitted: `c_min_trl`, `c_wfe_log`,
+`c_plateau_median`, the three that are loosenings. Not admitted: `c_hit_wilson`, which the filing
+stated before any result to be a tightening (5 of 5 folds required) and which measured as one
+(power 0, 3 at 0.12 against 4); `c_hit_8fold`, not measured at filing (the 8-fold arm has not run;
+it is deferred, filing_note 3, and would need a separate re-filing to be admitted later);
+`c_dsr_family`, never. Rule 2: the calibrated candidate, judged from the same measurement
+(`judge_rows`), has size 0/400 on both processes, so it is published as
+`GATE_SET_V2_1_CALIBRATED`, version `v2.1.0-calibrated`, fingerprint `9a195b2a…`,
+`validation/gates.py`, pinned by `tests/unit/test_validation_gates.py`. Rule 3: its power at 0.08
+is **0/400 on both processes**; at 0.12, 4/400 and 0/400. The shortfall is attributed below.
+Rule 4: H2 (trial count dominates) is **not supported**: removing deflation entirely raises
+power at 0.08 only to 3/400 and 2/400, so E-3 (effective campaign trial count) is NOT the next
+experiment. Rule 5: no threshold was chosen by looking at any real strategy; no new threshold
+value was introduced.
+
+**Why calibration cannot restore power here, stated plainly.** Under the calibrated set the
+binding gate at sr 0.08 is `min_track_record` on 255/400 (bootstrap) and 237/400 (paths)
+replicates. MinTRL_95 at a per-trade Sharpe of 0.08 is 425 trades; these documents produce a
+median of 330 (p10 74, p90 754) on twenty years of H4 bars. A single, undeflated, one-sided 95%
+test of a 0.08 edge on 330 trades has a t-statistic of 0.08 × √330 = 1.45 and power well below
+0.5; no gate set can have power the data cannot support, and every gate that is added only
+subtracts. Behind MinTRL the next killers are deflation on the bootstrap (70) and the plateau
+median on the paths (86), then the log-growth WFE and its 30-trade fold floor. The pre-registered
+target (power 0.5 at 0.08 per trade) was therefore unattainable at this universe's sample sizes
+whatever the gates, and that is the finding: **the binding constraint is trades per candidate,
+not thresholds.**
+
+**What would change the answer (not decided here; the operator's call, each needs its own
+pre-registration).** (a) Pool a document's trades across its instrument universe as ONE candidate
+(the engine already runs portfolio backtests deterministically): 16 series × ~330 trades ≈ 5,000
+per candidate, at which MinTRL (425) is cleared with room, a 0.08 edge has t ≈ 5.7, and the
+campaign's trial count falls by the same factor, which also eases deflation; the open questions are
+the cross-instrument dependence of trades (the purged CV's label spans already handle overlap in
+time) and whether per-instrument heterogeneity is a property to test or to average away. (b) Accept
+only larger edges (MinTRL is 190 trades at 0.12 and 70 at 0.20): honest, but it says the platform
+will only ever certify edges that are rare. (c) Lower timeframes to raise trade counts: K3 to K5
+show costs dominate there. Route (a) is the one worth filing next.
+
+**Switching the production bar.** `GATE_SET_V2_1_CALIBRATED` is published, as the rules require,
+but `lifecycle.promotion` and the ladder default still name `v2.0.0-audit`; switching is a
+one-line, recorded change the operator confirms (USER_ACTIONS R3). Measured, the switch changes no
+verdict on either process (0 and 0 either way); in practice it lets 150-to-400-trade candidates be
+measured through every rung instead of ending at rung 0, which is more information per campaign at
+no measured cost in size.
