@@ -288,6 +288,11 @@ the loop continues; the process exits 1 only when stopped after a failed poll. R
 `QuoteReplayReader(<state>/quotes).frame()` and `spread_profile(...)`. A poll is not a stream:
 quote changes between polls are not seen.
 
+Logs: `var/logs/quotes.log` gets one line per poll (`requested= received= recorded=`); httpx's
+per-request INFO line is held at WARNING in every service by `obs.logging.configure_logging`
+(set `FIBOKI_LOG_HTTP=INFO` in `~/.fiboki/env` and restart a service to see request lines while
+debugging). Nothing rotates the launchd logs; check `du -sh var/logs` in the weekly review.
+
 ## 6. Data operations
 
 ```bash

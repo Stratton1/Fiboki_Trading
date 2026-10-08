@@ -115,7 +115,9 @@ class OandaPricingQuoteFeed(QuoteFeed):
             latency = (received_at - quote.time).total_seconds() * 1000.0
             records.append(
                 QuoteRecord(
-                    timestamp=quote.time.to_pydatetime(),
+                    # datetime holds microseconds; OANDA sends nanoseconds. Truncate
+                    # explicitly (the dedupe key above keeps the full value).
+                    timestamp=quote.time.floor("us").to_pydatetime(),
                     instrument=symbol,
                     bid=quote.bid,
                     ask=quote.ask,

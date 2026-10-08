@@ -189,3 +189,37 @@ def test_configure_logging_installs_json_on_a_non_tty():
     assert record["msg"] == 'has "quotes"'
     assert record["component"] == "worker"
     logging.getLogger().handlers.clear()
+
+
+# ---------------------------------------------------------------- transport noise
+
+
+def test_per_request_transport_loggers_are_held_at_warning(monkeypatch) -> None:
+    import io
+    import logging
+
+    from fiboki.obs.logging import NOISY_TRANSPORT_LOGGERS, configure_logging
+
+    monkeypatch.delenv("FIBOKI_LOG_HTTP", raising=False)
+    buf = io.StringIO()
+    configure_logging(stream=buf, json_output=False)
+    for name in NOISY_TRANSPORT_LOGGERS:
+        assert logging.getLogger(name).getEffectiveLevel() == logging.WARNING
+    logging.getLogger("httpx").info("HTTP Request: GET https://example.invalid/ 200")
+    logging.getLogger("httpx").warning("transport warning still visible")
+    out = buf.getvalue()
+    assert "HTTP Request" not in out and "transport warning still visible" in out
+
+
+def test_request_lines_can_be_restored_for_debugging(monkeypatch) -> None:
+    import io
+    import logging
+
+    from fiboki.obs.logging import configure_logging
+
+    monkeypatch.setenv("FIBOKI_LOG_HTTP", "info")
+    configure_logging(stream=io.StringIO(), json_output=False)
+    assert logging.getLogger("httpx").getEffectiveLevel() == logging.INFO
+    monkeypatch.setenv("FIBOKI_LOG_HTTP", "nonsense")
+    configure_logging(stream=io.StringIO(), json_output=False)
+    assert logging.getLogger("httpx").getEffectiveLevel() == logging.WARNING

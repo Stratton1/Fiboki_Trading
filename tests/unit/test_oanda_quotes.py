@@ -159,3 +159,17 @@ def test_quotes_record_refuses_without_a_token(tmp_path, monkeypatch) -> None:
     with pytest.raises(MissingCredential):
         main(["quotes", "record", "--once", "--state-dir", str(tmp_path)])
     assert not (tmp_path / "quotes").exists()
+
+
+def test_nanosecond_venue_times_are_truncated_without_a_warning() -> None:
+    import warnings
+
+    body = HttpResponse(200, {"prices": [{
+        "instrument": "EUR_USD", "time": "2026-10-21T10:00:00.123456789Z", "tradeable": True,
+        "bids": [{"price": "1.1", "liquidity": 1}], "asks": [{"price": "1.2", "liquidity": 1}],
+    }]})
+    feed, *_ = _feed([body], polls=1)
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        (record,) = list(feed.stream(["EURUSD"]))
+    assert record.timestamp.microsecond == 123456

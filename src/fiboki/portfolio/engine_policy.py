@@ -111,7 +111,7 @@ def instrument_annualised_vol(history: Callable[[str], pd.DataFrame], symbol: st
         closes = history(symbol)["close"].astype(float)
     except Exception:
         return 0.10
-    rets = closes.pct_change().dropna().tail(250)
+    rets = closes.ffill().pct_change(fill_method=None).dropna().tail(250)
     if len(rets) < 20:
         return 0.10
     index = closes.index

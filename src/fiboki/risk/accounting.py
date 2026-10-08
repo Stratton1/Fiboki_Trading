@@ -316,7 +316,7 @@ def realised_portfolio_vol(
     series = _as_series(equity, index)
     if series is None or len(series) < min_observations + 1:
         return 0.0
-    returns = series.pct_change().dropna()
+    returns = series.ffill().pct_change(fill_method=None).dropna()
     returns = returns[np.isfinite(returns.to_numpy())]
     if len(returns) < min_observations:
         return 0.0
@@ -400,7 +400,11 @@ def correlation_from_frames(
     if len(closes) < 2:
         return CorrelationMatrix(default=default)
 
-    returns = pd.DataFrame(closes).sort_index().pct_change().dropna(how="all")
+    # Explicit forward-fill: the behaviour pandas' deprecated default gave, kept
+    # so a pandas upgrade cannot silently change the correlation the gateway uses.
+    returns = (
+        pd.DataFrame(closes).sort_index().ffill().pct_change(fill_method=None).dropna(how="all")
+    )
     labels = sorted(returns.columns)
     pairs: dict[tuple[str, str], float] = {}
     for i, a in enumerate(labels):

@@ -339,7 +339,30 @@ def configure_logging(
             root.removeHandler(existing)
     root.addHandler(handler)
     root.setLevel(level)
+    _quiet_transport_loggers()
     return root
+
+
+#: Third-party loggers that write one INFO line per HTTP request. A poller on a
+#: 30 s cadence (the quote recorder, the news service) would otherwise put
+#: thousands of lines a day into its launchd log, which nothing rotates.
+#: Failures still surface: WARNING and above pass, and Fiboki's own clients
+#: report errors through their own loggers and poll reports.
+NOISY_TRANSPORT_LOGGERS: tuple[str, ...] = ("httpx", "httpcore")
+
+
+def _quiet_transport_loggers() -> None:
+    """Hold the per-request transport loggers at WARNING unless told otherwise.
+
+    ``FIBOKI_LOG_HTTP=INFO`` (or DEBUG) restores the request lines for a
+    debugging session.
+    """
+    wanted = os.environ.get("FIBOKI_LOG_HTTP", "").strip().upper() or "WARNING"
+    level = logging.getLevelName(wanted)
+    if not isinstance(level, int):
+        level = logging.WARNING
+    for name in NOISY_TRANSPORT_LOGGERS:
+        logging.getLogger(name).setLevel(level)
 
 
 class _MergingAdapter(logging.LoggerAdapter):  # type: ignore[type-arg]

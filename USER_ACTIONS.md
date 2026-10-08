@@ -2,6 +2,12 @@
 
 **Generated:** 19 September 2026, at the end of the V2 build programme. **Updated 29 September 2026** after the agentic-integration wave (see `docs/v2/AGENTIC_INTEGRATION_PLAN.md` §3 and `docs/v2/BUILD_LOG.md`).
 
+**Status line (9 October 2026):** Everything is committed and pushed: the dev checkout, GitHub
+`main` and `v2/integration` are all at the same commit, and the runtime checkout `~/fiboki` runs it
+(web rebuilt, all six services restarted). The quote recorder is installed and verified on the
+MacBook (P2). Forward paper trading has run against the OANDA practice account since 29 September
+(one trade so far; `docs/v2/PLATFORM_STATUS.md` section 1). Your list is unchanged from 8 October.
+
 **Status line (8 October 2026):** The production promotion bar is now `v2.1.0-calibrated`
 (R3, switched on your instruction). V1 is fully down: Vercel paused, and on Railway both V1
 services are offline with their GitHub source disconnected (the API on 30 September, the V1
@@ -124,11 +130,18 @@ prices sit from its executable prices (P1's second question).
 **How it runs.** `fiboki quotes record --loop` (code: `broker/oanda_quotes.py`), as the launchd
 service `uk.fiboki.quotes`. Practice host only, read-only: it cannot place or change anything.
 `fiboki quotes status` exits 1 when nothing has been written for ten minutes. Interval:
-`FIBOKI_QUOTES_INTERVAL` in `~/.fiboki/env` (default 30, minimum 5). Disk: roughly 15 to 25 MB a
-day at 30 seconds for 20 instruments (an estimate; check `fiboki quotes status` after a day).
+`FIBOKI_QUOTES_INTERVAL` in `~/.fiboki/env` (default 30, minimum 5). Disk: about 450 bytes a
+record, so at most about 26 MB a day if all 20 quotes change every poll (fewer in practice: the
+first polls recorded 20, 18 and 14 of 20).
 
-**Nothing to do** except keep the machine on. On the desktop, install it with
-`scripts/launchd-install.sh --services quotes --load`.
+**Verified on the MacBook, 9 October 00:18 BST**: installed from `~/fiboki` at 5edbc35, every poll
+returned 20 of 20 instruments, the log replays clean through `QuoteReplayReader` (52 records, 20
+instruments in the first 70 seconds) and `fiboki quotes status` passes. First overnight median
+spreads: EURUSD 0.9 pips, GBPUSD 1.5, USDJPY 1.7, XAUUSD 0.49, US500 0.5, UK100 2.3, DE40 4.9
+(overnight, so wider than the London session; a profile needs weeks).
+
+**Nothing to do** except keep the machine on. On the desktop after the move, install it with
+`scripts/launchd-install.sh --services quotes --load` (the migration kit's RESTORE.md includes it).
 
 ### P3. Extend the economic calendar beyond 2024 and four currencies, and wire it in
 

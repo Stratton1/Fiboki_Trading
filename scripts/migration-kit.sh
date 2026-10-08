@@ -96,7 +96,7 @@ cat > "$KIT/RESTORE.md" <<EOF
    \`shasum -a 256 -c runtime/*.sha256\`.
 6. Research working files (optional): \`tar -xzf dev/research-working.tar.gz -C ~/fiboki\`.
 7. \`.venv/bin/fiboki doctor\` until 0 FAIL, then
-   \`scripts/launchd-install.sh --services api,worker,web,news,paper --load\`.
+   \`scripts/launchd-install.sh --services api,worker,web,news,paper,quotes --load\`.
 8. System Settings on the desktop: log in automatically, never sleep, restart after a power
    failure (LaunchAgents only run while you are logged in).
 EOF
