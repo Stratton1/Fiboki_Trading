@@ -270,6 +270,24 @@ started is also reported. Staleness thresholds come from one value, `Settings.he
 `FLATTEN` closing orders are dispatched through the **normal** ordering path, so they are
 recorded, idempotent and recoverable like any other order — not a side channel.
 
+## 5a. The executable-price recorder
+
+```bash
+fiboki quotes record --loop --interval 30      # what uk.fiboki.quotes runs
+fiboki quotes record --once                    # one poll, for a check
+fiboki quotes status [--max-age 600]           # exit 1 when nothing was written recently
+```
+
+Reads `GET /v3/accounts/{id}/pricing` on the OANDA PRACTICE host only (the pricing client's
+parsed-hostname assertion; the live host is refused) with `FIBOKI_OANDA_PRACTICE_TOKEN` and
+`FIBOKI_OANDA_PRACTICE_ACCOUNT_ID`, and appends every CHANGED top-of-book quote to the crash-safe
+segmented log in `<state>/quotes/` (`fiboki.data.recorder`): the venue's quote time, bid, ask,
+tradeable flag and how long after that time the poll received it. Default instruments: the 20 in
+`broker/oanda_quotes.DEFAULT_RECORDED_INSTRUMENTS`. A failed poll records nothing, prints why and
+the loop continues; the process exits 1 only when stopped after a failed poll. Read it back with
+`QuoteReplayReader(<state>/quotes).frame()` and `spread_profile(...)`. A poll is not a stream:
+quote changes between polls are not seen.
+
 ## 6. Data operations
 
 ```bash

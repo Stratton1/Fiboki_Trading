@@ -64,7 +64,9 @@ creates or marks a data root.
 
 ### 2.3 Services
 
-Five LaunchAgents, templates in `deploy/launchd/uk.fiboki.{api,worker,web,news,llama}.plist`,
+Seven LaunchAgents, templates in `deploy/launchd/uk.fiboki.{api,worker,web,news,quotes,llama,paper}.plist`
+(the default install writes the first five listed below; `quotes` and `paper` need the OANDA practice
+token and are installed by name with `--services quotes,paper`),
 installed by `scripts/launchd-install.sh` (which substitutes the repository path and writes to
 `~/Library/LaunchAgents`). Each runs `scripts/fiboki-service.sh <name>`:
 
@@ -75,11 +77,13 @@ installed by `scripts/launchd-install.sh` (which substitutes the repository path
 | `uk.fiboki.web` | `next start` (needs `npm run build`) | 3000 | `var/logs/web.log` |
 | `uk.fiboki.news` | `fiboki news record --loop --interval 300` | none | `var/logs/news.log` |
 | `uk.fiboki.llama` | `scripts/llama-server.sh` | 127.0.0.1:8080 | `var/logs/llama.log` |
+| `uk.fiboki.quotes` | `fiboki quotes record --loop` (OANDA practice top of book, read-only, every `FIBOKI_QUOTES_INTERVAL` s, default 30) | none | `var/logs/quotes.log` |
+| `uk.fiboki.paper` | `fiboki paper forward` against the committed wiring file | none | `var/logs/paper.log` |
 
 ```bash
 launchctl print    gui/$(id -u)/uk.fiboki.worker      # state, pid, last exit code
 launchctl kickstart -k gui/$(id -u)/uk.fiboki.worker  # restart one
-scripts/launchd-install.sh --unload                   # stop all five
+scripts/launchd-install.sh --unload --services api,worker,web,news,quotes,llama,paper   # stop all
 ```
 
 Decisions in the templates, each deliberate:

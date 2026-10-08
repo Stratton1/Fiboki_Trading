@@ -94,3 +94,6 @@ scripts/desktop/Fiboki.icns
 # experiment database and resume checkpoint are kept locally and in backups.
 research/reports/**/experiments.sqlite
 research/reports/**/checkpoint.json
+
+# Transfer drop for bundles from the build container (docs/v2/DEPLOYMENT.md section 2.6).
+_v2_delivery/

@@ -3,7 +3,8 @@
 This is the working charter for any agent — or human — changing this repository. It applies to
 every session, and it takes precedence over any summary, status document or prior conversation.
 
-Read `docs/v2/ROADMAP.md` for what is actually true today. Read `docs/v2/V1_FORENSIC_BASELINE.md`
+Read `docs/v2/PLATFORM_STATUS.md` for what is true today (`docs/v2/ROADMAP.md` is the 19 September
+build snapshot, kept as a record) and `USER_ACTIONS.md` for what waits on the operator. Read `docs/v2/V1_FORENSIC_BASELINE.md`
 for why these rules exist; every one of them is a defect that cost this project real time.
 
 ---
@@ -234,7 +235,7 @@ These replace V1-era statements that were still steering agents. Each has an enf
 
 | Old statement | Current rule | Enforced by |
 |---|---|---|
-| "12 strategy bots under a common framework" | Strategies are DSL documents under `research/strategies/` (five seeds today). Adding one requires `is_reparameterisation` to be false and a written reason it is different. | `strategy/registry.py`, holdout key-version tests |
+| "12 strategy bots under a common framework" | Strategies are DSL documents under `research/strategies/` (six seed documents today: the original five plus `tsmom_dual_horizon`, added for K4). Adding one requires `is_reparameterisation` to be false and a written reason it is different. | `strategy/registry.py`, holdout key-version tests |
 | "Minimum 80 trades for primary ranking" | Promotion requires the versioned gate set in `validation/gates.py`; ranking is on DSR, PBO, SPA/StepM, WFE, OOS hit and plateau, never on headline profit. Thresholds change only through a pre-registered calibration study (E-1). | `tests/unit/test_validation_gates.py` |
 | "KLineChart for charts, Plotly for analytics" | TradingView Lightweight Charts for price; uPlot plus owned SVG/canvas for analytics; no Plotly, no KLineChart; no indicator maths in the browser. | `apps/web/tests/e2e/source-rules.spec.ts` (dependency allow-list, byte budgets) |
 | "SQLite in dev / PostgreSQL in prod; Vercel / Railway / Render" | Local-first on Joe's Mac: SQLite (WAL) plus parquet under one `FIBOKI_STATE_DIR`/data root; services under launchd; no cloud dependency in research or execution. | `deploy/launchd/*`, `tests/unit/test_deploy_guards.py` |

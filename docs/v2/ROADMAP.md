@@ -1,5 +1,10 @@
 # Roadmap
 
+> **Historical snapshot (19 September 2026).** For the current state read
+> `docs/v2/PLATFORM_STATUS.md`; for research decisions, `research/reports/RESEARCH_LEDGER.md`;
+> for what waits on the operator, `USER_ACTIONS.md`. This file is kept unedited below as the
+> record of the V2 build's end state.
+
 **Verified snapshot: 2026-09-19T05:05Z.** `/home/claude/v2/.venv/bin/python -m pytest tests/ -q`
 → **2683 passed, 2 skipped** in 287 s. 125 source files / 51,937 lines; 102 test files / 28,716
 lines. `ruff check src tests scripts` → **101 findings**.

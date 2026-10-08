@@ -2,6 +2,16 @@
 
 **Generated:** 19 September 2026, at the end of the V2 build programme. **Updated 29 September 2026** after the agentic-integration wave (see `docs/v2/AGENTIC_INTEGRATION_PLAN.md` §3 and `docs/v2/BUILD_LOG.md`).
 
+**Status line (8 October 2026):** The production promotion bar is now `v2.1.0-calibrated`
+(R3, switched on your instruction). V1 is fully down: Vercel paused, and on Railway both V1
+services are offline with their GitHub source disconnected (the API on 30 September, the V1
+worker `humorous-grace`, which had still been running, on 8 October); only the V1 Postgres
+database remains (C2). The executable-price recorder is built and running (P2). Superseded files
+are gathered in `~/Fiboki_Old` (M1). A one-folder migration kit exists
+(`scripts/migration-kit.sh`, M1). Still needing you: the Finnhub and FRED keys (P6, five minutes
+each), P1's two venue questions, the pooled-universe pre-registration decision (R3), D2 to D4
+before any broker demo, and the desktop itself (M2, M3).
+
 **Status line (3 October 2026):** V1 is down (Vercel paused, Railway deployment removed). E-1 and
 E-2 are complete and decided: the audited gate set has no power against edges up to 0.12 per trade
 on either data-generating process, every proposed loosening keeps the false-promotion rate at zero,
@@ -36,6 +46,18 @@ removed and the `Fiboki_Trading` Railway service's GitHub source was disconnecte
 pushes to `main` no longer trigger a (failing) Railway build. The Railway service, its custom
 domain and its variables still exist; delete the service when you no longer want the DNS record.
 
+**Found and fixed 2026-10-08:** the Railway project `ravishing-benevolence` also held the V1
+*worker*, `humorous-grace`, which had been online for three months (its last good deploy was the
+V1 "unrealized fleet P&L" fix) and had been attempting a failed rebuild on every push to `main`.
+Its deployment was removed and its GitHub source disconnected on 2026-10-08. It held the IG demo
+credentials V1 used; it now runs nothing.
+
+- [ ] **Your decision: the V1 Postgres database** in the same Railway project is still online
+  (and billed). V2 does not use it. If you want V1's history, export it first (Railway → Postgres
+  → Data, or `pg_dump` with its connection string); then delete the database and its volume. Then
+  delete the whole Railway project, and remove the IG demo API key that V1 used from your IG
+  account settings, since nothing should hold it any more.
+
 **V2 cannot be "the live site" on Vercel as it stands, and this is a design property, not a bug.**
 V2's web tier is thin (display and controls); every number comes from the FastAPI service and the
 workers that run on your Mac against the local data store, the ledgers and the OANDA practice
@@ -60,11 +82,11 @@ honest routes to a public V2, in order of preference:
 Until one of these is done, `fiboki.uk` paused is the truthful state: nothing public claims numbers
 we cannot stand behind.
 
-### C3. Remove the committed live-execution flag from V1
+### C3. ~~Remove the committed live-execution flag from V1~~ — DONE (verified 2026-10-08)
 
-`render.yaml` in the V1 repository still contains `FIBOKEI_LIVE_EXECUTION_ENABLED: "true"` as a literal value. It is mitigated today only by the accident that Render is not the live host. Change it to `sync: false` or delete the file. V2's CI has a check that fails the build if any committed config sets a live-execution flag to a truthy literal; V1 has no such check.
-
----
+V1 lives in this repository under `legacy/v1/`, and `legacy/v1/render.yaml` now declares
+`FIBOKEI_LIVE_EXECUTION_ENABLED` with `sync: false` (no value committed). Render is not running
+V1, and the V1 Railway services are offline (C2).
 
 ### C4. ~~Rotate both operator passwords~~ — DONE 2026-09-29
 
@@ -88,13 +110,38 @@ Two things must be verified on the demo before the broker decision is final, and
 
 **How far does the candle endpoint's pricing diverge from your own executable stream?** OANDA's own UK help page says the live pricing feed "could be different from the historical data" because of pricing segments and account types. Run the recorder (P2) alongside candle pulls for a few weeks and diff them.
 
-### P2. Start the executable-price recorder
+### P2. The executable-price recorder — BUILT AND STARTED 2026-10-08
 
-This is the single highest-value thing you can start today, and its value is proportional to elapsed time. Every backtest Fiboki has ever run used somebody else's prices. `src/fiboki/data/recorder.py` is built, tested and crash-safe; it needs a live quote source.
+**What it is, plainly.** Every backtest assumes a spread from a fixed table. What a live account
+would actually have paid depends on the spread at the moment of each trade, which widens at the
+open, around news and at rollover. Those prices cannot be downloaded afterwards; they only exist if
+something records them as they happen. The recorder does that: every 30 seconds it reads OANDA's
+practice prices (best bid and ask) for the 20 research instruments and appends each changed quote
+to a crash-safe log in `var/quotes/`. After a few weeks it gives the measured spread by hour and day
+of week, which replaces the static spread table; after a few months it says how far OANDA's candle
+prices sit from its executable prices (P1's second question).
 
-Once P1 gives you a practice token, point the recorder at OANDA's pricing stream and leave it running. In six months you will have the only dataset that actually predicts your fills.
+**How it runs.** `fiboki quotes record --loop` (code: `broker/oanda_quotes.py`), as the launchd
+service `uk.fiboki.quotes`. Practice host only, read-only: it cannot place or change anything.
+`fiboki quotes status` exits 1 when nothing has been written for ten minutes. Interval:
+`FIBOKI_QUOTES_INTERVAL` in `~/.fiboki/env` (default 30, minimum 5). Disk: roughly 15 to 25 MB a
+day at 30 seconds for 20 instruments (an estimate; check `fiboki quotes status` after a day).
+
+**Nothing to do** except keep the machine on. On the desktop, install it with
+`scripts/launchd-install.sh --services quotes --load`.
 
 ### P3. Extend the economic calendar beyond 2024 and four currencies, and wire it in
+
+**What it is, plainly.** Strategies are blocked from opening trades in a window around
+high-impact scheduled events (central-bank decisions, US payrolls and CPI, UK CPI and GDP). That
+block only works for events the platform knows about. Today it knows the official dates for USD,
+EUR, GBP and JPY from January 2024 to 4 December 2026. Outside that (2005 to 2023 in every
+backtest, and AUD, CAD, CHF and NZD at any date) a backtest trades straight through events a live
+operator would avoid, which flatters some strategies and hurts others. Two jobs remain: extend the
+list backwards and to the other four currencies from the publishers' own archives, and refresh it
+before 4 December 2026. The source shortlist in `docs/v2/research/DATA_SOURCES_2026-10.md` (BLS,
+BEA, ONS, Bank of Canada, RBNZ, RBA and others) names the official calendars to use. This is
+collation work I can do; it needs no account.
 
 Since 2026-09-28 `src/fiboki/marketstate/fixtures/scheduled_events_official.json` carries 339 dated, scheduled events taken only from the publishers' own pages: FOMC, ECB, Bank of England and Bank of Japan decisions, US NFP and CPI (BLS), and UK CPI, monthly GDP and labour-market releases (ONS). `load_official_calendar()` loads it; `fiboki calendar status` shows what it covers. There is still **no network access** in the module.
 
@@ -120,6 +167,42 @@ This alone means every V1 research result is stale, independently of the engine 
 The engine refuses to invent an exchange rate. If you run a GBP account against USD-quoted instruments you must supply a real GBP/USD series, or explicitly acknowledge the approximation in writing. The XAUUSD work so far used a USD account precisely to sidestep this. V1 reported USD P&L as GBP, an error that ranged 1.20–1.43 over the sample.
 
 ### P6. Choose the licensed news API and start the headline recorder
+
+**The two keys, step by step (about five minutes each).** Full detail, limits and terms:
+`docs/v2/research/DATA_SOURCES_2026-10.md` §A.
+
+1. **Finnhub (free, personal use).** Sign up at https://finnhub.io/register (name, email,
+   password; pressing Sign Up accepts their terms and confirms personal, non-professional use).
+   Your key is on https://finnhub.io/dashboard. Free plan: 60 calls a minute; forex and general
+   news are free; the economic calendar is premium only. Read their terms of service in a browser
+   before relying on any right to store headlines (their robots file blocks automated reading of
+   it).
+2. **FRED (St. Louis Fed, free).** Create an account at
+   https://fredaccount.stlouisfed.org/login/secure/ ("Create New Account"; untick the newsletters),
+   then request a key at https://fredaccount.stlouisfed.org/apikeys. The key is 32 lower-case
+   letters and digits; 120 requests a minute. Wherever FRED data is shown you must display: "This
+   product uses the FRED® API but is not endorsed or certified by the Federal Reserve Bank of
+   St. Louis."
+3. Add both to `~/.fiboki/env` (never paste them into chat or a terminal command):
+   ```
+   FIBOKI_FINNHUB_API_KEY=<your Finnhub key>
+   FIBOKI_FRED_API_KEY=<your FRED key>
+   ```
+   These are the names the code reads. (An earlier line in M2 said `FIBOKI_FINNHUB_KEY` and
+   `FIBOKI_FRED_KEY`; those names are read by nothing and have been corrected.) Then restart the
+   headline recorder: `launchctl kickstart -k gui/$(id -u)/uk.fiboki.news`, and run
+   `.venv/bin/fiboki doctor`.
+
+**More free sources (researched 2026-10-08, 37 beyond the 34 already in the registry).** The
+catalogue, with each source's terms on storage and redistribution, is in
+`docs/v2/research/DATA_SOURCES_2026-10.md` §B. The ten worth wiring first for FX, indices and gold:
+the BLS release schedule and API; the BEA schedule and API; the US Treasury yield curve with the Fed
+H.10 (FX rates) and H.15 (interest rates) releases; Eurostat; the ONS release calendar; the Bank
+of Canada; the RBNZ and the Riksbank; the FOMC, ECB, BoE and BoJ meeting calendars; the BIS data
+portal; and the US EIA (oil, which moves CAD and NOK). Findings that matter: there is no usable
+free general-news API beyond Finnhub and GDELT (NewsAPI's free plan forbids production use and
+delays 24 hours; Alpha Vantage, Tiingo and FMP news are paid; EODHD allows 20 calls a day); CME
+Group's site forbids scripted access; the IMF forbids bulk automated download.
 
 `fiboki news record --loop` records central-bank headlines from twelve official feeds today with no account at all. Its value, like the price recorder's, is proportional to elapsed time: a headline's first-seen instant cannot be reconstructed later. Start it now on the machine that stays on (`fiboki news status` exits 1 if it has stopped).
 
@@ -165,6 +248,30 @@ What has changed is that it is now *measured* and *gated*:
 * **Gated.** `require_venue_realisable()` **refuses** to promote a strategy whose exit policy a venue cannot hold, unless the caller passes `accept_managed_exit_exposure=True` and names an operator. There is deliberately no config file and no environment variable that grants this: it is an argument at the call site, because the acceptance belongs to whoever is doing the promoting. That is the documented degraded mode.
 
 **Your action:** for each of the twelve strategies, decide whether the outcome a dead worker produces — the hard stop and, at most, the first take-profit leg — is acceptable, and size accordingly. Record the decision with the operator's name. **Every backtest figure still assumes a worker that never dies.** That assumption is now measured at every bar rather than merely stated, but it is still an assumption and it is still optimistic.
+
+**The options, plainly (decide per strategy; recorded with your name when you promote).**
+
+1. **Keep every exit at the broker (no exposure).** Promote only strategies whose exits are one
+   hard stop and one take-profit, which the venue holds even if Fiboki dies. Simplest and safest;
+   it rules out trailing stops, breakeven moves, time stops and scale-outs, which several seed
+   documents use (`donchian_breakout_atr` trails).
+2. **Accept the exposure and size for the worst case.** Keep the managed exits, and size so that
+   the dead-worker outcome (the hard stop, plus at most the first take-profit leg) is a loss you
+   accept. The platform measures this every bar (`managed_exit_exposure`). This is what the gate
+   expects you to write down.
+3. **Use OANDA's native trailing stop (to build).** OANDA's v20 API supports a trailing stop held
+   at the broker (`trailingStopLossOnFill`, a price distance). For trail-only strategies that would
+   move the trail from Fiboki to OANDA and remove most of the exposure. Not built today: the OANDA
+   adapter attaches a fixed stop and a single take-profit. A bounded piece of work if you want it.
+4. **Flatten on silence (to decide).** Have the watchdog arm the kill switch's FLATTEN when the
+   worker's heartbeat has been stale for a set time. It closes positions rather than leaving them
+   unmanaged, at the cost of closing good trades during a restart. Not built: it changes the
+   kill switch's never-automatic design, so it is your call.
+5. **Guaranteed stops** (IG only, for a premium) remove gap risk on the hard stop but not the
+   managed-exit problem; noted for completeness, as OANDA is the chosen broker.
+
+My recommendation: option 1 for the first demo promotions, and option 3 as the next build if a
+trailing strategy is ever the one that passes, because it removes the risk rather than accepting it.
 
 ### D2b. Treat a stale heartbeat as a position-management incident
 
@@ -212,14 +319,47 @@ all of them, nor even dropping deflation entirely, gives usable power at a 0.08 
 because the documents produce a median of 330 trades and a 95% test of that edge needs 425
 (MinTRL). The constraint is trades per candidate, not thresholds.
 
-- [ ] **Switch the production bar** to `v2.1.0-calibrated` (`lifecycle/promotion.py` and the
-  ladder default; one recorded change). Measured effect: no verdict changes on either process; sparse
-  candidates get measured through every rung instead of dying at rung 0. Say "switch" and I do it.
+- [x] **Switched 2026-10-08** on your instruction ("confirm switch"). `PRODUCTION_GATE_SET` in
+  `validation/gates.py` names `v2.1.0-calibrated`; `lifecycle/promotion.py`, the ladder's default,
+  `validation/run.py`, discovery campaigns and the agents' promotion-gate job all read it. The
+  rung-0 trade floor is now 150 (the MinTRL gate then decides). Measured effect on both E-1
+  processes: no verdict changes; candidates with 150 to 399 trades are measured through every rung
+  instead of ending at rung 0. Every stored validation report was produced under `v2.0.0-audit`
+  and is refused by promotion until re-run (none was promotable).
 - [ ] **Choose the next experiment.** My recommendation is to pre-register pooled-universe
   candidates (one document across its 16 series as a single candidate, ~5,000 trades), which is the
   only route that makes a 0.08 edge testable at all; the alternatives are to accept that only edges
   of 0.12+ per trade can ever be certified, or lower timeframes where costs dominate. E-3 (effective
   campaign trial count) is demoted: H2 failed.
+
+### R4. Is there a better way to run the platform? (review of 30 projects, 8 October 2026)
+
+Full report: `docs/v2/research/PLATFORM_SURVEY_2026-10.md` (NautilusTrader, QuantConnect Lean,
+freqtrade, pysystemtrade, vectorbt, backtrader, zipline-reloaded, qlib, FinRL, Lumibot, OctoBot,
+Hummingbot, Jesse, backtesting.py, bt, quantstats, OpenBB, ArcticDB, RQAlpha, barter-rs,
+hftbacktest, StockSharp, mlfinlab, ccxt, OANDA's own client libraries and others). One limit: this
+session's GitHub access is scoped to Fiboki's own repository, so star counts and licences came from
+the deps.dev mirror and release registries, and "last push" from release dates; the report says so.
+
+**Answer: keep the architecture; adopt three patterns; replace nothing.**
+
+- Nothing surveyed is more rigorous on validation and cost realism than Fiboki's ladder, holdout
+  registry, versioned gates and execution controls; most stop at "beware of overfitting".
+- **Do not move to NautilusTrader or Lean now.** Nautilus is the closest peer (one strategy code
+  path for backtest, sandbox and live) but is pre-2.0 with breaking releases, needs Python 3.12+,
+  and has no OANDA or IG adapter; its strengths (ticks, latency, order books) do not address
+  Fiboki's real constraints (sample size and engine speed). Lean has an OANDA plugin but is a C#
+  core whose CLI live trading needs a paid tier. Revisit only if live execution is approved.
+- **Adopt, in this order:** (1) engine speed: arrays instead of per-bar DataFrame access,
+  incremental portfolio volatility, then a Numba kernel, parallel across backtests, each step
+  proven byte-identical by the golden tests (estimate one to three weeks); (2) pooled evaluation
+  across the instrument universe, the way pysystemtrade pools forecasts across instruments while
+  keeping each instrument's costs, with an effective-sample-size correction for correlated trades
+  (this is R3's recommended next experiment); (3) single-operator operations: an external heartbeat
+  check with push alerts (D3, D4), a rehearsed restore, and a failover rehearsal between the
+  MacBook and the desktop.
+- Optional cross-checks: skfolio's purged combinatorial CV and the `arch` package's SPA/StepM as
+  independent checks on Fiboki's own implementations.
 
 ### R2. ~~Run E-1 process 2 on the Mac~~ — DONE 2026-10-01 (14.7 h, four shards; result in the ledger)
 
@@ -238,21 +378,64 @@ This is the most important item in the document. **Fiboki V2 has not identified 
 
 That is a successful research programme, not a failed one — but it means there is nothing to promote, and no amount of infrastructure changes that.
 
-### L2. Get professional advice on the tax treatment
+### L2. Tax advice — DEFERRED by your decision (8 October 2026) until profits exceed £50,000
 
-Spread betting is CGT-exempt for UK retail under current HMRC treatment; CFD and spot FX gains are chargeable above the £3,000 allowance at 18% or 24%. The mirror image is that spread-bet losses cannot be offset against other capital gains, which matters if you expect early losses.
+Recorded as you asked. Two facts so the deferral is an informed one, then nothing more until the
+threshold: (1) the broker account type decides the treatment from the first pound, not from
+£50,000: spread betting is currently outside Capital Gains Tax for UK retail traders, while CFD
+and spot FX gains are chargeable above the annual CGT allowance (£3,000 at the time of writing),
+and spread-bet losses cannot be set against other gains; (2) P1's open question (whether OANDA's
+API can trade a spread-bet sub-account) is therefore worth answering before live money, whatever
+the profit level. I am not a tax adviser; check the current HMRC position when you reach the
+threshold.
 
-This materially affects the OANDA-versus-IBKR choice and I am not the right source for it. Speak to an accountant.
+### L3. Complete the live-execution authorisation chain (details)
 
-### L3. Complete the live-execution authorisation chain
+Live trading needs **every one** of these at once; each blocks on its own, and the tests set them
+one, two and three at a time and assert live is still refused
+(`docs/v2/EXECUTION_ARCHITECTURE.md` §6):
 
-V2 requires five independent controls to reach live, by design: a build-time constant, a runtime environment token (not the string `"true"`), a persisted operator authorisation record with timestamps, a per-strategy allow-list, and a parsed-hostname assertion. Tests assert that every one-, two- and three-way subset still blocks.
+| # | Control | Where | Today |
+|---|---|---|---|
+| 1 | `LIVE_EXECUTION_COMPILED_IN = True` | a source edit to `broker/mode_guard.py`, reviewed and deployed | `False` |
+| 2 | `FIBOKI_LIVE_RUNTIME_ARMED` set to the exact long token in `mode_guard.py` (not "true") | environment | unset; the service wrapper unsets it |
+| 3 | a persisted live authorisation naming you, with a grant time and an expiry | `<state>/live_authorisation.json` | absent |
+| 4 | the strategy named in that authorisation's allow-list | same file | n/a |
+| 5 | the venue URL parses to an allow-listed live host | the mode guard | practice host |
+| 6 | `OANDA_LIVE_HOST_COMPILED_IN = True` | a second source edit, in `broker/oanda.py` | `False` |
+| 7 | `FIBOKI_OANDA_LIVE_RUNTIME` set to its own exact token | environment | unset |
+| 8 | the OANDA adapter's base URL is `api-fxtrade.oanda.com` | adapter | practice |
+| 9 | `FIBOKI_EXECUTION_MODE=live` | environment, read once at start | forced to `paper` by the wrapper |
+| 10 | the strategy's lifecycle state is LIVE (reached only through the promotion chain, D2) | risk gateway | none qualifies (L1) |
+| 11 | kill switch inactive | risk gateway | inactive |
+| 12 | the other gateway checks pass (limits, exposure, spread, data freshness, event blackout) | risk gateway | fail-closed |
 
-None of them are set, and setting them is deliberately a deploy-time act, not an API call. There is no endpoint that can enable live execution; the API returns 403 and audits the attempt.
+There is no API endpoint that enables live; the API returns 403 and audits the attempt. Today the
+service wrapper also refuses: `fiboki worker run live` refuses, and the compose file has no live
+service. **Nothing here is to be done until a strategy passes the calibrated gates and a demo
+period (L1), and L4 has been run.** When that day comes it is a deliberate, reviewed change, with
+two source edits in separate commits.
 
-### L4. Run the kill-switch drill and time it
+### L4. Run the kill-switch drill and time it (details)
 
-PAUSE and FLATTEN are distinct and implemented. Execute both against demo, time them, and write down the result.
+The kill switch has two actions, both journalled to `<state>/killswitch.jsonl` and read by every
+gateway before its next decision (no restart needed):
+
+- **PAUSE** (`fiboki killswitch pause --reason "..." --operator joe`): no new positions or adds;
+  closes and reductions still run; open positions keep their stops.
+- **FLATTEN** (`fiboki killswitch flatten --reason "..." --operator joe`): no new positions, and
+  every open position closed at market, through the normal order path (so recorded, idempotent and
+  recoverable).
+- `fiboki killswitch status` shows the state. There is deliberately no timeout and no CLI
+  deactivate command: disarming is an explicit operator action through the API, recorded in the
+  journal (`docs/v2/OPERATIONS.md` §5).
+
+**The drill, once on demo before any live money:** open one or two minimum-size demo positions;
+note the time; run PAUSE and confirm a new signal is refused; run FLATTEN and time how long until
+the broker shows no open positions; confirm the journal, the alert and the incident entry; write
+down both times and anything that surprised you, here, with the date. Until a broker demo exists
+the drill can be rehearsed against the paper venue, which proves the journal and the gateway path
+but not the broker's response time.
 
 ### L5. Close or explicitly accept the documented approximations
 
@@ -267,17 +450,58 @@ Everything here keeps the deployment in paper mode; none of it touches a live co
 
 ### M1. On the MacBook, before you leave it
 
-- [ ] Commit or push everything you want to keep (`git status` clean). `fiboki doctor` warns on a dirty tree.
-- [ ] `scripts/launchd-install.sh --unload` (or `scripts/dev-down.sh`), then `scripts/backup.sh`. Keep the `.tar.gz` **and** its `.sha256`.
-- [ ] Copy the migrated market-data store (`var/datastore`, with its `.fiboki-data-root` and `catalogue.db`) to an external disk, or re-run the backup with `--include-datastore`.
-- [ ] Put the contents of `~/.fiboki/env` (or whatever secrets you exported by hand) into your password manager. **Do not** copy `~/.zsh_history`, `.envrc` files or notes with keys in them to the new machine. If a secret was ever typed on a command line, rotate it on the desktop rather than carrying it over.
+**Where everything lives today (verified 2026-10-08).** Fiboki is not one folder, by design: macOS
+will not let launchd services run from inside `~/Documents`, so the services run from a second
+checkout outside it.
+
+| What | Where | Size | Carried by |
+|---|---|---|---|
+| Code (all of it) | GitHub `Stratton1/Fiboki_Trading`, `main` | | `git clone`, or `repo.bundle` in the kit |
+| Development checkout (research campaigns, their working files, eval caches, the V1 HistData canonical copy) | `~/Documents/Claude/Projects/Fiboki` | about 12.6 GB (was 16 GB) | kit: `dev/` |
+| Runtime checkout (the launchd services; operator state; the OANDA market-data store) | `~/fiboki` | 3.3 GB | kit: `runtime/` (includes the data store) |
+| Secrets (OANDA token, session secret, operator hashes) | `~/.fiboki/env` | | **your password manager only** |
+| Leases and heartbeats | `~/.fiboki/state.db` | 4 MB | kit (inside both backups) |
+| Service definitions | `~/Library/LaunchAgents/uk.fiboki.*.plist` | | regenerated by `scripts/launchd-install.sh` |
+| Desktop launcher | `~/Desktop/Fiboki.app` | | reinstalled by `scripts/desktop/install-launcher.sh` |
+| Superseded material (V1 data, logs, old bundles, dead scheduled tasks) | `~/Fiboki_Old` (README inside) | 3.4 GB | not needed; copy only if you want it |
+
+**The sweep (done 2026-10-08).** Every old Fiboki file outside the two checkouts and `~/.fiboki`
+was found and moved (not deleted) into `~/Fiboki_Old`: 3.2 GB of V1 raw HistData downloads, the
+V1 Dukascopy pull, 102 MB of untracked V1 backend data and logs, old git bundles, the 20 September
+delivery files, and three dead V1 Cowork scheduled tasks (one of which would have placed an IG
+demo order through the now-offline Railway worker). Left in place on purpose: the canonical V1
+HistData copy inside the development checkout (two tests and the store-migration script read it),
+and tool histories under `~/.cursor` and `~/.claude`.
+
+**The one-folder transfer kit.** `scripts/migration-kit.sh` writes everything the new machine
+needs that GitHub does not hold into a single folder, `~/FibokiMigration-<date>/`: a git bundle of
+every branch, a verified backup of the runtime state with the market-data store, a backup of the
+development checkout's state, the untracked research working files, copies of the launchd plists,
+`SHA256SUMS`, `MANIFEST.json` and `RESTORE.md` (step-by-step restore). It never includes
+`~/.fiboki/env`. Tested 2026-10-08 against a simulated layout: every archive verifies, the bundle
+clones, no secret is copied.
+
+- [ ] Put the contents of `~/.fiboki/env` into your password manager. **Do not** copy
+  `~/.zsh_history`, `.envrc` files or notes with keys in them to the new machine. If a secret was
+  ever typed on a command line, rotate it on the desktop rather than carrying it over.
+- [ ] Commit or push anything you changed yourself (`git status` clean in both checkouts).
+- [ ] `scripts/launchd-install.sh --unload --services api,worker,web,news,quotes,paper`, then
+  `scripts/migration-kit.sh --dest /Volumes/<external disk>` (about 4 to 6 GB; the MacBook has
+  about 19 GB free, so write it straight to an external disk).
+- [ ] Reload the services if the MacBook keeps running until the desktop is ready:
+  `scripts/launchd-install.sh --services api,worker,web,news,quotes,paper --load`.
+
+**On the desktop, one folder.** The two-checkout split exists only because the development copy
+lives in `~/Documents`. On the desktop, clone once to `~/fiboki` and do everything there: the
+services, research campaigns and the market-data store all under that one folder, with
+`~/.fiboki/env` beside it. That makes `~/fiboki` plus your password manager the whole platform.
 
 ### M2. On the desktop
 
 - [ ] `brew install python@3.11 node git sqlite llama.cpp`.
 - [x] `git clone` the repository **outside `~/Documents`** (macOS TCC blocks LaunchAgents there; `DEPLOYMENT.md` §2.6). On the MacBook this is `~/fiboki`; on the desktop use the same path so the runbooks apply unchanged.
 - [x] `scripts/desktop-install.sh --check`, then `scripts/desktop-install.sh` until it prints no MISSING line.
-- [x] `~/.fiboki/env` (mode 600): `FIBOKI_OPERATORS` for Joe and Tom as `scrypt$` hashes (C4); the file is shared by both checkouts. `FIBOKI_OANDA_PRACTICE_TOKEN` / `FIBOKI_OANDA_PRACTICE_ACCOUNT_ID` are present and verified (P1, 2026-10-03). Still to add: `FIBOKI_FINNHUB_KEY`, `FIBOKI_FRED_KEY` (P6).
+- [x] `~/.fiboki/env` (mode 600): `FIBOKI_OPERATORS` for Joe and Tom as `scrypt$` hashes (C4); the file is shared by both checkouts. `FIBOKI_OANDA_PRACTICE_TOKEN` / `FIBOKI_OANDA_PRACTICE_ACCOUNT_ID` are present and verified (P1, 2026-10-03). Still to add: `FIBOKI_FINNHUB_API_KEY`, `FIBOKI_FRED_API_KEY` (P6).
 - [x] Market-data store in `var/datastore` (60 instruments, 16.5M bars, verified by `fiboki doctor`). On the desktop: copy it again, or `scripts/backup.sh --include-datastore` on this machine first.
 - [ ] Download one model (M3) into `~/Models`, verify its SHA-256 against the Hugging Face page, `scripts/llama-server.sh --print`. On the MacBook (8 GB) Ollama `qwen3:4b` is used instead; llama.cpp with a larger model is the desktop plan.
 - [x] ~~`_build_provider` change~~ — made (`for_local_server`; detects llama.cpp by `/props`, Ollama otherwise).
@@ -289,6 +513,10 @@ Everything here keeps the deployment in paper mode; none of it touches a live co
 - [x] ~~Web build with `NEXT_PUBLIC_FIBOKI_API=""`~~ — fixed (`apiOrigin()` treats empty as same-origin).
 
 ### M3. Which model for which Mac
+
+**What I need from you:** the desktop's unified memory (Apple menu → About This Mac). The row
+below follows from it; a 16 GB machine is not in the table because it cannot hold a model large
+enough to be useful beside Fiboki, and should keep Ollama `qwen3:4b` as the MacBook does.
 
 `scripts/llama-server.sh` picks the row for the machine's memory. The choice is a starting point
 made on three stated grounds only: an Apache-2.0 licence, a file small enough to leave room for
