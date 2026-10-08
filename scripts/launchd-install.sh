@@ -7,7 +7,7 @@
 #   scripts/launchd-install.sh --unload              # stop and remove the loaded services
 #   scripts/launchd-install.sh --target DIR          # write elsewhere (review, tests)
 #
-# Services: api worker web news llama (uk.fiboki.<name>). Each runs
+# Services: api worker web news quotes llama paper (uk.fiboki.<name>). Each runs
 # scripts/fiboki-service.sh <name>, which forces paper mode. This script sets
 # no environment and no live control; secrets live in ~/.fiboki/env.
 # Idempotent: re-running rewrites the plists from the templates and, with
@@ -49,7 +49,7 @@ fi
 mkdir -p "$TARGET" "$ROOT/var/logs"
 for name in "${NAMES[@]}"; do
   src="deploy/launchd/uk.fiboki.$name.plist"
-  if [ ! -f "$src" ]; then echo "no template $src (services: api worker web news llama)" >&2; exit 2; fi
+  if [ ! -f "$src" ]; then echo "no template $src (services: api worker web news quotes llama paper)" >&2; exit 2; fi
   dest="$TARGET/uk.fiboki.$name.plist"
   sed "s#__FIBOKI_ROOT__#$ROOT#g" "$src" > "$dest.tmp"
   if grep -q '__FIBOKI_ROOT__' "$dest.tmp"; then echo "substitution failed for $dest" >&2; exit 1; fi

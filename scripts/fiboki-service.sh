@@ -2,7 +2,7 @@
 # Fiboki V2: run ONE desktop service in the foreground. launchd calls this
 # (deploy/launchd/uk.fiboki.<service>.plist); you can too, to debug one.
 #
-#   scripts/fiboki-service.sh api|worker|web|news|llama|paper
+#   scripts/fiboki-service.sh api|worker|web|news|quotes|llama|paper
 #
 # Environment, in order of precedence:
 #   1. ~/.fiboki/env (operator-owned, chmod 600, never in the repository):
@@ -90,6 +90,11 @@ case "$SERVICE" in
   news)
     exec "$ROOT/.venv/bin/fiboki" news record --loop --interval 300
     ;;
+  quotes)
+    # Executable-price recorder (USER_ACTIONS P2): OANDA PRACTICE top of book,
+    # read-only, every FIBOKI_QUOTES_INTERVAL seconds (default 30), into var/quotes.
+    exec "$ROOT/.venv/bin/fiboki" quotes record --loop --interval "${FIBOKI_QUOTES_INTERVAL:-30}"
+    ;;
   llama)
     # LLAMA_SERVER_ARGS in ~/.fiboki/env, e.g. "--tier 64" or "--model /Users/you/Models/x.gguf"
     # shellcheck disable=SC2086
@@ -106,7 +111,7 @@ case "$SERVICE" in
       --wiring "$ROOT/src/fiboki/entrypoints/wiring/paper_forward_v1.json"
     ;;
   *)
-    echo "usage: $0 api|worker|web|news|llama|paper" >&2
+    echo "usage: $0 api|worker|web|news|quotes|llama|paper" >&2
     exit 2
     ;;
 esac

@@ -2072,6 +2072,134 @@ macro_app = typer.Typer(
     no_args_is_help=True,
 )
 app.add_typer(news_app, name="news")
+
+
+# ---------------------------------------------------------------------------
+# quotes: the executable-price recorder (USER_ACTIONS P2)
+# ---------------------------------------------------------------------------
+
+quotes_app = typer.Typer(
+    help="Executable-price recorder: OANDA practice top of book, append-only.",
+    no_args_is_help=True,
+)
+app.add_typer(quotes_app, name="quotes")
+
+
+def _quotes_dir(state_dir: Path | None) -> Path:
+    from fiboki.core.paths import resolve_paths
+
+    if state_dir is not None:
+        return state_dir / "quotes"
+    return resolve_paths(os.environ, cwd=Path.cwd()).state_dir / "quotes"
+
+
+@quotes_app.command("record")
+def quotes_record(
+    once: bool = typer.Option(False, "--once", help="Poll once and exit."),
+    loop: bool = typer.Option(False, "--loop", help="Poll until SIGTERM/SIGINT."),
+    interval: float = typer.Option(30.0, "--interval", help="Seconds between polls (min 5)."),
+    instruments: str = typer.Option(
+        "", "--instruments", help="Comma-separated symbols (default: the research universe)."
+    ),
+    state_dir: Path | None = typer.Option(None, "--state-dir", help="Default: $FIBOKI_STATE_DIR or ./var."),
+) -> None:
+    """Record OANDA PRACTICE pricing to <state>/quotes. Read-only; practice host only.
+
+    Needs FIBOKI_OANDA_PRACTICE_TOKEN and FIBOKI_OANDA_PRACTICE_ACCOUNT_ID (read
+    once from the environment; the launchd wrapper loads ~/.fiboki/env). Exit 1
+    when the last poll failed outright (a recorder recording nothing).
+    """
+    import signal
+    import time
+
+    from fiboki.broker.http_transport import HttpxTransport, bearer_token_from_env
+    from fiboki.broker.oanda import OANDA_PRACTICE_HOST, RateLimiter
+    from fiboki.broker.oanda_pricing import OandaPricingSpreadSource
+    from fiboki.broker.oanda_quotes import DEFAULT_RECORDED_INSTRUMENTS, OandaPricingQuoteFeed
+    from fiboki.data.recorder import QuoteRecorder
+
+    if once == loop:
+        _fail("choose exactly one of --once or --loop", EXIT_MISUSE)
+    symbols = [s.strip().upper() for s in instruments.split(",") if s.strip()] or list(
+        DEFAULT_RECORDED_INSTRUMENTS
+    )
+    token = bearer_token_from_env(os.environ, "FIBOKI_OANDA_PRACTICE_TOKEN")
+    account = str(os.environ.get("FIBOKI_OANDA_PRACTICE_ACCOUNT_ID", "") or "").strip()
+    if not account:
+        _fail("FIBOKI_OANDA_PRACTICE_ACCOUNT_ID is not set (put it in ~/.fiboki/env)")
+    directory = _quotes_dir(state_dir)
+    directory.mkdir(parents=True, exist_ok=True)
+    stop = {"flag": False}
+
+    def _stop(*_: Any) -> None:
+        stop["flag"] = True
+
+    signal.signal(signal.SIGTERM, _stop)
+    signal.signal(signal.SIGINT, _stop)
+    last: dict[str, Any] = {}
+
+    def _report(report: Any) -> None:
+        last["report"] = report
+        row = report.as_row()
+        console.print(
+            f"{row['at']}  requested={row['requested']} received={row['received']} "
+            f"recorded={row['recorded']}"
+            + (f" missing={','.join(row['missing'])}" if row["missing"] else "")
+            + (f" error={row['error']}" if row["error"] else "")
+        )
+
+    def _sleep(seconds: float) -> None:
+        deadline = time.monotonic() + seconds
+        while not stop["flag"] and time.monotonic() < deadline:
+            time.sleep(min(1.0, deadline - time.monotonic()))
+
+    with HttpxTransport(
+        allowed_hosts=(OANDA_PRACTICE_HOST,), user_agent="fiboki/2 quote-recorder"
+    ) as transport:
+        source = OandaPricingSpreadSource(
+            transport=transport, account_id=account, api_token=token,
+            rate_limiter=RateLimiter(2.0),
+        )
+        feed = OandaPricingQuoteFeed(
+            source=source, interval_s=interval, sleeper=_sleep,
+            should_stop=lambda: stop["flag"] or (once and "report" in last),
+            on_poll=_report,
+        )
+        if loop:
+            console.print(
+                f"recording {len(symbols)} instruments to {directory} every {interval:.0f}s; "
+                "SIGTERM to stop"
+            )
+        with QuoteRecorder(directory, fsync_every=50) as recorder:
+            recorder.run(feed, symbols)
+    report = last.get("report")
+    if report is not None and report.error and report.received == 0:
+        raise typer.Exit(EXIT_FAIL)
+
+
+@quotes_app.command("status")
+def quotes_status(
+    state_dir: Path | None = typer.Option(None, "--state-dir"),
+    max_age: float = typer.Option(600.0, "--max-age", help="Seconds since the newest write."),
+) -> None:
+    """Is the recorder writing? Exit 1 when the newest segment is older than --max-age."""
+    import time
+
+    directory = _quotes_dir(state_dir)
+    segments = sorted(directory.glob("seg-*.ndjson")) if directory.is_dir() else []
+    if not segments:
+        _fail(f"no quote segments under {directory}: the recorder has never written")
+    newest = max(segments, key=lambda p: p.stat().st_mtime)
+    age = time.time() - newest.stat().st_mtime
+    total = sum(p.stat().st_size for p in segments)
+    console.print(
+        f"{directory}: {len(segments)} segment(s), {total:,} bytes; newest {newest.name} "
+        f"written {age:.0f}s ago"
+    )
+    if age > max_age:
+        err_console.print(f"[bold red]✗[/bold red] recorder is not writing (newest write {age:.0f}s ago)")
+        raise typer.Exit(EXIT_FAIL)
+    _ok("recorder wrote within the threshold")
 app.add_typer(macro_app, name="macro")
 
 _NEWS_STATE_ENV = "FIBOKI_STATE_DIR"

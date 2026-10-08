@@ -159,6 +159,22 @@ def test_launchd_install_substitutes_the_repo_into_five_valid_plists(tmp_path: P
     assert again.returncode == 0, "idempotent"
 
 
+def test_the_quote_recorder_service_is_an_opt_in_paper_only_template(tmp_path: Path) -> None:
+    """USER_ACTIONS P2. Not in the default set (it needs the OANDA practice token,
+    like paper); installed by name, same shape as every other service."""
+    target = tmp_path / "LaunchAgents"
+    proc = _run(["bash", str(SCRIPTS / "launchd-install.sh"), "--target", str(target),
+                 "--services", "quotes"])
+    assert proc.returncode == 0, proc.stderr
+    plist = plistlib.loads((target / "uk.fiboki.quotes.plist").read_bytes())
+    assert plist["ProgramArguments"] == ["/bin/bash", f"{REPO}/scripts/fiboki-service.sh", "quotes"]
+    assert plist["EnvironmentVariables"] == {"FIBOKI_EXECUTION_MODE": "paper"}
+    assert plist["KeepAlive"] == {"SuccessfulExit": False}
+    assert plist["StandardOutPath"] == f"{REPO}/var/logs/quotes.log"
+    wrapper = (SCRIPTS / "fiboki-service.sh").read_text()
+    assert 'fiboki" quotes record --loop' in wrapper
+
+
 def test_the_service_wrapper_forces_paper_after_reading_the_env_file() -> None:
     text = (SCRIPTS / "fiboki-service.sh").read_text()
     read = text.index('done < "$ENV_FILE"')
