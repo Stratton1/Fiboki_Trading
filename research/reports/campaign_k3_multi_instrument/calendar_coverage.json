@@ -1,0 +1,291 @@
+{
+  "mode": "official",
+  "policy": "enforce where covered; record the uncovered fraction",
+  "allow_empty_calendar": true,
+  "calendar": {
+    "n_events": 339,
+    "first_event": "2024-01-05 13:30:00+00:00",
+    "last_event": "2028-12-07 13:15:00+00:00",
+    "currencies": [
+      "EUR",
+      "GBP",
+      "JPY",
+      "USD"
+    ],
+    "by_impact": {
+      "high": 339
+    },
+    "sources": [
+      "bls_cpi",
+      "bls_empsit",
+      "boe_mpc",
+      "boj_mpm",
+      "ecb_governing_council",
+      "fed_fomc",
+      "ons_cpi",
+      "ons_gdp_monthly",
+      "ons_labour_market"
+    ],
+    "by_source": {
+      "bls_cpi": 35,
+      "bls_empsit": 35,
+      "boe_mpc": 32,
+      "boj_mpm": 32,
+      "ecb_governing_council": 40,
+      "fed_fomc": 32,
+      "ons_cpi": 37,
+      "ons_gdp_monthly": 48,
+      "ons_labour_market": 48
+    },
+    "declared_start": "2024-01-01 00:00:00+00:00",
+    "declared_end": "2026-12-04 13:30:00+00:00",
+    "is_populated": true
+  },
+  "series": {
+    "AUDJPY H4": {
+      "bars": 30631,
+      "first_bar": "2006-01-04 01:00:00+00:00",
+      "last_bar": "2025-12-31 21:00:00+00:00",
+      "bars_inside_declared_span": 3217,
+      "bars_before_declared_start": 27414,
+      "bars_after_declared_end": 0,
+      "time_covered_fraction": 0.105024,
+      "currencies": [
+        "AUD",
+        "JPY"
+      ],
+      "currencies_not_carried": [
+        "AUD"
+      ],
+      "fully_covered_fraction": 0.0
+    },
+    "AUDUSD H4": {
+      "bars": 32107,
+      "first_bar": "2006-01-04 01:00:00+00:00",
+      "last_bar": "2025-12-31 21:00:00+00:00",
+      "bars_inside_declared_span": 3215,
+      "bars_before_declared_start": 28892,
+      "bars_after_declared_end": 0,
+      "time_covered_fraction": 0.100134,
+      "currencies": [
+        "AUD",
+        "USD"
+      ],
+      "currencies_not_carried": [
+        "AUD"
+      ],
+      "fully_covered_fraction": 0.0
+    },
+    "DE40 H4": {
+      "bars": 18061,
+      "first_bar": "2010-11-15 05:00:00+00:00",
+      "last_bar": "2025-12-31 17:00:00+00:00",
+      "bars_inside_declared_span": 3160,
+      "bars_before_declared_start": 14901,
+      "bars_after_declared_end": 0,
+      "time_covered_fraction": 0.174963,
+      "currencies": [
+        "EUR"
+      ],
+      "currencies_not_carried": [],
+      "fully_covered_fraction": 0.174963
+    },
+    "EURGBP H4": {
+      "bars": 32105,
+      "first_bar": "2006-01-04 01:00:00+00:00",
+      "last_bar": "2025-12-31 21:00:00+00:00",
+      "bars_inside_declared_span": 3218,
+      "bars_before_declared_start": 28887,
+      "bars_after_declared_end": 0,
+      "time_covered_fraction": 0.100234,
+      "currencies": [
+        "EUR",
+        "GBP"
+      ],
+      "currencies_not_carried": [],
+      "fully_covered_fraction": 0.100234
+    },
+    "EURJPY H4": {
+      "bars": 32110,
+      "first_bar": "2006-01-04 01:00:00+00:00",
+      "last_bar": "2025-12-31 21:00:00+00:00",
+      "bars_inside_declared_span": 3214,
+      "bars_before_declared_start": 28896,
+      "bars_after_declared_end": 0,
+      "time_covered_fraction": 0.100093,
+      "currencies": [
+        "EUR",
+        "JPY"
+      ],
+      "currencies_not_carried": [],
+      "fully_covered_fraction": 0.100093
+    },
+    "EURUSD H4": {
+      "bars": 32110,
+      "first_bar": "2006-01-04 01:00:00+00:00",
+      "last_bar": "2025-12-31 21:00:00+00:00",
+      "bars_inside_declared_span": 3218,
+      "bars_before_declared_start": 28892,
+      "bars_after_declared_end": 0,
+      "time_covered_fraction": 0.100218,
+      "currencies": [
+        "EUR",
+        "USD"
+      ],
+      "currencies_not_carried": [],
+      "fully_covered_fraction": 0.100218
+    },
+    "GBPJPY H4": {
+      "bars": 32092,
+      "first_bar": "2006-01-04 01:00:00+00:00",
+      "last_bar": "2025-12-31 21:00:00+00:00",
+      "bars_inside_declared_span": 3214,
+      "bars_before_declared_start": 28878,
+      "bars_after_declared_end": 0,
+      "time_covered_fraction": 0.10015,
+      "currencies": [
+        "GBP",
+        "JPY"
+      ],
+      "currencies_not_carried": [],
+      "fully_covered_fraction": 0.10015
+    },
+    "GBPUSD H4": {
+      "bars": 32106,
+      "first_bar": "2006-01-04 01:00:00+00:00",
+      "last_bar": "2025-12-31 21:00:00+00:00",
+      "bars_inside_declared_span": 3218,
+      "bars_before_declared_start": 28888,
+      "bars_after_declared_end": 0,
+      "time_covered_fraction": 0.10023,
+      "currencies": [
+        "GBP",
+        "USD"
+      ],
+      "currencies_not_carried": [],
+      "fully_covered_fraction": 0.10023
+    },
+    "NZDUSD H4": {
+      "bars": 32105,
+      "first_bar": "2006-01-04 01:00:00+00:00",
+      "last_bar": "2025-12-31 21:00:00+00:00",
+      "bars_inside_declared_span": 3216,
+      "bars_before_declared_start": 28889,
+      "bars_after_declared_end": 0,
+      "time_covered_fraction": 0.100171,
+      "currencies": [
+        "NZD",
+        "USD"
+      ],
+      "currencies_not_carried": [
+        "NZD"
+      ],
+      "fully_covered_fraction": 0.0
+    },
+    "UK100 H4": {
+      "bars": 19684,
+      "first_bar": "2010-11-15 05:00:00+00:00",
+      "last_bar": "2025-12-31 17:00:00+00:00",
+      "bars_inside_declared_span": 3163,
+      "bars_before_declared_start": 16521,
+      "bars_after_declared_end": 0,
+      "time_covered_fraction": 0.160689,
+      "currencies": [
+        "GBP"
+      ],
+      "currencies_not_carried": [],
+      "fully_covered_fraction": 0.160689
+    },
+    "US500 H4": {
+      "bars": 24066,
+      "first_bar": "2010-11-14 21:00:00+00:00",
+      "last_bar": "2025-12-31 21:00:00+00:00",
+      "bars_inside_declared_span": 3194,
+      "bars_before_declared_start": 20872,
+      "bars_after_declared_end": 0,
+      "time_covered_fraction": 0.132718,
+      "currencies": [
+        "USD"
+      ],
+      "currencies_not_carried": [],
+      "fully_covered_fraction": 0.132718
+    },
+    "USDCAD H4": {
+      "bars": 32105,
+      "first_bar": "2006-01-04 01:00:00+00:00",
+      "last_bar": "2025-12-31 21:00:00+00:00",
+      "bars_inside_declared_span": 3215,
+      "bars_before_declared_start": 28890,
+      "bars_after_declared_end": 0,
+      "time_covered_fraction": 0.10014,
+      "currencies": [
+        "USD",
+        "CAD"
+      ],
+      "currencies_not_carried": [
+        "CAD"
+      ],
+      "fully_covered_fraction": 0.0
+    },
+    "USDCHF H4": {
+      "bars": 32101,
+      "first_bar": "2006-01-04 01:00:00+00:00",
+      "last_bar": "2025-12-31 21:00:00+00:00",
+      "bars_inside_declared_span": 3218,
+      "bars_before_declared_start": 28883,
+      "bars_after_declared_end": 0,
+      "time_covered_fraction": 0.100246,
+      "currencies": [
+        "USD",
+        "CHF"
+      ],
+      "currencies_not_carried": [
+        "CHF"
+      ],
+      "fully_covered_fraction": 0.0
+    },
+    "USDJPY H4": {
+      "bars": 32105,
+      "first_bar": "2006-01-04 01:00:00+00:00",
+      "last_bar": "2025-12-31 21:00:00+00:00",
+      "bars_inside_declared_span": 3215,
+      "bars_before_declared_start": 28890,
+      "bars_after_declared_end": 0,
+      "time_covered_fraction": 0.10014,
+      "currencies": [
+        "USD",
+        "JPY"
+      ],
+      "currencies_not_carried": [],
+      "fully_covered_fraction": 0.10014
+    },
+    "XAGUSD H4": {
+      "bars": 26620,
+      "first_bar": "2009-05-03 21:00:00+00:00",
+      "last_bar": "2025-12-31 21:00:00+00:00",
+      "bars_inside_declared_span": 3194,
+      "bars_before_declared_start": 23426,
+      "bars_after_declared_end": 0,
+      "time_covered_fraction": 0.119985,
+      "currencies": [
+        "USD"
+      ],
+      "currencies_not_carried": [],
+      "fully_covered_fraction": 0.119985
+    },
+    "XAUUSD H4": {
+      "bars": 26837,
+      "first_bar": "2009-03-15 21:00:00+00:00",
+      "last_bar": "2025-12-31 21:00:00+00:00",
+      "bars_inside_declared_span": 3194,
+      "bars_before_declared_start": 23643,
+      "bars_after_declared_end": 0,
+      "time_covered_fraction": 0.119015,
+      "currencies": [
+        "USD"
+      ],
+      "currencies_not_carried": [],
+      "fully_covered_fraction": 0.119015
+    }
+  }
+}

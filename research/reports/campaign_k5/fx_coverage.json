@@ -1,0 +1,562 @@
+{
+  "account_ccy": "GBP",
+  "builder": "fiboki.validation.run.build_research_fx_source (D1 closes as-of bar close)",
+  "needed_by_quote_ccy": {
+    "CAD": [
+      "USDCAD"
+    ],
+    "CHF": [
+      "USDCHF"
+    ],
+    "EUR": [
+      "DE40"
+    ],
+    "JPY": [
+      "AUDJPY",
+      "EURJPY",
+      "GBPJPY",
+      "USDJPY"
+    ],
+    "USD": [
+      "AUDUSD",
+      "EURUSD",
+      "GBPUSD",
+      "NZDUSD",
+      "US500",
+      "XAGUSD",
+      "XAUUSD"
+    ]
+  },
+  "pairs_loaded": {
+    "EURGBP": {
+      "dataset_version_id": "ds_dc307b45fa2d2ec9ba010a06",
+      "source_timeframe": "D1",
+      "derivation": "D1 closes stamped at bar close (open + 1 day)",
+      "first_known": "2005-01-03 00:00:00+00:00",
+      "last_known": "2026-09-30 00:00:00+00:00",
+      "observations": 6854,
+      "gaps_over_max_staleness": 0
+    },
+    "EURUSD": {
+      "dataset_version_id": "ds_a919ff4d7be2b3b803731bbd",
+      "source_timeframe": "D1",
+      "derivation": "D1 closes stamped at bar close (open + 1 day)",
+      "first_known": "2005-01-03 00:00:00+00:00",
+      "last_known": "2026-09-30 00:00:00+00:00",
+      "observations": 6879,
+      "gaps_over_max_staleness": 0
+    },
+    "GBPCAD": {
+      "dataset_version_id": "ds_153cddfe3f59e1209da60a6c",
+      "source_timeframe": "D1",
+      "derivation": "D1 closes stamped at bar close (open + 1 day)",
+      "first_known": "2005-01-03 00:00:00+00:00",
+      "last_known": "2026-09-30 00:00:00+00:00",
+      "observations": 6857,
+      "gaps_over_max_staleness": 0
+    },
+    "GBPCHF": {
+      "dataset_version_id": "ds_6bad225daea5df07f9319374",
+      "source_timeframe": "D1",
+      "derivation": "D1 closes stamped at bar close (open + 1 day)",
+      "first_known": "2005-01-03 00:00:00+00:00",
+      "last_known": "2026-09-30 00:00:00+00:00",
+      "observations": 6849,
+      "gaps_over_max_staleness": 0
+    },
+    "GBPJPY": {
+      "dataset_version_id": "ds_e349d738b2104e6b155a2ec1",
+      "source_timeframe": "D1",
+      "derivation": "D1 closes stamped at bar close (open + 1 day)",
+      "first_known": "2005-01-03 00:00:00+00:00",
+      "last_known": "2026-09-30 00:00:00+00:00",
+      "observations": 6852,
+      "gaps_over_max_staleness": 0
+    },
+    "GBPUSD": {
+      "dataset_version_id": "ds_12849393c960a8aae970127a",
+      "source_timeframe": "D1",
+      "derivation": "D1 closes stamped at bar close (open + 1 day)",
+      "first_known": "2005-01-03 00:00:00+00:00",
+      "last_known": "2026-09-30 00:00:00+00:00",
+      "observations": 6862,
+      "gaps_over_max_staleness": 0
+    },
+    "USDCAD": {
+      "dataset_version_id": "ds_1f556ebf7564ba9dd4b2d28c",
+      "source_timeframe": "D1",
+      "derivation": "D1 closes stamped at bar close (open + 1 day)",
+      "first_known": "2005-01-03 00:00:00+00:00",
+      "last_known": "2026-09-30 00:00:00+00:00",
+      "observations": 6855,
+      "gaps_over_max_staleness": 0
+    },
+    "USDCHF": {
+      "dataset_version_id": "ds_0de0ec59ebfd379cd2ed3978",
+      "source_timeframe": "D1",
+      "derivation": "D1 closes stamped at bar close (open + 1 day)",
+      "first_known": "2005-01-03 00:00:00+00:00",
+      "last_known": "2026-09-30 00:00:00+00:00",
+      "observations": 6856,
+      "gaps_over_max_staleness": 0
+    },
+    "USDJPY": {
+      "dataset_version_id": "ds_f68583a7243d71629e19871b",
+      "source_timeframe": "D1",
+      "derivation": "D1 closes stamped at bar close (open + 1 day)",
+      "first_known": "2005-01-03 00:00:00+00:00",
+      "last_known": "2026-09-30 00:00:00+00:00",
+      "observations": 6859,
+      "gaps_over_max_staleness": 0
+    }
+  },
+  "max_staleness": "4 days 00:00:00",
+  "fallback": {
+    "CAD": {
+      "route": "via_usd",
+      "legs": [
+        "USDCAD",
+        "GBPUSD"
+      ],
+      "available": true,
+      "missing_legs": []
+    },
+    "CHF": {
+      "route": "via_usd",
+      "legs": [
+        "USDCHF",
+        "GBPUSD"
+      ],
+      "available": true,
+      "missing_legs": []
+    },
+    "EUR": {
+      "route": "via_usd",
+      "legs": [
+        "EURUSD",
+        "GBPUSD"
+      ],
+      "available": true,
+      "missing_legs": []
+    },
+    "JPY": {
+      "route": "via_usd",
+      "legs": [
+        "USDJPY",
+        "GBPUSD"
+      ],
+      "available": true,
+      "missing_legs": []
+    }
+  },
+  "routes_at_bar_open": {
+    "USDCAD H4": {
+      "quote_ccy": "CAD",
+      "direct": [
+        "GBPCAD"
+      ],
+      "via_usd_legs": [
+        "USDCAD",
+        "GBPUSD"
+      ],
+      "bars": 34106,
+      "bars_direct": 34106,
+      "bars_via_usd": 0,
+      "bars_without_rate": 0,
+      "via_usd_first": null,
+      "via_usd_last": null
+    },
+    "USDCAD D1": {
+      "quote_ccy": "CAD",
+      "direct": [
+        "GBPCAD"
+      ],
+      "via_usd_legs": [
+        "USDCAD",
+        "GBPUSD"
+      ],
+      "bars": 6536,
+      "bars_direct": 6536,
+      "bars_via_usd": 0,
+      "bars_without_rate": 0,
+      "via_usd_first": null,
+      "via_usd_last": null
+    },
+    "USDCHF H4": {
+      "quote_ccy": "CHF",
+      "direct": [
+        "GBPCHF"
+      ],
+      "via_usd_legs": [
+        "USDCHF",
+        "GBPUSD"
+      ],
+      "bars": 34116,
+      "bars_direct": 34116,
+      "bars_via_usd": 0,
+      "bars_without_rate": 0,
+      "via_usd_first": null,
+      "via_usd_last": null
+    },
+    "USDCHF D1": {
+      "quote_ccy": "CHF",
+      "direct": [
+        "GBPCHF"
+      ],
+      "via_usd_legs": [
+        "USDCHF",
+        "GBPUSD"
+      ],
+      "bars": 6536,
+      "bars_direct": 6536,
+      "bars_via_usd": 0,
+      "bars_without_rate": 0,
+      "via_usd_first": null,
+      "via_usd_last": null
+    },
+    "DE40 H4": {
+      "quote_ccy": "EUR",
+      "direct": [
+        "EURGBP"
+      ],
+      "via_usd_legs": [
+        "EURUSD",
+        "GBPUSD"
+      ],
+      "bars": 25163,
+      "bars_direct": 25163,
+      "bars_via_usd": 0,
+      "bars_without_rate": 0,
+      "via_usd_first": null,
+      "via_usd_last": null
+    },
+    "DE40 D1": {
+      "quote_ccy": "EUR",
+      "direct": [
+        "EURGBP"
+      ],
+      "via_usd_legs": [
+        "EURUSD",
+        "GBPUSD"
+      ],
+      "bars": 5286,
+      "bars_direct": 5286,
+      "bars_via_usd": 0,
+      "bars_without_rate": 0,
+      "via_usd_first": null,
+      "via_usd_last": null
+    },
+    "AUDJPY H4": {
+      "quote_ccy": "JPY",
+      "direct": [
+        "GBPJPY"
+      ],
+      "via_usd_legs": [
+        "USDJPY",
+        "GBPUSD"
+      ],
+      "bars": 34128,
+      "bars_direct": 34128,
+      "bars_via_usd": 0,
+      "bars_without_rate": 0,
+      "via_usd_first": null,
+      "via_usd_last": null
+    },
+    "AUDJPY D1": {
+      "quote_ccy": "JPY",
+      "direct": [
+        "GBPJPY"
+      ],
+      "via_usd_legs": [
+        "USDJPY",
+        "GBPUSD"
+      ],
+      "bars": 6540,
+      "bars_direct": 6540,
+      "bars_via_usd": 0,
+      "bars_without_rate": 0,
+      "via_usd_first": null,
+      "via_usd_last": null
+    },
+    "EURJPY H4": {
+      "quote_ccy": "JPY",
+      "direct": [
+        "GBPJPY"
+      ],
+      "via_usd_legs": [
+        "USDJPY",
+        "GBPUSD"
+      ],
+      "bars": 34139,
+      "bars_direct": 34139,
+      "bars_via_usd": 0,
+      "bars_without_rate": 0,
+      "via_usd_first": null,
+      "via_usd_last": null
+    },
+    "EURJPY D1": {
+      "quote_ccy": "JPY",
+      "direct": [
+        "GBPJPY"
+      ],
+      "via_usd_legs": [
+        "USDJPY",
+        "GBPUSD"
+      ],
+      "bars": 6538,
+      "bars_direct": 6538,
+      "bars_via_usd": 0,
+      "bars_without_rate": 0,
+      "via_usd_first": null,
+      "via_usd_last": null
+    },
+    "GBPJPY H4": {
+      "quote_ccy": "JPY",
+      "direct": [
+        "GBPJPY"
+      ],
+      "via_usd_legs": [
+        "USDJPY",
+        "GBPUSD"
+      ],
+      "bars": 34113,
+      "bars_direct": 34113,
+      "bars_via_usd": 0,
+      "bars_without_rate": 0,
+      "via_usd_first": null,
+      "via_usd_last": null
+    },
+    "GBPJPY D1": {
+      "quote_ccy": "JPY",
+      "direct": [
+        "GBPJPY"
+      ],
+      "via_usd_legs": [
+        "USDJPY",
+        "GBPUSD"
+      ],
+      "bars": 6533,
+      "bars_direct": 6533,
+      "bars_via_usd": 0,
+      "bars_without_rate": 0,
+      "via_usd_first": null,
+      "via_usd_last": null
+    },
+    "USDJPY H4": {
+      "quote_ccy": "JPY",
+      "direct": [
+        "GBPJPY"
+      ],
+      "via_usd_legs": [
+        "USDJPY",
+        "GBPUSD"
+      ],
+      "bars": 34139,
+      "bars_direct": 34139,
+      "bars_via_usd": 0,
+      "bars_without_rate": 0,
+      "via_usd_first": null,
+      "via_usd_last": null
+    },
+    "USDJPY D1": {
+      "quote_ccy": "JPY",
+      "direct": [
+        "GBPJPY"
+      ],
+      "via_usd_legs": [
+        "USDJPY",
+        "GBPUSD"
+      ],
+      "bars": 6539,
+      "bars_direct": 6539,
+      "bars_via_usd": 0,
+      "bars_without_rate": 0,
+      "via_usd_first": null,
+      "via_usd_last": null
+    },
+    "AUDUSD H4": {
+      "quote_ccy": "USD",
+      "direct": [
+        "GBPUSD"
+      ],
+      "via_usd_legs": [],
+      "bars": 34160,
+      "bars_direct": 34160,
+      "bars_via_usd": 0,
+      "bars_without_rate": 0,
+      "via_usd_first": null,
+      "via_usd_last": null
+    },
+    "AUDUSD D1": {
+      "quote_ccy": "USD",
+      "direct": [
+        "GBPUSD"
+      ],
+      "via_usd_legs": [],
+      "bars": 6550,
+      "bars_direct": 6550,
+      "bars_via_usd": 0,
+      "bars_without_rate": 0,
+      "via_usd_first": null,
+      "via_usd_last": null
+    },
+    "EURUSD H4": {
+      "quote_ccy": "USD",
+      "direct": [
+        "GBPUSD"
+      ],
+      "via_usd_legs": [],
+      "bars": 34180,
+      "bars_direct": 34180,
+      "bars_via_usd": 0,
+      "bars_without_rate": 0,
+      "via_usd_first": null,
+      "via_usd_last": null
+    },
+    "EURUSD D1": {
+      "quote_ccy": "USD",
+      "direct": [
+        "GBPUSD"
+      ],
+      "via_usd_legs": [],
+      "bars": 6555,
+      "bars_direct": 6555,
+      "bars_via_usd": 0,
+      "bars_without_rate": 0,
+      "via_usd_first": null,
+      "via_usd_last": null
+    },
+    "GBPUSD H4": {
+      "quote_ccy": "USD",
+      "direct": [
+        "GBPUSD"
+      ],
+      "via_usd_legs": [],
+      "bars": 34127,
+      "bars_direct": 34127,
+      "bars_via_usd": 0,
+      "bars_without_rate": 0,
+      "via_usd_first": null,
+      "via_usd_last": null
+    },
+    "GBPUSD D1": {
+      "quote_ccy": "USD",
+      "direct": [
+        "GBPUSD"
+      ],
+      "via_usd_legs": [],
+      "bars": 6542,
+      "bars_direct": 6542,
+      "bars_via_usd": 0,
+      "bars_without_rate": 0,
+      "via_usd_first": null,
+      "via_usd_last": null
+    },
+    "NZDUSD H4": {
+      "quote_ccy": "USD",
+      "direct": [
+        "GBPUSD"
+      ],
+      "via_usd_legs": [],
+      "bars": 34120,
+      "bars_direct": 34120,
+      "bars_via_usd": 0,
+      "bars_without_rate": 0,
+      "via_usd_first": null,
+      "via_usd_last": null
+    },
+    "NZDUSD D1": {
+      "quote_ccy": "USD",
+      "direct": [
+        "GBPUSD"
+      ],
+      "via_usd_legs": [],
+      "bars": 6539,
+      "bars_direct": 6539,
+      "bars_via_usd": 0,
+      "bars_without_rate": 0,
+      "via_usd_first": null,
+      "via_usd_last": null
+    },
+    "US500 H4": {
+      "quote_ccy": "USD",
+      "direct": [
+        "GBPUSD"
+      ],
+      "via_usd_legs": [],
+      "bars": 33110,
+      "bars_direct": 33110,
+      "bars_via_usd": 0,
+      "bars_without_rate": 0,
+      "via_usd_first": null,
+      "via_usd_last": null
+    },
+    "US500 D1": {
+      "quote_ccy": "USD",
+      "direct": [
+        "GBPUSD"
+      ],
+      "via_usd_legs": [],
+      "bars": 6446,
+      "bars_direct": 6446,
+      "bars_via_usd": 0,
+      "bars_without_rate": 0,
+      "via_usd_first": null,
+      "via_usd_last": null
+    },
+    "XAGUSD H4": {
+      "quote_ccy": "USD",
+      "direct": [
+        "GBPUSD"
+      ],
+      "via_usd_legs": [],
+      "bars": 33368,
+      "bars_direct": 33368,
+      "bars_via_usd": 0,
+      "bars_without_rate": 0,
+      "via_usd_first": null,
+      "via_usd_last": null
+    },
+    "XAGUSD D1": {
+      "quote_ccy": "USD",
+      "direct": [
+        "GBPUSD"
+      ],
+      "via_usd_legs": [],
+      "bars": 6438,
+      "bars_direct": 6438,
+      "bars_via_usd": 0,
+      "bars_without_rate": 0,
+      "via_usd_first": null,
+      "via_usd_last": null
+    },
+    "XAUUSD H4": {
+      "quote_ccy": "USD",
+      "direct": [
+        "GBPUSD"
+      ],
+      "via_usd_legs": [],
+      "bars": 33439,
+      "bars_direct": 33439,
+      "bars_via_usd": 0,
+      "bars_without_rate": 0,
+      "via_usd_first": null,
+      "via_usd_last": null
+    },
+    "XAUUSD D1": {
+      "quote_ccy": "USD",
+      "direct": [
+        "GBPUSD"
+      ],
+      "via_usd_legs": [],
+      "bars": 6448,
+      "bars_direct": 6448,
+      "bars_via_usd": 0,
+      "bars_without_rate": 0,
+      "via_usd_first": null,
+      "via_usd_last": null
+    }
+  },
+  "instruments_without_usable_coverage": [],
+  "label": "SeriesFxSource(GBP; daily closes as-of bar close; max_staleness=4 days 00:00:00; pivot=USD; GBPCAD@ds_153cddfe3f59e1209da60a6c, GBPCHF@ds_6bad225daea5df07f9319374, EURGBP@ds_dc307b45fa2d2ec9ba010a06, GBPJPY@ds_e349d738b2104e6b155a2ec1, GBPUSD@ds_12849393c960a8aae970127a; fallback via_usd where the direct cross has no fresh rate for CAD, CHF, EUR, JPY using USDCAD@ds_1f556ebf7564ba9dd4b2d28c, USDCHF@ds_0de0ec59ebfd379cd2ed3978, EURUSD@ds_a919ff4d7be2b3b803731bbd, USDJPY@ds_f68583a7243d71629e19871b)"
+}

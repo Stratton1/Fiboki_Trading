@@ -1,0 +1,5978 @@
+# Campaign k5_generated_families_oanda_mid
+
+- actor: `script:run_discovery_campaign`
+- created: 2026-09-30T04:08:29.138431+00:00
+- gate set: `v2.0.0-audit` (`fe7daa4c71e886b1`)
+- datasets: AUDJPY_D1 -> `ds_39129edf7c2109880bbecf8a`, AUDJPY_H4 -> `ds_e1707823ba88b2ad1e4e9f06`, AUDUSD_D1 -> `ds_febd942f45e3738497481e26`, AUDUSD_H4 -> `ds_955952a677f3dcde348a547a`, DE40_D1 -> `ds_b4f9c19467618ab630422a6b`, DE40_H4 -> `ds_e8b257e41285cc6df6b308d5`, EURGBP_D1 -> `ds_dc307b45fa2d2ec9ba010a06`, EURGBP_H4 -> `ds_4fda205dc95ef6d3050a338b`, EURJPY_D1 -> `ds_d52afb357acfafd05c778e99`, EURJPY_H4 -> `ds_8a25ca7e3af8bf059992523d`, EURUSD_D1 -> `ds_a919ff4d7be2b3b803731bbd`, EURUSD_H4 -> `ds_7e580f69920fc10ab3fe3d07`, GBPJPY_D1 -> `ds_e349d738b2104e6b155a2ec1`, GBPJPY_H4 -> `ds_f995d56522470f8a41815f40`, GBPUSD_D1 -> `ds_12849393c960a8aae970127a`, GBPUSD_H4 -> `ds_f588002bfece4d20a887adb2`, NZDUSD_D1 -> `ds_f14dfdebdb567d463aedc3cf`, NZDUSD_H4 -> `ds_b1ff1299fb5de3de52f931cc`, UK100_D1 -> `ds_902024ed7fe1c90da6160989`, UK100_H4 -> `ds_60d1f72c36bb1f79ddd7207b`, US500_D1 -> `ds_50533d5c8bd73aae95f4f792`, US500_H4 -> `ds_611275defc76fd40bfbafc41`, USDCAD_D1 -> `ds_1f556ebf7564ba9dd4b2d28c`, USDCAD_H4 -> `ds_75c14e97ca44f2c63d86e7bc`, USDCHF_D1 -> `ds_0de0ec59ebfd379cd2ed3978`, USDCHF_H4 -> `ds_432d9d9d63b2031014462b15`, USDJPY_D1 -> `ds_f68583a7243d71629e19871b`, USDJPY_H4 -> `ds_eb2a6796b8847e9cc6686e3b`, XAGUSD_D1 -> `ds_25e55ba40ea1502328b13ccc`, XAGUSD_H4 -> `ds_4e9eb06628c281bdc80af975`, XAUUSD_D1 -> `ds_148eb2c812d52bbe45f8e0d6`, XAUUSD_H4 -> `ds_4b34c3447a6ca9669e49580f`
+
+## Trial accounting
+
+- planned in this campaign: **12408**
+- already spent on the same bars before this campaign began: **8496**
+- **true trial count: 20904**
+- ladder evaluations requested: 2951
+- engine backtests actually run: 2947 (lower when the deterministic evaluation cache was warm)
+
+The deflation threshold is E[max SR] for a search of 20904 trials. Using the largest cross-trial Sharpe variance observed in this campaign (5.80553e-05, measured at rung 1's in-sample screen), that threshold is 0.0308, on the same PER-BAR basis as the candidate Sharpes (nothing here is annualised): a Sharpe at or below it is what a search this size is EXPECTED to produce from strategies with no edge at all. No candidate survived as far as rung 5, so the threshold is reported as the bar a survivor WOULD have had to clear, not as a bar anything was measured against.
+
+## What was tried
+
+| strategy | cell | origin | n trials | external N | verdict | died at | deflated SR | threshold |
+|---|---|---|---|---|---|---|---|---|
+| `donchian_breakout_atr` | AUDUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `donchian_breakout_atr` | AUDUSD D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `donchian_breakout_atr` | DE40 H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `donchian_breakout_atr` | DE40 D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `donchian_breakout_atr` | EURJPY H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `donchian_breakout_atr` | EURJPY D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `donchian_breakout_atr` | EURUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `donchian_breakout_atr` | EURUSD D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `donchian_breakout_atr` | GBPJPY H4 | seed | 8 | 20896 | reject | RUNG 2 WALK_FORWARD | - | 0.007981 |
+| `donchian_breakout_atr` | GBPJPY D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `donchian_breakout_atr` | GBPUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `donchian_breakout_atr` | GBPUSD D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `donchian_breakout_atr` | NZDUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `donchian_breakout_atr` | NZDUSD D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `donchian_breakout_atr` | US500 H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `donchian_breakout_atr` | US500 D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `donchian_breakout_atr` | USDCAD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `donchian_breakout_atr` | USDCAD D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `donchian_breakout_atr` | USDCHF H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `donchian_breakout_atr` | USDCHF D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `donchian_breakout_atr` | USDJPY H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `donchian_breakout_atr` | USDJPY D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `donchian_breakout_atr` | XAUUSD H4 | seed | 8 | 20896 | reject | RUNG 4 ROBUSTNESS | - | 0.01482 |
+| `donchian_breakout_atr` | XAUUSD D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `fib_golden_pocket_pullback` | AUDUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `fib_golden_pocket_pullback` | AUDUSD D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `fib_golden_pocket_pullback` | DE40 H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `fib_golden_pocket_pullback` | DE40 D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `fib_golden_pocket_pullback` | EURJPY H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `fib_golden_pocket_pullback` | EURJPY D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `fib_golden_pocket_pullback` | EURUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `fib_golden_pocket_pullback` | EURUSD D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `fib_golden_pocket_pullback` | GBPJPY H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `fib_golden_pocket_pullback` | GBPJPY D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `fib_golden_pocket_pullback` | GBPUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `fib_golden_pocket_pullback` | GBPUSD D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `fib_golden_pocket_pullback` | NZDUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `fib_golden_pocket_pullback` | NZDUSD D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `fib_golden_pocket_pullback` | US500 H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `fib_golden_pocket_pullback` | US500 D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `fib_golden_pocket_pullback` | USDCAD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `fib_golden_pocket_pullback` | USDCAD D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `fib_golden_pocket_pullback` | USDCHF H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `fib_golden_pocket_pullback` | USDCHF D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `fib_golden_pocket_pullback` | USDJPY H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `fib_golden_pocket_pullback` | USDJPY D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `fib_golden_pocket_pullback` | XAUUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `fib_golden_pocket_pullback` | XAUUSD D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `ichimoku_kumo_trend` | AUDUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `ichimoku_kumo_trend` | AUDUSD D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `ichimoku_kumo_trend` | DE40 H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `ichimoku_kumo_trend` | DE40 D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `ichimoku_kumo_trend` | EURJPY H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `ichimoku_kumo_trend` | EURJPY D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `ichimoku_kumo_trend` | EURUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `ichimoku_kumo_trend` | EURUSD D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `ichimoku_kumo_trend` | GBPJPY H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `ichimoku_kumo_trend` | GBPJPY D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `ichimoku_kumo_trend` | GBPUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `ichimoku_kumo_trend` | GBPUSD D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `ichimoku_kumo_trend` | NZDUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `ichimoku_kumo_trend` | NZDUSD D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `ichimoku_kumo_trend` | US500 H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `ichimoku_kumo_trend` | US500 D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `ichimoku_kumo_trend` | USDCAD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `ichimoku_kumo_trend` | USDCAD D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `ichimoku_kumo_trend` | USDCHF H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `ichimoku_kumo_trend` | USDCHF D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `ichimoku_kumo_trend` | USDJPY H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `ichimoku_kumo_trend` | USDJPY D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `ichimoku_kumo_trend` | XAUUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `ichimoku_kumo_trend` | XAUUSD D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `macd_ema_trend_hybrid` | AUDUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `macd_ema_trend_hybrid` | AUDUSD D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `macd_ema_trend_hybrid` | DE40 H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `macd_ema_trend_hybrid` | DE40 D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `macd_ema_trend_hybrid` | EURJPY H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `macd_ema_trend_hybrid` | EURJPY D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `macd_ema_trend_hybrid` | EURUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `macd_ema_trend_hybrid` | EURUSD D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `macd_ema_trend_hybrid` | GBPJPY H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `macd_ema_trend_hybrid` | GBPJPY D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `macd_ema_trend_hybrid` | GBPUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `macd_ema_trend_hybrid` | GBPUSD D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `macd_ema_trend_hybrid` | NZDUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `macd_ema_trend_hybrid` | NZDUSD D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `macd_ema_trend_hybrid` | US500 H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `macd_ema_trend_hybrid` | US500 D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `macd_ema_trend_hybrid` | USDCAD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `macd_ema_trend_hybrid` | USDCAD D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `macd_ema_trend_hybrid` | USDCHF H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `macd_ema_trend_hybrid` | USDCHF D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `macd_ema_trend_hybrid` | USDJPY H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `macd_ema_trend_hybrid` | USDJPY D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `macd_ema_trend_hybrid` | XAUUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `macd_ema_trend_hybrid` | XAUUSD D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `rsi_band_mean_reversion` | AUDUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `rsi_band_mean_reversion` | EURGBP H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `rsi_band_mean_reversion` | EURUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `rsi_band_mean_reversion` | GBPUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `rsi_band_mean_reversion` | NZDUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `rsi_band_mean_reversion` | USDCAD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `rsi_band_mean_reversion` | USDCHF H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `rsi_band_mean_reversion` | USDJPY H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `tsmom_dual_horizon` | AUDUSD H4 | seed | 16 | 20888 | reject | RUNG 1 IN_SAMPLE_SCREEN | - | 0.01227 |
+| `tsmom_dual_horizon` | AUDUSD D1 | seed | 16 | 20888 | reject | RUNG 0 SANITY | - | - |
+| `tsmom_dual_horizon` | DE40 H4 | seed | 16 | 20888 | reject | RUNG 0 SANITY | - | - |
+| `tsmom_dual_horizon` | DE40 D1 | seed | 16 | 20888 | reject | RUNG 0 SANITY | - | - |
+| `tsmom_dual_horizon` | EURUSD H4 | seed | 16 | 20888 | reject | RUNG 0 SANITY | - | - |
+| `tsmom_dual_horizon` | EURUSD D1 | seed | 16 | 20888 | reject | RUNG 0 SANITY | - | - |
+| `tsmom_dual_horizon` | GBPUSD H4 | seed | 16 | 20888 | reject | RUNG 0 SANITY | - | - |
+| `tsmom_dual_horizon` | GBPUSD D1 | seed | 16 | 20888 | reject | RUNG 0 SANITY | - | - |
+| `tsmom_dual_horizon` | NZDUSD H4 | seed | 16 | 20888 | reject | RUNG 0 SANITY | - | - |
+| `tsmom_dual_horizon` | NZDUSD D1 | seed | 16 | 20888 | reject | RUNG 0 SANITY | - | - |
+| `tsmom_dual_horizon` | US500 H4 | seed | 16 | 20888 | reject | RUNG 0 SANITY | - | - |
+| `tsmom_dual_horizon` | US500 D1 | seed | 16 | 20888 | reject | RUNG 0 SANITY | - | - |
+| `tsmom_dual_horizon` | USDCAD H4 | seed | 16 | 20888 | reject | RUNG 0 SANITY | - | - |
+| `tsmom_dual_horizon` | USDCAD D1 | seed | 16 | 20888 | reject | RUNG 0 SANITY | - | - |
+| `tsmom_dual_horizon` | USDCHF H4 | seed | 16 | 20888 | reject | RUNG 0 SANITY | - | - |
+| `tsmom_dual_horizon` | USDCHF D1 | seed | 16 | 20888 | reject | RUNG 0 SANITY | - | - |
+| `tsmom_dual_horizon` | USDJPY H4 | seed | 16 | 20888 | reject | RUNG 0 SANITY | - | - |
+| `tsmom_dual_horizon` | USDJPY D1 | seed | 16 | 20888 | reject | RUNG 0 SANITY | - | - |
+| `tsmom_dual_horizon` | XAUUSD H4 | seed | 16 | 20888 | reject | RUNG 0 SANITY | - | - |
+| `tsmom_dual_horizon` | XAUUSD D1 | seed | 16 | 20888 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_close_break_adx_gate_swing_tp_short` | AUDJPY H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_close_break_adx_gate_swing_tp_short` | AUDJPY D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_close_break_adx_gate_swing_tp_short` | AUDUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_close_break_adx_gate_swing_tp_short` | AUDUSD D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_close_break_adx_gate_swing_tp_short` | DE40 H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_close_break_adx_gate_swing_tp_short` | DE40 D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_close_break_adx_gate_swing_tp_short` | EURJPY H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_close_break_adx_gate_swing_tp_short` | EURJPY D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_close_break_adx_gate_swing_tp_short` | EURUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_close_break_adx_gate_swing_tp_short` | EURUSD D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_close_break_adx_gate_swing_tp_short` | GBPJPY H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_close_break_adx_gate_swing_tp_short` | GBPJPY D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_close_break_adx_gate_swing_tp_short` | GBPUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_close_break_adx_gate_swing_tp_short` | GBPUSD D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_close_break_adx_gate_swing_tp_short` | NZDUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_close_break_adx_gate_swing_tp_short` | NZDUSD D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_close_break_adx_gate_swing_tp_short` | UK100 H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_close_break_adx_gate_swing_tp_short` | UK100 D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_close_break_adx_gate_swing_tp_short` | US500 H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_close_break_adx_gate_swing_tp_short` | US500 D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_close_break_adx_gate_swing_tp_short` | USDCAD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_close_break_adx_gate_swing_tp_short` | USDCAD D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_close_break_adx_gate_swing_tp_short` | USDCHF H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_close_break_adx_gate_swing_tp_short` | USDCHF D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_close_break_adx_gate_swing_tp_short` | USDJPY H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_close_break_adx_gate_swing_tp_short` | USDJPY D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_close_break_adx_gate_swing_tp_short` | XAGUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_close_break_adx_gate_swing_tp_short` | XAGUSD D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_close_break_adx_gate_swing_tp_short` | XAUUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_close_break_adx_gate_swing_tp_short` | XAUUSD D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_close_break_adx_gate_tp_r` | AUDJPY H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_close_break_adx_gate_tp_r` | AUDJPY D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_close_break_adx_gate_tp_r` | AUDUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_close_break_adx_gate_tp_r` | AUDUSD D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_close_break_adx_gate_tp_r` | DE40 H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_close_break_adx_gate_tp_r` | DE40 D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_close_break_adx_gate_tp_r` | EURJPY H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_close_break_adx_gate_tp_r` | EURJPY D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_close_break_adx_gate_tp_r` | EURUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_close_break_adx_gate_tp_r` | EURUSD D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_close_break_adx_gate_tp_r` | GBPJPY H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_close_break_adx_gate_tp_r` | GBPJPY D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_close_break_adx_gate_tp_r` | GBPUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_close_break_adx_gate_tp_r` | GBPUSD D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_close_break_adx_gate_tp_r` | NZDUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_close_break_adx_gate_tp_r` | NZDUSD D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_close_break_adx_gate_tp_r` | UK100 H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_close_break_adx_gate_tp_r` | UK100 D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_close_break_adx_gate_tp_r` | US500 H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_close_break_adx_gate_tp_r` | US500 D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_close_break_adx_gate_tp_r` | USDCAD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_close_break_adx_gate_tp_r` | USDCAD D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_close_break_adx_gate_tp_r` | USDCHF H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_close_break_adx_gate_tp_r` | USDCHF D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_close_break_adx_gate_tp_r` | USDJPY H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_close_break_adx_gate_tp_r` | USDJPY D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_close_break_adx_gate_tp_r` | XAGUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_close_break_adx_gate_tp_r` | XAGUSD D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_close_break_adx_gate_tp_r` | XAUUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_close_break_adx_gate_tp_r` | XAUUSD D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_close_break_none_swing_tp_long` | AUDJPY H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_close_break_none_swing_tp_long` | AUDJPY D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_close_break_none_swing_tp_long` | AUDUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_close_break_none_swing_tp_long` | AUDUSD D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_close_break_none_swing_tp_long` | DE40 H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_close_break_none_swing_tp_long` | DE40 D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_close_break_none_swing_tp_long` | EURJPY H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_close_break_none_swing_tp_long` | EURJPY D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_close_break_none_swing_tp_long` | EURUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_close_break_none_swing_tp_long` | EURUSD D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_close_break_none_swing_tp_long` | GBPJPY H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_close_break_none_swing_tp_long` | GBPJPY D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_close_break_none_swing_tp_long` | GBPUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_close_break_none_swing_tp_long` | GBPUSD D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_close_break_none_swing_tp_long` | NZDUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_close_break_none_swing_tp_long` | NZDUSD D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_close_break_none_swing_tp_long` | UK100 H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_close_break_none_swing_tp_long` | UK100 D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_close_break_none_swing_tp_long` | US500 H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_close_break_none_swing_tp_long` | US500 D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_close_break_none_swing_tp_long` | USDCAD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_close_break_none_swing_tp_long` | USDCAD D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_close_break_none_swing_tp_long` | USDCHF H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_close_break_none_swing_tp_long` | USDCHF D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_close_break_none_swing_tp_long` | USDJPY H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_close_break_none_swing_tp_long` | USDJPY D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_close_break_none_swing_tp_long` | XAGUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_close_break_none_swing_tp_long` | XAGUSD D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_close_break_none_swing_tp_long` | XAUUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_close_break_none_swing_tp_long` | XAUUSD D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_close_break_session_time_exit` | AUDJPY H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_close_break_session_time_exit` | AUDUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_close_break_session_time_exit` | DE40 H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_close_break_session_time_exit` | EURJPY H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_close_break_session_time_exit` | EURUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_close_break_session_time_exit` | GBPJPY H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_close_break_session_time_exit` | GBPUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_close_break_session_time_exit` | NZDUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_close_break_session_time_exit` | UK100 H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_close_break_session_time_exit` | US500 H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_close_break_session_time_exit` | USDCAD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_close_break_session_time_exit` | USDCHF H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_close_break_session_time_exit` | USDJPY H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_close_break_session_time_exit` | XAGUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_close_break_session_time_exit` | XAUUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_fresh_cross_adx_gate_swing_tp_long` | AUDJPY H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_fresh_cross_adx_gate_swing_tp_long` | AUDJPY D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_fresh_cross_adx_gate_swing_tp_long` | AUDUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_fresh_cross_adx_gate_swing_tp_long` | AUDUSD D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_fresh_cross_adx_gate_swing_tp_long` | DE40 H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_fresh_cross_adx_gate_swing_tp_long` | DE40 D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_fresh_cross_adx_gate_swing_tp_long` | EURJPY H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_fresh_cross_adx_gate_swing_tp_long` | EURJPY D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_fresh_cross_adx_gate_swing_tp_long` | EURUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_fresh_cross_adx_gate_swing_tp_long` | EURUSD D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_fresh_cross_adx_gate_swing_tp_long` | GBPJPY H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_fresh_cross_adx_gate_swing_tp_long` | GBPJPY D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_fresh_cross_adx_gate_swing_tp_long` | GBPUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_fresh_cross_adx_gate_swing_tp_long` | GBPUSD D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_fresh_cross_adx_gate_swing_tp_long` | NZDUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_fresh_cross_adx_gate_swing_tp_long` | NZDUSD D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_fresh_cross_adx_gate_swing_tp_long` | UK100 H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_fresh_cross_adx_gate_swing_tp_long` | UK100 D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_fresh_cross_adx_gate_swing_tp_long` | US500 H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_fresh_cross_adx_gate_swing_tp_long` | US500 D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_fresh_cross_adx_gate_swing_tp_long` | USDCAD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_fresh_cross_adx_gate_swing_tp_long` | USDCAD D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_fresh_cross_adx_gate_swing_tp_long` | USDCHF H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_fresh_cross_adx_gate_swing_tp_long` | USDCHF D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_fresh_cross_adx_gate_swing_tp_long` | USDJPY H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_fresh_cross_adx_gate_swing_tp_long` | USDJPY D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_fresh_cross_adx_gate_swing_tp_long` | XAGUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_fresh_cross_adx_gate_swing_tp_long` | XAGUSD D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_fresh_cross_adx_gate_swing_tp_long` | XAUUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_fresh_cross_adx_gate_swing_tp_long` | XAUUSD D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_fresh_cross_none_swing_tp_short` | AUDJPY H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_fresh_cross_none_swing_tp_short` | AUDJPY D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_fresh_cross_none_swing_tp_short` | AUDUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_fresh_cross_none_swing_tp_short` | AUDUSD D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_fresh_cross_none_swing_tp_short` | DE40 H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_fresh_cross_none_swing_tp_short` | DE40 D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_fresh_cross_none_swing_tp_short` | EURJPY H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_fresh_cross_none_swing_tp_short` | EURJPY D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_fresh_cross_none_swing_tp_short` | EURUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_fresh_cross_none_swing_tp_short` | EURUSD D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_fresh_cross_none_swing_tp_short` | GBPJPY H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_fresh_cross_none_swing_tp_short` | GBPJPY D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_fresh_cross_none_swing_tp_short` | GBPUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_fresh_cross_none_swing_tp_short` | GBPUSD D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_fresh_cross_none_swing_tp_short` | NZDUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_fresh_cross_none_swing_tp_short` | NZDUSD D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_fresh_cross_none_swing_tp_short` | UK100 H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_fresh_cross_none_swing_tp_short` | UK100 D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_fresh_cross_none_swing_tp_short` | US500 H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_fresh_cross_none_swing_tp_short` | US500 D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_fresh_cross_none_swing_tp_short` | USDCAD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_fresh_cross_none_swing_tp_short` | USDCAD D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_fresh_cross_none_swing_tp_short` | USDCHF H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_fresh_cross_none_swing_tp_short` | USDCHF D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_fresh_cross_none_swing_tp_short` | USDJPY H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_fresh_cross_none_swing_tp_short` | USDJPY D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_fresh_cross_none_swing_tp_short` | XAGUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_fresh_cross_none_swing_tp_short` | XAGUSD D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_fresh_cross_none_swing_tp_short` | XAUUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_fresh_cross_none_swing_tp_short` | XAUUSD D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_fresh_cross_none_time_exit` | AUDJPY H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_fresh_cross_none_time_exit` | AUDJPY D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_fresh_cross_none_time_exit` | AUDUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_fresh_cross_none_time_exit` | AUDUSD D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_fresh_cross_none_time_exit` | DE40 H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_fresh_cross_none_time_exit` | DE40 D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_fresh_cross_none_time_exit` | EURJPY H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_fresh_cross_none_time_exit` | EURJPY D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_fresh_cross_none_time_exit` | EURUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_fresh_cross_none_time_exit` | EURUSD D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_fresh_cross_none_time_exit` | GBPJPY H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_fresh_cross_none_time_exit` | GBPJPY D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_fresh_cross_none_time_exit` | GBPUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_fresh_cross_none_time_exit` | GBPUSD D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_fresh_cross_none_time_exit` | NZDUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_fresh_cross_none_time_exit` | NZDUSD D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_fresh_cross_none_time_exit` | UK100 H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_fresh_cross_none_time_exit` | UK100 D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_fresh_cross_none_time_exit` | US500 H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_fresh_cross_none_time_exit` | US500 D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_fresh_cross_none_time_exit` | USDCAD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_fresh_cross_none_time_exit` | USDCAD D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_fresh_cross_none_time_exit` | USDCHF H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_fresh_cross_none_time_exit` | USDCHF D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_fresh_cross_none_time_exit` | USDJPY H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_fresh_cross_none_time_exit` | USDJPY D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_fresh_cross_none_time_exit` | XAGUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_fresh_cross_none_time_exit` | XAGUSD D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_fresh_cross_none_time_exit` | XAUUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_fresh_cross_none_time_exit` | XAUUSD D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_fresh_cross_none_trail` | AUDJPY H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_fresh_cross_none_trail` | AUDJPY D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_fresh_cross_none_trail` | AUDUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_fresh_cross_none_trail` | AUDUSD D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_fresh_cross_none_trail` | DE40 H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_fresh_cross_none_trail` | DE40 D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_fresh_cross_none_trail` | EURJPY H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_fresh_cross_none_trail` | EURJPY D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_fresh_cross_none_trail` | EURUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_fresh_cross_none_trail` | EURUSD D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_fresh_cross_none_trail` | GBPJPY H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_fresh_cross_none_trail` | GBPJPY D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_fresh_cross_none_trail` | GBPUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_fresh_cross_none_trail` | GBPUSD D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_fresh_cross_none_trail` | NZDUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_fresh_cross_none_trail` | NZDUSD D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_fresh_cross_none_trail` | UK100 H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_fresh_cross_none_trail` | UK100 D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_fresh_cross_none_trail` | US500 H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_fresh_cross_none_trail` | US500 D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_fresh_cross_none_trail` | USDCAD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_fresh_cross_none_trail` | USDCAD D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_fresh_cross_none_trail` | USDCHF H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_fresh_cross_none_trail` | USDCHF D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_fresh_cross_none_trail` | USDJPY H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_fresh_cross_none_trail` | USDJPY D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_fresh_cross_none_trail` | XAGUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_fresh_cross_none_trail` | XAGUSD D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_fresh_cross_none_trail` | XAUUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_fresh_cross_none_trail` | XAUUSD D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_fresh_cross_session_swing_tp_short` | AUDJPY H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_fresh_cross_session_swing_tp_short` | AUDUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_fresh_cross_session_swing_tp_short` | DE40 H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_fresh_cross_session_swing_tp_short` | EURJPY H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_fresh_cross_session_swing_tp_short` | EURUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_fresh_cross_session_swing_tp_short` | GBPJPY H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_fresh_cross_session_swing_tp_short` | GBPUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_fresh_cross_session_swing_tp_short` | NZDUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_fresh_cross_session_swing_tp_short` | UK100 H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_fresh_cross_session_swing_tp_short` | US500 H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_fresh_cross_session_swing_tp_short` | USDCAD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_fresh_cross_session_swing_tp_short` | USDCHF H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_fresh_cross_session_swing_tp_short` | USDJPY H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_fresh_cross_session_swing_tp_short` | XAGUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_fresh_cross_session_swing_tp_short` | XAUUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_fresh_cross_session_time_exit` | AUDJPY H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_fresh_cross_session_time_exit` | AUDUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_fresh_cross_session_time_exit` | DE40 H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_fresh_cross_session_time_exit` | EURJPY H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_fresh_cross_session_time_exit` | EURUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_fresh_cross_session_time_exit` | GBPJPY H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_fresh_cross_session_time_exit` | GBPUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_fresh_cross_session_time_exit` | NZDUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_fresh_cross_session_time_exit` | UK100 H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_fresh_cross_session_time_exit` | US500 H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_fresh_cross_session_time_exit` | USDCAD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_fresh_cross_session_time_exit` | USDCHF H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_fresh_cross_session_time_exit` | USDJPY H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_fresh_cross_session_time_exit` | XAGUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_donchian_fresh_cross_session_time_exit` | XAUUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_kc_break_adx_gate_time_exit` | AUDJPY H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_kc_break_adx_gate_time_exit` | AUDJPY D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_kc_break_adx_gate_time_exit` | AUDUSD H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_kc_break_adx_gate_time_exit` | AUDUSD D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_kc_break_adx_gate_time_exit` | DE40 H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_kc_break_adx_gate_time_exit` | DE40 D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_kc_break_adx_gate_time_exit` | EURJPY H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_kc_break_adx_gate_time_exit` | EURJPY D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_kc_break_adx_gate_time_exit` | EURUSD H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_kc_break_adx_gate_time_exit` | EURUSD D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_kc_break_adx_gate_time_exit` | GBPJPY H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_kc_break_adx_gate_time_exit` | GBPJPY D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_kc_break_adx_gate_time_exit` | GBPUSD H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_kc_break_adx_gate_time_exit` | GBPUSD D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_kc_break_adx_gate_time_exit` | NZDUSD H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_kc_break_adx_gate_time_exit` | NZDUSD D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_kc_break_adx_gate_time_exit` | UK100 H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_kc_break_adx_gate_time_exit` | UK100 D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_kc_break_adx_gate_time_exit` | US500 H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_kc_break_adx_gate_time_exit` | US500 D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_kc_break_adx_gate_time_exit` | USDCAD H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_kc_break_adx_gate_time_exit` | USDCAD D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_kc_break_adx_gate_time_exit` | USDCHF H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_kc_break_adx_gate_time_exit` | USDCHF D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_kc_break_adx_gate_time_exit` | USDJPY H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_kc_break_adx_gate_time_exit` | USDJPY D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_kc_break_adx_gate_time_exit` | XAGUSD H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_kc_break_adx_gate_time_exit` | XAGUSD D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_kc_break_adx_gate_time_exit` | XAUUSD H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_kc_break_adx_gate_time_exit` | XAUUSD D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_kc_break_none_swing_tp_long` | AUDJPY H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_kc_break_none_swing_tp_long` | AUDJPY D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_kc_break_none_swing_tp_long` | AUDUSD H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_kc_break_none_swing_tp_long` | AUDUSD D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_kc_break_none_swing_tp_long` | DE40 H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_kc_break_none_swing_tp_long` | DE40 D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_kc_break_none_swing_tp_long` | EURJPY H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_kc_break_none_swing_tp_long` | EURJPY D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_kc_break_none_swing_tp_long` | EURUSD H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_kc_break_none_swing_tp_long` | EURUSD D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_kc_break_none_swing_tp_long` | GBPJPY H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_kc_break_none_swing_tp_long` | GBPJPY D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_kc_break_none_swing_tp_long` | GBPUSD H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_kc_break_none_swing_tp_long` | GBPUSD D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_kc_break_none_swing_tp_long` | NZDUSD H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_kc_break_none_swing_tp_long` | NZDUSD D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_kc_break_none_swing_tp_long` | UK100 H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_kc_break_none_swing_tp_long` | UK100 D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_kc_break_none_swing_tp_long` | US500 H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_kc_break_none_swing_tp_long` | US500 D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_kc_break_none_swing_tp_long` | USDCAD H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_kc_break_none_swing_tp_long` | USDCAD D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_kc_break_none_swing_tp_long` | USDCHF H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_kc_break_none_swing_tp_long` | USDCHF D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_kc_break_none_swing_tp_long` | USDJPY H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_kc_break_none_swing_tp_long` | USDJPY D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_kc_break_none_swing_tp_long` | XAGUSD H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_kc_break_none_swing_tp_long` | XAGUSD D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_kc_break_none_swing_tp_long` | XAUUSD H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_kc_break_none_swing_tp_long` | XAUUSD D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_kc_break_none_tp_r` | AUDJPY H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_kc_break_none_tp_r` | AUDJPY D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_kc_break_none_tp_r` | AUDUSD H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_kc_break_none_tp_r` | AUDUSD D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_kc_break_none_tp_r` | DE40 H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_kc_break_none_tp_r` | DE40 D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_kc_break_none_tp_r` | EURJPY H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_kc_break_none_tp_r` | EURJPY D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_kc_break_none_tp_r` | EURUSD H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_kc_break_none_tp_r` | EURUSD D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_kc_break_none_tp_r` | GBPJPY H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_kc_break_none_tp_r` | GBPJPY D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_kc_break_none_tp_r` | GBPUSD H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_kc_break_none_tp_r` | GBPUSD D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_kc_break_none_tp_r` | NZDUSD H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_kc_break_none_tp_r` | NZDUSD D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_kc_break_none_tp_r` | UK100 H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_kc_break_none_tp_r` | UK100 D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_kc_break_none_tp_r` | US500 H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_kc_break_none_tp_r` | US500 D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_kc_break_none_tp_r` | USDCAD H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_kc_break_none_tp_r` | USDCAD D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_kc_break_none_tp_r` | USDCHF H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_kc_break_none_tp_r` | USDCHF D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_kc_break_none_tp_r` | USDJPY H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_kc_break_none_tp_r` | USDJPY D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_kc_break_none_tp_r` | XAGUSD H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_kc_break_none_tp_r` | XAGUSD D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_kc_break_none_tp_r` | XAUUSD H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_kc_break_none_tp_r` | XAUUSD D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_kc_break_rvol_gate_time_exit` | AUDJPY H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_kc_break_rvol_gate_time_exit` | AUDJPY D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_kc_break_rvol_gate_time_exit` | AUDUSD H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_kc_break_rvol_gate_time_exit` | AUDUSD D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_kc_break_rvol_gate_time_exit` | DE40 H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_kc_break_rvol_gate_time_exit` | DE40 D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_kc_break_rvol_gate_time_exit` | EURJPY H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_kc_break_rvol_gate_time_exit` | EURJPY D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_kc_break_rvol_gate_time_exit` | EURUSD H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_kc_break_rvol_gate_time_exit` | EURUSD D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_kc_break_rvol_gate_time_exit` | GBPJPY H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_kc_break_rvol_gate_time_exit` | GBPJPY D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_kc_break_rvol_gate_time_exit` | GBPUSD H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_kc_break_rvol_gate_time_exit` | GBPUSD D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_kc_break_rvol_gate_time_exit` | NZDUSD H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_kc_break_rvol_gate_time_exit` | NZDUSD D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_kc_break_rvol_gate_time_exit` | UK100 H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_kc_break_rvol_gate_time_exit` | UK100 D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_kc_break_rvol_gate_time_exit` | US500 H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_kc_break_rvol_gate_time_exit` | US500 D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_kc_break_rvol_gate_time_exit` | USDCAD H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_kc_break_rvol_gate_time_exit` | USDCAD D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_kc_break_rvol_gate_time_exit` | USDCHF H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_kc_break_rvol_gate_time_exit` | USDCHF D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_kc_break_rvol_gate_time_exit` | USDJPY H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_kc_break_rvol_gate_time_exit` | USDJPY D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_kc_break_rvol_gate_time_exit` | XAGUSD H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_kc_break_rvol_gate_time_exit` | XAGUSD D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_kc_break_rvol_gate_time_exit` | XAUUSD H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_kc_break_rvol_gate_time_exit` | XAUUSD D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_kc_break_rvol_gate_tp_r` | AUDJPY H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_kc_break_rvol_gate_tp_r` | AUDJPY D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_kc_break_rvol_gate_tp_r` | AUDUSD H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_kc_break_rvol_gate_tp_r` | AUDUSD D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_kc_break_rvol_gate_tp_r` | DE40 H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_kc_break_rvol_gate_tp_r` | DE40 D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_kc_break_rvol_gate_tp_r` | EURJPY H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_kc_break_rvol_gate_tp_r` | EURJPY D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_kc_break_rvol_gate_tp_r` | EURUSD H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_kc_break_rvol_gate_tp_r` | EURUSD D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_kc_break_rvol_gate_tp_r` | GBPJPY H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_kc_break_rvol_gate_tp_r` | GBPJPY D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_kc_break_rvol_gate_tp_r` | GBPUSD H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_kc_break_rvol_gate_tp_r` | GBPUSD D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_kc_break_rvol_gate_tp_r` | NZDUSD H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_kc_break_rvol_gate_tp_r` | NZDUSD D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_kc_break_rvol_gate_tp_r` | UK100 H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_kc_break_rvol_gate_tp_r` | UK100 D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_kc_break_rvol_gate_tp_r` | US500 H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_kc_break_rvol_gate_tp_r` | US500 D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_kc_break_rvol_gate_tp_r` | USDCAD H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_kc_break_rvol_gate_tp_r` | USDCAD D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_kc_break_rvol_gate_tp_r` | USDCHF H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_kc_break_rvol_gate_tp_r` | USDCHF D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_kc_break_rvol_gate_tp_r` | USDJPY H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_kc_break_rvol_gate_tp_r` | USDJPY D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_kc_break_rvol_gate_tp_r` | XAGUSD H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_kc_break_rvol_gate_tp_r` | XAGUSD D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_kc_break_rvol_gate_tp_r` | XAUUSD H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_kc_break_rvol_gate_tp_r` | XAUUSD D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_kc_break_session_trail` | AUDJPY H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_kc_break_session_trail` | AUDUSD H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_kc_break_session_trail` | DE40 H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_kc_break_session_trail` | EURJPY H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_kc_break_session_trail` | EURUSD H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_kc_break_session_trail` | GBPJPY H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_kc_break_session_trail` | GBPUSD H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_kc_break_session_trail` | NZDUSD H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_kc_break_session_trail` | UK100 H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_kc_break_session_trail` | US500 H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_kc_break_session_trail` | USDCAD H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_kc_break_session_trail` | USDCHF H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_kc_break_session_trail` | USDJPY H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_kc_break_session_trail` | XAGUSD H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_bv_kc_break_session_trail` | XAUUSD H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_chikou_flip_adx_gate_swing_tp_long` | AUDJPY H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_chikou_flip_adx_gate_swing_tp_long` | AUDJPY D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_chikou_flip_adx_gate_swing_tp_long` | AUDUSD H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_chikou_flip_adx_gate_swing_tp_long` | AUDUSD D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_chikou_flip_adx_gate_swing_tp_long` | EURJPY H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_chikou_flip_adx_gate_swing_tp_long` | EURJPY D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_chikou_flip_adx_gate_swing_tp_long` | EURUSD H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_chikou_flip_adx_gate_swing_tp_long` | EURUSD D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_chikou_flip_adx_gate_swing_tp_long` | GBPJPY H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_chikou_flip_adx_gate_swing_tp_long` | GBPJPY D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_chikou_flip_adx_gate_swing_tp_long` | GBPUSD H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_chikou_flip_adx_gate_swing_tp_long` | GBPUSD D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_chikou_flip_adx_gate_swing_tp_long` | US500 H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_chikou_flip_adx_gate_swing_tp_long` | US500 D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_chikou_flip_adx_gate_swing_tp_long` | USDJPY H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_chikou_flip_adx_gate_swing_tp_long` | USDJPY D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_chikou_flip_adx_gate_swing_tp_long` | XAUUSD H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_chikou_flip_adx_gate_swing_tp_long` | XAUUSD D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_chikou_flip_none_swing_tp_short` | AUDJPY H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_chikou_flip_none_swing_tp_short` | AUDJPY D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_chikou_flip_none_swing_tp_short` | AUDUSD H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_chikou_flip_none_swing_tp_short` | AUDUSD D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_chikou_flip_none_swing_tp_short` | EURJPY H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_chikou_flip_none_swing_tp_short` | EURJPY D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_chikou_flip_none_swing_tp_short` | EURUSD H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_chikou_flip_none_swing_tp_short` | EURUSD D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_chikou_flip_none_swing_tp_short` | GBPJPY H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_chikou_flip_none_swing_tp_short` | GBPJPY D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_chikou_flip_none_swing_tp_short` | GBPUSD H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_chikou_flip_none_swing_tp_short` | GBPUSD D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_chikou_flip_none_swing_tp_short` | US500 H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_chikou_flip_none_swing_tp_short` | US500 D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_chikou_flip_none_swing_tp_short` | USDJPY H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_chikou_flip_none_swing_tp_short` | USDJPY D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_chikou_flip_none_swing_tp_short` | XAUUSD H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_chikou_flip_none_swing_tp_short` | XAUUSD D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_chikou_flip_rvol_gate_swing_tp_long` | AUDJPY H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_chikou_flip_rvol_gate_swing_tp_long` | AUDJPY D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_chikou_flip_rvol_gate_swing_tp_long` | AUDUSD H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_chikou_flip_rvol_gate_swing_tp_long` | AUDUSD D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_chikou_flip_rvol_gate_swing_tp_long` | EURJPY H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_chikou_flip_rvol_gate_swing_tp_long` | EURJPY D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_chikou_flip_rvol_gate_swing_tp_long` | EURUSD H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_chikou_flip_rvol_gate_swing_tp_long` | EURUSD D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_chikou_flip_rvol_gate_swing_tp_long` | GBPJPY H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_chikou_flip_rvol_gate_swing_tp_long` | GBPJPY D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_chikou_flip_rvol_gate_swing_tp_long` | GBPUSD H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_chikou_flip_rvol_gate_swing_tp_long` | GBPUSD D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_chikou_flip_rvol_gate_swing_tp_long` | US500 H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_chikou_flip_rvol_gate_swing_tp_long` | US500 D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_chikou_flip_rvol_gate_swing_tp_long` | USDJPY H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_chikou_flip_rvol_gate_swing_tp_long` | USDJPY D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_chikou_flip_rvol_gate_swing_tp_long` | XAUUSD H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_chikou_flip_rvol_gate_swing_tp_long` | XAUUSD D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_chikou_flip_rvol_gate_time_exit` | AUDJPY H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_chikou_flip_rvol_gate_time_exit` | AUDJPY D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_chikou_flip_rvol_gate_time_exit` | AUDUSD H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_chikou_flip_rvol_gate_time_exit` | AUDUSD D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_chikou_flip_rvol_gate_time_exit` | EURJPY H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_chikou_flip_rvol_gate_time_exit` | EURJPY D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_chikou_flip_rvol_gate_time_exit` | EURUSD H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_chikou_flip_rvol_gate_time_exit` | EURUSD D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_chikou_flip_rvol_gate_time_exit` | GBPJPY H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_chikou_flip_rvol_gate_time_exit` | GBPJPY D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_chikou_flip_rvol_gate_time_exit` | GBPUSD H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_chikou_flip_rvol_gate_time_exit` | GBPUSD D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_chikou_flip_rvol_gate_time_exit` | US500 H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_chikou_flip_rvol_gate_time_exit` | US500 D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_chikou_flip_rvol_gate_time_exit` | USDJPY H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_chikou_flip_rvol_gate_time_exit` | USDJPY D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_chikou_flip_rvol_gate_time_exit` | XAUUSD H4 | seed | 4 | 20900 | reject | RUNG 2 WALK_FORWARD | - | 0.01236 |
+| `gen_ic_kumo_chikou_flip_rvol_gate_time_exit` | XAUUSD D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_chikou_flip_session_time_exit` | AUDJPY H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_chikou_flip_session_time_exit` | AUDUSD H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_chikou_flip_session_time_exit` | EURJPY H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_chikou_flip_session_time_exit` | EURUSD H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_chikou_flip_session_time_exit` | GBPJPY H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_chikou_flip_session_time_exit` | GBPUSD H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_chikou_flip_session_time_exit` | US500 H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_chikou_flip_session_time_exit` | USDJPY H4 | seed | 4 | 20900 | reject | RUNG 1 IN_SAMPLE_SCREEN | - | 0.001379 |
+| `gen_ic_kumo_chikou_flip_session_time_exit` | XAUUSD H4 | seed | 4 | 20900 | reject | RUNG 2 WALK_FORWARD | - | 0.008411 |
+| `gen_ic_kumo_kijun_cross_adx_gate_swing_tp_long` | AUDJPY H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_kijun_cross_adx_gate_swing_tp_long` | AUDJPY D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_kijun_cross_adx_gate_swing_tp_long` | AUDUSD H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_kijun_cross_adx_gate_swing_tp_long` | AUDUSD D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_kijun_cross_adx_gate_swing_tp_long` | EURJPY H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_kijun_cross_adx_gate_swing_tp_long` | EURJPY D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_kijun_cross_adx_gate_swing_tp_long` | EURUSD H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_kijun_cross_adx_gate_swing_tp_long` | EURUSD D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_kijun_cross_adx_gate_swing_tp_long` | GBPJPY H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_kijun_cross_adx_gate_swing_tp_long` | GBPJPY D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_kijun_cross_adx_gate_swing_tp_long` | GBPUSD H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_kijun_cross_adx_gate_swing_tp_long` | GBPUSD D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_kijun_cross_adx_gate_swing_tp_long` | US500 H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_kijun_cross_adx_gate_swing_tp_long` | US500 D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_kijun_cross_adx_gate_swing_tp_long` | USDJPY H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_kijun_cross_adx_gate_swing_tp_long` | USDJPY D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_kijun_cross_adx_gate_swing_tp_long` | XAUUSD H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_kijun_cross_adx_gate_swing_tp_long` | XAUUSD D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_kijun_cross_adx_gate_tp_r` | AUDJPY H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_kijun_cross_adx_gate_tp_r` | AUDJPY D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_kijun_cross_adx_gate_tp_r` | AUDUSD H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_kijun_cross_adx_gate_tp_r` | AUDUSD D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_kijun_cross_adx_gate_tp_r` | EURJPY H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_kijun_cross_adx_gate_tp_r` | EURJPY D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_kijun_cross_adx_gate_tp_r` | EURUSD H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_kijun_cross_adx_gate_tp_r` | EURUSD D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_kijun_cross_adx_gate_tp_r` | GBPJPY H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_kijun_cross_adx_gate_tp_r` | GBPJPY D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_kijun_cross_adx_gate_tp_r` | GBPUSD H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_kijun_cross_adx_gate_tp_r` | GBPUSD D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_kijun_cross_adx_gate_tp_r` | US500 H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_kijun_cross_adx_gate_tp_r` | US500 D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_kijun_cross_adx_gate_tp_r` | USDJPY H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_kijun_cross_adx_gate_tp_r` | USDJPY D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_kijun_cross_adx_gate_tp_r` | XAUUSD H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_kijun_cross_adx_gate_tp_r` | XAUUSD D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_kijun_cross_none_swing_tp_short` | AUDJPY H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_kijun_cross_none_swing_tp_short` | AUDJPY D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_kijun_cross_none_swing_tp_short` | AUDUSD H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_kijun_cross_none_swing_tp_short` | AUDUSD D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_kijun_cross_none_swing_tp_short` | EURJPY H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_kijun_cross_none_swing_tp_short` | EURJPY D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_kijun_cross_none_swing_tp_short` | EURUSD H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_kijun_cross_none_swing_tp_short` | EURUSD D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_kijun_cross_none_swing_tp_short` | GBPJPY H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_kijun_cross_none_swing_tp_short` | GBPJPY D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_kijun_cross_none_swing_tp_short` | GBPUSD H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_kijun_cross_none_swing_tp_short` | GBPUSD D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_kijun_cross_none_swing_tp_short` | US500 H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_kijun_cross_none_swing_tp_short` | US500 D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_kijun_cross_none_swing_tp_short` | USDJPY H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_kijun_cross_none_swing_tp_short` | USDJPY D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_kijun_cross_none_swing_tp_short` | XAUUSD H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_kijun_cross_none_swing_tp_short` | XAUUSD D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_kijun_cross_rvol_gate_trail` | AUDJPY H4 | seed | 4 | 20900 | reject | RUNG 2 WALK_FORWARD | - | 0.01743 |
+| `gen_ic_kumo_kijun_cross_rvol_gate_trail` | AUDJPY D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_kijun_cross_rvol_gate_trail` | AUDUSD H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_kijun_cross_rvol_gate_trail` | AUDUSD D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_kijun_cross_rvol_gate_trail` | EURJPY H4 | seed | 4 | 20900 | reject | RUNG 2 WALK_FORWARD | - | 0.01078 |
+| `gen_ic_kumo_kijun_cross_rvol_gate_trail` | EURJPY D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_kijun_cross_rvol_gate_trail` | EURUSD H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_kijun_cross_rvol_gate_trail` | EURUSD D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_kijun_cross_rvol_gate_trail` | GBPJPY H4 | seed | 4 | 20900 | reject | RUNG 4 ROBUSTNESS | - | 0.0239 |
+| `gen_ic_kumo_kijun_cross_rvol_gate_trail` | GBPJPY D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_kijun_cross_rvol_gate_trail` | GBPUSD H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_kijun_cross_rvol_gate_trail` | GBPUSD D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_kijun_cross_rvol_gate_trail` | US500 H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_kijun_cross_rvol_gate_trail` | US500 D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_kijun_cross_rvol_gate_trail` | USDJPY H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_kijun_cross_rvol_gate_trail` | USDJPY D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_kijun_cross_rvol_gate_trail` | XAUUSD H4 | seed | 4 | 20900 | reject | RUNG 2 WALK_FORWARD | - | 0.01512 |
+| `gen_ic_kumo_kijun_cross_rvol_gate_trail` | XAUUSD D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_kijun_cross_session_tp_r` | AUDJPY H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_kijun_cross_session_tp_r` | AUDUSD H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_kijun_cross_session_tp_r` | EURJPY H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_kijun_cross_session_tp_r` | EURUSD H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_kijun_cross_session_tp_r` | GBPJPY H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_kijun_cross_session_tp_r` | GBPUSD H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_kijun_cross_session_tp_r` | US500 H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_kijun_cross_session_tp_r` | USDJPY H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_kijun_cross_session_tp_r` | XAUUSD H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_kijun_cross_session_trail` | AUDJPY H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_kijun_cross_session_trail` | AUDUSD H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_kijun_cross_session_trail` | EURJPY H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_kijun_cross_session_trail` | EURUSD H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_kijun_cross_session_trail` | GBPJPY H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_kijun_cross_session_trail` | GBPUSD H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_kijun_cross_session_trail` | US500 H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_kijun_cross_session_trail` | USDJPY H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_kijun_cross_session_trail` | XAUUSD H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_tk_cross_adx_gate_swing_tp_short` | AUDJPY H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_tk_cross_adx_gate_swing_tp_short` | AUDJPY D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_tk_cross_adx_gate_swing_tp_short` | AUDUSD H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_tk_cross_adx_gate_swing_tp_short` | AUDUSD D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_tk_cross_adx_gate_swing_tp_short` | EURJPY H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_tk_cross_adx_gate_swing_tp_short` | EURJPY D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_tk_cross_adx_gate_swing_tp_short` | EURUSD H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_tk_cross_adx_gate_swing_tp_short` | EURUSD D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_tk_cross_adx_gate_swing_tp_short` | GBPJPY H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_tk_cross_adx_gate_swing_tp_short` | GBPJPY D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_tk_cross_adx_gate_swing_tp_short` | GBPUSD H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_tk_cross_adx_gate_swing_tp_short` | GBPUSD D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_tk_cross_adx_gate_swing_tp_short` | US500 H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_tk_cross_adx_gate_swing_tp_short` | US500 D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_tk_cross_adx_gate_swing_tp_short` | USDJPY H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_tk_cross_adx_gate_swing_tp_short` | USDJPY D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_tk_cross_adx_gate_swing_tp_short` | XAUUSD H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_tk_cross_adx_gate_swing_tp_short` | XAUUSD D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_tk_cross_none_swing_tp_long` | AUDJPY H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_tk_cross_none_swing_tp_long` | AUDJPY D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_tk_cross_none_swing_tp_long` | AUDUSD H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_tk_cross_none_swing_tp_long` | AUDUSD D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_tk_cross_none_swing_tp_long` | EURJPY H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_tk_cross_none_swing_tp_long` | EURJPY D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_tk_cross_none_swing_tp_long` | EURUSD H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_tk_cross_none_swing_tp_long` | EURUSD D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_tk_cross_none_swing_tp_long` | GBPJPY H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_tk_cross_none_swing_tp_long` | GBPJPY D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_tk_cross_none_swing_tp_long` | GBPUSD H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_tk_cross_none_swing_tp_long` | GBPUSD D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_tk_cross_none_swing_tp_long` | US500 H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_tk_cross_none_swing_tp_long` | US500 D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_tk_cross_none_swing_tp_long` | USDJPY H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_tk_cross_none_swing_tp_long` | USDJPY D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_tk_cross_none_swing_tp_long` | XAUUSD H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_tk_cross_none_swing_tp_long` | XAUUSD D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_tk_cross_none_time_exit` | AUDJPY H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_tk_cross_none_time_exit` | AUDJPY D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_tk_cross_none_time_exit` | AUDUSD H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_tk_cross_none_time_exit` | AUDUSD D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_tk_cross_none_time_exit` | EURJPY H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_tk_cross_none_time_exit` | EURJPY D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_tk_cross_none_time_exit` | EURUSD H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_tk_cross_none_time_exit` | EURUSD D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_tk_cross_none_time_exit` | GBPJPY H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_tk_cross_none_time_exit` | GBPJPY D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_tk_cross_none_time_exit` | GBPUSD H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_tk_cross_none_time_exit` | GBPUSD D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_tk_cross_none_time_exit` | US500 H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_tk_cross_none_time_exit` | US500 D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_tk_cross_none_time_exit` | USDJPY H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_tk_cross_none_time_exit` | USDJPY D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_tk_cross_none_time_exit` | XAUUSD H4 | seed | 4 | 20900 | reject | RUNG 2 WALK_FORWARD | - | 0.01602 |
+| `gen_ic_kumo_tk_cross_none_time_exit` | XAUUSD D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_tk_cross_none_tp_r` | AUDJPY H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_tk_cross_none_tp_r` | AUDJPY D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_tk_cross_none_tp_r` | AUDUSD H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_tk_cross_none_tp_r` | AUDUSD D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_tk_cross_none_tp_r` | EURJPY H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_tk_cross_none_tp_r` | EURJPY D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_tk_cross_none_tp_r` | EURUSD H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_tk_cross_none_tp_r` | EURUSD D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_tk_cross_none_tp_r` | GBPJPY H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_tk_cross_none_tp_r` | GBPJPY D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_tk_cross_none_tp_r` | GBPUSD H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_tk_cross_none_tp_r` | GBPUSD D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_tk_cross_none_tp_r` | US500 H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_tk_cross_none_tp_r` | US500 D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_tk_cross_none_tp_r` | USDJPY H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_tk_cross_none_tp_r` | USDJPY D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_tk_cross_none_tp_r` | XAUUSD H4 | seed | 4 | 20900 | reject | RUNG 2 WALK_FORWARD | - | 0.01932 |
+| `gen_ic_kumo_tk_cross_none_tp_r` | XAUUSD D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_tk_cross_none_trail` | AUDJPY H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_tk_cross_none_trail` | AUDJPY D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_tk_cross_none_trail` | AUDUSD H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_tk_cross_none_trail` | AUDUSD D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_tk_cross_none_trail` | EURJPY H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_tk_cross_none_trail` | EURJPY D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_tk_cross_none_trail` | EURUSD H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_tk_cross_none_trail` | EURUSD D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_tk_cross_none_trail` | GBPJPY H4 | seed | 4 | 20900 | reject | RUNG 2 WALK_FORWARD | - | 0.01545 |
+| `gen_ic_kumo_tk_cross_none_trail` | GBPJPY D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_tk_cross_none_trail` | GBPUSD H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_tk_cross_none_trail` | GBPUSD D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_tk_cross_none_trail` | US500 H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_tk_cross_none_trail` | US500 D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_tk_cross_none_trail` | USDJPY H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_tk_cross_none_trail` | USDJPY D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_tk_cross_none_trail` | XAUUSD H4 | seed | 4 | 20900 | reject | RUNG 2 WALK_FORWARD | - | 0.01526 |
+| `gen_ic_kumo_tk_cross_none_trail` | XAUUSD D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_tk_cross_rvol_gate_swing_tp_long` | AUDJPY H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_tk_cross_rvol_gate_swing_tp_long` | AUDJPY D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_tk_cross_rvol_gate_swing_tp_long` | AUDUSD H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_tk_cross_rvol_gate_swing_tp_long` | AUDUSD D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_tk_cross_rvol_gate_swing_tp_long` | EURJPY H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_tk_cross_rvol_gate_swing_tp_long` | EURJPY D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_tk_cross_rvol_gate_swing_tp_long` | EURUSD H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_tk_cross_rvol_gate_swing_tp_long` | EURUSD D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_tk_cross_rvol_gate_swing_tp_long` | GBPJPY H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_tk_cross_rvol_gate_swing_tp_long` | GBPJPY D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_tk_cross_rvol_gate_swing_tp_long` | GBPUSD H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_tk_cross_rvol_gate_swing_tp_long` | GBPUSD D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_tk_cross_rvol_gate_swing_tp_long` | US500 H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_tk_cross_rvol_gate_swing_tp_long` | US500 D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_tk_cross_rvol_gate_swing_tp_long` | USDJPY H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_tk_cross_rvol_gate_swing_tp_long` | USDJPY D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_tk_cross_rvol_gate_swing_tp_long` | XAUUSD H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_tk_cross_rvol_gate_swing_tp_long` | XAUUSD D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_tk_cross_rvol_gate_trail` | AUDJPY H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_tk_cross_rvol_gate_trail` | AUDJPY D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_tk_cross_rvol_gate_trail` | AUDUSD H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_tk_cross_rvol_gate_trail` | AUDUSD D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_tk_cross_rvol_gate_trail` | EURJPY H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_tk_cross_rvol_gate_trail` | EURJPY D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_tk_cross_rvol_gate_trail` | EURUSD H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_tk_cross_rvol_gate_trail` | EURUSD D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_tk_cross_rvol_gate_trail` | GBPJPY H4 | seed | 4 | 20900 | reject | RUNG 2 WALK_FORWARD | - | 0.01664 |
+| `gen_ic_kumo_tk_cross_rvol_gate_trail` | GBPJPY D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_tk_cross_rvol_gate_trail` | GBPUSD H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_tk_cross_rvol_gate_trail` | GBPUSD D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_tk_cross_rvol_gate_trail` | US500 H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_tk_cross_rvol_gate_trail` | US500 D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_tk_cross_rvol_gate_trail` | USDJPY H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_tk_cross_rvol_gate_trail` | USDJPY D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_tk_cross_rvol_gate_trail` | XAUUSD H4 | seed | 4 | 20900 | reject | RUNG 2 WALK_FORWARD | - | 0.0145 |
+| `gen_ic_kumo_tk_cross_rvol_gate_trail` | XAUUSD D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_tk_cross_session_swing_tp_long` | AUDJPY H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_tk_cross_session_swing_tp_long` | AUDUSD H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_tk_cross_session_swing_tp_long` | EURJPY H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_tk_cross_session_swing_tp_long` | EURUSD H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_tk_cross_session_swing_tp_long` | GBPJPY H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_tk_cross_session_swing_tp_long` | GBPUSD H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_tk_cross_session_swing_tp_long` | US500 H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_tk_cross_session_swing_tp_long` | USDJPY H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_tk_cross_session_swing_tp_long` | XAUUSD H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_tk_cross_session_tp_r` | AUDJPY H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_tk_cross_session_tp_r` | AUDUSD H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_tk_cross_session_tp_r` | EURJPY H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_tk_cross_session_tp_r` | EURUSD H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_tk_cross_session_tp_r` | GBPJPY H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_tk_cross_session_tp_r` | GBPUSD H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_tk_cross_session_tp_r` | US500 H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_tk_cross_session_tp_r` | USDJPY H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_ic_kumo_tk_cross_session_tp_r` | XAUUSD H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_macd_cci_adx_gate_swing_tp_long` | AUDJPY H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_macd_cci_adx_gate_swing_tp_long` | AUDJPY D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_macd_cci_adx_gate_swing_tp_long` | AUDUSD H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_macd_cci_adx_gate_swing_tp_long` | AUDUSD D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_macd_cci_adx_gate_swing_tp_long` | EURGBP H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_macd_cci_adx_gate_swing_tp_long` | EURGBP D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_macd_cci_adx_gate_swing_tp_long` | EURJPY H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_macd_cci_adx_gate_swing_tp_long` | EURJPY D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_macd_cci_adx_gate_swing_tp_long` | EURUSD H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_macd_cci_adx_gate_swing_tp_long` | EURUSD D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_macd_cci_adx_gate_swing_tp_long` | GBPJPY H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_macd_cci_adx_gate_swing_tp_long` | GBPJPY D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_macd_cci_adx_gate_swing_tp_long` | GBPUSD H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_macd_cci_adx_gate_swing_tp_long` | GBPUSD D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_macd_cci_adx_gate_swing_tp_long` | NZDUSD H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_macd_cci_adx_gate_swing_tp_long` | NZDUSD D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_macd_cci_adx_gate_swing_tp_long` | USDCAD H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_macd_cci_adx_gate_swing_tp_long` | USDCAD D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_macd_cci_adx_gate_swing_tp_long` | USDCHF H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_macd_cci_adx_gate_swing_tp_long` | USDCHF D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_macd_cci_adx_gate_swing_tp_long` | USDJPY H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_macd_cci_adx_gate_swing_tp_long` | USDJPY D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_macd_cci_adx_gate_swing_tp_long` | XAUUSD H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_macd_cci_adx_gate_swing_tp_long` | XAUUSD D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_macd_cci_adx_gate_time_exit` | AUDJPY H4 | seed | 4 | 20900 | reject | RUNG 2 WALK_FORWARD | - | 0.02185 |
+| `gen_mo_macd_cci_adx_gate_time_exit` | AUDJPY D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_macd_cci_adx_gate_time_exit` | AUDUSD H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_macd_cci_adx_gate_time_exit` | AUDUSD D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_macd_cci_adx_gate_time_exit` | EURGBP H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_macd_cci_adx_gate_time_exit` | EURGBP D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_macd_cci_adx_gate_time_exit` | EURJPY H4 | seed | 4 | 20900 | reject | RUNG 1 IN_SAMPLE_SCREEN | - | 0.01822 |
+| `gen_mo_macd_cci_adx_gate_time_exit` | EURJPY D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_macd_cci_adx_gate_time_exit` | EURUSD H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_macd_cci_adx_gate_time_exit` | EURUSD D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_macd_cci_adx_gate_time_exit` | GBPJPY H4 | seed | 4 | 20900 | reject | RUNG 1 IN_SAMPLE_SCREEN | - | 0.01448 |
+| `gen_mo_macd_cci_adx_gate_time_exit` | GBPJPY D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_macd_cci_adx_gate_time_exit` | GBPUSD H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_macd_cci_adx_gate_time_exit` | GBPUSD D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_macd_cci_adx_gate_time_exit` | NZDUSD H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_macd_cci_adx_gate_time_exit` | NZDUSD D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_macd_cci_adx_gate_time_exit` | USDCAD H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_macd_cci_adx_gate_time_exit` | USDCAD D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_macd_cci_adx_gate_time_exit` | USDCHF H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_macd_cci_adx_gate_time_exit` | USDCHF D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_macd_cci_adx_gate_time_exit` | USDJPY H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_macd_cci_adx_gate_time_exit` | USDJPY D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_macd_cci_adx_gate_time_exit` | XAUUSD H4 | seed | 4 | 20900 | reject | RUNG 2 WALK_FORWARD | - | 0.01469 |
+| `gen_mo_macd_cci_adx_gate_time_exit` | XAUUSD D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_macd_cci_adx_gate_trail` | AUDJPY H4 | seed | 4 | 20900 | reject | RUNG 2 WALK_FORWARD | - | 0.01429 |
+| `gen_mo_macd_cci_adx_gate_trail` | AUDJPY D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_macd_cci_adx_gate_trail` | AUDUSD H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_macd_cci_adx_gate_trail` | AUDUSD D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_macd_cci_adx_gate_trail` | EURGBP H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_macd_cci_adx_gate_trail` | EURGBP D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_macd_cci_adx_gate_trail` | EURJPY H4 | seed | 4 | 20900 | reject | RUNG 2 WALK_FORWARD | - | 0.009423 |
+| `gen_mo_macd_cci_adx_gate_trail` | EURJPY D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_macd_cci_adx_gate_trail` | EURUSD H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_macd_cci_adx_gate_trail` | EURUSD D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_macd_cci_adx_gate_trail` | GBPJPY H4 | seed | 4 | 20900 | reject | RUNG 2 WALK_FORWARD | - | 0.005767 |
+| `gen_mo_macd_cci_adx_gate_trail` | GBPJPY D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_macd_cci_adx_gate_trail` | GBPUSD H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_macd_cci_adx_gate_trail` | GBPUSD D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_macd_cci_adx_gate_trail` | NZDUSD H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_macd_cci_adx_gate_trail` | NZDUSD D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_macd_cci_adx_gate_trail` | USDCAD H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_macd_cci_adx_gate_trail` | USDCAD D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_macd_cci_adx_gate_trail` | USDCHF H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_macd_cci_adx_gate_trail` | USDCHF D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_macd_cci_adx_gate_trail` | USDJPY H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_macd_cci_adx_gate_trail` | USDJPY D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_macd_cci_adx_gate_trail` | XAUUSD H4 | seed | 4 | 20900 | reject | RUNG 4 ROBUSTNESS | - | 0.01938 |
+| `gen_mo_macd_cci_adx_gate_trail` | XAUUSD D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_macd_cci_none_time_exit` | AUDJPY H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_macd_cci_none_time_exit` | AUDJPY D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_macd_cci_none_time_exit` | AUDUSD H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_macd_cci_none_time_exit` | AUDUSD D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_macd_cci_none_time_exit` | EURGBP H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_macd_cci_none_time_exit` | EURGBP D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_macd_cci_none_time_exit` | EURJPY H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_macd_cci_none_time_exit` | EURJPY D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_macd_cci_none_time_exit` | EURUSD H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_macd_cci_none_time_exit` | EURUSD D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_macd_cci_none_time_exit` | GBPJPY H4 | seed | 4 | 20900 | reject | RUNG 2 WALK_FORWARD | - | 0.03076 |
+| `gen_mo_macd_cci_none_time_exit` | GBPJPY D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_macd_cci_none_time_exit` | GBPUSD H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_macd_cci_none_time_exit` | GBPUSD D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_macd_cci_none_time_exit` | NZDUSD H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_macd_cci_none_time_exit` | NZDUSD D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_macd_cci_none_time_exit` | USDCAD H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_macd_cci_none_time_exit` | USDCAD D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_macd_cci_none_time_exit` | USDCHF H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_macd_cci_none_time_exit` | USDCHF D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_macd_cci_none_time_exit` | USDJPY H4 | seed | 4 | 20900 | reject | RUNG 1 IN_SAMPLE_SCREEN | - | 0.01583 |
+| `gen_mo_macd_cci_none_time_exit` | USDJPY D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_macd_cci_none_time_exit` | XAUUSD H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_macd_cci_none_time_exit` | XAUUSD D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_macd_cci_session_swing_tp_long` | AUDJPY H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_macd_cci_session_swing_tp_long` | AUDUSD H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_macd_cci_session_swing_tp_long` | EURGBP H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_macd_cci_session_swing_tp_long` | EURJPY H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_macd_cci_session_swing_tp_long` | EURUSD H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_macd_cci_session_swing_tp_long` | GBPJPY H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_macd_cci_session_swing_tp_long` | GBPUSD H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_macd_cci_session_swing_tp_long` | NZDUSD H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_macd_cci_session_swing_tp_long` | USDCAD H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_macd_cci_session_swing_tp_long` | USDCHF H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_macd_cci_session_swing_tp_long` | USDJPY H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_macd_cci_session_swing_tp_long` | XAUUSD H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_macd_cci_session_time_exit` | AUDJPY H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_macd_cci_session_time_exit` | AUDUSD H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_macd_cci_session_time_exit` | EURGBP H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_macd_cci_session_time_exit` | EURJPY H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_macd_cci_session_time_exit` | EURUSD H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_macd_cci_session_time_exit` | GBPJPY H4 | seed | 4 | 20900 | reject | RUNG 2 WALK_FORWARD | - | 0.01428 |
+| `gen_mo_macd_cci_session_time_exit` | GBPUSD H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_macd_cci_session_time_exit` | NZDUSD H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_macd_cci_session_time_exit` | USDCAD H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_macd_cci_session_time_exit` | USDCHF H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_macd_cci_session_time_exit` | USDJPY H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_macd_cci_session_time_exit` | XAUUSD H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_macd_stoch_none_swing_tp_long` | AUDJPY H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_macd_stoch_none_swing_tp_long` | AUDJPY D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_macd_stoch_none_swing_tp_long` | AUDUSD H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_macd_stoch_none_swing_tp_long` | AUDUSD D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_macd_stoch_none_swing_tp_long` | EURGBP H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_macd_stoch_none_swing_tp_long` | EURGBP D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_macd_stoch_none_swing_tp_long` | EURJPY H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_macd_stoch_none_swing_tp_long` | EURJPY D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_macd_stoch_none_swing_tp_long` | EURUSD H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_macd_stoch_none_swing_tp_long` | EURUSD D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_macd_stoch_none_swing_tp_long` | GBPJPY H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_macd_stoch_none_swing_tp_long` | GBPJPY D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_macd_stoch_none_swing_tp_long` | GBPUSD H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_macd_stoch_none_swing_tp_long` | GBPUSD D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_macd_stoch_none_swing_tp_long` | NZDUSD H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_macd_stoch_none_swing_tp_long` | NZDUSD D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_macd_stoch_none_swing_tp_long` | USDCAD H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_macd_stoch_none_swing_tp_long` | USDCAD D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_macd_stoch_none_swing_tp_long` | USDCHF H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_macd_stoch_none_swing_tp_long` | USDCHF D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_macd_stoch_none_swing_tp_long` | USDJPY H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_macd_stoch_none_swing_tp_long` | USDJPY D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_macd_stoch_none_swing_tp_long` | XAUUSD H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_macd_stoch_none_swing_tp_long` | XAUUSD D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_macd_stoch_none_time_exit` | AUDJPY H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_macd_stoch_none_time_exit` | AUDJPY D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_macd_stoch_none_time_exit` | AUDUSD H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_macd_stoch_none_time_exit` | AUDUSD D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_macd_stoch_none_time_exit` | EURGBP H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_macd_stoch_none_time_exit` | EURGBP D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_macd_stoch_none_time_exit` | EURJPY H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_macd_stoch_none_time_exit` | EURJPY D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_macd_stoch_none_time_exit` | EURUSD H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_macd_stoch_none_time_exit` | EURUSD D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_macd_stoch_none_time_exit` | GBPJPY H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_macd_stoch_none_time_exit` | GBPJPY D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_macd_stoch_none_time_exit` | GBPUSD H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_macd_stoch_none_time_exit` | GBPUSD D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_macd_stoch_none_time_exit` | NZDUSD H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_macd_stoch_none_time_exit` | NZDUSD D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_macd_stoch_none_time_exit` | USDCAD H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_macd_stoch_none_time_exit` | USDCAD D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_macd_stoch_none_time_exit` | USDCHF H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_macd_stoch_none_time_exit` | USDCHF D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_macd_stoch_none_time_exit` | USDJPY H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_macd_stoch_none_time_exit` | USDJPY D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_macd_stoch_none_time_exit` | XAUUSD H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_macd_stoch_none_time_exit` | XAUUSD D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_macd_stoch_none_tp_r` | AUDJPY H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_macd_stoch_none_tp_r` | AUDJPY D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_macd_stoch_none_tp_r` | AUDUSD H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_macd_stoch_none_tp_r` | AUDUSD D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_macd_stoch_none_tp_r` | EURGBP H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_macd_stoch_none_tp_r` | EURGBP D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_macd_stoch_none_tp_r` | EURJPY H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_macd_stoch_none_tp_r` | EURJPY D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_macd_stoch_none_tp_r` | EURUSD H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_macd_stoch_none_tp_r` | EURUSD D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_macd_stoch_none_tp_r` | GBPJPY H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_macd_stoch_none_tp_r` | GBPJPY D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_macd_stoch_none_tp_r` | GBPUSD H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_macd_stoch_none_tp_r` | GBPUSD D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_macd_stoch_none_tp_r` | NZDUSD H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_macd_stoch_none_tp_r` | NZDUSD D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_macd_stoch_none_tp_r` | USDCAD H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_macd_stoch_none_tp_r` | USDCAD D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_macd_stoch_none_tp_r` | USDCHF H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_macd_stoch_none_tp_r` | USDCHF D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_macd_stoch_none_tp_r` | USDJPY H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_macd_stoch_none_tp_r` | USDJPY D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_macd_stoch_none_tp_r` | XAUUSD H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_macd_stoch_none_tp_r` | XAUUSD D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_macd_stoch_none_trail` | AUDJPY H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_macd_stoch_none_trail` | AUDJPY D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_macd_stoch_none_trail` | AUDUSD H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_macd_stoch_none_trail` | AUDUSD D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_macd_stoch_none_trail` | EURGBP H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_macd_stoch_none_trail` | EURGBP D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_macd_stoch_none_trail` | EURJPY H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_macd_stoch_none_trail` | EURJPY D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_macd_stoch_none_trail` | EURUSD H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_macd_stoch_none_trail` | EURUSD D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_macd_stoch_none_trail` | GBPJPY H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_macd_stoch_none_trail` | GBPJPY D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_macd_stoch_none_trail` | GBPUSD H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_macd_stoch_none_trail` | GBPUSD D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_macd_stoch_none_trail` | NZDUSD H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_macd_stoch_none_trail` | NZDUSD D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_macd_stoch_none_trail` | USDCAD H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_macd_stoch_none_trail` | USDCAD D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_macd_stoch_none_trail` | USDCHF H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_macd_stoch_none_trail` | USDCHF D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_macd_stoch_none_trail` | USDJPY H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_macd_stoch_none_trail` | USDJPY D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_macd_stoch_none_trail` | XAUUSD H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_macd_stoch_none_trail` | XAUUSD D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_macd_stoch_rvol_gate_time_exit` | AUDJPY H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_macd_stoch_rvol_gate_time_exit` | AUDJPY D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_macd_stoch_rvol_gate_time_exit` | AUDUSD H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_macd_stoch_rvol_gate_time_exit` | AUDUSD D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_macd_stoch_rvol_gate_time_exit` | EURGBP H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_macd_stoch_rvol_gate_time_exit` | EURGBP D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_macd_stoch_rvol_gate_time_exit` | EURJPY H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_macd_stoch_rvol_gate_time_exit` | EURJPY D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_macd_stoch_rvol_gate_time_exit` | EURUSD H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_macd_stoch_rvol_gate_time_exit` | EURUSD D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_macd_stoch_rvol_gate_time_exit` | GBPJPY H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_macd_stoch_rvol_gate_time_exit` | GBPJPY D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_macd_stoch_rvol_gate_time_exit` | GBPUSD H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_macd_stoch_rvol_gate_time_exit` | GBPUSD D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_macd_stoch_rvol_gate_time_exit` | NZDUSD H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_macd_stoch_rvol_gate_time_exit` | NZDUSD D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_macd_stoch_rvol_gate_time_exit` | USDCAD H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_macd_stoch_rvol_gate_time_exit` | USDCAD D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_macd_stoch_rvol_gate_time_exit` | USDCHF H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_macd_stoch_rvol_gate_time_exit` | USDCHF D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_macd_stoch_rvol_gate_time_exit` | USDJPY H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_macd_stoch_rvol_gate_time_exit` | USDJPY D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_macd_stoch_rvol_gate_time_exit` | XAUUSD H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_macd_stoch_rvol_gate_time_exit` | XAUUSD D1 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_rsi_stoch_adx_gate_swing_tp_long` | AUDJPY H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_rsi_stoch_adx_gate_swing_tp_long` | AUDJPY D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_rsi_stoch_adx_gate_swing_tp_long` | AUDUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_rsi_stoch_adx_gate_swing_tp_long` | AUDUSD D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_rsi_stoch_adx_gate_swing_tp_long` | EURGBP H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_rsi_stoch_adx_gate_swing_tp_long` | EURGBP D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_rsi_stoch_adx_gate_swing_tp_long` | EURJPY H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_rsi_stoch_adx_gate_swing_tp_long` | EURJPY D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_rsi_stoch_adx_gate_swing_tp_long` | EURUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_rsi_stoch_adx_gate_swing_tp_long` | EURUSD D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_rsi_stoch_adx_gate_swing_tp_long` | GBPJPY H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_rsi_stoch_adx_gate_swing_tp_long` | GBPJPY D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_rsi_stoch_adx_gate_swing_tp_long` | GBPUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_rsi_stoch_adx_gate_swing_tp_long` | GBPUSD D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_rsi_stoch_adx_gate_swing_tp_long` | NZDUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_rsi_stoch_adx_gate_swing_tp_long` | NZDUSD D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_rsi_stoch_adx_gate_swing_tp_long` | USDCAD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_rsi_stoch_adx_gate_swing_tp_long` | USDCAD D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_rsi_stoch_adx_gate_swing_tp_long` | USDCHF H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_rsi_stoch_adx_gate_swing_tp_long` | USDCHF D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_rsi_stoch_adx_gate_swing_tp_long` | USDJPY H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_rsi_stoch_adx_gate_swing_tp_long` | USDJPY D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_rsi_stoch_adx_gate_swing_tp_long` | XAUUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_rsi_stoch_adx_gate_swing_tp_long` | XAUUSD D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_rsi_stoch_rvol_gate_swing_tp_long` | AUDJPY H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_rsi_stoch_rvol_gate_swing_tp_long` | AUDJPY D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_rsi_stoch_rvol_gate_swing_tp_long` | AUDUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_rsi_stoch_rvol_gate_swing_tp_long` | AUDUSD D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_rsi_stoch_rvol_gate_swing_tp_long` | EURGBP H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_rsi_stoch_rvol_gate_swing_tp_long` | EURGBP D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_rsi_stoch_rvol_gate_swing_tp_long` | EURJPY H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_rsi_stoch_rvol_gate_swing_tp_long` | EURJPY D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_rsi_stoch_rvol_gate_swing_tp_long` | EURUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_rsi_stoch_rvol_gate_swing_tp_long` | EURUSD D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_rsi_stoch_rvol_gate_swing_tp_long` | GBPJPY H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_rsi_stoch_rvol_gate_swing_tp_long` | GBPJPY D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_rsi_stoch_rvol_gate_swing_tp_long` | GBPUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_rsi_stoch_rvol_gate_swing_tp_long` | GBPUSD D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_rsi_stoch_rvol_gate_swing_tp_long` | NZDUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_rsi_stoch_rvol_gate_swing_tp_long` | NZDUSD D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_rsi_stoch_rvol_gate_swing_tp_long` | USDCAD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_rsi_stoch_rvol_gate_swing_tp_long` | USDCAD D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_rsi_stoch_rvol_gate_swing_tp_long` | USDCHF H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_rsi_stoch_rvol_gate_swing_tp_long` | USDCHF D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_rsi_stoch_rvol_gate_swing_tp_long` | USDJPY H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_rsi_stoch_rvol_gate_swing_tp_long` | USDJPY D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_rsi_stoch_rvol_gate_swing_tp_long` | XAUUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_rsi_stoch_rvol_gate_swing_tp_long` | XAUUSD D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_rsi_stoch_rvol_gate_swing_tp_short` | AUDJPY H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_rsi_stoch_rvol_gate_swing_tp_short` | AUDJPY D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_rsi_stoch_rvol_gate_swing_tp_short` | AUDUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_rsi_stoch_rvol_gate_swing_tp_short` | AUDUSD D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_rsi_stoch_rvol_gate_swing_tp_short` | EURGBP H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_rsi_stoch_rvol_gate_swing_tp_short` | EURGBP D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_rsi_stoch_rvol_gate_swing_tp_short` | EURJPY H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_rsi_stoch_rvol_gate_swing_tp_short` | EURJPY D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_rsi_stoch_rvol_gate_swing_tp_short` | EURUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_rsi_stoch_rvol_gate_swing_tp_short` | EURUSD D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_rsi_stoch_rvol_gate_swing_tp_short` | GBPJPY H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_rsi_stoch_rvol_gate_swing_tp_short` | GBPJPY D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_rsi_stoch_rvol_gate_swing_tp_short` | GBPUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_rsi_stoch_rvol_gate_swing_tp_short` | GBPUSD D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_rsi_stoch_rvol_gate_swing_tp_short` | NZDUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_rsi_stoch_rvol_gate_swing_tp_short` | NZDUSD D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_rsi_stoch_rvol_gate_swing_tp_short` | USDCAD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_rsi_stoch_rvol_gate_swing_tp_short` | USDCAD D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_rsi_stoch_rvol_gate_swing_tp_short` | USDCHF H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_rsi_stoch_rvol_gate_swing_tp_short` | USDCHF D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_rsi_stoch_rvol_gate_swing_tp_short` | USDJPY H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_rsi_stoch_rvol_gate_swing_tp_short` | USDJPY D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_rsi_stoch_rvol_gate_swing_tp_short` | XAUUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_rsi_stoch_rvol_gate_swing_tp_short` | XAUUSD D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_rsi_stoch_rvol_gate_tp_r` | AUDJPY H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_rsi_stoch_rvol_gate_tp_r` | AUDJPY D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_rsi_stoch_rvol_gate_tp_r` | AUDUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_rsi_stoch_rvol_gate_tp_r` | AUDUSD D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_rsi_stoch_rvol_gate_tp_r` | EURGBP H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_rsi_stoch_rvol_gate_tp_r` | EURGBP D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_rsi_stoch_rvol_gate_tp_r` | EURJPY H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_rsi_stoch_rvol_gate_tp_r` | EURJPY D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_rsi_stoch_rvol_gate_tp_r` | EURUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_rsi_stoch_rvol_gate_tp_r` | EURUSD D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_rsi_stoch_rvol_gate_tp_r` | GBPJPY H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_rsi_stoch_rvol_gate_tp_r` | GBPJPY D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_rsi_stoch_rvol_gate_tp_r` | GBPUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_rsi_stoch_rvol_gate_tp_r` | GBPUSD D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_rsi_stoch_rvol_gate_tp_r` | NZDUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_rsi_stoch_rvol_gate_tp_r` | NZDUSD D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_rsi_stoch_rvol_gate_tp_r` | USDCAD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_rsi_stoch_rvol_gate_tp_r` | USDCAD D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_rsi_stoch_rvol_gate_tp_r` | USDCHF H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_rsi_stoch_rvol_gate_tp_r` | USDCHF D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_rsi_stoch_rvol_gate_tp_r` | USDJPY H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_rsi_stoch_rvol_gate_tp_r` | USDJPY D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_rsi_stoch_rvol_gate_tp_r` | XAUUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_rsi_stoch_rvol_gate_tp_r` | XAUUSD D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_rsi_stoch_session_swing_tp_long` | AUDJPY H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_rsi_stoch_session_swing_tp_long` | AUDUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_rsi_stoch_session_swing_tp_long` | EURGBP H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_rsi_stoch_session_swing_tp_long` | EURJPY H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_rsi_stoch_session_swing_tp_long` | EURUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_rsi_stoch_session_swing_tp_long` | GBPJPY H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_rsi_stoch_session_swing_tp_long` | GBPUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_rsi_stoch_session_swing_tp_long` | NZDUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_rsi_stoch_session_swing_tp_long` | USDCAD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_rsi_stoch_session_swing_tp_long` | USDCHF H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_rsi_stoch_session_swing_tp_long` | USDJPY H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_rsi_stoch_session_swing_tp_long` | XAUUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_rsi_stoch_session_trail` | AUDJPY H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_rsi_stoch_session_trail` | AUDUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_rsi_stoch_session_trail` | EURGBP H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_rsi_stoch_session_trail` | EURJPY H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_rsi_stoch_session_trail` | EURUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_rsi_stoch_session_trail` | GBPJPY H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_rsi_stoch_session_trail` | GBPUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_rsi_stoch_session_trail` | NZDUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_rsi_stoch_session_trail` | USDCAD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_rsi_stoch_session_trail` | USDCHF H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_rsi_stoch_session_trail` | USDJPY H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mo_rsi_stoch_session_trail` | XAUUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mr_bb_reentry_none_swing_tp_long` | AUDUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mr_bb_reentry_none_swing_tp_long` | AUDUSD D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mr_bb_reentry_none_swing_tp_long` | EURGBP H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mr_bb_reentry_none_swing_tp_long` | EURGBP D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mr_bb_reentry_none_swing_tp_long` | EURUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mr_bb_reentry_none_swing_tp_long` | EURUSD D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mr_bb_reentry_none_swing_tp_long` | GBPUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mr_bb_reentry_none_swing_tp_long` | GBPUSD D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mr_bb_reentry_none_swing_tp_long` | NZDUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mr_bb_reentry_none_swing_tp_long` | NZDUSD D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mr_bb_reentry_none_swing_tp_long` | USDCAD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mr_bb_reentry_none_swing_tp_long` | USDCAD D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mr_bb_reentry_none_swing_tp_long` | USDCHF H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mr_bb_reentry_none_swing_tp_long` | USDCHF D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mr_bb_reentry_none_swing_tp_long` | USDJPY H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mr_bb_reentry_none_swing_tp_long` | USDJPY D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mr_bb_reentry_none_swing_tp_short` | AUDUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mr_bb_reentry_none_swing_tp_short` | AUDUSD D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mr_bb_reentry_none_swing_tp_short` | EURGBP H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mr_bb_reentry_none_swing_tp_short` | EURGBP D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mr_bb_reentry_none_swing_tp_short` | EURUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mr_bb_reentry_none_swing_tp_short` | EURUSD D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mr_bb_reentry_none_swing_tp_short` | GBPUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mr_bb_reentry_none_swing_tp_short` | GBPUSD D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mr_bb_reentry_none_swing_tp_short` | NZDUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mr_bb_reentry_none_swing_tp_short` | NZDUSD D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mr_bb_reentry_none_swing_tp_short` | USDCAD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mr_bb_reentry_none_swing_tp_short` | USDCAD D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mr_bb_reentry_none_swing_tp_short` | USDCHF H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mr_bb_reentry_none_swing_tp_short` | USDCHF D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mr_bb_reentry_none_swing_tp_short` | USDJPY H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mr_bb_reentry_none_swing_tp_short` | USDJPY D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mr_bb_reentry_none_time_exit` | AUDUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mr_bb_reentry_none_time_exit` | AUDUSD D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mr_bb_reentry_none_time_exit` | EURGBP H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mr_bb_reentry_none_time_exit` | EURGBP D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mr_bb_reentry_none_time_exit` | EURUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mr_bb_reentry_none_time_exit` | EURUSD D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mr_bb_reentry_none_time_exit` | GBPUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mr_bb_reentry_none_time_exit` | GBPUSD D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mr_bb_reentry_none_time_exit` | NZDUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mr_bb_reentry_none_time_exit` | NZDUSD D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mr_bb_reentry_none_time_exit` | USDCAD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mr_bb_reentry_none_time_exit` | USDCAD D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mr_bb_reentry_none_time_exit` | USDCHF H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mr_bb_reentry_none_time_exit` | USDCHF D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mr_bb_reentry_none_time_exit` | USDJPY H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mr_bb_reentry_none_time_exit` | USDJPY D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mr_bb_reentry_rvol_gate_swing_tp_long` | AUDUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mr_bb_reentry_rvol_gate_swing_tp_long` | AUDUSD D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mr_bb_reentry_rvol_gate_swing_tp_long` | EURGBP H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mr_bb_reentry_rvol_gate_swing_tp_long` | EURGBP D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mr_bb_reentry_rvol_gate_swing_tp_long` | EURUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mr_bb_reentry_rvol_gate_swing_tp_long` | EURUSD D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mr_bb_reentry_rvol_gate_swing_tp_long` | GBPUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mr_bb_reentry_rvol_gate_swing_tp_long` | GBPUSD D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mr_bb_reentry_rvol_gate_swing_tp_long` | NZDUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mr_bb_reentry_rvol_gate_swing_tp_long` | NZDUSD D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mr_bb_reentry_rvol_gate_swing_tp_long` | USDCAD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mr_bb_reentry_rvol_gate_swing_tp_long` | USDCAD D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mr_bb_reentry_rvol_gate_swing_tp_long` | USDCHF H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mr_bb_reentry_rvol_gate_swing_tp_long` | USDCHF D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mr_bb_reentry_rvol_gate_swing_tp_long` | USDJPY H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mr_bb_reentry_rvol_gate_swing_tp_long` | USDJPY D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mr_bb_reentry_session_swing_tp_long` | AUDUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mr_bb_reentry_session_swing_tp_long` | EURGBP H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mr_bb_reentry_session_swing_tp_long` | EURUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mr_bb_reentry_session_swing_tp_long` | GBPUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mr_bb_reentry_session_swing_tp_long` | NZDUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mr_bb_reentry_session_swing_tp_long` | USDCAD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mr_bb_reentry_session_swing_tp_long` | USDCHF H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mr_bb_reentry_session_swing_tp_long` | USDJPY H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mr_bb_reentry_session_swing_tp_short` | AUDUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mr_bb_reentry_session_swing_tp_short` | EURGBP H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mr_bb_reentry_session_swing_tp_short` | EURUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mr_bb_reentry_session_swing_tp_short` | GBPUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mr_bb_reentry_session_swing_tp_short` | NZDUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mr_bb_reentry_session_swing_tp_short` | USDCAD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mr_bb_reentry_session_swing_tp_short` | USDCHF H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mr_bb_reentry_session_swing_tp_short` | USDJPY H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mr_bb_reentry_session_time_exit` | AUDUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mr_bb_reentry_session_time_exit` | EURGBP H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mr_bb_reentry_session_time_exit` | EURUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mr_bb_reentry_session_time_exit` | GBPUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mr_bb_reentry_session_time_exit` | NZDUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mr_bb_reentry_session_time_exit` | USDCAD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mr_bb_reentry_session_time_exit` | USDCHF H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mr_bb_reentry_session_time_exit` | USDJPY H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mr_kc_reentry_none_swing_tp_long` | AUDUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mr_kc_reentry_none_swing_tp_long` | AUDUSD D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mr_kc_reentry_none_swing_tp_long` | EURGBP H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mr_kc_reentry_none_swing_tp_long` | EURGBP D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mr_kc_reentry_none_swing_tp_long` | EURUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mr_kc_reentry_none_swing_tp_long` | EURUSD D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mr_kc_reentry_none_swing_tp_long` | GBPUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mr_kc_reentry_none_swing_tp_long` | GBPUSD D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mr_kc_reentry_none_swing_tp_long` | NZDUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mr_kc_reentry_none_swing_tp_long` | NZDUSD D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mr_kc_reentry_none_swing_tp_long` | USDCAD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mr_kc_reentry_none_swing_tp_long` | USDCAD D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mr_kc_reentry_none_swing_tp_long` | USDCHF H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mr_kc_reentry_none_swing_tp_long` | USDCHF D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mr_kc_reentry_none_swing_tp_long` | USDJPY H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mr_kc_reentry_none_swing_tp_long` | USDJPY D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mr_kc_reentry_none_time_exit` | AUDUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mr_kc_reentry_none_time_exit` | AUDUSD D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mr_kc_reentry_none_time_exit` | EURGBP H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mr_kc_reentry_none_time_exit` | EURGBP D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mr_kc_reentry_none_time_exit` | EURUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mr_kc_reentry_none_time_exit` | EURUSD D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mr_kc_reentry_none_time_exit` | GBPUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mr_kc_reentry_none_time_exit` | GBPUSD D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mr_kc_reentry_none_time_exit` | NZDUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mr_kc_reentry_none_time_exit` | NZDUSD D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mr_kc_reentry_none_time_exit` | USDCAD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mr_kc_reentry_none_time_exit` | USDCAD D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mr_kc_reentry_none_time_exit` | USDCHF H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mr_kc_reentry_none_time_exit` | USDCHF D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mr_kc_reentry_none_time_exit` | USDJPY H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mr_kc_reentry_none_time_exit` | USDJPY D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mr_kc_reentry_none_trail` | AUDUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mr_kc_reentry_none_trail` | AUDUSD D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mr_kc_reentry_none_trail` | EURGBP H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mr_kc_reentry_none_trail` | EURGBP D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mr_kc_reentry_none_trail` | EURUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mr_kc_reentry_none_trail` | EURUSD D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mr_kc_reentry_none_trail` | GBPUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mr_kc_reentry_none_trail` | GBPUSD D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mr_kc_reentry_none_trail` | NZDUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mr_kc_reentry_none_trail` | NZDUSD D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mr_kc_reentry_none_trail` | USDCAD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mr_kc_reentry_none_trail` | USDCAD D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mr_kc_reentry_none_trail` | USDCHF H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mr_kc_reentry_none_trail` | USDCHF D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mr_kc_reentry_none_trail` | USDJPY H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mr_kc_reentry_none_trail` | USDJPY D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mr_kc_reentry_session_swing_tp_long` | AUDUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mr_kc_reentry_session_swing_tp_long` | EURGBP H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mr_kc_reentry_session_swing_tp_long` | EURUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mr_kc_reentry_session_swing_tp_long` | GBPUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mr_kc_reentry_session_swing_tp_long` | NZDUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mr_kc_reentry_session_swing_tp_long` | USDCAD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mr_kc_reentry_session_swing_tp_long` | USDCHF H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mr_kc_reentry_session_swing_tp_long` | USDJPY H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mr_kc_reentry_session_swing_tp_short` | AUDUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mr_kc_reentry_session_swing_tp_short` | EURGBP H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mr_kc_reentry_session_swing_tp_short` | EURUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mr_kc_reentry_session_swing_tp_short` | GBPUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mr_kc_reentry_session_swing_tp_short` | NZDUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mr_kc_reentry_session_swing_tp_short` | USDCAD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mr_kc_reentry_session_swing_tp_short` | USDCHF H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mr_kc_reentry_session_swing_tp_short` | USDJPY H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mr_kc_reentry_session_time_exit` | AUDUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mr_kc_reentry_session_time_exit` | EURGBP H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mr_kc_reentry_session_time_exit` | EURUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mr_kc_reentry_session_time_exit` | GBPUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mr_kc_reentry_session_time_exit` | NZDUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mr_kc_reentry_session_time_exit` | USDCAD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mr_kc_reentry_session_time_exit` | USDCHF H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_mr_kc_reentry_session_time_exit` | USDJPY H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_sb_range_close_break_adx_gate_swing_tp_short` | DE40 H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_sb_range_close_break_adx_gate_swing_tp_short` | EURGBP H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_sb_range_close_break_adx_gate_swing_tp_short` | EURJPY H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_sb_range_close_break_adx_gate_swing_tp_short` | EURUSD H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_sb_range_close_break_adx_gate_swing_tp_short` | GBPJPY H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_sb_range_close_break_adx_gate_swing_tp_short` | GBPUSD H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_sb_range_close_break_adx_gate_swing_tp_short` | UK100 H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_sb_range_close_break_adx_gate_swing_tp_short` | USDCHF H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_sb_range_close_break_adx_gate_time_exit` | DE40 H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_sb_range_close_break_adx_gate_time_exit` | EURGBP H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_sb_range_close_break_adx_gate_time_exit` | EURJPY H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_sb_range_close_break_adx_gate_time_exit` | EURUSD H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_sb_range_close_break_adx_gate_time_exit` | GBPJPY H4 | seed | 4 | 20900 | reject | RUNG 2 WALK_FORWARD | - | 0.001473 |
+| `gen_sb_range_close_break_adx_gate_time_exit` | GBPUSD H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_sb_range_close_break_adx_gate_time_exit` | UK100 H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_sb_range_close_break_adx_gate_time_exit` | USDCHF H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_sb_range_close_break_none_swing_tp_long` | DE40 H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_sb_range_close_break_none_swing_tp_long` | EURGBP H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_sb_range_close_break_none_swing_tp_long` | EURJPY H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_sb_range_close_break_none_swing_tp_long` | EURUSD H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_sb_range_close_break_none_swing_tp_long` | GBPJPY H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_sb_range_close_break_none_swing_tp_long` | GBPUSD H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_sb_range_close_break_none_swing_tp_long` | UK100 H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_sb_range_close_break_none_swing_tp_long` | USDCHF H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_sb_range_close_break_none_swing_tp_short` | DE40 H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_sb_range_close_break_none_swing_tp_short` | EURGBP H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_sb_range_close_break_none_swing_tp_short` | EURJPY H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_sb_range_close_break_none_swing_tp_short` | EURUSD H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_sb_range_close_break_none_swing_tp_short` | GBPJPY H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_sb_range_close_break_none_swing_tp_short` | GBPUSD H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_sb_range_close_break_none_swing_tp_short` | UK100 H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_sb_range_close_break_none_swing_tp_short` | USDCHF H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_sb_range_close_break_none_trail` | DE40 H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_sb_range_close_break_none_trail` | EURGBP H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_sb_range_close_break_none_trail` | EURJPY H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_sb_range_close_break_none_trail` | EURUSD H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_sb_range_close_break_none_trail` | GBPJPY H4 | seed | 4 | 20900 | reject | RUNG 2 WALK_FORWARD | - | 0.01521 |
+| `gen_sb_range_close_break_none_trail` | GBPUSD H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_sb_range_close_break_none_trail` | UK100 H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_sb_range_close_break_none_trail` | USDCHF H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_sb_range_close_break_rvol_gate_swing_tp_short` | DE40 H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_sb_range_close_break_rvol_gate_swing_tp_short` | EURGBP H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_sb_range_close_break_rvol_gate_swing_tp_short` | EURJPY H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_sb_range_close_break_rvol_gate_swing_tp_short` | EURUSD H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_sb_range_close_break_rvol_gate_swing_tp_short` | GBPJPY H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_sb_range_close_break_rvol_gate_swing_tp_short` | GBPUSD H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_sb_range_close_break_rvol_gate_swing_tp_short` | UK100 H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_sb_range_close_break_rvol_gate_swing_tp_short` | USDCHF H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_sb_range_close_break_session_swing_tp_long` | DE40 H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_sb_range_close_break_session_swing_tp_long` | EURGBP H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_sb_range_close_break_session_swing_tp_long` | EURJPY H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_sb_range_close_break_session_swing_tp_long` | EURUSD H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_sb_range_close_break_session_swing_tp_long` | GBPJPY H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_sb_range_close_break_session_swing_tp_long` | GBPUSD H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_sb_range_close_break_session_swing_tp_long` | UK100 H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_sb_range_close_break_session_swing_tp_long` | USDCHF H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_sb_range_close_break_session_time_exit` | DE40 H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_sb_range_close_break_session_time_exit` | EURGBP H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_sb_range_close_break_session_time_exit` | EURJPY H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_sb_range_close_break_session_time_exit` | EURUSD H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_sb_range_close_break_session_time_exit` | GBPJPY H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_sb_range_close_break_session_time_exit` | GBPUSD H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_sb_range_close_break_session_time_exit` | UK100 H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_sb_range_close_break_session_time_exit` | USDCHF H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_sb_range_fresh_cross_adx_gate_swing_tp_short` | DE40 H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_sb_range_fresh_cross_adx_gate_swing_tp_short` | EURGBP H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_sb_range_fresh_cross_adx_gate_swing_tp_short` | EURJPY H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_sb_range_fresh_cross_adx_gate_swing_tp_short` | EURUSD H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_sb_range_fresh_cross_adx_gate_swing_tp_short` | GBPJPY H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_sb_range_fresh_cross_adx_gate_swing_tp_short` | GBPUSD H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_sb_range_fresh_cross_adx_gate_swing_tp_short` | UK100 H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_sb_range_fresh_cross_adx_gate_swing_tp_short` | USDCHF H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_sb_range_fresh_cross_adx_gate_time_exit` | DE40 H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_sb_range_fresh_cross_adx_gate_time_exit` | EURGBP H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_sb_range_fresh_cross_adx_gate_time_exit` | EURJPY H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_sb_range_fresh_cross_adx_gate_time_exit` | EURUSD H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_sb_range_fresh_cross_adx_gate_time_exit` | GBPJPY H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_sb_range_fresh_cross_adx_gate_time_exit` | GBPUSD H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_sb_range_fresh_cross_adx_gate_time_exit` | UK100 H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_sb_range_fresh_cross_adx_gate_time_exit` | USDCHF H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_sb_range_fresh_cross_none_swing_tp_long` | DE40 H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_sb_range_fresh_cross_none_swing_tp_long` | EURGBP H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_sb_range_fresh_cross_none_swing_tp_long` | EURJPY H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_sb_range_fresh_cross_none_swing_tp_long` | EURUSD H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_sb_range_fresh_cross_none_swing_tp_long` | GBPJPY H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_sb_range_fresh_cross_none_swing_tp_long` | GBPUSD H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_sb_range_fresh_cross_none_swing_tp_long` | UK100 H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_sb_range_fresh_cross_none_swing_tp_long` | USDCHF H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_sb_range_fresh_cross_none_swing_tp_short` | DE40 H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_sb_range_fresh_cross_none_swing_tp_short` | EURGBP H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_sb_range_fresh_cross_none_swing_tp_short` | EURJPY H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_sb_range_fresh_cross_none_swing_tp_short` | EURUSD H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_sb_range_fresh_cross_none_swing_tp_short` | GBPJPY H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_sb_range_fresh_cross_none_swing_tp_short` | GBPUSD H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_sb_range_fresh_cross_none_swing_tp_short` | UK100 H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_sb_range_fresh_cross_none_swing_tp_short` | USDCHF H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_sb_range_fresh_cross_none_time_exit` | DE40 H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_sb_range_fresh_cross_none_time_exit` | EURGBP H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_sb_range_fresh_cross_none_time_exit` | EURJPY H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_sb_range_fresh_cross_none_time_exit` | EURUSD H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_sb_range_fresh_cross_none_time_exit` | GBPJPY H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_sb_range_fresh_cross_none_time_exit` | GBPUSD H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_sb_range_fresh_cross_none_time_exit` | UK100 H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_sb_range_fresh_cross_none_time_exit` | USDCHF H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_sb_range_fresh_cross_rvol_gate_tp_r` | DE40 H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_sb_range_fresh_cross_rvol_gate_tp_r` | EURGBP H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_sb_range_fresh_cross_rvol_gate_tp_r` | EURJPY H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_sb_range_fresh_cross_rvol_gate_tp_r` | EURUSD H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_sb_range_fresh_cross_rvol_gate_tp_r` | GBPJPY H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_sb_range_fresh_cross_rvol_gate_tp_r` | GBPUSD H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_sb_range_fresh_cross_rvol_gate_tp_r` | UK100 H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_sb_range_fresh_cross_rvol_gate_tp_r` | USDCHF H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_sb_range_fresh_cross_session_swing_tp_long` | DE40 H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_sb_range_fresh_cross_session_swing_tp_long` | EURGBP H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_sb_range_fresh_cross_session_swing_tp_long` | EURJPY H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_sb_range_fresh_cross_session_swing_tp_long` | EURUSD H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_sb_range_fresh_cross_session_swing_tp_long` | GBPJPY H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_sb_range_fresh_cross_session_swing_tp_long` | GBPUSD H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_sb_range_fresh_cross_session_swing_tp_long` | UK100 H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_sb_range_fresh_cross_session_swing_tp_long` | USDCHF H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_sb_range_fresh_cross_session_time_exit` | DE40 H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_sb_range_fresh_cross_session_time_exit` | EURGBP H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_sb_range_fresh_cross_session_time_exit` | EURJPY H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_sb_range_fresh_cross_session_time_exit` | EURUSD H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_sb_range_fresh_cross_session_time_exit` | GBPJPY H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_sb_range_fresh_cross_session_time_exit` | GBPUSD H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_sb_range_fresh_cross_session_time_exit` | UK100 H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_sb_range_fresh_cross_session_time_exit` | USDCHF H4 | seed | 4 | 20900 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_ema_recross_rvol_gate_trail` | AUDUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_ema_recross_rvol_gate_trail` | AUDUSD D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_ema_recross_rvol_gate_trail` | DE40 H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_ema_recross_rvol_gate_trail` | DE40 D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_ema_recross_rvol_gate_trail` | EURJPY H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_ema_recross_rvol_gate_trail` | EURJPY D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_ema_recross_rvol_gate_trail` | EURUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_ema_recross_rvol_gate_trail` | EURUSD D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_ema_recross_rvol_gate_trail` | GBPJPY H4 | seed | 8 | 20896 | reject | RUNG 2 WALK_FORWARD | - | 0.01651 |
+| `gen_tp_ema_recross_rvol_gate_trail` | GBPJPY D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_ema_recross_rvol_gate_trail` | GBPUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_ema_recross_rvol_gate_trail` | GBPUSD D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_ema_recross_rvol_gate_trail` | NZDUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_ema_recross_rvol_gate_trail` | NZDUSD D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_ema_recross_rvol_gate_trail` | UK100 H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_ema_recross_rvol_gate_trail` | UK100 D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_ema_recross_rvol_gate_trail` | US500 H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_ema_recross_rvol_gate_trail` | US500 D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_ema_recross_rvol_gate_trail` | USDCAD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_ema_recross_rvol_gate_trail` | USDCAD D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_ema_recross_rvol_gate_trail` | USDCHF H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_ema_recross_rvol_gate_trail` | USDCHF D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_ema_recross_rvol_gate_trail` | USDJPY H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_ema_recross_rvol_gate_trail` | USDJPY D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_ema_recross_rvol_gate_trail` | XAGUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_ema_recross_rvol_gate_trail` | XAGUSD D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_ema_recross_rvol_gate_trail` | XAUUSD H4 | seed | 8 | 20896 | reject | RUNG 4 ROBUSTNESS | - | 0.01144 |
+| `gen_tp_ema_recross_rvol_gate_trail` | XAUUSD D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_ema_recross_session_trail` | AUDUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_ema_recross_session_trail` | DE40 H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_ema_recross_session_trail` | EURJPY H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_ema_recross_session_trail` | EURUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_ema_recross_session_trail` | GBPJPY H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_ema_recross_session_trail` | GBPUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_ema_recross_session_trail` | NZDUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_ema_recross_session_trail` | UK100 H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_ema_recross_session_trail` | US500 H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_ema_recross_session_trail` | USDCAD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_ema_recross_session_trail` | USDCHF H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_ema_recross_session_trail` | USDJPY H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_ema_recross_session_trail` | XAGUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_ema_recross_session_trail` | XAUUSD H4 | seed | 8 | 20896 | reject | RUNG 2 WALK_FORWARD | - | 0.009704 |
+| `gen_tp_kc_recross_adx_gate_swing_tp_short` | AUDUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_kc_recross_adx_gate_swing_tp_short` | AUDUSD D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_kc_recross_adx_gate_swing_tp_short` | DE40 H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_kc_recross_adx_gate_swing_tp_short` | DE40 D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_kc_recross_adx_gate_swing_tp_short` | EURJPY H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_kc_recross_adx_gate_swing_tp_short` | EURJPY D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_kc_recross_adx_gate_swing_tp_short` | EURUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_kc_recross_adx_gate_swing_tp_short` | EURUSD D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_kc_recross_adx_gate_swing_tp_short` | GBPJPY H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_kc_recross_adx_gate_swing_tp_short` | GBPJPY D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_kc_recross_adx_gate_swing_tp_short` | GBPUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_kc_recross_adx_gate_swing_tp_short` | GBPUSD D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_kc_recross_adx_gate_swing_tp_short` | NZDUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_kc_recross_adx_gate_swing_tp_short` | NZDUSD D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_kc_recross_adx_gate_swing_tp_short` | UK100 H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_kc_recross_adx_gate_swing_tp_short` | UK100 D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_kc_recross_adx_gate_swing_tp_short` | US500 H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_kc_recross_adx_gate_swing_tp_short` | US500 D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_kc_recross_adx_gate_swing_tp_short` | USDCAD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_kc_recross_adx_gate_swing_tp_short` | USDCAD D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_kc_recross_adx_gate_swing_tp_short` | USDCHF H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_kc_recross_adx_gate_swing_tp_short` | USDCHF D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_kc_recross_adx_gate_swing_tp_short` | USDJPY H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_kc_recross_adx_gate_swing_tp_short` | USDJPY D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_kc_recross_adx_gate_swing_tp_short` | XAGUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_kc_recross_adx_gate_swing_tp_short` | XAGUSD D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_kc_recross_adx_gate_swing_tp_short` | XAUUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_kc_recross_adx_gate_swing_tp_short` | XAUUSD D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_kc_recross_none_swing_tp_long` | AUDUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_kc_recross_none_swing_tp_long` | AUDUSD D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_kc_recross_none_swing_tp_long` | DE40 H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_kc_recross_none_swing_tp_long` | DE40 D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_kc_recross_none_swing_tp_long` | EURJPY H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_kc_recross_none_swing_tp_long` | EURJPY D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_kc_recross_none_swing_tp_long` | EURUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_kc_recross_none_swing_tp_long` | EURUSD D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_kc_recross_none_swing_tp_long` | GBPJPY H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_kc_recross_none_swing_tp_long` | GBPJPY D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_kc_recross_none_swing_tp_long` | GBPUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_kc_recross_none_swing_tp_long` | GBPUSD D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_kc_recross_none_swing_tp_long` | NZDUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_kc_recross_none_swing_tp_long` | NZDUSD D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_kc_recross_none_swing_tp_long` | UK100 H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_kc_recross_none_swing_tp_long` | UK100 D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_kc_recross_none_swing_tp_long` | US500 H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_kc_recross_none_swing_tp_long` | US500 D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_kc_recross_none_swing_tp_long` | USDCAD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_kc_recross_none_swing_tp_long` | USDCAD D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_kc_recross_none_swing_tp_long` | USDCHF H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_kc_recross_none_swing_tp_long` | USDCHF D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_kc_recross_none_swing_tp_long` | USDJPY H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_kc_recross_none_swing_tp_long` | USDJPY D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_kc_recross_none_swing_tp_long` | XAGUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_kc_recross_none_swing_tp_long` | XAGUSD D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_kc_recross_none_swing_tp_long` | XAUUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_kc_recross_none_swing_tp_long` | XAUUSD D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_kc_recross_none_time_exit` | AUDUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_kc_recross_none_time_exit` | AUDUSD D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_kc_recross_none_time_exit` | DE40 H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_kc_recross_none_time_exit` | DE40 D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_kc_recross_none_time_exit` | EURJPY H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_kc_recross_none_time_exit` | EURJPY D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_kc_recross_none_time_exit` | EURUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_kc_recross_none_time_exit` | EURUSD D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_kc_recross_none_time_exit` | GBPJPY H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_kc_recross_none_time_exit` | GBPJPY D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_kc_recross_none_time_exit` | GBPUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_kc_recross_none_time_exit` | GBPUSD D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_kc_recross_none_time_exit` | NZDUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_kc_recross_none_time_exit` | NZDUSD D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_kc_recross_none_time_exit` | UK100 H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_kc_recross_none_time_exit` | UK100 D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_kc_recross_none_time_exit` | US500 H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_kc_recross_none_time_exit` | US500 D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_kc_recross_none_time_exit` | USDCAD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_kc_recross_none_time_exit` | USDCAD D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_kc_recross_none_time_exit` | USDCHF H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_kc_recross_none_time_exit` | USDCHF D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_kc_recross_none_time_exit` | USDJPY H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_kc_recross_none_time_exit` | USDJPY D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_kc_recross_none_time_exit` | XAGUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_kc_recross_none_time_exit` | XAGUSD D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_kc_recross_none_time_exit` | XAUUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_kc_recross_none_time_exit` | XAUUSD D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_kc_recross_none_trail` | AUDUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_kc_recross_none_trail` | AUDUSD D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_kc_recross_none_trail` | DE40 H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_kc_recross_none_trail` | DE40 D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_kc_recross_none_trail` | EURJPY H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_kc_recross_none_trail` | EURJPY D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_kc_recross_none_trail` | EURUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_kc_recross_none_trail` | EURUSD D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_kc_recross_none_trail` | GBPJPY H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_kc_recross_none_trail` | GBPJPY D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_kc_recross_none_trail` | GBPUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_kc_recross_none_trail` | GBPUSD D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_kc_recross_none_trail` | NZDUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_kc_recross_none_trail` | NZDUSD D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_kc_recross_none_trail` | UK100 H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_kc_recross_none_trail` | UK100 D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_kc_recross_none_trail` | US500 H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_kc_recross_none_trail` | US500 D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_kc_recross_none_trail` | USDCAD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_kc_recross_none_trail` | USDCAD D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_kc_recross_none_trail` | USDCHF H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_kc_recross_none_trail` | USDCHF D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_kc_recross_none_trail` | USDJPY H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_kc_recross_none_trail` | USDJPY D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_kc_recross_none_trail` | XAGUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_kc_recross_none_trail` | XAGUSD D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_kc_recross_none_trail` | XAUUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_kc_recross_none_trail` | XAUUSD D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_kc_recross_rvol_gate_time_exit` | AUDUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_kc_recross_rvol_gate_time_exit` | AUDUSD D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_kc_recross_rvol_gate_time_exit` | DE40 H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_kc_recross_rvol_gate_time_exit` | DE40 D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_kc_recross_rvol_gate_time_exit` | EURJPY H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_kc_recross_rvol_gate_time_exit` | EURJPY D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_kc_recross_rvol_gate_time_exit` | EURUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_kc_recross_rvol_gate_time_exit` | EURUSD D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_kc_recross_rvol_gate_time_exit` | GBPJPY H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_kc_recross_rvol_gate_time_exit` | GBPJPY D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_kc_recross_rvol_gate_time_exit` | GBPUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_kc_recross_rvol_gate_time_exit` | GBPUSD D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_kc_recross_rvol_gate_time_exit` | NZDUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_kc_recross_rvol_gate_time_exit` | NZDUSD D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_kc_recross_rvol_gate_time_exit` | UK100 H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_kc_recross_rvol_gate_time_exit` | UK100 D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_kc_recross_rvol_gate_time_exit` | US500 H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_kc_recross_rvol_gate_time_exit` | US500 D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_kc_recross_rvol_gate_time_exit` | USDCAD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_kc_recross_rvol_gate_time_exit` | USDCAD D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_kc_recross_rvol_gate_time_exit` | USDCHF H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_kc_recross_rvol_gate_time_exit` | USDCHF D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_kc_recross_rvol_gate_time_exit` | USDJPY H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_kc_recross_rvol_gate_time_exit` | USDJPY D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_kc_recross_rvol_gate_time_exit` | XAGUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_kc_recross_rvol_gate_time_exit` | XAGUSD D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_kc_recross_rvol_gate_time_exit` | XAUUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_kc_recross_rvol_gate_time_exit` | XAUUSD D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_kc_recross_session_trail` | AUDUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_kc_recross_session_trail` | DE40 H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_kc_recross_session_trail` | EURJPY H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_kc_recross_session_trail` | EURUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_kc_recross_session_trail` | GBPJPY H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_kc_recross_session_trail` | GBPUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_kc_recross_session_trail` | NZDUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_kc_recross_session_trail` | UK100 H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_kc_recross_session_trail` | US500 H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_kc_recross_session_trail` | USDCAD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_kc_recross_session_trail` | USDCHF H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_kc_recross_session_trail` | USDJPY H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_kc_recross_session_trail` | XAGUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_kc_recross_session_trail` | XAUUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_adx_gate_swing_tp_long` | AUDUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_adx_gate_swing_tp_long` | AUDUSD D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_adx_gate_swing_tp_long` | DE40 H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_adx_gate_swing_tp_long` | DE40 D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_adx_gate_swing_tp_long` | EURJPY H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_adx_gate_swing_tp_long` | EURJPY D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_adx_gate_swing_tp_long` | EURUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_adx_gate_swing_tp_long` | EURUSD D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_adx_gate_swing_tp_long` | GBPJPY H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_adx_gate_swing_tp_long` | GBPJPY D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_adx_gate_swing_tp_long` | GBPUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_adx_gate_swing_tp_long` | GBPUSD D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_adx_gate_swing_tp_long` | NZDUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_adx_gate_swing_tp_long` | NZDUSD D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_adx_gate_swing_tp_long` | UK100 H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_adx_gate_swing_tp_long` | UK100 D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_adx_gate_swing_tp_long` | US500 H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_adx_gate_swing_tp_long` | US500 D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_adx_gate_swing_tp_long` | USDCAD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_adx_gate_swing_tp_long` | USDCAD D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_adx_gate_swing_tp_long` | USDCHF H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_adx_gate_swing_tp_long` | USDCHF D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_adx_gate_swing_tp_long` | USDJPY H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_adx_gate_swing_tp_long` | USDJPY D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_adx_gate_swing_tp_long` | XAGUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_adx_gate_swing_tp_long` | XAGUSD D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_adx_gate_swing_tp_long` | XAUUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_adx_gate_swing_tp_long` | XAUUSD D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_adx_gate_swing_tp_short` | AUDUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_adx_gate_swing_tp_short` | AUDUSD D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_adx_gate_swing_tp_short` | DE40 H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_adx_gate_swing_tp_short` | DE40 D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_adx_gate_swing_tp_short` | EURJPY H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_adx_gate_swing_tp_short` | EURJPY D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_adx_gate_swing_tp_short` | EURUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_adx_gate_swing_tp_short` | EURUSD D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_adx_gate_swing_tp_short` | GBPJPY H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_adx_gate_swing_tp_short` | GBPJPY D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_adx_gate_swing_tp_short` | GBPUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_adx_gate_swing_tp_short` | GBPUSD D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_adx_gate_swing_tp_short` | NZDUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_adx_gate_swing_tp_short` | NZDUSD D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_adx_gate_swing_tp_short` | UK100 H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_adx_gate_swing_tp_short` | UK100 D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_adx_gate_swing_tp_short` | US500 H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_adx_gate_swing_tp_short` | US500 D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_adx_gate_swing_tp_short` | USDCAD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_adx_gate_swing_tp_short` | USDCAD D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_adx_gate_swing_tp_short` | USDCHF H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_adx_gate_swing_tp_short` | USDCHF D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_adx_gate_swing_tp_short` | USDJPY H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_adx_gate_swing_tp_short` | USDJPY D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_adx_gate_swing_tp_short` | XAGUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_adx_gate_swing_tp_short` | XAGUSD D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_adx_gate_swing_tp_short` | XAUUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_adx_gate_swing_tp_short` | XAUUSD D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_adx_gate_time_exit` | AUDUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_adx_gate_time_exit` | AUDUSD D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_adx_gate_time_exit` | DE40 H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_adx_gate_time_exit` | DE40 D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_adx_gate_time_exit` | EURJPY H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_adx_gate_time_exit` | EURJPY D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_adx_gate_time_exit` | EURUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_adx_gate_time_exit` | EURUSD D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_adx_gate_time_exit` | GBPJPY H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_adx_gate_time_exit` | GBPJPY D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_adx_gate_time_exit` | GBPUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_adx_gate_time_exit` | GBPUSD D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_adx_gate_time_exit` | NZDUSD H4 | seed | 8 | 20896 | reject | RUNG 1 IN_SAMPLE_SCREEN | - | 0.01749 |
+| `gen_tp_sma_recross_adx_gate_time_exit` | NZDUSD D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_adx_gate_time_exit` | UK100 H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_adx_gate_time_exit` | UK100 D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_adx_gate_time_exit` | US500 H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_adx_gate_time_exit` | US500 D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_adx_gate_time_exit` | USDCAD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_adx_gate_time_exit` | USDCAD D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_adx_gate_time_exit` | USDCHF H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_adx_gate_time_exit` | USDCHF D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_adx_gate_time_exit` | USDJPY H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_adx_gate_time_exit` | USDJPY D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_adx_gate_time_exit` | XAGUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_adx_gate_time_exit` | XAGUSD D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_adx_gate_time_exit` | XAUUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_adx_gate_time_exit` | XAUUSD D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_adx_gate_tp_r` | AUDUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_adx_gate_tp_r` | AUDUSD D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_adx_gate_tp_r` | DE40 H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_adx_gate_tp_r` | DE40 D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_adx_gate_tp_r` | EURJPY H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_adx_gate_tp_r` | EURJPY D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_adx_gate_tp_r` | EURUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_adx_gate_tp_r` | EURUSD D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_adx_gate_tp_r` | GBPJPY H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_adx_gate_tp_r` | GBPJPY D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_adx_gate_tp_r` | GBPUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_adx_gate_tp_r` | GBPUSD D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_adx_gate_tp_r` | NZDUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_adx_gate_tp_r` | NZDUSD D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_adx_gate_tp_r` | UK100 H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_adx_gate_tp_r` | UK100 D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_adx_gate_tp_r` | US500 H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_adx_gate_tp_r` | US500 D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_adx_gate_tp_r` | USDCAD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_adx_gate_tp_r` | USDCAD D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_adx_gate_tp_r` | USDCHF H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_adx_gate_tp_r` | USDCHF D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_adx_gate_tp_r` | USDJPY H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_adx_gate_tp_r` | USDJPY D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_adx_gate_tp_r` | XAGUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_adx_gate_tp_r` | XAGUSD D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_adx_gate_tp_r` | XAUUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_adx_gate_tp_r` | XAUUSD D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_none_swing_tp_long` | AUDUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_none_swing_tp_long` | AUDUSD D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_none_swing_tp_long` | DE40 H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_none_swing_tp_long` | DE40 D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_none_swing_tp_long` | EURJPY H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_none_swing_tp_long` | EURJPY D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_none_swing_tp_long` | EURUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_none_swing_tp_long` | EURUSD D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_none_swing_tp_long` | GBPJPY H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_none_swing_tp_long` | GBPJPY D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_none_swing_tp_long` | GBPUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_none_swing_tp_long` | GBPUSD D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_none_swing_tp_long` | NZDUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_none_swing_tp_long` | NZDUSD D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_none_swing_tp_long` | UK100 H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_none_swing_tp_long` | UK100 D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_none_swing_tp_long` | US500 H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_none_swing_tp_long` | US500 D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_none_swing_tp_long` | USDCAD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_none_swing_tp_long` | USDCAD D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_none_swing_tp_long` | USDCHF H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_none_swing_tp_long` | USDCHF D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_none_swing_tp_long` | USDJPY H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_none_swing_tp_long` | USDJPY D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_none_swing_tp_long` | XAGUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_none_swing_tp_long` | XAGUSD D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_none_swing_tp_long` | XAUUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_none_swing_tp_long` | XAUUSD D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_none_swing_tp_short` | AUDUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_none_swing_tp_short` | AUDUSD D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_none_swing_tp_short` | DE40 H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_none_swing_tp_short` | DE40 D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_none_swing_tp_short` | EURJPY H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_none_swing_tp_short` | EURJPY D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_none_swing_tp_short` | EURUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_none_swing_tp_short` | EURUSD D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_none_swing_tp_short` | GBPJPY H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_none_swing_tp_short` | GBPJPY D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_none_swing_tp_short` | GBPUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_none_swing_tp_short` | GBPUSD D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_none_swing_tp_short` | NZDUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_none_swing_tp_short` | NZDUSD D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_none_swing_tp_short` | UK100 H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_none_swing_tp_short` | UK100 D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_none_swing_tp_short` | US500 H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_none_swing_tp_short` | US500 D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_none_swing_tp_short` | USDCAD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_none_swing_tp_short` | USDCAD D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_none_swing_tp_short` | USDCHF H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_none_swing_tp_short` | USDCHF D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_none_swing_tp_short` | USDJPY H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_none_swing_tp_short` | USDJPY D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_none_swing_tp_short` | XAGUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_none_swing_tp_short` | XAGUSD D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_none_swing_tp_short` | XAUUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_none_swing_tp_short` | XAUUSD D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_rvol_gate_tp_r` | AUDUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_rvol_gate_tp_r` | AUDUSD D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_rvol_gate_tp_r` | DE40 H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_rvol_gate_tp_r` | DE40 D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_rvol_gate_tp_r` | EURJPY H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_rvol_gate_tp_r` | EURJPY D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_rvol_gate_tp_r` | EURUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_rvol_gate_tp_r` | EURUSD D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_rvol_gate_tp_r` | GBPJPY H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_rvol_gate_tp_r` | GBPJPY D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_rvol_gate_tp_r` | GBPUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_rvol_gate_tp_r` | GBPUSD D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_rvol_gate_tp_r` | NZDUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_rvol_gate_tp_r` | NZDUSD D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_rvol_gate_tp_r` | UK100 H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_rvol_gate_tp_r` | UK100 D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_rvol_gate_tp_r` | US500 H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_rvol_gate_tp_r` | US500 D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_rvol_gate_tp_r` | USDCAD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_rvol_gate_tp_r` | USDCAD D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_rvol_gate_tp_r` | USDCHF H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_rvol_gate_tp_r` | USDCHF D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_rvol_gate_tp_r` | USDJPY H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_rvol_gate_tp_r` | USDJPY D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_rvol_gate_tp_r` | XAGUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_rvol_gate_tp_r` | XAGUSD D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_rvol_gate_tp_r` | XAUUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_rvol_gate_tp_r` | XAUUSD D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_rvol_gate_trail` | AUDUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_rvol_gate_trail` | AUDUSD D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_rvol_gate_trail` | DE40 H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_rvol_gate_trail` | DE40 D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_rvol_gate_trail` | EURJPY H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_rvol_gate_trail` | EURJPY D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_rvol_gate_trail` | EURUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_rvol_gate_trail` | EURUSD D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_rvol_gate_trail` | GBPJPY H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_rvol_gate_trail` | GBPJPY D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_rvol_gate_trail` | GBPUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_rvol_gate_trail` | GBPUSD D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_rvol_gate_trail` | NZDUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_rvol_gate_trail` | NZDUSD D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_rvol_gate_trail` | UK100 H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_rvol_gate_trail` | UK100 D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_rvol_gate_trail` | US500 H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_rvol_gate_trail` | US500 D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_rvol_gate_trail` | USDCAD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_rvol_gate_trail` | USDCAD D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_rvol_gate_trail` | USDCHF H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_rvol_gate_trail` | USDCHF D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_rvol_gate_trail` | USDJPY H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_rvol_gate_trail` | USDJPY D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_rvol_gate_trail` | XAGUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_rvol_gate_trail` | XAGUSD D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_rvol_gate_trail` | XAUUSD H4 | seed | 8 | 20896 | reject | RUNG 2 WALK_FORWARD | - | 0.01589 |
+| `gen_tp_sma_recross_rvol_gate_trail` | XAUUSD D1 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_session_swing_tp_short` | AUDUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_session_swing_tp_short` | DE40 H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_session_swing_tp_short` | EURJPY H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_session_swing_tp_short` | EURUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_session_swing_tp_short` | GBPJPY H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_session_swing_tp_short` | GBPUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_session_swing_tp_short` | NZDUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_session_swing_tp_short` | UK100 H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_session_swing_tp_short` | US500 H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_session_swing_tp_short` | USDCAD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_session_swing_tp_short` | USDCHF H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_session_swing_tp_short` | USDJPY H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_session_swing_tp_short` | XAGUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_session_swing_tp_short` | XAUUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_session_time_exit` | AUDUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_session_time_exit` | DE40 H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_session_time_exit` | EURJPY H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_session_time_exit` | EURUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_session_time_exit` | GBPJPY H4 | seed | 8 | 20896 | reject | RUNG 2 WALK_FORWARD | - | 0.01828 |
+| `gen_tp_sma_recross_session_time_exit` | GBPUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_session_time_exit` | NZDUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_session_time_exit` | UK100 H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_session_time_exit` | US500 H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_session_time_exit` | USDCAD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_session_time_exit` | USDCHF H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_session_time_exit` | USDJPY H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_session_time_exit` | XAGUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+| `gen_tp_sma_recross_session_time_exit` | XAUUSD H4 | seed | 8 | 20896 | reject | RUNG 0 SANITY | - | - |
+
+### Why each one stopped
+
+- donchian_breakout_atr on AUDUSD H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -1.31871 at declared defaults is not positive; there is no edge to validate.
+- donchian_breakout_atr on AUDUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 157, required gte 400, short by 243
+- donchian_breakout_atr on DE40 H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -0.763011 at declared defaults is not positive; there is no edge to validate.
+- donchian_breakout_atr on DE40 D1: REJECT at RUNG 0 SANITY -- min_trades: observed 123, required gte 400, short by 277
+- donchian_breakout_atr on EURJPY H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -0.441471 at declared defaults is not positive; there is no edge to validate.
+- donchian_breakout_atr on EURJPY D1: REJECT at RUNG 0 SANITY -- min_trades: observed 161, required gte 400, short by 239
+- donchian_breakout_atr on EURUSD H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -0.981024 at declared defaults is not positive; there is no edge to validate.
+- donchian_breakout_atr on EURUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 161, required gte 400, short by 239
+- donchian_breakout_atr on GBPJPY H4: REJECT at RUNG 2 WALK_FORWARD -- walk_forward_efficiency: observed -1.394, required gte 50, short by 51.39
+- donchian_breakout_atr on GBPJPY D1: REJECT at RUNG 0 SANITY -- min_trades: observed 149, required gte 400, short by 251
+- donchian_breakout_atr on GBPUSD H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -1.23405 at declared defaults is not positive; there is no edge to validate.
+- donchian_breakout_atr on GBPUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 155, required gte 400, short by 245
+- donchian_breakout_atr on NZDUSD H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -0.993819 at declared defaults is not positive; there is no edge to validate.
+- donchian_breakout_atr on NZDUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 153, required gte 400, short by 247
+- donchian_breakout_atr on US500 H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -2.1262 at declared defaults is not positive; there is no edge to validate.
+- donchian_breakout_atr on US500 D1: REJECT at RUNG 0 SANITY -- min_trades: observed 159, required gte 400, short by 241
+- donchian_breakout_atr on USDCAD H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -0.695421 at declared defaults is not positive; there is no edge to validate.
+- donchian_breakout_atr on USDCAD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 160, required gte 400, short by 240
+- donchian_breakout_atr on USDCHF H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -0.948029 at declared defaults is not positive; there is no edge to validate.
+- donchian_breakout_atr on USDCHF D1: REJECT at RUNG 0 SANITY -- min_trades: observed 158, required gte 400, short by 242
+- donchian_breakout_atr on USDJPY H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -0.728321 at declared defaults is not positive; there is no edge to validate.
+- donchian_breakout_atr on USDJPY D1: REJECT at RUNG 0 SANITY -- min_trades: observed 149, required gte 400, short by 251
+- donchian_breakout_atr on XAUUSD H4: REJECT at RUNG 4 ROBUSTNESS -- parameter_plateau: observed 1.831, required lte 1.25, short by 0.581
+- donchian_breakout_atr on XAUUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 160, required gte 400, short by 240
+- fib_golden_pocket_pullback on AUDUSD H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -0.524273 at declared defaults is not positive; there is no edge to validate.
+- fib_golden_pocket_pullback on AUDUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 0, required gte 400, short by 400
+- fib_golden_pocket_pullback on DE40 H4: REJECT at RUNG 0 SANITY -- min_trades: observed 312, required gte 400, short by 88
+- fib_golden_pocket_pullback on DE40 D1: REJECT at RUNG 0 SANITY -- min_trades: observed 0, required gte 400, short by 400
+- fib_golden_pocket_pullback on EURJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 385, required gte 400, short by 15
+- fib_golden_pocket_pullback on EURJPY D1: REJECT at RUNG 0 SANITY -- min_trades: observed 0, required gte 400, short by 400
+- fib_golden_pocket_pullback on EURUSD H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -0.87986 at declared defaults is not positive; there is no edge to validate.
+- fib_golden_pocket_pullback on EURUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 0, required gte 400, short by 400
+- fib_golden_pocket_pullback on GBPJPY H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -1.47456 at declared defaults is not positive; there is no edge to validate.
+- fib_golden_pocket_pullback on GBPJPY D1: REJECT at RUNG 0 SANITY -- min_trades: observed 0, required gte 400, short by 400
+- fib_golden_pocket_pullback on GBPUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 379, required gte 400, short by 21
+- fib_golden_pocket_pullback on GBPUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 0, required gte 400, short by 400
+- fib_golden_pocket_pullback on NZDUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 381, required gte 400, short by 19
+- fib_golden_pocket_pullback on NZDUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 0, required gte 400, short by 400
+- fib_golden_pocket_pullback on US500 H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -1.71224 at declared defaults is not positive; there is no edge to validate.
+- fib_golden_pocket_pullback on US500 D1: REJECT at RUNG 0 SANITY -- min_trades: observed 0, required gte 400, short by 400
+- fib_golden_pocket_pullback on USDCAD H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -0.751668 at declared defaults is not positive; there is no edge to validate.
+- fib_golden_pocket_pullback on USDCAD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 0, required gte 400, short by 400
+- fib_golden_pocket_pullback on USDCHF H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -1.45111 at declared defaults is not positive; there is no edge to validate.
+- fib_golden_pocket_pullback on USDCHF D1: REJECT at RUNG 0 SANITY -- min_trades: observed 0, required gte 400, short by 400
+- fib_golden_pocket_pullback on USDJPY H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -1.63347 at declared defaults is not positive; there is no edge to validate.
+- fib_golden_pocket_pullback on USDJPY D1: REJECT at RUNG 0 SANITY -- min_trades: observed 0, required gte 400, short by 400
+- fib_golden_pocket_pullback on XAUUSD H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -1.60366 at declared defaults is not positive; there is no edge to validate.
+- fib_golden_pocket_pullback on XAUUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 0, required gte 400, short by 400
+- ichimoku_kumo_trend on AUDUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 137, required gte 400, short by 263
+- ichimoku_kumo_trend on AUDUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 0, required gte 400, short by 400
+- ichimoku_kumo_trend on DE40 H4: REJECT at RUNG 0 SANITY -- min_trades: observed 99, required gte 400, short by 301
+- ichimoku_kumo_trend on DE40 D1: REJECT at RUNG 0 SANITY -- min_trades: observed 0, required gte 400, short by 400
+- ichimoku_kumo_trend on EURJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 135, required gte 400, short by 265
+- ichimoku_kumo_trend on EURJPY D1: REJECT at RUNG 0 SANITY -- min_trades: observed 0, required gte 400, short by 400
+- ichimoku_kumo_trend on EURUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 151, required gte 400, short by 249
+- ichimoku_kumo_trend on EURUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 0, required gte 400, short by 400
+- ichimoku_kumo_trend on GBPJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 137, required gte 400, short by 263
+- ichimoku_kumo_trend on GBPJPY D1: REJECT at RUNG 0 SANITY -- min_trades: observed 0, required gte 400, short by 400
+- ichimoku_kumo_trend on GBPUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 138, required gte 400, short by 262
+- ichimoku_kumo_trend on GBPUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 0, required gte 400, short by 400
+- ichimoku_kumo_trend on NZDUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 138, required gte 400, short by 262
+- ichimoku_kumo_trend on NZDUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 0, required gte 400, short by 400
+- ichimoku_kumo_trend on US500 H4: REJECT at RUNG 0 SANITY -- min_trades: observed 123, required gte 400, short by 277
+- ichimoku_kumo_trend on US500 D1: REJECT at RUNG 0 SANITY -- min_trades: observed 0, required gte 400, short by 400
+- ichimoku_kumo_trend on USDCAD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 154, required gte 400, short by 246
+- ichimoku_kumo_trend on USDCAD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 0, required gte 400, short by 400
+- ichimoku_kumo_trend on USDCHF H4: REJECT at RUNG 0 SANITY -- min_trades: observed 164, required gte 400, short by 236
+- ichimoku_kumo_trend on USDCHF D1: REJECT at RUNG 0 SANITY -- min_trades: observed 0, required gte 400, short by 400
+- ichimoku_kumo_trend on USDJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 142, required gte 400, short by 258
+- ichimoku_kumo_trend on USDJPY D1: REJECT at RUNG 0 SANITY -- min_trades: observed 0, required gte 400, short by 400
+- ichimoku_kumo_trend on XAUUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 129, required gte 400, short by 271
+- ichimoku_kumo_trend on XAUUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 0, required gte 400, short by 400
+- macd_ema_trend_hybrid on AUDUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 70, required gte 400, short by 330
+- macd_ema_trend_hybrid on AUDUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 0, required gte 400, short by 400
+- macd_ema_trend_hybrid on DE40 H4: REJECT at RUNG 0 SANITY -- min_trades: observed 53, required gte 400, short by 347
+- macd_ema_trend_hybrid on DE40 D1: REJECT at RUNG 0 SANITY -- min_trades: observed 0, required gte 400, short by 400
+- macd_ema_trend_hybrid on EURJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 72, required gte 400, short by 328
+- macd_ema_trend_hybrid on EURJPY D1: REJECT at RUNG 0 SANITY -- min_trades: observed 0, required gte 400, short by 400
+- macd_ema_trend_hybrid on EURUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 90, required gte 400, short by 310
+- macd_ema_trend_hybrid on EURUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 0, required gte 400, short by 400
+- macd_ema_trend_hybrid on GBPJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 74, required gte 400, short by 326
+- macd_ema_trend_hybrid on GBPJPY D1: REJECT at RUNG 0 SANITY -- min_trades: observed 0, required gte 400, short by 400
+- macd_ema_trend_hybrid on GBPUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 101, required gte 400, short by 299
+- macd_ema_trend_hybrid on GBPUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 0, required gte 400, short by 400
+- macd_ema_trend_hybrid on NZDUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 79, required gte 400, short by 321
+- macd_ema_trend_hybrid on NZDUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 0, required gte 400, short by 400
+- macd_ema_trend_hybrid on US500 H4: REJECT at RUNG 0 SANITY -- min_trades: observed 106, required gte 400, short by 294
+- macd_ema_trend_hybrid on US500 D1: REJECT at RUNG 0 SANITY -- min_trades: observed 0, required gte 400, short by 400
+- macd_ema_trend_hybrid on USDCAD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 97, required gte 400, short by 303
+- macd_ema_trend_hybrid on USDCAD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 0, required gte 400, short by 400
+- macd_ema_trend_hybrid on USDCHF H4: REJECT at RUNG 0 SANITY -- min_trades: observed 87, required gte 400, short by 313
+- macd_ema_trend_hybrid on USDCHF D1: REJECT at RUNG 0 SANITY -- min_trades: observed 0, required gte 400, short by 400
+- macd_ema_trend_hybrid on USDJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 62, required gte 400, short by 338
+- macd_ema_trend_hybrid on USDJPY D1: REJECT at RUNG 0 SANITY -- min_trades: observed 0, required gte 400, short by 400
+- macd_ema_trend_hybrid on XAUUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 91, required gte 400, short by 309
+- macd_ema_trend_hybrid on XAUUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 0, required gte 400, short by 400
+- rsi_band_mean_reversion on AUDUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 294, required gte 400, short by 106
+- rsi_band_mean_reversion on EURGBP H4: REJECT at RUNG 0 SANITY -- min_trades: observed 258, required gte 400, short by 142
+- rsi_band_mean_reversion on EURUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 230, required gte 400, short by 170
+- rsi_band_mean_reversion on GBPUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 258, required gte 400, short by 142
+- rsi_band_mean_reversion on NZDUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 285, required gte 400, short by 115
+- rsi_band_mean_reversion on USDCAD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 229, required gte 400, short by 171
+- rsi_band_mean_reversion on USDCHF H4: REJECT at RUNG 0 SANITY -- min_trades: observed 226, required gte 400, short by 174
+- rsi_band_mean_reversion on USDJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 236, required gte 400, short by 164
+- tsmom_dual_horizon on AUDUSD H4: REJECT at RUNG 1 IN_SAMPLE_SCREEN -- RUNG 1 IN_SAMPLE_SCREEN: no parameterisation inside the domains the document declares is positive in sample on sharpe; there is nothing for the later rungs to test.
+- tsmom_dual_horizon on AUDUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 125, required gte 400, short by 275
+- tsmom_dual_horizon on DE40 H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -1.11386 at declared defaults is not positive; there is no edge to validate.
+- tsmom_dual_horizon on DE40 D1: REJECT at RUNG 0 SANITY -- min_trades: observed 104, required gte 400, short by 296
+- tsmom_dual_horizon on EURUSD H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -0.633276 at declared defaults is not positive; there is no edge to validate.
+- tsmom_dual_horizon on EURUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 141, required gte 400, short by 259
+- tsmom_dual_horizon on GBPUSD H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -0.469943 at declared defaults is not positive; there is no edge to validate.
+- tsmom_dual_horizon on GBPUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 130, required gte 400, short by 270
+- tsmom_dual_horizon on NZDUSD H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -0.438965 at declared defaults is not positive; there is no edge to validate.
+- tsmom_dual_horizon on NZDUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 122, required gte 400, short by 278
+- tsmom_dual_horizon on US500 H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -0.841296 at declared defaults is not positive; there is no edge to validate.
+- tsmom_dual_horizon on US500 D1: REJECT at RUNG 0 SANITY -- min_trades: observed 125, required gte 400, short by 275
+- tsmom_dual_horizon on USDCAD H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -0.654561 at declared defaults is not positive; there is no edge to validate.
+- tsmom_dual_horizon on USDCAD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 123, required gte 400, short by 277
+- tsmom_dual_horizon on USDCHF H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -0.808878 at declared defaults is not positive; there is no edge to validate.
+- tsmom_dual_horizon on USDCHF D1: REJECT at RUNG 0 SANITY -- min_trades: observed 123, required gte 400, short by 277
+- tsmom_dual_horizon on USDJPY H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -0.631633 at declared defaults is not positive; there is no edge to validate.
+- tsmom_dual_horizon on USDJPY D1: REJECT at RUNG 0 SANITY -- min_trades: observed 130, required gte 400, short by 270
+- tsmom_dual_horizon on XAUUSD H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -0.121218 at declared defaults is not positive; there is no edge to validate.
+- tsmom_dual_horizon on XAUUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 116, required gte 400, short by 284
+- gen_bv_donchian_close_break_adx_gate_swing_tp_short on AUDJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 44, required gte 400, short by 356
+- gen_bv_donchian_close_break_adx_gate_swing_tp_short on AUDJPY D1: REJECT at RUNG 0 SANITY -- min_trades: observed 1, required gte 400, short by 399
+- gen_bv_donchian_close_break_adx_gate_swing_tp_short on AUDUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 34, required gte 400, short by 366
+- gen_bv_donchian_close_break_adx_gate_swing_tp_short on AUDUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 7, required gte 400, short by 393
+- gen_bv_donchian_close_break_adx_gate_swing_tp_short on DE40 H4: REJECT at RUNG 0 SANITY -- min_trades: observed 21, required gte 400, short by 379
+- gen_bv_donchian_close_break_adx_gate_swing_tp_short on DE40 D1: REJECT at RUNG 0 SANITY -- min_trades: observed 1, required gte 400, short by 399
+- gen_bv_donchian_close_break_adx_gate_swing_tp_short on EURJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 43, required gte 400, short by 357
+- gen_bv_donchian_close_break_adx_gate_swing_tp_short on EURJPY D1: REJECT at RUNG 0 SANITY -- min_trades: observed 6, required gte 400, short by 394
+- gen_bv_donchian_close_break_adx_gate_swing_tp_short on EURUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 39, required gte 400, short by 361
+- gen_bv_donchian_close_break_adx_gate_swing_tp_short on EURUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 7, required gte 400, short by 393
+- gen_bv_donchian_close_break_adx_gate_swing_tp_short on GBPJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 39, required gte 400, short by 361
+- gen_bv_donchian_close_break_adx_gate_swing_tp_short on GBPJPY D1: REJECT at RUNG 0 SANITY -- min_trades: observed 5, required gte 400, short by 395
+- gen_bv_donchian_close_break_adx_gate_swing_tp_short on GBPUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 46, required gte 400, short by 354
+- gen_bv_donchian_close_break_adx_gate_swing_tp_short on GBPUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 4, required gte 400, short by 396
+- gen_bv_donchian_close_break_adx_gate_swing_tp_short on NZDUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 43, required gte 400, short by 357
+- gen_bv_donchian_close_break_adx_gate_swing_tp_short on NZDUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 4, required gte 400, short by 396
+- gen_bv_donchian_close_break_adx_gate_swing_tp_short on UK100 H4: REJECT at RUNG 0 SANITY -- min_trades: observed 25, required gte 400, short by 375
+- gen_bv_donchian_close_break_adx_gate_swing_tp_short on UK100 D1: REJECT at RUNG 0 SANITY -- min_trades: observed 0, required gte 400, short by 400
+- gen_bv_donchian_close_break_adx_gate_swing_tp_short on US500 H4: REJECT at RUNG 0 SANITY -- min_trades: observed 22, required gte 400, short by 378
+- gen_bv_donchian_close_break_adx_gate_swing_tp_short on US500 D1: REJECT at RUNG 0 SANITY -- min_trades: observed 4, required gte 400, short by 396
+- gen_bv_donchian_close_break_adx_gate_swing_tp_short on USDCAD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 51, required gte 400, short by 349
+- gen_bv_donchian_close_break_adx_gate_swing_tp_short on USDCAD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 6, required gte 400, short by 394
+- gen_bv_donchian_close_break_adx_gate_swing_tp_short on USDCHF H4: REJECT at RUNG 0 SANITY -- min_trades: observed 40, required gte 400, short by 360
+- gen_bv_donchian_close_break_adx_gate_swing_tp_short on USDCHF D1: REJECT at RUNG 0 SANITY -- min_trades: observed 5, required gte 400, short by 395
+- gen_bv_donchian_close_break_adx_gate_swing_tp_short on USDJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 47, required gte 400, short by 353
+- gen_bv_donchian_close_break_adx_gate_swing_tp_short on USDJPY D1: REJECT at RUNG 0 SANITY -- min_trades: observed 4, required gte 400, short by 396
+- gen_bv_donchian_close_break_adx_gate_swing_tp_short on XAGUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 40, required gte 400, short by 360
+- gen_bv_donchian_close_break_adx_gate_swing_tp_short on XAGUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 9, required gte 400, short by 391
+- gen_bv_donchian_close_break_adx_gate_swing_tp_short on XAUUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 42, required gte 400, short by 358
+- gen_bv_donchian_close_break_adx_gate_swing_tp_short on XAUUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 6, required gte 400, short by 394
+- gen_bv_donchian_close_break_adx_gate_tp_r on AUDJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 92, required gte 400, short by 308
+- gen_bv_donchian_close_break_adx_gate_tp_r on AUDJPY D1: REJECT at RUNG 0 SANITY -- min_trades: observed 6, required gte 400, short by 394
+- gen_bv_donchian_close_break_adx_gate_tp_r on AUDUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 83, required gte 400, short by 317
+- gen_bv_donchian_close_break_adx_gate_tp_r on AUDUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 19, required gte 400, short by 381
+- gen_bv_donchian_close_break_adx_gate_tp_r on DE40 H4: REJECT at RUNG 0 SANITY -- min_trades: observed 43, required gte 400, short by 357
+- gen_bv_donchian_close_break_adx_gate_tp_r on DE40 D1: REJECT at RUNG 0 SANITY -- min_trades: observed 4, required gte 400, short by 396
+- gen_bv_donchian_close_break_adx_gate_tp_r on EURJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 83, required gte 400, short by 317
+- gen_bv_donchian_close_break_adx_gate_tp_r on EURJPY D1: REJECT at RUNG 0 SANITY -- min_trades: observed 12, required gte 400, short by 388
+- gen_bv_donchian_close_break_adx_gate_tp_r on EURUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 82, required gte 400, short by 318
+- gen_bv_donchian_close_break_adx_gate_tp_r on EURUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 15, required gte 400, short by 385
+- gen_bv_donchian_close_break_adx_gate_tp_r on GBPJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 85, required gte 400, short by 315
+- gen_bv_donchian_close_break_adx_gate_tp_r on GBPJPY D1: REJECT at RUNG 0 SANITY -- min_trades: observed 7, required gte 400, short by 393
+- gen_bv_donchian_close_break_adx_gate_tp_r on GBPUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 91, required gte 400, short by 309
+- gen_bv_donchian_close_break_adx_gate_tp_r on GBPUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 10, required gte 400, short by 390
+- gen_bv_donchian_close_break_adx_gate_tp_r on NZDUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 98, required gte 400, short by 302
+- gen_bv_donchian_close_break_adx_gate_tp_r on NZDUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 12, required gte 400, short by 388
+- gen_bv_donchian_close_break_adx_gate_tp_r on UK100 H4: REJECT at RUNG 0 SANITY -- min_trades: observed 49, required gte 400, short by 351
+- gen_bv_donchian_close_break_adx_gate_tp_r on UK100 D1: REJECT at RUNG 0 SANITY -- min_trades: observed 3, required gte 400, short by 397
+- gen_bv_donchian_close_break_adx_gate_tp_r on US500 H4: REJECT at RUNG 0 SANITY -- min_trades: observed 71, required gte 400, short by 329
+- gen_bv_donchian_close_break_adx_gate_tp_r on US500 D1: REJECT at RUNG 0 SANITY -- min_trades: observed 14, required gte 400, short by 386
+- gen_bv_donchian_close_break_adx_gate_tp_r on USDCAD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 88, required gte 400, short by 312
+- gen_bv_donchian_close_break_adx_gate_tp_r on USDCAD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 12, required gte 400, short by 388
+- gen_bv_donchian_close_break_adx_gate_tp_r on USDCHF H4: REJECT at RUNG 0 SANITY -- min_trades: observed 99, required gte 400, short by 301
+- gen_bv_donchian_close_break_adx_gate_tp_r on USDCHF D1: REJECT at RUNG 0 SANITY -- min_trades: observed 7, required gte 400, short by 393
+- gen_bv_donchian_close_break_adx_gate_tp_r on USDJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 99, required gte 400, short by 301
+- gen_bv_donchian_close_break_adx_gate_tp_r on USDJPY D1: REJECT at RUNG 0 SANITY -- min_trades: observed 12, required gte 400, short by 388
+- gen_bv_donchian_close_break_adx_gate_tp_r on XAGUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 86, required gte 400, short by 314
+- gen_bv_donchian_close_break_adx_gate_tp_r on XAGUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 18, required gte 400, short by 382
+- gen_bv_donchian_close_break_adx_gate_tp_r on XAUUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 93, required gte 400, short by 307
+- gen_bv_donchian_close_break_adx_gate_tp_r on XAUUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 11, required gte 400, short by 389
+- gen_bv_donchian_close_break_none_swing_tp_long on AUDJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 100, required gte 400, short by 300
+- gen_bv_donchian_close_break_none_swing_tp_long on AUDJPY D1: REJECT at RUNG 0 SANITY -- min_trades: observed 15, required gte 400, short by 385
+- gen_bv_donchian_close_break_none_swing_tp_long on AUDUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 90, required gte 400, short by 310
+- gen_bv_donchian_close_break_none_swing_tp_long on AUDUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 19, required gte 400, short by 381
+- gen_bv_donchian_close_break_none_swing_tp_long on DE40 H4: REJECT at RUNG 0 SANITY -- min_trades: observed 62, required gte 400, short by 338
+- gen_bv_donchian_close_break_none_swing_tp_long on DE40 D1: REJECT at RUNG 0 SANITY -- min_trades: observed 12, required gte 400, short by 388
+- gen_bv_donchian_close_break_none_swing_tp_long on EURJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 79, required gte 400, short by 321
+- gen_bv_donchian_close_break_none_swing_tp_long on EURJPY D1: REJECT at RUNG 0 SANITY -- min_trades: observed 18, required gte 400, short by 382
+- gen_bv_donchian_close_break_none_swing_tp_long on EURUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 83, required gte 400, short by 317
+- gen_bv_donchian_close_break_none_swing_tp_long on EURUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 17, required gte 400, short by 383
+- gen_bv_donchian_close_break_none_swing_tp_long on GBPJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 94, required gte 400, short by 306
+- gen_bv_donchian_close_break_none_swing_tp_long on GBPJPY D1: REJECT at RUNG 0 SANITY -- min_trades: observed 16, required gte 400, short by 384
+- gen_bv_donchian_close_break_none_swing_tp_long on GBPUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 83, required gte 400, short by 317
+- gen_bv_donchian_close_break_none_swing_tp_long on GBPUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 7, required gte 400, short by 393
+- gen_bv_donchian_close_break_none_swing_tp_long on NZDUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 102, required gte 400, short by 298
+- gen_bv_donchian_close_break_none_swing_tp_long on NZDUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 20, required gte 400, short by 380
+- gen_bv_donchian_close_break_none_swing_tp_long on UK100 H4: REJECT at RUNG 0 SANITY -- min_trades: observed 54, required gte 400, short by 346
+- gen_bv_donchian_close_break_none_swing_tp_long on UK100 D1: REJECT at RUNG 0 SANITY -- min_trades: observed 0, required gte 400, short by 400
+- gen_bv_donchian_close_break_none_swing_tp_long on US500 H4: REJECT at RUNG 0 SANITY -- min_trades: observed 83, required gte 400, short by 317
+- gen_bv_donchian_close_break_none_swing_tp_long on US500 D1: REJECT at RUNG 0 SANITY -- min_trades: observed 21, required gte 400, short by 379
+- gen_bv_donchian_close_break_none_swing_tp_long on USDCAD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 60, required gte 400, short by 340
+- gen_bv_donchian_close_break_none_swing_tp_long on USDCAD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 16, required gte 400, short by 384
+- gen_bv_donchian_close_break_none_swing_tp_long on USDCHF H4: REJECT at RUNG 0 SANITY -- min_trades: observed 93, required gte 400, short by 307
+- gen_bv_donchian_close_break_none_swing_tp_long on USDCHF D1: REJECT at RUNG 0 SANITY -- min_trades: observed 9, required gte 400, short by 391
+- gen_bv_donchian_close_break_none_swing_tp_long on USDJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 87, required gte 400, short by 313
+- gen_bv_donchian_close_break_none_swing_tp_long on USDJPY D1: REJECT at RUNG 0 SANITY -- min_trades: observed 23, required gte 400, short by 377
+- gen_bv_donchian_close_break_none_swing_tp_long on XAGUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 96, required gte 400, short by 304
+- gen_bv_donchian_close_break_none_swing_tp_long on XAGUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 18, required gte 400, short by 382
+- gen_bv_donchian_close_break_none_swing_tp_long on XAUUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 82, required gte 400, short by 318
+- gen_bv_donchian_close_break_none_swing_tp_long on XAUUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 15, required gte 400, short by 385
+- gen_bv_donchian_close_break_session_time_exit on AUDJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 149, required gte 400, short by 251
+- gen_bv_donchian_close_break_session_time_exit on AUDUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 134, required gte 400, short by 266
+- gen_bv_donchian_close_break_session_time_exit on DE40 H4: REJECT at RUNG 0 SANITY -- min_trades: observed 94, required gte 400, short by 306
+- gen_bv_donchian_close_break_session_time_exit on EURJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 157, required gte 400, short by 243
+- gen_bv_donchian_close_break_session_time_exit on EURUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 147, required gte 400, short by 253
+- gen_bv_donchian_close_break_session_time_exit on GBPJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 175, required gte 400, short by 225
+- gen_bv_donchian_close_break_session_time_exit on GBPUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 155, required gte 400, short by 245
+- gen_bv_donchian_close_break_session_time_exit on NZDUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 163, required gte 400, short by 237
+- gen_bv_donchian_close_break_session_time_exit on UK100 H4: REJECT at RUNG 0 SANITY -- min_trades: observed 106, required gte 400, short by 294
+- gen_bv_donchian_close_break_session_time_exit on US500 H4: REJECT at RUNG 0 SANITY -- min_trades: observed 129, required gte 400, short by 271
+- gen_bv_donchian_close_break_session_time_exit on USDCAD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 163, required gte 400, short by 237
+- gen_bv_donchian_close_break_session_time_exit on USDCHF H4: REJECT at RUNG 0 SANITY -- min_trades: observed 172, required gte 400, short by 228
+- gen_bv_donchian_close_break_session_time_exit on USDJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 145, required gte 400, short by 255
+- gen_bv_donchian_close_break_session_time_exit on XAGUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 163, required gte 400, short by 237
+- gen_bv_donchian_close_break_session_time_exit on XAUUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 145, required gte 400, short by 255
+- gen_bv_donchian_fresh_cross_adx_gate_swing_tp_long on AUDJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 43, required gte 400, short by 357
+- gen_bv_donchian_fresh_cross_adx_gate_swing_tp_long on AUDJPY D1: REJECT at RUNG 0 SANITY -- min_trades: observed 4, required gte 400, short by 396
+- gen_bv_donchian_fresh_cross_adx_gate_swing_tp_long on AUDUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 39, required gte 400, short by 361
+- gen_bv_donchian_fresh_cross_adx_gate_swing_tp_long on AUDUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 9, required gte 400, short by 391
+- gen_bv_donchian_fresh_cross_adx_gate_swing_tp_long on DE40 H4: REJECT at RUNG 0 SANITY -- min_trades: observed 22, required gte 400, short by 378
+- gen_bv_donchian_fresh_cross_adx_gate_swing_tp_long on DE40 D1: REJECT at RUNG 0 SANITY -- min_trades: observed 2, required gte 400, short by 398
+- gen_bv_donchian_fresh_cross_adx_gate_swing_tp_long on EURJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 29, required gte 400, short by 371
+- gen_bv_donchian_fresh_cross_adx_gate_swing_tp_long on EURJPY D1: REJECT at RUNG 0 SANITY -- min_trades: observed 6, required gte 400, short by 394
+- gen_bv_donchian_fresh_cross_adx_gate_swing_tp_long on EURUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 39, required gte 400, short by 361
+- gen_bv_donchian_fresh_cross_adx_gate_swing_tp_long on EURUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 7, required gte 400, short by 393
+- gen_bv_donchian_fresh_cross_adx_gate_swing_tp_long on GBPJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 38, required gte 400, short by 362
+- gen_bv_donchian_fresh_cross_adx_gate_swing_tp_long on GBPJPY D1: REJECT at RUNG 0 SANITY -- min_trades: observed 2, required gte 400, short by 398
+- gen_bv_donchian_fresh_cross_adx_gate_swing_tp_long on GBPUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 40, required gte 400, short by 360
+- gen_bv_donchian_fresh_cross_adx_gate_swing_tp_long on GBPUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 4, required gte 400, short by 396
+- gen_bv_donchian_fresh_cross_adx_gate_swing_tp_long on NZDUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 46, required gte 400, short by 354
+- gen_bv_donchian_fresh_cross_adx_gate_swing_tp_long on NZDUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 7, required gte 400, short by 393
+- gen_bv_donchian_fresh_cross_adx_gate_swing_tp_long on UK100 H4: REJECT at RUNG 0 SANITY -- min_trades: observed 19, required gte 400, short by 381
+- gen_bv_donchian_fresh_cross_adx_gate_swing_tp_long on UK100 D1: REJECT at RUNG 0 SANITY -- min_trades: observed 0, required gte 400, short by 400
+- gen_bv_donchian_fresh_cross_adx_gate_swing_tp_long on US500 H4: REJECT at RUNG 0 SANITY -- min_trades: observed 38, required gte 400, short by 362
+- gen_bv_donchian_fresh_cross_adx_gate_swing_tp_long on US500 D1: REJECT at RUNG 0 SANITY -- min_trades: observed 8, required gte 400, short by 392
+- gen_bv_donchian_fresh_cross_adx_gate_swing_tp_long on USDCAD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 31, required gte 400, short by 369
+- gen_bv_donchian_fresh_cross_adx_gate_swing_tp_long on USDCAD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 6, required gte 400, short by 394
+- gen_bv_donchian_fresh_cross_adx_gate_swing_tp_long on USDCHF H4: REJECT at RUNG 0 SANITY -- min_trades: observed 54, required gte 400, short by 346
+- gen_bv_donchian_fresh_cross_adx_gate_swing_tp_long on USDCHF D1: REJECT at RUNG 0 SANITY -- min_trades: observed 2, required gte 400, short by 398
+- gen_bv_donchian_fresh_cross_adx_gate_swing_tp_long on USDJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 38, required gte 400, short by 362
+- gen_bv_donchian_fresh_cross_adx_gate_swing_tp_long on USDJPY D1: REJECT at RUNG 0 SANITY -- min_trades: observed 7, required gte 400, short by 393
+- gen_bv_donchian_fresh_cross_adx_gate_swing_tp_long on XAGUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 43, required gte 400, short by 357
+- gen_bv_donchian_fresh_cross_adx_gate_swing_tp_long on XAGUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 8, required gte 400, short by 392
+- gen_bv_donchian_fresh_cross_adx_gate_swing_tp_long on XAUUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 42, required gte 400, short by 358
+- gen_bv_donchian_fresh_cross_adx_gate_swing_tp_long on XAUUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 3, required gte 400, short by 397
+- gen_bv_donchian_fresh_cross_none_swing_tp_short on AUDJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 83, required gte 400, short by 317
+- gen_bv_donchian_fresh_cross_none_swing_tp_short on AUDJPY D1: REJECT at RUNG 0 SANITY -- min_trades: observed 15, required gte 400, short by 385
+- gen_bv_donchian_fresh_cross_none_swing_tp_short on AUDUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 79, required gte 400, short by 321
+- gen_bv_donchian_fresh_cross_none_swing_tp_short on AUDUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 14, required gte 400, short by 386
+- gen_bv_donchian_fresh_cross_none_swing_tp_short on DE40 H4: REJECT at RUNG 0 SANITY -- min_trades: observed 46, required gte 400, short by 354
+- gen_bv_donchian_fresh_cross_none_swing_tp_short on DE40 D1: REJECT at RUNG 0 SANITY -- min_trades: observed 8, required gte 400, short by 392
+- gen_bv_donchian_fresh_cross_none_swing_tp_short on EURJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 95, required gte 400, short by 305
+- gen_bv_donchian_fresh_cross_none_swing_tp_short on EURJPY D1: REJECT at RUNG 0 SANITY -- min_trades: observed 12, required gte 400, short by 388
+- gen_bv_donchian_fresh_cross_none_swing_tp_short on EURUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 72, required gte 400, short by 328
+- gen_bv_donchian_fresh_cross_none_swing_tp_short on EURUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 17, required gte 400, short by 383
+- gen_bv_donchian_fresh_cross_none_swing_tp_short on GBPJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 87, required gte 400, short by 313
+- gen_bv_donchian_fresh_cross_none_swing_tp_short on GBPJPY D1: REJECT at RUNG 0 SANITY -- min_trades: observed 16, required gte 400, short by 384
+- gen_bv_donchian_fresh_cross_none_swing_tp_short on GBPUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 83, required gte 400, short by 317
+- gen_bv_donchian_fresh_cross_none_swing_tp_short on GBPUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 13, required gte 400, short by 387
+- gen_bv_donchian_fresh_cross_none_swing_tp_short on NZDUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 79, required gte 400, short by 321
+- gen_bv_donchian_fresh_cross_none_swing_tp_short on NZDUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 10, required gte 400, short by 390
+- gen_bv_donchian_fresh_cross_none_swing_tp_short on UK100 H4: REJECT at RUNG 0 SANITY -- min_trades: observed 49, required gte 400, short by 351
+- gen_bv_donchian_fresh_cross_none_swing_tp_short on UK100 D1: REJECT at RUNG 0 SANITY -- min_trades: observed 0, required gte 400, short by 400
+- gen_bv_donchian_fresh_cross_none_swing_tp_short on US500 H4: REJECT at RUNG 0 SANITY -- min_trades: observed 44, required gte 400, short by 356
+- gen_bv_donchian_fresh_cross_none_swing_tp_short on US500 D1: REJECT at RUNG 0 SANITY -- min_trades: observed 9, required gte 400, short by 391
+- gen_bv_donchian_fresh_cross_none_swing_tp_short on USDCAD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 100, required gte 400, short by 300
+- gen_bv_donchian_fresh_cross_none_swing_tp_short on USDCAD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 12, required gte 400, short by 388
+- gen_bv_donchian_fresh_cross_none_swing_tp_short on USDCHF H4: REJECT at RUNG 0 SANITY -- min_trades: observed 77, required gte 400, short by 323
+- gen_bv_donchian_fresh_cross_none_swing_tp_short on USDCHF D1: REJECT at RUNG 0 SANITY -- min_trades: observed 15, required gte 400, short by 385
+- gen_bv_donchian_fresh_cross_none_swing_tp_short on USDJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 89, required gte 400, short by 311
+- gen_bv_donchian_fresh_cross_none_swing_tp_short on USDJPY D1: REJECT at RUNG 0 SANITY -- min_trades: observed 13, required gte 400, short by 387
+- gen_bv_donchian_fresh_cross_none_swing_tp_short on XAGUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 83, required gte 400, short by 317
+- gen_bv_donchian_fresh_cross_none_swing_tp_short on XAGUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 12, required gte 400, short by 388
+- gen_bv_donchian_fresh_cross_none_swing_tp_short on XAUUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 73, required gte 400, short by 327
+- gen_bv_donchian_fresh_cross_none_swing_tp_short on XAUUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 14, required gte 400, short by 386
+- gen_bv_donchian_fresh_cross_none_time_exit on AUDJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 220, required gte 400, short by 180
+- gen_bv_donchian_fresh_cross_none_time_exit on AUDJPY D1: REJECT at RUNG 0 SANITY -- min_trades: observed 36, required gte 400, short by 364
+- gen_bv_donchian_fresh_cross_none_time_exit on AUDUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 196, required gte 400, short by 204
+- gen_bv_donchian_fresh_cross_none_time_exit on AUDUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 39, required gte 400, short by 361
+- gen_bv_donchian_fresh_cross_none_time_exit on DE40 H4: REJECT at RUNG 0 SANITY -- min_trades: observed 114, required gte 400, short by 286
+- gen_bv_donchian_fresh_cross_none_time_exit on DE40 D1: REJECT at RUNG 0 SANITY -- min_trades: observed 25, required gte 400, short by 375
+- gen_bv_donchian_fresh_cross_none_time_exit on EURJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 208, required gte 400, short by 192
+- gen_bv_donchian_fresh_cross_none_time_exit on EURJPY D1: REJECT at RUNG 0 SANITY -- min_trades: observed 33, required gte 400, short by 367
+- gen_bv_donchian_fresh_cross_none_time_exit on EURUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 167, required gte 400, short by 233
+- gen_bv_donchian_fresh_cross_none_time_exit on EURUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 37, required gte 400, short by 363
+- gen_bv_donchian_fresh_cross_none_time_exit on GBPJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 224, required gte 400, short by 176
+- gen_bv_donchian_fresh_cross_none_time_exit on GBPJPY D1: REJECT at RUNG 0 SANITY -- min_trades: observed 35, required gte 400, short by 365
+- gen_bv_donchian_fresh_cross_none_time_exit on GBPUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 191, required gte 400, short by 209
+- gen_bv_donchian_fresh_cross_none_time_exit on GBPUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 27, required gte 400, short by 373
+- gen_bv_donchian_fresh_cross_none_time_exit on NZDUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 210, required gte 400, short by 190
+- gen_bv_donchian_fresh_cross_none_time_exit on NZDUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 36, required gte 400, short by 364
+- gen_bv_donchian_fresh_cross_none_time_exit on UK100 H4: REJECT at RUNG 0 SANITY -- min_trades: observed 126, required gte 400, short by 274
+- gen_bv_donchian_fresh_cross_none_time_exit on UK100 D1: REJECT at RUNG 0 SANITY -- min_trades: observed 0, required gte 400, short by 400
+- gen_bv_donchian_fresh_cross_none_time_exit on US500 H4: REJECT at RUNG 0 SANITY -- min_trades: observed 147, required gte 400, short by 253
+- gen_bv_donchian_fresh_cross_none_time_exit on US500 D1: REJECT at RUNG 0 SANITY -- min_trades: observed 35, required gte 400, short by 365
+- gen_bv_donchian_fresh_cross_none_time_exit on USDCAD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 184, required gte 400, short by 216
+- gen_bv_donchian_fresh_cross_none_time_exit on USDCAD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 36, required gte 400, short by 364
+- gen_bv_donchian_fresh_cross_none_time_exit on USDCHF H4: REJECT at RUNG 0 SANITY -- min_trades: observed 186, required gte 400, short by 214
+- gen_bv_donchian_fresh_cross_none_time_exit on USDCHF D1: REJECT at RUNG 0 SANITY -- min_trades: observed 29, required gte 400, short by 371
+- gen_bv_donchian_fresh_cross_none_time_exit on USDJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 206, required gte 400, short by 194
+- gen_bv_donchian_fresh_cross_none_time_exit on USDJPY D1: REJECT at RUNG 0 SANITY -- min_trades: observed 43, required gte 400, short by 357
+- gen_bv_donchian_fresh_cross_none_time_exit on XAGUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 195, required gte 400, short by 205
+- gen_bv_donchian_fresh_cross_none_time_exit on XAGUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 35, required gte 400, short by 365
+- gen_bv_donchian_fresh_cross_none_time_exit on XAUUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 179, required gte 400, short by 221
+- gen_bv_donchian_fresh_cross_none_time_exit on XAUUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 29, required gte 400, short by 371
+- gen_bv_donchian_fresh_cross_none_trail on AUDJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 221, required gte 400, short by 179
+- gen_bv_donchian_fresh_cross_none_trail on AUDJPY D1: REJECT at RUNG 0 SANITY -- min_trades: observed 35, required gte 400, short by 365
+- gen_bv_donchian_fresh_cross_none_trail on AUDUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 196, required gte 400, short by 204
+- gen_bv_donchian_fresh_cross_none_trail on AUDUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 38, required gte 400, short by 362
+- gen_bv_donchian_fresh_cross_none_trail on DE40 H4: REJECT at RUNG 0 SANITY -- min_trades: observed 117, required gte 400, short by 283
+- gen_bv_donchian_fresh_cross_none_trail on DE40 D1: REJECT at RUNG 0 SANITY -- min_trades: observed 26, required gte 400, short by 374
+- gen_bv_donchian_fresh_cross_none_trail on EURJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 200, required gte 400, short by 200
+- gen_bv_donchian_fresh_cross_none_trail on EURJPY D1: REJECT at RUNG 0 SANITY -- min_trades: observed 34, required gte 400, short by 366
+- gen_bv_donchian_fresh_cross_none_trail on EURUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 169, required gte 400, short by 231
+- gen_bv_donchian_fresh_cross_none_trail on EURUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 37, required gte 400, short by 363
+- gen_bv_donchian_fresh_cross_none_trail on GBPJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 218, required gte 400, short by 182
+- gen_bv_donchian_fresh_cross_none_trail on GBPJPY D1: REJECT at RUNG 0 SANITY -- min_trades: observed 35, required gte 400, short by 365
+- gen_bv_donchian_fresh_cross_none_trail on GBPUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 190, required gte 400, short by 210
+- gen_bv_donchian_fresh_cross_none_trail on GBPUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 27, required gte 400, short by 373
+- gen_bv_donchian_fresh_cross_none_trail on NZDUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 213, required gte 400, short by 187
+- gen_bv_donchian_fresh_cross_none_trail on NZDUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 35, required gte 400, short by 365
+- gen_bv_donchian_fresh_cross_none_trail on UK100 H4: REJECT at RUNG 0 SANITY -- min_trades: observed 133, required gte 400, short by 267
+- gen_bv_donchian_fresh_cross_none_trail on UK100 D1: REJECT at RUNG 0 SANITY -- min_trades: observed 10, required gte 400, short by 390
+- gen_bv_donchian_fresh_cross_none_trail on US500 H4: REJECT at RUNG 0 SANITY -- min_trades: observed 141, required gte 400, short by 259
+- gen_bv_donchian_fresh_cross_none_trail on US500 D1: REJECT at RUNG 0 SANITY -- min_trades: observed 38, required gte 400, short by 362
+- gen_bv_donchian_fresh_cross_none_trail on USDCAD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 181, required gte 400, short by 219
+- gen_bv_donchian_fresh_cross_none_trail on USDCAD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 35, required gte 400, short by 365
+- gen_bv_donchian_fresh_cross_none_trail on USDCHF H4: REJECT at RUNG 0 SANITY -- min_trades: observed 189, required gte 400, short by 211
+- gen_bv_donchian_fresh_cross_none_trail on USDCHF D1: REJECT at RUNG 0 SANITY -- min_trades: observed 29, required gte 400, short by 371
+- gen_bv_donchian_fresh_cross_none_trail on USDJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 202, required gte 400, short by 198
+- gen_bv_donchian_fresh_cross_none_trail on USDJPY D1: REJECT at RUNG 0 SANITY -- min_trades: observed 41, required gte 400, short by 359
+- gen_bv_donchian_fresh_cross_none_trail on XAGUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 194, required gte 400, short by 206
+- gen_bv_donchian_fresh_cross_none_trail on XAGUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 34, required gte 400, short by 366
+- gen_bv_donchian_fresh_cross_none_trail on XAUUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 180, required gte 400, short by 220
+- gen_bv_donchian_fresh_cross_none_trail on XAUUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 30, required gte 400, short by 370
+- gen_bv_donchian_fresh_cross_session_swing_tp_short on AUDJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 50, required gte 400, short by 350
+- gen_bv_donchian_fresh_cross_session_swing_tp_short on AUDUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 45, required gte 400, short by 355
+- gen_bv_donchian_fresh_cross_session_swing_tp_short on DE40 H4: REJECT at RUNG 0 SANITY -- min_trades: observed 34, required gte 400, short by 366
+- gen_bv_donchian_fresh_cross_session_swing_tp_short on EURJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 66, required gte 400, short by 334
+- gen_bv_donchian_fresh_cross_session_swing_tp_short on EURUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 56, required gte 400, short by 344
+- gen_bv_donchian_fresh_cross_session_swing_tp_short on GBPJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 65, required gte 400, short by 335
+- gen_bv_donchian_fresh_cross_session_swing_tp_short on GBPUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 65, required gte 400, short by 335
+- gen_bv_donchian_fresh_cross_session_swing_tp_short on NZDUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 60, required gte 400, short by 340
+- gen_bv_donchian_fresh_cross_session_swing_tp_short on UK100 H4: REJECT at RUNG 0 SANITY -- min_trades: observed 39, required gte 400, short by 361
+- gen_bv_donchian_fresh_cross_session_swing_tp_short on US500 H4: REJECT at RUNG 0 SANITY -- min_trades: observed 33, required gte 400, short by 367
+- gen_bv_donchian_fresh_cross_session_swing_tp_short on USDCAD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 90, required gte 400, short by 310
+- gen_bv_donchian_fresh_cross_session_swing_tp_short on USDCHF H4: REJECT at RUNG 0 SANITY -- min_trades: observed 69, required gte 400, short by 331
+- gen_bv_donchian_fresh_cross_session_swing_tp_short on USDJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 53, required gte 400, short by 347
+- gen_bv_donchian_fresh_cross_session_swing_tp_short on XAGUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 65, required gte 400, short by 335
+- gen_bv_donchian_fresh_cross_session_swing_tp_short on XAUUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 60, required gte 400, short by 340
+- gen_bv_donchian_fresh_cross_session_time_exit on AUDJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 132, required gte 400, short by 268
+- gen_bv_donchian_fresh_cross_session_time_exit on AUDUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 125, required gte 400, short by 275
+- gen_bv_donchian_fresh_cross_session_time_exit on DE40 H4: REJECT at RUNG 0 SANITY -- min_trades: observed 87, required gte 400, short by 313
+- gen_bv_donchian_fresh_cross_session_time_exit on EURJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 147, required gte 400, short by 253
+- gen_bv_donchian_fresh_cross_session_time_exit on EURUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 130, required gte 400, short by 270
+- gen_bv_donchian_fresh_cross_session_time_exit on GBPJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 158, required gte 400, short by 242
+- gen_bv_donchian_fresh_cross_session_time_exit on GBPUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 142, required gte 400, short by 258
+- gen_bv_donchian_fresh_cross_session_time_exit on NZDUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 146, required gte 400, short by 254
+- gen_bv_donchian_fresh_cross_session_time_exit on UK100 H4: REJECT at RUNG 0 SANITY -- min_trades: observed 96, required gte 400, short by 304
+- gen_bv_donchian_fresh_cross_session_time_exit on US500 H4: REJECT at RUNG 0 SANITY -- min_trades: observed 118, required gte 400, short by 282
+- gen_bv_donchian_fresh_cross_session_time_exit on USDCAD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 156, required gte 400, short by 244
+- gen_bv_donchian_fresh_cross_session_time_exit on USDCHF H4: REJECT at RUNG 0 SANITY -- min_trades: observed 162, required gte 400, short by 238
+- gen_bv_donchian_fresh_cross_session_time_exit on USDJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 134, required gte 400, short by 266
+- gen_bv_donchian_fresh_cross_session_time_exit on XAGUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 151, required gte 400, short by 249
+- gen_bv_donchian_fresh_cross_session_time_exit on XAUUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 139, required gte 400, short by 261
+- gen_bv_kc_break_adx_gate_time_exit on AUDJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 70, required gte 400, short by 330
+- gen_bv_kc_break_adx_gate_time_exit on AUDJPY D1: REJECT at RUNG 0 SANITY -- min_trades: observed 7, required gte 400, short by 393
+- gen_bv_kc_break_adx_gate_time_exit on AUDUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 57, required gte 400, short by 343
+- gen_bv_kc_break_adx_gate_time_exit on AUDUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 13, required gte 400, short by 387
+- gen_bv_kc_break_adx_gate_time_exit on DE40 H4: REJECT at RUNG 0 SANITY -- min_trades: observed 35, required gte 400, short by 365
+- gen_bv_kc_break_adx_gate_time_exit on DE40 D1: REJECT at RUNG 0 SANITY -- min_trades: observed 1, required gte 400, short by 399
+- gen_bv_kc_break_adx_gate_time_exit on EURJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 62, required gte 400, short by 338
+- gen_bv_kc_break_adx_gate_time_exit on EURJPY D1: REJECT at RUNG 0 SANITY -- min_trades: observed 7, required gte 400, short by 393
+- gen_bv_kc_break_adx_gate_time_exit on EURUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 66, required gte 400, short by 334
+- gen_bv_kc_break_adx_gate_time_exit on EURUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 13, required gte 400, short by 387
+- gen_bv_kc_break_adx_gate_time_exit on GBPJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 73, required gte 400, short by 327
+- gen_bv_kc_break_adx_gate_time_exit on GBPJPY D1: REJECT at RUNG 0 SANITY -- min_trades: observed 6, required gte 400, short by 394
+- gen_bv_kc_break_adx_gate_time_exit on GBPUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 71, required gte 400, short by 329
+- gen_bv_kc_break_adx_gate_time_exit on GBPUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 10, required gte 400, short by 390
+- gen_bv_kc_break_adx_gate_time_exit on NZDUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 77, required gte 400, short by 323
+- gen_bv_kc_break_adx_gate_time_exit on NZDUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 9, required gte 400, short by 391
+- gen_bv_kc_break_adx_gate_time_exit on UK100 H4: REJECT at RUNG 0 SANITY -- min_trades: observed 35, required gte 400, short by 365
+- gen_bv_kc_break_adx_gate_time_exit on UK100 D1: REJECT at RUNG 0 SANITY -- min_trades: observed 0, required gte 400, short by 400
+- gen_bv_kc_break_adx_gate_time_exit on US500 H4: REJECT at RUNG 0 SANITY -- min_trades: observed 64, required gte 400, short by 336
+- gen_bv_kc_break_adx_gate_time_exit on US500 D1: REJECT at RUNG 0 SANITY -- min_trades: observed 7, required gte 400, short by 393
+- gen_bv_kc_break_adx_gate_time_exit on USDCAD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 80, required gte 400, short by 320
+- gen_bv_kc_break_adx_gate_time_exit on USDCAD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 11, required gte 400, short by 389
+- gen_bv_kc_break_adx_gate_time_exit on USDCHF H4: REJECT at RUNG 0 SANITY -- min_trades: observed 73, required gte 400, short by 327
+- gen_bv_kc_break_adx_gate_time_exit on USDCHF D1: REJECT at RUNG 0 SANITY -- min_trades: observed 7, required gte 400, short by 393
+- gen_bv_kc_break_adx_gate_time_exit on USDJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 80, required gte 400, short by 320
+- gen_bv_kc_break_adx_gate_time_exit on USDJPY D1: REJECT at RUNG 0 SANITY -- min_trades: observed 11, required gte 400, short by 389
+- gen_bv_kc_break_adx_gate_time_exit on XAGUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 78, required gte 400, short by 322
+- gen_bv_kc_break_adx_gate_time_exit on XAGUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 15, required gte 400, short by 385
+- gen_bv_kc_break_adx_gate_time_exit on XAUUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 93, required gte 400, short by 307
+- gen_bv_kc_break_adx_gate_time_exit on XAUUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 10, required gte 400, short by 390
+- gen_bv_kc_break_none_swing_tp_long on AUDJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 73, required gte 400, short by 327
+- gen_bv_kc_break_none_swing_tp_long on AUDJPY D1: REJECT at RUNG 0 SANITY -- min_trades: observed 13, required gte 400, short by 387
+- gen_bv_kc_break_none_swing_tp_long on AUDUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 68, required gte 400, short by 332
+- gen_bv_kc_break_none_swing_tp_long on AUDUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 14, required gte 400, short by 386
+- gen_bv_kc_break_none_swing_tp_long on DE40 H4: REJECT at RUNG 0 SANITY -- min_trades: observed 52, required gte 400, short by 348
+- gen_bv_kc_break_none_swing_tp_long on DE40 D1: REJECT at RUNG 0 SANITY -- min_trades: observed 6, required gte 400, short by 394
+- gen_bv_kc_break_none_swing_tp_long on EURJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 57, required gte 400, short by 343
+- gen_bv_kc_break_none_swing_tp_long on EURJPY D1: REJECT at RUNG 0 SANITY -- min_trades: observed 11, required gte 400, short by 389
+- gen_bv_kc_break_none_swing_tp_long on EURUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 72, required gte 400, short by 328
+- gen_bv_kc_break_none_swing_tp_long on EURUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 14, required gte 400, short by 386
+- gen_bv_kc_break_none_swing_tp_long on GBPJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 64, required gte 400, short by 336
+- gen_bv_kc_break_none_swing_tp_long on GBPJPY D1: REJECT at RUNG 0 SANITY -- min_trades: observed 12, required gte 400, short by 388
+- gen_bv_kc_break_none_swing_tp_long on GBPUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 71, required gte 400, short by 329
+- gen_bv_kc_break_none_swing_tp_long on GBPUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 11, required gte 400, short by 389
+- gen_bv_kc_break_none_swing_tp_long on NZDUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 70, required gte 400, short by 330
+- gen_bv_kc_break_none_swing_tp_long on NZDUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 14, required gte 400, short by 386
+- gen_bv_kc_break_none_swing_tp_long on UK100 H4: REJECT at RUNG 0 SANITY -- min_trades: observed 45, required gte 400, short by 355
+- gen_bv_kc_break_none_swing_tp_long on UK100 D1: REJECT at RUNG 0 SANITY -- min_trades: observed 0, required gte 400, short by 400
+- gen_bv_kc_break_none_swing_tp_long on US500 H4: REJECT at RUNG 0 SANITY -- min_trades: observed 75, required gte 400, short by 325
+- gen_bv_kc_break_none_swing_tp_long on US500 D1: REJECT at RUNG 0 SANITY -- min_trades: observed 15, required gte 400, short by 385
+- gen_bv_kc_break_none_swing_tp_long on USDCAD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 53, required gte 400, short by 347
+- gen_bv_kc_break_none_swing_tp_long on USDCAD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 10, required gte 400, short by 390
+- gen_bv_kc_break_none_swing_tp_long on USDCHF H4: REJECT at RUNG 0 SANITY -- min_trades: observed 71, required gte 400, short by 329
+- gen_bv_kc_break_none_swing_tp_long on USDCHF D1: REJECT at RUNG 0 SANITY -- min_trades: observed 8, required gte 400, short by 392
+- gen_bv_kc_break_none_swing_tp_long on USDJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 66, required gte 400, short by 334
+- gen_bv_kc_break_none_swing_tp_long on USDJPY D1: REJECT at RUNG 0 SANITY -- min_trades: observed 16, required gte 400, short by 384
+- gen_bv_kc_break_none_swing_tp_long on XAGUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 82, required gte 400, short by 318
+- gen_bv_kc_break_none_swing_tp_long on XAGUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 13, required gte 400, short by 387
+- gen_bv_kc_break_none_swing_tp_long on XAUUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 77, required gte 400, short by 323
+- gen_bv_kc_break_none_swing_tp_long on XAUUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 11, required gte 400, short by 389
+- gen_bv_kc_break_none_tp_r on AUDJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 155, required gte 400, short by 245
+- gen_bv_kc_break_none_tp_r on AUDJPY D1: REJECT at RUNG 0 SANITY -- min_trades: observed 29, required gte 400, short by 371
+- gen_bv_kc_break_none_tp_r on AUDUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 143, required gte 400, short by 257
+- gen_bv_kc_break_none_tp_r on AUDUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 26, required gte 400, short by 374
+- gen_bv_kc_break_none_tp_r on DE40 H4: REJECT at RUNG 0 SANITY -- min_trades: observed 91, required gte 400, short by 309
+- gen_bv_kc_break_none_tp_r on DE40 D1: REJECT at RUNG 0 SANITY -- min_trades: observed 14, required gte 400, short by 386
+- gen_bv_kc_break_none_tp_r on EURJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 145, required gte 400, short by 255
+- gen_bv_kc_break_none_tp_r on EURJPY D1: REJECT at RUNG 0 SANITY -- min_trades: observed 26, required gte 400, short by 374
+- gen_bv_kc_break_none_tp_r on EURUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 138, required gte 400, short by 262
+- gen_bv_kc_break_none_tp_r on EURUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 27, required gte 400, short by 373
+- gen_bv_kc_break_none_tp_r on GBPJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 160, required gte 400, short by 240
+- gen_bv_kc_break_none_tp_r on GBPJPY D1: REJECT at RUNG 0 SANITY -- min_trades: observed 26, required gte 400, short by 374
+- gen_bv_kc_break_none_tp_r on GBPUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 148, required gte 400, short by 252
+- gen_bv_kc_break_none_tp_r on GBPUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 23, required gte 400, short by 377
+- gen_bv_kc_break_none_tp_r on NZDUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 156, required gte 400, short by 244
+- gen_bv_kc_break_none_tp_r on NZDUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 21, required gte 400, short by 379
+- gen_bv_kc_break_none_tp_r on UK100 H4: REJECT at RUNG 0 SANITY -- min_trades: observed 104, required gte 400, short by 296
+- gen_bv_kc_break_none_tp_r on UK100 D1: REJECT at RUNG 0 SANITY -- min_trades: observed 8, required gte 400, short by 392
+- gen_bv_kc_break_none_tp_r on US500 H4: REJECT at RUNG 0 SANITY -- min_trades: observed 122, required gte 400, short by 278
+- gen_bv_kc_break_none_tp_r on US500 D1: REJECT at RUNG 0 SANITY -- min_trades: observed 26, required gte 400, short by 374
+- gen_bv_kc_break_none_tp_r on USDCAD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 147, required gte 400, short by 253
+- gen_bv_kc_break_none_tp_r on USDCAD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 23, required gte 400, short by 377
+- gen_bv_kc_break_none_tp_r on USDCHF H4: REJECT at RUNG 0 SANITY -- min_trades: observed 144, required gte 400, short by 256
+- gen_bv_kc_break_none_tp_r on USDCHF D1: REJECT at RUNG 0 SANITY -- min_trades: observed 20, required gte 400, short by 380
+- gen_bv_kc_break_none_tp_r on USDJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 160, required gte 400, short by 240
+- gen_bv_kc_break_none_tp_r on USDJPY D1: REJECT at RUNG 0 SANITY -- min_trades: observed 30, required gte 400, short by 370
+- gen_bv_kc_break_none_tp_r on XAGUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 167, required gte 400, short by 233
+- gen_bv_kc_break_none_tp_r on XAGUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 27, required gte 400, short by 373
+- gen_bv_kc_break_none_tp_r on XAUUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 155, required gte 400, short by 245
+- gen_bv_kc_break_none_tp_r on XAUUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 25, required gte 400, short by 375
+- gen_bv_kc_break_rvol_gate_time_exit on AUDJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 131, required gte 400, short by 269
+- gen_bv_kc_break_rvol_gate_time_exit on AUDJPY D1: REJECT at RUNG 0 SANITY -- min_trades: observed 31, required gte 400, short by 369
+- gen_bv_kc_break_rvol_gate_time_exit on AUDUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 117, required gte 400, short by 283
+- gen_bv_kc_break_rvol_gate_time_exit on AUDUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 26, required gte 400, short by 374
+- gen_bv_kc_break_rvol_gate_time_exit on DE40 H4: REJECT at RUNG 0 SANITY -- min_trades: observed 97, required gte 400, short by 303
+- gen_bv_kc_break_rvol_gate_time_exit on DE40 D1: REJECT at RUNG 0 SANITY -- min_trades: observed 13, required gte 400, short by 387
+- gen_bv_kc_break_rvol_gate_time_exit on EURJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 92, required gte 400, short by 308
+- gen_bv_kc_break_rvol_gate_time_exit on EURJPY D1: REJECT at RUNG 0 SANITY -- min_trades: observed 24, required gte 400, short by 376
+- gen_bv_kc_break_rvol_gate_time_exit on EURUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 68, required gte 400, short by 332
+- gen_bv_kc_break_rvol_gate_time_exit on EURUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 28, required gte 400, short by 372
+- gen_bv_kc_break_rvol_gate_time_exit on GBPJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 125, required gte 400, short by 275
+- gen_bv_kc_break_rvol_gate_time_exit on GBPJPY D1: REJECT at RUNG 0 SANITY -- min_trades: observed 27, required gte 400, short by 373
+- gen_bv_kc_break_rvol_gate_time_exit on GBPUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 79, required gte 400, short by 321
+- gen_bv_kc_break_rvol_gate_time_exit on GBPUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 23, required gte 400, short by 377
+- gen_bv_kc_break_rvol_gate_time_exit on NZDUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 143, required gte 400, short by 257
+- gen_bv_kc_break_rvol_gate_time_exit on NZDUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 21, required gte 400, short by 379
+- gen_bv_kc_break_rvol_gate_time_exit on UK100 H4: REJECT at RUNG 0 SANITY -- min_trades: observed 94, required gte 400, short by 306
+- gen_bv_kc_break_rvol_gate_time_exit on UK100 D1: REJECT at RUNG 0 SANITY -- min_trades: observed 0, required gte 400, short by 400
+- gen_bv_kc_break_rvol_gate_time_exit on US500 H4: REJECT at RUNG 0 SANITY -- min_trades: observed 101, required gte 400, short by 299
+- gen_bv_kc_break_rvol_gate_time_exit on US500 D1: REJECT at RUNG 0 SANITY -- min_trades: observed 25, required gte 400, short by 375
+- gen_bv_kc_break_rvol_gate_time_exit on USDCAD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 72, required gte 400, short by 328
+- gen_bv_kc_break_rvol_gate_time_exit on USDCAD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 27, required gte 400, short by 373
+- gen_bv_kc_break_rvol_gate_time_exit on USDCHF H4: REJECT at RUNG 0 SANITY -- min_trades: observed 85, required gte 400, short by 315
+- gen_bv_kc_break_rvol_gate_time_exit on USDCHF D1: REJECT at RUNG 0 SANITY -- min_trades: observed 22, required gte 400, short by 378
+- gen_bv_kc_break_rvol_gate_time_exit on USDJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 89, required gte 400, short by 311
+- gen_bv_kc_break_rvol_gate_time_exit on USDJPY D1: REJECT at RUNG 0 SANITY -- min_trades: observed 34, required gte 400, short by 366
+- gen_bv_kc_break_rvol_gate_time_exit on XAGUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 169, required gte 400, short by 231
+- gen_bv_kc_break_rvol_gate_time_exit on XAGUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 28, required gte 400, short by 372
+- gen_bv_kc_break_rvol_gate_time_exit on XAUUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 156, required gte 400, short by 244
+- gen_bv_kc_break_rvol_gate_time_exit on XAUUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 25, required gte 400, short by 375
+- gen_bv_kc_break_rvol_gate_tp_r on AUDJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 123, required gte 400, short by 277
+- gen_bv_kc_break_rvol_gate_tp_r on AUDJPY D1: REJECT at RUNG 0 SANITY -- min_trades: observed 29, required gte 400, short by 371
+- gen_bv_kc_break_rvol_gate_tp_r on AUDUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 110, required gte 400, short by 290
+- gen_bv_kc_break_rvol_gate_tp_r on AUDUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 26, required gte 400, short by 374
+- gen_bv_kc_break_rvol_gate_tp_r on DE40 H4: REJECT at RUNG 0 SANITY -- min_trades: observed 91, required gte 400, short by 309
+- gen_bv_kc_break_rvol_gate_tp_r on DE40 D1: REJECT at RUNG 0 SANITY -- min_trades: observed 14, required gte 400, short by 386
+- gen_bv_kc_break_rvol_gate_tp_r on EURJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 87, required gte 400, short by 313
+- gen_bv_kc_break_rvol_gate_tp_r on EURJPY D1: REJECT at RUNG 0 SANITY -- min_trades: observed 26, required gte 400, short by 374
+- gen_bv_kc_break_rvol_gate_tp_r on EURUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 69, required gte 400, short by 331
+- gen_bv_kc_break_rvol_gate_tp_r on EURUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 27, required gte 400, short by 373
+- gen_bv_kc_break_rvol_gate_tp_r on GBPJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 114, required gte 400, short by 286
+- gen_bv_kc_break_rvol_gate_tp_r on GBPJPY D1: REJECT at RUNG 0 SANITY -- min_trades: observed 26, required gte 400, short by 374
+- gen_bv_kc_break_rvol_gate_tp_r on GBPUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 78, required gte 400, short by 322
+- gen_bv_kc_break_rvol_gate_tp_r on GBPUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 23, required gte 400, short by 377
+- gen_bv_kc_break_rvol_gate_tp_r on NZDUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 141, required gte 400, short by 259
+- gen_bv_kc_break_rvol_gate_tp_r on NZDUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 21, required gte 400, short by 379
+- gen_bv_kc_break_rvol_gate_tp_r on UK100 H4: REJECT at RUNG 0 SANITY -- min_trades: observed 101, required gte 400, short by 299
+- gen_bv_kc_break_rvol_gate_tp_r on UK100 D1: REJECT at RUNG 0 SANITY -- min_trades: observed 8, required gte 400, short by 392
+- gen_bv_kc_break_rvol_gate_tp_r on US500 H4: REJECT at RUNG 0 SANITY -- min_trades: observed 99, required gte 400, short by 301
+- gen_bv_kc_break_rvol_gate_tp_r on US500 D1: REJECT at RUNG 0 SANITY -- min_trades: observed 26, required gte 400, short by 374
+- gen_bv_kc_break_rvol_gate_tp_r on USDCAD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 71, required gte 400, short by 329
+- gen_bv_kc_break_rvol_gate_tp_r on USDCAD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 23, required gte 400, short by 377
+- gen_bv_kc_break_rvol_gate_tp_r on USDCHF H4: REJECT at RUNG 0 SANITY -- min_trades: observed 83, required gte 400, short by 317
+- gen_bv_kc_break_rvol_gate_tp_r on USDCHF D1: REJECT at RUNG 0 SANITY -- min_trades: observed 20, required gte 400, short by 380
+- gen_bv_kc_break_rvol_gate_tp_r on USDJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 83, required gte 400, short by 317
+- gen_bv_kc_break_rvol_gate_tp_r on USDJPY D1: REJECT at RUNG 0 SANITY -- min_trades: observed 30, required gte 400, short by 370
+- gen_bv_kc_break_rvol_gate_tp_r on XAGUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 167, required gte 400, short by 233
+- gen_bv_kc_break_rvol_gate_tp_r on XAGUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 27, required gte 400, short by 373
+- gen_bv_kc_break_rvol_gate_tp_r on XAUUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 149, required gte 400, short by 251
+- gen_bv_kc_break_rvol_gate_tp_r on XAUUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 25, required gte 400, short by 375
+- gen_bv_kc_break_session_trail on AUDJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 100, required gte 400, short by 300
+- gen_bv_kc_break_session_trail on AUDUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 106, required gte 400, short by 294
+- gen_bv_kc_break_session_trail on DE40 H4: REJECT at RUNG 0 SANITY -- min_trades: observed 72, required gte 400, short by 328
+- gen_bv_kc_break_session_trail on EURJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 101, required gte 400, short by 299
+- gen_bv_kc_break_session_trail on EURUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 111, required gte 400, short by 289
+- gen_bv_kc_break_session_trail on GBPJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 117, required gte 400, short by 283
+- gen_bv_kc_break_session_trail on GBPUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 115, required gte 400, short by 285
+- gen_bv_kc_break_session_trail on NZDUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 105, required gte 400, short by 295
+- gen_bv_kc_break_session_trail on UK100 H4: REJECT at RUNG 0 SANITY -- min_trades: observed 81, required gte 400, short by 319
+- gen_bv_kc_break_session_trail on US500 H4: REJECT at RUNG 0 SANITY -- min_trades: observed 96, required gte 400, short by 304
+- gen_bv_kc_break_session_trail on USDCAD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 137, required gte 400, short by 263
+- gen_bv_kc_break_session_trail on USDCHF H4: REJECT at RUNG 0 SANITY -- min_trades: observed 122, required gte 400, short by 278
+- gen_bv_kc_break_session_trail on USDJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 113, required gte 400, short by 287
+- gen_bv_kc_break_session_trail on XAGUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 141, required gte 400, short by 259
+- gen_bv_kc_break_session_trail on XAUUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 133, required gte 400, short by 267
+- gen_ic_kumo_chikou_flip_adx_gate_swing_tp_long on AUDJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 115, required gte 400, short by 285
+- gen_ic_kumo_chikou_flip_adx_gate_swing_tp_long on AUDJPY D1: REJECT at RUNG 0 SANITY -- min_trades: observed 15, required gte 400, short by 385
+- gen_ic_kumo_chikou_flip_adx_gate_swing_tp_long on AUDUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 130, required gte 400, short by 270
+- gen_ic_kumo_chikou_flip_adx_gate_swing_tp_long on AUDUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 19, required gte 400, short by 381
+- gen_ic_kumo_chikou_flip_adx_gate_swing_tp_long on EURJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 108, required gte 400, short by 292
+- gen_ic_kumo_chikou_flip_adx_gate_swing_tp_long on EURJPY D1: REJECT at RUNG 0 SANITY -- min_trades: observed 25, required gte 400, short by 375
+- gen_ic_kumo_chikou_flip_adx_gate_swing_tp_long on EURUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 109, required gte 400, short by 291
+- gen_ic_kumo_chikou_flip_adx_gate_swing_tp_long on EURUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 17, required gte 400, short by 383
+- gen_ic_kumo_chikou_flip_adx_gate_swing_tp_long on GBPJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 130, required gte 400, short by 270
+- gen_ic_kumo_chikou_flip_adx_gate_swing_tp_long on GBPJPY D1: REJECT at RUNG 0 SANITY -- min_trades: observed 15, required gte 400, short by 385
+- gen_ic_kumo_chikou_flip_adx_gate_swing_tp_long on GBPUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 128, required gte 400, short by 272
+- gen_ic_kumo_chikou_flip_adx_gate_swing_tp_long on GBPUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 18, required gte 400, short by 382
+- gen_ic_kumo_chikou_flip_adx_gate_swing_tp_long on US500 H4: REJECT at RUNG 0 SANITY -- min_trades: observed 120, required gte 400, short by 280
+- gen_ic_kumo_chikou_flip_adx_gate_swing_tp_long on US500 D1: REJECT at RUNG 0 SANITY -- min_trades: observed 25, required gte 400, short by 375
+- gen_ic_kumo_chikou_flip_adx_gate_swing_tp_long on USDJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 112, required gte 400, short by 288
+- gen_ic_kumo_chikou_flip_adx_gate_swing_tp_long on USDJPY D1: REJECT at RUNG 0 SANITY -- min_trades: observed 17, required gte 400, short by 383
+- gen_ic_kumo_chikou_flip_adx_gate_swing_tp_long on XAUUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 144, required gte 400, short by 256
+- gen_ic_kumo_chikou_flip_adx_gate_swing_tp_long on XAUUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 23, required gte 400, short by 377
+- gen_ic_kumo_chikou_flip_none_swing_tp_short on AUDJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 174, required gte 400, short by 226
+- gen_ic_kumo_chikou_flip_none_swing_tp_short on AUDJPY D1: REJECT at RUNG 0 SANITY -- min_trades: observed 30, required gte 400, short by 370
+- gen_ic_kumo_chikou_flip_none_swing_tp_short on AUDUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 173, required gte 400, short by 227
+- gen_ic_kumo_chikou_flip_none_swing_tp_short on AUDUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 36, required gte 400, short by 364
+- gen_ic_kumo_chikou_flip_none_swing_tp_short on EURJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 173, required gte 400, short by 227
+- gen_ic_kumo_chikou_flip_none_swing_tp_short on EURJPY D1: REJECT at RUNG 0 SANITY -- min_trades: observed 30, required gte 400, short by 370
+- gen_ic_kumo_chikou_flip_none_swing_tp_short on EURUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 163, required gte 400, short by 237
+- gen_ic_kumo_chikou_flip_none_swing_tp_short on EURUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 43, required gte 400, short by 357
+- gen_ic_kumo_chikou_flip_none_swing_tp_short on GBPJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 127, required gte 400, short by 273
+- gen_ic_kumo_chikou_flip_none_swing_tp_short on GBPJPY D1: REJECT at RUNG 0 SANITY -- min_trades: observed 21, required gte 400, short by 379
+- gen_ic_kumo_chikou_flip_none_swing_tp_short on GBPUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 117, required gte 400, short by 283
+- gen_ic_kumo_chikou_flip_none_swing_tp_short on GBPUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 40, required gte 400, short by 360
+- gen_ic_kumo_chikou_flip_none_swing_tp_short on US500 H4: REJECT at RUNG 0 SANITY -- min_trades: observed 152, required gte 400, short by 248
+- gen_ic_kumo_chikou_flip_none_swing_tp_short on US500 D1: REJECT at RUNG 0 SANITY -- min_trades: observed 26, required gte 400, short by 374
+- gen_ic_kumo_chikou_flip_none_swing_tp_short on USDJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 132, required gte 400, short by 268
+- gen_ic_kumo_chikou_flip_none_swing_tp_short on USDJPY D1: REJECT at RUNG 0 SANITY -- min_trades: observed 41, required gte 400, short by 359
+- gen_ic_kumo_chikou_flip_none_swing_tp_short on XAUUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 146, required gte 400, short by 254
+- gen_ic_kumo_chikou_flip_none_swing_tp_short on XAUUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 31, required gte 400, short by 369
+- gen_ic_kumo_chikou_flip_rvol_gate_swing_tp_long on AUDJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 177, required gte 400, short by 223
+- gen_ic_kumo_chikou_flip_rvol_gate_swing_tp_long on AUDJPY D1: REJECT at RUNG 0 SANITY -- min_trades: observed 36, required gte 400, short by 364
+- gen_ic_kumo_chikou_flip_rvol_gate_swing_tp_long on AUDUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 191, required gte 400, short by 209
+- gen_ic_kumo_chikou_flip_rvol_gate_swing_tp_long on AUDUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 38, required gte 400, short by 362
+- gen_ic_kumo_chikou_flip_rvol_gate_swing_tp_long on EURJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 151, required gte 400, short by 249
+- gen_ic_kumo_chikou_flip_rvol_gate_swing_tp_long on EURJPY D1: REJECT at RUNG 0 SANITY -- min_trades: observed 37, required gte 400, short by 363
+- gen_ic_kumo_chikou_flip_rvol_gate_swing_tp_long on EURUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 141, required gte 400, short by 259
+- gen_ic_kumo_chikou_flip_rvol_gate_swing_tp_long on EURUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 35, required gte 400, short by 365
+- gen_ic_kumo_chikou_flip_rvol_gate_swing_tp_long on GBPJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 181, required gte 400, short by 219
+- gen_ic_kumo_chikou_flip_rvol_gate_swing_tp_long on GBPJPY D1: REJECT at RUNG 0 SANITY -- min_trades: observed 30, required gte 400, short by 370
+- gen_ic_kumo_chikou_flip_rvol_gate_swing_tp_long on GBPUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 161, required gte 400, short by 239
+- gen_ic_kumo_chikou_flip_rvol_gate_swing_tp_long on GBPUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 50, required gte 400, short by 350
+- gen_ic_kumo_chikou_flip_rvol_gate_swing_tp_long on US500 H4: REJECT at RUNG 0 SANITY -- min_trades: observed 170, required gte 400, short by 230
+- gen_ic_kumo_chikou_flip_rvol_gate_swing_tp_long on US500 D1: REJECT at RUNG 0 SANITY -- min_trades: observed 42, required gte 400, short by 358
+- gen_ic_kumo_chikou_flip_rvol_gate_swing_tp_long on USDJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 128, required gte 400, short by 272
+- gen_ic_kumo_chikou_flip_rvol_gate_swing_tp_long on USDJPY D1: REJECT at RUNG 0 SANITY -- min_trades: observed 33, required gte 400, short by 367
+- gen_ic_kumo_chikou_flip_rvol_gate_swing_tp_long on XAUUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 199, required gte 400, short by 201
+- gen_ic_kumo_chikou_flip_rvol_gate_swing_tp_long on XAUUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 26, required gte 400, short by 374
+- gen_ic_kumo_chikou_flip_rvol_gate_time_exit on AUDJPY H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -0.191566 at declared defaults is not positive; there is no edge to validate.
+- gen_ic_kumo_chikou_flip_rvol_gate_time_exit on AUDJPY D1: REJECT at RUNG 0 SANITY -- min_trades: observed 92, required gte 400, short by 308
+- gen_ic_kumo_chikou_flip_rvol_gate_time_exit on AUDUSD H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -0.724451 at declared defaults is not positive; there is no edge to validate.
+- gen_ic_kumo_chikou_flip_rvol_gate_time_exit on AUDUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 92, required gte 400, short by 308
+- gen_ic_kumo_chikou_flip_rvol_gate_time_exit on EURJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 397, required gte 400, short by 3
+- gen_ic_kumo_chikou_flip_rvol_gate_time_exit on EURJPY D1: REJECT at RUNG 0 SANITY -- min_trades: observed 105, required gte 400, short by 295
+- gen_ic_kumo_chikou_flip_rvol_gate_time_exit on EURUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 383, required gte 400, short by 17
+- gen_ic_kumo_chikou_flip_rvol_gate_time_exit on EURUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 100, required gte 400, short by 300
+- gen_ic_kumo_chikou_flip_rvol_gate_time_exit on GBPJPY H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -0.217961 at declared defaults is not positive; there is no edge to validate.
+- gen_ic_kumo_chikou_flip_rvol_gate_time_exit on GBPJPY D1: REJECT at RUNG 0 SANITY -- min_trades: observed 93, required gte 400, short by 307
+- gen_ic_kumo_chikou_flip_rvol_gate_time_exit on GBPUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 398, required gte 400, short by 2
+- gen_ic_kumo_chikou_flip_rvol_gate_time_exit on GBPUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 103, required gte 400, short by 297
+- gen_ic_kumo_chikou_flip_rvol_gate_time_exit on US500 H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -1.16259 at declared defaults is not positive; there is no edge to validate.
+- gen_ic_kumo_chikou_flip_rvol_gate_time_exit on US500 D1: REJECT at RUNG 0 SANITY -- min_trades: observed 94, required gte 400, short by 306
+- gen_ic_kumo_chikou_flip_rvol_gate_time_exit on USDJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 395, required gte 400, short by 5
+- gen_ic_kumo_chikou_flip_rvol_gate_time_exit on USDJPY D1: REJECT at RUNG 0 SANITY -- min_trades: observed 105, required gte 400, short by 295
+- gen_ic_kumo_chikou_flip_rvol_gate_time_exit on XAUUSD H4: REJECT at RUNG 2 WALK_FORWARD -- walk_forward_efficiency: observed 26.2, required gte 50, short by 23.8
+- gen_ic_kumo_chikou_flip_rvol_gate_time_exit on XAUUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 94, required gte 400, short by 306
+- gen_ic_kumo_chikou_flip_session_time_exit on AUDJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 393, required gte 400, short by 7
+- gen_ic_kumo_chikou_flip_session_time_exit on AUDUSD H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -1.21379 at declared defaults is not positive; there is no edge to validate.
+- gen_ic_kumo_chikou_flip_session_time_exit on EURJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 386, required gte 400, short by 14
+- gen_ic_kumo_chikou_flip_session_time_exit on EURUSD H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -0.950526 at declared defaults is not positive; there is no edge to validate.
+- gen_ic_kumo_chikou_flip_session_time_exit on GBPJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 382, required gte 400, short by 18
+- gen_ic_kumo_chikou_flip_session_time_exit on GBPUSD H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -1.00611 at declared defaults is not positive; there is no edge to validate.
+- gen_ic_kumo_chikou_flip_session_time_exit on US500 H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -1.46139 at declared defaults is not positive; there is no edge to validate.
+- gen_ic_kumo_chikou_flip_session_time_exit on USDJPY H4: REJECT at RUNG 1 IN_SAMPLE_SCREEN -- RUNG 1 IN_SAMPLE_SCREEN: no parameterisation inside the domains the document declares is positive in sample on sharpe; there is nothing for the later rungs to test.
+- gen_ic_kumo_chikou_flip_session_time_exit on XAUUSD H4: REJECT at RUNG 2 WALK_FORWARD -- walk_forward_efficiency: observed 15.67, required gte 50, short by 34.33
+- gen_ic_kumo_kijun_cross_adx_gate_swing_tp_long on AUDJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 99, required gte 400, short by 301
+- gen_ic_kumo_kijun_cross_adx_gate_swing_tp_long on AUDJPY D1: REJECT at RUNG 0 SANITY -- min_trades: observed 20, required gte 400, short by 380
+- gen_ic_kumo_kijun_cross_adx_gate_swing_tp_long on AUDUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 112, required gte 400, short by 288
+- gen_ic_kumo_kijun_cross_adx_gate_swing_tp_long on AUDUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 17, required gte 400, short by 383
+- gen_ic_kumo_kijun_cross_adx_gate_swing_tp_long on EURJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 98, required gte 400, short by 302
+- gen_ic_kumo_kijun_cross_adx_gate_swing_tp_long on EURJPY D1: REJECT at RUNG 0 SANITY -- min_trades: observed 22, required gte 400, short by 378
+- gen_ic_kumo_kijun_cross_adx_gate_swing_tp_long on EURUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 101, required gte 400, short by 299
+- gen_ic_kumo_kijun_cross_adx_gate_swing_tp_long on EURUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 17, required gte 400, short by 383
+- gen_ic_kumo_kijun_cross_adx_gate_swing_tp_long on GBPJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 102, required gte 400, short by 298
+- gen_ic_kumo_kijun_cross_adx_gate_swing_tp_long on GBPJPY D1: REJECT at RUNG 0 SANITY -- min_trades: observed 18, required gte 400, short by 382
+- gen_ic_kumo_kijun_cross_adx_gate_swing_tp_long on GBPUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 121, required gte 400, short by 279
+- gen_ic_kumo_kijun_cross_adx_gate_swing_tp_long on GBPUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 17, required gte 400, short by 383
+- gen_ic_kumo_kijun_cross_adx_gate_swing_tp_long on US500 H4: REJECT at RUNG 0 SANITY -- min_trades: observed 117, required gte 400, short by 283
+- gen_ic_kumo_kijun_cross_adx_gate_swing_tp_long on US500 D1: REJECT at RUNG 0 SANITY -- min_trades: observed 24, required gte 400, short by 376
+- gen_ic_kumo_kijun_cross_adx_gate_swing_tp_long on USDJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 97, required gte 400, short by 303
+- gen_ic_kumo_kijun_cross_adx_gate_swing_tp_long on USDJPY D1: REJECT at RUNG 0 SANITY -- min_trades: observed 14, required gte 400, short by 386
+- gen_ic_kumo_kijun_cross_adx_gate_swing_tp_long on XAUUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 130, required gte 400, short by 270
+- gen_ic_kumo_kijun_cross_adx_gate_swing_tp_long on XAUUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 11, required gte 400, short by 389
+- gen_ic_kumo_kijun_cross_adx_gate_tp_r on AUDJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 250, required gte 400, short by 150
+- gen_ic_kumo_kijun_cross_adx_gate_tp_r on AUDJPY D1: REJECT at RUNG 0 SANITY -- min_trades: observed 47, required gte 400, short by 353
+- gen_ic_kumo_kijun_cross_adx_gate_tp_r on AUDUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 258, required gte 400, short by 142
+- gen_ic_kumo_kijun_cross_adx_gate_tp_r on AUDUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 46, required gte 400, short by 354
+- gen_ic_kumo_kijun_cross_adx_gate_tp_r on EURJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 266, required gte 400, short by 134
+- gen_ic_kumo_kijun_cross_adx_gate_tp_r on EURJPY D1: REJECT at RUNG 0 SANITY -- min_trades: observed 55, required gte 400, short by 345
+- gen_ic_kumo_kijun_cross_adx_gate_tp_r on EURUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 279, required gte 400, short by 121
+- gen_ic_kumo_kijun_cross_adx_gate_tp_r on EURUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 50, required gte 400, short by 350
+- gen_ic_kumo_kijun_cross_adx_gate_tp_r on GBPJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 271, required gte 400, short by 129
+- gen_ic_kumo_kijun_cross_adx_gate_tp_r on GBPJPY D1: REJECT at RUNG 0 SANITY -- min_trades: observed 53, required gte 400, short by 347
+- gen_ic_kumo_kijun_cross_adx_gate_tp_r on GBPUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 276, required gte 400, short by 124
+- gen_ic_kumo_kijun_cross_adx_gate_tp_r on GBPUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 32, required gte 400, short by 368
+- gen_ic_kumo_kijun_cross_adx_gate_tp_r on US500 H4: REJECT at RUNG 0 SANITY -- min_trades: observed 293, required gte 400, short by 107
+- gen_ic_kumo_kijun_cross_adx_gate_tp_r on US500 D1: REJECT at RUNG 0 SANITY -- min_trades: observed 49, required gte 400, short by 351
+- gen_ic_kumo_kijun_cross_adx_gate_tp_r on USDJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 275, required gte 400, short by 125
+- gen_ic_kumo_kijun_cross_adx_gate_tp_r on USDJPY D1: REJECT at RUNG 0 SANITY -- min_trades: observed 52, required gte 400, short by 348
+- gen_ic_kumo_kijun_cross_adx_gate_tp_r on XAUUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 287, required gte 400, short by 113
+- gen_ic_kumo_kijun_cross_adx_gate_tp_r on XAUUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 40, required gte 400, short by 360
+- gen_ic_kumo_kijun_cross_none_swing_tp_short on AUDJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 132, required gte 400, short by 268
+- gen_ic_kumo_kijun_cross_none_swing_tp_short on AUDJPY D1: REJECT at RUNG 0 SANITY -- min_trades: observed 15, required gte 400, short by 385
+- gen_ic_kumo_kijun_cross_none_swing_tp_short on AUDUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 156, required gte 400, short by 244
+- gen_ic_kumo_kijun_cross_none_swing_tp_short on AUDUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 32, required gte 400, short by 368
+- gen_ic_kumo_kijun_cross_none_swing_tp_short on EURJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 157, required gte 400, short by 243
+- gen_ic_kumo_kijun_cross_none_swing_tp_short on EURJPY D1: REJECT at RUNG 0 SANITY -- min_trades: observed 29, required gte 400, short by 371
+- gen_ic_kumo_kijun_cross_none_swing_tp_short on EURUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 160, required gte 400, short by 240
+- gen_ic_kumo_kijun_cross_none_swing_tp_short on EURUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 35, required gte 400, short by 365
+- gen_ic_kumo_kijun_cross_none_swing_tp_short on GBPJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 129, required gte 400, short by 271
+- gen_ic_kumo_kijun_cross_none_swing_tp_short on GBPJPY D1: REJECT at RUNG 0 SANITY -- min_trades: observed 28, required gte 400, short by 372
+- gen_ic_kumo_kijun_cross_none_swing_tp_short on GBPUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 148, required gte 400, short by 252
+- gen_ic_kumo_kijun_cross_none_swing_tp_short on GBPUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 27, required gte 400, short by 373
+- gen_ic_kumo_kijun_cross_none_swing_tp_short on US500 H4: REJECT at RUNG 0 SANITY -- min_trades: observed 146, required gte 400, short by 254
+- gen_ic_kumo_kijun_cross_none_swing_tp_short on US500 D1: REJECT at RUNG 0 SANITY -- min_trades: observed 26, required gte 400, short by 374
+- gen_ic_kumo_kijun_cross_none_swing_tp_short on USDJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 172, required gte 400, short by 228
+- gen_ic_kumo_kijun_cross_none_swing_tp_short on USDJPY D1: REJECT at RUNG 0 SANITY -- min_trades: observed 34, required gte 400, short by 366
+- gen_ic_kumo_kijun_cross_none_swing_tp_short on XAUUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 129, required gte 400, short by 271
+- gen_ic_kumo_kijun_cross_none_swing_tp_short on XAUUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 27, required gte 400, short by 373
+- gen_ic_kumo_kijun_cross_rvol_gate_trail on AUDJPY H4: REJECT at RUNG 2 WALK_FORWARD -- oos_window_hit_rate: observed 0.5, required gte 0.6, short by 0.1
+- gen_ic_kumo_kijun_cross_rvol_gate_trail on AUDJPY D1: REJECT at RUNG 0 SANITY -- min_trades: observed 106, required gte 400, short by 294
+- gen_ic_kumo_kijun_cross_rvol_gate_trail on AUDUSD H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -0.822804 at declared defaults is not positive; there is no edge to validate.
+- gen_ic_kumo_kijun_cross_rvol_gate_trail on AUDUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 97, required gte 400, short by 303
+- gen_ic_kumo_kijun_cross_rvol_gate_trail on EURJPY H4: REJECT at RUNG 2 WALK_FORWARD -- oos_window_hit_rate: observed 0.5, required gte 0.6, short by 0.1
+- gen_ic_kumo_kijun_cross_rvol_gate_trail on EURJPY D1: REJECT at RUNG 0 SANITY -- min_trades: observed 98, required gte 400, short by 302
+- gen_ic_kumo_kijun_cross_rvol_gate_trail on EURUSD H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -1.01424 at declared defaults is not positive; there is no edge to validate.
+- gen_ic_kumo_kijun_cross_rvol_gate_trail on EURUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 102, required gte 400, short by 298
+- gen_ic_kumo_kijun_cross_rvol_gate_trail on GBPJPY H4: REJECT at RUNG 4 ROBUSTNESS -- parameter_plateau: observed 1.608, required lte 1.25, short by 0.3577
+- gen_ic_kumo_kijun_cross_rvol_gate_trail on GBPJPY D1: REJECT at RUNG 0 SANITY -- min_trades: observed 105, required gte 400, short by 295
+- gen_ic_kumo_kijun_cross_rvol_gate_trail on GBPUSD H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -1.24298 at declared defaults is not positive; there is no edge to validate.
+- gen_ic_kumo_kijun_cross_rvol_gate_trail on GBPUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 102, required gte 400, short by 298
+- gen_ic_kumo_kijun_cross_rvol_gate_trail on US500 H4: REJECT at RUNG 0 SANITY -- min_trades: observed 347, required gte 400, short by 53
+- gen_ic_kumo_kijun_cross_rvol_gate_trail on US500 D1: REJECT at RUNG 0 SANITY -- min_trades: observed 119, required gte 400, short by 281
+- gen_ic_kumo_kijun_cross_rvol_gate_trail on USDJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 390, required gte 400, short by 10
+- gen_ic_kumo_kijun_cross_rvol_gate_trail on USDJPY D1: REJECT at RUNG 0 SANITY -- min_trades: observed 108, required gte 400, short by 292
+- gen_ic_kumo_kijun_cross_rvol_gate_trail on XAUUSD H4: REJECT at RUNG 2 WALK_FORWARD -- walk_forward_efficiency: observed 41.91, required gte 50, short by 8.089
+- gen_ic_kumo_kijun_cross_rvol_gate_trail on XAUUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 90, required gte 400, short by 310
+- gen_ic_kumo_kijun_cross_session_tp_r on AUDJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 292, required gte 400, short by 108
+- gen_ic_kumo_kijun_cross_session_tp_r on AUDUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 328, required gte 400, short by 72
+- gen_ic_kumo_kijun_cross_session_tp_r on EURJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 324, required gte 400, short by 76
+- gen_ic_kumo_kijun_cross_session_tp_r on EURUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 362, required gte 400, short by 38
+- gen_ic_kumo_kijun_cross_session_tp_r on GBPJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 321, required gte 400, short by 79
+- gen_ic_kumo_kijun_cross_session_tp_r on GBPUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 353, required gte 400, short by 47
+- gen_ic_kumo_kijun_cross_session_tp_r on US500 H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -1.95354 at declared defaults is not positive; there is no edge to validate.
+- gen_ic_kumo_kijun_cross_session_tp_r on USDJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 331, required gte 400, short by 69
+- gen_ic_kumo_kijun_cross_session_tp_r on XAUUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 333, required gte 400, short by 67
+- gen_ic_kumo_kijun_cross_session_trail on AUDJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 338, required gte 400, short by 62
+- gen_ic_kumo_kijun_cross_session_trail on AUDUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 380, required gte 400, short by 20
+- gen_ic_kumo_kijun_cross_session_trail on EURJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 388, required gte 400, short by 12
+- gen_ic_kumo_kijun_cross_session_trail on EURUSD H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -0.883848 at declared defaults is not positive; there is no edge to validate.
+- gen_ic_kumo_kijun_cross_session_trail on GBPJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 387, required gte 400, short by 13
+- gen_ic_kumo_kijun_cross_session_trail on GBPUSD H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -0.639073 at declared defaults is not positive; there is no edge to validate.
+- gen_ic_kumo_kijun_cross_session_trail on US500 H4: REJECT at RUNG 0 SANITY -- min_trades: observed 315, required gte 400, short by 85
+- gen_ic_kumo_kijun_cross_session_trail on USDJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 389, required gte 400, short by 11
+- gen_ic_kumo_kijun_cross_session_trail on XAUUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 391, required gte 400, short by 9
+- gen_ic_kumo_tk_cross_adx_gate_swing_tp_short on AUDJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 85, required gte 400, short by 315
+- gen_ic_kumo_tk_cross_adx_gate_swing_tp_short on AUDJPY D1: REJECT at RUNG 0 SANITY -- min_trades: observed 18, required gte 400, short by 382
+- gen_ic_kumo_tk_cross_adx_gate_swing_tp_short on AUDUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 84, required gte 400, short by 316
+- gen_ic_kumo_tk_cross_adx_gate_swing_tp_short on AUDUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 15, required gte 400, short by 385
+- gen_ic_kumo_tk_cross_adx_gate_swing_tp_short on EURJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 85, required gte 400, short by 315
+- gen_ic_kumo_tk_cross_adx_gate_swing_tp_short on EURJPY D1: REJECT at RUNG 0 SANITY -- min_trades: observed 18, required gte 400, short by 382
+- gen_ic_kumo_tk_cross_adx_gate_swing_tp_short on EURUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 82, required gte 400, short by 318
+- gen_ic_kumo_tk_cross_adx_gate_swing_tp_short on EURUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 17, required gte 400, short by 383
+- gen_ic_kumo_tk_cross_adx_gate_swing_tp_short on GBPJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 64, required gte 400, short by 336
+- gen_ic_kumo_tk_cross_adx_gate_swing_tp_short on GBPJPY D1: REJECT at RUNG 0 SANITY -- min_trades: observed 13, required gte 400, short by 387
+- gen_ic_kumo_tk_cross_adx_gate_swing_tp_short on GBPUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 66, required gte 400, short by 334
+- gen_ic_kumo_tk_cross_adx_gate_swing_tp_short on GBPUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 7, required gte 400, short by 393
+- gen_ic_kumo_tk_cross_adx_gate_swing_tp_short on US500 H4: REJECT at RUNG 0 SANITY -- min_trades: observed 90, required gte 400, short by 310
+- gen_ic_kumo_tk_cross_adx_gate_swing_tp_short on US500 D1: REJECT at RUNG 0 SANITY -- min_trades: observed 15, required gte 400, short by 385
+- gen_ic_kumo_tk_cross_adx_gate_swing_tp_short on USDJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 97, required gte 400, short by 303
+- gen_ic_kumo_tk_cross_adx_gate_swing_tp_short on USDJPY D1: REJECT at RUNG 0 SANITY -- min_trades: observed 14, required gte 400, short by 386
+- gen_ic_kumo_tk_cross_adx_gate_swing_tp_short on XAUUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 68, required gte 400, short by 332
+- gen_ic_kumo_tk_cross_adx_gate_swing_tp_short on XAUUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 13, required gte 400, short by 387
+- gen_ic_kumo_tk_cross_none_swing_tp_long on AUDJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 130, required gte 400, short by 270
+- gen_ic_kumo_tk_cross_none_swing_tp_long on AUDJPY D1: REJECT at RUNG 0 SANITY -- min_trades: observed 21, required gte 400, short by 379
+- gen_ic_kumo_tk_cross_none_swing_tp_long on AUDUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 144, required gte 400, short by 256
+- gen_ic_kumo_tk_cross_none_swing_tp_long on AUDUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 30, required gte 400, short by 370
+- gen_ic_kumo_tk_cross_none_swing_tp_long on EURJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 144, required gte 400, short by 256
+- gen_ic_kumo_tk_cross_none_swing_tp_long on EURJPY D1: REJECT at RUNG 0 SANITY -- min_trades: observed 28, required gte 400, short by 372
+- gen_ic_kumo_tk_cross_none_swing_tp_long on EURUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 122, required gte 400, short by 278
+- gen_ic_kumo_tk_cross_none_swing_tp_long on EURUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 30, required gte 400, short by 370
+- gen_ic_kumo_tk_cross_none_swing_tp_long on GBPJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 130, required gte 400, short by 270
+- gen_ic_kumo_tk_cross_none_swing_tp_long on GBPJPY D1: REJECT at RUNG 0 SANITY -- min_trades: observed 25, required gte 400, short by 375
+- gen_ic_kumo_tk_cross_none_swing_tp_long on GBPUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 132, required gte 400, short by 268
+- gen_ic_kumo_tk_cross_none_swing_tp_long on GBPUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 31, required gte 400, short by 369
+- gen_ic_kumo_tk_cross_none_swing_tp_long on US500 H4: REJECT at RUNG 0 SANITY -- min_trades: observed 130, required gte 400, short by 270
+- gen_ic_kumo_tk_cross_none_swing_tp_long on US500 D1: REJECT at RUNG 0 SANITY -- min_trades: observed 27, required gte 400, short by 373
+- gen_ic_kumo_tk_cross_none_swing_tp_long on USDJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 150, required gte 400, short by 250
+- gen_ic_kumo_tk_cross_none_swing_tp_long on USDJPY D1: REJECT at RUNG 0 SANITY -- min_trades: observed 15, required gte 400, short by 385
+- gen_ic_kumo_tk_cross_none_swing_tp_long on XAUUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 134, required gte 400, short by 266
+- gen_ic_kumo_tk_cross_none_swing_tp_long on XAUUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 26, required gte 400, short by 374
+- gen_ic_kumo_tk_cross_none_time_exit on AUDJPY H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -0.688301 at declared defaults is not positive; there is no edge to validate.
+- gen_ic_kumo_tk_cross_none_time_exit on AUDJPY D1: REJECT at RUNG 0 SANITY -- min_trades: observed 97, required gte 400, short by 303
+- gen_ic_kumo_tk_cross_none_time_exit on AUDUSD H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -0.54303 at declared defaults is not positive; there is no edge to validate.
+- gen_ic_kumo_tk_cross_none_time_exit on AUDUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 73, required gte 400, short by 327
+- gen_ic_kumo_tk_cross_none_time_exit on EURJPY H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -0.625539 at declared defaults is not positive; there is no edge to validate.
+- gen_ic_kumo_tk_cross_none_time_exit on EURJPY D1: REJECT at RUNG 0 SANITY -- min_trades: observed 92, required gte 400, short by 308
+- gen_ic_kumo_tk_cross_none_time_exit on EURUSD H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -0.0162641 at declared defaults is not positive; there is no edge to validate.
+- gen_ic_kumo_tk_cross_none_time_exit on EURUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 86, required gte 400, short by 314
+- gen_ic_kumo_tk_cross_none_time_exit on GBPJPY H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -0.179049 at declared defaults is not positive; there is no edge to validate.
+- gen_ic_kumo_tk_cross_none_time_exit on GBPJPY D1: REJECT at RUNG 0 SANITY -- min_trades: observed 86, required gte 400, short by 314
+- gen_ic_kumo_tk_cross_none_time_exit on GBPUSD H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -0.481303 at declared defaults is not positive; there is no edge to validate.
+- gen_ic_kumo_tk_cross_none_time_exit on GBPUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 87, required gte 400, short by 313
+- gen_ic_kumo_tk_cross_none_time_exit on US500 H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -1.35766 at declared defaults is not positive; there is no edge to validate.
+- gen_ic_kumo_tk_cross_none_time_exit on US500 D1: REJECT at RUNG 0 SANITY -- min_trades: observed 92, required gte 400, short by 308
+- gen_ic_kumo_tk_cross_none_time_exit on USDJPY H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -0.180071 at declared defaults is not positive; there is no edge to validate.
+- gen_ic_kumo_tk_cross_none_time_exit on USDJPY D1: REJECT at RUNG 0 SANITY -- min_trades: observed 84, required gte 400, short by 316
+- gen_ic_kumo_tk_cross_none_time_exit on XAUUSD H4: REJECT at RUNG 2 WALK_FORWARD -- walk_forward_efficiency: observed 48.58, required gte 50, short by 1.417
+- gen_ic_kumo_tk_cross_none_time_exit on XAUUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 75, required gte 400, short by 325
+- gen_ic_kumo_tk_cross_none_tp_r on AUDJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 387, required gte 400, short by 13
+- gen_ic_kumo_tk_cross_none_tp_r on AUDJPY D1: REJECT at RUNG 0 SANITY -- min_trades: observed 88, required gte 400, short by 312
+- gen_ic_kumo_tk_cross_none_tp_r on AUDUSD H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -1.28103 at declared defaults is not positive; there is no edge to validate.
+- gen_ic_kumo_tk_cross_none_tp_r on AUDUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 69, required gte 400, short by 331
+- gen_ic_kumo_tk_cross_none_tp_r on EURJPY H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -0.72327 at declared defaults is not positive; there is no edge to validate.
+- gen_ic_kumo_tk_cross_none_tp_r on EURJPY D1: REJECT at RUNG 0 SANITY -- min_trades: observed 82, required gte 400, short by 318
+- gen_ic_kumo_tk_cross_none_tp_r on EURUSD H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -0.820095 at declared defaults is not positive; there is no edge to validate.
+- gen_ic_kumo_tk_cross_none_tp_r on EURUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 87, required gte 400, short by 313
+- gen_ic_kumo_tk_cross_none_tp_r on GBPJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 384, required gte 400, short by 16
+- gen_ic_kumo_tk_cross_none_tp_r on GBPJPY D1: REJECT at RUNG 0 SANITY -- min_trades: observed 80, required gte 400, short by 320
+- gen_ic_kumo_tk_cross_none_tp_r on GBPUSD H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -1.12116 at declared defaults is not positive; there is no edge to validate.
+- gen_ic_kumo_tk_cross_none_tp_r on GBPUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 75, required gte 400, short by 325
+- gen_ic_kumo_tk_cross_none_tp_r on US500 H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -1.67446 at declared defaults is not positive; there is no edge to validate.
+- gen_ic_kumo_tk_cross_none_tp_r on US500 D1: REJECT at RUNG 0 SANITY -- min_trades: observed 74, required gte 400, short by 326
+- gen_ic_kumo_tk_cross_none_tp_r on USDJPY H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -1.02796 at declared defaults is not positive; there is no edge to validate.
+- gen_ic_kumo_tk_cross_none_tp_r on USDJPY D1: REJECT at RUNG 0 SANITY -- min_trades: observed 75, required gte 400, short by 325
+- gen_ic_kumo_tk_cross_none_tp_r on XAUUSD H4: REJECT at RUNG 2 WALK_FORWARD -- walk_forward_efficiency: observed 21.12, required gte 50, short by 28.88
+- gen_ic_kumo_tk_cross_none_tp_r on XAUUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 73, required gte 400, short by 327
+- gen_ic_kumo_tk_cross_none_trail on AUDJPY H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -0.198889 at declared defaults is not positive; there is no edge to validate.
+- gen_ic_kumo_tk_cross_none_trail on AUDJPY D1: REJECT at RUNG 0 SANITY -- min_trades: observed 102, required gte 400, short by 298
+- gen_ic_kumo_tk_cross_none_trail on AUDUSD H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -0.753977 at declared defaults is not positive; there is no edge to validate.
+- gen_ic_kumo_tk_cross_none_trail on AUDUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 77, required gte 400, short by 323
+- gen_ic_kumo_tk_cross_none_trail on EURJPY H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -0.0910434 at declared defaults is not positive; there is no edge to validate.
+- gen_ic_kumo_tk_cross_none_trail on EURJPY D1: REJECT at RUNG 0 SANITY -- min_trades: observed 96, required gte 400, short by 304
+- gen_ic_kumo_tk_cross_none_trail on EURUSD H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -0.345513 at declared defaults is not positive; there is no edge to validate.
+- gen_ic_kumo_tk_cross_none_trail on EURUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 93, required gte 400, short by 307
+- gen_ic_kumo_tk_cross_none_trail on GBPJPY H4: REJECT at RUNG 2 WALK_FORWARD -- walk_forward_efficiency: observed 39.64, required gte 50, short by 10.36
+- gen_ic_kumo_tk_cross_none_trail on GBPJPY D1: REJECT at RUNG 0 SANITY -- min_trades: observed 89, required gte 400, short by 311
+- gen_ic_kumo_tk_cross_none_trail on GBPUSD H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -1.03337 at declared defaults is not positive; there is no edge to validate.
+- gen_ic_kumo_tk_cross_none_trail on GBPUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 91, required gte 400, short by 309
+- gen_ic_kumo_tk_cross_none_trail on US500 H4: REJECT at RUNG 0 SANITY -- min_trades: observed 335, required gte 400, short by 65
+- gen_ic_kumo_tk_cross_none_trail on US500 D1: REJECT at RUNG 0 SANITY -- min_trades: observed 94, required gte 400, short by 306
+- gen_ic_kumo_tk_cross_none_trail on USDJPY H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -0.285146 at declared defaults is not positive; there is no edge to validate.
+- gen_ic_kumo_tk_cross_none_trail on USDJPY D1: REJECT at RUNG 0 SANITY -- min_trades: observed 88, required gte 400, short by 312
+- gen_ic_kumo_tk_cross_none_trail on XAUUSD H4: REJECT at RUNG 2 WALK_FORWARD -- walk_forward_efficiency: observed 33.92, required gte 50, short by 16.08
+- gen_ic_kumo_tk_cross_none_trail on XAUUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 78, required gte 400, short by 322
+- gen_ic_kumo_tk_cross_rvol_gate_swing_tp_long on AUDJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 123, required gte 400, short by 277
+- gen_ic_kumo_tk_cross_rvol_gate_swing_tp_long on AUDJPY D1: REJECT at RUNG 0 SANITY -- min_trades: observed 21, required gte 400, short by 379
+- gen_ic_kumo_tk_cross_rvol_gate_swing_tp_long on AUDUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 136, required gte 400, short by 264
+- gen_ic_kumo_tk_cross_rvol_gate_swing_tp_long on AUDUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 30, required gte 400, short by 370
+- gen_ic_kumo_tk_cross_rvol_gate_swing_tp_long on EURJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 118, required gte 400, short by 282
+- gen_ic_kumo_tk_cross_rvol_gate_swing_tp_long on EURJPY D1: REJECT at RUNG 0 SANITY -- min_trades: observed 28, required gte 400, short by 372
+- gen_ic_kumo_tk_cross_rvol_gate_swing_tp_long on EURUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 96, required gte 400, short by 304
+- gen_ic_kumo_tk_cross_rvol_gate_swing_tp_long on EURUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 30, required gte 400, short by 370
+- gen_ic_kumo_tk_cross_rvol_gate_swing_tp_long on GBPJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 119, required gte 400, short by 281
+- gen_ic_kumo_tk_cross_rvol_gate_swing_tp_long on GBPJPY D1: REJECT at RUNG 0 SANITY -- min_trades: observed 25, required gte 400, short by 375
+- gen_ic_kumo_tk_cross_rvol_gate_swing_tp_long on GBPUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 113, required gte 400, short by 287
+- gen_ic_kumo_tk_cross_rvol_gate_swing_tp_long on GBPUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 31, required gte 400, short by 369
+- gen_ic_kumo_tk_cross_rvol_gate_swing_tp_long on US500 H4: REJECT at RUNG 0 SANITY -- min_trades: observed 130, required gte 400, short by 270
+- gen_ic_kumo_tk_cross_rvol_gate_swing_tp_long on US500 D1: REJECT at RUNG 0 SANITY -- min_trades: observed 27, required gte 400, short by 373
+- gen_ic_kumo_tk_cross_rvol_gate_swing_tp_long on USDJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 116, required gte 400, short by 284
+- gen_ic_kumo_tk_cross_rvol_gate_swing_tp_long on USDJPY D1: REJECT at RUNG 0 SANITY -- min_trades: observed 15, required gte 400, short by 385
+- gen_ic_kumo_tk_cross_rvol_gate_swing_tp_long on XAUUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 132, required gte 400, short by 268
+- gen_ic_kumo_tk_cross_rvol_gate_swing_tp_long on XAUUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 26, required gte 400, short by 374
+- gen_ic_kumo_tk_cross_rvol_gate_trail on AUDJPY H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -0.284234 at declared defaults is not positive; there is no edge to validate.
+- gen_ic_kumo_tk_cross_rvol_gate_trail on AUDJPY D1: REJECT at RUNG 0 SANITY -- min_trades: observed 102, required gte 400, short by 298
+- gen_ic_kumo_tk_cross_rvol_gate_trail on AUDUSD H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -0.178028 at declared defaults is not positive; there is no edge to validate.
+- gen_ic_kumo_tk_cross_rvol_gate_trail on AUDUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 77, required gte 400, short by 323
+- gen_ic_kumo_tk_cross_rvol_gate_trail on EURJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 398, required gte 400, short by 2
+- gen_ic_kumo_tk_cross_rvol_gate_trail on EURJPY D1: REJECT at RUNG 0 SANITY -- min_trades: observed 96, required gte 400, short by 304
+- gen_ic_kumo_tk_cross_rvol_gate_trail on EURUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 379, required gte 400, short by 21
+- gen_ic_kumo_tk_cross_rvol_gate_trail on EURUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 93, required gte 400, short by 307
+- gen_ic_kumo_tk_cross_rvol_gate_trail on GBPJPY H4: REJECT at RUNG 2 WALK_FORWARD -- walk_forward_efficiency: observed -9.046, required gte 50, short by 59.05
+- gen_ic_kumo_tk_cross_rvol_gate_trail on GBPJPY D1: REJECT at RUNG 0 SANITY -- min_trades: observed 89, required gte 400, short by 311
+- gen_ic_kumo_tk_cross_rvol_gate_trail on GBPUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 382, required gte 400, short by 18
+- gen_ic_kumo_tk_cross_rvol_gate_trail on GBPUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 91, required gte 400, short by 309
+- gen_ic_kumo_tk_cross_rvol_gate_trail on US500 H4: REJECT at RUNG 0 SANITY -- min_trades: observed 330, required gte 400, short by 70
+- gen_ic_kumo_tk_cross_rvol_gate_trail on US500 D1: REJECT at RUNG 0 SANITY -- min_trades: observed 94, required gte 400, short by 306
+- gen_ic_kumo_tk_cross_rvol_gate_trail on USDJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 371, required gte 400, short by 29
+- gen_ic_kumo_tk_cross_rvol_gate_trail on USDJPY D1: REJECT at RUNG 0 SANITY -- min_trades: observed 88, required gte 400, short by 312
+- gen_ic_kumo_tk_cross_rvol_gate_trail on XAUUSD H4: REJECT at RUNG 2 WALK_FORWARD -- walk_forward_efficiency: observed 31.59, required gte 50, short by 18.41
+- gen_ic_kumo_tk_cross_rvol_gate_trail on XAUUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 78, required gte 400, short by 322
+- gen_ic_kumo_tk_cross_session_swing_tp_long on AUDJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 98, required gte 400, short by 302
+- gen_ic_kumo_tk_cross_session_swing_tp_long on AUDUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 111, required gte 400, short by 289
+- gen_ic_kumo_tk_cross_session_swing_tp_long on EURJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 115, required gte 400, short by 285
+- gen_ic_kumo_tk_cross_session_swing_tp_long on EURUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 103, required gte 400, short by 297
+- gen_ic_kumo_tk_cross_session_swing_tp_long on GBPJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 108, required gte 400, short by 292
+- gen_ic_kumo_tk_cross_session_swing_tp_long on GBPUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 103, required gte 400, short by 297
+- gen_ic_kumo_tk_cross_session_swing_tp_long on US500 H4: REJECT at RUNG 0 SANITY -- min_trades: observed 102, required gte 400, short by 298
+- gen_ic_kumo_tk_cross_session_swing_tp_long on USDJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 119, required gte 400, short by 281
+- gen_ic_kumo_tk_cross_session_swing_tp_long on XAUUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 97, required gte 400, short by 303
+- gen_ic_kumo_tk_cross_session_tp_r on AUDJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 266, required gte 400, short by 134
+- gen_ic_kumo_tk_cross_session_tp_r on AUDUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 296, required gte 400, short by 104
+- gen_ic_kumo_tk_cross_session_tp_r on EURJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 299, required gte 400, short by 101
+- gen_ic_kumo_tk_cross_session_tp_r on EURUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 310, required gte 400, short by 90
+- gen_ic_kumo_tk_cross_session_tp_r on GBPJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 287, required gte 400, short by 113
+- gen_ic_kumo_tk_cross_session_tp_r on GBPUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 298, required gte 400, short by 102
+- gen_ic_kumo_tk_cross_session_tp_r on US500 H4: REJECT at RUNG 0 SANITY -- min_trades: observed 274, required gte 400, short by 126
+- gen_ic_kumo_tk_cross_session_tp_r on USDJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 297, required gte 400, short by 103
+- gen_ic_kumo_tk_cross_session_tp_r on XAUUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 263, required gte 400, short by 137
+- gen_mo_macd_cci_adx_gate_swing_tp_long on AUDJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 118, required gte 400, short by 282
+- gen_mo_macd_cci_adx_gate_swing_tp_long on AUDJPY D1: REJECT at RUNG 0 SANITY -- min_trades: observed 26, required gte 400, short by 374
+- gen_mo_macd_cci_adx_gate_swing_tp_long on AUDUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 167, required gte 400, short by 233
+- gen_mo_macd_cci_adx_gate_swing_tp_long on AUDUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 32, required gte 400, short by 368
+- gen_mo_macd_cci_adx_gate_swing_tp_long on EURGBP H4: REJECT at RUNG 0 SANITY -- min_trades: observed 186, required gte 400, short by 214
+- gen_mo_macd_cci_adx_gate_swing_tp_long on EURGBP D1: REJECT at RUNG 0 SANITY -- min_trades: observed 31, required gte 400, short by 369
+- gen_mo_macd_cci_adx_gate_swing_tp_long on EURJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 151, required gte 400, short by 249
+- gen_mo_macd_cci_adx_gate_swing_tp_long on EURJPY D1: REJECT at RUNG 0 SANITY -- min_trades: observed 32, required gte 400, short by 368
+- gen_mo_macd_cci_adx_gate_swing_tp_long on EURUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 196, required gte 400, short by 204
+- gen_mo_macd_cci_adx_gate_swing_tp_long on EURUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 28, required gte 400, short by 372
+- gen_mo_macd_cci_adx_gate_swing_tp_long on GBPJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 147, required gte 400, short by 253
+- gen_mo_macd_cci_adx_gate_swing_tp_long on GBPJPY D1: REJECT at RUNG 0 SANITY -- min_trades: observed 31, required gte 400, short by 369
+- gen_mo_macd_cci_adx_gate_swing_tp_long on GBPUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 203, required gte 400, short by 197
+- gen_mo_macd_cci_adx_gate_swing_tp_long on GBPUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 34, required gte 400, short by 366
+- gen_mo_macd_cci_adx_gate_swing_tp_long on NZDUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 191, required gte 400, short by 209
+- gen_mo_macd_cci_adx_gate_swing_tp_long on NZDUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 38, required gte 400, short by 362
+- gen_mo_macd_cci_adx_gate_swing_tp_long on USDCAD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 195, required gte 400, short by 205
+- gen_mo_macd_cci_adx_gate_swing_tp_long on USDCAD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 32, required gte 400, short by 368
+- gen_mo_macd_cci_adx_gate_swing_tp_long on USDCHF H4: REJECT at RUNG 0 SANITY -- min_trades: observed 89, required gte 400, short by 311
+- gen_mo_macd_cci_adx_gate_swing_tp_long on USDCHF D1: REJECT at RUNG 0 SANITY -- min_trades: observed 30, required gte 400, short by 370
+- gen_mo_macd_cci_adx_gate_swing_tp_long on USDJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 141, required gte 400, short by 259
+- gen_mo_macd_cci_adx_gate_swing_tp_long on USDJPY D1: REJECT at RUNG 0 SANITY -- min_trades: observed 15, required gte 400, short by 385
+- gen_mo_macd_cci_adx_gate_swing_tp_long on XAUUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 218, required gte 400, short by 182
+- gen_mo_macd_cci_adx_gate_swing_tp_long on XAUUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 30, required gte 400, short by 370
+- gen_mo_macd_cci_adx_gate_time_exit on AUDJPY H4: REJECT at RUNG 2 WALK_FORWARD -- walk_forward_efficiency: observed 22.45, required gte 50, short by 27.55
+- gen_mo_macd_cci_adx_gate_time_exit on AUDJPY D1: REJECT at RUNG 0 SANITY -- min_trades: observed 123, required gte 400, short by 277
+- gen_mo_macd_cci_adx_gate_time_exit on AUDUSD H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -0.732543 at declared defaults is not positive; there is no edge to validate.
+- gen_mo_macd_cci_adx_gate_time_exit on AUDUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 118, required gte 400, short by 282
+- gen_mo_macd_cci_adx_gate_time_exit on EURGBP H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -1.15304 at declared defaults is not positive; there is no edge to validate.
+- gen_mo_macd_cci_adx_gate_time_exit on EURGBP D1: REJECT at RUNG 0 SANITY -- min_trades: observed 114, required gte 400, short by 286
+- gen_mo_macd_cci_adx_gate_time_exit on EURJPY H4: REJECT at RUNG 1 IN_SAMPLE_SCREEN -- RUNG 1 IN_SAMPLE_SCREEN: no parameterisation inside the domains the document declares is positive in sample on sharpe; there is nothing for the later rungs to test.
+- gen_mo_macd_cci_adx_gate_time_exit on EURJPY D1: REJECT at RUNG 0 SANITY -- min_trades: observed 122, required gte 400, short by 278
+- gen_mo_macd_cci_adx_gate_time_exit on EURUSD H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -0.441931 at declared defaults is not positive; there is no edge to validate.
+- gen_mo_macd_cci_adx_gate_time_exit on EURUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 117, required gte 400, short by 283
+- gen_mo_macd_cci_adx_gate_time_exit on GBPJPY H4: REJECT at RUNG 1 IN_SAMPLE_SCREEN -- RUNG 1 IN_SAMPLE_SCREEN: no parameterisation inside the domains the document declares is positive in sample on sharpe; there is nothing for the later rungs to test.
+- gen_mo_macd_cci_adx_gate_time_exit on GBPJPY D1: REJECT at RUNG 0 SANITY -- min_trades: observed 127, required gte 400, short by 273
+- gen_mo_macd_cci_adx_gate_time_exit on GBPUSD H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -0.779575 at declared defaults is not positive; there is no edge to validate.
+- gen_mo_macd_cci_adx_gate_time_exit on GBPUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 97, required gte 400, short by 303
+- gen_mo_macd_cci_adx_gate_time_exit on NZDUSD H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -0.654594 at declared defaults is not positive; there is no edge to validate.
+- gen_mo_macd_cci_adx_gate_time_exit on NZDUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 113, required gte 400, short by 287
+- gen_mo_macd_cci_adx_gate_time_exit on USDCAD H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -0.988296 at declared defaults is not positive; there is no edge to validate.
+- gen_mo_macd_cci_adx_gate_time_exit on USDCAD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 108, required gte 400, short by 292
+- gen_mo_macd_cci_adx_gate_time_exit on USDCHF H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -0.832862 at declared defaults is not positive; there is no edge to validate.
+- gen_mo_macd_cci_adx_gate_time_exit on USDCHF D1: REJECT at RUNG 0 SANITY -- min_trades: observed 126, required gte 400, short by 274
+- gen_mo_macd_cci_adx_gate_time_exit on USDJPY H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -0.118083 at declared defaults is not positive; there is no edge to validate.
+- gen_mo_macd_cci_adx_gate_time_exit on USDJPY D1: REJECT at RUNG 0 SANITY -- min_trades: observed 116, required gte 400, short by 284
+- gen_mo_macd_cci_adx_gate_time_exit on XAUUSD H4: REJECT at RUNG 2 WALK_FORWARD -- walk_forward_efficiency: observed -421.7, required gte 50, short by 471.7
+- gen_mo_macd_cci_adx_gate_time_exit on XAUUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 112, required gte 400, short by 288
+- gen_mo_macd_cci_adx_gate_trail on AUDJPY H4: REJECT at RUNG 2 WALK_FORWARD -- walk_forward_efficiency: observed -11.32, required gte 50, short by 61.32
+- gen_mo_macd_cci_adx_gate_trail on AUDJPY D1: REJECT at RUNG 0 SANITY -- min_trades: observed 130, required gte 400, short by 270
+- gen_mo_macd_cci_adx_gate_trail on AUDUSD H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -0.844286 at declared defaults is not positive; there is no edge to validate.
+- gen_mo_macd_cci_adx_gate_trail on AUDUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 130, required gte 400, short by 270
+- gen_mo_macd_cci_adx_gate_trail on EURGBP H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -1.43209 at declared defaults is not positive; there is no edge to validate.
+- gen_mo_macd_cci_adx_gate_trail on EURGBP D1: REJECT at RUNG 0 SANITY -- min_trades: observed 133, required gte 400, short by 267
+- gen_mo_macd_cci_adx_gate_trail on EURJPY H4: REJECT at RUNG 2 WALK_FORWARD -- walk_forward_efficiency: observed 43.71, required gte 50, short by 6.29
+- gen_mo_macd_cci_adx_gate_trail on EURJPY D1: REJECT at RUNG 0 SANITY -- min_trades: observed 138, required gte 400, short by 262
+- gen_mo_macd_cci_adx_gate_trail on EURUSD H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -0.765746 at declared defaults is not positive; there is no edge to validate.
+- gen_mo_macd_cci_adx_gate_trail on EURUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 123, required gte 400, short by 277
+- gen_mo_macd_cci_adx_gate_trail on GBPJPY H4: REJECT at RUNG 2 WALK_FORWARD -- walk_forward_efficiency: observed -84.57, required gte 50, short by 134.6
+- gen_mo_macd_cci_adx_gate_trail on GBPJPY D1: REJECT at RUNG 0 SANITY -- min_trades: observed 145, required gte 400, short by 255
+- gen_mo_macd_cci_adx_gate_trail on GBPUSD H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -0.74645 at declared defaults is not positive; there is no edge to validate.
+- gen_mo_macd_cci_adx_gate_trail on GBPUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 110, required gte 400, short by 290
+- gen_mo_macd_cci_adx_gate_trail on NZDUSD H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -0.826778 at declared defaults is not positive; there is no edge to validate.
+- gen_mo_macd_cci_adx_gate_trail on NZDUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 119, required gte 400, short by 281
+- gen_mo_macd_cci_adx_gate_trail on USDCAD H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -0.895453 at declared defaults is not positive; there is no edge to validate.
+- gen_mo_macd_cci_adx_gate_trail on USDCAD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 128, required gte 400, short by 272
+- gen_mo_macd_cci_adx_gate_trail on USDCHF H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -1.80546 at declared defaults is not positive; there is no edge to validate.
+- gen_mo_macd_cci_adx_gate_trail on USDCHF D1: REJECT at RUNG 0 SANITY -- min_trades: observed 127, required gte 400, short by 273
+- gen_mo_macd_cci_adx_gate_trail on USDJPY H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -0.531489 at declared defaults is not positive; there is no edge to validate.
+- gen_mo_macd_cci_adx_gate_trail on USDJPY D1: REJECT at RUNG 0 SANITY -- min_trades: observed 127, required gte 400, short by 273
+- gen_mo_macd_cci_adx_gate_trail on XAUUSD H4: REJECT at RUNG 4 ROBUSTNESS -- parameter_plateau: observed 1.737, required lte 1.25, short by 0.4869
+- gen_mo_macd_cci_adx_gate_trail on XAUUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 130, required gte 400, short by 270
+- gen_mo_macd_cci_none_time_exit on AUDJPY H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -0.0430631 at declared defaults is not positive; there is no edge to validate.
+- gen_mo_macd_cci_none_time_exit on AUDJPY D1: REJECT at RUNG 0 SANITY -- min_trades: observed 195, required gte 400, short by 205
+- gen_mo_macd_cci_none_time_exit on AUDUSD H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -0.70113 at declared defaults is not positive; there is no edge to validate.
+- gen_mo_macd_cci_none_time_exit on AUDUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 200, required gte 400, short by 200
+- gen_mo_macd_cci_none_time_exit on EURGBP H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -0.960443 at declared defaults is not positive; there is no edge to validate.
+- gen_mo_macd_cci_none_time_exit on EURGBP D1: REJECT at RUNG 0 SANITY -- min_trades: observed 200, required gte 400, short by 200
+- gen_mo_macd_cci_none_time_exit on EURJPY H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -0.207737 at declared defaults is not positive; there is no edge to validate.
+- gen_mo_macd_cci_none_time_exit on EURJPY D1: REJECT at RUNG 0 SANITY -- min_trades: observed 191, required gte 400, short by 209
+- gen_mo_macd_cci_none_time_exit on EURUSD H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -0.466493 at declared defaults is not positive; there is no edge to validate.
+- gen_mo_macd_cci_none_time_exit on EURUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 197, required gte 400, short by 203
+- gen_mo_macd_cci_none_time_exit on GBPJPY H4: REJECT at RUNG 2 WALK_FORWARD -- walk_forward_efficiency: observed 23.72, required gte 50, short by 26.28
+- gen_mo_macd_cci_none_time_exit on GBPJPY D1: REJECT at RUNG 0 SANITY -- min_trades: observed 201, required gte 400, short by 199
+- gen_mo_macd_cci_none_time_exit on GBPUSD H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -0.44709 at declared defaults is not positive; there is no edge to validate.
+- gen_mo_macd_cci_none_time_exit on GBPUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 203, required gte 400, short by 197
+- gen_mo_macd_cci_none_time_exit on NZDUSD H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -0.365196 at declared defaults is not positive; there is no edge to validate.
+- gen_mo_macd_cci_none_time_exit on NZDUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 192, required gte 400, short by 208
+- gen_mo_macd_cci_none_time_exit on USDCAD H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -0.80526 at declared defaults is not positive; there is no edge to validate.
+- gen_mo_macd_cci_none_time_exit on USDCAD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 192, required gte 400, short by 208
+- gen_mo_macd_cci_none_time_exit on USDCHF H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -0.520128 at declared defaults is not positive; there is no edge to validate.
+- gen_mo_macd_cci_none_time_exit on USDCHF D1: REJECT at RUNG 0 SANITY -- min_trades: observed 205, required gte 400, short by 195
+- gen_mo_macd_cci_none_time_exit on USDJPY H4: REJECT at RUNG 1 IN_SAMPLE_SCREEN -- RUNG 1 IN_SAMPLE_SCREEN: no parameterisation inside the domains the document declares is positive in sample on sharpe; there is nothing for the later rungs to test.
+- gen_mo_macd_cci_none_time_exit on USDJPY D1: REJECT at RUNG 0 SANITY -- min_trades: observed 195, required gte 400, short by 205
+- gen_mo_macd_cci_none_time_exit on XAUUSD H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -0.154585 at declared defaults is not positive; there is no edge to validate.
+- gen_mo_macd_cci_none_time_exit on XAUUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 188, required gte 400, short by 212
+- gen_mo_macd_cci_session_swing_tp_long on AUDJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 144, required gte 400, short by 256
+- gen_mo_macd_cci_session_swing_tp_long on AUDUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 181, required gte 400, short by 219
+- gen_mo_macd_cci_session_swing_tp_long on EURGBP H4: REJECT at RUNG 0 SANITY -- min_trades: observed 213, required gte 400, short by 187
+- gen_mo_macd_cci_session_swing_tp_long on EURJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 173, required gte 400, short by 227
+- gen_mo_macd_cci_session_swing_tp_long on EURUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 222, required gte 400, short by 178
+- gen_mo_macd_cci_session_swing_tp_long on GBPJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 150, required gte 400, short by 250
+- gen_mo_macd_cci_session_swing_tp_long on GBPUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 234, required gte 400, short by 166
+- gen_mo_macd_cci_session_swing_tp_long on NZDUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 204, required gte 400, short by 196
+- gen_mo_macd_cci_session_swing_tp_long on USDCAD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 226, required gte 400, short by 174
+- gen_mo_macd_cci_session_swing_tp_long on USDCHF H4: REJECT at RUNG 0 SANITY -- min_trades: observed 95, required gte 400, short by 305
+- gen_mo_macd_cci_session_swing_tp_long on USDJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 173, required gte 400, short by 227
+- gen_mo_macd_cci_session_swing_tp_long on XAUUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 208, required gte 400, short by 192
+- gen_mo_macd_cci_session_time_exit on AUDJPY H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -0.197423 at declared defaults is not positive; there is no edge to validate.
+- gen_mo_macd_cci_session_time_exit on AUDUSD H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -0.56305 at declared defaults is not positive; there is no edge to validate.
+- gen_mo_macd_cci_session_time_exit on EURGBP H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -0.820735 at declared defaults is not positive; there is no edge to validate.
+- gen_mo_macd_cci_session_time_exit on EURJPY H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -0.335804 at declared defaults is not positive; there is no edge to validate.
+- gen_mo_macd_cci_session_time_exit on EURUSD H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -0.0302254 at declared defaults is not positive; there is no edge to validate.
+- gen_mo_macd_cci_session_time_exit on GBPJPY H4: REJECT at RUNG 2 WALK_FORWARD -- walk_forward_efficiency: observed -61.04, required gte 50, short by 111
+- gen_mo_macd_cci_session_time_exit on GBPUSD H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -0.542972 at declared defaults is not positive; there is no edge to validate.
+- gen_mo_macd_cci_session_time_exit on NZDUSD H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -0.414588 at declared defaults is not positive; there is no edge to validate.
+- gen_mo_macd_cci_session_time_exit on USDCAD H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -0.612781 at declared defaults is not positive; there is no edge to validate.
+- gen_mo_macd_cci_session_time_exit on USDCHF H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -0.842522 at declared defaults is not positive; there is no edge to validate.
+- gen_mo_macd_cci_session_time_exit on USDJPY H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -0.0522028 at declared defaults is not positive; there is no edge to validate.
+- gen_mo_macd_cci_session_time_exit on XAUUSD H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -0.496291 at declared defaults is not positive; there is no edge to validate.
+- gen_mo_macd_stoch_none_swing_tp_long on AUDJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 34, required gte 400, short by 366
+- gen_mo_macd_stoch_none_swing_tp_long on AUDJPY D1: REJECT at RUNG 0 SANITY -- min_trades: observed 8, required gte 400, short by 392
+- gen_mo_macd_stoch_none_swing_tp_long on AUDUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 93, required gte 400, short by 307
+- gen_mo_macd_stoch_none_swing_tp_long on AUDUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 15, required gte 400, short by 385
+- gen_mo_macd_stoch_none_swing_tp_long on EURGBP H4: REJECT at RUNG 0 SANITY -- min_trades: observed 113, required gte 400, short by 287
+- gen_mo_macd_stoch_none_swing_tp_long on EURGBP D1: REJECT at RUNG 0 SANITY -- min_trades: observed 21, required gte 400, short by 379
+- gen_mo_macd_stoch_none_swing_tp_long on EURJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 59, required gte 400, short by 341
+- gen_mo_macd_stoch_none_swing_tp_long on EURJPY D1: REJECT at RUNG 0 SANITY -- min_trades: observed 17, required gte 400, short by 383
+- gen_mo_macd_stoch_none_swing_tp_long on EURUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 101, required gte 400, short by 299
+- gen_mo_macd_stoch_none_swing_tp_long on EURUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 23, required gte 400, short by 377
+- gen_mo_macd_stoch_none_swing_tp_long on GBPJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 59, required gte 400, short by 341
+- gen_mo_macd_stoch_none_swing_tp_long on GBPJPY D1: REJECT at RUNG 0 SANITY -- min_trades: observed 8, required gte 400, short by 392
+- gen_mo_macd_stoch_none_swing_tp_long on GBPUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 108, required gte 400, short by 292
+- gen_mo_macd_stoch_none_swing_tp_long on GBPUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 17, required gte 400, short by 383
+- gen_mo_macd_stoch_none_swing_tp_long on NZDUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 99, required gte 400, short by 301
+- gen_mo_macd_stoch_none_swing_tp_long on NZDUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 15, required gte 400, short by 385
+- gen_mo_macd_stoch_none_swing_tp_long on USDCAD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 130, required gte 400, short by 270
+- gen_mo_macd_stoch_none_swing_tp_long on USDCAD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 18, required gte 400, short by 382
+- gen_mo_macd_stoch_none_swing_tp_long on USDCHF H4: REJECT at RUNG 0 SANITY -- min_trades: observed 88, required gte 400, short by 312
+- gen_mo_macd_stoch_none_swing_tp_long on USDCHF D1: REJECT at RUNG 0 SANITY -- min_trades: observed 16, required gte 400, short by 384
+- gen_mo_macd_stoch_none_swing_tp_long on USDJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 68, required gte 400, short by 332
+- gen_mo_macd_stoch_none_swing_tp_long on USDJPY D1: REJECT at RUNG 0 SANITY -- min_trades: observed 8, required gte 400, short by 392
+- gen_mo_macd_stoch_none_swing_tp_long on XAUUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 56, required gte 400, short by 344
+- gen_mo_macd_stoch_none_swing_tp_long on XAUUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 7, required gte 400, short by 393
+- gen_mo_macd_stoch_none_time_exit on AUDJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 141, required gte 400, short by 259
+- gen_mo_macd_stoch_none_time_exit on AUDJPY D1: REJECT at RUNG 0 SANITY -- min_trades: observed 23, required gte 400, short by 377
+- gen_mo_macd_stoch_none_time_exit on AUDUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 193, required gte 400, short by 207
+- gen_mo_macd_stoch_none_time_exit on AUDUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 31, required gte 400, short by 369
+- gen_mo_macd_stoch_none_time_exit on EURGBP H4: REJECT at RUNG 0 SANITY -- min_trades: observed 171, required gte 400, short by 229
+- gen_mo_macd_stoch_none_time_exit on EURGBP D1: REJECT at RUNG 0 SANITY -- min_trades: observed 28, required gte 400, short by 372
+- gen_mo_macd_stoch_none_time_exit on EURJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 161, required gte 400, short by 239
+- gen_mo_macd_stoch_none_time_exit on EURJPY D1: REJECT at RUNG 0 SANITY -- min_trades: observed 36, required gte 400, short by 364
+- gen_mo_macd_stoch_none_time_exit on EURUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 166, required gte 400, short by 234
+- gen_mo_macd_stoch_none_time_exit on EURUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 32, required gte 400, short by 368
+- gen_mo_macd_stoch_none_time_exit on GBPJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 171, required gte 400, short by 229
+- gen_mo_macd_stoch_none_time_exit on GBPJPY D1: REJECT at RUNG 0 SANITY -- min_trades: observed 22, required gte 400, short by 378
+- gen_mo_macd_stoch_none_time_exit on GBPUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 183, required gte 400, short by 217
+- gen_mo_macd_stoch_none_time_exit on GBPUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 24, required gte 400, short by 376
+- gen_mo_macd_stoch_none_time_exit on NZDUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 174, required gte 400, short by 226
+- gen_mo_macd_stoch_none_time_exit on NZDUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 22, required gte 400, short by 378
+- gen_mo_macd_stoch_none_time_exit on USDCAD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 187, required gte 400, short by 213
+- gen_mo_macd_stoch_none_time_exit on USDCAD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 27, required gte 400, short by 373
+- gen_mo_macd_stoch_none_time_exit on USDCHF H4: REJECT at RUNG 0 SANITY -- min_trades: observed 170, required gte 400, short by 230
+- gen_mo_macd_stoch_none_time_exit on USDCHF D1: REJECT at RUNG 0 SANITY -- min_trades: observed 24, required gte 400, short by 376
+- gen_mo_macd_stoch_none_time_exit on USDJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 167, required gte 400, short by 233
+- gen_mo_macd_stoch_none_time_exit on USDJPY D1: REJECT at RUNG 0 SANITY -- min_trades: observed 25, required gte 400, short by 375
+- gen_mo_macd_stoch_none_time_exit on XAUUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 142, required gte 400, short by 258
+- gen_mo_macd_stoch_none_time_exit on XAUUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 30, required gte 400, short by 370
+- gen_mo_macd_stoch_none_tp_r on AUDJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 152, required gte 400, short by 248
+- gen_mo_macd_stoch_none_tp_r on AUDJPY D1: REJECT at RUNG 0 SANITY -- min_trades: observed 24, required gte 400, short by 376
+- gen_mo_macd_stoch_none_tp_r on AUDUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 205, required gte 400, short by 195
+- gen_mo_macd_stoch_none_tp_r on AUDUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 30, required gte 400, short by 370
+- gen_mo_macd_stoch_none_tp_r on EURGBP H4: REJECT at RUNG 0 SANITY -- min_trades: observed 176, required gte 400, short by 224
+- gen_mo_macd_stoch_none_tp_r on EURGBP D1: REJECT at RUNG 0 SANITY -- min_trades: observed 29, required gte 400, short by 371
+- gen_mo_macd_stoch_none_tp_r on EURJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 166, required gte 400, short by 234
+- gen_mo_macd_stoch_none_tp_r on EURJPY D1: REJECT at RUNG 0 SANITY -- min_trades: observed 36, required gte 400, short by 364
+- gen_mo_macd_stoch_none_tp_r on EURUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 178, required gte 400, short by 222
+- gen_mo_macd_stoch_none_tp_r on EURUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 36, required gte 400, short by 364
+- gen_mo_macd_stoch_none_tp_r on GBPJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 173, required gte 400, short by 227
+- gen_mo_macd_stoch_none_tp_r on GBPJPY D1: REJECT at RUNG 0 SANITY -- min_trades: observed 26, required gte 400, short by 374
+- gen_mo_macd_stoch_none_tp_r on GBPUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 192, required gte 400, short by 208
+- gen_mo_macd_stoch_none_tp_r on GBPUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 26, required gte 400, short by 374
+- gen_mo_macd_stoch_none_tp_r on NZDUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 183, required gte 400, short by 217
+- gen_mo_macd_stoch_none_tp_r on NZDUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 24, required gte 400, short by 376
+- gen_mo_macd_stoch_none_tp_r on USDCAD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 199, required gte 400, short by 201
+- gen_mo_macd_stoch_none_tp_r on USDCAD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 29, required gte 400, short by 371
+- gen_mo_macd_stoch_none_tp_r on USDCHF H4: REJECT at RUNG 0 SANITY -- min_trades: observed 179, required gte 400, short by 221
+- gen_mo_macd_stoch_none_tp_r on USDCHF D1: REJECT at RUNG 0 SANITY -- min_trades: observed 24, required gte 400, short by 376
+- gen_mo_macd_stoch_none_tp_r on USDJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 173, required gte 400, short by 227
+- gen_mo_macd_stoch_none_tp_r on USDJPY D1: REJECT at RUNG 0 SANITY -- min_trades: observed 27, required gte 400, short by 373
+- gen_mo_macd_stoch_none_tp_r on XAUUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 149, required gte 400, short by 251
+- gen_mo_macd_stoch_none_tp_r on XAUUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 31, required gte 400, short by 369
+- gen_mo_macd_stoch_none_trail on AUDJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 149, required gte 400, short by 251
+- gen_mo_macd_stoch_none_trail on AUDJPY D1: REJECT at RUNG 0 SANITY -- min_trades: observed 27, required gte 400, short by 373
+- gen_mo_macd_stoch_none_trail on AUDUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 205, required gte 400, short by 195
+- gen_mo_macd_stoch_none_trail on AUDUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 32, required gte 400, short by 368
+- gen_mo_macd_stoch_none_trail on EURGBP H4: REJECT at RUNG 0 SANITY -- min_trades: observed 178, required gte 400, short by 222
+- gen_mo_macd_stoch_none_trail on EURGBP D1: REJECT at RUNG 0 SANITY -- min_trades: observed 30, required gte 400, short by 370
+- gen_mo_macd_stoch_none_trail on EURJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 165, required gte 400, short by 235
+- gen_mo_macd_stoch_none_trail on EURJPY D1: REJECT at RUNG 0 SANITY -- min_trades: observed 40, required gte 400, short by 360
+- gen_mo_macd_stoch_none_trail on EURUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 179, required gte 400, short by 221
+- gen_mo_macd_stoch_none_trail on EURUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 36, required gte 400, short by 364
+- gen_mo_macd_stoch_none_trail on GBPJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 176, required gte 400, short by 224
+- gen_mo_macd_stoch_none_trail on GBPJPY D1: REJECT at RUNG 0 SANITY -- min_trades: observed 26, required gte 400, short by 374
+- gen_mo_macd_stoch_none_trail on GBPUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 190, required gte 400, short by 210
+- gen_mo_macd_stoch_none_trail on GBPUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 25, required gte 400, short by 375
+- gen_mo_macd_stoch_none_trail on NZDUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 173, required gte 400, short by 227
+- gen_mo_macd_stoch_none_trail on NZDUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 24, required gte 400, short by 376
+- gen_mo_macd_stoch_none_trail on USDCAD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 199, required gte 400, short by 201
+- gen_mo_macd_stoch_none_trail on USDCAD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 30, required gte 400, short by 370
+- gen_mo_macd_stoch_none_trail on USDCHF H4: REJECT at RUNG 0 SANITY -- min_trades: observed 180, required gte 400, short by 220
+- gen_mo_macd_stoch_none_trail on USDCHF D1: REJECT at RUNG 0 SANITY -- min_trades: observed 21, required gte 400, short by 379
+- gen_mo_macd_stoch_none_trail on USDJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 172, required gte 400, short by 228
+- gen_mo_macd_stoch_none_trail on USDJPY D1: REJECT at RUNG 0 SANITY -- min_trades: observed 29, required gte 400, short by 371
+- gen_mo_macd_stoch_none_trail on XAUUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 151, required gte 400, short by 249
+- gen_mo_macd_stoch_none_trail on XAUUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 30, required gte 400, short by 370
+- gen_mo_macd_stoch_rvol_gate_time_exit on AUDJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 133, required gte 400, short by 267
+- gen_mo_macd_stoch_rvol_gate_time_exit on AUDJPY D1: REJECT at RUNG 0 SANITY -- min_trades: observed 23, required gte 400, short by 377
+- gen_mo_macd_stoch_rvol_gate_time_exit on AUDUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 171, required gte 400, short by 229
+- gen_mo_macd_stoch_rvol_gate_time_exit on AUDUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 31, required gte 400, short by 369
+- gen_mo_macd_stoch_rvol_gate_time_exit on EURGBP H4: REJECT at RUNG 0 SANITY -- min_trades: observed 97, required gte 400, short by 303
+- gen_mo_macd_stoch_rvol_gate_time_exit on EURGBP D1: REJECT at RUNG 0 SANITY -- min_trades: observed 28, required gte 400, short by 372
+- gen_mo_macd_stoch_rvol_gate_time_exit on EURJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 127, required gte 400, short by 273
+- gen_mo_macd_stoch_rvol_gate_time_exit on EURJPY D1: REJECT at RUNG 0 SANITY -- min_trades: observed 36, required gte 400, short by 364
+- gen_mo_macd_stoch_rvol_gate_time_exit on EURUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 110, required gte 400, short by 290
+- gen_mo_macd_stoch_rvol_gate_time_exit on EURUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 32, required gte 400, short by 368
+- gen_mo_macd_stoch_rvol_gate_time_exit on GBPJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 144, required gte 400, short by 256
+- gen_mo_macd_stoch_rvol_gate_time_exit on GBPJPY D1: REJECT at RUNG 0 SANITY -- min_trades: observed 22, required gte 400, short by 378
+- gen_mo_macd_stoch_rvol_gate_time_exit on GBPUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 130, required gte 400, short by 270
+- gen_mo_macd_stoch_rvol_gate_time_exit on GBPUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 24, required gte 400, short by 376
+- gen_mo_macd_stoch_rvol_gate_time_exit on NZDUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 157, required gte 400, short by 243
+- gen_mo_macd_stoch_rvol_gate_time_exit on NZDUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 22, required gte 400, short by 378
+- gen_mo_macd_stoch_rvol_gate_time_exit on USDCAD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 115, required gte 400, short by 285
+- gen_mo_macd_stoch_rvol_gate_time_exit on USDCAD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 27, required gte 400, short by 373
+- gen_mo_macd_stoch_rvol_gate_time_exit on USDCHF H4: REJECT at RUNG 0 SANITY -- min_trades: observed 121, required gte 400, short by 279
+- gen_mo_macd_stoch_rvol_gate_time_exit on USDCHF D1: REJECT at RUNG 0 SANITY -- min_trades: observed 24, required gte 400, short by 376
+- gen_mo_macd_stoch_rvol_gate_time_exit on USDJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 115, required gte 400, short by 285
+- gen_mo_macd_stoch_rvol_gate_time_exit on USDJPY D1: REJECT at RUNG 0 SANITY -- min_trades: observed 25, required gte 400, short by 375
+- gen_mo_macd_stoch_rvol_gate_time_exit on XAUUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 140, required gte 400, short by 260
+- gen_mo_macd_stoch_rvol_gate_time_exit on XAUUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 30, required gte 400, short by 370
+- gen_mo_rsi_stoch_adx_gate_swing_tp_long on AUDJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 50, required gte 400, short by 350
+- gen_mo_rsi_stoch_adx_gate_swing_tp_long on AUDJPY D1: REJECT at RUNG 0 SANITY -- min_trades: observed 12, required gte 400, short by 388
+- gen_mo_rsi_stoch_adx_gate_swing_tp_long on AUDUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 41, required gte 400, short by 359
+- gen_mo_rsi_stoch_adx_gate_swing_tp_long on AUDUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 7, required gte 400, short by 393
+- gen_mo_rsi_stoch_adx_gate_swing_tp_long on EURGBP H4: REJECT at RUNG 0 SANITY -- min_trades: observed 65, required gte 400, short by 335
+- gen_mo_rsi_stoch_adx_gate_swing_tp_long on EURGBP D1: REJECT at RUNG 0 SANITY -- min_trades: observed 13, required gte 400, short by 387
+- gen_mo_rsi_stoch_adx_gate_swing_tp_long on EURJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 52, required gte 400, short by 348
+- gen_mo_rsi_stoch_adx_gate_swing_tp_long on EURJPY D1: REJECT at RUNG 0 SANITY -- min_trades: observed 16, required gte 400, short by 384
+- gen_mo_rsi_stoch_adx_gate_swing_tp_long on EURUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 66, required gte 400, short by 334
+- gen_mo_rsi_stoch_adx_gate_swing_tp_long on EURUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 11, required gte 400, short by 389
+- gen_mo_rsi_stoch_adx_gate_swing_tp_long on GBPJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 48, required gte 400, short by 352
+- gen_mo_rsi_stoch_adx_gate_swing_tp_long on GBPJPY D1: REJECT at RUNG 0 SANITY -- min_trades: observed 6, required gte 400, short by 394
+- gen_mo_rsi_stoch_adx_gate_swing_tp_long on GBPUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 64, required gte 400, short by 336
+- gen_mo_rsi_stoch_adx_gate_swing_tp_long on GBPUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 8, required gte 400, short by 392
+- gen_mo_rsi_stoch_adx_gate_swing_tp_long on NZDUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 44, required gte 400, short by 356
+- gen_mo_rsi_stoch_adx_gate_swing_tp_long on NZDUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 11, required gte 400, short by 389
+- gen_mo_rsi_stoch_adx_gate_swing_tp_long on USDCAD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 82, required gte 400, short by 318
+- gen_mo_rsi_stoch_adx_gate_swing_tp_long on USDCAD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 10, required gte 400, short by 390
+- gen_mo_rsi_stoch_adx_gate_swing_tp_long on USDCHF H4: REJECT at RUNG 0 SANITY -- min_trades: observed 26, required gte 400, short by 374
+- gen_mo_rsi_stoch_adx_gate_swing_tp_long on USDCHF D1: REJECT at RUNG 0 SANITY -- min_trades: observed 8, required gte 400, short by 392
+- gen_mo_rsi_stoch_adx_gate_swing_tp_long on USDJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 56, required gte 400, short by 344
+- gen_mo_rsi_stoch_adx_gate_swing_tp_long on USDJPY D1: REJECT at RUNG 0 SANITY -- min_trades: observed 16, required gte 400, short by 384
+- gen_mo_rsi_stoch_adx_gate_swing_tp_long on XAUUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 46, required gte 400, short by 354
+- gen_mo_rsi_stoch_adx_gate_swing_tp_long on XAUUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 13, required gte 400, short by 387
+- gen_mo_rsi_stoch_rvol_gate_swing_tp_long on AUDJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 76, required gte 400, short by 324
+- gen_mo_rsi_stoch_rvol_gate_swing_tp_long on AUDJPY D1: REJECT at RUNG 0 SANITY -- min_trades: observed 16, required gte 400, short by 384
+- gen_mo_rsi_stoch_rvol_gate_swing_tp_long on AUDUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 71, required gte 400, short by 329
+- gen_mo_rsi_stoch_rvol_gate_swing_tp_long on AUDUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 14, required gte 400, short by 386
+- gen_mo_rsi_stoch_rvol_gate_swing_tp_long on EURGBP H4: REJECT at RUNG 0 SANITY -- min_trades: observed 61, required gte 400, short by 339
+- gen_mo_rsi_stoch_rvol_gate_swing_tp_long on EURGBP D1: REJECT at RUNG 0 SANITY -- min_trades: observed 29, required gte 400, short by 371
+- gen_mo_rsi_stoch_rvol_gate_swing_tp_long on EURJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 64, required gte 400, short by 336
+- gen_mo_rsi_stoch_rvol_gate_swing_tp_long on EURJPY D1: REJECT at RUNG 0 SANITY -- min_trades: observed 24, required gte 400, short by 376
+- gen_mo_rsi_stoch_rvol_gate_swing_tp_long on EURUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 72, required gte 400, short by 328
+- gen_mo_rsi_stoch_rvol_gate_swing_tp_long on EURUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 18, required gte 400, short by 382
+- gen_mo_rsi_stoch_rvol_gate_swing_tp_long on GBPJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 74, required gte 400, short by 326
+- gen_mo_rsi_stoch_rvol_gate_swing_tp_long on GBPJPY D1: REJECT at RUNG 0 SANITY -- min_trades: observed 15, required gte 400, short by 385
+- gen_mo_rsi_stoch_rvol_gate_swing_tp_long on GBPUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 70, required gte 400, short by 330
+- gen_mo_rsi_stoch_rvol_gate_swing_tp_long on GBPUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 23, required gte 400, short by 377
+- gen_mo_rsi_stoch_rvol_gate_swing_tp_long on NZDUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 83, required gte 400, short by 317
+- gen_mo_rsi_stoch_rvol_gate_swing_tp_long on NZDUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 21, required gte 400, short by 379
+- gen_mo_rsi_stoch_rvol_gate_swing_tp_long on USDCAD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 91, required gte 400, short by 309
+- gen_mo_rsi_stoch_rvol_gate_swing_tp_long on USDCAD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 20, required gte 400, short by 380
+- gen_mo_rsi_stoch_rvol_gate_swing_tp_long on USDCHF H4: REJECT at RUNG 0 SANITY -- min_trades: observed 39, required gte 400, short by 361
+- gen_mo_rsi_stoch_rvol_gate_swing_tp_long on USDCHF D1: REJECT at RUNG 0 SANITY -- min_trades: observed 17, required gte 400, short by 383
+- gen_mo_rsi_stoch_rvol_gate_swing_tp_long on USDJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 68, required gte 400, short by 332
+- gen_mo_rsi_stoch_rvol_gate_swing_tp_long on USDJPY D1: REJECT at RUNG 0 SANITY -- min_trades: observed 23, required gte 400, short by 377
+- gen_mo_rsi_stoch_rvol_gate_swing_tp_long on XAUUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 75, required gte 400, short by 325
+- gen_mo_rsi_stoch_rvol_gate_swing_tp_long on XAUUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 18, required gte 400, short by 382
+- gen_mo_rsi_stoch_rvol_gate_swing_tp_short on AUDJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 87, required gte 400, short by 313
+- gen_mo_rsi_stoch_rvol_gate_swing_tp_short on AUDJPY D1: REJECT at RUNG 0 SANITY -- min_trades: observed 23, required gte 400, short by 377
+- gen_mo_rsi_stoch_rvol_gate_swing_tp_short on AUDUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 102, required gte 400, short by 298
+- gen_mo_rsi_stoch_rvol_gate_swing_tp_short on AUDUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 29, required gte 400, short by 371
+- gen_mo_rsi_stoch_rvol_gate_swing_tp_short on EURGBP H4: REJECT at RUNG 0 SANITY -- min_trades: observed 68, required gte 400, short by 332
+- gen_mo_rsi_stoch_rvol_gate_swing_tp_short on EURGBP D1: REJECT at RUNG 0 SANITY -- min_trades: observed 16, required gte 400, short by 384
+- gen_mo_rsi_stoch_rvol_gate_swing_tp_short on EURJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 98, required gte 400, short by 302
+- gen_mo_rsi_stoch_rvol_gate_swing_tp_short on EURJPY D1: REJECT at RUNG 0 SANITY -- min_trades: observed 25, required gte 400, short by 375
+- gen_mo_rsi_stoch_rvol_gate_swing_tp_short on EURUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 71, required gte 400, short by 329
+- gen_mo_rsi_stoch_rvol_gate_swing_tp_short on EURUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 16, required gte 400, short by 384
+- gen_mo_rsi_stoch_rvol_gate_swing_tp_short on GBPJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 53, required gte 400, short by 347
+- gen_mo_rsi_stoch_rvol_gate_swing_tp_short on GBPJPY D1: REJECT at RUNG 0 SANITY -- min_trades: observed 13, required gte 400, short by 387
+- gen_mo_rsi_stoch_rvol_gate_swing_tp_short on GBPUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 45, required gte 400, short by 355
+- gen_mo_rsi_stoch_rvol_gate_swing_tp_short on GBPUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 21, required gte 400, short by 379
+- gen_mo_rsi_stoch_rvol_gate_swing_tp_short on NZDUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 80, required gte 400, short by 320
+- gen_mo_rsi_stoch_rvol_gate_swing_tp_short on NZDUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 20, required gte 400, short by 380
+- gen_mo_rsi_stoch_rvol_gate_swing_tp_short on USDCAD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 67, required gte 400, short by 333
+- gen_mo_rsi_stoch_rvol_gate_swing_tp_short on USDCAD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 13, required gte 400, short by 387
+- gen_mo_rsi_stoch_rvol_gate_swing_tp_short on USDCHF H4: REJECT at RUNG 0 SANITY -- min_trades: observed 65, required gte 400, short by 335
+- gen_mo_rsi_stoch_rvol_gate_swing_tp_short on USDCHF D1: REJECT at RUNG 0 SANITY -- min_trades: observed 19, required gte 400, short by 381
+- gen_mo_rsi_stoch_rvol_gate_swing_tp_short on USDJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 86, required gte 400, short by 314
+- gen_mo_rsi_stoch_rvol_gate_swing_tp_short on USDJPY D1: REJECT at RUNG 0 SANITY -- min_trades: observed 16, required gte 400, short by 384
+- gen_mo_rsi_stoch_rvol_gate_swing_tp_short on XAUUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 92, required gte 400, short by 308
+- gen_mo_rsi_stoch_rvol_gate_swing_tp_short on XAUUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 26, required gte 400, short by 374
+- gen_mo_rsi_stoch_rvol_gate_tp_r on AUDJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 208, required gte 400, short by 192
+- gen_mo_rsi_stoch_rvol_gate_tp_r on AUDJPY D1: REJECT at RUNG 0 SANITY -- min_trades: observed 47, required gte 400, short by 353
+- gen_mo_rsi_stoch_rvol_gate_tp_r on AUDUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 192, required gte 400, short by 208
+- gen_mo_rsi_stoch_rvol_gate_tp_r on AUDUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 45, required gte 400, short by 355
+- gen_mo_rsi_stoch_rvol_gate_tp_r on EURGBP H4: REJECT at RUNG 0 SANITY -- min_trades: observed 133, required gte 400, short by 267
+- gen_mo_rsi_stoch_rvol_gate_tp_r on EURGBP D1: REJECT at RUNG 0 SANITY -- min_trades: observed 46, required gte 400, short by 354
+- gen_mo_rsi_stoch_rvol_gate_tp_r on EURJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 189, required gte 400, short by 211
+- gen_mo_rsi_stoch_rvol_gate_tp_r on EURJPY D1: REJECT at RUNG 0 SANITY -- min_trades: observed 54, required gte 400, short by 346
+- gen_mo_rsi_stoch_rvol_gate_tp_r on EURUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 174, required gte 400, short by 226
+- gen_mo_rsi_stoch_rvol_gate_tp_r on EURUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 43, required gte 400, short by 357
+- gen_mo_rsi_stoch_rvol_gate_tp_r on GBPJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 186, required gte 400, short by 214
+- gen_mo_rsi_stoch_rvol_gate_tp_r on GBPJPY D1: REJECT at RUNG 0 SANITY -- min_trades: observed 41, required gte 400, short by 359
+- gen_mo_rsi_stoch_rvol_gate_tp_r on GBPUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 160, required gte 400, short by 240
+- gen_mo_rsi_stoch_rvol_gate_tp_r on GBPUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 49, required gte 400, short by 351
+- gen_mo_rsi_stoch_rvol_gate_tp_r on NZDUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 197, required gte 400, short by 203
+- gen_mo_rsi_stoch_rvol_gate_tp_r on NZDUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 39, required gte 400, short by 361
+- gen_mo_rsi_stoch_rvol_gate_tp_r on USDCAD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 158, required gte 400, short by 242
+- gen_mo_rsi_stoch_rvol_gate_tp_r on USDCAD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 40, required gte 400, short by 360
+- gen_mo_rsi_stoch_rvol_gate_tp_r on USDCHF H4: REJECT at RUNG 0 SANITY -- min_trades: observed 179, required gte 400, short by 221
+- gen_mo_rsi_stoch_rvol_gate_tp_r on USDCHF D1: REJECT at RUNG 0 SANITY -- min_trades: observed 40, required gte 400, short by 360
+- gen_mo_rsi_stoch_rvol_gate_tp_r on USDJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 161, required gte 400, short by 239
+- gen_mo_rsi_stoch_rvol_gate_tp_r on USDJPY D1: REJECT at RUNG 0 SANITY -- min_trades: observed 39, required gte 400, short by 361
+- gen_mo_rsi_stoch_rvol_gate_tp_r on XAUUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 192, required gte 400, short by 208
+- gen_mo_rsi_stoch_rvol_gate_tp_r on XAUUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 46, required gte 400, short by 354
+- gen_mo_rsi_stoch_session_swing_tp_long on AUDJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 50, required gte 400, short by 350
+- gen_mo_rsi_stoch_session_swing_tp_long on AUDUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 53, required gte 400, short by 347
+- gen_mo_rsi_stoch_session_swing_tp_long on EURGBP H4: REJECT at RUNG 0 SANITY -- min_trades: observed 64, required gte 400, short by 336
+- gen_mo_rsi_stoch_session_swing_tp_long on EURJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 50, required gte 400, short by 350
+- gen_mo_rsi_stoch_session_swing_tp_long on EURUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 72, required gte 400, short by 328
+- gen_mo_rsi_stoch_session_swing_tp_long on GBPJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 60, required gte 400, short by 340
+- gen_mo_rsi_stoch_session_swing_tp_long on GBPUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 73, required gte 400, short by 327
+- gen_mo_rsi_stoch_session_swing_tp_long on NZDUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 53, required gte 400, short by 347
+- gen_mo_rsi_stoch_session_swing_tp_long on USDCAD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 96, required gte 400, short by 304
+- gen_mo_rsi_stoch_session_swing_tp_long on USDCHF H4: REJECT at RUNG 0 SANITY -- min_trades: observed 77, required gte 400, short by 323
+- gen_mo_rsi_stoch_session_swing_tp_long on USDJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 72, required gte 400, short by 328
+- gen_mo_rsi_stoch_session_swing_tp_long on XAUUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 64, required gte 400, short by 336
+- gen_mo_rsi_stoch_session_trail on AUDJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 141, required gte 400, short by 259
+- gen_mo_rsi_stoch_session_trail on AUDUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 139, required gte 400, short by 261
+- gen_mo_rsi_stoch_session_trail on EURGBP H4: REJECT at RUNG 0 SANITY -- min_trades: observed 156, required gte 400, short by 244
+- gen_mo_rsi_stoch_session_trail on EURJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 137, required gte 400, short by 263
+- gen_mo_rsi_stoch_session_trail on EURUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 167, required gte 400, short by 233
+- gen_mo_rsi_stoch_session_trail on GBPJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 143, required gte 400, short by 257
+- gen_mo_rsi_stoch_session_trail on GBPUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 158, required gte 400, short by 242
+- gen_mo_rsi_stoch_session_trail on NZDUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 133, required gte 400, short by 267
+- gen_mo_rsi_stoch_session_trail on USDCAD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 171, required gte 400, short by 229
+- gen_mo_rsi_stoch_session_trail on USDCHF H4: REJECT at RUNG 0 SANITY -- min_trades: observed 159, required gte 400, short by 241
+- gen_mo_rsi_stoch_session_trail on USDJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 155, required gte 400, short by 245
+- gen_mo_rsi_stoch_session_trail on XAUUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 158, required gte 400, short by 242
+- gen_mr_bb_reentry_none_swing_tp_long on AUDUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 360, required gte 400, short by 40
+- gen_mr_bb_reentry_none_swing_tp_long on AUDUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 81, required gte 400, short by 319
+- gen_mr_bb_reentry_none_swing_tp_long on EURGBP H4: REJECT at RUNG 0 SANITY -- min_trades: observed 300, required gte 400, short by 100
+- gen_mr_bb_reentry_none_swing_tp_long on EURGBP D1: REJECT at RUNG 0 SANITY -- min_trades: observed 87, required gte 400, short by 313
+- gen_mr_bb_reentry_none_swing_tp_long on EURUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 290, required gte 400, short by 110
+- gen_mr_bb_reentry_none_swing_tp_long on EURUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 89, required gte 400, short by 311
+- gen_mr_bb_reentry_none_swing_tp_long on GBPUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 353, required gte 400, short by 47
+- gen_mr_bb_reentry_none_swing_tp_long on GBPUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 81, required gte 400, short by 319
+- gen_mr_bb_reentry_none_swing_tp_long on NZDUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 301, required gte 400, short by 99
+- gen_mr_bb_reentry_none_swing_tp_long on NZDUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 76, required gte 400, short by 324
+- gen_mr_bb_reentry_none_swing_tp_long on USDCAD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 345, required gte 400, short by 55
+- gen_mr_bb_reentry_none_swing_tp_long on USDCAD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 83, required gte 400, short by 317
+- gen_mr_bb_reentry_none_swing_tp_long on USDCHF H4: REJECT at RUNG 0 SANITY -- min_trades: observed 304, required gte 400, short by 96
+- gen_mr_bb_reentry_none_swing_tp_long on USDCHF D1: REJECT at RUNG 0 SANITY -- min_trades: observed 99, required gte 400, short by 301
+- gen_mr_bb_reentry_none_swing_tp_long on USDJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 319, required gte 400, short by 81
+- gen_mr_bb_reentry_none_swing_tp_long on USDJPY D1: REJECT at RUNG 0 SANITY -- min_trades: observed 64, required gte 400, short by 336
+- gen_mr_bb_reentry_none_swing_tp_short on AUDUSD H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -1.83832 at declared defaults is not positive; there is no edge to validate.
+- gen_mr_bb_reentry_none_swing_tp_short on AUDUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 102, required gte 400, short by 298
+- gen_mr_bb_reentry_none_swing_tp_short on EURGBP H4: REJECT at RUNG 0 SANITY -- min_trades: observed 286, required gte 400, short by 114
+- gen_mr_bb_reentry_none_swing_tp_short on EURGBP D1: REJECT at RUNG 0 SANITY -- min_trades: observed 66, required gte 400, short by 334
+- gen_mr_bb_reentry_none_swing_tp_short on EURUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 368, required gte 400, short by 32
+- gen_mr_bb_reentry_none_swing_tp_short on EURUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 84, required gte 400, short by 316
+- gen_mr_bb_reentry_none_swing_tp_short on GBPUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 291, required gte 400, short by 109
+- gen_mr_bb_reentry_none_swing_tp_short on GBPUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 90, required gte 400, short by 310
+- gen_mr_bb_reentry_none_swing_tp_short on NZDUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 362, required gte 400, short by 38
+- gen_mr_bb_reentry_none_swing_tp_short on NZDUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 83, required gte 400, short by 317
+- gen_mr_bb_reentry_none_swing_tp_short on USDCAD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 252, required gte 400, short by 148
+- gen_mr_bb_reentry_none_swing_tp_short on USDCAD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 77, required gte 400, short by 323
+- gen_mr_bb_reentry_none_swing_tp_short on USDCHF H4: REJECT at RUNG 0 SANITY -- min_trades: observed 349, required gte 400, short by 51
+- gen_mr_bb_reentry_none_swing_tp_short on USDCHF D1: REJECT at RUNG 0 SANITY -- min_trades: observed 87, required gte 400, short by 313
+- gen_mr_bb_reentry_none_swing_tp_short on USDJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 360, required gte 400, short by 40
+- gen_mr_bb_reentry_none_swing_tp_short on USDJPY D1: REJECT at RUNG 0 SANITY -- min_trades: observed 95, required gte 400, short by 305
+- gen_mr_bb_reentry_none_time_exit on AUDUSD H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -0.568946 at declared defaults is not positive; there is no edge to validate.
+- gen_mr_bb_reentry_none_time_exit on AUDUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 118, required gte 400, short by 282
+- gen_mr_bb_reentry_none_time_exit on EURGBP H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -0.373386 at declared defaults is not positive; there is no edge to validate.
+- gen_mr_bb_reentry_none_time_exit on EURGBP D1: REJECT at RUNG 0 SANITY -- min_trades: observed 112, required gte 400, short by 288
+- gen_mr_bb_reentry_none_time_exit on EURUSD H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -1.01118 at declared defaults is not positive; there is no edge to validate.
+- gen_mr_bb_reentry_none_time_exit on EURUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 119, required gte 400, short by 281
+- gen_mr_bb_reentry_none_time_exit on GBPUSD H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -0.611023 at declared defaults is not positive; there is no edge to validate.
+- gen_mr_bb_reentry_none_time_exit on GBPUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 118, required gte 400, short by 282
+- gen_mr_bb_reentry_none_time_exit on NZDUSD H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -1.13797 at declared defaults is not positive; there is no edge to validate.
+- gen_mr_bb_reentry_none_time_exit on NZDUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 104, required gte 400, short by 296
+- gen_mr_bb_reentry_none_time_exit on USDCAD H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -0.749035 at declared defaults is not positive; there is no edge to validate.
+- gen_mr_bb_reentry_none_time_exit on USDCAD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 106, required gte 400, short by 294
+- gen_mr_bb_reentry_none_time_exit on USDCHF H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -0.587342 at declared defaults is not positive; there is no edge to validate.
+- gen_mr_bb_reentry_none_time_exit on USDCHF D1: REJECT at RUNG 0 SANITY -- min_trades: observed 115, required gte 400, short by 285
+- gen_mr_bb_reentry_none_time_exit on USDJPY H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -1.14543 at declared defaults is not positive; there is no edge to validate.
+- gen_mr_bb_reentry_none_time_exit on USDJPY D1: REJECT at RUNG 0 SANITY -- min_trades: observed 100, required gte 400, short by 300
+- gen_mr_bb_reentry_rvol_gate_swing_tp_long on AUDUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 347, required gte 400, short by 53
+- gen_mr_bb_reentry_rvol_gate_swing_tp_long on AUDUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 81, required gte 400, short by 319
+- gen_mr_bb_reentry_rvol_gate_swing_tp_long on EURGBP H4: REJECT at RUNG 0 SANITY -- min_trades: observed 212, required gte 400, short by 188
+- gen_mr_bb_reentry_rvol_gate_swing_tp_long on EURGBP D1: REJECT at RUNG 0 SANITY -- min_trades: observed 87, required gte 400, short by 313
+- gen_mr_bb_reentry_rvol_gate_swing_tp_long on EURUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 230, required gte 400, short by 170
+- gen_mr_bb_reentry_rvol_gate_swing_tp_long on EURUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 89, required gte 400, short by 311
+- gen_mr_bb_reentry_rvol_gate_swing_tp_long on GBPUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 250, required gte 400, short by 150
+- gen_mr_bb_reentry_rvol_gate_swing_tp_long on GBPUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 80, required gte 400, short by 320
+- gen_mr_bb_reentry_rvol_gate_swing_tp_long on NZDUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 285, required gte 400, short by 115
+- gen_mr_bb_reentry_rvol_gate_swing_tp_long on NZDUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 76, required gte 400, short by 324
+- gen_mr_bb_reentry_rvol_gate_swing_tp_long on USDCAD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 220, required gte 400, short by 180
+- gen_mr_bb_reentry_rvol_gate_swing_tp_long on USDCAD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 83, required gte 400, short by 317
+- gen_mr_bb_reentry_rvol_gate_swing_tp_long on USDCHF H4: REJECT at RUNG 0 SANITY -- min_trades: observed 215, required gte 400, short by 185
+- gen_mr_bb_reentry_rvol_gate_swing_tp_long on USDCHF D1: REJECT at RUNG 0 SANITY -- min_trades: observed 99, required gte 400, short by 301
+- gen_mr_bb_reentry_rvol_gate_swing_tp_long on USDJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 243, required gte 400, short by 157
+- gen_mr_bb_reentry_rvol_gate_swing_tp_long on USDJPY D1: REJECT at RUNG 0 SANITY -- min_trades: observed 64, required gte 400, short by 336
+- gen_mr_bb_reentry_session_swing_tp_long on AUDUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 252, required gte 400, short by 148
+- gen_mr_bb_reentry_session_swing_tp_long on EURGBP H4: REJECT at RUNG 0 SANITY -- min_trades: observed 253, required gte 400, short by 147
+- gen_mr_bb_reentry_session_swing_tp_long on EURUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 244, required gte 400, short by 156
+- gen_mr_bb_reentry_session_swing_tp_long on GBPUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 282, required gte 400, short by 118
+- gen_mr_bb_reentry_session_swing_tp_long on NZDUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 239, required gte 400, short by 161
+- gen_mr_bb_reentry_session_swing_tp_long on USDCAD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 245, required gte 400, short by 155
+- gen_mr_bb_reentry_session_swing_tp_long on USDCHF H4: REJECT at RUNG 0 SANITY -- min_trades: observed 221, required gte 400, short by 179
+- gen_mr_bb_reentry_session_swing_tp_long on USDJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 223, required gte 400, short by 177
+- gen_mr_bb_reentry_session_swing_tp_short on AUDUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 302, required gte 400, short by 98
+- gen_mr_bb_reentry_session_swing_tp_short on EURGBP H4: REJECT at RUNG 0 SANITY -- min_trades: observed 266, required gte 400, short by 134
+- gen_mr_bb_reentry_session_swing_tp_short on EURUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 262, required gte 400, short by 138
+- gen_mr_bb_reentry_session_swing_tp_short on GBPUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 281, required gte 400, short by 119
+- gen_mr_bb_reentry_session_swing_tp_short on NZDUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 305, required gte 400, short by 95
+- gen_mr_bb_reentry_session_swing_tp_short on USDCAD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 237, required gte 400, short by 163
+- gen_mr_bb_reentry_session_swing_tp_short on USDCHF H4: REJECT at RUNG 0 SANITY -- min_trades: observed 266, required gte 400, short by 134
+- gen_mr_bb_reentry_session_swing_tp_short on USDJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 266, required gte 400, short by 134
+- gen_mr_bb_reentry_session_time_exit on AUDUSD H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -0.800669 at declared defaults is not positive; there is no edge to validate.
+- gen_mr_bb_reentry_session_time_exit on EURGBP H4: REJECT at RUNG 0 SANITY -- min_trades: observed 395, required gte 400, short by 5
+- gen_mr_bb_reentry_session_time_exit on EURUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 396, required gte 400, short by 4
+- gen_mr_bb_reentry_session_time_exit on GBPUSD H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -0.565269 at declared defaults is not positive; there is no edge to validate.
+- gen_mr_bb_reentry_session_time_exit on NZDUSD H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -0.808249 at declared defaults is not positive; there is no edge to validate.
+- gen_mr_bb_reentry_session_time_exit on USDCAD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 346, required gte 400, short by 54
+- gen_mr_bb_reentry_session_time_exit on USDCHF H4: REJECT at RUNG 0 SANITY -- min_trades: observed 377, required gte 400, short by 23
+- gen_mr_bb_reentry_session_time_exit on USDJPY H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -0.850467 at declared defaults is not positive; there is no edge to validate.
+- gen_mr_kc_reentry_none_swing_tp_long on AUDUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 158, required gte 400, short by 242
+- gen_mr_kc_reentry_none_swing_tp_long on AUDUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 39, required gte 400, short by 361
+- gen_mr_kc_reentry_none_swing_tp_long on EURGBP H4: REJECT at RUNG 0 SANITY -- min_trades: observed 157, required gte 400, short by 243
+- gen_mr_kc_reentry_none_swing_tp_long on EURGBP D1: REJECT at RUNG 0 SANITY -- min_trades: observed 40, required gte 400, short by 360
+- gen_mr_kc_reentry_none_swing_tp_long on EURUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 134, required gte 400, short by 266
+- gen_mr_kc_reentry_none_swing_tp_long on EURUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 39, required gte 400, short by 361
+- gen_mr_kc_reentry_none_swing_tp_long on GBPUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 142, required gte 400, short by 258
+- gen_mr_kc_reentry_none_swing_tp_long on GBPUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 38, required gte 400, short by 362
+- gen_mr_kc_reentry_none_swing_tp_long on NZDUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 136, required gte 400, short by 264
+- gen_mr_kc_reentry_none_swing_tp_long on NZDUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 26, required gte 400, short by 374
+- gen_mr_kc_reentry_none_swing_tp_long on USDCAD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 157, required gte 400, short by 243
+- gen_mr_kc_reentry_none_swing_tp_long on USDCAD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 32, required gte 400, short by 368
+- gen_mr_kc_reentry_none_swing_tp_long on USDCHF H4: REJECT at RUNG 0 SANITY -- min_trades: observed 121, required gte 400, short by 279
+- gen_mr_kc_reentry_none_swing_tp_long on USDCHF D1: REJECT at RUNG 0 SANITY -- min_trades: observed 49, required gte 400, short by 351
+- gen_mr_kc_reentry_none_swing_tp_long on USDJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 148, required gte 400, short by 252
+- gen_mr_kc_reentry_none_swing_tp_long on USDJPY D1: REJECT at RUNG 0 SANITY -- min_trades: observed 26, required gte 400, short by 374
+- gen_mr_kc_reentry_none_time_exit on AUDUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 276, required gte 400, short by 124
+- gen_mr_kc_reentry_none_time_exit on AUDUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 63, required gte 400, short by 337
+- gen_mr_kc_reentry_none_time_exit on EURGBP H4: REJECT at RUNG 0 SANITY -- min_trades: observed 228, required gte 400, short by 172
+- gen_mr_kc_reentry_none_time_exit on EURGBP D1: REJECT at RUNG 0 SANITY -- min_trades: observed 59, required gte 400, short by 341
+- gen_mr_kc_reentry_none_time_exit on EURUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 216, required gte 400, short by 184
+- gen_mr_kc_reentry_none_time_exit on EURUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 60, required gte 400, short by 340
+- gen_mr_kc_reentry_none_time_exit on GBPUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 238, required gte 400, short by 162
+- gen_mr_kc_reentry_none_time_exit on GBPUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 71, required gte 400, short by 329
+- gen_mr_kc_reentry_none_time_exit on NZDUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 248, required gte 400, short by 152
+- gen_mr_kc_reentry_none_time_exit on NZDUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 49, required gte 400, short by 351
+- gen_mr_kc_reentry_none_time_exit on USDCAD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 231, required gte 400, short by 169
+- gen_mr_kc_reentry_none_time_exit on USDCAD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 45, required gte 400, short by 355
+- gen_mr_kc_reentry_none_time_exit on USDCHF H4: REJECT at RUNG 0 SANITY -- min_trades: observed 222, required gte 400, short by 178
+- gen_mr_kc_reentry_none_time_exit on USDCHF D1: REJECT at RUNG 0 SANITY -- min_trades: observed 57, required gte 400, short by 343
+- gen_mr_kc_reentry_none_time_exit on USDJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 255, required gte 400, short by 145
+- gen_mr_kc_reentry_none_time_exit on USDJPY D1: REJECT at RUNG 0 SANITY -- min_trades: observed 55, required gte 400, short by 345
+- gen_mr_kc_reentry_none_trail on AUDUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 288, required gte 400, short by 112
+- gen_mr_kc_reentry_none_trail on AUDUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 71, required gte 400, short by 329
+- gen_mr_kc_reentry_none_trail on EURGBP H4: REJECT at RUNG 0 SANITY -- min_trades: observed 233, required gte 400, short by 167
+- gen_mr_kc_reentry_none_trail on EURGBP D1: REJECT at RUNG 0 SANITY -- min_trades: observed 60, required gte 400, short by 340
+- gen_mr_kc_reentry_none_trail on EURUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 225, required gte 400, short by 175
+- gen_mr_kc_reentry_none_trail on EURUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 62, required gte 400, short by 338
+- gen_mr_kc_reentry_none_trail on GBPUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 247, required gte 400, short by 153
+- gen_mr_kc_reentry_none_trail on GBPUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 76, required gte 400, short by 324
+- gen_mr_kc_reentry_none_trail on NZDUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 253, required gte 400, short by 147
+- gen_mr_kc_reentry_none_trail on NZDUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 46, required gte 400, short by 354
+- gen_mr_kc_reentry_none_trail on USDCAD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 242, required gte 400, short by 158
+- gen_mr_kc_reentry_none_trail on USDCAD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 47, required gte 400, short by 353
+- gen_mr_kc_reentry_none_trail on USDCHF H4: REJECT at RUNG 0 SANITY -- min_trades: observed 223, required gte 400, short by 177
+- gen_mr_kc_reentry_none_trail on USDCHF D1: REJECT at RUNG 0 SANITY -- min_trades: observed 65, required gte 400, short by 335
+- gen_mr_kc_reentry_none_trail on USDJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 258, required gte 400, short by 142
+- gen_mr_kc_reentry_none_trail on USDJPY D1: REJECT at RUNG 0 SANITY -- min_trades: observed 55, required gte 400, short by 345
+- gen_mr_kc_reentry_session_swing_tp_long on AUDUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 107, required gte 400, short by 293
+- gen_mr_kc_reentry_session_swing_tp_long on EURGBP H4: REJECT at RUNG 0 SANITY -- min_trades: observed 121, required gte 400, short by 279
+- gen_mr_kc_reentry_session_swing_tp_long on EURUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 90, required gte 400, short by 310
+- gen_mr_kc_reentry_session_swing_tp_long on GBPUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 114, required gte 400, short by 286
+- gen_mr_kc_reentry_session_swing_tp_long on NZDUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 96, required gte 400, short by 304
+- gen_mr_kc_reentry_session_swing_tp_long on USDCAD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 115, required gte 400, short by 285
+- gen_mr_kc_reentry_session_swing_tp_long on USDCHF H4: REJECT at RUNG 0 SANITY -- min_trades: observed 93, required gte 400, short by 307
+- gen_mr_kc_reentry_session_swing_tp_long on USDJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 104, required gte 400, short by 296
+- gen_mr_kc_reentry_session_swing_tp_short on AUDUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 125, required gte 400, short by 275
+- gen_mr_kc_reentry_session_swing_tp_short on EURGBP H4: REJECT at RUNG 0 SANITY -- min_trades: observed 92, required gte 400, short by 308
+- gen_mr_kc_reentry_session_swing_tp_short on EURUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 94, required gte 400, short by 306
+- gen_mr_kc_reentry_session_swing_tp_short on GBPUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 118, required gte 400, short by 282
+- gen_mr_kc_reentry_session_swing_tp_short on NZDUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 121, required gte 400, short by 279
+- gen_mr_kc_reentry_session_swing_tp_short on USDCAD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 92, required gte 400, short by 308
+- gen_mr_kc_reentry_session_swing_tp_short on USDCHF H4: REJECT at RUNG 0 SANITY -- min_trades: observed 101, required gte 400, short by 299
+- gen_mr_kc_reentry_session_swing_tp_short on USDJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 122, required gte 400, short by 278
+- gen_mr_kc_reentry_session_time_exit on AUDUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 196, required gte 400, short by 204
+- gen_mr_kc_reentry_session_time_exit on EURGBP H4: REJECT at RUNG 0 SANITY -- min_trades: observed 189, required gte 400, short by 211
+- gen_mr_kc_reentry_session_time_exit on EURUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 160, required gte 400, short by 240
+- gen_mr_kc_reentry_session_time_exit on GBPUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 195, required gte 400, short by 205
+- gen_mr_kc_reentry_session_time_exit on NZDUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 189, required gte 400, short by 211
+- gen_mr_kc_reentry_session_time_exit on USDCAD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 176, required gte 400, short by 224
+- gen_mr_kc_reentry_session_time_exit on USDCHF H4: REJECT at RUNG 0 SANITY -- min_trades: observed 175, required gte 400, short by 225
+- gen_mr_kc_reentry_session_time_exit on USDJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 196, required gte 400, short by 204
+- gen_sb_range_close_break_adx_gate_swing_tp_short on DE40 H4: REJECT at RUNG 0 SANITY -- min_trades: observed 120, required gte 400, short by 280
+- gen_sb_range_close_break_adx_gate_swing_tp_short on EURGBP H4: REJECT at RUNG 0 SANITY -- min_trades: observed 110, required gte 400, short by 290
+- gen_sb_range_close_break_adx_gate_swing_tp_short on EURJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 131, required gte 400, short by 269
+- gen_sb_range_close_break_adx_gate_swing_tp_short on EURUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 125, required gte 400, short by 275
+- gen_sb_range_close_break_adx_gate_swing_tp_short on GBPJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 44, required gte 400, short by 356
+- gen_sb_range_close_break_adx_gate_swing_tp_short on GBPUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 65, required gte 400, short by 335
+- gen_sb_range_close_break_adx_gate_swing_tp_short on UK100 H4: REJECT at RUNG 0 SANITY -- min_trades: observed 63, required gte 400, short by 337
+- gen_sb_range_close_break_adx_gate_swing_tp_short on USDCHF H4: REJECT at RUNG 0 SANITY -- min_trades: observed 83, required gte 400, short by 317
+- gen_sb_range_close_break_adx_gate_time_exit on DE40 H4: REJECT at RUNG 0 SANITY -- min_trades: observed 296, required gte 400, short by 104
+- gen_sb_range_close_break_adx_gate_time_exit on EURGBP H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -0.233846 at declared defaults is not positive; there is no edge to validate.
+- gen_sb_range_close_break_adx_gate_time_exit on EURJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 392, required gte 400, short by 8
+- gen_sb_range_close_break_adx_gate_time_exit on EURUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 387, required gte 400, short by 13
+- gen_sb_range_close_break_adx_gate_time_exit on GBPJPY H4: REJECT at RUNG 2 WALK_FORWARD -- walk_forward_efficiency: observed -22.3, required gte 50, short by 72.3
+- gen_sb_range_close_break_adx_gate_time_exit on GBPUSD H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -0.6655 at declared defaults is not positive; there is no edge to validate.
+- gen_sb_range_close_break_adx_gate_time_exit on UK100 H4: REJECT at RUNG 0 SANITY -- min_trades: observed 215, required gte 400, short by 185
+- gen_sb_range_close_break_adx_gate_time_exit on USDCHF H4: REJECT at RUNG 0 SANITY -- min_trades: observed 369, required gte 400, short by 31
+- gen_sb_range_close_break_none_swing_tp_long on DE40 H4: REJECT at RUNG 0 SANITY -- min_trades: observed 131, required gte 400, short by 269
+- gen_sb_range_close_break_none_swing_tp_long on EURGBP H4: REJECT at RUNG 0 SANITY -- min_trades: observed 108, required gte 400, short by 292
+- gen_sb_range_close_break_none_swing_tp_long on EURJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 123, required gte 400, short by 277
+- gen_sb_range_close_break_none_swing_tp_long on EURUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 141, required gte 400, short by 259
+- gen_sb_range_close_break_none_swing_tp_long on GBPJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 128, required gte 400, short by 272
+- gen_sb_range_close_break_none_swing_tp_long on GBPUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 149, required gte 400, short by 251
+- gen_sb_range_close_break_none_swing_tp_long on UK100 H4: REJECT at RUNG 0 SANITY -- min_trades: observed 103, required gte 400, short by 297
+- gen_sb_range_close_break_none_swing_tp_long on USDCHF H4: REJECT at RUNG 0 SANITY -- min_trades: observed 91, required gte 400, short by 309
+- gen_sb_range_close_break_none_swing_tp_short on DE40 H4: REJECT at RUNG 0 SANITY -- min_trades: observed 156, required gte 400, short by 244
+- gen_sb_range_close_break_none_swing_tp_short on EURGBP H4: REJECT at RUNG 0 SANITY -- min_trades: observed 119, required gte 400, short by 281
+- gen_sb_range_close_break_none_swing_tp_short on EURJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 164, required gte 400, short by 236
+- gen_sb_range_close_break_none_swing_tp_short on EURUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 139, required gte 400, short by 261
+- gen_sb_range_close_break_none_swing_tp_short on GBPJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 46, required gte 400, short by 354
+- gen_sb_range_close_break_none_swing_tp_short on GBPUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 79, required gte 400, short by 321
+- gen_sb_range_close_break_none_swing_tp_short on UK100 H4: REJECT at RUNG 0 SANITY -- min_trades: observed 112, required gte 400, short by 288
+- gen_sb_range_close_break_none_swing_tp_short on USDCHF H4: REJECT at RUNG 0 SANITY -- min_trades: observed 99, required gte 400, short by 301
+- gen_sb_range_close_break_none_trail on DE40 H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -0.949689 at declared defaults is not positive; there is no edge to validate.
+- gen_sb_range_close_break_none_trail on EURGBP H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -1.07498 at declared defaults is not positive; there is no edge to validate.
+- gen_sb_range_close_break_none_trail on EURJPY H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -0.0496529 at declared defaults is not positive; there is no edge to validate.
+- gen_sb_range_close_break_none_trail on EURUSD H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -0.658943 at declared defaults is not positive; there is no edge to validate.
+- gen_sb_range_close_break_none_trail on GBPJPY H4: REJECT at RUNG 2 WALK_FORWARD -- walk_forward_efficiency: observed -16.39, required gte 50, short by 66.39
+- gen_sb_range_close_break_none_trail on GBPUSD H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -1.03336 at declared defaults is not positive; there is no edge to validate.
+- gen_sb_range_close_break_none_trail on UK100 H4: REJECT at RUNG 0 SANITY -- min_trades: observed 397, required gte 400, short by 3
+- gen_sb_range_close_break_none_trail on USDCHF H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -1.321 at declared defaults is not positive; there is no edge to validate.
+- gen_sb_range_close_break_rvol_gate_swing_tp_short on DE40 H4: REJECT at RUNG 0 SANITY -- min_trades: observed 156, required gte 400, short by 244
+- gen_sb_range_close_break_rvol_gate_swing_tp_short on EURGBP H4: REJECT at RUNG 0 SANITY -- min_trades: observed 94, required gte 400, short by 306
+- gen_sb_range_close_break_rvol_gate_swing_tp_short on EURJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 135, required gte 400, short by 265
+- gen_sb_range_close_break_rvol_gate_swing_tp_short on EURUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 116, required gte 400, short by 284
+- gen_sb_range_close_break_rvol_gate_swing_tp_short on GBPJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 43, required gte 400, short by 357
+- gen_sb_range_close_break_rvol_gate_swing_tp_short on GBPUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 70, required gte 400, short by 330
+- gen_sb_range_close_break_rvol_gate_swing_tp_short on UK100 H4: REJECT at RUNG 0 SANITY -- min_trades: observed 112, required gte 400, short by 288
+- gen_sb_range_close_break_rvol_gate_swing_tp_short on USDCHF H4: REJECT at RUNG 0 SANITY -- min_trades: observed 86, required gte 400, short by 314
+- gen_sb_range_close_break_session_swing_tp_long on DE40 H4: REJECT at RUNG 0 SANITY -- min_trades: observed 101, required gte 400, short by 299
+- gen_sb_range_close_break_session_swing_tp_long on EURGBP H4: REJECT at RUNG 0 SANITY -- min_trades: observed 131, required gte 400, short by 269
+- gen_sb_range_close_break_session_swing_tp_long on EURJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 111, required gte 400, short by 289
+- gen_sb_range_close_break_session_swing_tp_long on EURUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 116, required gte 400, short by 284
+- gen_sb_range_close_break_session_swing_tp_long on GBPJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 111, required gte 400, short by 289
+- gen_sb_range_close_break_session_swing_tp_long on GBPUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 126, required gte 400, short by 274
+- gen_sb_range_close_break_session_swing_tp_long on UK100 H4: REJECT at RUNG 0 SANITY -- min_trades: observed 68, required gte 400, short by 332
+- gen_sb_range_close_break_session_swing_tp_long on USDCHF H4: REJECT at RUNG 0 SANITY -- min_trades: observed 78, required gte 400, short by 322
+- gen_sb_range_close_break_session_time_exit on DE40 H4: REJECT at RUNG 0 SANITY -- min_trades: observed 300, required gte 400, short by 100
+- gen_sb_range_close_break_session_time_exit on EURGBP H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -0.747967 at declared defaults is not positive; there is no edge to validate.
+- gen_sb_range_close_break_session_time_exit on EURJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 358, required gte 400, short by 42
+- gen_sb_range_close_break_session_time_exit on EURUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 363, required gte 400, short by 37
+- gen_sb_range_close_break_session_time_exit on GBPJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 394, required gte 400, short by 6
+- gen_sb_range_close_break_session_time_exit on GBPUSD H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -1.07759 at declared defaults is not positive; there is no edge to validate.
+- gen_sb_range_close_break_session_time_exit on UK100 H4: REJECT at RUNG 0 SANITY -- min_trades: observed 243, required gte 400, short by 157
+- gen_sb_range_close_break_session_time_exit on USDCHF H4: REJECT at RUNG 0 SANITY -- min_trades: observed 352, required gte 400, short by 48
+- gen_sb_range_fresh_cross_adx_gate_swing_tp_short on DE40 H4: REJECT at RUNG 0 SANITY -- min_trades: observed 96, required gte 400, short by 304
+- gen_sb_range_fresh_cross_adx_gate_swing_tp_short on EURGBP H4: REJECT at RUNG 0 SANITY -- min_trades: observed 112, required gte 400, short by 288
+- gen_sb_range_fresh_cross_adx_gate_swing_tp_short on EURJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 107, required gte 400, short by 293
+- gen_sb_range_fresh_cross_adx_gate_swing_tp_short on EURUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 115, required gte 400, short by 285
+- gen_sb_range_fresh_cross_adx_gate_swing_tp_short on GBPJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 39, required gte 400, short by 361
+- gen_sb_range_fresh_cross_adx_gate_swing_tp_short on GBPUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 85, required gte 400, short by 315
+- gen_sb_range_fresh_cross_adx_gate_swing_tp_short on UK100 H4: REJECT at RUNG 0 SANITY -- min_trades: observed 49, required gte 400, short by 351
+- gen_sb_range_fresh_cross_adx_gate_swing_tp_short on USDCHF H4: REJECT at RUNG 0 SANITY -- min_trades: observed 71, required gte 400, short by 329
+- gen_sb_range_fresh_cross_adx_gate_time_exit on DE40 H4: REJECT at RUNG 0 SANITY -- min_trades: observed 214, required gte 400, short by 186
+- gen_sb_range_fresh_cross_adx_gate_time_exit on EURGBP H4: REJECT at RUNG 0 SANITY -- min_trades: observed 391, required gte 400, short by 9
+- gen_sb_range_fresh_cross_adx_gate_time_exit on EURJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 288, required gte 400, short by 112
+- gen_sb_range_fresh_cross_adx_gate_time_exit on EURUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 313, required gte 400, short by 87
+- gen_sb_range_fresh_cross_adx_gate_time_exit on GBPJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 303, required gte 400, short by 97
+- gen_sb_range_fresh_cross_adx_gate_time_exit on GBPUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 362, required gte 400, short by 38
+- gen_sb_range_fresh_cross_adx_gate_time_exit on UK100 H4: REJECT at RUNG 0 SANITY -- min_trades: observed 163, required gte 400, short by 237
+- gen_sb_range_fresh_cross_adx_gate_time_exit on USDCHF H4: REJECT at RUNG 0 SANITY -- min_trades: observed 281, required gte 400, short by 119
+- gen_sb_range_fresh_cross_none_swing_tp_long on DE40 H4: REJECT at RUNG 0 SANITY -- min_trades: observed 115, required gte 400, short by 285
+- gen_sb_range_fresh_cross_none_swing_tp_long on EURGBP H4: REJECT at RUNG 0 SANITY -- min_trades: observed 156, required gte 400, short by 244
+- gen_sb_range_fresh_cross_none_swing_tp_long on EURJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 105, required gte 400, short by 295
+- gen_sb_range_fresh_cross_none_swing_tp_long on EURUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 133, required gte 400, short by 267
+- gen_sb_range_fresh_cross_none_swing_tp_long on GBPJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 115, required gte 400, short by 285
+- gen_sb_range_fresh_cross_none_swing_tp_long on GBPUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 146, required gte 400, short by 254
+- gen_sb_range_fresh_cross_none_swing_tp_long on UK100 H4: REJECT at RUNG 0 SANITY -- min_trades: observed 89, required gte 400, short by 311
+- gen_sb_range_fresh_cross_none_swing_tp_long on USDCHF H4: REJECT at RUNG 0 SANITY -- min_trades: observed 116, required gte 400, short by 284
+- gen_sb_range_fresh_cross_none_swing_tp_short on DE40 H4: REJECT at RUNG 0 SANITY -- min_trades: observed 131, required gte 400, short by 269
+- gen_sb_range_fresh_cross_none_swing_tp_short on EURGBP H4: REJECT at RUNG 0 SANITY -- min_trades: observed 131, required gte 400, short by 269
+- gen_sb_range_fresh_cross_none_swing_tp_short on EURJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 141, required gte 400, short by 259
+- gen_sb_range_fresh_cross_none_swing_tp_short on EURUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 132, required gte 400, short by 268
+- gen_sb_range_fresh_cross_none_swing_tp_short on GBPJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 44, required gte 400, short by 356
+- gen_sb_range_fresh_cross_none_swing_tp_short on GBPUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 101, required gte 400, short by 299
+- gen_sb_range_fresh_cross_none_swing_tp_short on UK100 H4: REJECT at RUNG 0 SANITY -- min_trades: observed 93, required gte 400, short by 307
+- gen_sb_range_fresh_cross_none_swing_tp_short on USDCHF H4: REJECT at RUNG 0 SANITY -- min_trades: observed 90, required gte 400, short by 310
+- gen_sb_range_fresh_cross_none_time_exit on DE40 H4: REJECT at RUNG 0 SANITY -- min_trades: observed 306, required gte 400, short by 94
+- gen_sb_range_fresh_cross_none_time_exit on EURGBP H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -0.476265 at declared defaults is not positive; there is no edge to validate.
+- gen_sb_range_fresh_cross_none_time_exit on EURJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 365, required gte 400, short by 35
+- gen_sb_range_fresh_cross_none_time_exit on EURUSD H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -0.0942808 at declared defaults is not positive; there is no edge to validate.
+- gen_sb_range_fresh_cross_none_time_exit on GBPJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 387, required gte 400, short by 13
+- gen_sb_range_fresh_cross_none_time_exit on GBPUSD H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -0.7573 at declared defaults is not positive; there is no edge to validate.
+- gen_sb_range_fresh_cross_none_time_exit on UK100 H4: REJECT at RUNG 0 SANITY -- min_trades: observed 254, required gte 400, short by 146
+- gen_sb_range_fresh_cross_none_time_exit on USDCHF H4: REJECT at RUNG 0 SANITY -- min_trades: observed 377, required gte 400, short by 23
+- gen_sb_range_fresh_cross_rvol_gate_tp_r on DE40 H4: REJECT at RUNG 0 SANITY -- min_trades: observed 326, required gte 400, short by 74
+- gen_sb_range_fresh_cross_rvol_gate_tp_r on EURGBP H4: REJECT at RUNG 0 SANITY -- min_trades: observed 374, required gte 400, short by 26
+- gen_sb_range_fresh_cross_rvol_gate_tp_r on EURJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 308, required gte 400, short by 92
+- gen_sb_range_fresh_cross_rvol_gate_tp_r on EURUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 336, required gte 400, short by 64
+- gen_sb_range_fresh_cross_rvol_gate_tp_r on GBPJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 354, required gte 400, short by 46
+- gen_sb_range_fresh_cross_rvol_gate_tp_r on GBPUSD H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -1.41119 at declared defaults is not positive; there is no edge to validate.
+- gen_sb_range_fresh_cross_rvol_gate_tp_r on UK100 H4: REJECT at RUNG 0 SANITY -- min_trades: observed 287, required gte 400, short by 113
+- gen_sb_range_fresh_cross_rvol_gate_tp_r on USDCHF H4: REJECT at RUNG 0 SANITY -- min_trades: observed 301, required gte 400, short by 99
+- gen_sb_range_fresh_cross_session_swing_tp_long on DE40 H4: REJECT at RUNG 0 SANITY -- min_trades: observed 86, required gte 400, short by 314
+- gen_sb_range_fresh_cross_session_swing_tp_long on EURGBP H4: REJECT at RUNG 0 SANITY -- min_trades: observed 105, required gte 400, short by 295
+- gen_sb_range_fresh_cross_session_swing_tp_long on EURJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 84, required gte 400, short by 316
+- gen_sb_range_fresh_cross_session_swing_tp_long on EURUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 102, required gte 400, short by 298
+- gen_sb_range_fresh_cross_session_swing_tp_long on GBPJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 99, required gte 400, short by 301
+- gen_sb_range_fresh_cross_session_swing_tp_long on GBPUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 113, required gte 400, short by 287
+- gen_sb_range_fresh_cross_session_swing_tp_long on UK100 H4: REJECT at RUNG 0 SANITY -- min_trades: observed 59, required gte 400, short by 341
+- gen_sb_range_fresh_cross_session_swing_tp_long on USDCHF H4: REJECT at RUNG 0 SANITY -- min_trades: observed 89, required gte 400, short by 311
+- gen_sb_range_fresh_cross_session_time_exit on DE40 H4: REJECT at RUNG 0 SANITY -- min_trades: observed 215, required gte 400, short by 185
+- gen_sb_range_fresh_cross_session_time_exit on EURGBP H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -0.793777 at declared defaults is not positive; there is no edge to validate.
+- gen_sb_range_fresh_cross_session_time_exit on EURJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 270, required gte 400, short by 130
+- gen_sb_range_fresh_cross_session_time_exit on EURUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 286, required gte 400, short by 114
+- gen_sb_range_fresh_cross_session_time_exit on GBPJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 296, required gte 400, short by 104
+- gen_sb_range_fresh_cross_session_time_exit on GBPUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 365, required gte 400, short by 35
+- gen_sb_range_fresh_cross_session_time_exit on UK100 H4: REJECT at RUNG 0 SANITY -- min_trades: observed 183, required gte 400, short by 217
+- gen_sb_range_fresh_cross_session_time_exit on USDCHF H4: REJECT at RUNG 0 SANITY -- min_trades: observed 257, required gte 400, short by 143
+- gen_tp_ema_recross_rvol_gate_trail on AUDUSD H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -0.51647 at declared defaults is not positive; there is no edge to validate.
+- gen_tp_ema_recross_rvol_gate_trail on AUDUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 152, required gte 400, short by 248
+- gen_tp_ema_recross_rvol_gate_trail on DE40 H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -0.965973 at declared defaults is not positive; there is no edge to validate.
+- gen_tp_ema_recross_rvol_gate_trail on DE40 D1: REJECT at RUNG 0 SANITY -- min_trades: observed 127, required gte 400, short by 273
+- gen_tp_ema_recross_rvol_gate_trail on EURJPY H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -0.419393 at declared defaults is not positive; there is no edge to validate.
+- gen_tp_ema_recross_rvol_gate_trail on EURJPY D1: REJECT at RUNG 0 SANITY -- min_trades: observed 154, required gte 400, short by 246
+- gen_tp_ema_recross_rvol_gate_trail on EURUSD H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -0.630492 at declared defaults is not positive; there is no edge to validate.
+- gen_tp_ema_recross_rvol_gate_trail on EURUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 149, required gte 400, short by 251
+- gen_tp_ema_recross_rvol_gate_trail on GBPJPY H4: REJECT at RUNG 2 WALK_FORWARD -- walk_forward_efficiency: observed -21.59, required gte 50, short by 71.59
+- gen_tp_ema_recross_rvol_gate_trail on GBPJPY D1: REJECT at RUNG 0 SANITY -- min_trades: observed 161, required gte 400, short by 239
+- gen_tp_ema_recross_rvol_gate_trail on GBPUSD H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -2.02846 at declared defaults is not positive; there is no edge to validate.
+- gen_tp_ema_recross_rvol_gate_trail on GBPUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 154, required gte 400, short by 246
+- gen_tp_ema_recross_rvol_gate_trail on NZDUSD H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -0.554885 at declared defaults is not positive; there is no edge to validate.
+- gen_tp_ema_recross_rvol_gate_trail on NZDUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 152, required gte 400, short by 248
+- gen_tp_ema_recross_rvol_gate_trail on UK100 H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -1.33028 at declared defaults is not positive; there is no edge to validate.
+- gen_tp_ema_recross_rvol_gate_trail on UK100 D1: REJECT at RUNG 0 SANITY -- min_trades: observed 39, required gte 400, short by 361
+- gen_tp_ema_recross_rvol_gate_trail on US500 H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -1.76476 at declared defaults is not positive; there is no edge to validate.
+- gen_tp_ema_recross_rvol_gate_trail on US500 D1: REJECT at RUNG 0 SANITY -- min_trades: observed 167, required gte 400, short by 233
+- gen_tp_ema_recross_rvol_gate_trail on USDCAD H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -0.809403 at declared defaults is not positive; there is no edge to validate.
+- gen_tp_ema_recross_rvol_gate_trail on USDCAD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 162, required gte 400, short by 238
+- gen_tp_ema_recross_rvol_gate_trail on USDCHF H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -1.85482 at declared defaults is not positive; there is no edge to validate.
+- gen_tp_ema_recross_rvol_gate_trail on USDCHF D1: REJECT at RUNG 0 SANITY -- min_trades: observed 163, required gte 400, short by 237
+- gen_tp_ema_recross_rvol_gate_trail on USDJPY H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -0.644948 at declared defaults is not positive; there is no edge to validate.
+- gen_tp_ema_recross_rvol_gate_trail on USDJPY D1: REJECT at RUNG 0 SANITY -- min_trades: observed 161, required gte 400, short by 239
+- gen_tp_ema_recross_rvol_gate_trail on XAGUSD H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -0.492888 at declared defaults is not positive; there is no edge to validate.
+- gen_tp_ema_recross_rvol_gate_trail on XAGUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 140, required gte 400, short by 260
+- gen_tp_ema_recross_rvol_gate_trail on XAUUSD H4: REJECT at RUNG 4 ROBUSTNESS -- parameter_plateau: observed 1.629, required lte 1.25, short by 0.3787
+- gen_tp_ema_recross_rvol_gate_trail on XAUUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 146, required gte 400, short by 254
+- gen_tp_ema_recross_session_trail on AUDUSD H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -0.77071 at declared defaults is not positive; there is no edge to validate.
+- gen_tp_ema_recross_session_trail on DE40 H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -0.938031 at declared defaults is not positive; there is no edge to validate.
+- gen_tp_ema_recross_session_trail on EURJPY H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -0.200003 at declared defaults is not positive; there is no edge to validate.
+- gen_tp_ema_recross_session_trail on EURUSD H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -0.932012 at declared defaults is not positive; there is no edge to validate.
+- gen_tp_ema_recross_session_trail on GBPJPY H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -0.156353 at declared defaults is not positive; there is no edge to validate.
+- gen_tp_ema_recross_session_trail on GBPUSD H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -2.21929 at declared defaults is not positive; there is no edge to validate.
+- gen_tp_ema_recross_session_trail on NZDUSD H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -0.362311 at declared defaults is not positive; there is no edge to validate.
+- gen_tp_ema_recross_session_trail on UK100 H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -1.41159 at declared defaults is not positive; there is no edge to validate.
+- gen_tp_ema_recross_session_trail on US500 H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -1.71951 at declared defaults is not positive; there is no edge to validate.
+- gen_tp_ema_recross_session_trail on USDCAD H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -1.20367 at declared defaults is not positive; there is no edge to validate.
+- gen_tp_ema_recross_session_trail on USDCHF H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -1.58448 at declared defaults is not positive; there is no edge to validate.
+- gen_tp_ema_recross_session_trail on USDJPY H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -0.963853 at declared defaults is not positive; there is no edge to validate.
+- gen_tp_ema_recross_session_trail on XAGUSD H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -0.844954 at declared defaults is not positive; there is no edge to validate.
+- gen_tp_ema_recross_session_trail on XAUUSD H4: REJECT at RUNG 2 WALK_FORWARD -- walk_forward_efficiency: observed 41.7, required gte 50, short by 8.301
+- gen_tp_kc_recross_adx_gate_swing_tp_short on AUDUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 143, required gte 400, short by 257
+- gen_tp_kc_recross_adx_gate_swing_tp_short on AUDUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 25, required gte 400, short by 375
+- gen_tp_kc_recross_adx_gate_swing_tp_short on DE40 H4: REJECT at RUNG 0 SANITY -- min_trades: observed 83, required gte 400, short by 317
+- gen_tp_kc_recross_adx_gate_swing_tp_short on DE40 D1: REJECT at RUNG 0 SANITY -- min_trades: observed 5, required gte 400, short by 395
+- gen_tp_kc_recross_adx_gate_swing_tp_short on EURJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 141, required gte 400, short by 259
+- gen_tp_kc_recross_adx_gate_swing_tp_short on EURJPY D1: REJECT at RUNG 0 SANITY -- min_trades: observed 25, required gte 400, short by 375
+- gen_tp_kc_recross_adx_gate_swing_tp_short on EURUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 147, required gte 400, short by 253
+- gen_tp_kc_recross_adx_gate_swing_tp_short on EURUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 22, required gte 400, short by 378
+- gen_tp_kc_recross_adx_gate_swing_tp_short on GBPJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 110, required gte 400, short by 290
+- gen_tp_kc_recross_adx_gate_swing_tp_short on GBPJPY D1: REJECT at RUNG 0 SANITY -- min_trades: observed 23, required gte 400, short by 377
+- gen_tp_kc_recross_adx_gate_swing_tp_short on GBPUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 175, required gte 400, short by 225
+- gen_tp_kc_recross_adx_gate_swing_tp_short on GBPUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 29, required gte 400, short by 371
+- gen_tp_kc_recross_adx_gate_swing_tp_short on NZDUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 162, required gte 400, short by 238
+- gen_tp_kc_recross_adx_gate_swing_tp_short on NZDUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 25, required gte 400, short by 375
+- gen_tp_kc_recross_adx_gate_swing_tp_short on UK100 H4: REJECT at RUNG 0 SANITY -- min_trades: observed 59, required gte 400, short by 341
+- gen_tp_kc_recross_adx_gate_swing_tp_short on UK100 D1: REJECT at RUNG 0 SANITY -- min_trades: observed 5, required gte 400, short by 395
+- gen_tp_kc_recross_adx_gate_swing_tp_short on US500 H4: REJECT at RUNG 0 SANITY -- min_trades: observed 106, required gte 400, short by 294
+- gen_tp_kc_recross_adx_gate_swing_tp_short on US500 D1: REJECT at RUNG 0 SANITY -- min_trades: observed 9, required gte 400, short by 391
+- gen_tp_kc_recross_adx_gate_swing_tp_short on USDCAD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 170, required gte 400, short by 230
+- gen_tp_kc_recross_adx_gate_swing_tp_short on USDCAD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 28, required gte 400, short by 372
+- gen_tp_kc_recross_adx_gate_swing_tp_short on USDCHF H4: REJECT at RUNG 0 SANITY -- min_trades: observed 162, required gte 400, short by 238
+- gen_tp_kc_recross_adx_gate_swing_tp_short on USDCHF D1: REJECT at RUNG 0 SANITY -- min_trades: observed 27, required gte 400, short by 373
+- gen_tp_kc_recross_adx_gate_swing_tp_short on USDJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 122, required gte 400, short by 278
+- gen_tp_kc_recross_adx_gate_swing_tp_short on USDJPY D1: REJECT at RUNG 0 SANITY -- min_trades: observed 19, required gte 400, short by 381
+- gen_tp_kc_recross_adx_gate_swing_tp_short on XAGUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 71, required gte 400, short by 329
+- gen_tp_kc_recross_adx_gate_swing_tp_short on XAGUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 18, required gte 400, short by 382
+- gen_tp_kc_recross_adx_gate_swing_tp_short on XAUUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 156, required gte 400, short by 244
+- gen_tp_kc_recross_adx_gate_swing_tp_short on XAUUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 12, required gte 400, short by 388
+- gen_tp_kc_recross_none_swing_tp_long on AUDUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 198, required gte 400, short by 202
+- gen_tp_kc_recross_none_swing_tp_long on AUDUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 32, required gte 400, short by 368
+- gen_tp_kc_recross_none_swing_tp_long on DE40 H4: REJECT at RUNG 0 SANITY -- min_trades: observed 183, required gte 400, short by 217
+- gen_tp_kc_recross_none_swing_tp_long on DE40 D1: REJECT at RUNG 0 SANITY -- min_trades: observed 35, required gte 400, short by 365
+- gen_tp_kc_recross_none_swing_tp_long on EURJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 167, required gte 400, short by 233
+- gen_tp_kc_recross_none_swing_tp_long on EURJPY D1: REJECT at RUNG 0 SANITY -- min_trades: observed 30, required gte 400, short by 370
+- gen_tp_kc_recross_none_swing_tp_long on EURUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 190, required gte 400, short by 210
+- gen_tp_kc_recross_none_swing_tp_long on EURUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 35, required gte 400, short by 365
+- gen_tp_kc_recross_none_swing_tp_long on GBPJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 193, required gte 400, short by 207
+- gen_tp_kc_recross_none_swing_tp_long on GBPJPY D1: REJECT at RUNG 0 SANITY -- min_trades: observed 33, required gte 400, short by 367
+- gen_tp_kc_recross_none_swing_tp_long on GBPUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 208, required gte 400, short by 192
+- gen_tp_kc_recross_none_swing_tp_long on GBPUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 27, required gte 400, short by 373
+- gen_tp_kc_recross_none_swing_tp_long on NZDUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 168, required gte 400, short by 232
+- gen_tp_kc_recross_none_swing_tp_long on NZDUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 34, required gte 400, short by 366
+- gen_tp_kc_recross_none_swing_tp_long on UK100 H4: REJECT at RUNG 0 SANITY -- min_trades: observed 173, required gte 400, short by 227
+- gen_tp_kc_recross_none_swing_tp_long on UK100 D1: REJECT at RUNG 0 SANITY -- min_trades: observed 34, required gte 400, short by 366
+- gen_tp_kc_recross_none_swing_tp_long on US500 H4: REJECT at RUNG 0 SANITY -- min_trades: observed 282, required gte 400, short by 118
+- gen_tp_kc_recross_none_swing_tp_long on US500 D1: REJECT at RUNG 0 SANITY -- min_trades: observed 55, required gte 400, short by 345
+- gen_tp_kc_recross_none_swing_tp_long on USDCAD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 216, required gte 400, short by 184
+- gen_tp_kc_recross_none_swing_tp_long on USDCAD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 36, required gte 400, short by 364
+- gen_tp_kc_recross_none_swing_tp_long on USDCHF H4: REJECT at RUNG 0 SANITY -- min_trades: observed 43, required gte 400, short by 357
+- gen_tp_kc_recross_none_swing_tp_long on USDCHF D1: REJECT at RUNG 0 SANITY -- min_trades: observed 27, required gte 400, short by 373
+- gen_tp_kc_recross_none_swing_tp_long on USDJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 193, required gte 400, short by 207
+- gen_tp_kc_recross_none_swing_tp_long on USDJPY D1: REJECT at RUNG 0 SANITY -- min_trades: observed 17, required gte 400, short by 383
+- gen_tp_kc_recross_none_swing_tp_long on XAGUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 136, required gte 400, short by 264
+- gen_tp_kc_recross_none_swing_tp_long on XAGUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 29, required gte 400, short by 371
+- gen_tp_kc_recross_none_swing_tp_long on XAUUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 203, required gte 400, short by 197
+- gen_tp_kc_recross_none_swing_tp_long on XAUUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 35, required gte 400, short by 365
+- gen_tp_kc_recross_none_time_exit on AUDUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 301, required gte 400, short by 99
+- gen_tp_kc_recross_none_time_exit on AUDUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 54, required gte 400, short by 346
+- gen_tp_kc_recross_none_time_exit on DE40 H4: REJECT at RUNG 0 SANITY -- min_trades: observed 239, required gte 400, short by 161
+- gen_tp_kc_recross_none_time_exit on DE40 D1: REJECT at RUNG 0 SANITY -- min_trades: observed 45, required gte 400, short by 355
+- gen_tp_kc_recross_none_time_exit on EURJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 307, required gte 400, short by 93
+- gen_tp_kc_recross_none_time_exit on EURJPY D1: REJECT at RUNG 0 SANITY -- min_trades: observed 56, required gte 400, short by 344
+- gen_tp_kc_recross_none_time_exit on EURUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 312, required gte 400, short by 88
+- gen_tp_kc_recross_none_time_exit on EURUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 54, required gte 400, short by 346
+- gen_tp_kc_recross_none_time_exit on GBPJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 310, required gte 400, short by 90
+- gen_tp_kc_recross_none_time_exit on GBPJPY D1: REJECT at RUNG 0 SANITY -- min_trades: observed 56, required gte 400, short by 344
+- gen_tp_kc_recross_none_time_exit on GBPUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 331, required gte 400, short by 69
+- gen_tp_kc_recross_none_time_exit on GBPUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 49, required gte 400, short by 351
+- gen_tp_kc_recross_none_time_exit on NZDUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 301, required gte 400, short by 99
+- gen_tp_kc_recross_none_time_exit on NZDUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 53, required gte 400, short by 347
+- gen_tp_kc_recross_none_time_exit on UK100 H4: REJECT at RUNG 0 SANITY -- min_trades: observed 166, required gte 400, short by 234
+- gen_tp_kc_recross_none_time_exit on UK100 D1: REJECT at RUNG 0 SANITY -- min_trades: observed 0, required gte 400, short by 400
+- gen_tp_kc_recross_none_time_exit on US500 H4: REJECT at RUNG 0 SANITY -- min_trades: observed 324, required gte 400, short by 76
+- gen_tp_kc_recross_none_time_exit on US500 D1: REJECT at RUNG 0 SANITY -- min_trades: observed 57, required gte 400, short by 343
+- gen_tp_kc_recross_none_time_exit on USDCAD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 310, required gte 400, short by 90
+- gen_tp_kc_recross_none_time_exit on USDCAD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 52, required gte 400, short by 348
+- gen_tp_kc_recross_none_time_exit on USDCHF H4: REJECT at RUNG 0 SANITY -- min_trades: observed 281, required gte 400, short by 119
+- gen_tp_kc_recross_none_time_exit on USDCHF D1: REJECT at RUNG 0 SANITY -- min_trades: observed 42, required gte 400, short by 358
+- gen_tp_kc_recross_none_time_exit on USDJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 302, required gte 400, short by 98
+- gen_tp_kc_recross_none_time_exit on USDJPY D1: REJECT at RUNG 0 SANITY -- min_trades: observed 51, required gte 400, short by 349
+- gen_tp_kc_recross_none_time_exit on XAGUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 285, required gte 400, short by 115
+- gen_tp_kc_recross_none_time_exit on XAGUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 45, required gte 400, short by 355
+- gen_tp_kc_recross_none_time_exit on XAUUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 300, required gte 400, short by 100
+- gen_tp_kc_recross_none_time_exit on XAUUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 49, required gte 400, short by 351
+- gen_tp_kc_recross_none_trail on AUDUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 346, required gte 400, short by 54
+- gen_tp_kc_recross_none_trail on AUDUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 66, required gte 400, short by 334
+- gen_tp_kc_recross_none_trail on DE40 H4: REJECT at RUNG 0 SANITY -- min_trades: observed 278, required gte 400, short by 122
+- gen_tp_kc_recross_none_trail on DE40 D1: REJECT at RUNG 0 SANITY -- min_trades: observed 56, required gte 400, short by 344
+- gen_tp_kc_recross_none_trail on EURJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 355, required gte 400, short by 45
+- gen_tp_kc_recross_none_trail on EURJPY D1: REJECT at RUNG 0 SANITY -- min_trades: observed 63, required gte 400, short by 337
+- gen_tp_kc_recross_none_trail on EURUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 355, required gte 400, short by 45
+- gen_tp_kc_recross_none_trail on EURUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 58, required gte 400, short by 342
+- gen_tp_kc_recross_none_trail on GBPJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 364, required gte 400, short by 36
+- gen_tp_kc_recross_none_trail on GBPJPY D1: REJECT at RUNG 0 SANITY -- min_trades: observed 66, required gte 400, short by 334
+- gen_tp_kc_recross_none_trail on GBPUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 399, required gte 400, short by 1
+- gen_tp_kc_recross_none_trail on GBPUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 56, required gte 400, short by 344
+- gen_tp_kc_recross_none_trail on NZDUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 347, required gte 400, short by 53
+- gen_tp_kc_recross_none_trail on NZDUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 63, required gte 400, short by 337
+- gen_tp_kc_recross_none_trail on UK100 H4: REJECT at RUNG 0 SANITY -- min_trades: observed 231, required gte 400, short by 169
+- gen_tp_kc_recross_none_trail on UK100 D1: REJECT at RUNG 0 SANITY -- min_trades: observed 16, required gte 400, short by 384
+- gen_tp_kc_recross_none_trail on US500 H4: REJECT at RUNG 0 SANITY -- min_trades: observed 368, required gte 400, short by 32
+- gen_tp_kc_recross_none_trail on US500 D1: REJECT at RUNG 0 SANITY -- min_trades: observed 72, required gte 400, short by 328
+- gen_tp_kc_recross_none_trail on USDCAD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 365, required gte 400, short by 35
+- gen_tp_kc_recross_none_trail on USDCAD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 62, required gte 400, short by 338
+- gen_tp_kc_recross_none_trail on USDCHF H4: REJECT at RUNG 0 SANITY -- min_trades: observed 330, required gte 400, short by 70
+- gen_tp_kc_recross_none_trail on USDCHF D1: REJECT at RUNG 0 SANITY -- min_trades: observed 49, required gte 400, short by 351
+- gen_tp_kc_recross_none_trail on USDJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 335, required gte 400, short by 65
+- gen_tp_kc_recross_none_trail on USDJPY D1: REJECT at RUNG 0 SANITY -- min_trades: observed 56, required gte 400, short by 344
+- gen_tp_kc_recross_none_trail on XAGUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 332, required gte 400, short by 68
+- gen_tp_kc_recross_none_trail on XAGUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 52, required gte 400, short by 348
+- gen_tp_kc_recross_none_trail on XAUUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 354, required gte 400, short by 46
+- gen_tp_kc_recross_none_trail on XAUUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 64, required gte 400, short by 336
+- gen_tp_kc_recross_rvol_gate_time_exit on AUDUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 281, required gte 400, short by 119
+- gen_tp_kc_recross_rvol_gate_time_exit on AUDUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 54, required gte 400, short by 346
+- gen_tp_kc_recross_rvol_gate_time_exit on DE40 H4: REJECT at RUNG 0 SANITY -- min_trades: observed 239, required gte 400, short by 161
+- gen_tp_kc_recross_rvol_gate_time_exit on DE40 D1: REJECT at RUNG 0 SANITY -- min_trades: observed 45, required gte 400, short by 355
+- gen_tp_kc_recross_rvol_gate_time_exit on EURJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 250, required gte 400, short by 150
+- gen_tp_kc_recross_rvol_gate_time_exit on EURJPY D1: REJECT at RUNG 0 SANITY -- min_trades: observed 56, required gte 400, short by 344
+- gen_tp_kc_recross_rvol_gate_time_exit on EURUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 240, required gte 400, short by 160
+- gen_tp_kc_recross_rvol_gate_time_exit on EURUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 54, required gte 400, short by 346
+- gen_tp_kc_recross_rvol_gate_time_exit on GBPJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 277, required gte 400, short by 123
+- gen_tp_kc_recross_rvol_gate_time_exit on GBPJPY D1: REJECT at RUNG 0 SANITY -- min_trades: observed 56, required gte 400, short by 344
+- gen_tp_kc_recross_rvol_gate_time_exit on GBPUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 266, required gte 400, short by 134
+- gen_tp_kc_recross_rvol_gate_time_exit on GBPUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 48, required gte 400, short by 352
+- gen_tp_kc_recross_rvol_gate_time_exit on NZDUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 291, required gte 400, short by 109
+- gen_tp_kc_recross_rvol_gate_time_exit on NZDUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 53, required gte 400, short by 347
+- gen_tp_kc_recross_rvol_gate_time_exit on UK100 H4: REJECT at RUNG 0 SANITY -- min_trades: observed 164, required gte 400, short by 236
+- gen_tp_kc_recross_rvol_gate_time_exit on UK100 D1: REJECT at RUNG 0 SANITY -- min_trades: observed 0, required gte 400, short by 400
+- gen_tp_kc_recross_rvol_gate_time_exit on US500 H4: REJECT at RUNG 0 SANITY -- min_trades: observed 315, required gte 400, short by 85
+- gen_tp_kc_recross_rvol_gate_time_exit on US500 D1: REJECT at RUNG 0 SANITY -- min_trades: observed 57, required gte 400, short by 343
+- gen_tp_kc_recross_rvol_gate_time_exit on USDCAD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 233, required gte 400, short by 167
+- gen_tp_kc_recross_rvol_gate_time_exit on USDCAD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 52, required gte 400, short by 348
+- gen_tp_kc_recross_rvol_gate_time_exit on USDCHF H4: REJECT at RUNG 0 SANITY -- min_trades: observed 226, required gte 400, short by 174
+- gen_tp_kc_recross_rvol_gate_time_exit on USDCHF D1: REJECT at RUNG 0 SANITY -- min_trades: observed 42, required gte 400, short by 358
+- gen_tp_kc_recross_rvol_gate_time_exit on USDJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 235, required gte 400, short by 165
+- gen_tp_kc_recross_rvol_gate_time_exit on USDJPY D1: REJECT at RUNG 0 SANITY -- min_trades: observed 51, required gte 400, short by 349
+- gen_tp_kc_recross_rvol_gate_time_exit on XAGUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 285, required gte 400, short by 115
+- gen_tp_kc_recross_rvol_gate_time_exit on XAGUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 45, required gte 400, short by 355
+- gen_tp_kc_recross_rvol_gate_time_exit on XAUUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 297, required gte 400, short by 103
+- gen_tp_kc_recross_rvol_gate_time_exit on XAUUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 49, required gte 400, short by 351
+- gen_tp_kc_recross_session_trail on AUDUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 226, required gte 400, short by 174
+- gen_tp_kc_recross_session_trail on DE40 H4: REJECT at RUNG 0 SANITY -- min_trades: observed 216, required gte 400, short by 184
+- gen_tp_kc_recross_session_trail on EURJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 251, required gte 400, short by 149
+- gen_tp_kc_recross_session_trail on EURUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 238, required gte 400, short by 162
+- gen_tp_kc_recross_session_trail on GBPJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 271, required gte 400, short by 129
+- gen_tp_kc_recross_session_trail on GBPUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 296, required gte 400, short by 104
+- gen_tp_kc_recross_session_trail on NZDUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 263, required gte 400, short by 137
+- gen_tp_kc_recross_session_trail on UK100 H4: REJECT at RUNG 0 SANITY -- min_trades: observed 185, required gte 400, short by 215
+- gen_tp_kc_recross_session_trail on US500 H4: REJECT at RUNG 0 SANITY -- min_trades: observed 306, required gte 400, short by 94
+- gen_tp_kc_recross_session_trail on USDCAD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 283, required gte 400, short by 117
+- gen_tp_kc_recross_session_trail on USDCHF H4: REJECT at RUNG 0 SANITY -- min_trades: observed 243, required gte 400, short by 157
+- gen_tp_kc_recross_session_trail on USDJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 231, required gte 400, short by 169
+- gen_tp_kc_recross_session_trail on XAGUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 269, required gte 400, short by 131
+- gen_tp_kc_recross_session_trail on XAUUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 279, required gte 400, short by 121
+- gen_tp_sma_recross_adx_gate_swing_tp_long on AUDUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 165, required gte 400, short by 235
+- gen_tp_sma_recross_adx_gate_swing_tp_long on AUDUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 25, required gte 400, short by 375
+- gen_tp_sma_recross_adx_gate_swing_tp_long on DE40 H4: REJECT at RUNG 0 SANITY -- min_trades: observed 107, required gte 400, short by 293
+- gen_tp_sma_recross_adx_gate_swing_tp_long on DE40 D1: REJECT at RUNG 0 SANITY -- min_trades: observed 19, required gte 400, short by 381
+- gen_tp_sma_recross_adx_gate_swing_tp_long on EURJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 127, required gte 400, short by 273
+- gen_tp_sma_recross_adx_gate_swing_tp_long on EURJPY D1: REJECT at RUNG 0 SANITY -- min_trades: observed 29, required gte 400, short by 371
+- gen_tp_sma_recross_adx_gate_swing_tp_long on EURUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 166, required gte 400, short by 234
+- gen_tp_sma_recross_adx_gate_swing_tp_long on EURUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 20, required gte 400, short by 380
+- gen_tp_sma_recross_adx_gate_swing_tp_long on GBPJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 185, required gte 400, short by 215
+- gen_tp_sma_recross_adx_gate_swing_tp_long on GBPJPY D1: REJECT at RUNG 0 SANITY -- min_trades: observed 31, required gte 400, short by 369
+- gen_tp_sma_recross_adx_gate_swing_tp_long on GBPUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 189, required gte 400, short by 211
+- gen_tp_sma_recross_adx_gate_swing_tp_long on GBPUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 28, required gte 400, short by 372
+- gen_tp_sma_recross_adx_gate_swing_tp_long on NZDUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 152, required gte 400, short by 248
+- gen_tp_sma_recross_adx_gate_swing_tp_long on NZDUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 32, required gte 400, short by 368
+- gen_tp_sma_recross_adx_gate_swing_tp_long on UK100 H4: REJECT at RUNG 0 SANITY -- min_trades: observed 121, required gte 400, short by 279
+- gen_tp_sma_recross_adx_gate_swing_tp_long on UK100 D1: REJECT at RUNG 0 SANITY -- min_trades: observed 10, required gte 400, short by 390
+- gen_tp_sma_recross_adx_gate_swing_tp_long on US500 H4: REJECT at RUNG 0 SANITY -- min_trades: observed 186, required gte 400, short by 214
+- gen_tp_sma_recross_adx_gate_swing_tp_long on US500 D1: REJECT at RUNG 0 SANITY -- min_trades: observed 31, required gte 400, short by 369
+- gen_tp_sma_recross_adx_gate_swing_tp_long on USDCAD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 163, required gte 400, short by 237
+- gen_tp_sma_recross_adx_gate_swing_tp_long on USDCAD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 36, required gte 400, short by 364
+- gen_tp_sma_recross_adx_gate_swing_tp_long on USDCHF H4: REJECT at RUNG 0 SANITY -- min_trades: observed 165, required gte 400, short by 235
+- gen_tp_sma_recross_adx_gate_swing_tp_long on USDCHF D1: REJECT at RUNG 0 SANITY -- min_trades: observed 6, required gte 400, short by 394
+- gen_tp_sma_recross_adx_gate_swing_tp_long on USDJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 150, required gte 400, short by 250
+- gen_tp_sma_recross_adx_gate_swing_tp_long on USDJPY D1: REJECT at RUNG 0 SANITY -- min_trades: observed 18, required gte 400, short by 382
+- gen_tp_sma_recross_adx_gate_swing_tp_long on XAGUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 174, required gte 400, short by 226
+- gen_tp_sma_recross_adx_gate_swing_tp_long on XAGUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 31, required gte 400, short by 369
+- gen_tp_sma_recross_adx_gate_swing_tp_long on XAUUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 161, required gte 400, short by 239
+- gen_tp_sma_recross_adx_gate_swing_tp_long on XAUUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 33, required gte 400, short by 367
+- gen_tp_sma_recross_adx_gate_swing_tp_short on AUDUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 154, required gte 400, short by 246
+- gen_tp_sma_recross_adx_gate_swing_tp_short on AUDUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 17, required gte 400, short by 383
+- gen_tp_sma_recross_adx_gate_swing_tp_short on DE40 H4: REJECT at RUNG 0 SANITY -- min_trades: observed 86, required gte 400, short by 314
+- gen_tp_sma_recross_adx_gate_swing_tp_short on DE40 D1: REJECT at RUNG 0 SANITY -- min_trades: observed 14, required gte 400, short by 386
+- gen_tp_sma_recross_adx_gate_swing_tp_short on EURJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 141, required gte 400, short by 259
+- gen_tp_sma_recross_adx_gate_swing_tp_short on EURJPY D1: REJECT at RUNG 0 SANITY -- min_trades: observed 24, required gte 400, short by 376
+- gen_tp_sma_recross_adx_gate_swing_tp_short on EURUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 150, required gte 400, short by 250
+- gen_tp_sma_recross_adx_gate_swing_tp_short on EURUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 13, required gte 400, short by 387
+- gen_tp_sma_recross_adx_gate_swing_tp_short on GBPJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 153, required gte 400, short by 247
+- gen_tp_sma_recross_adx_gate_swing_tp_short on GBPJPY D1: REJECT at RUNG 0 SANITY -- min_trades: observed 16, required gte 400, short by 384
+- gen_tp_sma_recross_adx_gate_swing_tp_short on GBPUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 178, required gte 400, short by 222
+- gen_tp_sma_recross_adx_gate_swing_tp_short on GBPUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 20, required gte 400, short by 380
+- gen_tp_sma_recross_adx_gate_swing_tp_short on NZDUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 156, required gte 400, short by 244
+- gen_tp_sma_recross_adx_gate_swing_tp_short on NZDUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 20, required gte 400, short by 380
+- gen_tp_sma_recross_adx_gate_swing_tp_short on UK100 H4: REJECT at RUNG 0 SANITY -- min_trades: observed 81, required gte 400, short by 319
+- gen_tp_sma_recross_adx_gate_swing_tp_short on UK100 D1: REJECT at RUNG 0 SANITY -- min_trades: observed 1, required gte 400, short by 399
+- gen_tp_sma_recross_adx_gate_swing_tp_short on US500 H4: REJECT at RUNG 0 SANITY -- min_trades: observed 110, required gte 400, short by 290
+- gen_tp_sma_recross_adx_gate_swing_tp_short on US500 D1: REJECT at RUNG 0 SANITY -- min_trades: observed 11, required gte 400, short by 389
+- gen_tp_sma_recross_adx_gate_swing_tp_short on USDCAD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 172, required gte 400, short by 228
+- gen_tp_sma_recross_adx_gate_swing_tp_short on USDCAD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 16, required gte 400, short by 384
+- gen_tp_sma_recross_adx_gate_swing_tp_short on USDCHF H4: REJECT at RUNG 0 SANITY -- min_trades: observed 145, required gte 400, short by 255
+- gen_tp_sma_recross_adx_gate_swing_tp_short on USDCHF D1: REJECT at RUNG 0 SANITY -- min_trades: observed 23, required gte 400, short by 377
+- gen_tp_sma_recross_adx_gate_swing_tp_short on USDJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 146, required gte 400, short by 254
+- gen_tp_sma_recross_adx_gate_swing_tp_short on USDJPY D1: REJECT at RUNG 0 SANITY -- min_trades: observed 15, required gte 400, short by 385
+- gen_tp_sma_recross_adx_gate_swing_tp_short on XAGUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 70, required gte 400, short by 330
+- gen_tp_sma_recross_adx_gate_swing_tp_short on XAGUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 22, required gte 400, short by 378
+- gen_tp_sma_recross_adx_gate_swing_tp_short on XAUUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 160, required gte 400, short by 240
+- gen_tp_sma_recross_adx_gate_swing_tp_short on XAUUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 26, required gte 400, short by 374
+- gen_tp_sma_recross_adx_gate_time_exit on AUDUSD H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -0.333129 at declared defaults is not positive; there is no edge to validate.
+- gen_tp_sma_recross_adx_gate_time_exit on AUDUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 77, required gte 400, short by 323
+- gen_tp_sma_recross_adx_gate_time_exit on DE40 H4: REJECT at RUNG 0 SANITY -- min_trades: observed 338, required gte 400, short by 62
+- gen_tp_sma_recross_adx_gate_time_exit on DE40 D1: REJECT at RUNG 0 SANITY -- min_trades: observed 57, required gte 400, short by 343
+- gen_tp_sma_recross_adx_gate_time_exit on EURJPY H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -0.745996 at declared defaults is not positive; there is no edge to validate.
+- gen_tp_sma_recross_adx_gate_time_exit on EURJPY D1: REJECT at RUNG 0 SANITY -- min_trades: observed 89, required gte 400, short by 311
+- gen_tp_sma_recross_adx_gate_time_exit on EURUSD H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -0.0511852 at declared defaults is not positive; there is no edge to validate.
+- gen_tp_sma_recross_adx_gate_time_exit on EURUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 74, required gte 400, short by 326
+- gen_tp_sma_recross_adx_gate_time_exit on GBPJPY H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -0.116591 at declared defaults is not positive; there is no edge to validate.
+- gen_tp_sma_recross_adx_gate_time_exit on GBPJPY D1: REJECT at RUNG 0 SANITY -- min_trades: observed 86, required gte 400, short by 314
+- gen_tp_sma_recross_adx_gate_time_exit on GBPUSD H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -1.19934 at declared defaults is not positive; there is no edge to validate.
+- gen_tp_sma_recross_adx_gate_time_exit on GBPUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 68, required gte 400, short by 332
+- gen_tp_sma_recross_adx_gate_time_exit on NZDUSD H4: REJECT at RUNG 1 IN_SAMPLE_SCREEN -- RUNG 1 IN_SAMPLE_SCREEN: no parameterisation inside the domains the document declares is positive in sample on sharpe; there is nothing for the later rungs to test.
+- gen_tp_sma_recross_adx_gate_time_exit on NZDUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 69, required gte 400, short by 331
+- gen_tp_sma_recross_adx_gate_time_exit on UK100 H4: REJECT at RUNG 0 SANITY -- min_trades: observed 248, required gte 400, short by 152
+- gen_tp_sma_recross_adx_gate_time_exit on UK100 D1: REJECT at RUNG 0 SANITY -- min_trades: observed 1, required gte 400, short by 399
+- gen_tp_sma_recross_adx_gate_time_exit on US500 H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -0.292945 at declared defaults is not positive; there is no edge to validate.
+- gen_tp_sma_recross_adx_gate_time_exit on US500 D1: REJECT at RUNG 0 SANITY -- min_trades: observed 75, required gte 400, short by 325
+- gen_tp_sma_recross_adx_gate_time_exit on USDCAD H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -1.01521 at declared defaults is not positive; there is no edge to validate.
+- gen_tp_sma_recross_adx_gate_time_exit on USDCAD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 75, required gte 400, short by 325
+- gen_tp_sma_recross_adx_gate_time_exit on USDCHF H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -1.5422 at declared defaults is not positive; there is no edge to validate.
+- gen_tp_sma_recross_adx_gate_time_exit on USDCHF D1: REJECT at RUNG 0 SANITY -- min_trades: observed 71, required gte 400, short by 329
+- gen_tp_sma_recross_adx_gate_time_exit on USDJPY H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -1.17538 at declared defaults is not positive; there is no edge to validate.
+- gen_tp_sma_recross_adx_gate_time_exit on USDJPY D1: REJECT at RUNG 0 SANITY -- min_trades: observed 90, required gte 400, short by 310
+- gen_tp_sma_recross_adx_gate_time_exit on XAGUSD H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -0.579442 at declared defaults is not positive; there is no edge to validate.
+- gen_tp_sma_recross_adx_gate_time_exit on XAGUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 88, required gte 400, short by 312
+- gen_tp_sma_recross_adx_gate_time_exit on XAUUSD H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -0.414085 at declared defaults is not positive; there is no edge to validate.
+- gen_tp_sma_recross_adx_gate_time_exit on XAUUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 80, required gte 400, short by 320
+- gen_tp_sma_recross_adx_gate_tp_r on AUDUSD H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -0.861466 at declared defaults is not positive; there is no edge to validate.
+- gen_tp_sma_recross_adx_gate_tp_r on AUDUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 76, required gte 400, short by 324
+- gen_tp_sma_recross_adx_gate_tp_r on DE40 H4: REJECT at RUNG 0 SANITY -- min_trades: observed 332, required gte 400, short by 68
+- gen_tp_sma_recross_adx_gate_tp_r on DE40 D1: REJECT at RUNG 0 SANITY -- min_trades: observed 58, required gte 400, short by 342
+- gen_tp_sma_recross_adx_gate_tp_r on EURJPY H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -1.18335 at declared defaults is not positive; there is no edge to validate.
+- gen_tp_sma_recross_adx_gate_tp_r on EURJPY D1: REJECT at RUNG 0 SANITY -- min_trades: observed 84, required gte 400, short by 316
+- gen_tp_sma_recross_adx_gate_tp_r on EURUSD H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -0.573098 at declared defaults is not positive; there is no edge to validate.
+- gen_tp_sma_recross_adx_gate_tp_r on EURUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 73, required gte 400, short by 327
+- gen_tp_sma_recross_adx_gate_tp_r on GBPJPY H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -0.957583 at declared defaults is not positive; there is no edge to validate.
+- gen_tp_sma_recross_adx_gate_tp_r on GBPJPY D1: REJECT at RUNG 0 SANITY -- min_trades: observed 79, required gte 400, short by 321
+- gen_tp_sma_recross_adx_gate_tp_r on GBPUSD H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -1.24188 at declared defaults is not positive; there is no edge to validate.
+- gen_tp_sma_recross_adx_gate_tp_r on GBPUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 73, required gte 400, short by 327
+- gen_tp_sma_recross_adx_gate_tp_r on NZDUSD H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -0.626771 at declared defaults is not positive; there is no edge to validate.
+- gen_tp_sma_recross_adx_gate_tp_r on NZDUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 69, required gte 400, short by 331
+- gen_tp_sma_recross_adx_gate_tp_r on UK100 H4: REJECT at RUNG 0 SANITY -- min_trades: observed 262, required gte 400, short by 138
+- gen_tp_sma_recross_adx_gate_tp_r on UK100 D1: REJECT at RUNG 0 SANITY -- min_trades: observed 17, required gte 400, short by 383
+- gen_tp_sma_recross_adx_gate_tp_r on US500 H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -0.376979 at declared defaults is not positive; there is no edge to validate.
+- gen_tp_sma_recross_adx_gate_tp_r on US500 D1: REJECT at RUNG 0 SANITY -- min_trades: observed 73, required gte 400, short by 327
+- gen_tp_sma_recross_adx_gate_tp_r on USDCAD H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -1.91518 at declared defaults is not positive; there is no edge to validate.
+- gen_tp_sma_recross_adx_gate_tp_r on USDCAD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 78, required gte 400, short by 322
+- gen_tp_sma_recross_adx_gate_tp_r on USDCHF H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -1.56054 at declared defaults is not positive; there is no edge to validate.
+- gen_tp_sma_recross_adx_gate_tp_r on USDCHF D1: REJECT at RUNG 0 SANITY -- min_trades: observed 75, required gte 400, short by 325
+- gen_tp_sma_recross_adx_gate_tp_r on USDJPY H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -2.16284 at declared defaults is not positive; there is no edge to validate.
+- gen_tp_sma_recross_adx_gate_tp_r on USDJPY D1: REJECT at RUNG 0 SANITY -- min_trades: observed 83, required gte 400, short by 317
+- gen_tp_sma_recross_adx_gate_tp_r on XAGUSD H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -1.35875 at declared defaults is not positive; there is no edge to validate.
+- gen_tp_sma_recross_adx_gate_tp_r on XAGUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 92, required gte 400, short by 308
+- gen_tp_sma_recross_adx_gate_tp_r on XAUUSD H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -0.872641 at declared defaults is not positive; there is no edge to validate.
+- gen_tp_sma_recross_adx_gate_tp_r on XAUUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 81, required gte 400, short by 319
+- gen_tp_sma_recross_none_swing_tp_long on AUDUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 204, required gte 400, short by 196
+- gen_tp_sma_recross_none_swing_tp_long on AUDUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 37, required gte 400, short by 363
+- gen_tp_sma_recross_none_swing_tp_long on DE40 H4: REJECT at RUNG 0 SANITY -- min_trades: observed 138, required gte 400, short by 262
+- gen_tp_sma_recross_none_swing_tp_long on DE40 D1: REJECT at RUNG 0 SANITY -- min_trades: observed 26, required gte 400, short by 374
+- gen_tp_sma_recross_none_swing_tp_long on EURJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 155, required gte 400, short by 245
+- gen_tp_sma_recross_none_swing_tp_long on EURJPY D1: REJECT at RUNG 0 SANITY -- min_trades: observed 39, required gte 400, short by 361
+- gen_tp_sma_recross_none_swing_tp_long on EURUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 211, required gte 400, short by 189
+- gen_tp_sma_recross_none_swing_tp_long on EURUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 27, required gte 400, short by 373
+- gen_tp_sma_recross_none_swing_tp_long on GBPJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 218, required gte 400, short by 182
+- gen_tp_sma_recross_none_swing_tp_long on GBPJPY D1: REJECT at RUNG 0 SANITY -- min_trades: observed 40, required gte 400, short by 360
+- gen_tp_sma_recross_none_swing_tp_long on GBPUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 224, required gte 400, short by 176
+- gen_tp_sma_recross_none_swing_tp_long on GBPUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 46, required gte 400, short by 354
+- gen_tp_sma_recross_none_swing_tp_long on NZDUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 200, required gte 400, short by 200
+- gen_tp_sma_recross_none_swing_tp_long on NZDUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 53, required gte 400, short by 347
+- gen_tp_sma_recross_none_swing_tp_long on UK100 H4: REJECT at RUNG 0 SANITY -- min_trades: observed 199, required gte 400, short by 201
+- gen_tp_sma_recross_none_swing_tp_long on UK100 D1: REJECT at RUNG 0 SANITY -- min_trades: observed 30, required gte 400, short by 370
+- gen_tp_sma_recross_none_swing_tp_long on US500 H4: REJECT at RUNG 0 SANITY -- min_trades: observed 231, required gte 400, short by 169
+- gen_tp_sma_recross_none_swing_tp_long on US500 D1: REJECT at RUNG 0 SANITY -- min_trades: observed 46, required gte 400, short by 354
+- gen_tp_sma_recross_none_swing_tp_long on USDCAD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 203, required gte 400, short by 197
+- gen_tp_sma_recross_none_swing_tp_long on USDCAD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 43, required gte 400, short by 357
+- gen_tp_sma_recross_none_swing_tp_long on USDCHF H4: REJECT at RUNG 0 SANITY -- min_trades: observed 225, required gte 400, short by 175
+- gen_tp_sma_recross_none_swing_tp_long on USDCHF D1: REJECT at RUNG 0 SANITY -- min_trades: observed 8, required gte 400, short by 392
+- gen_tp_sma_recross_none_swing_tp_long on USDJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 201, required gte 400, short by 199
+- gen_tp_sma_recross_none_swing_tp_long on USDJPY D1: REJECT at RUNG 0 SANITY -- min_trades: observed 24, required gte 400, short by 376
+- gen_tp_sma_recross_none_swing_tp_long on XAGUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 211, required gte 400, short by 189
+- gen_tp_sma_recross_none_swing_tp_long on XAGUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 38, required gte 400, short by 362
+- gen_tp_sma_recross_none_swing_tp_long on XAUUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 204, required gte 400, short by 196
+- gen_tp_sma_recross_none_swing_tp_long on XAUUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 58, required gte 400, short by 342
+- gen_tp_sma_recross_none_swing_tp_short on AUDUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 196, required gte 400, short by 204
+- gen_tp_sma_recross_none_swing_tp_short on AUDUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 21, required gte 400, short by 379
+- gen_tp_sma_recross_none_swing_tp_short on DE40 H4: REJECT at RUNG 0 SANITY -- min_trades: observed 124, required gte 400, short by 276
+- gen_tp_sma_recross_none_swing_tp_short on DE40 D1: REJECT at RUNG 0 SANITY -- min_trades: observed 20, required gte 400, short by 380
+- gen_tp_sma_recross_none_swing_tp_short on EURJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 167, required gte 400, short by 233
+- gen_tp_sma_recross_none_swing_tp_short on EURJPY D1: REJECT at RUNG 0 SANITY -- min_trades: observed 27, required gte 400, short by 373
+- gen_tp_sma_recross_none_swing_tp_short on EURUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 181, required gte 400, short by 219
+- gen_tp_sma_recross_none_swing_tp_short on EURUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 17, required gte 400, short by 383
+- gen_tp_sma_recross_none_swing_tp_short on GBPJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 195, required gte 400, short by 205
+- gen_tp_sma_recross_none_swing_tp_short on GBPJPY D1: REJECT at RUNG 0 SANITY -- min_trades: observed 22, required gte 400, short by 378
+- gen_tp_sma_recross_none_swing_tp_short on GBPUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 216, required gte 400, short by 184
+- gen_tp_sma_recross_none_swing_tp_short on GBPUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 41, required gte 400, short by 359
+- gen_tp_sma_recross_none_swing_tp_short on NZDUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 205, required gte 400, short by 195
+- gen_tp_sma_recross_none_swing_tp_short on NZDUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 30, required gte 400, short by 370
+- gen_tp_sma_recross_none_swing_tp_short on UK100 H4: REJECT at RUNG 0 SANITY -- min_trades: observed 168, required gte 400, short by 232
+- gen_tp_sma_recross_none_swing_tp_short on UK100 D1: REJECT at RUNG 0 SANITY -- min_trades: observed 9, required gte 400, short by 391
+- gen_tp_sma_recross_none_swing_tp_short on US500 H4: REJECT at RUNG 0 SANITY -- min_trades: observed 141, required gte 400, short by 259
+- gen_tp_sma_recross_none_swing_tp_short on US500 D1: REJECT at RUNG 0 SANITY -- min_trades: observed 22, required gte 400, short by 378
+- gen_tp_sma_recross_none_swing_tp_short on USDCAD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 208, required gte 400, short by 192
+- gen_tp_sma_recross_none_swing_tp_short on USDCAD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 40, required gte 400, short by 360
+- gen_tp_sma_recross_none_swing_tp_short on USDCHF H4: REJECT at RUNG 0 SANITY -- min_trades: observed 192, required gte 400, short by 208
+- gen_tp_sma_recross_none_swing_tp_short on USDCHF D1: REJECT at RUNG 0 SANITY -- min_trades: observed 37, required gte 400, short by 363
+- gen_tp_sma_recross_none_swing_tp_short on USDJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 173, required gte 400, short by 227
+- gen_tp_sma_recross_none_swing_tp_short on USDJPY D1: REJECT at RUNG 0 SANITY -- min_trades: observed 35, required gte 400, short by 365
+- gen_tp_sma_recross_none_swing_tp_short on XAGUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 83, required gte 400, short by 317
+- gen_tp_sma_recross_none_swing_tp_short on XAGUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 25, required gte 400, short by 375
+- gen_tp_sma_recross_none_swing_tp_short on XAUUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 193, required gte 400, short by 207
+- gen_tp_sma_recross_none_swing_tp_short on XAUUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 41, required gte 400, short by 359
+- gen_tp_sma_recross_rvol_gate_tp_r on AUDUSD H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -1.14683 at declared defaults is not positive; there is no edge to validate.
+- gen_tp_sma_recross_rvol_gate_tp_r on AUDUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 124, required gte 400, short by 276
+- gen_tp_sma_recross_rvol_gate_tp_r on DE40 H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -0.957013 at declared defaults is not positive; there is no edge to validate.
+- gen_tp_sma_recross_rvol_gate_tp_r on DE40 D1: REJECT at RUNG 0 SANITY -- min_trades: observed 98, required gte 400, short by 302
+- gen_tp_sma_recross_rvol_gate_tp_r on EURJPY H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -1.0706 at declared defaults is not positive; there is no edge to validate.
+- gen_tp_sma_recross_rvol_gate_tp_r on EURJPY D1: REJECT at RUNG 0 SANITY -- min_trades: observed 113, required gte 400, short by 287
+- gen_tp_sma_recross_rvol_gate_tp_r on EURUSD H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -1.15375 at declared defaults is not positive; there is no edge to validate.
+- gen_tp_sma_recross_rvol_gate_tp_r on EURUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 127, required gte 400, short by 273
+- gen_tp_sma_recross_rvol_gate_tp_r on GBPJPY H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -1.11197 at declared defaults is not positive; there is no edge to validate.
+- gen_tp_sma_recross_rvol_gate_tp_r on GBPJPY D1: REJECT at RUNG 0 SANITY -- min_trades: observed 114, required gte 400, short by 286
+- gen_tp_sma_recross_rvol_gate_tp_r on GBPUSD H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -0.98757 at declared defaults is not positive; there is no edge to validate.
+- gen_tp_sma_recross_rvol_gate_tp_r on GBPUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 137, required gte 400, short by 263
+- gen_tp_sma_recross_rvol_gate_tp_r on NZDUSD H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -0.761205 at declared defaults is not positive; there is no edge to validate.
+- gen_tp_sma_recross_rvol_gate_tp_r on NZDUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 116, required gte 400, short by 284
+- gen_tp_sma_recross_rvol_gate_tp_r on UK100 H4: REJECT at RUNG 0 SANITY -- min_trades: observed 396, required gte 400, short by 4
+- gen_tp_sma_recross_rvol_gate_tp_r on UK100 D1: REJECT at RUNG 0 SANITY -- min_trades: observed 32, required gte 400, short by 368
+- gen_tp_sma_recross_rvol_gate_tp_r on US500 H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -0.104845 at declared defaults is not positive; there is no edge to validate.
+- gen_tp_sma_recross_rvol_gate_tp_r on US500 D1: REJECT at RUNG 0 SANITY -- min_trades: observed 119, required gte 400, short by 281
+- gen_tp_sma_recross_rvol_gate_tp_r on USDCAD H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -1.95444 at declared defaults is not positive; there is no edge to validate.
+- gen_tp_sma_recross_rvol_gate_tp_r on USDCAD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 122, required gte 400, short by 278
+- gen_tp_sma_recross_rvol_gate_tp_r on USDCHF H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -1.35703 at declared defaults is not positive; there is no edge to validate.
+- gen_tp_sma_recross_rvol_gate_tp_r on USDCHF D1: REJECT at RUNG 0 SANITY -- min_trades: observed 122, required gte 400, short by 278
+- gen_tp_sma_recross_rvol_gate_tp_r on USDJPY H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -1.63351 at declared defaults is not positive; there is no edge to validate.
+- gen_tp_sma_recross_rvol_gate_tp_r on USDJPY D1: REJECT at RUNG 0 SANITY -- min_trades: observed 116, required gte 400, short by 284
+- gen_tp_sma_recross_rvol_gate_tp_r on XAGUSD H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -1.1412 at declared defaults is not positive; there is no edge to validate.
+- gen_tp_sma_recross_rvol_gate_tp_r on XAGUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 120, required gte 400, short by 280
+- gen_tp_sma_recross_rvol_gate_tp_r on XAUUSD H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -0.937721 at declared defaults is not positive; there is no edge to validate.
+- gen_tp_sma_recross_rvol_gate_tp_r on XAUUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 121, required gte 400, short by 279
+- gen_tp_sma_recross_rvol_gate_trail on AUDUSD H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -0.761525 at declared defaults is not positive; there is no edge to validate.
+- gen_tp_sma_recross_rvol_gate_trail on AUDUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 155, required gte 400, short by 245
+- gen_tp_sma_recross_rvol_gate_trail on DE40 H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -0.813871 at declared defaults is not positive; there is no edge to validate.
+- gen_tp_sma_recross_rvol_gate_trail on DE40 D1: REJECT at RUNG 0 SANITY -- min_trades: observed 125, required gte 400, short by 275
+- gen_tp_sma_recross_rvol_gate_trail on EURJPY H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -0.793623 at declared defaults is not positive; there is no edge to validate.
+- gen_tp_sma_recross_rvol_gate_trail on EURJPY D1: REJECT at RUNG 0 SANITY -- min_trades: observed 161, required gte 400, short by 239
+- gen_tp_sma_recross_rvol_gate_trail on EURUSD H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -0.830709 at declared defaults is not positive; there is no edge to validate.
+- gen_tp_sma_recross_rvol_gate_trail on EURUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 165, required gte 400, short by 235
+- gen_tp_sma_recross_rvol_gate_trail on GBPJPY H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -0.123944 at declared defaults is not positive; there is no edge to validate.
+- gen_tp_sma_recross_rvol_gate_trail on GBPJPY D1: REJECT at RUNG 0 SANITY -- min_trades: observed 159, required gte 400, short by 241
+- gen_tp_sma_recross_rvol_gate_trail on GBPUSD H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -1.24915 at declared defaults is not positive; there is no edge to validate.
+- gen_tp_sma_recross_rvol_gate_trail on GBPUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 162, required gte 400, short by 238
+- gen_tp_sma_recross_rvol_gate_trail on NZDUSD H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -0.613675 at declared defaults is not positive; there is no edge to validate.
+- gen_tp_sma_recross_rvol_gate_trail on NZDUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 157, required gte 400, short by 243
+- gen_tp_sma_recross_rvol_gate_trail on UK100 H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -1.53116 at declared defaults is not positive; there is no edge to validate.
+- gen_tp_sma_recross_rvol_gate_trail on UK100 D1: REJECT at RUNG 0 SANITY -- min_trades: observed 44, required gte 400, short by 356
+- gen_tp_sma_recross_rvol_gate_trail on US500 H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -1.67128 at declared defaults is not positive; there is no edge to validate.
+- gen_tp_sma_recross_rvol_gate_trail on US500 D1: REJECT at RUNG 0 SANITY -- min_trades: observed 164, required gte 400, short by 236
+- gen_tp_sma_recross_rvol_gate_trail on USDCAD H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -0.645777 at declared defaults is not positive; there is no edge to validate.
+- gen_tp_sma_recross_rvol_gate_trail on USDCAD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 174, required gte 400, short by 226
+- gen_tp_sma_recross_rvol_gate_trail on USDCHF H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -1.62412 at declared defaults is not positive; there is no edge to validate.
+- gen_tp_sma_recross_rvol_gate_trail on USDCHF D1: REJECT at RUNG 0 SANITY -- min_trades: observed 163, required gte 400, short by 237
+- gen_tp_sma_recross_rvol_gate_trail on USDJPY H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -0.857977 at declared defaults is not positive; there is no edge to validate.
+- gen_tp_sma_recross_rvol_gate_trail on USDJPY D1: REJECT at RUNG 0 SANITY -- min_trades: observed 166, required gte 400, short by 234
+- gen_tp_sma_recross_rvol_gate_trail on XAGUSD H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -0.410662 at declared defaults is not positive; there is no edge to validate.
+- gen_tp_sma_recross_rvol_gate_trail on XAGUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 152, required gte 400, short by 248
+- gen_tp_sma_recross_rvol_gate_trail on XAUUSD H4: REJECT at RUNG 2 WALK_FORWARD -- walk_forward_efficiency: observed -29.86, required gte 50, short by 79.86
+- gen_tp_sma_recross_rvol_gate_trail on XAUUSD D1: REJECT at RUNG 0 SANITY -- min_trades: observed 152, required gte 400, short by 248
+- gen_tp_sma_recross_session_swing_tp_short on AUDUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 178, required gte 400, short by 222
+- gen_tp_sma_recross_session_swing_tp_short on DE40 H4: REJECT at RUNG 0 SANITY -- min_trades: observed 120, required gte 400, short by 280
+- gen_tp_sma_recross_session_swing_tp_short on EURJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 160, required gte 400, short by 240
+- gen_tp_sma_recross_session_swing_tp_short on EURUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 180, required gte 400, short by 220
+- gen_tp_sma_recross_session_swing_tp_short on GBPJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 173, required gte 400, short by 227
+- gen_tp_sma_recross_session_swing_tp_short on GBPUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 201, required gte 400, short by 199
+- gen_tp_sma_recross_session_swing_tp_short on NZDUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 172, required gte 400, short by 228
+- gen_tp_sma_recross_session_swing_tp_short on UK100 H4: REJECT at RUNG 0 SANITY -- min_trades: observed 135, required gte 400, short by 265
+- gen_tp_sma_recross_session_swing_tp_short on US500 H4: REJECT at RUNG 0 SANITY -- min_trades: observed 126, required gte 400, short by 274
+- gen_tp_sma_recross_session_swing_tp_short on USDCAD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 194, required gte 400, short by 206
+- gen_tp_sma_recross_session_swing_tp_short on USDCHF H4: REJECT at RUNG 0 SANITY -- min_trades: observed 178, required gte 400, short by 222
+- gen_tp_sma_recross_session_swing_tp_short on USDJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 161, required gte 400, short by 239
+- gen_tp_sma_recross_session_swing_tp_short on XAGUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 73, required gte 400, short by 327
+- gen_tp_sma_recross_session_swing_tp_short on XAUUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 188, required gte 400, short by 212
+- gen_tp_sma_recross_session_time_exit on AUDUSD H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -0.818714 at declared defaults is not positive; there is no edge to validate.
+- gen_tp_sma_recross_session_time_exit on DE40 H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -0.0528953 at declared defaults is not positive; there is no edge to validate.
+- gen_tp_sma_recross_session_time_exit on EURJPY H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -0.588893 at declared defaults is not positive; there is no edge to validate.
+- gen_tp_sma_recross_session_time_exit on EURUSD H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -0.846578 at declared defaults is not positive; there is no edge to validate.
+- gen_tp_sma_recross_session_time_exit on GBPJPY H4: REJECT at RUNG 2 WALK_FORWARD -- walk_forward_efficiency: observed -48.59, required gte 50, short by 98.59
+- gen_tp_sma_recross_session_time_exit on GBPUSD H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -1.10175 at declared defaults is not positive; there is no edge to validate.
+- gen_tp_sma_recross_session_time_exit on NZDUSD H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -0.463809 at declared defaults is not positive; there is no edge to validate.
+- gen_tp_sma_recross_session_time_exit on UK100 H4: REJECT at RUNG 0 SANITY -- min_trades: observed 234, required gte 400, short by 166
+- gen_tp_sma_recross_session_time_exit on US500 H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -0.800474 at declared defaults is not positive; there is no edge to validate.
+- gen_tp_sma_recross_session_time_exit on USDCAD H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -1.32231 at declared defaults is not positive; there is no edge to validate.
+- gen_tp_sma_recross_session_time_exit on USDCHF H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -1.22145 at declared defaults is not positive; there is no edge to validate.
+- gen_tp_sma_recross_session_time_exit on USDJPY H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -0.723559 at declared defaults is not positive; there is no edge to validate.
+- gen_tp_sma_recross_session_time_exit on XAGUSD H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -0.591942 at declared defaults is not positive; there is no edge to validate.
+- gen_tp_sma_recross_session_time_exit on XAUUSD H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -0.232266 at declared defaults is not positive; there is no edge to validate.
+
+## What was skipped
+
+- donchian_breakout_atr on AUDJPY H4: out_of_universe -- donchian_breakout_atr declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'XAUUSD', 'US500', 'DE40'] and timeframes ['H4', 'D1']; running it on AUDJPY H4 would validate a strategy nobody wrote
+- donchian_breakout_atr on AUDJPY D1: out_of_universe -- donchian_breakout_atr declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'XAUUSD', 'US500', 'DE40'] and timeframes ['H4', 'D1']; running it on AUDJPY D1 would validate a strategy nobody wrote
+- donchian_breakout_atr on EURGBP H4: out_of_universe -- donchian_breakout_atr declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'XAUUSD', 'US500', 'DE40'] and timeframes ['H4', 'D1']; running it on EURGBP H4 would validate a strategy nobody wrote
+- donchian_breakout_atr on EURGBP D1: out_of_universe -- donchian_breakout_atr declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'XAUUSD', 'US500', 'DE40'] and timeframes ['H4', 'D1']; running it on EURGBP D1 would validate a strategy nobody wrote
+- donchian_breakout_atr on UK100 H4: out_of_universe -- donchian_breakout_atr declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'XAUUSD', 'US500', 'DE40'] and timeframes ['H4', 'D1']; running it on UK100 H4 would validate a strategy nobody wrote
+- donchian_breakout_atr on UK100 D1: out_of_universe -- donchian_breakout_atr declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'XAUUSD', 'US500', 'DE40'] and timeframes ['H4', 'D1']; running it on UK100 D1 would validate a strategy nobody wrote
+- donchian_breakout_atr on XAGUSD H4: out_of_universe -- donchian_breakout_atr declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'XAUUSD', 'US500', 'DE40'] and timeframes ['H4', 'D1']; running it on XAGUSD H4 would validate a strategy nobody wrote
+- donchian_breakout_atr on XAGUSD D1: out_of_universe -- donchian_breakout_atr declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'XAUUSD', 'US500', 'DE40'] and timeframes ['H4', 'D1']; running it on XAGUSD D1 would validate a strategy nobody wrote
+- fib_golden_pocket_pullback on AUDJPY H4: out_of_universe -- fib_golden_pocket_pullback declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'XAUUSD', 'US500', 'DE40'] and timeframes ['H1', 'H4', 'D1']; running it on AUDJPY H4 would validate a strategy nobody wrote
+- fib_golden_pocket_pullback on AUDJPY D1: out_of_universe -- fib_golden_pocket_pullback declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'XAUUSD', 'US500', 'DE40'] and timeframes ['H1', 'H4', 'D1']; running it on AUDJPY D1 would validate a strategy nobody wrote
+- fib_golden_pocket_pullback on EURGBP H4: out_of_universe -- fib_golden_pocket_pullback declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'XAUUSD', 'US500', 'DE40'] and timeframes ['H1', 'H4', 'D1']; running it on EURGBP H4 would validate a strategy nobody wrote
+- fib_golden_pocket_pullback on EURGBP D1: out_of_universe -- fib_golden_pocket_pullback declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'XAUUSD', 'US500', 'DE40'] and timeframes ['H1', 'H4', 'D1']; running it on EURGBP D1 would validate a strategy nobody wrote
+- fib_golden_pocket_pullback on UK100 H4: out_of_universe -- fib_golden_pocket_pullback declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'XAUUSD', 'US500', 'DE40'] and timeframes ['H1', 'H4', 'D1']; running it on UK100 H4 would validate a strategy nobody wrote
+- fib_golden_pocket_pullback on UK100 D1: out_of_universe -- fib_golden_pocket_pullback declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'XAUUSD', 'US500', 'DE40'] and timeframes ['H1', 'H4', 'D1']; running it on UK100 D1 would validate a strategy nobody wrote
+- fib_golden_pocket_pullback on XAGUSD H4: out_of_universe -- fib_golden_pocket_pullback declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'XAUUSD', 'US500', 'DE40'] and timeframes ['H1', 'H4', 'D1']; running it on XAGUSD H4 would validate a strategy nobody wrote
+- fib_golden_pocket_pullback on XAGUSD D1: out_of_universe -- fib_golden_pocket_pullback declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'XAUUSD', 'US500', 'DE40'] and timeframes ['H1', 'H4', 'D1']; running it on XAGUSD D1 would validate a strategy nobody wrote
+- ichimoku_kumo_trend on AUDJPY H4: out_of_universe -- ichimoku_kumo_trend declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'XAUUSD', 'US500', 'DE40'] and timeframes ['H4', 'D1']; running it on AUDJPY H4 would validate a strategy nobody wrote
+- ichimoku_kumo_trend on AUDJPY D1: out_of_universe -- ichimoku_kumo_trend declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'XAUUSD', 'US500', 'DE40'] and timeframes ['H4', 'D1']; running it on AUDJPY D1 would validate a strategy nobody wrote
+- ichimoku_kumo_trend on EURGBP H4: out_of_universe -- ichimoku_kumo_trend declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'XAUUSD', 'US500', 'DE40'] and timeframes ['H4', 'D1']; running it on EURGBP H4 would validate a strategy nobody wrote
+- ichimoku_kumo_trend on EURGBP D1: out_of_universe -- ichimoku_kumo_trend declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'XAUUSD', 'US500', 'DE40'] and timeframes ['H4', 'D1']; running it on EURGBP D1 would validate a strategy nobody wrote
+- ichimoku_kumo_trend on UK100 H4: out_of_universe -- ichimoku_kumo_trend declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'XAUUSD', 'US500', 'DE40'] and timeframes ['H4', 'D1']; running it on UK100 H4 would validate a strategy nobody wrote
+- ichimoku_kumo_trend on UK100 D1: out_of_universe -- ichimoku_kumo_trend declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'XAUUSD', 'US500', 'DE40'] and timeframes ['H4', 'D1']; running it on UK100 D1 would validate a strategy nobody wrote
+- ichimoku_kumo_trend on XAGUSD H4: out_of_universe -- ichimoku_kumo_trend declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'XAUUSD', 'US500', 'DE40'] and timeframes ['H4', 'D1']; running it on XAGUSD H4 would validate a strategy nobody wrote
+- ichimoku_kumo_trend on XAGUSD D1: out_of_universe -- ichimoku_kumo_trend declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'XAUUSD', 'US500', 'DE40'] and timeframes ['H4', 'D1']; running it on XAGUSD D1 would validate a strategy nobody wrote
+- macd_ema_trend_hybrid on AUDJPY H4: out_of_universe -- macd_ema_trend_hybrid declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'XAUUSD', 'US500', 'DE40'] and timeframes ['H4', 'D1']; running it on AUDJPY H4 would validate a strategy nobody wrote
+- macd_ema_trend_hybrid on AUDJPY D1: out_of_universe -- macd_ema_trend_hybrid declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'XAUUSD', 'US500', 'DE40'] and timeframes ['H4', 'D1']; running it on AUDJPY D1 would validate a strategy nobody wrote
+- macd_ema_trend_hybrid on EURGBP H4: out_of_universe -- macd_ema_trend_hybrid declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'XAUUSD', 'US500', 'DE40'] and timeframes ['H4', 'D1']; running it on EURGBP H4 would validate a strategy nobody wrote
+- macd_ema_trend_hybrid on EURGBP D1: out_of_universe -- macd_ema_trend_hybrid declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'XAUUSD', 'US500', 'DE40'] and timeframes ['H4', 'D1']; running it on EURGBP D1 would validate a strategy nobody wrote
+- macd_ema_trend_hybrid on UK100 H4: out_of_universe -- macd_ema_trend_hybrid declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'XAUUSD', 'US500', 'DE40'] and timeframes ['H4', 'D1']; running it on UK100 H4 would validate a strategy nobody wrote
+- macd_ema_trend_hybrid on UK100 D1: out_of_universe -- macd_ema_trend_hybrid declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'XAUUSD', 'US500', 'DE40'] and timeframes ['H4', 'D1']; running it on UK100 D1 would validate a strategy nobody wrote
+- macd_ema_trend_hybrid on XAGUSD H4: out_of_universe -- macd_ema_trend_hybrid declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'XAUUSD', 'US500', 'DE40'] and timeframes ['H4', 'D1']; running it on XAGUSD H4 would validate a strategy nobody wrote
+- macd_ema_trend_hybrid on XAGUSD D1: out_of_universe -- macd_ema_trend_hybrid declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'XAUUSD', 'US500', 'DE40'] and timeframes ['H4', 'D1']; running it on XAGUSD D1 would validate a strategy nobody wrote
+- rsi_band_mean_reversion on AUDJPY H4: out_of_universe -- rsi_band_mean_reversion declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP', 'AUDNZD', 'EURCHF'] and timeframes ['H1', 'H4']; running it on AUDJPY H4 would validate a strategy nobody wrote
+- rsi_band_mean_reversion on AUDJPY D1: out_of_universe -- rsi_band_mean_reversion declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP', 'AUDNZD', 'EURCHF'] and timeframes ['H1', 'H4']; running it on AUDJPY D1 would validate a strategy nobody wrote
+- rsi_band_mean_reversion on AUDUSD D1: out_of_universe -- rsi_band_mean_reversion declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP', 'AUDNZD', 'EURCHF'] and timeframes ['H1', 'H4']; running it on AUDUSD D1 would validate a strategy nobody wrote
+- rsi_band_mean_reversion on DE40 H4: out_of_universe -- rsi_band_mean_reversion declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP', 'AUDNZD', 'EURCHF'] and timeframes ['H1', 'H4']; running it on DE40 H4 would validate a strategy nobody wrote
+- rsi_band_mean_reversion on DE40 D1: out_of_universe -- rsi_band_mean_reversion declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP', 'AUDNZD', 'EURCHF'] and timeframes ['H1', 'H4']; running it on DE40 D1 would validate a strategy nobody wrote
+- rsi_band_mean_reversion on EURGBP D1: out_of_universe -- rsi_band_mean_reversion declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP', 'AUDNZD', 'EURCHF'] and timeframes ['H1', 'H4']; running it on EURGBP D1 would validate a strategy nobody wrote
+- rsi_band_mean_reversion on EURJPY H4: out_of_universe -- rsi_band_mean_reversion declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP', 'AUDNZD', 'EURCHF'] and timeframes ['H1', 'H4']; running it on EURJPY H4 would validate a strategy nobody wrote
+- rsi_band_mean_reversion on EURJPY D1: out_of_universe -- rsi_band_mean_reversion declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP', 'AUDNZD', 'EURCHF'] and timeframes ['H1', 'H4']; running it on EURJPY D1 would validate a strategy nobody wrote
+- rsi_band_mean_reversion on EURUSD D1: out_of_universe -- rsi_band_mean_reversion declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP', 'AUDNZD', 'EURCHF'] and timeframes ['H1', 'H4']; running it on EURUSD D1 would validate a strategy nobody wrote
+- rsi_band_mean_reversion on GBPJPY H4: out_of_universe -- rsi_band_mean_reversion declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP', 'AUDNZD', 'EURCHF'] and timeframes ['H1', 'H4']; running it on GBPJPY H4 would validate a strategy nobody wrote
+- rsi_band_mean_reversion on GBPJPY D1: out_of_universe -- rsi_band_mean_reversion declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP', 'AUDNZD', 'EURCHF'] and timeframes ['H1', 'H4']; running it on GBPJPY D1 would validate a strategy nobody wrote
+- rsi_band_mean_reversion on GBPUSD D1: out_of_universe -- rsi_band_mean_reversion declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP', 'AUDNZD', 'EURCHF'] and timeframes ['H1', 'H4']; running it on GBPUSD D1 would validate a strategy nobody wrote
+- rsi_band_mean_reversion on NZDUSD D1: out_of_universe -- rsi_band_mean_reversion declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP', 'AUDNZD', 'EURCHF'] and timeframes ['H1', 'H4']; running it on NZDUSD D1 would validate a strategy nobody wrote
+- rsi_band_mean_reversion on UK100 H4: out_of_universe -- rsi_band_mean_reversion declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP', 'AUDNZD', 'EURCHF'] and timeframes ['H1', 'H4']; running it on UK100 H4 would validate a strategy nobody wrote
+- rsi_band_mean_reversion on UK100 D1: out_of_universe -- rsi_band_mean_reversion declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP', 'AUDNZD', 'EURCHF'] and timeframes ['H1', 'H4']; running it on UK100 D1 would validate a strategy nobody wrote
+- rsi_band_mean_reversion on US500 H4: out_of_universe -- rsi_band_mean_reversion declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP', 'AUDNZD', 'EURCHF'] and timeframes ['H1', 'H4']; running it on US500 H4 would validate a strategy nobody wrote
+- rsi_band_mean_reversion on US500 D1: out_of_universe -- rsi_band_mean_reversion declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP', 'AUDNZD', 'EURCHF'] and timeframes ['H1', 'H4']; running it on US500 D1 would validate a strategy nobody wrote
+- rsi_band_mean_reversion on USDCAD D1: out_of_universe -- rsi_band_mean_reversion declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP', 'AUDNZD', 'EURCHF'] and timeframes ['H1', 'H4']; running it on USDCAD D1 would validate a strategy nobody wrote
+- rsi_band_mean_reversion on USDCHF D1: out_of_universe -- rsi_band_mean_reversion declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP', 'AUDNZD', 'EURCHF'] and timeframes ['H1', 'H4']; running it on USDCHF D1 would validate a strategy nobody wrote
+- rsi_band_mean_reversion on USDJPY D1: out_of_universe -- rsi_band_mean_reversion declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP', 'AUDNZD', 'EURCHF'] and timeframes ['H1', 'H4']; running it on USDJPY D1 would validate a strategy nobody wrote
+- rsi_band_mean_reversion on XAGUSD H4: out_of_universe -- rsi_band_mean_reversion declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP', 'AUDNZD', 'EURCHF'] and timeframes ['H1', 'H4']; running it on XAGUSD H4 would validate a strategy nobody wrote
+- rsi_band_mean_reversion on XAGUSD D1: out_of_universe -- rsi_band_mean_reversion declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP', 'AUDNZD', 'EURCHF'] and timeframes ['H1', 'H4']; running it on XAGUSD D1 would validate a strategy nobody wrote
+- rsi_band_mean_reversion on XAUUSD H4: out_of_universe -- rsi_band_mean_reversion declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP', 'AUDNZD', 'EURCHF'] and timeframes ['H1', 'H4']; running it on XAUUSD H4 would validate a strategy nobody wrote
+- rsi_band_mean_reversion on XAUUSD D1: out_of_universe -- rsi_band_mean_reversion declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP', 'AUDNZD', 'EURCHF'] and timeframes ['H1', 'H4']; running it on XAUUSD D1 would validate a strategy nobody wrote
+- tsmom_dual_horizon on AUDJPY H4: out_of_universe -- tsmom_dual_horizon declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'XAUUSD', 'US500', 'DE40'] and timeframes ['D1', 'H4']; running it on AUDJPY H4 would validate a strategy nobody wrote
+- tsmom_dual_horizon on AUDJPY D1: out_of_universe -- tsmom_dual_horizon declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'XAUUSD', 'US500', 'DE40'] and timeframes ['D1', 'H4']; running it on AUDJPY D1 would validate a strategy nobody wrote
+- tsmom_dual_horizon on EURGBP H4: out_of_universe -- tsmom_dual_horizon declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'XAUUSD', 'US500', 'DE40'] and timeframes ['D1', 'H4']; running it on EURGBP H4 would validate a strategy nobody wrote
+- tsmom_dual_horizon on EURGBP D1: out_of_universe -- tsmom_dual_horizon declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'XAUUSD', 'US500', 'DE40'] and timeframes ['D1', 'H4']; running it on EURGBP D1 would validate a strategy nobody wrote
+- tsmom_dual_horizon on EURJPY H4: out_of_universe -- tsmom_dual_horizon declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'XAUUSD', 'US500', 'DE40'] and timeframes ['D1', 'H4']; running it on EURJPY H4 would validate a strategy nobody wrote
+- tsmom_dual_horizon on EURJPY D1: out_of_universe -- tsmom_dual_horizon declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'XAUUSD', 'US500', 'DE40'] and timeframes ['D1', 'H4']; running it on EURJPY D1 would validate a strategy nobody wrote
+- tsmom_dual_horizon on GBPJPY H4: out_of_universe -- tsmom_dual_horizon declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'XAUUSD', 'US500', 'DE40'] and timeframes ['D1', 'H4']; running it on GBPJPY H4 would validate a strategy nobody wrote
+- tsmom_dual_horizon on GBPJPY D1: out_of_universe -- tsmom_dual_horizon declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'XAUUSD', 'US500', 'DE40'] and timeframes ['D1', 'H4']; running it on GBPJPY D1 would validate a strategy nobody wrote
+- tsmom_dual_horizon on UK100 H4: out_of_universe -- tsmom_dual_horizon declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'XAUUSD', 'US500', 'DE40'] and timeframes ['D1', 'H4']; running it on UK100 H4 would validate a strategy nobody wrote
+- tsmom_dual_horizon on UK100 D1: out_of_universe -- tsmom_dual_horizon declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'XAUUSD', 'US500', 'DE40'] and timeframes ['D1', 'H4']; running it on UK100 D1 would validate a strategy nobody wrote
+- tsmom_dual_horizon on XAGUSD H4: out_of_universe -- tsmom_dual_horizon declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'XAUUSD', 'US500', 'DE40'] and timeframes ['D1', 'H4']; running it on XAGUSD H4 would validate a strategy nobody wrote
+- tsmom_dual_horizon on XAGUSD D1: out_of_universe -- tsmom_dual_horizon declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'XAUUSD', 'US500', 'DE40'] and timeframes ['D1', 'H4']; running it on XAGUSD D1 would validate a strategy nobody wrote
+- gen_bv_donchian_close_break_adx_gate_swing_tp_short on EURGBP H4: out_of_universe -- gen_bv_donchian_close_break_adx_gate_swing_tp_short declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'XAUUSD', 'XAGUSD', 'US500', 'DE40', 'UK100'] and timeframes ['H4', 'D1']; running it on EURGBP H4 would validate a strategy nobody wrote
+- gen_bv_donchian_close_break_adx_gate_swing_tp_short on EURGBP D1: out_of_universe -- gen_bv_donchian_close_break_adx_gate_swing_tp_short declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'XAUUSD', 'XAGUSD', 'US500', 'DE40', 'UK100'] and timeframes ['H4', 'D1']; running it on EURGBP D1 would validate a strategy nobody wrote
+- gen_bv_donchian_close_break_adx_gate_tp_r on EURGBP H4: out_of_universe -- gen_bv_donchian_close_break_adx_gate_tp_r declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'XAUUSD', 'XAGUSD', 'US500', 'DE40', 'UK100'] and timeframes ['H4', 'D1']; running it on EURGBP H4 would validate a strategy nobody wrote
+- gen_bv_donchian_close_break_adx_gate_tp_r on EURGBP D1: out_of_universe -- gen_bv_donchian_close_break_adx_gate_tp_r declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'XAUUSD', 'XAGUSD', 'US500', 'DE40', 'UK100'] and timeframes ['H4', 'D1']; running it on EURGBP D1 would validate a strategy nobody wrote
+- gen_bv_donchian_close_break_none_swing_tp_long on EURGBP H4: out_of_universe -- gen_bv_donchian_close_break_none_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'XAUUSD', 'XAGUSD', 'US500', 'DE40', 'UK100'] and timeframes ['H4', 'D1']; running it on EURGBP H4 would validate a strategy nobody wrote
+- gen_bv_donchian_close_break_none_swing_tp_long on EURGBP D1: out_of_universe -- gen_bv_donchian_close_break_none_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'XAUUSD', 'XAGUSD', 'US500', 'DE40', 'UK100'] and timeframes ['H4', 'D1']; running it on EURGBP D1 would validate a strategy nobody wrote
+- gen_bv_donchian_close_break_session_time_exit on AUDJPY D1: out_of_universe -- gen_bv_donchian_close_break_session_time_exit declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'XAUUSD', 'XAGUSD', 'US500', 'DE40', 'UK100'] and timeframes ['H4']; running it on AUDJPY D1 would validate a strategy nobody wrote
+- gen_bv_donchian_close_break_session_time_exit on AUDUSD D1: out_of_universe -- gen_bv_donchian_close_break_session_time_exit declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'XAUUSD', 'XAGUSD', 'US500', 'DE40', 'UK100'] and timeframes ['H4']; running it on AUDUSD D1 would validate a strategy nobody wrote
+- gen_bv_donchian_close_break_session_time_exit on DE40 D1: out_of_universe -- gen_bv_donchian_close_break_session_time_exit declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'XAUUSD', 'XAGUSD', 'US500', 'DE40', 'UK100'] and timeframes ['H4']; running it on DE40 D1 would validate a strategy nobody wrote
+- gen_bv_donchian_close_break_session_time_exit on EURGBP H4: out_of_universe -- gen_bv_donchian_close_break_session_time_exit declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'XAUUSD', 'XAGUSD', 'US500', 'DE40', 'UK100'] and timeframes ['H4']; running it on EURGBP H4 would validate a strategy nobody wrote
+- gen_bv_donchian_close_break_session_time_exit on EURGBP D1: out_of_universe -- gen_bv_donchian_close_break_session_time_exit declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'XAUUSD', 'XAGUSD', 'US500', 'DE40', 'UK100'] and timeframes ['H4']; running it on EURGBP D1 would validate a strategy nobody wrote
+- gen_bv_donchian_close_break_session_time_exit on EURJPY D1: out_of_universe -- gen_bv_donchian_close_break_session_time_exit declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'XAUUSD', 'XAGUSD', 'US500', 'DE40', 'UK100'] and timeframes ['H4']; running it on EURJPY D1 would validate a strategy nobody wrote
+- gen_bv_donchian_close_break_session_time_exit on EURUSD D1: out_of_universe -- gen_bv_donchian_close_break_session_time_exit declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'XAUUSD', 'XAGUSD', 'US500', 'DE40', 'UK100'] and timeframes ['H4']; running it on EURUSD D1 would validate a strategy nobody wrote
+- gen_bv_donchian_close_break_session_time_exit on GBPJPY D1: out_of_universe -- gen_bv_donchian_close_break_session_time_exit declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'XAUUSD', 'XAGUSD', 'US500', 'DE40', 'UK100'] and timeframes ['H4']; running it on GBPJPY D1 would validate a strategy nobody wrote
+- gen_bv_donchian_close_break_session_time_exit on GBPUSD D1: out_of_universe -- gen_bv_donchian_close_break_session_time_exit declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'XAUUSD', 'XAGUSD', 'US500', 'DE40', 'UK100'] and timeframes ['H4']; running it on GBPUSD D1 would validate a strategy nobody wrote
+- gen_bv_donchian_close_break_session_time_exit on NZDUSD D1: out_of_universe -- gen_bv_donchian_close_break_session_time_exit declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'XAUUSD', 'XAGUSD', 'US500', 'DE40', 'UK100'] and timeframes ['H4']; running it on NZDUSD D1 would validate a strategy nobody wrote
+- gen_bv_donchian_close_break_session_time_exit on UK100 D1: out_of_universe -- gen_bv_donchian_close_break_session_time_exit declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'XAUUSD', 'XAGUSD', 'US500', 'DE40', 'UK100'] and timeframes ['H4']; running it on UK100 D1 would validate a strategy nobody wrote
+- gen_bv_donchian_close_break_session_time_exit on US500 D1: out_of_universe -- gen_bv_donchian_close_break_session_time_exit declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'XAUUSD', 'XAGUSD', 'US500', 'DE40', 'UK100'] and timeframes ['H4']; running it on US500 D1 would validate a strategy nobody wrote
+- gen_bv_donchian_close_break_session_time_exit on USDCAD D1: out_of_universe -- gen_bv_donchian_close_break_session_time_exit declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'XAUUSD', 'XAGUSD', 'US500', 'DE40', 'UK100'] and timeframes ['H4']; running it on USDCAD D1 would validate a strategy nobody wrote
+- gen_bv_donchian_close_break_session_time_exit on USDCHF D1: out_of_universe -- gen_bv_donchian_close_break_session_time_exit declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'XAUUSD', 'XAGUSD', 'US500', 'DE40', 'UK100'] and timeframes ['H4']; running it on USDCHF D1 would validate a strategy nobody wrote
+- gen_bv_donchian_close_break_session_time_exit on USDJPY D1: out_of_universe -- gen_bv_donchian_close_break_session_time_exit declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'XAUUSD', 'XAGUSD', 'US500', 'DE40', 'UK100'] and timeframes ['H4']; running it on USDJPY D1 would validate a strategy nobody wrote
+- gen_bv_donchian_close_break_session_time_exit on XAGUSD D1: out_of_universe -- gen_bv_donchian_close_break_session_time_exit declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'XAUUSD', 'XAGUSD', 'US500', 'DE40', 'UK100'] and timeframes ['H4']; running it on XAGUSD D1 would validate a strategy nobody wrote
+- gen_bv_donchian_close_break_session_time_exit on XAUUSD D1: out_of_universe -- gen_bv_donchian_close_break_session_time_exit declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'XAUUSD', 'XAGUSD', 'US500', 'DE40', 'UK100'] and timeframes ['H4']; running it on XAUUSD D1 would validate a strategy nobody wrote
+- gen_bv_donchian_fresh_cross_adx_gate_swing_tp_long on EURGBP H4: out_of_universe -- gen_bv_donchian_fresh_cross_adx_gate_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'XAUUSD', 'XAGUSD', 'US500', 'DE40', 'UK100'] and timeframes ['H4', 'D1']; running it on EURGBP H4 would validate a strategy nobody wrote
+- gen_bv_donchian_fresh_cross_adx_gate_swing_tp_long on EURGBP D1: out_of_universe -- gen_bv_donchian_fresh_cross_adx_gate_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'XAUUSD', 'XAGUSD', 'US500', 'DE40', 'UK100'] and timeframes ['H4', 'D1']; running it on EURGBP D1 would validate a strategy nobody wrote
+- gen_bv_donchian_fresh_cross_none_swing_tp_short on EURGBP H4: out_of_universe -- gen_bv_donchian_fresh_cross_none_swing_tp_short declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'XAUUSD', 'XAGUSD', 'US500', 'DE40', 'UK100'] and timeframes ['H4', 'D1']; running it on EURGBP H4 would validate a strategy nobody wrote
+- gen_bv_donchian_fresh_cross_none_swing_tp_short on EURGBP D1: out_of_universe -- gen_bv_donchian_fresh_cross_none_swing_tp_short declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'XAUUSD', 'XAGUSD', 'US500', 'DE40', 'UK100'] and timeframes ['H4', 'D1']; running it on EURGBP D1 would validate a strategy nobody wrote
+- gen_bv_donchian_fresh_cross_none_time_exit on EURGBP H4: out_of_universe -- gen_bv_donchian_fresh_cross_none_time_exit declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'XAUUSD', 'XAGUSD', 'US500', 'DE40', 'UK100'] and timeframes ['H4', 'D1']; running it on EURGBP H4 would validate a strategy nobody wrote
+- gen_bv_donchian_fresh_cross_none_time_exit on EURGBP D1: out_of_universe -- gen_bv_donchian_fresh_cross_none_time_exit declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'XAUUSD', 'XAGUSD', 'US500', 'DE40', 'UK100'] and timeframes ['H4', 'D1']; running it on EURGBP D1 would validate a strategy nobody wrote
+- gen_bv_donchian_fresh_cross_none_trail on EURGBP H4: out_of_universe -- gen_bv_donchian_fresh_cross_none_trail declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'XAUUSD', 'XAGUSD', 'US500', 'DE40', 'UK100'] and timeframes ['H4', 'D1']; running it on EURGBP H4 would validate a strategy nobody wrote
+- gen_bv_donchian_fresh_cross_none_trail on EURGBP D1: out_of_universe -- gen_bv_donchian_fresh_cross_none_trail declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'XAUUSD', 'XAGUSD', 'US500', 'DE40', 'UK100'] and timeframes ['H4', 'D1']; running it on EURGBP D1 would validate a strategy nobody wrote
+- gen_bv_donchian_fresh_cross_session_swing_tp_short on AUDJPY D1: out_of_universe -- gen_bv_donchian_fresh_cross_session_swing_tp_short declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'XAUUSD', 'XAGUSD', 'US500', 'DE40', 'UK100'] and timeframes ['H4']; running it on AUDJPY D1 would validate a strategy nobody wrote
+- gen_bv_donchian_fresh_cross_session_swing_tp_short on AUDUSD D1: out_of_universe -- gen_bv_donchian_fresh_cross_session_swing_tp_short declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'XAUUSD', 'XAGUSD', 'US500', 'DE40', 'UK100'] and timeframes ['H4']; running it on AUDUSD D1 would validate a strategy nobody wrote
+- gen_bv_donchian_fresh_cross_session_swing_tp_short on DE40 D1: out_of_universe -- gen_bv_donchian_fresh_cross_session_swing_tp_short declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'XAUUSD', 'XAGUSD', 'US500', 'DE40', 'UK100'] and timeframes ['H4']; running it on DE40 D1 would validate a strategy nobody wrote
+- gen_bv_donchian_fresh_cross_session_swing_tp_short on EURGBP H4: out_of_universe -- gen_bv_donchian_fresh_cross_session_swing_tp_short declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'XAUUSD', 'XAGUSD', 'US500', 'DE40', 'UK100'] and timeframes ['H4']; running it on EURGBP H4 would validate a strategy nobody wrote
+- gen_bv_donchian_fresh_cross_session_swing_tp_short on EURGBP D1: out_of_universe -- gen_bv_donchian_fresh_cross_session_swing_tp_short declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'XAUUSD', 'XAGUSD', 'US500', 'DE40', 'UK100'] and timeframes ['H4']; running it on EURGBP D1 would validate a strategy nobody wrote
+- gen_bv_donchian_fresh_cross_session_swing_tp_short on EURJPY D1: out_of_universe -- gen_bv_donchian_fresh_cross_session_swing_tp_short declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'XAUUSD', 'XAGUSD', 'US500', 'DE40', 'UK100'] and timeframes ['H4']; running it on EURJPY D1 would validate a strategy nobody wrote
+- gen_bv_donchian_fresh_cross_session_swing_tp_short on EURUSD D1: out_of_universe -- gen_bv_donchian_fresh_cross_session_swing_tp_short declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'XAUUSD', 'XAGUSD', 'US500', 'DE40', 'UK100'] and timeframes ['H4']; running it on EURUSD D1 would validate a strategy nobody wrote
+- gen_bv_donchian_fresh_cross_session_swing_tp_short on GBPJPY D1: out_of_universe -- gen_bv_donchian_fresh_cross_session_swing_tp_short declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'XAUUSD', 'XAGUSD', 'US500', 'DE40', 'UK100'] and timeframes ['H4']; running it on GBPJPY D1 would validate a strategy nobody wrote
+- gen_bv_donchian_fresh_cross_session_swing_tp_short on GBPUSD D1: out_of_universe -- gen_bv_donchian_fresh_cross_session_swing_tp_short declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'XAUUSD', 'XAGUSD', 'US500', 'DE40', 'UK100'] and timeframes ['H4']; running it on GBPUSD D1 would validate a strategy nobody wrote
+- gen_bv_donchian_fresh_cross_session_swing_tp_short on NZDUSD D1: out_of_universe -- gen_bv_donchian_fresh_cross_session_swing_tp_short declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'XAUUSD', 'XAGUSD', 'US500', 'DE40', 'UK100'] and timeframes ['H4']; running it on NZDUSD D1 would validate a strategy nobody wrote
+- gen_bv_donchian_fresh_cross_session_swing_tp_short on UK100 D1: out_of_universe -- gen_bv_donchian_fresh_cross_session_swing_tp_short declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'XAUUSD', 'XAGUSD', 'US500', 'DE40', 'UK100'] and timeframes ['H4']; running it on UK100 D1 would validate a strategy nobody wrote
+- gen_bv_donchian_fresh_cross_session_swing_tp_short on US500 D1: out_of_universe -- gen_bv_donchian_fresh_cross_session_swing_tp_short declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'XAUUSD', 'XAGUSD', 'US500', 'DE40', 'UK100'] and timeframes ['H4']; running it on US500 D1 would validate a strategy nobody wrote
+- gen_bv_donchian_fresh_cross_session_swing_tp_short on USDCAD D1: out_of_universe -- gen_bv_donchian_fresh_cross_session_swing_tp_short declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'XAUUSD', 'XAGUSD', 'US500', 'DE40', 'UK100'] and timeframes ['H4']; running it on USDCAD D1 would validate a strategy nobody wrote
+- gen_bv_donchian_fresh_cross_session_swing_tp_short on USDCHF D1: out_of_universe -- gen_bv_donchian_fresh_cross_session_swing_tp_short declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'XAUUSD', 'XAGUSD', 'US500', 'DE40', 'UK100'] and timeframes ['H4']; running it on USDCHF D1 would validate a strategy nobody wrote
+- gen_bv_donchian_fresh_cross_session_swing_tp_short on USDJPY D1: out_of_universe -- gen_bv_donchian_fresh_cross_session_swing_tp_short declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'XAUUSD', 'XAGUSD', 'US500', 'DE40', 'UK100'] and timeframes ['H4']; running it on USDJPY D1 would validate a strategy nobody wrote
+- gen_bv_donchian_fresh_cross_session_swing_tp_short on XAGUSD D1: out_of_universe -- gen_bv_donchian_fresh_cross_session_swing_tp_short declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'XAUUSD', 'XAGUSD', 'US500', 'DE40', 'UK100'] and timeframes ['H4']; running it on XAGUSD D1 would validate a strategy nobody wrote
+- gen_bv_donchian_fresh_cross_session_swing_tp_short on XAUUSD D1: out_of_universe -- gen_bv_donchian_fresh_cross_session_swing_tp_short declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'XAUUSD', 'XAGUSD', 'US500', 'DE40', 'UK100'] and timeframes ['H4']; running it on XAUUSD D1 would validate a strategy nobody wrote
+- gen_bv_donchian_fresh_cross_session_time_exit on AUDJPY D1: out_of_universe -- gen_bv_donchian_fresh_cross_session_time_exit declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'XAUUSD', 'XAGUSD', 'US500', 'DE40', 'UK100'] and timeframes ['H4']; running it on AUDJPY D1 would validate a strategy nobody wrote
+- gen_bv_donchian_fresh_cross_session_time_exit on AUDUSD D1: out_of_universe -- gen_bv_donchian_fresh_cross_session_time_exit declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'XAUUSD', 'XAGUSD', 'US500', 'DE40', 'UK100'] and timeframes ['H4']; running it on AUDUSD D1 would validate a strategy nobody wrote
+- gen_bv_donchian_fresh_cross_session_time_exit on DE40 D1: out_of_universe -- gen_bv_donchian_fresh_cross_session_time_exit declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'XAUUSD', 'XAGUSD', 'US500', 'DE40', 'UK100'] and timeframes ['H4']; running it on DE40 D1 would validate a strategy nobody wrote
+- gen_bv_donchian_fresh_cross_session_time_exit on EURGBP H4: out_of_universe -- gen_bv_donchian_fresh_cross_session_time_exit declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'XAUUSD', 'XAGUSD', 'US500', 'DE40', 'UK100'] and timeframes ['H4']; running it on EURGBP H4 would validate a strategy nobody wrote
+- gen_bv_donchian_fresh_cross_session_time_exit on EURGBP D1: out_of_universe -- gen_bv_donchian_fresh_cross_session_time_exit declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'XAUUSD', 'XAGUSD', 'US500', 'DE40', 'UK100'] and timeframes ['H4']; running it on EURGBP D1 would validate a strategy nobody wrote
+- gen_bv_donchian_fresh_cross_session_time_exit on EURJPY D1: out_of_universe -- gen_bv_donchian_fresh_cross_session_time_exit declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'XAUUSD', 'XAGUSD', 'US500', 'DE40', 'UK100'] and timeframes ['H4']; running it on EURJPY D1 would validate a strategy nobody wrote
+- gen_bv_donchian_fresh_cross_session_time_exit on EURUSD D1: out_of_universe -- gen_bv_donchian_fresh_cross_session_time_exit declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'XAUUSD', 'XAGUSD', 'US500', 'DE40', 'UK100'] and timeframes ['H4']; running it on EURUSD D1 would validate a strategy nobody wrote
+- gen_bv_donchian_fresh_cross_session_time_exit on GBPJPY D1: out_of_universe -- gen_bv_donchian_fresh_cross_session_time_exit declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'XAUUSD', 'XAGUSD', 'US500', 'DE40', 'UK100'] and timeframes ['H4']; running it on GBPJPY D1 would validate a strategy nobody wrote
+- gen_bv_donchian_fresh_cross_session_time_exit on GBPUSD D1: out_of_universe -- gen_bv_donchian_fresh_cross_session_time_exit declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'XAUUSD', 'XAGUSD', 'US500', 'DE40', 'UK100'] and timeframes ['H4']; running it on GBPUSD D1 would validate a strategy nobody wrote
+- gen_bv_donchian_fresh_cross_session_time_exit on NZDUSD D1: out_of_universe -- gen_bv_donchian_fresh_cross_session_time_exit declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'XAUUSD', 'XAGUSD', 'US500', 'DE40', 'UK100'] and timeframes ['H4']; running it on NZDUSD D1 would validate a strategy nobody wrote
+- gen_bv_donchian_fresh_cross_session_time_exit on UK100 D1: out_of_universe -- gen_bv_donchian_fresh_cross_session_time_exit declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'XAUUSD', 'XAGUSD', 'US500', 'DE40', 'UK100'] and timeframes ['H4']; running it on UK100 D1 would validate a strategy nobody wrote
+- gen_bv_donchian_fresh_cross_session_time_exit on US500 D1: out_of_universe -- gen_bv_donchian_fresh_cross_session_time_exit declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'XAUUSD', 'XAGUSD', 'US500', 'DE40', 'UK100'] and timeframes ['H4']; running it on US500 D1 would validate a strategy nobody wrote
+- gen_bv_donchian_fresh_cross_session_time_exit on USDCAD D1: out_of_universe -- gen_bv_donchian_fresh_cross_session_time_exit declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'XAUUSD', 'XAGUSD', 'US500', 'DE40', 'UK100'] and timeframes ['H4']; running it on USDCAD D1 would validate a strategy nobody wrote
+- gen_bv_donchian_fresh_cross_session_time_exit on USDCHF D1: out_of_universe -- gen_bv_donchian_fresh_cross_session_time_exit declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'XAUUSD', 'XAGUSD', 'US500', 'DE40', 'UK100'] and timeframes ['H4']; running it on USDCHF D1 would validate a strategy nobody wrote
+- gen_bv_donchian_fresh_cross_session_time_exit on USDJPY D1: out_of_universe -- gen_bv_donchian_fresh_cross_session_time_exit declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'XAUUSD', 'XAGUSD', 'US500', 'DE40', 'UK100'] and timeframes ['H4']; running it on USDJPY D1 would validate a strategy nobody wrote
+- gen_bv_donchian_fresh_cross_session_time_exit on XAGUSD D1: out_of_universe -- gen_bv_donchian_fresh_cross_session_time_exit declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'XAUUSD', 'XAGUSD', 'US500', 'DE40', 'UK100'] and timeframes ['H4']; running it on XAGUSD D1 would validate a strategy nobody wrote
+- gen_bv_donchian_fresh_cross_session_time_exit on XAUUSD D1: out_of_universe -- gen_bv_donchian_fresh_cross_session_time_exit declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'XAUUSD', 'XAGUSD', 'US500', 'DE40', 'UK100'] and timeframes ['H4']; running it on XAUUSD D1 would validate a strategy nobody wrote
+- gen_bv_kc_break_adx_gate_time_exit on EURGBP H4: out_of_universe -- gen_bv_kc_break_adx_gate_time_exit declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'XAUUSD', 'XAGUSD', 'US500', 'DE40', 'UK100'] and timeframes ['H4', 'D1']; running it on EURGBP H4 would validate a strategy nobody wrote
+- gen_bv_kc_break_adx_gate_time_exit on EURGBP D1: out_of_universe -- gen_bv_kc_break_adx_gate_time_exit declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'XAUUSD', 'XAGUSD', 'US500', 'DE40', 'UK100'] and timeframes ['H4', 'D1']; running it on EURGBP D1 would validate a strategy nobody wrote
+- gen_bv_kc_break_none_swing_tp_long on EURGBP H4: out_of_universe -- gen_bv_kc_break_none_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'XAUUSD', 'XAGUSD', 'US500', 'DE40', 'UK100'] and timeframes ['H4', 'D1']; running it on EURGBP H4 would validate a strategy nobody wrote
+- gen_bv_kc_break_none_swing_tp_long on EURGBP D1: out_of_universe -- gen_bv_kc_break_none_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'XAUUSD', 'XAGUSD', 'US500', 'DE40', 'UK100'] and timeframes ['H4', 'D1']; running it on EURGBP D1 would validate a strategy nobody wrote
+- gen_bv_kc_break_none_tp_r on EURGBP H4: out_of_universe -- gen_bv_kc_break_none_tp_r declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'XAUUSD', 'XAGUSD', 'US500', 'DE40', 'UK100'] and timeframes ['H4', 'D1']; running it on EURGBP H4 would validate a strategy nobody wrote
+- gen_bv_kc_break_none_tp_r on EURGBP D1: out_of_universe -- gen_bv_kc_break_none_tp_r declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'XAUUSD', 'XAGUSD', 'US500', 'DE40', 'UK100'] and timeframes ['H4', 'D1']; running it on EURGBP D1 would validate a strategy nobody wrote
+- gen_bv_kc_break_rvol_gate_time_exit on EURGBP H4: out_of_universe -- gen_bv_kc_break_rvol_gate_time_exit declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'XAUUSD', 'XAGUSD', 'US500', 'DE40', 'UK100'] and timeframes ['H4', 'D1']; running it on EURGBP H4 would validate a strategy nobody wrote
+- gen_bv_kc_break_rvol_gate_time_exit on EURGBP D1: out_of_universe -- gen_bv_kc_break_rvol_gate_time_exit declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'XAUUSD', 'XAGUSD', 'US500', 'DE40', 'UK100'] and timeframes ['H4', 'D1']; running it on EURGBP D1 would validate a strategy nobody wrote
+- gen_bv_kc_break_rvol_gate_tp_r on EURGBP H4: out_of_universe -- gen_bv_kc_break_rvol_gate_tp_r declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'XAUUSD', 'XAGUSD', 'US500', 'DE40', 'UK100'] and timeframes ['H4', 'D1']; running it on EURGBP H4 would validate a strategy nobody wrote
+- gen_bv_kc_break_rvol_gate_tp_r on EURGBP D1: out_of_universe -- gen_bv_kc_break_rvol_gate_tp_r declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'XAUUSD', 'XAGUSD', 'US500', 'DE40', 'UK100'] and timeframes ['H4', 'D1']; running it on EURGBP D1 would validate a strategy nobody wrote
+- gen_bv_kc_break_session_trail on AUDJPY D1: out_of_universe -- gen_bv_kc_break_session_trail declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'XAUUSD', 'XAGUSD', 'US500', 'DE40', 'UK100'] and timeframes ['H4']; running it on AUDJPY D1 would validate a strategy nobody wrote
+- gen_bv_kc_break_session_trail on AUDUSD D1: out_of_universe -- gen_bv_kc_break_session_trail declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'XAUUSD', 'XAGUSD', 'US500', 'DE40', 'UK100'] and timeframes ['H4']; running it on AUDUSD D1 would validate a strategy nobody wrote
+- gen_bv_kc_break_session_trail on DE40 D1: out_of_universe -- gen_bv_kc_break_session_trail declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'XAUUSD', 'XAGUSD', 'US500', 'DE40', 'UK100'] and timeframes ['H4']; running it on DE40 D1 would validate a strategy nobody wrote
+- gen_bv_kc_break_session_trail on EURGBP H4: out_of_universe -- gen_bv_kc_break_session_trail declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'XAUUSD', 'XAGUSD', 'US500', 'DE40', 'UK100'] and timeframes ['H4']; running it on EURGBP H4 would validate a strategy nobody wrote
+- gen_bv_kc_break_session_trail on EURGBP D1: out_of_universe -- gen_bv_kc_break_session_trail declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'XAUUSD', 'XAGUSD', 'US500', 'DE40', 'UK100'] and timeframes ['H4']; running it on EURGBP D1 would validate a strategy nobody wrote
+- gen_bv_kc_break_session_trail on EURJPY D1: out_of_universe -- gen_bv_kc_break_session_trail declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'XAUUSD', 'XAGUSD', 'US500', 'DE40', 'UK100'] and timeframes ['H4']; running it on EURJPY D1 would validate a strategy nobody wrote
+- gen_bv_kc_break_session_trail on EURUSD D1: out_of_universe -- gen_bv_kc_break_session_trail declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'XAUUSD', 'XAGUSD', 'US500', 'DE40', 'UK100'] and timeframes ['H4']; running it on EURUSD D1 would validate a strategy nobody wrote
+- gen_bv_kc_break_session_trail on GBPJPY D1: out_of_universe -- gen_bv_kc_break_session_trail declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'XAUUSD', 'XAGUSD', 'US500', 'DE40', 'UK100'] and timeframes ['H4']; running it on GBPJPY D1 would validate a strategy nobody wrote
+- gen_bv_kc_break_session_trail on GBPUSD D1: out_of_universe -- gen_bv_kc_break_session_trail declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'XAUUSD', 'XAGUSD', 'US500', 'DE40', 'UK100'] and timeframes ['H4']; running it on GBPUSD D1 would validate a strategy nobody wrote
+- gen_bv_kc_break_session_trail on NZDUSD D1: out_of_universe -- gen_bv_kc_break_session_trail declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'XAUUSD', 'XAGUSD', 'US500', 'DE40', 'UK100'] and timeframes ['H4']; running it on NZDUSD D1 would validate a strategy nobody wrote
+- gen_bv_kc_break_session_trail on UK100 D1: out_of_universe -- gen_bv_kc_break_session_trail declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'XAUUSD', 'XAGUSD', 'US500', 'DE40', 'UK100'] and timeframes ['H4']; running it on UK100 D1 would validate a strategy nobody wrote
+- gen_bv_kc_break_session_trail on US500 D1: out_of_universe -- gen_bv_kc_break_session_trail declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'XAUUSD', 'XAGUSD', 'US500', 'DE40', 'UK100'] and timeframes ['H4']; running it on US500 D1 would validate a strategy nobody wrote
+- gen_bv_kc_break_session_trail on USDCAD D1: out_of_universe -- gen_bv_kc_break_session_trail declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'XAUUSD', 'XAGUSD', 'US500', 'DE40', 'UK100'] and timeframes ['H4']; running it on USDCAD D1 would validate a strategy nobody wrote
+- gen_bv_kc_break_session_trail on USDCHF D1: out_of_universe -- gen_bv_kc_break_session_trail declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'XAUUSD', 'XAGUSD', 'US500', 'DE40', 'UK100'] and timeframes ['H4']; running it on USDCHF D1 would validate a strategy nobody wrote
+- gen_bv_kc_break_session_trail on USDJPY D1: out_of_universe -- gen_bv_kc_break_session_trail declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'XAUUSD', 'XAGUSD', 'US500', 'DE40', 'UK100'] and timeframes ['H4']; running it on USDJPY D1 would validate a strategy nobody wrote
+- gen_bv_kc_break_session_trail on XAGUSD D1: out_of_universe -- gen_bv_kc_break_session_trail declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'XAUUSD', 'XAGUSD', 'US500', 'DE40', 'UK100'] and timeframes ['H4']; running it on XAGUSD D1 would validate a strategy nobody wrote
+- gen_bv_kc_break_session_trail on XAUUSD D1: out_of_universe -- gen_bv_kc_break_session_trail declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'XAUUSD', 'XAGUSD', 'US500', 'DE40', 'UK100'] and timeframes ['H4']; running it on XAUUSD D1 would validate a strategy nobody wrote
+- gen_ic_kumo_chikou_flip_adx_gate_swing_tp_long on DE40 H4: out_of_universe -- gen_ic_kumo_chikou_flip_adx_gate_swing_tp_long declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4', 'D1']; running it on DE40 H4 would validate a strategy nobody wrote
+- gen_ic_kumo_chikou_flip_adx_gate_swing_tp_long on DE40 D1: out_of_universe -- gen_ic_kumo_chikou_flip_adx_gate_swing_tp_long declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4', 'D1']; running it on DE40 D1 would validate a strategy nobody wrote
+- gen_ic_kumo_chikou_flip_adx_gate_swing_tp_long on EURGBP H4: out_of_universe -- gen_ic_kumo_chikou_flip_adx_gate_swing_tp_long declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4', 'D1']; running it on EURGBP H4 would validate a strategy nobody wrote
+- gen_ic_kumo_chikou_flip_adx_gate_swing_tp_long on EURGBP D1: out_of_universe -- gen_ic_kumo_chikou_flip_adx_gate_swing_tp_long declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4', 'D1']; running it on EURGBP D1 would validate a strategy nobody wrote
+- gen_ic_kumo_chikou_flip_adx_gate_swing_tp_long on NZDUSD H4: out_of_universe -- gen_ic_kumo_chikou_flip_adx_gate_swing_tp_long declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4', 'D1']; running it on NZDUSD H4 would validate a strategy nobody wrote
+- gen_ic_kumo_chikou_flip_adx_gate_swing_tp_long on NZDUSD D1: out_of_universe -- gen_ic_kumo_chikou_flip_adx_gate_swing_tp_long declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4', 'D1']; running it on NZDUSD D1 would validate a strategy nobody wrote
+- gen_ic_kumo_chikou_flip_adx_gate_swing_tp_long on UK100 H4: out_of_universe -- gen_ic_kumo_chikou_flip_adx_gate_swing_tp_long declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4', 'D1']; running it on UK100 H4 would validate a strategy nobody wrote
+- gen_ic_kumo_chikou_flip_adx_gate_swing_tp_long on UK100 D1: out_of_universe -- gen_ic_kumo_chikou_flip_adx_gate_swing_tp_long declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4', 'D1']; running it on UK100 D1 would validate a strategy nobody wrote
+- gen_ic_kumo_chikou_flip_adx_gate_swing_tp_long on USDCAD H4: out_of_universe -- gen_ic_kumo_chikou_flip_adx_gate_swing_tp_long declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4', 'D1']; running it on USDCAD H4 would validate a strategy nobody wrote
+- gen_ic_kumo_chikou_flip_adx_gate_swing_tp_long on USDCAD D1: out_of_universe -- gen_ic_kumo_chikou_flip_adx_gate_swing_tp_long declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4', 'D1']; running it on USDCAD D1 would validate a strategy nobody wrote
+- gen_ic_kumo_chikou_flip_adx_gate_swing_tp_long on USDCHF H4: out_of_universe -- gen_ic_kumo_chikou_flip_adx_gate_swing_tp_long declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4', 'D1']; running it on USDCHF H4 would validate a strategy nobody wrote
+- gen_ic_kumo_chikou_flip_adx_gate_swing_tp_long on USDCHF D1: out_of_universe -- gen_ic_kumo_chikou_flip_adx_gate_swing_tp_long declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4', 'D1']; running it on USDCHF D1 would validate a strategy nobody wrote
+- gen_ic_kumo_chikou_flip_adx_gate_swing_tp_long on XAGUSD H4: out_of_universe -- gen_ic_kumo_chikou_flip_adx_gate_swing_tp_long declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4', 'D1']; running it on XAGUSD H4 would validate a strategy nobody wrote
+- gen_ic_kumo_chikou_flip_adx_gate_swing_tp_long on XAGUSD D1: out_of_universe -- gen_ic_kumo_chikou_flip_adx_gate_swing_tp_long declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4', 'D1']; running it on XAGUSD D1 would validate a strategy nobody wrote
+- gen_ic_kumo_chikou_flip_none_swing_tp_short on DE40 H4: out_of_universe -- gen_ic_kumo_chikou_flip_none_swing_tp_short declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4', 'D1']; running it on DE40 H4 would validate a strategy nobody wrote
+- gen_ic_kumo_chikou_flip_none_swing_tp_short on DE40 D1: out_of_universe -- gen_ic_kumo_chikou_flip_none_swing_tp_short declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4', 'D1']; running it on DE40 D1 would validate a strategy nobody wrote
+- gen_ic_kumo_chikou_flip_none_swing_tp_short on EURGBP H4: out_of_universe -- gen_ic_kumo_chikou_flip_none_swing_tp_short declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4', 'D1']; running it on EURGBP H4 would validate a strategy nobody wrote
+- gen_ic_kumo_chikou_flip_none_swing_tp_short on EURGBP D1: out_of_universe -- gen_ic_kumo_chikou_flip_none_swing_tp_short declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4', 'D1']; running it on EURGBP D1 would validate a strategy nobody wrote
+- gen_ic_kumo_chikou_flip_none_swing_tp_short on NZDUSD H4: out_of_universe -- gen_ic_kumo_chikou_flip_none_swing_tp_short declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4', 'D1']; running it on NZDUSD H4 would validate a strategy nobody wrote
+- gen_ic_kumo_chikou_flip_none_swing_tp_short on NZDUSD D1: out_of_universe -- gen_ic_kumo_chikou_flip_none_swing_tp_short declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4', 'D1']; running it on NZDUSD D1 would validate a strategy nobody wrote
+- gen_ic_kumo_chikou_flip_none_swing_tp_short on UK100 H4: out_of_universe -- gen_ic_kumo_chikou_flip_none_swing_tp_short declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4', 'D1']; running it on UK100 H4 would validate a strategy nobody wrote
+- gen_ic_kumo_chikou_flip_none_swing_tp_short on UK100 D1: out_of_universe -- gen_ic_kumo_chikou_flip_none_swing_tp_short declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4', 'D1']; running it on UK100 D1 would validate a strategy nobody wrote
+- gen_ic_kumo_chikou_flip_none_swing_tp_short on USDCAD H4: out_of_universe -- gen_ic_kumo_chikou_flip_none_swing_tp_short declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4', 'D1']; running it on USDCAD H4 would validate a strategy nobody wrote
+- gen_ic_kumo_chikou_flip_none_swing_tp_short on USDCAD D1: out_of_universe -- gen_ic_kumo_chikou_flip_none_swing_tp_short declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4', 'D1']; running it on USDCAD D1 would validate a strategy nobody wrote
+- gen_ic_kumo_chikou_flip_none_swing_tp_short on USDCHF H4: out_of_universe -- gen_ic_kumo_chikou_flip_none_swing_tp_short declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4', 'D1']; running it on USDCHF H4 would validate a strategy nobody wrote
+- gen_ic_kumo_chikou_flip_none_swing_tp_short on USDCHF D1: out_of_universe -- gen_ic_kumo_chikou_flip_none_swing_tp_short declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4', 'D1']; running it on USDCHF D1 would validate a strategy nobody wrote
+- gen_ic_kumo_chikou_flip_none_swing_tp_short on XAGUSD H4: out_of_universe -- gen_ic_kumo_chikou_flip_none_swing_tp_short declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4', 'D1']; running it on XAGUSD H4 would validate a strategy nobody wrote
+- gen_ic_kumo_chikou_flip_none_swing_tp_short on XAGUSD D1: out_of_universe -- gen_ic_kumo_chikou_flip_none_swing_tp_short declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4', 'D1']; running it on XAGUSD D1 would validate a strategy nobody wrote
+- gen_ic_kumo_chikou_flip_rvol_gate_swing_tp_long on DE40 H4: out_of_universe -- gen_ic_kumo_chikou_flip_rvol_gate_swing_tp_long declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4', 'D1']; running it on DE40 H4 would validate a strategy nobody wrote
+- gen_ic_kumo_chikou_flip_rvol_gate_swing_tp_long on DE40 D1: out_of_universe -- gen_ic_kumo_chikou_flip_rvol_gate_swing_tp_long declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4', 'D1']; running it on DE40 D1 would validate a strategy nobody wrote
+- gen_ic_kumo_chikou_flip_rvol_gate_swing_tp_long on EURGBP H4: out_of_universe -- gen_ic_kumo_chikou_flip_rvol_gate_swing_tp_long declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4', 'D1']; running it on EURGBP H4 would validate a strategy nobody wrote
+- gen_ic_kumo_chikou_flip_rvol_gate_swing_tp_long on EURGBP D1: out_of_universe -- gen_ic_kumo_chikou_flip_rvol_gate_swing_tp_long declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4', 'D1']; running it on EURGBP D1 would validate a strategy nobody wrote
+- gen_ic_kumo_chikou_flip_rvol_gate_swing_tp_long on NZDUSD H4: out_of_universe -- gen_ic_kumo_chikou_flip_rvol_gate_swing_tp_long declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4', 'D1']; running it on NZDUSD H4 would validate a strategy nobody wrote
+- gen_ic_kumo_chikou_flip_rvol_gate_swing_tp_long on NZDUSD D1: out_of_universe -- gen_ic_kumo_chikou_flip_rvol_gate_swing_tp_long declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4', 'D1']; running it on NZDUSD D1 would validate a strategy nobody wrote
+- gen_ic_kumo_chikou_flip_rvol_gate_swing_tp_long on UK100 H4: out_of_universe -- gen_ic_kumo_chikou_flip_rvol_gate_swing_tp_long declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4', 'D1']; running it on UK100 H4 would validate a strategy nobody wrote
+- gen_ic_kumo_chikou_flip_rvol_gate_swing_tp_long on UK100 D1: out_of_universe -- gen_ic_kumo_chikou_flip_rvol_gate_swing_tp_long declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4', 'D1']; running it on UK100 D1 would validate a strategy nobody wrote
+- gen_ic_kumo_chikou_flip_rvol_gate_swing_tp_long on USDCAD H4: out_of_universe -- gen_ic_kumo_chikou_flip_rvol_gate_swing_tp_long declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4', 'D1']; running it on USDCAD H4 would validate a strategy nobody wrote
+- gen_ic_kumo_chikou_flip_rvol_gate_swing_tp_long on USDCAD D1: out_of_universe -- gen_ic_kumo_chikou_flip_rvol_gate_swing_tp_long declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4', 'D1']; running it on USDCAD D1 would validate a strategy nobody wrote
+- gen_ic_kumo_chikou_flip_rvol_gate_swing_tp_long on USDCHF H4: out_of_universe -- gen_ic_kumo_chikou_flip_rvol_gate_swing_tp_long declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4', 'D1']; running it on USDCHF H4 would validate a strategy nobody wrote
+- gen_ic_kumo_chikou_flip_rvol_gate_swing_tp_long on USDCHF D1: out_of_universe -- gen_ic_kumo_chikou_flip_rvol_gate_swing_tp_long declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4', 'D1']; running it on USDCHF D1 would validate a strategy nobody wrote
+- gen_ic_kumo_chikou_flip_rvol_gate_swing_tp_long on XAGUSD H4: out_of_universe -- gen_ic_kumo_chikou_flip_rvol_gate_swing_tp_long declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4', 'D1']; running it on XAGUSD H4 would validate a strategy nobody wrote
+- gen_ic_kumo_chikou_flip_rvol_gate_swing_tp_long on XAGUSD D1: out_of_universe -- gen_ic_kumo_chikou_flip_rvol_gate_swing_tp_long declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4', 'D1']; running it on XAGUSD D1 would validate a strategy nobody wrote
+- gen_ic_kumo_chikou_flip_rvol_gate_time_exit on DE40 H4: out_of_universe -- gen_ic_kumo_chikou_flip_rvol_gate_time_exit declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4', 'D1']; running it on DE40 H4 would validate a strategy nobody wrote
+- gen_ic_kumo_chikou_flip_rvol_gate_time_exit on DE40 D1: out_of_universe -- gen_ic_kumo_chikou_flip_rvol_gate_time_exit declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4', 'D1']; running it on DE40 D1 would validate a strategy nobody wrote
+- gen_ic_kumo_chikou_flip_rvol_gate_time_exit on EURGBP H4: out_of_universe -- gen_ic_kumo_chikou_flip_rvol_gate_time_exit declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4', 'D1']; running it on EURGBP H4 would validate a strategy nobody wrote
+- gen_ic_kumo_chikou_flip_rvol_gate_time_exit on EURGBP D1: out_of_universe -- gen_ic_kumo_chikou_flip_rvol_gate_time_exit declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4', 'D1']; running it on EURGBP D1 would validate a strategy nobody wrote
+- gen_ic_kumo_chikou_flip_rvol_gate_time_exit on NZDUSD H4: out_of_universe -- gen_ic_kumo_chikou_flip_rvol_gate_time_exit declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4', 'D1']; running it on NZDUSD H4 would validate a strategy nobody wrote
+- gen_ic_kumo_chikou_flip_rvol_gate_time_exit on NZDUSD D1: out_of_universe -- gen_ic_kumo_chikou_flip_rvol_gate_time_exit declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4', 'D1']; running it on NZDUSD D1 would validate a strategy nobody wrote
+- gen_ic_kumo_chikou_flip_rvol_gate_time_exit on UK100 H4: out_of_universe -- gen_ic_kumo_chikou_flip_rvol_gate_time_exit declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4', 'D1']; running it on UK100 H4 would validate a strategy nobody wrote
+- gen_ic_kumo_chikou_flip_rvol_gate_time_exit on UK100 D1: out_of_universe -- gen_ic_kumo_chikou_flip_rvol_gate_time_exit declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4', 'D1']; running it on UK100 D1 would validate a strategy nobody wrote
+- gen_ic_kumo_chikou_flip_rvol_gate_time_exit on USDCAD H4: out_of_universe -- gen_ic_kumo_chikou_flip_rvol_gate_time_exit declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4', 'D1']; running it on USDCAD H4 would validate a strategy nobody wrote
+- gen_ic_kumo_chikou_flip_rvol_gate_time_exit on USDCAD D1: out_of_universe -- gen_ic_kumo_chikou_flip_rvol_gate_time_exit declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4', 'D1']; running it on USDCAD D1 would validate a strategy nobody wrote
+- gen_ic_kumo_chikou_flip_rvol_gate_time_exit on USDCHF H4: out_of_universe -- gen_ic_kumo_chikou_flip_rvol_gate_time_exit declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4', 'D1']; running it on USDCHF H4 would validate a strategy nobody wrote
+- gen_ic_kumo_chikou_flip_rvol_gate_time_exit on USDCHF D1: out_of_universe -- gen_ic_kumo_chikou_flip_rvol_gate_time_exit declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4', 'D1']; running it on USDCHF D1 would validate a strategy nobody wrote
+- gen_ic_kumo_chikou_flip_rvol_gate_time_exit on XAGUSD H4: out_of_universe -- gen_ic_kumo_chikou_flip_rvol_gate_time_exit declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4', 'D1']; running it on XAGUSD H4 would validate a strategy nobody wrote
+- gen_ic_kumo_chikou_flip_rvol_gate_time_exit on XAGUSD D1: out_of_universe -- gen_ic_kumo_chikou_flip_rvol_gate_time_exit declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4', 'D1']; running it on XAGUSD D1 would validate a strategy nobody wrote
+- gen_ic_kumo_chikou_flip_session_time_exit on AUDJPY D1: out_of_universe -- gen_ic_kumo_chikou_flip_session_time_exit declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4']; running it on AUDJPY D1 would validate a strategy nobody wrote
+- gen_ic_kumo_chikou_flip_session_time_exit on AUDUSD D1: out_of_universe -- gen_ic_kumo_chikou_flip_session_time_exit declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4']; running it on AUDUSD D1 would validate a strategy nobody wrote
+- gen_ic_kumo_chikou_flip_session_time_exit on DE40 H4: out_of_universe -- gen_ic_kumo_chikou_flip_session_time_exit declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4']; running it on DE40 H4 would validate a strategy nobody wrote
+- gen_ic_kumo_chikou_flip_session_time_exit on DE40 D1: out_of_universe -- gen_ic_kumo_chikou_flip_session_time_exit declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4']; running it on DE40 D1 would validate a strategy nobody wrote
+- gen_ic_kumo_chikou_flip_session_time_exit on EURGBP H4: out_of_universe -- gen_ic_kumo_chikou_flip_session_time_exit declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4']; running it on EURGBP H4 would validate a strategy nobody wrote
+- gen_ic_kumo_chikou_flip_session_time_exit on EURGBP D1: out_of_universe -- gen_ic_kumo_chikou_flip_session_time_exit declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4']; running it on EURGBP D1 would validate a strategy nobody wrote
+- gen_ic_kumo_chikou_flip_session_time_exit on EURJPY D1: out_of_universe -- gen_ic_kumo_chikou_flip_session_time_exit declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4']; running it on EURJPY D1 would validate a strategy nobody wrote
+- gen_ic_kumo_chikou_flip_session_time_exit on EURUSD D1: out_of_universe -- gen_ic_kumo_chikou_flip_session_time_exit declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4']; running it on EURUSD D1 would validate a strategy nobody wrote
+- gen_ic_kumo_chikou_flip_session_time_exit on GBPJPY D1: out_of_universe -- gen_ic_kumo_chikou_flip_session_time_exit declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4']; running it on GBPJPY D1 would validate a strategy nobody wrote
+- gen_ic_kumo_chikou_flip_session_time_exit on GBPUSD D1: out_of_universe -- gen_ic_kumo_chikou_flip_session_time_exit declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4']; running it on GBPUSD D1 would validate a strategy nobody wrote
+- gen_ic_kumo_chikou_flip_session_time_exit on NZDUSD H4: out_of_universe -- gen_ic_kumo_chikou_flip_session_time_exit declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4']; running it on NZDUSD H4 would validate a strategy nobody wrote
+- gen_ic_kumo_chikou_flip_session_time_exit on NZDUSD D1: out_of_universe -- gen_ic_kumo_chikou_flip_session_time_exit declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4']; running it on NZDUSD D1 would validate a strategy nobody wrote
+- gen_ic_kumo_chikou_flip_session_time_exit on UK100 H4: out_of_universe -- gen_ic_kumo_chikou_flip_session_time_exit declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4']; running it on UK100 H4 would validate a strategy nobody wrote
+- gen_ic_kumo_chikou_flip_session_time_exit on UK100 D1: out_of_universe -- gen_ic_kumo_chikou_flip_session_time_exit declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4']; running it on UK100 D1 would validate a strategy nobody wrote
+- gen_ic_kumo_chikou_flip_session_time_exit on US500 D1: out_of_universe -- gen_ic_kumo_chikou_flip_session_time_exit declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4']; running it on US500 D1 would validate a strategy nobody wrote
+- gen_ic_kumo_chikou_flip_session_time_exit on USDCAD H4: out_of_universe -- gen_ic_kumo_chikou_flip_session_time_exit declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4']; running it on USDCAD H4 would validate a strategy nobody wrote
+- gen_ic_kumo_chikou_flip_session_time_exit on USDCAD D1: out_of_universe -- gen_ic_kumo_chikou_flip_session_time_exit declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4']; running it on USDCAD D1 would validate a strategy nobody wrote
+- gen_ic_kumo_chikou_flip_session_time_exit on USDCHF H4: out_of_universe -- gen_ic_kumo_chikou_flip_session_time_exit declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4']; running it on USDCHF H4 would validate a strategy nobody wrote
+- gen_ic_kumo_chikou_flip_session_time_exit on USDCHF D1: out_of_universe -- gen_ic_kumo_chikou_flip_session_time_exit declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4']; running it on USDCHF D1 would validate a strategy nobody wrote
+- gen_ic_kumo_chikou_flip_session_time_exit on USDJPY D1: out_of_universe -- gen_ic_kumo_chikou_flip_session_time_exit declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4']; running it on USDJPY D1 would validate a strategy nobody wrote
+- gen_ic_kumo_chikou_flip_session_time_exit on XAGUSD H4: out_of_universe -- gen_ic_kumo_chikou_flip_session_time_exit declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4']; running it on XAGUSD H4 would validate a strategy nobody wrote
+- gen_ic_kumo_chikou_flip_session_time_exit on XAGUSD D1: out_of_universe -- gen_ic_kumo_chikou_flip_session_time_exit declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4']; running it on XAGUSD D1 would validate a strategy nobody wrote
+- gen_ic_kumo_chikou_flip_session_time_exit on XAUUSD D1: out_of_universe -- gen_ic_kumo_chikou_flip_session_time_exit declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4']; running it on XAUUSD D1 would validate a strategy nobody wrote
+- gen_ic_kumo_kijun_cross_adx_gate_swing_tp_long on DE40 H4: out_of_universe -- gen_ic_kumo_kijun_cross_adx_gate_swing_tp_long declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4', 'D1']; running it on DE40 H4 would validate a strategy nobody wrote
+- gen_ic_kumo_kijun_cross_adx_gate_swing_tp_long on DE40 D1: out_of_universe -- gen_ic_kumo_kijun_cross_adx_gate_swing_tp_long declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4', 'D1']; running it on DE40 D1 would validate a strategy nobody wrote
+- gen_ic_kumo_kijun_cross_adx_gate_swing_tp_long on EURGBP H4: out_of_universe -- gen_ic_kumo_kijun_cross_adx_gate_swing_tp_long declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4', 'D1']; running it on EURGBP H4 would validate a strategy nobody wrote
+- gen_ic_kumo_kijun_cross_adx_gate_swing_tp_long on EURGBP D1: out_of_universe -- gen_ic_kumo_kijun_cross_adx_gate_swing_tp_long declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4', 'D1']; running it on EURGBP D1 would validate a strategy nobody wrote
+- gen_ic_kumo_kijun_cross_adx_gate_swing_tp_long on NZDUSD H4: out_of_universe -- gen_ic_kumo_kijun_cross_adx_gate_swing_tp_long declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4', 'D1']; running it on NZDUSD H4 would validate a strategy nobody wrote
+- gen_ic_kumo_kijun_cross_adx_gate_swing_tp_long on NZDUSD D1: out_of_universe -- gen_ic_kumo_kijun_cross_adx_gate_swing_tp_long declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4', 'D1']; running it on NZDUSD D1 would validate a strategy nobody wrote
+- gen_ic_kumo_kijun_cross_adx_gate_swing_tp_long on UK100 H4: out_of_universe -- gen_ic_kumo_kijun_cross_adx_gate_swing_tp_long declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4', 'D1']; running it on UK100 H4 would validate a strategy nobody wrote
+- gen_ic_kumo_kijun_cross_adx_gate_swing_tp_long on UK100 D1: out_of_universe -- gen_ic_kumo_kijun_cross_adx_gate_swing_tp_long declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4', 'D1']; running it on UK100 D1 would validate a strategy nobody wrote
+- gen_ic_kumo_kijun_cross_adx_gate_swing_tp_long on USDCAD H4: out_of_universe -- gen_ic_kumo_kijun_cross_adx_gate_swing_tp_long declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4', 'D1']; running it on USDCAD H4 would validate a strategy nobody wrote
+- gen_ic_kumo_kijun_cross_adx_gate_swing_tp_long on USDCAD D1: out_of_universe -- gen_ic_kumo_kijun_cross_adx_gate_swing_tp_long declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4', 'D1']; running it on USDCAD D1 would validate a strategy nobody wrote
+- gen_ic_kumo_kijun_cross_adx_gate_swing_tp_long on USDCHF H4: out_of_universe -- gen_ic_kumo_kijun_cross_adx_gate_swing_tp_long declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4', 'D1']; running it on USDCHF H4 would validate a strategy nobody wrote
+- gen_ic_kumo_kijun_cross_adx_gate_swing_tp_long on USDCHF D1: out_of_universe -- gen_ic_kumo_kijun_cross_adx_gate_swing_tp_long declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4', 'D1']; running it on USDCHF D1 would validate a strategy nobody wrote
+- gen_ic_kumo_kijun_cross_adx_gate_swing_tp_long on XAGUSD H4: out_of_universe -- gen_ic_kumo_kijun_cross_adx_gate_swing_tp_long declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4', 'D1']; running it on XAGUSD H4 would validate a strategy nobody wrote
+- gen_ic_kumo_kijun_cross_adx_gate_swing_tp_long on XAGUSD D1: out_of_universe -- gen_ic_kumo_kijun_cross_adx_gate_swing_tp_long declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4', 'D1']; running it on XAGUSD D1 would validate a strategy nobody wrote
+- gen_ic_kumo_kijun_cross_adx_gate_tp_r on DE40 H4: out_of_universe -- gen_ic_kumo_kijun_cross_adx_gate_tp_r declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4', 'D1']; running it on DE40 H4 would validate a strategy nobody wrote
+- gen_ic_kumo_kijun_cross_adx_gate_tp_r on DE40 D1: out_of_universe -- gen_ic_kumo_kijun_cross_adx_gate_tp_r declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4', 'D1']; running it on DE40 D1 would validate a strategy nobody wrote
+- gen_ic_kumo_kijun_cross_adx_gate_tp_r on EURGBP H4: out_of_universe -- gen_ic_kumo_kijun_cross_adx_gate_tp_r declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4', 'D1']; running it on EURGBP H4 would validate a strategy nobody wrote
+- gen_ic_kumo_kijun_cross_adx_gate_tp_r on EURGBP D1: out_of_universe -- gen_ic_kumo_kijun_cross_adx_gate_tp_r declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4', 'D1']; running it on EURGBP D1 would validate a strategy nobody wrote
+- gen_ic_kumo_kijun_cross_adx_gate_tp_r on NZDUSD H4: out_of_universe -- gen_ic_kumo_kijun_cross_adx_gate_tp_r declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4', 'D1']; running it on NZDUSD H4 would validate a strategy nobody wrote
+- gen_ic_kumo_kijun_cross_adx_gate_tp_r on NZDUSD D1: out_of_universe -- gen_ic_kumo_kijun_cross_adx_gate_tp_r declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4', 'D1']; running it on NZDUSD D1 would validate a strategy nobody wrote
+- gen_ic_kumo_kijun_cross_adx_gate_tp_r on UK100 H4: out_of_universe -- gen_ic_kumo_kijun_cross_adx_gate_tp_r declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4', 'D1']; running it on UK100 H4 would validate a strategy nobody wrote
+- gen_ic_kumo_kijun_cross_adx_gate_tp_r on UK100 D1: out_of_universe -- gen_ic_kumo_kijun_cross_adx_gate_tp_r declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4', 'D1']; running it on UK100 D1 would validate a strategy nobody wrote
+- gen_ic_kumo_kijun_cross_adx_gate_tp_r on USDCAD H4: out_of_universe -- gen_ic_kumo_kijun_cross_adx_gate_tp_r declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4', 'D1']; running it on USDCAD H4 would validate a strategy nobody wrote
+- gen_ic_kumo_kijun_cross_adx_gate_tp_r on USDCAD D1: out_of_universe -- gen_ic_kumo_kijun_cross_adx_gate_tp_r declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4', 'D1']; running it on USDCAD D1 would validate a strategy nobody wrote
+- gen_ic_kumo_kijun_cross_adx_gate_tp_r on USDCHF H4: out_of_universe -- gen_ic_kumo_kijun_cross_adx_gate_tp_r declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4', 'D1']; running it on USDCHF H4 would validate a strategy nobody wrote
+- gen_ic_kumo_kijun_cross_adx_gate_tp_r on USDCHF D1: out_of_universe -- gen_ic_kumo_kijun_cross_adx_gate_tp_r declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4', 'D1']; running it on USDCHF D1 would validate a strategy nobody wrote
+- gen_ic_kumo_kijun_cross_adx_gate_tp_r on XAGUSD H4: out_of_universe -- gen_ic_kumo_kijun_cross_adx_gate_tp_r declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4', 'D1']; running it on XAGUSD H4 would validate a strategy nobody wrote
+- gen_ic_kumo_kijun_cross_adx_gate_tp_r on XAGUSD D1: out_of_universe -- gen_ic_kumo_kijun_cross_adx_gate_tp_r declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4', 'D1']; running it on XAGUSD D1 would validate a strategy nobody wrote
+- gen_ic_kumo_kijun_cross_none_swing_tp_short on DE40 H4: out_of_universe -- gen_ic_kumo_kijun_cross_none_swing_tp_short declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4', 'D1']; running it on DE40 H4 would validate a strategy nobody wrote
+- gen_ic_kumo_kijun_cross_none_swing_tp_short on DE40 D1: out_of_universe -- gen_ic_kumo_kijun_cross_none_swing_tp_short declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4', 'D1']; running it on DE40 D1 would validate a strategy nobody wrote
+- gen_ic_kumo_kijun_cross_none_swing_tp_short on EURGBP H4: out_of_universe -- gen_ic_kumo_kijun_cross_none_swing_tp_short declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4', 'D1']; running it on EURGBP H4 would validate a strategy nobody wrote
+- gen_ic_kumo_kijun_cross_none_swing_tp_short on EURGBP D1: out_of_universe -- gen_ic_kumo_kijun_cross_none_swing_tp_short declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4', 'D1']; running it on EURGBP D1 would validate a strategy nobody wrote
+- gen_ic_kumo_kijun_cross_none_swing_tp_short on NZDUSD H4: out_of_universe -- gen_ic_kumo_kijun_cross_none_swing_tp_short declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4', 'D1']; running it on NZDUSD H4 would validate a strategy nobody wrote
+- gen_ic_kumo_kijun_cross_none_swing_tp_short on NZDUSD D1: out_of_universe -- gen_ic_kumo_kijun_cross_none_swing_tp_short declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4', 'D1']; running it on NZDUSD D1 would validate a strategy nobody wrote
+- gen_ic_kumo_kijun_cross_none_swing_tp_short on UK100 H4: out_of_universe -- gen_ic_kumo_kijun_cross_none_swing_tp_short declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4', 'D1']; running it on UK100 H4 would validate a strategy nobody wrote
+- gen_ic_kumo_kijun_cross_none_swing_tp_short on UK100 D1: out_of_universe -- gen_ic_kumo_kijun_cross_none_swing_tp_short declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4', 'D1']; running it on UK100 D1 would validate a strategy nobody wrote
+- gen_ic_kumo_kijun_cross_none_swing_tp_short on USDCAD H4: out_of_universe -- gen_ic_kumo_kijun_cross_none_swing_tp_short declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4', 'D1']; running it on USDCAD H4 would validate a strategy nobody wrote
+- gen_ic_kumo_kijun_cross_none_swing_tp_short on USDCAD D1: out_of_universe -- gen_ic_kumo_kijun_cross_none_swing_tp_short declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4', 'D1']; running it on USDCAD D1 would validate a strategy nobody wrote
+- gen_ic_kumo_kijun_cross_none_swing_tp_short on USDCHF H4: out_of_universe -- gen_ic_kumo_kijun_cross_none_swing_tp_short declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4', 'D1']; running it on USDCHF H4 would validate a strategy nobody wrote
+- gen_ic_kumo_kijun_cross_none_swing_tp_short on USDCHF D1: out_of_universe -- gen_ic_kumo_kijun_cross_none_swing_tp_short declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4', 'D1']; running it on USDCHF D1 would validate a strategy nobody wrote
+- gen_ic_kumo_kijun_cross_none_swing_tp_short on XAGUSD H4: out_of_universe -- gen_ic_kumo_kijun_cross_none_swing_tp_short declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4', 'D1']; running it on XAGUSD H4 would validate a strategy nobody wrote
+- gen_ic_kumo_kijun_cross_none_swing_tp_short on XAGUSD D1: out_of_universe -- gen_ic_kumo_kijun_cross_none_swing_tp_short declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4', 'D1']; running it on XAGUSD D1 would validate a strategy nobody wrote
+- gen_ic_kumo_kijun_cross_rvol_gate_trail on DE40 H4: out_of_universe -- gen_ic_kumo_kijun_cross_rvol_gate_trail declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4', 'D1']; running it on DE40 H4 would validate a strategy nobody wrote
+- gen_ic_kumo_kijun_cross_rvol_gate_trail on DE40 D1: out_of_universe -- gen_ic_kumo_kijun_cross_rvol_gate_trail declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4', 'D1']; running it on DE40 D1 would validate a strategy nobody wrote
+- gen_ic_kumo_kijun_cross_rvol_gate_trail on EURGBP H4: out_of_universe -- gen_ic_kumo_kijun_cross_rvol_gate_trail declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4', 'D1']; running it on EURGBP H4 would validate a strategy nobody wrote
+- gen_ic_kumo_kijun_cross_rvol_gate_trail on EURGBP D1: out_of_universe -- gen_ic_kumo_kijun_cross_rvol_gate_trail declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4', 'D1']; running it on EURGBP D1 would validate a strategy nobody wrote
+- gen_ic_kumo_kijun_cross_rvol_gate_trail on NZDUSD H4: out_of_universe -- gen_ic_kumo_kijun_cross_rvol_gate_trail declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4', 'D1']; running it on NZDUSD H4 would validate a strategy nobody wrote
+- gen_ic_kumo_kijun_cross_rvol_gate_trail on NZDUSD D1: out_of_universe -- gen_ic_kumo_kijun_cross_rvol_gate_trail declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4', 'D1']; running it on NZDUSD D1 would validate a strategy nobody wrote
+- gen_ic_kumo_kijun_cross_rvol_gate_trail on UK100 H4: out_of_universe -- gen_ic_kumo_kijun_cross_rvol_gate_trail declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4', 'D1']; running it on UK100 H4 would validate a strategy nobody wrote
+- gen_ic_kumo_kijun_cross_rvol_gate_trail on UK100 D1: out_of_universe -- gen_ic_kumo_kijun_cross_rvol_gate_trail declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4', 'D1']; running it on UK100 D1 would validate a strategy nobody wrote
+- gen_ic_kumo_kijun_cross_rvol_gate_trail on USDCAD H4: out_of_universe -- gen_ic_kumo_kijun_cross_rvol_gate_trail declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4', 'D1']; running it on USDCAD H4 would validate a strategy nobody wrote
+- gen_ic_kumo_kijun_cross_rvol_gate_trail on USDCAD D1: out_of_universe -- gen_ic_kumo_kijun_cross_rvol_gate_trail declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4', 'D1']; running it on USDCAD D1 would validate a strategy nobody wrote
+- gen_ic_kumo_kijun_cross_rvol_gate_trail on USDCHF H4: out_of_universe -- gen_ic_kumo_kijun_cross_rvol_gate_trail declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4', 'D1']; running it on USDCHF H4 would validate a strategy nobody wrote
+- gen_ic_kumo_kijun_cross_rvol_gate_trail on USDCHF D1: out_of_universe -- gen_ic_kumo_kijun_cross_rvol_gate_trail declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4', 'D1']; running it on USDCHF D1 would validate a strategy nobody wrote
+- gen_ic_kumo_kijun_cross_rvol_gate_trail on XAGUSD H4: out_of_universe -- gen_ic_kumo_kijun_cross_rvol_gate_trail declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4', 'D1']; running it on XAGUSD H4 would validate a strategy nobody wrote
+- gen_ic_kumo_kijun_cross_rvol_gate_trail on XAGUSD D1: out_of_universe -- gen_ic_kumo_kijun_cross_rvol_gate_trail declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4', 'D1']; running it on XAGUSD D1 would validate a strategy nobody wrote
+- gen_ic_kumo_kijun_cross_session_tp_r on AUDJPY D1: out_of_universe -- gen_ic_kumo_kijun_cross_session_tp_r declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4']; running it on AUDJPY D1 would validate a strategy nobody wrote
+- gen_ic_kumo_kijun_cross_session_tp_r on AUDUSD D1: out_of_universe -- gen_ic_kumo_kijun_cross_session_tp_r declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4']; running it on AUDUSD D1 would validate a strategy nobody wrote
+- gen_ic_kumo_kijun_cross_session_tp_r on DE40 H4: out_of_universe -- gen_ic_kumo_kijun_cross_session_tp_r declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4']; running it on DE40 H4 would validate a strategy nobody wrote
+- gen_ic_kumo_kijun_cross_session_tp_r on DE40 D1: out_of_universe -- gen_ic_kumo_kijun_cross_session_tp_r declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4']; running it on DE40 D1 would validate a strategy nobody wrote
+- gen_ic_kumo_kijun_cross_session_tp_r on EURGBP H4: out_of_universe -- gen_ic_kumo_kijun_cross_session_tp_r declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4']; running it on EURGBP H4 would validate a strategy nobody wrote
+- gen_ic_kumo_kijun_cross_session_tp_r on EURGBP D1: out_of_universe -- gen_ic_kumo_kijun_cross_session_tp_r declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4']; running it on EURGBP D1 would validate a strategy nobody wrote
+- gen_ic_kumo_kijun_cross_session_tp_r on EURJPY D1: out_of_universe -- gen_ic_kumo_kijun_cross_session_tp_r declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4']; running it on EURJPY D1 would validate a strategy nobody wrote
+- gen_ic_kumo_kijun_cross_session_tp_r on EURUSD D1: out_of_universe -- gen_ic_kumo_kijun_cross_session_tp_r declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4']; running it on EURUSD D1 would validate a strategy nobody wrote
+- gen_ic_kumo_kijun_cross_session_tp_r on GBPJPY D1: out_of_universe -- gen_ic_kumo_kijun_cross_session_tp_r declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4']; running it on GBPJPY D1 would validate a strategy nobody wrote
+- gen_ic_kumo_kijun_cross_session_tp_r on GBPUSD D1: out_of_universe -- gen_ic_kumo_kijun_cross_session_tp_r declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4']; running it on GBPUSD D1 would validate a strategy nobody wrote
+- gen_ic_kumo_kijun_cross_session_tp_r on NZDUSD H4: out_of_universe -- gen_ic_kumo_kijun_cross_session_tp_r declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4']; running it on NZDUSD H4 would validate a strategy nobody wrote
+- gen_ic_kumo_kijun_cross_session_tp_r on NZDUSD D1: out_of_universe -- gen_ic_kumo_kijun_cross_session_tp_r declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4']; running it on NZDUSD D1 would validate a strategy nobody wrote
+- gen_ic_kumo_kijun_cross_session_tp_r on UK100 H4: out_of_universe -- gen_ic_kumo_kijun_cross_session_tp_r declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4']; running it on UK100 H4 would validate a strategy nobody wrote
+- gen_ic_kumo_kijun_cross_session_tp_r on UK100 D1: out_of_universe -- gen_ic_kumo_kijun_cross_session_tp_r declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4']; running it on UK100 D1 would validate a strategy nobody wrote
+- gen_ic_kumo_kijun_cross_session_tp_r on US500 D1: out_of_universe -- gen_ic_kumo_kijun_cross_session_tp_r declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4']; running it on US500 D1 would validate a strategy nobody wrote
+- gen_ic_kumo_kijun_cross_session_tp_r on USDCAD H4: out_of_universe -- gen_ic_kumo_kijun_cross_session_tp_r declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4']; running it on USDCAD H4 would validate a strategy nobody wrote
+- gen_ic_kumo_kijun_cross_session_tp_r on USDCAD D1: out_of_universe -- gen_ic_kumo_kijun_cross_session_tp_r declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4']; running it on USDCAD D1 would validate a strategy nobody wrote
+- gen_ic_kumo_kijun_cross_session_tp_r on USDCHF H4: out_of_universe -- gen_ic_kumo_kijun_cross_session_tp_r declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4']; running it on USDCHF H4 would validate a strategy nobody wrote
+- gen_ic_kumo_kijun_cross_session_tp_r on USDCHF D1: out_of_universe -- gen_ic_kumo_kijun_cross_session_tp_r declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4']; running it on USDCHF D1 would validate a strategy nobody wrote
+- gen_ic_kumo_kijun_cross_session_tp_r on USDJPY D1: out_of_universe -- gen_ic_kumo_kijun_cross_session_tp_r declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4']; running it on USDJPY D1 would validate a strategy nobody wrote
+- gen_ic_kumo_kijun_cross_session_tp_r on XAGUSD H4: out_of_universe -- gen_ic_kumo_kijun_cross_session_tp_r declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4']; running it on XAGUSD H4 would validate a strategy nobody wrote
+- gen_ic_kumo_kijun_cross_session_tp_r on XAGUSD D1: out_of_universe -- gen_ic_kumo_kijun_cross_session_tp_r declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4']; running it on XAGUSD D1 would validate a strategy nobody wrote
+- gen_ic_kumo_kijun_cross_session_tp_r on XAUUSD D1: out_of_universe -- gen_ic_kumo_kijun_cross_session_tp_r declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4']; running it on XAUUSD D1 would validate a strategy nobody wrote
+- gen_ic_kumo_kijun_cross_session_trail on AUDJPY D1: out_of_universe -- gen_ic_kumo_kijun_cross_session_trail declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4']; running it on AUDJPY D1 would validate a strategy nobody wrote
+- gen_ic_kumo_kijun_cross_session_trail on AUDUSD D1: out_of_universe -- gen_ic_kumo_kijun_cross_session_trail declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4']; running it on AUDUSD D1 would validate a strategy nobody wrote
+- gen_ic_kumo_kijun_cross_session_trail on DE40 H4: out_of_universe -- gen_ic_kumo_kijun_cross_session_trail declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4']; running it on DE40 H4 would validate a strategy nobody wrote
+- gen_ic_kumo_kijun_cross_session_trail on DE40 D1: out_of_universe -- gen_ic_kumo_kijun_cross_session_trail declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4']; running it on DE40 D1 would validate a strategy nobody wrote
+- gen_ic_kumo_kijun_cross_session_trail on EURGBP H4: out_of_universe -- gen_ic_kumo_kijun_cross_session_trail declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4']; running it on EURGBP H4 would validate a strategy nobody wrote
+- gen_ic_kumo_kijun_cross_session_trail on EURGBP D1: out_of_universe -- gen_ic_kumo_kijun_cross_session_trail declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4']; running it on EURGBP D1 would validate a strategy nobody wrote
+- gen_ic_kumo_kijun_cross_session_trail on EURJPY D1: out_of_universe -- gen_ic_kumo_kijun_cross_session_trail declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4']; running it on EURJPY D1 would validate a strategy nobody wrote
+- gen_ic_kumo_kijun_cross_session_trail on EURUSD D1: out_of_universe -- gen_ic_kumo_kijun_cross_session_trail declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4']; running it on EURUSD D1 would validate a strategy nobody wrote
+- gen_ic_kumo_kijun_cross_session_trail on GBPJPY D1: out_of_universe -- gen_ic_kumo_kijun_cross_session_trail declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4']; running it on GBPJPY D1 would validate a strategy nobody wrote
+- gen_ic_kumo_kijun_cross_session_trail on GBPUSD D1: out_of_universe -- gen_ic_kumo_kijun_cross_session_trail declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4']; running it on GBPUSD D1 would validate a strategy nobody wrote
+- gen_ic_kumo_kijun_cross_session_trail on NZDUSD H4: out_of_universe -- gen_ic_kumo_kijun_cross_session_trail declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4']; running it on NZDUSD H4 would validate a strategy nobody wrote
+- gen_ic_kumo_kijun_cross_session_trail on NZDUSD D1: out_of_universe -- gen_ic_kumo_kijun_cross_session_trail declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4']; running it on NZDUSD D1 would validate a strategy nobody wrote
+- gen_ic_kumo_kijun_cross_session_trail on UK100 H4: out_of_universe -- gen_ic_kumo_kijun_cross_session_trail declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4']; running it on UK100 H4 would validate a strategy nobody wrote
+- gen_ic_kumo_kijun_cross_session_trail on UK100 D1: out_of_universe -- gen_ic_kumo_kijun_cross_session_trail declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4']; running it on UK100 D1 would validate a strategy nobody wrote
+- gen_ic_kumo_kijun_cross_session_trail on US500 D1: out_of_universe -- gen_ic_kumo_kijun_cross_session_trail declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4']; running it on US500 D1 would validate a strategy nobody wrote
+- gen_ic_kumo_kijun_cross_session_trail on USDCAD H4: out_of_universe -- gen_ic_kumo_kijun_cross_session_trail declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4']; running it on USDCAD H4 would validate a strategy nobody wrote
+- gen_ic_kumo_kijun_cross_session_trail on USDCAD D1: out_of_universe -- gen_ic_kumo_kijun_cross_session_trail declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4']; running it on USDCAD D1 would validate a strategy nobody wrote
+- gen_ic_kumo_kijun_cross_session_trail on USDCHF H4: out_of_universe -- gen_ic_kumo_kijun_cross_session_trail declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4']; running it on USDCHF H4 would validate a strategy nobody wrote
+- gen_ic_kumo_kijun_cross_session_trail on USDCHF D1: out_of_universe -- gen_ic_kumo_kijun_cross_session_trail declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4']; running it on USDCHF D1 would validate a strategy nobody wrote
+- gen_ic_kumo_kijun_cross_session_trail on USDJPY D1: out_of_universe -- gen_ic_kumo_kijun_cross_session_trail declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4']; running it on USDJPY D1 would validate a strategy nobody wrote
+- gen_ic_kumo_kijun_cross_session_trail on XAGUSD H4: out_of_universe -- gen_ic_kumo_kijun_cross_session_trail declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4']; running it on XAGUSD H4 would validate a strategy nobody wrote
+- gen_ic_kumo_kijun_cross_session_trail on XAGUSD D1: out_of_universe -- gen_ic_kumo_kijun_cross_session_trail declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4']; running it on XAGUSD D1 would validate a strategy nobody wrote
+- gen_ic_kumo_kijun_cross_session_trail on XAUUSD D1: out_of_universe -- gen_ic_kumo_kijun_cross_session_trail declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4']; running it on XAUUSD D1 would validate a strategy nobody wrote
+- gen_ic_kumo_tk_cross_adx_gate_swing_tp_short on DE40 H4: out_of_universe -- gen_ic_kumo_tk_cross_adx_gate_swing_tp_short declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4', 'D1']; running it on DE40 H4 would validate a strategy nobody wrote
+- gen_ic_kumo_tk_cross_adx_gate_swing_tp_short on DE40 D1: out_of_universe -- gen_ic_kumo_tk_cross_adx_gate_swing_tp_short declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4', 'D1']; running it on DE40 D1 would validate a strategy nobody wrote
+- gen_ic_kumo_tk_cross_adx_gate_swing_tp_short on EURGBP H4: out_of_universe -- gen_ic_kumo_tk_cross_adx_gate_swing_tp_short declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4', 'D1']; running it on EURGBP H4 would validate a strategy nobody wrote
+- gen_ic_kumo_tk_cross_adx_gate_swing_tp_short on EURGBP D1: out_of_universe -- gen_ic_kumo_tk_cross_adx_gate_swing_tp_short declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4', 'D1']; running it on EURGBP D1 would validate a strategy nobody wrote
+- gen_ic_kumo_tk_cross_adx_gate_swing_tp_short on NZDUSD H4: out_of_universe -- gen_ic_kumo_tk_cross_adx_gate_swing_tp_short declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4', 'D1']; running it on NZDUSD H4 would validate a strategy nobody wrote
+- gen_ic_kumo_tk_cross_adx_gate_swing_tp_short on NZDUSD D1: out_of_universe -- gen_ic_kumo_tk_cross_adx_gate_swing_tp_short declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4', 'D1']; running it on NZDUSD D1 would validate a strategy nobody wrote
+- gen_ic_kumo_tk_cross_adx_gate_swing_tp_short on UK100 H4: out_of_universe -- gen_ic_kumo_tk_cross_adx_gate_swing_tp_short declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4', 'D1']; running it on UK100 H4 would validate a strategy nobody wrote
+- gen_ic_kumo_tk_cross_adx_gate_swing_tp_short on UK100 D1: out_of_universe -- gen_ic_kumo_tk_cross_adx_gate_swing_tp_short declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4', 'D1']; running it on UK100 D1 would validate a strategy nobody wrote
+- gen_ic_kumo_tk_cross_adx_gate_swing_tp_short on USDCAD H4: out_of_universe -- gen_ic_kumo_tk_cross_adx_gate_swing_tp_short declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4', 'D1']; running it on USDCAD H4 would validate a strategy nobody wrote
+- gen_ic_kumo_tk_cross_adx_gate_swing_tp_short on USDCAD D1: out_of_universe -- gen_ic_kumo_tk_cross_adx_gate_swing_tp_short declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4', 'D1']; running it on USDCAD D1 would validate a strategy nobody wrote
+- gen_ic_kumo_tk_cross_adx_gate_swing_tp_short on USDCHF H4: out_of_universe -- gen_ic_kumo_tk_cross_adx_gate_swing_tp_short declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4', 'D1']; running it on USDCHF H4 would validate a strategy nobody wrote
+- gen_ic_kumo_tk_cross_adx_gate_swing_tp_short on USDCHF D1: out_of_universe -- gen_ic_kumo_tk_cross_adx_gate_swing_tp_short declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4', 'D1']; running it on USDCHF D1 would validate a strategy nobody wrote
+- gen_ic_kumo_tk_cross_adx_gate_swing_tp_short on XAGUSD H4: out_of_universe -- gen_ic_kumo_tk_cross_adx_gate_swing_tp_short declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4', 'D1']; running it on XAGUSD H4 would validate a strategy nobody wrote
+- gen_ic_kumo_tk_cross_adx_gate_swing_tp_short on XAGUSD D1: out_of_universe -- gen_ic_kumo_tk_cross_adx_gate_swing_tp_short declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4', 'D1']; running it on XAGUSD D1 would validate a strategy nobody wrote
+- gen_ic_kumo_tk_cross_none_swing_tp_long on DE40 H4: out_of_universe -- gen_ic_kumo_tk_cross_none_swing_tp_long declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4', 'D1']; running it on DE40 H4 would validate a strategy nobody wrote
+- gen_ic_kumo_tk_cross_none_swing_tp_long on DE40 D1: out_of_universe -- gen_ic_kumo_tk_cross_none_swing_tp_long declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4', 'D1']; running it on DE40 D1 would validate a strategy nobody wrote
+- gen_ic_kumo_tk_cross_none_swing_tp_long on EURGBP H4: out_of_universe -- gen_ic_kumo_tk_cross_none_swing_tp_long declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4', 'D1']; running it on EURGBP H4 would validate a strategy nobody wrote
+- gen_ic_kumo_tk_cross_none_swing_tp_long on EURGBP D1: out_of_universe -- gen_ic_kumo_tk_cross_none_swing_tp_long declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4', 'D1']; running it on EURGBP D1 would validate a strategy nobody wrote
+- gen_ic_kumo_tk_cross_none_swing_tp_long on NZDUSD H4: out_of_universe -- gen_ic_kumo_tk_cross_none_swing_tp_long declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4', 'D1']; running it on NZDUSD H4 would validate a strategy nobody wrote
+- gen_ic_kumo_tk_cross_none_swing_tp_long on NZDUSD D1: out_of_universe -- gen_ic_kumo_tk_cross_none_swing_tp_long declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4', 'D1']; running it on NZDUSD D1 would validate a strategy nobody wrote
+- gen_ic_kumo_tk_cross_none_swing_tp_long on UK100 H4: out_of_universe -- gen_ic_kumo_tk_cross_none_swing_tp_long declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4', 'D1']; running it on UK100 H4 would validate a strategy nobody wrote
+- gen_ic_kumo_tk_cross_none_swing_tp_long on UK100 D1: out_of_universe -- gen_ic_kumo_tk_cross_none_swing_tp_long declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4', 'D1']; running it on UK100 D1 would validate a strategy nobody wrote
+- gen_ic_kumo_tk_cross_none_swing_tp_long on USDCAD H4: out_of_universe -- gen_ic_kumo_tk_cross_none_swing_tp_long declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4', 'D1']; running it on USDCAD H4 would validate a strategy nobody wrote
+- gen_ic_kumo_tk_cross_none_swing_tp_long on USDCAD D1: out_of_universe -- gen_ic_kumo_tk_cross_none_swing_tp_long declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4', 'D1']; running it on USDCAD D1 would validate a strategy nobody wrote
+- gen_ic_kumo_tk_cross_none_swing_tp_long on USDCHF H4: out_of_universe -- gen_ic_kumo_tk_cross_none_swing_tp_long declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4', 'D1']; running it on USDCHF H4 would validate a strategy nobody wrote
+- gen_ic_kumo_tk_cross_none_swing_tp_long on USDCHF D1: out_of_universe -- gen_ic_kumo_tk_cross_none_swing_tp_long declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4', 'D1']; running it on USDCHF D1 would validate a strategy nobody wrote
+- gen_ic_kumo_tk_cross_none_swing_tp_long on XAGUSD H4: out_of_universe -- gen_ic_kumo_tk_cross_none_swing_tp_long declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4', 'D1']; running it on XAGUSD H4 would validate a strategy nobody wrote
+- gen_ic_kumo_tk_cross_none_swing_tp_long on XAGUSD D1: out_of_universe -- gen_ic_kumo_tk_cross_none_swing_tp_long declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4', 'D1']; running it on XAGUSD D1 would validate a strategy nobody wrote
+- gen_ic_kumo_tk_cross_none_time_exit on DE40 H4: out_of_universe -- gen_ic_kumo_tk_cross_none_time_exit declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4', 'D1']; running it on DE40 H4 would validate a strategy nobody wrote
+- gen_ic_kumo_tk_cross_none_time_exit on DE40 D1: out_of_universe -- gen_ic_kumo_tk_cross_none_time_exit declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4', 'D1']; running it on DE40 D1 would validate a strategy nobody wrote
+- gen_ic_kumo_tk_cross_none_time_exit on EURGBP H4: out_of_universe -- gen_ic_kumo_tk_cross_none_time_exit declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4', 'D1']; running it on EURGBP H4 would validate a strategy nobody wrote
+- gen_ic_kumo_tk_cross_none_time_exit on EURGBP D1: out_of_universe -- gen_ic_kumo_tk_cross_none_time_exit declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4', 'D1']; running it on EURGBP D1 would validate a strategy nobody wrote
+- gen_ic_kumo_tk_cross_none_time_exit on NZDUSD H4: out_of_universe -- gen_ic_kumo_tk_cross_none_time_exit declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4', 'D1']; running it on NZDUSD H4 would validate a strategy nobody wrote
+- gen_ic_kumo_tk_cross_none_time_exit on NZDUSD D1: out_of_universe -- gen_ic_kumo_tk_cross_none_time_exit declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4', 'D1']; running it on NZDUSD D1 would validate a strategy nobody wrote
+- gen_ic_kumo_tk_cross_none_time_exit on UK100 H4: out_of_universe -- gen_ic_kumo_tk_cross_none_time_exit declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4', 'D1']; running it on UK100 H4 would validate a strategy nobody wrote
+- gen_ic_kumo_tk_cross_none_time_exit on UK100 D1: out_of_universe -- gen_ic_kumo_tk_cross_none_time_exit declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4', 'D1']; running it on UK100 D1 would validate a strategy nobody wrote
+- gen_ic_kumo_tk_cross_none_time_exit on USDCAD H4: out_of_universe -- gen_ic_kumo_tk_cross_none_time_exit declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4', 'D1']; running it on USDCAD H4 would validate a strategy nobody wrote
+- gen_ic_kumo_tk_cross_none_time_exit on USDCAD D1: out_of_universe -- gen_ic_kumo_tk_cross_none_time_exit declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4', 'D1']; running it on USDCAD D1 would validate a strategy nobody wrote
+- gen_ic_kumo_tk_cross_none_time_exit on USDCHF H4: out_of_universe -- gen_ic_kumo_tk_cross_none_time_exit declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4', 'D1']; running it on USDCHF H4 would validate a strategy nobody wrote
+- gen_ic_kumo_tk_cross_none_time_exit on USDCHF D1: out_of_universe -- gen_ic_kumo_tk_cross_none_time_exit declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4', 'D1']; running it on USDCHF D1 would validate a strategy nobody wrote
+- gen_ic_kumo_tk_cross_none_time_exit on XAGUSD H4: out_of_universe -- gen_ic_kumo_tk_cross_none_time_exit declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4', 'D1']; running it on XAGUSD H4 would validate a strategy nobody wrote
+- gen_ic_kumo_tk_cross_none_time_exit on XAGUSD D1: out_of_universe -- gen_ic_kumo_tk_cross_none_time_exit declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4', 'D1']; running it on XAGUSD D1 would validate a strategy nobody wrote
+- gen_ic_kumo_tk_cross_none_tp_r on DE40 H4: out_of_universe -- gen_ic_kumo_tk_cross_none_tp_r declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4', 'D1']; running it on DE40 H4 would validate a strategy nobody wrote
+- gen_ic_kumo_tk_cross_none_tp_r on DE40 D1: out_of_universe -- gen_ic_kumo_tk_cross_none_tp_r declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4', 'D1']; running it on DE40 D1 would validate a strategy nobody wrote
+- gen_ic_kumo_tk_cross_none_tp_r on EURGBP H4: out_of_universe -- gen_ic_kumo_tk_cross_none_tp_r declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4', 'D1']; running it on EURGBP H4 would validate a strategy nobody wrote
+- gen_ic_kumo_tk_cross_none_tp_r on EURGBP D1: out_of_universe -- gen_ic_kumo_tk_cross_none_tp_r declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4', 'D1']; running it on EURGBP D1 would validate a strategy nobody wrote
+- gen_ic_kumo_tk_cross_none_tp_r on NZDUSD H4: out_of_universe -- gen_ic_kumo_tk_cross_none_tp_r declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4', 'D1']; running it on NZDUSD H4 would validate a strategy nobody wrote
+- gen_ic_kumo_tk_cross_none_tp_r on NZDUSD D1: out_of_universe -- gen_ic_kumo_tk_cross_none_tp_r declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4', 'D1']; running it on NZDUSD D1 would validate a strategy nobody wrote
+- gen_ic_kumo_tk_cross_none_tp_r on UK100 H4: out_of_universe -- gen_ic_kumo_tk_cross_none_tp_r declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4', 'D1']; running it on UK100 H4 would validate a strategy nobody wrote
+- gen_ic_kumo_tk_cross_none_tp_r on UK100 D1: out_of_universe -- gen_ic_kumo_tk_cross_none_tp_r declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4', 'D1']; running it on UK100 D1 would validate a strategy nobody wrote
+- gen_ic_kumo_tk_cross_none_tp_r on USDCAD H4: out_of_universe -- gen_ic_kumo_tk_cross_none_tp_r declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4', 'D1']; running it on USDCAD H4 would validate a strategy nobody wrote
+- gen_ic_kumo_tk_cross_none_tp_r on USDCAD D1: out_of_universe -- gen_ic_kumo_tk_cross_none_tp_r declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4', 'D1']; running it on USDCAD D1 would validate a strategy nobody wrote
+- gen_ic_kumo_tk_cross_none_tp_r on USDCHF H4: out_of_universe -- gen_ic_kumo_tk_cross_none_tp_r declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4', 'D1']; running it on USDCHF H4 would validate a strategy nobody wrote
+- gen_ic_kumo_tk_cross_none_tp_r on USDCHF D1: out_of_universe -- gen_ic_kumo_tk_cross_none_tp_r declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4', 'D1']; running it on USDCHF D1 would validate a strategy nobody wrote
+- gen_ic_kumo_tk_cross_none_tp_r on XAGUSD H4: out_of_universe -- gen_ic_kumo_tk_cross_none_tp_r declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4', 'D1']; running it on XAGUSD H4 would validate a strategy nobody wrote
+- gen_ic_kumo_tk_cross_none_tp_r on XAGUSD D1: out_of_universe -- gen_ic_kumo_tk_cross_none_tp_r declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4', 'D1']; running it on XAGUSD D1 would validate a strategy nobody wrote
+- gen_ic_kumo_tk_cross_none_trail on DE40 H4: out_of_universe -- gen_ic_kumo_tk_cross_none_trail declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4', 'D1']; running it on DE40 H4 would validate a strategy nobody wrote
+- gen_ic_kumo_tk_cross_none_trail on DE40 D1: out_of_universe -- gen_ic_kumo_tk_cross_none_trail declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4', 'D1']; running it on DE40 D1 would validate a strategy nobody wrote
+- gen_ic_kumo_tk_cross_none_trail on EURGBP H4: out_of_universe -- gen_ic_kumo_tk_cross_none_trail declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4', 'D1']; running it on EURGBP H4 would validate a strategy nobody wrote
+- gen_ic_kumo_tk_cross_none_trail on EURGBP D1: out_of_universe -- gen_ic_kumo_tk_cross_none_trail declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4', 'D1']; running it on EURGBP D1 would validate a strategy nobody wrote
+- gen_ic_kumo_tk_cross_none_trail on NZDUSD H4: out_of_universe -- gen_ic_kumo_tk_cross_none_trail declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4', 'D1']; running it on NZDUSD H4 would validate a strategy nobody wrote
+- gen_ic_kumo_tk_cross_none_trail on NZDUSD D1: out_of_universe -- gen_ic_kumo_tk_cross_none_trail declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4', 'D1']; running it on NZDUSD D1 would validate a strategy nobody wrote
+- gen_ic_kumo_tk_cross_none_trail on UK100 H4: out_of_universe -- gen_ic_kumo_tk_cross_none_trail declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4', 'D1']; running it on UK100 H4 would validate a strategy nobody wrote
+- gen_ic_kumo_tk_cross_none_trail on UK100 D1: out_of_universe -- gen_ic_kumo_tk_cross_none_trail declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4', 'D1']; running it on UK100 D1 would validate a strategy nobody wrote
+- gen_ic_kumo_tk_cross_none_trail on USDCAD H4: out_of_universe -- gen_ic_kumo_tk_cross_none_trail declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4', 'D1']; running it on USDCAD H4 would validate a strategy nobody wrote
+- gen_ic_kumo_tk_cross_none_trail on USDCAD D1: out_of_universe -- gen_ic_kumo_tk_cross_none_trail declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4', 'D1']; running it on USDCAD D1 would validate a strategy nobody wrote
+- gen_ic_kumo_tk_cross_none_trail on USDCHF H4: out_of_universe -- gen_ic_kumo_tk_cross_none_trail declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4', 'D1']; running it on USDCHF H4 would validate a strategy nobody wrote
+- gen_ic_kumo_tk_cross_none_trail on USDCHF D1: out_of_universe -- gen_ic_kumo_tk_cross_none_trail declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4', 'D1']; running it on USDCHF D1 would validate a strategy nobody wrote
+- gen_ic_kumo_tk_cross_none_trail on XAGUSD H4: out_of_universe -- gen_ic_kumo_tk_cross_none_trail declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4', 'D1']; running it on XAGUSD H4 would validate a strategy nobody wrote
+- gen_ic_kumo_tk_cross_none_trail on XAGUSD D1: out_of_universe -- gen_ic_kumo_tk_cross_none_trail declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4', 'D1']; running it on XAGUSD D1 would validate a strategy nobody wrote
+- gen_ic_kumo_tk_cross_rvol_gate_swing_tp_long on DE40 H4: out_of_universe -- gen_ic_kumo_tk_cross_rvol_gate_swing_tp_long declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4', 'D1']; running it on DE40 H4 would validate a strategy nobody wrote
+- gen_ic_kumo_tk_cross_rvol_gate_swing_tp_long on DE40 D1: out_of_universe -- gen_ic_kumo_tk_cross_rvol_gate_swing_tp_long declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4', 'D1']; running it on DE40 D1 would validate a strategy nobody wrote
+- gen_ic_kumo_tk_cross_rvol_gate_swing_tp_long on EURGBP H4: out_of_universe -- gen_ic_kumo_tk_cross_rvol_gate_swing_tp_long declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4', 'D1']; running it on EURGBP H4 would validate a strategy nobody wrote
+- gen_ic_kumo_tk_cross_rvol_gate_swing_tp_long on EURGBP D1: out_of_universe -- gen_ic_kumo_tk_cross_rvol_gate_swing_tp_long declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4', 'D1']; running it on EURGBP D1 would validate a strategy nobody wrote
+- gen_ic_kumo_tk_cross_rvol_gate_swing_tp_long on NZDUSD H4: out_of_universe -- gen_ic_kumo_tk_cross_rvol_gate_swing_tp_long declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4', 'D1']; running it on NZDUSD H4 would validate a strategy nobody wrote
+- gen_ic_kumo_tk_cross_rvol_gate_swing_tp_long on NZDUSD D1: out_of_universe -- gen_ic_kumo_tk_cross_rvol_gate_swing_tp_long declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4', 'D1']; running it on NZDUSD D1 would validate a strategy nobody wrote
+- gen_ic_kumo_tk_cross_rvol_gate_swing_tp_long on UK100 H4: out_of_universe -- gen_ic_kumo_tk_cross_rvol_gate_swing_tp_long declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4', 'D1']; running it on UK100 H4 would validate a strategy nobody wrote
+- gen_ic_kumo_tk_cross_rvol_gate_swing_tp_long on UK100 D1: out_of_universe -- gen_ic_kumo_tk_cross_rvol_gate_swing_tp_long declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4', 'D1']; running it on UK100 D1 would validate a strategy nobody wrote
+- gen_ic_kumo_tk_cross_rvol_gate_swing_tp_long on USDCAD H4: out_of_universe -- gen_ic_kumo_tk_cross_rvol_gate_swing_tp_long declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4', 'D1']; running it on USDCAD H4 would validate a strategy nobody wrote
+- gen_ic_kumo_tk_cross_rvol_gate_swing_tp_long on USDCAD D1: out_of_universe -- gen_ic_kumo_tk_cross_rvol_gate_swing_tp_long declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4', 'D1']; running it on USDCAD D1 would validate a strategy nobody wrote
+- gen_ic_kumo_tk_cross_rvol_gate_swing_tp_long on USDCHF H4: out_of_universe -- gen_ic_kumo_tk_cross_rvol_gate_swing_tp_long declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4', 'D1']; running it on USDCHF H4 would validate a strategy nobody wrote
+- gen_ic_kumo_tk_cross_rvol_gate_swing_tp_long on USDCHF D1: out_of_universe -- gen_ic_kumo_tk_cross_rvol_gate_swing_tp_long declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4', 'D1']; running it on USDCHF D1 would validate a strategy nobody wrote
+- gen_ic_kumo_tk_cross_rvol_gate_swing_tp_long on XAGUSD H4: out_of_universe -- gen_ic_kumo_tk_cross_rvol_gate_swing_tp_long declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4', 'D1']; running it on XAGUSD H4 would validate a strategy nobody wrote
+- gen_ic_kumo_tk_cross_rvol_gate_swing_tp_long on XAGUSD D1: out_of_universe -- gen_ic_kumo_tk_cross_rvol_gate_swing_tp_long declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4', 'D1']; running it on XAGUSD D1 would validate a strategy nobody wrote
+- gen_ic_kumo_tk_cross_rvol_gate_trail on DE40 H4: out_of_universe -- gen_ic_kumo_tk_cross_rvol_gate_trail declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4', 'D1']; running it on DE40 H4 would validate a strategy nobody wrote
+- gen_ic_kumo_tk_cross_rvol_gate_trail on DE40 D1: out_of_universe -- gen_ic_kumo_tk_cross_rvol_gate_trail declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4', 'D1']; running it on DE40 D1 would validate a strategy nobody wrote
+- gen_ic_kumo_tk_cross_rvol_gate_trail on EURGBP H4: out_of_universe -- gen_ic_kumo_tk_cross_rvol_gate_trail declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4', 'D1']; running it on EURGBP H4 would validate a strategy nobody wrote
+- gen_ic_kumo_tk_cross_rvol_gate_trail on EURGBP D1: out_of_universe -- gen_ic_kumo_tk_cross_rvol_gate_trail declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4', 'D1']; running it on EURGBP D1 would validate a strategy nobody wrote
+- gen_ic_kumo_tk_cross_rvol_gate_trail on NZDUSD H4: out_of_universe -- gen_ic_kumo_tk_cross_rvol_gate_trail declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4', 'D1']; running it on NZDUSD H4 would validate a strategy nobody wrote
+- gen_ic_kumo_tk_cross_rvol_gate_trail on NZDUSD D1: out_of_universe -- gen_ic_kumo_tk_cross_rvol_gate_trail declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4', 'D1']; running it on NZDUSD D1 would validate a strategy nobody wrote
+- gen_ic_kumo_tk_cross_rvol_gate_trail on UK100 H4: out_of_universe -- gen_ic_kumo_tk_cross_rvol_gate_trail declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4', 'D1']; running it on UK100 H4 would validate a strategy nobody wrote
+- gen_ic_kumo_tk_cross_rvol_gate_trail on UK100 D1: out_of_universe -- gen_ic_kumo_tk_cross_rvol_gate_trail declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4', 'D1']; running it on UK100 D1 would validate a strategy nobody wrote
+- gen_ic_kumo_tk_cross_rvol_gate_trail on USDCAD H4: out_of_universe -- gen_ic_kumo_tk_cross_rvol_gate_trail declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4', 'D1']; running it on USDCAD H4 would validate a strategy nobody wrote
+- gen_ic_kumo_tk_cross_rvol_gate_trail on USDCAD D1: out_of_universe -- gen_ic_kumo_tk_cross_rvol_gate_trail declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4', 'D1']; running it on USDCAD D1 would validate a strategy nobody wrote
+- gen_ic_kumo_tk_cross_rvol_gate_trail on USDCHF H4: out_of_universe -- gen_ic_kumo_tk_cross_rvol_gate_trail declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4', 'D1']; running it on USDCHF H4 would validate a strategy nobody wrote
+- gen_ic_kumo_tk_cross_rvol_gate_trail on USDCHF D1: out_of_universe -- gen_ic_kumo_tk_cross_rvol_gate_trail declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4', 'D1']; running it on USDCHF D1 would validate a strategy nobody wrote
+- gen_ic_kumo_tk_cross_rvol_gate_trail on XAGUSD H4: out_of_universe -- gen_ic_kumo_tk_cross_rvol_gate_trail declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4', 'D1']; running it on XAGUSD H4 would validate a strategy nobody wrote
+- gen_ic_kumo_tk_cross_rvol_gate_trail on XAGUSD D1: out_of_universe -- gen_ic_kumo_tk_cross_rvol_gate_trail declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4', 'D1']; running it on XAGUSD D1 would validate a strategy nobody wrote
+- gen_ic_kumo_tk_cross_session_swing_tp_long on AUDJPY D1: out_of_universe -- gen_ic_kumo_tk_cross_session_swing_tp_long declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4']; running it on AUDJPY D1 would validate a strategy nobody wrote
+- gen_ic_kumo_tk_cross_session_swing_tp_long on AUDUSD D1: out_of_universe -- gen_ic_kumo_tk_cross_session_swing_tp_long declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4']; running it on AUDUSD D1 would validate a strategy nobody wrote
+- gen_ic_kumo_tk_cross_session_swing_tp_long on DE40 H4: out_of_universe -- gen_ic_kumo_tk_cross_session_swing_tp_long declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4']; running it on DE40 H4 would validate a strategy nobody wrote
+- gen_ic_kumo_tk_cross_session_swing_tp_long on DE40 D1: out_of_universe -- gen_ic_kumo_tk_cross_session_swing_tp_long declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4']; running it on DE40 D1 would validate a strategy nobody wrote
+- gen_ic_kumo_tk_cross_session_swing_tp_long on EURGBP H4: out_of_universe -- gen_ic_kumo_tk_cross_session_swing_tp_long declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4']; running it on EURGBP H4 would validate a strategy nobody wrote
+- gen_ic_kumo_tk_cross_session_swing_tp_long on EURGBP D1: out_of_universe -- gen_ic_kumo_tk_cross_session_swing_tp_long declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4']; running it on EURGBP D1 would validate a strategy nobody wrote
+- gen_ic_kumo_tk_cross_session_swing_tp_long on EURJPY D1: out_of_universe -- gen_ic_kumo_tk_cross_session_swing_tp_long declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4']; running it on EURJPY D1 would validate a strategy nobody wrote
+- gen_ic_kumo_tk_cross_session_swing_tp_long on EURUSD D1: out_of_universe -- gen_ic_kumo_tk_cross_session_swing_tp_long declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4']; running it on EURUSD D1 would validate a strategy nobody wrote
+- gen_ic_kumo_tk_cross_session_swing_tp_long on GBPJPY D1: out_of_universe -- gen_ic_kumo_tk_cross_session_swing_tp_long declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4']; running it on GBPJPY D1 would validate a strategy nobody wrote
+- gen_ic_kumo_tk_cross_session_swing_tp_long on GBPUSD D1: out_of_universe -- gen_ic_kumo_tk_cross_session_swing_tp_long declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4']; running it on GBPUSD D1 would validate a strategy nobody wrote
+- gen_ic_kumo_tk_cross_session_swing_tp_long on NZDUSD H4: out_of_universe -- gen_ic_kumo_tk_cross_session_swing_tp_long declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4']; running it on NZDUSD H4 would validate a strategy nobody wrote
+- gen_ic_kumo_tk_cross_session_swing_tp_long on NZDUSD D1: out_of_universe -- gen_ic_kumo_tk_cross_session_swing_tp_long declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4']; running it on NZDUSD D1 would validate a strategy nobody wrote
+- gen_ic_kumo_tk_cross_session_swing_tp_long on UK100 H4: out_of_universe -- gen_ic_kumo_tk_cross_session_swing_tp_long declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4']; running it on UK100 H4 would validate a strategy nobody wrote
+- gen_ic_kumo_tk_cross_session_swing_tp_long on UK100 D1: out_of_universe -- gen_ic_kumo_tk_cross_session_swing_tp_long declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4']; running it on UK100 D1 would validate a strategy nobody wrote
+- gen_ic_kumo_tk_cross_session_swing_tp_long on US500 D1: out_of_universe -- gen_ic_kumo_tk_cross_session_swing_tp_long declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4']; running it on US500 D1 would validate a strategy nobody wrote
+- gen_ic_kumo_tk_cross_session_swing_tp_long on USDCAD H4: out_of_universe -- gen_ic_kumo_tk_cross_session_swing_tp_long declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4']; running it on USDCAD H4 would validate a strategy nobody wrote
+- gen_ic_kumo_tk_cross_session_swing_tp_long on USDCAD D1: out_of_universe -- gen_ic_kumo_tk_cross_session_swing_tp_long declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4']; running it on USDCAD D1 would validate a strategy nobody wrote
+- gen_ic_kumo_tk_cross_session_swing_tp_long on USDCHF H4: out_of_universe -- gen_ic_kumo_tk_cross_session_swing_tp_long declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4']; running it on USDCHF H4 would validate a strategy nobody wrote
+- gen_ic_kumo_tk_cross_session_swing_tp_long on USDCHF D1: out_of_universe -- gen_ic_kumo_tk_cross_session_swing_tp_long declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4']; running it on USDCHF D1 would validate a strategy nobody wrote
+- gen_ic_kumo_tk_cross_session_swing_tp_long on USDJPY D1: out_of_universe -- gen_ic_kumo_tk_cross_session_swing_tp_long declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4']; running it on USDJPY D1 would validate a strategy nobody wrote
+- gen_ic_kumo_tk_cross_session_swing_tp_long on XAGUSD H4: out_of_universe -- gen_ic_kumo_tk_cross_session_swing_tp_long declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4']; running it on XAGUSD H4 would validate a strategy nobody wrote
+- gen_ic_kumo_tk_cross_session_swing_tp_long on XAGUSD D1: out_of_universe -- gen_ic_kumo_tk_cross_session_swing_tp_long declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4']; running it on XAGUSD D1 would validate a strategy nobody wrote
+- gen_ic_kumo_tk_cross_session_swing_tp_long on XAUUSD D1: out_of_universe -- gen_ic_kumo_tk_cross_session_swing_tp_long declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4']; running it on XAUUSD D1 would validate a strategy nobody wrote
+- gen_ic_kumo_tk_cross_session_tp_r on AUDJPY D1: out_of_universe -- gen_ic_kumo_tk_cross_session_tp_r declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4']; running it on AUDJPY D1 would validate a strategy nobody wrote
+- gen_ic_kumo_tk_cross_session_tp_r on AUDUSD D1: out_of_universe -- gen_ic_kumo_tk_cross_session_tp_r declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4']; running it on AUDUSD D1 would validate a strategy nobody wrote
+- gen_ic_kumo_tk_cross_session_tp_r on DE40 H4: out_of_universe -- gen_ic_kumo_tk_cross_session_tp_r declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4']; running it on DE40 H4 would validate a strategy nobody wrote
+- gen_ic_kumo_tk_cross_session_tp_r on DE40 D1: out_of_universe -- gen_ic_kumo_tk_cross_session_tp_r declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4']; running it on DE40 D1 would validate a strategy nobody wrote
+- gen_ic_kumo_tk_cross_session_tp_r on EURGBP H4: out_of_universe -- gen_ic_kumo_tk_cross_session_tp_r declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4']; running it on EURGBP H4 would validate a strategy nobody wrote
+- gen_ic_kumo_tk_cross_session_tp_r on EURGBP D1: out_of_universe -- gen_ic_kumo_tk_cross_session_tp_r declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4']; running it on EURGBP D1 would validate a strategy nobody wrote
+- gen_ic_kumo_tk_cross_session_tp_r on EURJPY D1: out_of_universe -- gen_ic_kumo_tk_cross_session_tp_r declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4']; running it on EURJPY D1 would validate a strategy nobody wrote
+- gen_ic_kumo_tk_cross_session_tp_r on EURUSD D1: out_of_universe -- gen_ic_kumo_tk_cross_session_tp_r declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4']; running it on EURUSD D1 would validate a strategy nobody wrote
+- gen_ic_kumo_tk_cross_session_tp_r on GBPJPY D1: out_of_universe -- gen_ic_kumo_tk_cross_session_tp_r declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4']; running it on GBPJPY D1 would validate a strategy nobody wrote
+- gen_ic_kumo_tk_cross_session_tp_r on GBPUSD D1: out_of_universe -- gen_ic_kumo_tk_cross_session_tp_r declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4']; running it on GBPUSD D1 would validate a strategy nobody wrote
+- gen_ic_kumo_tk_cross_session_tp_r on NZDUSD H4: out_of_universe -- gen_ic_kumo_tk_cross_session_tp_r declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4']; running it on NZDUSD H4 would validate a strategy nobody wrote
+- gen_ic_kumo_tk_cross_session_tp_r on NZDUSD D1: out_of_universe -- gen_ic_kumo_tk_cross_session_tp_r declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4']; running it on NZDUSD D1 would validate a strategy nobody wrote
+- gen_ic_kumo_tk_cross_session_tp_r on UK100 H4: out_of_universe -- gen_ic_kumo_tk_cross_session_tp_r declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4']; running it on UK100 H4 would validate a strategy nobody wrote
+- gen_ic_kumo_tk_cross_session_tp_r on UK100 D1: out_of_universe -- gen_ic_kumo_tk_cross_session_tp_r declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4']; running it on UK100 D1 would validate a strategy nobody wrote
+- gen_ic_kumo_tk_cross_session_tp_r on US500 D1: out_of_universe -- gen_ic_kumo_tk_cross_session_tp_r declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4']; running it on US500 D1 would validate a strategy nobody wrote
+- gen_ic_kumo_tk_cross_session_tp_r on USDCAD H4: out_of_universe -- gen_ic_kumo_tk_cross_session_tp_r declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4']; running it on USDCAD H4 would validate a strategy nobody wrote
+- gen_ic_kumo_tk_cross_session_tp_r on USDCAD D1: out_of_universe -- gen_ic_kumo_tk_cross_session_tp_r declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4']; running it on USDCAD D1 would validate a strategy nobody wrote
+- gen_ic_kumo_tk_cross_session_tp_r on USDCHF H4: out_of_universe -- gen_ic_kumo_tk_cross_session_tp_r declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4']; running it on USDCHF H4 would validate a strategy nobody wrote
+- gen_ic_kumo_tk_cross_session_tp_r on USDCHF D1: out_of_universe -- gen_ic_kumo_tk_cross_session_tp_r declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4']; running it on USDCHF D1 would validate a strategy nobody wrote
+- gen_ic_kumo_tk_cross_session_tp_r on USDJPY D1: out_of_universe -- gen_ic_kumo_tk_cross_session_tp_r declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4']; running it on USDJPY D1 would validate a strategy nobody wrote
+- gen_ic_kumo_tk_cross_session_tp_r on XAGUSD H4: out_of_universe -- gen_ic_kumo_tk_cross_session_tp_r declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4']; running it on XAGUSD H4 would validate a strategy nobody wrote
+- gen_ic_kumo_tk_cross_session_tp_r on XAGUSD D1: out_of_universe -- gen_ic_kumo_tk_cross_session_tp_r declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4']; running it on XAGUSD D1 would validate a strategy nobody wrote
+- gen_ic_kumo_tk_cross_session_tp_r on XAUUSD D1: out_of_universe -- gen_ic_kumo_tk_cross_session_tp_r declares universe ['USDJPY', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURUSD', 'GBPUSD', 'AUDUSD', 'XAUUSD', 'US500'] and timeframes ['H4']; running it on XAUUSD D1 would validate a strategy nobody wrote
+- gen_mo_macd_cci_adx_gate_swing_tp_long on DE40 H4: out_of_universe -- gen_mo_macd_cci_adx_gate_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURGBP', 'XAUUSD'] and timeframes ['H4', 'D1']; running it on DE40 H4 would validate a strategy nobody wrote
+- gen_mo_macd_cci_adx_gate_swing_tp_long on DE40 D1: out_of_universe -- gen_mo_macd_cci_adx_gate_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURGBP', 'XAUUSD'] and timeframes ['H4', 'D1']; running it on DE40 D1 would validate a strategy nobody wrote
+- gen_mo_macd_cci_adx_gate_swing_tp_long on UK100 H4: out_of_universe -- gen_mo_macd_cci_adx_gate_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURGBP', 'XAUUSD'] and timeframes ['H4', 'D1']; running it on UK100 H4 would validate a strategy nobody wrote
+- gen_mo_macd_cci_adx_gate_swing_tp_long on UK100 D1: out_of_universe -- gen_mo_macd_cci_adx_gate_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURGBP', 'XAUUSD'] and timeframes ['H4', 'D1']; running it on UK100 D1 would validate a strategy nobody wrote
+- gen_mo_macd_cci_adx_gate_swing_tp_long on US500 H4: out_of_universe -- gen_mo_macd_cci_adx_gate_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURGBP', 'XAUUSD'] and timeframes ['H4', 'D1']; running it on US500 H4 would validate a strategy nobody wrote
+- gen_mo_macd_cci_adx_gate_swing_tp_long on US500 D1: out_of_universe -- gen_mo_macd_cci_adx_gate_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURGBP', 'XAUUSD'] and timeframes ['H4', 'D1']; running it on US500 D1 would validate a strategy nobody wrote
+- gen_mo_macd_cci_adx_gate_swing_tp_long on XAGUSD H4: out_of_universe -- gen_mo_macd_cci_adx_gate_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURGBP', 'XAUUSD'] and timeframes ['H4', 'D1']; running it on XAGUSD H4 would validate a strategy nobody wrote
+- gen_mo_macd_cci_adx_gate_swing_tp_long on XAGUSD D1: out_of_universe -- gen_mo_macd_cci_adx_gate_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURGBP', 'XAUUSD'] and timeframes ['H4', 'D1']; running it on XAGUSD D1 would validate a strategy nobody wrote
+- gen_mo_macd_cci_adx_gate_time_exit on DE40 H4: out_of_universe -- gen_mo_macd_cci_adx_gate_time_exit declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURGBP', 'XAUUSD'] and timeframes ['H4', 'D1']; running it on DE40 H4 would validate a strategy nobody wrote
+- gen_mo_macd_cci_adx_gate_time_exit on DE40 D1: out_of_universe -- gen_mo_macd_cci_adx_gate_time_exit declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURGBP', 'XAUUSD'] and timeframes ['H4', 'D1']; running it on DE40 D1 would validate a strategy nobody wrote
+- gen_mo_macd_cci_adx_gate_time_exit on UK100 H4: out_of_universe -- gen_mo_macd_cci_adx_gate_time_exit declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURGBP', 'XAUUSD'] and timeframes ['H4', 'D1']; running it on UK100 H4 would validate a strategy nobody wrote
+- gen_mo_macd_cci_adx_gate_time_exit on UK100 D1: out_of_universe -- gen_mo_macd_cci_adx_gate_time_exit declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURGBP', 'XAUUSD'] and timeframes ['H4', 'D1']; running it on UK100 D1 would validate a strategy nobody wrote
+- gen_mo_macd_cci_adx_gate_time_exit on US500 H4: out_of_universe -- gen_mo_macd_cci_adx_gate_time_exit declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURGBP', 'XAUUSD'] and timeframes ['H4', 'D1']; running it on US500 H4 would validate a strategy nobody wrote
+- gen_mo_macd_cci_adx_gate_time_exit on US500 D1: out_of_universe -- gen_mo_macd_cci_adx_gate_time_exit declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURGBP', 'XAUUSD'] and timeframes ['H4', 'D1']; running it on US500 D1 would validate a strategy nobody wrote
+- gen_mo_macd_cci_adx_gate_time_exit on XAGUSD H4: out_of_universe -- gen_mo_macd_cci_adx_gate_time_exit declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURGBP', 'XAUUSD'] and timeframes ['H4', 'D1']; running it on XAGUSD H4 would validate a strategy nobody wrote
+- gen_mo_macd_cci_adx_gate_time_exit on XAGUSD D1: out_of_universe -- gen_mo_macd_cci_adx_gate_time_exit declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURGBP', 'XAUUSD'] and timeframes ['H4', 'D1']; running it on XAGUSD D1 would validate a strategy nobody wrote
+- gen_mo_macd_cci_adx_gate_trail on DE40 H4: out_of_universe -- gen_mo_macd_cci_adx_gate_trail declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURGBP', 'XAUUSD'] and timeframes ['H4', 'D1']; running it on DE40 H4 would validate a strategy nobody wrote
+- gen_mo_macd_cci_adx_gate_trail on DE40 D1: out_of_universe -- gen_mo_macd_cci_adx_gate_trail declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURGBP', 'XAUUSD'] and timeframes ['H4', 'D1']; running it on DE40 D1 would validate a strategy nobody wrote
+- gen_mo_macd_cci_adx_gate_trail on UK100 H4: out_of_universe -- gen_mo_macd_cci_adx_gate_trail declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURGBP', 'XAUUSD'] and timeframes ['H4', 'D1']; running it on UK100 H4 would validate a strategy nobody wrote
+- gen_mo_macd_cci_adx_gate_trail on UK100 D1: out_of_universe -- gen_mo_macd_cci_adx_gate_trail declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURGBP', 'XAUUSD'] and timeframes ['H4', 'D1']; running it on UK100 D1 would validate a strategy nobody wrote
+- gen_mo_macd_cci_adx_gate_trail on US500 H4: out_of_universe -- gen_mo_macd_cci_adx_gate_trail declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURGBP', 'XAUUSD'] and timeframes ['H4', 'D1']; running it on US500 H4 would validate a strategy nobody wrote
+- gen_mo_macd_cci_adx_gate_trail on US500 D1: out_of_universe -- gen_mo_macd_cci_adx_gate_trail declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURGBP', 'XAUUSD'] and timeframes ['H4', 'D1']; running it on US500 D1 would validate a strategy nobody wrote
+- gen_mo_macd_cci_adx_gate_trail on XAGUSD H4: out_of_universe -- gen_mo_macd_cci_adx_gate_trail declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURGBP', 'XAUUSD'] and timeframes ['H4', 'D1']; running it on XAGUSD H4 would validate a strategy nobody wrote
+- gen_mo_macd_cci_adx_gate_trail on XAGUSD D1: out_of_universe -- gen_mo_macd_cci_adx_gate_trail declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURGBP', 'XAUUSD'] and timeframes ['H4', 'D1']; running it on XAGUSD D1 would validate a strategy nobody wrote
+- gen_mo_macd_cci_none_time_exit on DE40 H4: out_of_universe -- gen_mo_macd_cci_none_time_exit declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURGBP', 'XAUUSD'] and timeframes ['H4', 'D1']; running it on DE40 H4 would validate a strategy nobody wrote
+- gen_mo_macd_cci_none_time_exit on DE40 D1: out_of_universe -- gen_mo_macd_cci_none_time_exit declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURGBP', 'XAUUSD'] and timeframes ['H4', 'D1']; running it on DE40 D1 would validate a strategy nobody wrote
+- gen_mo_macd_cci_none_time_exit on UK100 H4: out_of_universe -- gen_mo_macd_cci_none_time_exit declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURGBP', 'XAUUSD'] and timeframes ['H4', 'D1']; running it on UK100 H4 would validate a strategy nobody wrote
+- gen_mo_macd_cci_none_time_exit on UK100 D1: out_of_universe -- gen_mo_macd_cci_none_time_exit declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURGBP', 'XAUUSD'] and timeframes ['H4', 'D1']; running it on UK100 D1 would validate a strategy nobody wrote
+- gen_mo_macd_cci_none_time_exit on US500 H4: out_of_universe -- gen_mo_macd_cci_none_time_exit declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURGBP', 'XAUUSD'] and timeframes ['H4', 'D1']; running it on US500 H4 would validate a strategy nobody wrote
+- gen_mo_macd_cci_none_time_exit on US500 D1: out_of_universe -- gen_mo_macd_cci_none_time_exit declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURGBP', 'XAUUSD'] and timeframes ['H4', 'D1']; running it on US500 D1 would validate a strategy nobody wrote
+- gen_mo_macd_cci_none_time_exit on XAGUSD H4: out_of_universe -- gen_mo_macd_cci_none_time_exit declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURGBP', 'XAUUSD'] and timeframes ['H4', 'D1']; running it on XAGUSD H4 would validate a strategy nobody wrote
+- gen_mo_macd_cci_none_time_exit on XAGUSD D1: out_of_universe -- gen_mo_macd_cci_none_time_exit declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURGBP', 'XAUUSD'] and timeframes ['H4', 'D1']; running it on XAGUSD D1 would validate a strategy nobody wrote
+- gen_mo_macd_cci_session_swing_tp_long on AUDJPY D1: out_of_universe -- gen_mo_macd_cci_session_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURGBP', 'XAUUSD'] and timeframes ['H4']; running it on AUDJPY D1 would validate a strategy nobody wrote
+- gen_mo_macd_cci_session_swing_tp_long on AUDUSD D1: out_of_universe -- gen_mo_macd_cci_session_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURGBP', 'XAUUSD'] and timeframes ['H4']; running it on AUDUSD D1 would validate a strategy nobody wrote
+- gen_mo_macd_cci_session_swing_tp_long on DE40 H4: out_of_universe -- gen_mo_macd_cci_session_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURGBP', 'XAUUSD'] and timeframes ['H4']; running it on DE40 H4 would validate a strategy nobody wrote
+- gen_mo_macd_cci_session_swing_tp_long on DE40 D1: out_of_universe -- gen_mo_macd_cci_session_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURGBP', 'XAUUSD'] and timeframes ['H4']; running it on DE40 D1 would validate a strategy nobody wrote
+- gen_mo_macd_cci_session_swing_tp_long on EURGBP D1: out_of_universe -- gen_mo_macd_cci_session_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURGBP', 'XAUUSD'] and timeframes ['H4']; running it on EURGBP D1 would validate a strategy nobody wrote
+- gen_mo_macd_cci_session_swing_tp_long on EURJPY D1: out_of_universe -- gen_mo_macd_cci_session_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURGBP', 'XAUUSD'] and timeframes ['H4']; running it on EURJPY D1 would validate a strategy nobody wrote
+- gen_mo_macd_cci_session_swing_tp_long on EURUSD D1: out_of_universe -- gen_mo_macd_cci_session_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURGBP', 'XAUUSD'] and timeframes ['H4']; running it on EURUSD D1 would validate a strategy nobody wrote
+- gen_mo_macd_cci_session_swing_tp_long on GBPJPY D1: out_of_universe -- gen_mo_macd_cci_session_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURGBP', 'XAUUSD'] and timeframes ['H4']; running it on GBPJPY D1 would validate a strategy nobody wrote
+- gen_mo_macd_cci_session_swing_tp_long on GBPUSD D1: out_of_universe -- gen_mo_macd_cci_session_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURGBP', 'XAUUSD'] and timeframes ['H4']; running it on GBPUSD D1 would validate a strategy nobody wrote
+- gen_mo_macd_cci_session_swing_tp_long on NZDUSD D1: out_of_universe -- gen_mo_macd_cci_session_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURGBP', 'XAUUSD'] and timeframes ['H4']; running it on NZDUSD D1 would validate a strategy nobody wrote
+- gen_mo_macd_cci_session_swing_tp_long on UK100 H4: out_of_universe -- gen_mo_macd_cci_session_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURGBP', 'XAUUSD'] and timeframes ['H4']; running it on UK100 H4 would validate a strategy nobody wrote
+- gen_mo_macd_cci_session_swing_tp_long on UK100 D1: out_of_universe -- gen_mo_macd_cci_session_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURGBP', 'XAUUSD'] and timeframes ['H4']; running it on UK100 D1 would validate a strategy nobody wrote
+- gen_mo_macd_cci_session_swing_tp_long on US500 H4: out_of_universe -- gen_mo_macd_cci_session_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURGBP', 'XAUUSD'] and timeframes ['H4']; running it on US500 H4 would validate a strategy nobody wrote
+- gen_mo_macd_cci_session_swing_tp_long on US500 D1: out_of_universe -- gen_mo_macd_cci_session_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURGBP', 'XAUUSD'] and timeframes ['H4']; running it on US500 D1 would validate a strategy nobody wrote
+- gen_mo_macd_cci_session_swing_tp_long on USDCAD D1: out_of_universe -- gen_mo_macd_cci_session_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURGBP', 'XAUUSD'] and timeframes ['H4']; running it on USDCAD D1 would validate a strategy nobody wrote
+- gen_mo_macd_cci_session_swing_tp_long on USDCHF D1: out_of_universe -- gen_mo_macd_cci_session_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURGBP', 'XAUUSD'] and timeframes ['H4']; running it on USDCHF D1 would validate a strategy nobody wrote
+- gen_mo_macd_cci_session_swing_tp_long on USDJPY D1: out_of_universe -- gen_mo_macd_cci_session_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURGBP', 'XAUUSD'] and timeframes ['H4']; running it on USDJPY D1 would validate a strategy nobody wrote
+- gen_mo_macd_cci_session_swing_tp_long on XAGUSD H4: out_of_universe -- gen_mo_macd_cci_session_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURGBP', 'XAUUSD'] and timeframes ['H4']; running it on XAGUSD H4 would validate a strategy nobody wrote
+- gen_mo_macd_cci_session_swing_tp_long on XAGUSD D1: out_of_universe -- gen_mo_macd_cci_session_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURGBP', 'XAUUSD'] and timeframes ['H4']; running it on XAGUSD D1 would validate a strategy nobody wrote
+- gen_mo_macd_cci_session_swing_tp_long on XAUUSD D1: out_of_universe -- gen_mo_macd_cci_session_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURGBP', 'XAUUSD'] and timeframes ['H4']; running it on XAUUSD D1 would validate a strategy nobody wrote
+- gen_mo_macd_cci_session_time_exit on AUDJPY D1: out_of_universe -- gen_mo_macd_cci_session_time_exit declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURGBP', 'XAUUSD'] and timeframes ['H4']; running it on AUDJPY D1 would validate a strategy nobody wrote
+- gen_mo_macd_cci_session_time_exit on AUDUSD D1: out_of_universe -- gen_mo_macd_cci_session_time_exit declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURGBP', 'XAUUSD'] and timeframes ['H4']; running it on AUDUSD D1 would validate a strategy nobody wrote
+- gen_mo_macd_cci_session_time_exit on DE40 H4: out_of_universe -- gen_mo_macd_cci_session_time_exit declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURGBP', 'XAUUSD'] and timeframes ['H4']; running it on DE40 H4 would validate a strategy nobody wrote
+- gen_mo_macd_cci_session_time_exit on DE40 D1: out_of_universe -- gen_mo_macd_cci_session_time_exit declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURGBP', 'XAUUSD'] and timeframes ['H4']; running it on DE40 D1 would validate a strategy nobody wrote
+- gen_mo_macd_cci_session_time_exit on EURGBP D1: out_of_universe -- gen_mo_macd_cci_session_time_exit declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURGBP', 'XAUUSD'] and timeframes ['H4']; running it on EURGBP D1 would validate a strategy nobody wrote
+- gen_mo_macd_cci_session_time_exit on EURJPY D1: out_of_universe -- gen_mo_macd_cci_session_time_exit declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURGBP', 'XAUUSD'] and timeframes ['H4']; running it on EURJPY D1 would validate a strategy nobody wrote
+- gen_mo_macd_cci_session_time_exit on EURUSD D1: out_of_universe -- gen_mo_macd_cci_session_time_exit declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURGBP', 'XAUUSD'] and timeframes ['H4']; running it on EURUSD D1 would validate a strategy nobody wrote
+- gen_mo_macd_cci_session_time_exit on GBPJPY D1: out_of_universe -- gen_mo_macd_cci_session_time_exit declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURGBP', 'XAUUSD'] and timeframes ['H4']; running it on GBPJPY D1 would validate a strategy nobody wrote
+- gen_mo_macd_cci_session_time_exit on GBPUSD D1: out_of_universe -- gen_mo_macd_cci_session_time_exit declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURGBP', 'XAUUSD'] and timeframes ['H4']; running it on GBPUSD D1 would validate a strategy nobody wrote
+- gen_mo_macd_cci_session_time_exit on NZDUSD D1: out_of_universe -- gen_mo_macd_cci_session_time_exit declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURGBP', 'XAUUSD'] and timeframes ['H4']; running it on NZDUSD D1 would validate a strategy nobody wrote
+- gen_mo_macd_cci_session_time_exit on UK100 H4: out_of_universe -- gen_mo_macd_cci_session_time_exit declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURGBP', 'XAUUSD'] and timeframes ['H4']; running it on UK100 H4 would validate a strategy nobody wrote
+- gen_mo_macd_cci_session_time_exit on UK100 D1: out_of_universe -- gen_mo_macd_cci_session_time_exit declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURGBP', 'XAUUSD'] and timeframes ['H4']; running it on UK100 D1 would validate a strategy nobody wrote
+- gen_mo_macd_cci_session_time_exit on US500 H4: out_of_universe -- gen_mo_macd_cci_session_time_exit declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURGBP', 'XAUUSD'] and timeframes ['H4']; running it on US500 H4 would validate a strategy nobody wrote
+- gen_mo_macd_cci_session_time_exit on US500 D1: out_of_universe -- gen_mo_macd_cci_session_time_exit declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURGBP', 'XAUUSD'] and timeframes ['H4']; running it on US500 D1 would validate a strategy nobody wrote
+- gen_mo_macd_cci_session_time_exit on USDCAD D1: out_of_universe -- gen_mo_macd_cci_session_time_exit declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURGBP', 'XAUUSD'] and timeframes ['H4']; running it on USDCAD D1 would validate a strategy nobody wrote
+- gen_mo_macd_cci_session_time_exit on USDCHF D1: out_of_universe -- gen_mo_macd_cci_session_time_exit declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURGBP', 'XAUUSD'] and timeframes ['H4']; running it on USDCHF D1 would validate a strategy nobody wrote
+- gen_mo_macd_cci_session_time_exit on USDJPY D1: out_of_universe -- gen_mo_macd_cci_session_time_exit declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURGBP', 'XAUUSD'] and timeframes ['H4']; running it on USDJPY D1 would validate a strategy nobody wrote
+- gen_mo_macd_cci_session_time_exit on XAGUSD H4: out_of_universe -- gen_mo_macd_cci_session_time_exit declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURGBP', 'XAUUSD'] and timeframes ['H4']; running it on XAGUSD H4 would validate a strategy nobody wrote
+- gen_mo_macd_cci_session_time_exit on XAGUSD D1: out_of_universe -- gen_mo_macd_cci_session_time_exit declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURGBP', 'XAUUSD'] and timeframes ['H4']; running it on XAGUSD D1 would validate a strategy nobody wrote
+- gen_mo_macd_cci_session_time_exit on XAUUSD D1: out_of_universe -- gen_mo_macd_cci_session_time_exit declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURGBP', 'XAUUSD'] and timeframes ['H4']; running it on XAUUSD D1 would validate a strategy nobody wrote
+- gen_mo_macd_stoch_none_swing_tp_long on DE40 H4: out_of_universe -- gen_mo_macd_stoch_none_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURGBP', 'XAUUSD'] and timeframes ['H4', 'D1']; running it on DE40 H4 would validate a strategy nobody wrote
+- gen_mo_macd_stoch_none_swing_tp_long on DE40 D1: out_of_universe -- gen_mo_macd_stoch_none_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURGBP', 'XAUUSD'] and timeframes ['H4', 'D1']; running it on DE40 D1 would validate a strategy nobody wrote
+- gen_mo_macd_stoch_none_swing_tp_long on UK100 H4: out_of_universe -- gen_mo_macd_stoch_none_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURGBP', 'XAUUSD'] and timeframes ['H4', 'D1']; running it on UK100 H4 would validate a strategy nobody wrote
+- gen_mo_macd_stoch_none_swing_tp_long on UK100 D1: out_of_universe -- gen_mo_macd_stoch_none_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURGBP', 'XAUUSD'] and timeframes ['H4', 'D1']; running it on UK100 D1 would validate a strategy nobody wrote
+- gen_mo_macd_stoch_none_swing_tp_long on US500 H4: out_of_universe -- gen_mo_macd_stoch_none_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURGBP', 'XAUUSD'] and timeframes ['H4', 'D1']; running it on US500 H4 would validate a strategy nobody wrote
+- gen_mo_macd_stoch_none_swing_tp_long on US500 D1: out_of_universe -- gen_mo_macd_stoch_none_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURGBP', 'XAUUSD'] and timeframes ['H4', 'D1']; running it on US500 D1 would validate a strategy nobody wrote
+- gen_mo_macd_stoch_none_swing_tp_long on XAGUSD H4: out_of_universe -- gen_mo_macd_stoch_none_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURGBP', 'XAUUSD'] and timeframes ['H4', 'D1']; running it on XAGUSD H4 would validate a strategy nobody wrote
+- gen_mo_macd_stoch_none_swing_tp_long on XAGUSD D1: out_of_universe -- gen_mo_macd_stoch_none_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURGBP', 'XAUUSD'] and timeframes ['H4', 'D1']; running it on XAGUSD D1 would validate a strategy nobody wrote
+- gen_mo_macd_stoch_none_time_exit on DE40 H4: out_of_universe -- gen_mo_macd_stoch_none_time_exit declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURGBP', 'XAUUSD'] and timeframes ['H4', 'D1']; running it on DE40 H4 would validate a strategy nobody wrote
+- gen_mo_macd_stoch_none_time_exit on DE40 D1: out_of_universe -- gen_mo_macd_stoch_none_time_exit declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURGBP', 'XAUUSD'] and timeframes ['H4', 'D1']; running it on DE40 D1 would validate a strategy nobody wrote
+- gen_mo_macd_stoch_none_time_exit on UK100 H4: out_of_universe -- gen_mo_macd_stoch_none_time_exit declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURGBP', 'XAUUSD'] and timeframes ['H4', 'D1']; running it on UK100 H4 would validate a strategy nobody wrote
+- gen_mo_macd_stoch_none_time_exit on UK100 D1: out_of_universe -- gen_mo_macd_stoch_none_time_exit declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURGBP', 'XAUUSD'] and timeframes ['H4', 'D1']; running it on UK100 D1 would validate a strategy nobody wrote
+- gen_mo_macd_stoch_none_time_exit on US500 H4: out_of_universe -- gen_mo_macd_stoch_none_time_exit declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURGBP', 'XAUUSD'] and timeframes ['H4', 'D1']; running it on US500 H4 would validate a strategy nobody wrote
+- gen_mo_macd_stoch_none_time_exit on US500 D1: out_of_universe -- gen_mo_macd_stoch_none_time_exit declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURGBP', 'XAUUSD'] and timeframes ['H4', 'D1']; running it on US500 D1 would validate a strategy nobody wrote
+- gen_mo_macd_stoch_none_time_exit on XAGUSD H4: out_of_universe -- gen_mo_macd_stoch_none_time_exit declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURGBP', 'XAUUSD'] and timeframes ['H4', 'D1']; running it on XAGUSD H4 would validate a strategy nobody wrote
+- gen_mo_macd_stoch_none_time_exit on XAGUSD D1: out_of_universe -- gen_mo_macd_stoch_none_time_exit declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURGBP', 'XAUUSD'] and timeframes ['H4', 'D1']; running it on XAGUSD D1 would validate a strategy nobody wrote
+- gen_mo_macd_stoch_none_tp_r on DE40 H4: out_of_universe -- gen_mo_macd_stoch_none_tp_r declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURGBP', 'XAUUSD'] and timeframes ['H4', 'D1']; running it on DE40 H4 would validate a strategy nobody wrote
+- gen_mo_macd_stoch_none_tp_r on DE40 D1: out_of_universe -- gen_mo_macd_stoch_none_tp_r declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURGBP', 'XAUUSD'] and timeframes ['H4', 'D1']; running it on DE40 D1 would validate a strategy nobody wrote
+- gen_mo_macd_stoch_none_tp_r on UK100 H4: out_of_universe -- gen_mo_macd_stoch_none_tp_r declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURGBP', 'XAUUSD'] and timeframes ['H4', 'D1']; running it on UK100 H4 would validate a strategy nobody wrote
+- gen_mo_macd_stoch_none_tp_r on UK100 D1: out_of_universe -- gen_mo_macd_stoch_none_tp_r declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURGBP', 'XAUUSD'] and timeframes ['H4', 'D1']; running it on UK100 D1 would validate a strategy nobody wrote
+- gen_mo_macd_stoch_none_tp_r on US500 H4: out_of_universe -- gen_mo_macd_stoch_none_tp_r declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURGBP', 'XAUUSD'] and timeframes ['H4', 'D1']; running it on US500 H4 would validate a strategy nobody wrote
+- gen_mo_macd_stoch_none_tp_r on US500 D1: out_of_universe -- gen_mo_macd_stoch_none_tp_r declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURGBP', 'XAUUSD'] and timeframes ['H4', 'D1']; running it on US500 D1 would validate a strategy nobody wrote
+- gen_mo_macd_stoch_none_tp_r on XAGUSD H4: out_of_universe -- gen_mo_macd_stoch_none_tp_r declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURGBP', 'XAUUSD'] and timeframes ['H4', 'D1']; running it on XAGUSD H4 would validate a strategy nobody wrote
+- gen_mo_macd_stoch_none_tp_r on XAGUSD D1: out_of_universe -- gen_mo_macd_stoch_none_tp_r declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURGBP', 'XAUUSD'] and timeframes ['H4', 'D1']; running it on XAGUSD D1 would validate a strategy nobody wrote
+- gen_mo_macd_stoch_none_trail on DE40 H4: out_of_universe -- gen_mo_macd_stoch_none_trail declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURGBP', 'XAUUSD'] and timeframes ['H4', 'D1']; running it on DE40 H4 would validate a strategy nobody wrote
+- gen_mo_macd_stoch_none_trail on DE40 D1: out_of_universe -- gen_mo_macd_stoch_none_trail declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURGBP', 'XAUUSD'] and timeframes ['H4', 'D1']; running it on DE40 D1 would validate a strategy nobody wrote
+- gen_mo_macd_stoch_none_trail on UK100 H4: out_of_universe -- gen_mo_macd_stoch_none_trail declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURGBP', 'XAUUSD'] and timeframes ['H4', 'D1']; running it on UK100 H4 would validate a strategy nobody wrote
+- gen_mo_macd_stoch_none_trail on UK100 D1: out_of_universe -- gen_mo_macd_stoch_none_trail declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURGBP', 'XAUUSD'] and timeframes ['H4', 'D1']; running it on UK100 D1 would validate a strategy nobody wrote
+- gen_mo_macd_stoch_none_trail on US500 H4: out_of_universe -- gen_mo_macd_stoch_none_trail declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURGBP', 'XAUUSD'] and timeframes ['H4', 'D1']; running it on US500 H4 would validate a strategy nobody wrote
+- gen_mo_macd_stoch_none_trail on US500 D1: out_of_universe -- gen_mo_macd_stoch_none_trail declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURGBP', 'XAUUSD'] and timeframes ['H4', 'D1']; running it on US500 D1 would validate a strategy nobody wrote
+- gen_mo_macd_stoch_none_trail on XAGUSD H4: out_of_universe -- gen_mo_macd_stoch_none_trail declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURGBP', 'XAUUSD'] and timeframes ['H4', 'D1']; running it on XAGUSD H4 would validate a strategy nobody wrote
+- gen_mo_macd_stoch_none_trail on XAGUSD D1: out_of_universe -- gen_mo_macd_stoch_none_trail declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURGBP', 'XAUUSD'] and timeframes ['H4', 'D1']; running it on XAGUSD D1 would validate a strategy nobody wrote
+- gen_mo_macd_stoch_rvol_gate_time_exit on DE40 H4: out_of_universe -- gen_mo_macd_stoch_rvol_gate_time_exit declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURGBP', 'XAUUSD'] and timeframes ['H4', 'D1']; running it on DE40 H4 would validate a strategy nobody wrote
+- gen_mo_macd_stoch_rvol_gate_time_exit on DE40 D1: out_of_universe -- gen_mo_macd_stoch_rvol_gate_time_exit declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURGBP', 'XAUUSD'] and timeframes ['H4', 'D1']; running it on DE40 D1 would validate a strategy nobody wrote
+- gen_mo_macd_stoch_rvol_gate_time_exit on UK100 H4: out_of_universe -- gen_mo_macd_stoch_rvol_gate_time_exit declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURGBP', 'XAUUSD'] and timeframes ['H4', 'D1']; running it on UK100 H4 would validate a strategy nobody wrote
+- gen_mo_macd_stoch_rvol_gate_time_exit on UK100 D1: out_of_universe -- gen_mo_macd_stoch_rvol_gate_time_exit declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURGBP', 'XAUUSD'] and timeframes ['H4', 'D1']; running it on UK100 D1 would validate a strategy nobody wrote
+- gen_mo_macd_stoch_rvol_gate_time_exit on US500 H4: out_of_universe -- gen_mo_macd_stoch_rvol_gate_time_exit declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURGBP', 'XAUUSD'] and timeframes ['H4', 'D1']; running it on US500 H4 would validate a strategy nobody wrote
+- gen_mo_macd_stoch_rvol_gate_time_exit on US500 D1: out_of_universe -- gen_mo_macd_stoch_rvol_gate_time_exit declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURGBP', 'XAUUSD'] and timeframes ['H4', 'D1']; running it on US500 D1 would validate a strategy nobody wrote
+- gen_mo_macd_stoch_rvol_gate_time_exit on XAGUSD H4: out_of_universe -- gen_mo_macd_stoch_rvol_gate_time_exit declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURGBP', 'XAUUSD'] and timeframes ['H4', 'D1']; running it on XAGUSD H4 would validate a strategy nobody wrote
+- gen_mo_macd_stoch_rvol_gate_time_exit on XAGUSD D1: out_of_universe -- gen_mo_macd_stoch_rvol_gate_time_exit declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURGBP', 'XAUUSD'] and timeframes ['H4', 'D1']; running it on XAGUSD D1 would validate a strategy nobody wrote
+- gen_mo_rsi_stoch_adx_gate_swing_tp_long on DE40 H4: out_of_universe -- gen_mo_rsi_stoch_adx_gate_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURGBP', 'XAUUSD'] and timeframes ['H4', 'D1']; running it on DE40 H4 would validate a strategy nobody wrote
+- gen_mo_rsi_stoch_adx_gate_swing_tp_long on DE40 D1: out_of_universe -- gen_mo_rsi_stoch_adx_gate_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURGBP', 'XAUUSD'] and timeframes ['H4', 'D1']; running it on DE40 D1 would validate a strategy nobody wrote
+- gen_mo_rsi_stoch_adx_gate_swing_tp_long on UK100 H4: out_of_universe -- gen_mo_rsi_stoch_adx_gate_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURGBP', 'XAUUSD'] and timeframes ['H4', 'D1']; running it on UK100 H4 would validate a strategy nobody wrote
+- gen_mo_rsi_stoch_adx_gate_swing_tp_long on UK100 D1: out_of_universe -- gen_mo_rsi_stoch_adx_gate_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURGBP', 'XAUUSD'] and timeframes ['H4', 'D1']; running it on UK100 D1 would validate a strategy nobody wrote
+- gen_mo_rsi_stoch_adx_gate_swing_tp_long on US500 H4: out_of_universe -- gen_mo_rsi_stoch_adx_gate_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURGBP', 'XAUUSD'] and timeframes ['H4', 'D1']; running it on US500 H4 would validate a strategy nobody wrote
+- gen_mo_rsi_stoch_adx_gate_swing_tp_long on US500 D1: out_of_universe -- gen_mo_rsi_stoch_adx_gate_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURGBP', 'XAUUSD'] and timeframes ['H4', 'D1']; running it on US500 D1 would validate a strategy nobody wrote
+- gen_mo_rsi_stoch_adx_gate_swing_tp_long on XAGUSD H4: out_of_universe -- gen_mo_rsi_stoch_adx_gate_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURGBP', 'XAUUSD'] and timeframes ['H4', 'D1']; running it on XAGUSD H4 would validate a strategy nobody wrote
+- gen_mo_rsi_stoch_adx_gate_swing_tp_long on XAGUSD D1: out_of_universe -- gen_mo_rsi_stoch_adx_gate_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURGBP', 'XAUUSD'] and timeframes ['H4', 'D1']; running it on XAGUSD D1 would validate a strategy nobody wrote
+- gen_mo_rsi_stoch_rvol_gate_swing_tp_long on DE40 H4: out_of_universe -- gen_mo_rsi_stoch_rvol_gate_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURGBP', 'XAUUSD'] and timeframes ['H4', 'D1']; running it on DE40 H4 would validate a strategy nobody wrote
+- gen_mo_rsi_stoch_rvol_gate_swing_tp_long on DE40 D1: out_of_universe -- gen_mo_rsi_stoch_rvol_gate_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURGBP', 'XAUUSD'] and timeframes ['H4', 'D1']; running it on DE40 D1 would validate a strategy nobody wrote
+- gen_mo_rsi_stoch_rvol_gate_swing_tp_long on UK100 H4: out_of_universe -- gen_mo_rsi_stoch_rvol_gate_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURGBP', 'XAUUSD'] and timeframes ['H4', 'D1']; running it on UK100 H4 would validate a strategy nobody wrote
+- gen_mo_rsi_stoch_rvol_gate_swing_tp_long on UK100 D1: out_of_universe -- gen_mo_rsi_stoch_rvol_gate_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURGBP', 'XAUUSD'] and timeframes ['H4', 'D1']; running it on UK100 D1 would validate a strategy nobody wrote
+- gen_mo_rsi_stoch_rvol_gate_swing_tp_long on US500 H4: out_of_universe -- gen_mo_rsi_stoch_rvol_gate_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURGBP', 'XAUUSD'] and timeframes ['H4', 'D1']; running it on US500 H4 would validate a strategy nobody wrote
+- gen_mo_rsi_stoch_rvol_gate_swing_tp_long on US500 D1: out_of_universe -- gen_mo_rsi_stoch_rvol_gate_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURGBP', 'XAUUSD'] and timeframes ['H4', 'D1']; running it on US500 D1 would validate a strategy nobody wrote
+- gen_mo_rsi_stoch_rvol_gate_swing_tp_long on XAGUSD H4: out_of_universe -- gen_mo_rsi_stoch_rvol_gate_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURGBP', 'XAUUSD'] and timeframes ['H4', 'D1']; running it on XAGUSD H4 would validate a strategy nobody wrote
+- gen_mo_rsi_stoch_rvol_gate_swing_tp_long on XAGUSD D1: out_of_universe -- gen_mo_rsi_stoch_rvol_gate_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURGBP', 'XAUUSD'] and timeframes ['H4', 'D1']; running it on XAGUSD D1 would validate a strategy nobody wrote
+- gen_mo_rsi_stoch_rvol_gate_swing_tp_short on DE40 H4: out_of_universe -- gen_mo_rsi_stoch_rvol_gate_swing_tp_short declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURGBP', 'XAUUSD'] and timeframes ['H4', 'D1']; running it on DE40 H4 would validate a strategy nobody wrote
+- gen_mo_rsi_stoch_rvol_gate_swing_tp_short on DE40 D1: out_of_universe -- gen_mo_rsi_stoch_rvol_gate_swing_tp_short declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURGBP', 'XAUUSD'] and timeframes ['H4', 'D1']; running it on DE40 D1 would validate a strategy nobody wrote
+- gen_mo_rsi_stoch_rvol_gate_swing_tp_short on UK100 H4: out_of_universe -- gen_mo_rsi_stoch_rvol_gate_swing_tp_short declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURGBP', 'XAUUSD'] and timeframes ['H4', 'D1']; running it on UK100 H4 would validate a strategy nobody wrote
+- gen_mo_rsi_stoch_rvol_gate_swing_tp_short on UK100 D1: out_of_universe -- gen_mo_rsi_stoch_rvol_gate_swing_tp_short declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURGBP', 'XAUUSD'] and timeframes ['H4', 'D1']; running it on UK100 D1 would validate a strategy nobody wrote
+- gen_mo_rsi_stoch_rvol_gate_swing_tp_short on US500 H4: out_of_universe -- gen_mo_rsi_stoch_rvol_gate_swing_tp_short declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURGBP', 'XAUUSD'] and timeframes ['H4', 'D1']; running it on US500 H4 would validate a strategy nobody wrote
+- gen_mo_rsi_stoch_rvol_gate_swing_tp_short on US500 D1: out_of_universe -- gen_mo_rsi_stoch_rvol_gate_swing_tp_short declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURGBP', 'XAUUSD'] and timeframes ['H4', 'D1']; running it on US500 D1 would validate a strategy nobody wrote
+- gen_mo_rsi_stoch_rvol_gate_swing_tp_short on XAGUSD H4: out_of_universe -- gen_mo_rsi_stoch_rvol_gate_swing_tp_short declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURGBP', 'XAUUSD'] and timeframes ['H4', 'D1']; running it on XAGUSD H4 would validate a strategy nobody wrote
+- gen_mo_rsi_stoch_rvol_gate_swing_tp_short on XAGUSD D1: out_of_universe -- gen_mo_rsi_stoch_rvol_gate_swing_tp_short declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURGBP', 'XAUUSD'] and timeframes ['H4', 'D1']; running it on XAGUSD D1 would validate a strategy nobody wrote
+- gen_mo_rsi_stoch_rvol_gate_tp_r on DE40 H4: out_of_universe -- gen_mo_rsi_stoch_rvol_gate_tp_r declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURGBP', 'XAUUSD'] and timeframes ['H4', 'D1']; running it on DE40 H4 would validate a strategy nobody wrote
+- gen_mo_rsi_stoch_rvol_gate_tp_r on DE40 D1: out_of_universe -- gen_mo_rsi_stoch_rvol_gate_tp_r declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURGBP', 'XAUUSD'] and timeframes ['H4', 'D1']; running it on DE40 D1 would validate a strategy nobody wrote
+- gen_mo_rsi_stoch_rvol_gate_tp_r on UK100 H4: out_of_universe -- gen_mo_rsi_stoch_rvol_gate_tp_r declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURGBP', 'XAUUSD'] and timeframes ['H4', 'D1']; running it on UK100 H4 would validate a strategy nobody wrote
+- gen_mo_rsi_stoch_rvol_gate_tp_r on UK100 D1: out_of_universe -- gen_mo_rsi_stoch_rvol_gate_tp_r declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURGBP', 'XAUUSD'] and timeframes ['H4', 'D1']; running it on UK100 D1 would validate a strategy nobody wrote
+- gen_mo_rsi_stoch_rvol_gate_tp_r on US500 H4: out_of_universe -- gen_mo_rsi_stoch_rvol_gate_tp_r declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURGBP', 'XAUUSD'] and timeframes ['H4', 'D1']; running it on US500 H4 would validate a strategy nobody wrote
+- gen_mo_rsi_stoch_rvol_gate_tp_r on US500 D1: out_of_universe -- gen_mo_rsi_stoch_rvol_gate_tp_r declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURGBP', 'XAUUSD'] and timeframes ['H4', 'D1']; running it on US500 D1 would validate a strategy nobody wrote
+- gen_mo_rsi_stoch_rvol_gate_tp_r on XAGUSD H4: out_of_universe -- gen_mo_rsi_stoch_rvol_gate_tp_r declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURGBP', 'XAUUSD'] and timeframes ['H4', 'D1']; running it on XAGUSD H4 would validate a strategy nobody wrote
+- gen_mo_rsi_stoch_rvol_gate_tp_r on XAGUSD D1: out_of_universe -- gen_mo_rsi_stoch_rvol_gate_tp_r declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURGBP', 'XAUUSD'] and timeframes ['H4', 'D1']; running it on XAGUSD D1 would validate a strategy nobody wrote
+- gen_mo_rsi_stoch_session_swing_tp_long on AUDJPY D1: out_of_universe -- gen_mo_rsi_stoch_session_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURGBP', 'XAUUSD'] and timeframes ['H4']; running it on AUDJPY D1 would validate a strategy nobody wrote
+- gen_mo_rsi_stoch_session_swing_tp_long on AUDUSD D1: out_of_universe -- gen_mo_rsi_stoch_session_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURGBP', 'XAUUSD'] and timeframes ['H4']; running it on AUDUSD D1 would validate a strategy nobody wrote
+- gen_mo_rsi_stoch_session_swing_tp_long on DE40 H4: out_of_universe -- gen_mo_rsi_stoch_session_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURGBP', 'XAUUSD'] and timeframes ['H4']; running it on DE40 H4 would validate a strategy nobody wrote
+- gen_mo_rsi_stoch_session_swing_tp_long on DE40 D1: out_of_universe -- gen_mo_rsi_stoch_session_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURGBP', 'XAUUSD'] and timeframes ['H4']; running it on DE40 D1 would validate a strategy nobody wrote
+- gen_mo_rsi_stoch_session_swing_tp_long on EURGBP D1: out_of_universe -- gen_mo_rsi_stoch_session_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURGBP', 'XAUUSD'] and timeframes ['H4']; running it on EURGBP D1 would validate a strategy nobody wrote
+- gen_mo_rsi_stoch_session_swing_tp_long on EURJPY D1: out_of_universe -- gen_mo_rsi_stoch_session_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURGBP', 'XAUUSD'] and timeframes ['H4']; running it on EURJPY D1 would validate a strategy nobody wrote
+- gen_mo_rsi_stoch_session_swing_tp_long on EURUSD D1: out_of_universe -- gen_mo_rsi_stoch_session_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURGBP', 'XAUUSD'] and timeframes ['H4']; running it on EURUSD D1 would validate a strategy nobody wrote
+- gen_mo_rsi_stoch_session_swing_tp_long on GBPJPY D1: out_of_universe -- gen_mo_rsi_stoch_session_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURGBP', 'XAUUSD'] and timeframes ['H4']; running it on GBPJPY D1 would validate a strategy nobody wrote
+- gen_mo_rsi_stoch_session_swing_tp_long on GBPUSD D1: out_of_universe -- gen_mo_rsi_stoch_session_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURGBP', 'XAUUSD'] and timeframes ['H4']; running it on GBPUSD D1 would validate a strategy nobody wrote
+- gen_mo_rsi_stoch_session_swing_tp_long on NZDUSD D1: out_of_universe -- gen_mo_rsi_stoch_session_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURGBP', 'XAUUSD'] and timeframes ['H4']; running it on NZDUSD D1 would validate a strategy nobody wrote
+- gen_mo_rsi_stoch_session_swing_tp_long on UK100 H4: out_of_universe -- gen_mo_rsi_stoch_session_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURGBP', 'XAUUSD'] and timeframes ['H4']; running it on UK100 H4 would validate a strategy nobody wrote
+- gen_mo_rsi_stoch_session_swing_tp_long on UK100 D1: out_of_universe -- gen_mo_rsi_stoch_session_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURGBP', 'XAUUSD'] and timeframes ['H4']; running it on UK100 D1 would validate a strategy nobody wrote
+- gen_mo_rsi_stoch_session_swing_tp_long on US500 H4: out_of_universe -- gen_mo_rsi_stoch_session_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURGBP', 'XAUUSD'] and timeframes ['H4']; running it on US500 H4 would validate a strategy nobody wrote
+- gen_mo_rsi_stoch_session_swing_tp_long on US500 D1: out_of_universe -- gen_mo_rsi_stoch_session_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURGBP', 'XAUUSD'] and timeframes ['H4']; running it on US500 D1 would validate a strategy nobody wrote
+- gen_mo_rsi_stoch_session_swing_tp_long on USDCAD D1: out_of_universe -- gen_mo_rsi_stoch_session_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURGBP', 'XAUUSD'] and timeframes ['H4']; running it on USDCAD D1 would validate a strategy nobody wrote
+- gen_mo_rsi_stoch_session_swing_tp_long on USDCHF D1: out_of_universe -- gen_mo_rsi_stoch_session_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURGBP', 'XAUUSD'] and timeframes ['H4']; running it on USDCHF D1 would validate a strategy nobody wrote
+- gen_mo_rsi_stoch_session_swing_tp_long on USDJPY D1: out_of_universe -- gen_mo_rsi_stoch_session_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURGBP', 'XAUUSD'] and timeframes ['H4']; running it on USDJPY D1 would validate a strategy nobody wrote
+- gen_mo_rsi_stoch_session_swing_tp_long on XAGUSD H4: out_of_universe -- gen_mo_rsi_stoch_session_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURGBP', 'XAUUSD'] and timeframes ['H4']; running it on XAGUSD H4 would validate a strategy nobody wrote
+- gen_mo_rsi_stoch_session_swing_tp_long on XAGUSD D1: out_of_universe -- gen_mo_rsi_stoch_session_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURGBP', 'XAUUSD'] and timeframes ['H4']; running it on XAGUSD D1 would validate a strategy nobody wrote
+- gen_mo_rsi_stoch_session_swing_tp_long on XAUUSD D1: out_of_universe -- gen_mo_rsi_stoch_session_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURGBP', 'XAUUSD'] and timeframes ['H4']; running it on XAUUSD D1 would validate a strategy nobody wrote
+- gen_mo_rsi_stoch_session_trail on AUDJPY D1: out_of_universe -- gen_mo_rsi_stoch_session_trail declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURGBP', 'XAUUSD'] and timeframes ['H4']; running it on AUDJPY D1 would validate a strategy nobody wrote
+- gen_mo_rsi_stoch_session_trail on AUDUSD D1: out_of_universe -- gen_mo_rsi_stoch_session_trail declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURGBP', 'XAUUSD'] and timeframes ['H4']; running it on AUDUSD D1 would validate a strategy nobody wrote
+- gen_mo_rsi_stoch_session_trail on DE40 H4: out_of_universe -- gen_mo_rsi_stoch_session_trail declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURGBP', 'XAUUSD'] and timeframes ['H4']; running it on DE40 H4 would validate a strategy nobody wrote
+- gen_mo_rsi_stoch_session_trail on DE40 D1: out_of_universe -- gen_mo_rsi_stoch_session_trail declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURGBP', 'XAUUSD'] and timeframes ['H4']; running it on DE40 D1 would validate a strategy nobody wrote
+- gen_mo_rsi_stoch_session_trail on EURGBP D1: out_of_universe -- gen_mo_rsi_stoch_session_trail declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURGBP', 'XAUUSD'] and timeframes ['H4']; running it on EURGBP D1 would validate a strategy nobody wrote
+- gen_mo_rsi_stoch_session_trail on EURJPY D1: out_of_universe -- gen_mo_rsi_stoch_session_trail declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURGBP', 'XAUUSD'] and timeframes ['H4']; running it on EURJPY D1 would validate a strategy nobody wrote
+- gen_mo_rsi_stoch_session_trail on EURUSD D1: out_of_universe -- gen_mo_rsi_stoch_session_trail declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURGBP', 'XAUUSD'] and timeframes ['H4']; running it on EURUSD D1 would validate a strategy nobody wrote
+- gen_mo_rsi_stoch_session_trail on GBPJPY D1: out_of_universe -- gen_mo_rsi_stoch_session_trail declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURGBP', 'XAUUSD'] and timeframes ['H4']; running it on GBPJPY D1 would validate a strategy nobody wrote
+- gen_mo_rsi_stoch_session_trail on GBPUSD D1: out_of_universe -- gen_mo_rsi_stoch_session_trail declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURGBP', 'XAUUSD'] and timeframes ['H4']; running it on GBPUSD D1 would validate a strategy nobody wrote
+- gen_mo_rsi_stoch_session_trail on NZDUSD D1: out_of_universe -- gen_mo_rsi_stoch_session_trail declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURGBP', 'XAUUSD'] and timeframes ['H4']; running it on NZDUSD D1 would validate a strategy nobody wrote
+- gen_mo_rsi_stoch_session_trail on UK100 H4: out_of_universe -- gen_mo_rsi_stoch_session_trail declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURGBP', 'XAUUSD'] and timeframes ['H4']; running it on UK100 H4 would validate a strategy nobody wrote
+- gen_mo_rsi_stoch_session_trail on UK100 D1: out_of_universe -- gen_mo_rsi_stoch_session_trail declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURGBP', 'XAUUSD'] and timeframes ['H4']; running it on UK100 D1 would validate a strategy nobody wrote
+- gen_mo_rsi_stoch_session_trail on US500 H4: out_of_universe -- gen_mo_rsi_stoch_session_trail declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURGBP', 'XAUUSD'] and timeframes ['H4']; running it on US500 H4 would validate a strategy nobody wrote
+- gen_mo_rsi_stoch_session_trail on US500 D1: out_of_universe -- gen_mo_rsi_stoch_session_trail declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURGBP', 'XAUUSD'] and timeframes ['H4']; running it on US500 D1 would validate a strategy nobody wrote
+- gen_mo_rsi_stoch_session_trail on USDCAD D1: out_of_universe -- gen_mo_rsi_stoch_session_trail declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURGBP', 'XAUUSD'] and timeframes ['H4']; running it on USDCAD D1 would validate a strategy nobody wrote
+- gen_mo_rsi_stoch_session_trail on USDCHF D1: out_of_universe -- gen_mo_rsi_stoch_session_trail declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURGBP', 'XAUUSD'] and timeframes ['H4']; running it on USDCHF D1 would validate a strategy nobody wrote
+- gen_mo_rsi_stoch_session_trail on USDJPY D1: out_of_universe -- gen_mo_rsi_stoch_session_trail declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURGBP', 'XAUUSD'] and timeframes ['H4']; running it on USDJPY D1 would validate a strategy nobody wrote
+- gen_mo_rsi_stoch_session_trail on XAGUSD H4: out_of_universe -- gen_mo_rsi_stoch_session_trail declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURGBP', 'XAUUSD'] and timeframes ['H4']; running it on XAGUSD H4 would validate a strategy nobody wrote
+- gen_mo_rsi_stoch_session_trail on XAGUSD D1: out_of_universe -- gen_mo_rsi_stoch_session_trail declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURGBP', 'XAUUSD'] and timeframes ['H4']; running it on XAGUSD D1 would validate a strategy nobody wrote
+- gen_mo_rsi_stoch_session_trail on XAUUSD D1: out_of_universe -- gen_mo_rsi_stoch_session_trail declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'AUDJPY', 'EURGBP', 'XAUUSD'] and timeframes ['H4']; running it on XAUUSD D1 would validate a strategy nobody wrote
+- gen_mr_bb_reentry_none_swing_tp_long on AUDJPY H4: out_of_universe -- gen_mr_bb_reentry_none_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4', 'D1']; running it on AUDJPY H4 would validate a strategy nobody wrote
+- gen_mr_bb_reentry_none_swing_tp_long on AUDJPY D1: out_of_universe -- gen_mr_bb_reentry_none_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4', 'D1']; running it on AUDJPY D1 would validate a strategy nobody wrote
+- gen_mr_bb_reentry_none_swing_tp_long on DE40 H4: out_of_universe -- gen_mr_bb_reentry_none_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4', 'D1']; running it on DE40 H4 would validate a strategy nobody wrote
+- gen_mr_bb_reentry_none_swing_tp_long on DE40 D1: out_of_universe -- gen_mr_bb_reentry_none_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4', 'D1']; running it on DE40 D1 would validate a strategy nobody wrote
+- gen_mr_bb_reentry_none_swing_tp_long on EURJPY H4: out_of_universe -- gen_mr_bb_reentry_none_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4', 'D1']; running it on EURJPY H4 would validate a strategy nobody wrote
+- gen_mr_bb_reentry_none_swing_tp_long on EURJPY D1: out_of_universe -- gen_mr_bb_reentry_none_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4', 'D1']; running it on EURJPY D1 would validate a strategy nobody wrote
+- gen_mr_bb_reentry_none_swing_tp_long on GBPJPY H4: out_of_universe -- gen_mr_bb_reentry_none_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4', 'D1']; running it on GBPJPY H4 would validate a strategy nobody wrote
+- gen_mr_bb_reentry_none_swing_tp_long on GBPJPY D1: out_of_universe -- gen_mr_bb_reentry_none_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4', 'D1']; running it on GBPJPY D1 would validate a strategy nobody wrote
+- gen_mr_bb_reentry_none_swing_tp_long on UK100 H4: out_of_universe -- gen_mr_bb_reentry_none_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4', 'D1']; running it on UK100 H4 would validate a strategy nobody wrote
+- gen_mr_bb_reentry_none_swing_tp_long on UK100 D1: out_of_universe -- gen_mr_bb_reentry_none_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4', 'D1']; running it on UK100 D1 would validate a strategy nobody wrote
+- gen_mr_bb_reentry_none_swing_tp_long on US500 H4: out_of_universe -- gen_mr_bb_reentry_none_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4', 'D1']; running it on US500 H4 would validate a strategy nobody wrote
+- gen_mr_bb_reentry_none_swing_tp_long on US500 D1: out_of_universe -- gen_mr_bb_reentry_none_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4', 'D1']; running it on US500 D1 would validate a strategy nobody wrote
+- gen_mr_bb_reentry_none_swing_tp_long on XAGUSD H4: out_of_universe -- gen_mr_bb_reentry_none_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4', 'D1']; running it on XAGUSD H4 would validate a strategy nobody wrote
+- gen_mr_bb_reentry_none_swing_tp_long on XAGUSD D1: out_of_universe -- gen_mr_bb_reentry_none_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4', 'D1']; running it on XAGUSD D1 would validate a strategy nobody wrote
+- gen_mr_bb_reentry_none_swing_tp_long on XAUUSD H4: out_of_universe -- gen_mr_bb_reentry_none_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4', 'D1']; running it on XAUUSD H4 would validate a strategy nobody wrote
+- gen_mr_bb_reentry_none_swing_tp_long on XAUUSD D1: out_of_universe -- gen_mr_bb_reentry_none_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4', 'D1']; running it on XAUUSD D1 would validate a strategy nobody wrote
+- gen_mr_bb_reentry_none_swing_tp_short on AUDJPY H4: out_of_universe -- gen_mr_bb_reentry_none_swing_tp_short declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4', 'D1']; running it on AUDJPY H4 would validate a strategy nobody wrote
+- gen_mr_bb_reentry_none_swing_tp_short on AUDJPY D1: out_of_universe -- gen_mr_bb_reentry_none_swing_tp_short declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4', 'D1']; running it on AUDJPY D1 would validate a strategy nobody wrote
+- gen_mr_bb_reentry_none_swing_tp_short on DE40 H4: out_of_universe -- gen_mr_bb_reentry_none_swing_tp_short declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4', 'D1']; running it on DE40 H4 would validate a strategy nobody wrote
+- gen_mr_bb_reentry_none_swing_tp_short on DE40 D1: out_of_universe -- gen_mr_bb_reentry_none_swing_tp_short declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4', 'D1']; running it on DE40 D1 would validate a strategy nobody wrote
+- gen_mr_bb_reentry_none_swing_tp_short on EURJPY H4: out_of_universe -- gen_mr_bb_reentry_none_swing_tp_short declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4', 'D1']; running it on EURJPY H4 would validate a strategy nobody wrote
+- gen_mr_bb_reentry_none_swing_tp_short on EURJPY D1: out_of_universe -- gen_mr_bb_reentry_none_swing_tp_short declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4', 'D1']; running it on EURJPY D1 would validate a strategy nobody wrote
+- gen_mr_bb_reentry_none_swing_tp_short on GBPJPY H4: out_of_universe -- gen_mr_bb_reentry_none_swing_tp_short declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4', 'D1']; running it on GBPJPY H4 would validate a strategy nobody wrote
+- gen_mr_bb_reentry_none_swing_tp_short on GBPJPY D1: out_of_universe -- gen_mr_bb_reentry_none_swing_tp_short declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4', 'D1']; running it on GBPJPY D1 would validate a strategy nobody wrote
+- gen_mr_bb_reentry_none_swing_tp_short on UK100 H4: out_of_universe -- gen_mr_bb_reentry_none_swing_tp_short declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4', 'D1']; running it on UK100 H4 would validate a strategy nobody wrote
+- gen_mr_bb_reentry_none_swing_tp_short on UK100 D1: out_of_universe -- gen_mr_bb_reentry_none_swing_tp_short declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4', 'D1']; running it on UK100 D1 would validate a strategy nobody wrote
+- gen_mr_bb_reentry_none_swing_tp_short on US500 H4: out_of_universe -- gen_mr_bb_reentry_none_swing_tp_short declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4', 'D1']; running it on US500 H4 would validate a strategy nobody wrote
+- gen_mr_bb_reentry_none_swing_tp_short on US500 D1: out_of_universe -- gen_mr_bb_reentry_none_swing_tp_short declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4', 'D1']; running it on US500 D1 would validate a strategy nobody wrote
+- gen_mr_bb_reentry_none_swing_tp_short on XAGUSD H4: out_of_universe -- gen_mr_bb_reentry_none_swing_tp_short declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4', 'D1']; running it on XAGUSD H4 would validate a strategy nobody wrote
+- gen_mr_bb_reentry_none_swing_tp_short on XAGUSD D1: out_of_universe -- gen_mr_bb_reentry_none_swing_tp_short declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4', 'D1']; running it on XAGUSD D1 would validate a strategy nobody wrote
+- gen_mr_bb_reentry_none_swing_tp_short on XAUUSD H4: out_of_universe -- gen_mr_bb_reentry_none_swing_tp_short declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4', 'D1']; running it on XAUUSD H4 would validate a strategy nobody wrote
+- gen_mr_bb_reentry_none_swing_tp_short on XAUUSD D1: out_of_universe -- gen_mr_bb_reentry_none_swing_tp_short declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4', 'D1']; running it on XAUUSD D1 would validate a strategy nobody wrote
+- gen_mr_bb_reentry_none_time_exit on AUDJPY H4: out_of_universe -- gen_mr_bb_reentry_none_time_exit declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4', 'D1']; running it on AUDJPY H4 would validate a strategy nobody wrote
+- gen_mr_bb_reentry_none_time_exit on AUDJPY D1: out_of_universe -- gen_mr_bb_reentry_none_time_exit declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4', 'D1']; running it on AUDJPY D1 would validate a strategy nobody wrote
+- gen_mr_bb_reentry_none_time_exit on DE40 H4: out_of_universe -- gen_mr_bb_reentry_none_time_exit declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4', 'D1']; running it on DE40 H4 would validate a strategy nobody wrote
+- gen_mr_bb_reentry_none_time_exit on DE40 D1: out_of_universe -- gen_mr_bb_reentry_none_time_exit declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4', 'D1']; running it on DE40 D1 would validate a strategy nobody wrote
+- gen_mr_bb_reentry_none_time_exit on EURJPY H4: out_of_universe -- gen_mr_bb_reentry_none_time_exit declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4', 'D1']; running it on EURJPY H4 would validate a strategy nobody wrote
+- gen_mr_bb_reentry_none_time_exit on EURJPY D1: out_of_universe -- gen_mr_bb_reentry_none_time_exit declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4', 'D1']; running it on EURJPY D1 would validate a strategy nobody wrote
+- gen_mr_bb_reentry_none_time_exit on GBPJPY H4: out_of_universe -- gen_mr_bb_reentry_none_time_exit declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4', 'D1']; running it on GBPJPY H4 would validate a strategy nobody wrote
+- gen_mr_bb_reentry_none_time_exit on GBPJPY D1: out_of_universe -- gen_mr_bb_reentry_none_time_exit declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4', 'D1']; running it on GBPJPY D1 would validate a strategy nobody wrote
+- gen_mr_bb_reentry_none_time_exit on UK100 H4: out_of_universe -- gen_mr_bb_reentry_none_time_exit declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4', 'D1']; running it on UK100 H4 would validate a strategy nobody wrote
+- gen_mr_bb_reentry_none_time_exit on UK100 D1: out_of_universe -- gen_mr_bb_reentry_none_time_exit declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4', 'D1']; running it on UK100 D1 would validate a strategy nobody wrote
+- gen_mr_bb_reentry_none_time_exit on US500 H4: out_of_universe -- gen_mr_bb_reentry_none_time_exit declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4', 'D1']; running it on US500 H4 would validate a strategy nobody wrote
+- gen_mr_bb_reentry_none_time_exit on US500 D1: out_of_universe -- gen_mr_bb_reentry_none_time_exit declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4', 'D1']; running it on US500 D1 would validate a strategy nobody wrote
+- gen_mr_bb_reentry_none_time_exit on XAGUSD H4: out_of_universe -- gen_mr_bb_reentry_none_time_exit declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4', 'D1']; running it on XAGUSD H4 would validate a strategy nobody wrote
+- gen_mr_bb_reentry_none_time_exit on XAGUSD D1: out_of_universe -- gen_mr_bb_reentry_none_time_exit declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4', 'D1']; running it on XAGUSD D1 would validate a strategy nobody wrote
+- gen_mr_bb_reentry_none_time_exit on XAUUSD H4: out_of_universe -- gen_mr_bb_reentry_none_time_exit declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4', 'D1']; running it on XAUUSD H4 would validate a strategy nobody wrote
+- gen_mr_bb_reentry_none_time_exit on XAUUSD D1: out_of_universe -- gen_mr_bb_reentry_none_time_exit declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4', 'D1']; running it on XAUUSD D1 would validate a strategy nobody wrote
+- gen_mr_bb_reentry_rvol_gate_swing_tp_long on AUDJPY H4: out_of_universe -- gen_mr_bb_reentry_rvol_gate_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4', 'D1']; running it on AUDJPY H4 would validate a strategy nobody wrote
+- gen_mr_bb_reentry_rvol_gate_swing_tp_long on AUDJPY D1: out_of_universe -- gen_mr_bb_reentry_rvol_gate_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4', 'D1']; running it on AUDJPY D1 would validate a strategy nobody wrote
+- gen_mr_bb_reentry_rvol_gate_swing_tp_long on DE40 H4: out_of_universe -- gen_mr_bb_reentry_rvol_gate_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4', 'D1']; running it on DE40 H4 would validate a strategy nobody wrote
+- gen_mr_bb_reentry_rvol_gate_swing_tp_long on DE40 D1: out_of_universe -- gen_mr_bb_reentry_rvol_gate_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4', 'D1']; running it on DE40 D1 would validate a strategy nobody wrote
+- gen_mr_bb_reentry_rvol_gate_swing_tp_long on EURJPY H4: out_of_universe -- gen_mr_bb_reentry_rvol_gate_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4', 'D1']; running it on EURJPY H4 would validate a strategy nobody wrote
+- gen_mr_bb_reentry_rvol_gate_swing_tp_long on EURJPY D1: out_of_universe -- gen_mr_bb_reentry_rvol_gate_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4', 'D1']; running it on EURJPY D1 would validate a strategy nobody wrote
+- gen_mr_bb_reentry_rvol_gate_swing_tp_long on GBPJPY H4: out_of_universe -- gen_mr_bb_reentry_rvol_gate_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4', 'D1']; running it on GBPJPY H4 would validate a strategy nobody wrote
+- gen_mr_bb_reentry_rvol_gate_swing_tp_long on GBPJPY D1: out_of_universe -- gen_mr_bb_reentry_rvol_gate_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4', 'D1']; running it on GBPJPY D1 would validate a strategy nobody wrote
+- gen_mr_bb_reentry_rvol_gate_swing_tp_long on UK100 H4: out_of_universe -- gen_mr_bb_reentry_rvol_gate_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4', 'D1']; running it on UK100 H4 would validate a strategy nobody wrote
+- gen_mr_bb_reentry_rvol_gate_swing_tp_long on UK100 D1: out_of_universe -- gen_mr_bb_reentry_rvol_gate_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4', 'D1']; running it on UK100 D1 would validate a strategy nobody wrote
+- gen_mr_bb_reentry_rvol_gate_swing_tp_long on US500 H4: out_of_universe -- gen_mr_bb_reentry_rvol_gate_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4', 'D1']; running it on US500 H4 would validate a strategy nobody wrote
+- gen_mr_bb_reentry_rvol_gate_swing_tp_long on US500 D1: out_of_universe -- gen_mr_bb_reentry_rvol_gate_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4', 'D1']; running it on US500 D1 would validate a strategy nobody wrote
+- gen_mr_bb_reentry_rvol_gate_swing_tp_long on XAGUSD H4: out_of_universe -- gen_mr_bb_reentry_rvol_gate_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4', 'D1']; running it on XAGUSD H4 would validate a strategy nobody wrote
+- gen_mr_bb_reentry_rvol_gate_swing_tp_long on XAGUSD D1: out_of_universe -- gen_mr_bb_reentry_rvol_gate_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4', 'D1']; running it on XAGUSD D1 would validate a strategy nobody wrote
+- gen_mr_bb_reentry_rvol_gate_swing_tp_long on XAUUSD H4: out_of_universe -- gen_mr_bb_reentry_rvol_gate_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4', 'D1']; running it on XAUUSD H4 would validate a strategy nobody wrote
+- gen_mr_bb_reentry_rvol_gate_swing_tp_long on XAUUSD D1: out_of_universe -- gen_mr_bb_reentry_rvol_gate_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4', 'D1']; running it on XAUUSD D1 would validate a strategy nobody wrote
+- gen_mr_bb_reentry_session_swing_tp_long on AUDJPY H4: out_of_universe -- gen_mr_bb_reentry_session_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4']; running it on AUDJPY H4 would validate a strategy nobody wrote
+- gen_mr_bb_reentry_session_swing_tp_long on AUDJPY D1: out_of_universe -- gen_mr_bb_reentry_session_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4']; running it on AUDJPY D1 would validate a strategy nobody wrote
+- gen_mr_bb_reentry_session_swing_tp_long on AUDUSD D1: out_of_universe -- gen_mr_bb_reentry_session_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4']; running it on AUDUSD D1 would validate a strategy nobody wrote
+- gen_mr_bb_reentry_session_swing_tp_long on DE40 H4: out_of_universe -- gen_mr_bb_reentry_session_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4']; running it on DE40 H4 would validate a strategy nobody wrote
+- gen_mr_bb_reentry_session_swing_tp_long on DE40 D1: out_of_universe -- gen_mr_bb_reentry_session_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4']; running it on DE40 D1 would validate a strategy nobody wrote
+- gen_mr_bb_reentry_session_swing_tp_long on EURGBP D1: out_of_universe -- gen_mr_bb_reentry_session_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4']; running it on EURGBP D1 would validate a strategy nobody wrote
+- gen_mr_bb_reentry_session_swing_tp_long on EURJPY H4: out_of_universe -- gen_mr_bb_reentry_session_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4']; running it on EURJPY H4 would validate a strategy nobody wrote
+- gen_mr_bb_reentry_session_swing_tp_long on EURJPY D1: out_of_universe -- gen_mr_bb_reentry_session_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4']; running it on EURJPY D1 would validate a strategy nobody wrote
+- gen_mr_bb_reentry_session_swing_tp_long on EURUSD D1: out_of_universe -- gen_mr_bb_reentry_session_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4']; running it on EURUSD D1 would validate a strategy nobody wrote
+- gen_mr_bb_reentry_session_swing_tp_long on GBPJPY H4: out_of_universe -- gen_mr_bb_reentry_session_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4']; running it on GBPJPY H4 would validate a strategy nobody wrote
+- gen_mr_bb_reentry_session_swing_tp_long on GBPJPY D1: out_of_universe -- gen_mr_bb_reentry_session_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4']; running it on GBPJPY D1 would validate a strategy nobody wrote
+- gen_mr_bb_reentry_session_swing_tp_long on GBPUSD D1: out_of_universe -- gen_mr_bb_reentry_session_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4']; running it on GBPUSD D1 would validate a strategy nobody wrote
+- gen_mr_bb_reentry_session_swing_tp_long on NZDUSD D1: out_of_universe -- gen_mr_bb_reentry_session_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4']; running it on NZDUSD D1 would validate a strategy nobody wrote
+- gen_mr_bb_reentry_session_swing_tp_long on UK100 H4: out_of_universe -- gen_mr_bb_reentry_session_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4']; running it on UK100 H4 would validate a strategy nobody wrote
+- gen_mr_bb_reentry_session_swing_tp_long on UK100 D1: out_of_universe -- gen_mr_bb_reentry_session_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4']; running it on UK100 D1 would validate a strategy nobody wrote
+- gen_mr_bb_reentry_session_swing_tp_long on US500 H4: out_of_universe -- gen_mr_bb_reentry_session_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4']; running it on US500 H4 would validate a strategy nobody wrote
+- gen_mr_bb_reentry_session_swing_tp_long on US500 D1: out_of_universe -- gen_mr_bb_reentry_session_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4']; running it on US500 D1 would validate a strategy nobody wrote
+- gen_mr_bb_reentry_session_swing_tp_long on USDCAD D1: out_of_universe -- gen_mr_bb_reentry_session_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4']; running it on USDCAD D1 would validate a strategy nobody wrote
+- gen_mr_bb_reentry_session_swing_tp_long on USDCHF D1: out_of_universe -- gen_mr_bb_reentry_session_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4']; running it on USDCHF D1 would validate a strategy nobody wrote
+- gen_mr_bb_reentry_session_swing_tp_long on USDJPY D1: out_of_universe -- gen_mr_bb_reentry_session_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4']; running it on USDJPY D1 would validate a strategy nobody wrote
+- gen_mr_bb_reentry_session_swing_tp_long on XAGUSD H4: out_of_universe -- gen_mr_bb_reentry_session_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4']; running it on XAGUSD H4 would validate a strategy nobody wrote
+- gen_mr_bb_reentry_session_swing_tp_long on XAGUSD D1: out_of_universe -- gen_mr_bb_reentry_session_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4']; running it on XAGUSD D1 would validate a strategy nobody wrote
+- gen_mr_bb_reentry_session_swing_tp_long on XAUUSD H4: out_of_universe -- gen_mr_bb_reentry_session_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4']; running it on XAUUSD H4 would validate a strategy nobody wrote
+- gen_mr_bb_reentry_session_swing_tp_long on XAUUSD D1: out_of_universe -- gen_mr_bb_reentry_session_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4']; running it on XAUUSD D1 would validate a strategy nobody wrote
+- gen_mr_bb_reentry_session_swing_tp_short on AUDJPY H4: out_of_universe -- gen_mr_bb_reentry_session_swing_tp_short declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4']; running it on AUDJPY H4 would validate a strategy nobody wrote
+- gen_mr_bb_reentry_session_swing_tp_short on AUDJPY D1: out_of_universe -- gen_mr_bb_reentry_session_swing_tp_short declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4']; running it on AUDJPY D1 would validate a strategy nobody wrote
+- gen_mr_bb_reentry_session_swing_tp_short on AUDUSD D1: out_of_universe -- gen_mr_bb_reentry_session_swing_tp_short declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4']; running it on AUDUSD D1 would validate a strategy nobody wrote
+- gen_mr_bb_reentry_session_swing_tp_short on DE40 H4: out_of_universe -- gen_mr_bb_reentry_session_swing_tp_short declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4']; running it on DE40 H4 would validate a strategy nobody wrote
+- gen_mr_bb_reentry_session_swing_tp_short on DE40 D1: out_of_universe -- gen_mr_bb_reentry_session_swing_tp_short declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4']; running it on DE40 D1 would validate a strategy nobody wrote
+- gen_mr_bb_reentry_session_swing_tp_short on EURGBP D1: out_of_universe -- gen_mr_bb_reentry_session_swing_tp_short declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4']; running it on EURGBP D1 would validate a strategy nobody wrote
+- gen_mr_bb_reentry_session_swing_tp_short on EURJPY H4: out_of_universe -- gen_mr_bb_reentry_session_swing_tp_short declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4']; running it on EURJPY H4 would validate a strategy nobody wrote
+- gen_mr_bb_reentry_session_swing_tp_short on EURJPY D1: out_of_universe -- gen_mr_bb_reentry_session_swing_tp_short declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4']; running it on EURJPY D1 would validate a strategy nobody wrote
+- gen_mr_bb_reentry_session_swing_tp_short on EURUSD D1: out_of_universe -- gen_mr_bb_reentry_session_swing_tp_short declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4']; running it on EURUSD D1 would validate a strategy nobody wrote
+- gen_mr_bb_reentry_session_swing_tp_short on GBPJPY H4: out_of_universe -- gen_mr_bb_reentry_session_swing_tp_short declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4']; running it on GBPJPY H4 would validate a strategy nobody wrote
+- gen_mr_bb_reentry_session_swing_tp_short on GBPJPY D1: out_of_universe -- gen_mr_bb_reentry_session_swing_tp_short declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4']; running it on GBPJPY D1 would validate a strategy nobody wrote
+- gen_mr_bb_reentry_session_swing_tp_short on GBPUSD D1: out_of_universe -- gen_mr_bb_reentry_session_swing_tp_short declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4']; running it on GBPUSD D1 would validate a strategy nobody wrote
+- gen_mr_bb_reentry_session_swing_tp_short on NZDUSD D1: out_of_universe -- gen_mr_bb_reentry_session_swing_tp_short declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4']; running it on NZDUSD D1 would validate a strategy nobody wrote
+- gen_mr_bb_reentry_session_swing_tp_short on UK100 H4: out_of_universe -- gen_mr_bb_reentry_session_swing_tp_short declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4']; running it on UK100 H4 would validate a strategy nobody wrote
+- gen_mr_bb_reentry_session_swing_tp_short on UK100 D1: out_of_universe -- gen_mr_bb_reentry_session_swing_tp_short declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4']; running it on UK100 D1 would validate a strategy nobody wrote
+- gen_mr_bb_reentry_session_swing_tp_short on US500 H4: out_of_universe -- gen_mr_bb_reentry_session_swing_tp_short declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4']; running it on US500 H4 would validate a strategy nobody wrote
+- gen_mr_bb_reentry_session_swing_tp_short on US500 D1: out_of_universe -- gen_mr_bb_reentry_session_swing_tp_short declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4']; running it on US500 D1 would validate a strategy nobody wrote
+- gen_mr_bb_reentry_session_swing_tp_short on USDCAD D1: out_of_universe -- gen_mr_bb_reentry_session_swing_tp_short declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4']; running it on USDCAD D1 would validate a strategy nobody wrote
+- gen_mr_bb_reentry_session_swing_tp_short on USDCHF D1: out_of_universe -- gen_mr_bb_reentry_session_swing_tp_short declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4']; running it on USDCHF D1 would validate a strategy nobody wrote
+- gen_mr_bb_reentry_session_swing_tp_short on USDJPY D1: out_of_universe -- gen_mr_bb_reentry_session_swing_tp_short declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4']; running it on USDJPY D1 would validate a strategy nobody wrote
+- gen_mr_bb_reentry_session_swing_tp_short on XAGUSD H4: out_of_universe -- gen_mr_bb_reentry_session_swing_tp_short declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4']; running it on XAGUSD H4 would validate a strategy nobody wrote
+- gen_mr_bb_reentry_session_swing_tp_short on XAGUSD D1: out_of_universe -- gen_mr_bb_reentry_session_swing_tp_short declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4']; running it on XAGUSD D1 would validate a strategy nobody wrote
+- gen_mr_bb_reentry_session_swing_tp_short on XAUUSD H4: out_of_universe -- gen_mr_bb_reentry_session_swing_tp_short declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4']; running it on XAUUSD H4 would validate a strategy nobody wrote
+- gen_mr_bb_reentry_session_swing_tp_short on XAUUSD D1: out_of_universe -- gen_mr_bb_reentry_session_swing_tp_short declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4']; running it on XAUUSD D1 would validate a strategy nobody wrote
+- gen_mr_bb_reentry_session_time_exit on AUDJPY H4: out_of_universe -- gen_mr_bb_reentry_session_time_exit declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4']; running it on AUDJPY H4 would validate a strategy nobody wrote
+- gen_mr_bb_reentry_session_time_exit on AUDJPY D1: out_of_universe -- gen_mr_bb_reentry_session_time_exit declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4']; running it on AUDJPY D1 would validate a strategy nobody wrote
+- gen_mr_bb_reentry_session_time_exit on AUDUSD D1: out_of_universe -- gen_mr_bb_reentry_session_time_exit declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4']; running it on AUDUSD D1 would validate a strategy nobody wrote
+- gen_mr_bb_reentry_session_time_exit on DE40 H4: out_of_universe -- gen_mr_bb_reentry_session_time_exit declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4']; running it on DE40 H4 would validate a strategy nobody wrote
+- gen_mr_bb_reentry_session_time_exit on DE40 D1: out_of_universe -- gen_mr_bb_reentry_session_time_exit declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4']; running it on DE40 D1 would validate a strategy nobody wrote
+- gen_mr_bb_reentry_session_time_exit on EURGBP D1: out_of_universe -- gen_mr_bb_reentry_session_time_exit declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4']; running it on EURGBP D1 would validate a strategy nobody wrote
+- gen_mr_bb_reentry_session_time_exit on EURJPY H4: out_of_universe -- gen_mr_bb_reentry_session_time_exit declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4']; running it on EURJPY H4 would validate a strategy nobody wrote
+- gen_mr_bb_reentry_session_time_exit on EURJPY D1: out_of_universe -- gen_mr_bb_reentry_session_time_exit declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4']; running it on EURJPY D1 would validate a strategy nobody wrote
+- gen_mr_bb_reentry_session_time_exit on EURUSD D1: out_of_universe -- gen_mr_bb_reentry_session_time_exit declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4']; running it on EURUSD D1 would validate a strategy nobody wrote
+- gen_mr_bb_reentry_session_time_exit on GBPJPY H4: out_of_universe -- gen_mr_bb_reentry_session_time_exit declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4']; running it on GBPJPY H4 would validate a strategy nobody wrote
+- gen_mr_bb_reentry_session_time_exit on GBPJPY D1: out_of_universe -- gen_mr_bb_reentry_session_time_exit declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4']; running it on GBPJPY D1 would validate a strategy nobody wrote
+- gen_mr_bb_reentry_session_time_exit on GBPUSD D1: out_of_universe -- gen_mr_bb_reentry_session_time_exit declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4']; running it on GBPUSD D1 would validate a strategy nobody wrote
+- gen_mr_bb_reentry_session_time_exit on NZDUSD D1: out_of_universe -- gen_mr_bb_reentry_session_time_exit declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4']; running it on NZDUSD D1 would validate a strategy nobody wrote
+- gen_mr_bb_reentry_session_time_exit on UK100 H4: out_of_universe -- gen_mr_bb_reentry_session_time_exit declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4']; running it on UK100 H4 would validate a strategy nobody wrote
+- gen_mr_bb_reentry_session_time_exit on UK100 D1: out_of_universe -- gen_mr_bb_reentry_session_time_exit declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4']; running it on UK100 D1 would validate a strategy nobody wrote
+- gen_mr_bb_reentry_session_time_exit on US500 H4: out_of_universe -- gen_mr_bb_reentry_session_time_exit declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4']; running it on US500 H4 would validate a strategy nobody wrote
+- gen_mr_bb_reentry_session_time_exit on US500 D1: out_of_universe -- gen_mr_bb_reentry_session_time_exit declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4']; running it on US500 D1 would validate a strategy nobody wrote
+- gen_mr_bb_reentry_session_time_exit on USDCAD D1: out_of_universe -- gen_mr_bb_reentry_session_time_exit declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4']; running it on USDCAD D1 would validate a strategy nobody wrote
+- gen_mr_bb_reentry_session_time_exit on USDCHF D1: out_of_universe -- gen_mr_bb_reentry_session_time_exit declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4']; running it on USDCHF D1 would validate a strategy nobody wrote
+- gen_mr_bb_reentry_session_time_exit on USDJPY D1: out_of_universe -- gen_mr_bb_reentry_session_time_exit declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4']; running it on USDJPY D1 would validate a strategy nobody wrote
+- gen_mr_bb_reentry_session_time_exit on XAGUSD H4: out_of_universe -- gen_mr_bb_reentry_session_time_exit declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4']; running it on XAGUSD H4 would validate a strategy nobody wrote
+- gen_mr_bb_reentry_session_time_exit on XAGUSD D1: out_of_universe -- gen_mr_bb_reentry_session_time_exit declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4']; running it on XAGUSD D1 would validate a strategy nobody wrote
+- gen_mr_bb_reentry_session_time_exit on XAUUSD H4: out_of_universe -- gen_mr_bb_reentry_session_time_exit declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4']; running it on XAUUSD H4 would validate a strategy nobody wrote
+- gen_mr_bb_reentry_session_time_exit on XAUUSD D1: out_of_universe -- gen_mr_bb_reentry_session_time_exit declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4']; running it on XAUUSD D1 would validate a strategy nobody wrote
+- gen_mr_kc_reentry_none_swing_tp_long on AUDJPY H4: out_of_universe -- gen_mr_kc_reentry_none_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4', 'D1']; running it on AUDJPY H4 would validate a strategy nobody wrote
+- gen_mr_kc_reentry_none_swing_tp_long on AUDJPY D1: out_of_universe -- gen_mr_kc_reentry_none_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4', 'D1']; running it on AUDJPY D1 would validate a strategy nobody wrote
+- gen_mr_kc_reentry_none_swing_tp_long on DE40 H4: out_of_universe -- gen_mr_kc_reentry_none_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4', 'D1']; running it on DE40 H4 would validate a strategy nobody wrote
+- gen_mr_kc_reentry_none_swing_tp_long on DE40 D1: out_of_universe -- gen_mr_kc_reentry_none_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4', 'D1']; running it on DE40 D1 would validate a strategy nobody wrote
+- gen_mr_kc_reentry_none_swing_tp_long on EURJPY H4: out_of_universe -- gen_mr_kc_reentry_none_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4', 'D1']; running it on EURJPY H4 would validate a strategy nobody wrote
+- gen_mr_kc_reentry_none_swing_tp_long on EURJPY D1: out_of_universe -- gen_mr_kc_reentry_none_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4', 'D1']; running it on EURJPY D1 would validate a strategy nobody wrote
+- gen_mr_kc_reentry_none_swing_tp_long on GBPJPY H4: out_of_universe -- gen_mr_kc_reentry_none_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4', 'D1']; running it on GBPJPY H4 would validate a strategy nobody wrote
+- gen_mr_kc_reentry_none_swing_tp_long on GBPJPY D1: out_of_universe -- gen_mr_kc_reentry_none_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4', 'D1']; running it on GBPJPY D1 would validate a strategy nobody wrote
+- gen_mr_kc_reentry_none_swing_tp_long on UK100 H4: out_of_universe -- gen_mr_kc_reentry_none_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4', 'D1']; running it on UK100 H4 would validate a strategy nobody wrote
+- gen_mr_kc_reentry_none_swing_tp_long on UK100 D1: out_of_universe -- gen_mr_kc_reentry_none_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4', 'D1']; running it on UK100 D1 would validate a strategy nobody wrote
+- gen_mr_kc_reentry_none_swing_tp_long on US500 H4: out_of_universe -- gen_mr_kc_reentry_none_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4', 'D1']; running it on US500 H4 would validate a strategy nobody wrote
+- gen_mr_kc_reentry_none_swing_tp_long on US500 D1: out_of_universe -- gen_mr_kc_reentry_none_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4', 'D1']; running it on US500 D1 would validate a strategy nobody wrote
+- gen_mr_kc_reentry_none_swing_tp_long on XAGUSD H4: out_of_universe -- gen_mr_kc_reentry_none_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4', 'D1']; running it on XAGUSD H4 would validate a strategy nobody wrote
+- gen_mr_kc_reentry_none_swing_tp_long on XAGUSD D1: out_of_universe -- gen_mr_kc_reentry_none_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4', 'D1']; running it on XAGUSD D1 would validate a strategy nobody wrote
+- gen_mr_kc_reentry_none_swing_tp_long on XAUUSD H4: out_of_universe -- gen_mr_kc_reentry_none_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4', 'D1']; running it on XAUUSD H4 would validate a strategy nobody wrote
+- gen_mr_kc_reentry_none_swing_tp_long on XAUUSD D1: out_of_universe -- gen_mr_kc_reentry_none_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4', 'D1']; running it on XAUUSD D1 would validate a strategy nobody wrote
+- gen_mr_kc_reentry_none_time_exit on AUDJPY H4: out_of_universe -- gen_mr_kc_reentry_none_time_exit declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4', 'D1']; running it on AUDJPY H4 would validate a strategy nobody wrote
+- gen_mr_kc_reentry_none_time_exit on AUDJPY D1: out_of_universe -- gen_mr_kc_reentry_none_time_exit declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4', 'D1']; running it on AUDJPY D1 would validate a strategy nobody wrote
+- gen_mr_kc_reentry_none_time_exit on DE40 H4: out_of_universe -- gen_mr_kc_reentry_none_time_exit declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4', 'D1']; running it on DE40 H4 would validate a strategy nobody wrote
+- gen_mr_kc_reentry_none_time_exit on DE40 D1: out_of_universe -- gen_mr_kc_reentry_none_time_exit declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4', 'D1']; running it on DE40 D1 would validate a strategy nobody wrote
+- gen_mr_kc_reentry_none_time_exit on EURJPY H4: out_of_universe -- gen_mr_kc_reentry_none_time_exit declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4', 'D1']; running it on EURJPY H4 would validate a strategy nobody wrote
+- gen_mr_kc_reentry_none_time_exit on EURJPY D1: out_of_universe -- gen_mr_kc_reentry_none_time_exit declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4', 'D1']; running it on EURJPY D1 would validate a strategy nobody wrote
+- gen_mr_kc_reentry_none_time_exit on GBPJPY H4: out_of_universe -- gen_mr_kc_reentry_none_time_exit declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4', 'D1']; running it on GBPJPY H4 would validate a strategy nobody wrote
+- gen_mr_kc_reentry_none_time_exit on GBPJPY D1: out_of_universe -- gen_mr_kc_reentry_none_time_exit declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4', 'D1']; running it on GBPJPY D1 would validate a strategy nobody wrote
+- gen_mr_kc_reentry_none_time_exit on UK100 H4: out_of_universe -- gen_mr_kc_reentry_none_time_exit declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4', 'D1']; running it on UK100 H4 would validate a strategy nobody wrote
+- gen_mr_kc_reentry_none_time_exit on UK100 D1: out_of_universe -- gen_mr_kc_reentry_none_time_exit declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4', 'D1']; running it on UK100 D1 would validate a strategy nobody wrote
+- gen_mr_kc_reentry_none_time_exit on US500 H4: out_of_universe -- gen_mr_kc_reentry_none_time_exit declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4', 'D1']; running it on US500 H4 would validate a strategy nobody wrote
+- gen_mr_kc_reentry_none_time_exit on US500 D1: out_of_universe -- gen_mr_kc_reentry_none_time_exit declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4', 'D1']; running it on US500 D1 would validate a strategy nobody wrote
+- gen_mr_kc_reentry_none_time_exit on XAGUSD H4: out_of_universe -- gen_mr_kc_reentry_none_time_exit declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4', 'D1']; running it on XAGUSD H4 would validate a strategy nobody wrote
+- gen_mr_kc_reentry_none_time_exit on XAGUSD D1: out_of_universe -- gen_mr_kc_reentry_none_time_exit declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4', 'D1']; running it on XAGUSD D1 would validate a strategy nobody wrote
+- gen_mr_kc_reentry_none_time_exit on XAUUSD H4: out_of_universe -- gen_mr_kc_reentry_none_time_exit declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4', 'D1']; running it on XAUUSD H4 would validate a strategy nobody wrote
+- gen_mr_kc_reentry_none_time_exit on XAUUSD D1: out_of_universe -- gen_mr_kc_reentry_none_time_exit declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4', 'D1']; running it on XAUUSD D1 would validate a strategy nobody wrote
+- gen_mr_kc_reentry_none_trail on AUDJPY H4: out_of_universe -- gen_mr_kc_reentry_none_trail declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4', 'D1']; running it on AUDJPY H4 would validate a strategy nobody wrote
+- gen_mr_kc_reentry_none_trail on AUDJPY D1: out_of_universe -- gen_mr_kc_reentry_none_trail declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4', 'D1']; running it on AUDJPY D1 would validate a strategy nobody wrote
+- gen_mr_kc_reentry_none_trail on DE40 H4: out_of_universe -- gen_mr_kc_reentry_none_trail declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4', 'D1']; running it on DE40 H4 would validate a strategy nobody wrote
+- gen_mr_kc_reentry_none_trail on DE40 D1: out_of_universe -- gen_mr_kc_reentry_none_trail declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4', 'D1']; running it on DE40 D1 would validate a strategy nobody wrote
+- gen_mr_kc_reentry_none_trail on EURJPY H4: out_of_universe -- gen_mr_kc_reentry_none_trail declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4', 'D1']; running it on EURJPY H4 would validate a strategy nobody wrote
+- gen_mr_kc_reentry_none_trail on EURJPY D1: out_of_universe -- gen_mr_kc_reentry_none_trail declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4', 'D1']; running it on EURJPY D1 would validate a strategy nobody wrote
+- gen_mr_kc_reentry_none_trail on GBPJPY H4: out_of_universe -- gen_mr_kc_reentry_none_trail declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4', 'D1']; running it on GBPJPY H4 would validate a strategy nobody wrote
+- gen_mr_kc_reentry_none_trail on GBPJPY D1: out_of_universe -- gen_mr_kc_reentry_none_trail declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4', 'D1']; running it on GBPJPY D1 would validate a strategy nobody wrote
+- gen_mr_kc_reentry_none_trail on UK100 H4: out_of_universe -- gen_mr_kc_reentry_none_trail declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4', 'D1']; running it on UK100 H4 would validate a strategy nobody wrote
+- gen_mr_kc_reentry_none_trail on UK100 D1: out_of_universe -- gen_mr_kc_reentry_none_trail declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4', 'D1']; running it on UK100 D1 would validate a strategy nobody wrote
+- gen_mr_kc_reentry_none_trail on US500 H4: out_of_universe -- gen_mr_kc_reentry_none_trail declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4', 'D1']; running it on US500 H4 would validate a strategy nobody wrote
+- gen_mr_kc_reentry_none_trail on US500 D1: out_of_universe -- gen_mr_kc_reentry_none_trail declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4', 'D1']; running it on US500 D1 would validate a strategy nobody wrote
+- gen_mr_kc_reentry_none_trail on XAGUSD H4: out_of_universe -- gen_mr_kc_reentry_none_trail declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4', 'D1']; running it on XAGUSD H4 would validate a strategy nobody wrote
+- gen_mr_kc_reentry_none_trail on XAGUSD D1: out_of_universe -- gen_mr_kc_reentry_none_trail declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4', 'D1']; running it on XAGUSD D1 would validate a strategy nobody wrote
+- gen_mr_kc_reentry_none_trail on XAUUSD H4: out_of_universe -- gen_mr_kc_reentry_none_trail declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4', 'D1']; running it on XAUUSD H4 would validate a strategy nobody wrote
+- gen_mr_kc_reentry_none_trail on XAUUSD D1: out_of_universe -- gen_mr_kc_reentry_none_trail declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4', 'D1']; running it on XAUUSD D1 would validate a strategy nobody wrote
+- gen_mr_kc_reentry_session_swing_tp_long on AUDJPY H4: out_of_universe -- gen_mr_kc_reentry_session_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4']; running it on AUDJPY H4 would validate a strategy nobody wrote
+- gen_mr_kc_reentry_session_swing_tp_long on AUDJPY D1: out_of_universe -- gen_mr_kc_reentry_session_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4']; running it on AUDJPY D1 would validate a strategy nobody wrote
+- gen_mr_kc_reentry_session_swing_tp_long on AUDUSD D1: out_of_universe -- gen_mr_kc_reentry_session_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4']; running it on AUDUSD D1 would validate a strategy nobody wrote
+- gen_mr_kc_reentry_session_swing_tp_long on DE40 H4: out_of_universe -- gen_mr_kc_reentry_session_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4']; running it on DE40 H4 would validate a strategy nobody wrote
+- gen_mr_kc_reentry_session_swing_tp_long on DE40 D1: out_of_universe -- gen_mr_kc_reentry_session_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4']; running it on DE40 D1 would validate a strategy nobody wrote
+- gen_mr_kc_reentry_session_swing_tp_long on EURGBP D1: out_of_universe -- gen_mr_kc_reentry_session_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4']; running it on EURGBP D1 would validate a strategy nobody wrote
+- gen_mr_kc_reentry_session_swing_tp_long on EURJPY H4: out_of_universe -- gen_mr_kc_reentry_session_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4']; running it on EURJPY H4 would validate a strategy nobody wrote
+- gen_mr_kc_reentry_session_swing_tp_long on EURJPY D1: out_of_universe -- gen_mr_kc_reentry_session_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4']; running it on EURJPY D1 would validate a strategy nobody wrote
+- gen_mr_kc_reentry_session_swing_tp_long on EURUSD D1: out_of_universe -- gen_mr_kc_reentry_session_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4']; running it on EURUSD D1 would validate a strategy nobody wrote
+- gen_mr_kc_reentry_session_swing_tp_long on GBPJPY H4: out_of_universe -- gen_mr_kc_reentry_session_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4']; running it on GBPJPY H4 would validate a strategy nobody wrote
+- gen_mr_kc_reentry_session_swing_tp_long on GBPJPY D1: out_of_universe -- gen_mr_kc_reentry_session_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4']; running it on GBPJPY D1 would validate a strategy nobody wrote
+- gen_mr_kc_reentry_session_swing_tp_long on GBPUSD D1: out_of_universe -- gen_mr_kc_reentry_session_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4']; running it on GBPUSD D1 would validate a strategy nobody wrote
+- gen_mr_kc_reentry_session_swing_tp_long on NZDUSD D1: out_of_universe -- gen_mr_kc_reentry_session_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4']; running it on NZDUSD D1 would validate a strategy nobody wrote
+- gen_mr_kc_reentry_session_swing_tp_long on UK100 H4: out_of_universe -- gen_mr_kc_reentry_session_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4']; running it on UK100 H4 would validate a strategy nobody wrote
+- gen_mr_kc_reentry_session_swing_tp_long on UK100 D1: out_of_universe -- gen_mr_kc_reentry_session_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4']; running it on UK100 D1 would validate a strategy nobody wrote
+- gen_mr_kc_reentry_session_swing_tp_long on US500 H4: out_of_universe -- gen_mr_kc_reentry_session_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4']; running it on US500 H4 would validate a strategy nobody wrote
+- gen_mr_kc_reentry_session_swing_tp_long on US500 D1: out_of_universe -- gen_mr_kc_reentry_session_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4']; running it on US500 D1 would validate a strategy nobody wrote
+- gen_mr_kc_reentry_session_swing_tp_long on USDCAD D1: out_of_universe -- gen_mr_kc_reentry_session_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4']; running it on USDCAD D1 would validate a strategy nobody wrote
+- gen_mr_kc_reentry_session_swing_tp_long on USDCHF D1: out_of_universe -- gen_mr_kc_reentry_session_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4']; running it on USDCHF D1 would validate a strategy nobody wrote
+- gen_mr_kc_reentry_session_swing_tp_long on USDJPY D1: out_of_universe -- gen_mr_kc_reentry_session_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4']; running it on USDJPY D1 would validate a strategy nobody wrote
+- gen_mr_kc_reentry_session_swing_tp_long on XAGUSD H4: out_of_universe -- gen_mr_kc_reentry_session_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4']; running it on XAGUSD H4 would validate a strategy nobody wrote
+- gen_mr_kc_reentry_session_swing_tp_long on XAGUSD D1: out_of_universe -- gen_mr_kc_reentry_session_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4']; running it on XAGUSD D1 would validate a strategy nobody wrote
+- gen_mr_kc_reentry_session_swing_tp_long on XAUUSD H4: out_of_universe -- gen_mr_kc_reentry_session_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4']; running it on XAUUSD H4 would validate a strategy nobody wrote
+- gen_mr_kc_reentry_session_swing_tp_long on XAUUSD D1: out_of_universe -- gen_mr_kc_reentry_session_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4']; running it on XAUUSD D1 would validate a strategy nobody wrote
+- gen_mr_kc_reentry_session_swing_tp_short on AUDJPY H4: out_of_universe -- gen_mr_kc_reentry_session_swing_tp_short declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4']; running it on AUDJPY H4 would validate a strategy nobody wrote
+- gen_mr_kc_reentry_session_swing_tp_short on AUDJPY D1: out_of_universe -- gen_mr_kc_reentry_session_swing_tp_short declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4']; running it on AUDJPY D1 would validate a strategy nobody wrote
+- gen_mr_kc_reentry_session_swing_tp_short on AUDUSD D1: out_of_universe -- gen_mr_kc_reentry_session_swing_tp_short declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4']; running it on AUDUSD D1 would validate a strategy nobody wrote
+- gen_mr_kc_reentry_session_swing_tp_short on DE40 H4: out_of_universe -- gen_mr_kc_reentry_session_swing_tp_short declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4']; running it on DE40 H4 would validate a strategy nobody wrote
+- gen_mr_kc_reentry_session_swing_tp_short on DE40 D1: out_of_universe -- gen_mr_kc_reentry_session_swing_tp_short declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4']; running it on DE40 D1 would validate a strategy nobody wrote
+- gen_mr_kc_reentry_session_swing_tp_short on EURGBP D1: out_of_universe -- gen_mr_kc_reentry_session_swing_tp_short declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4']; running it on EURGBP D1 would validate a strategy nobody wrote
+- gen_mr_kc_reentry_session_swing_tp_short on EURJPY H4: out_of_universe -- gen_mr_kc_reentry_session_swing_tp_short declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4']; running it on EURJPY H4 would validate a strategy nobody wrote
+- gen_mr_kc_reentry_session_swing_tp_short on EURJPY D1: out_of_universe -- gen_mr_kc_reentry_session_swing_tp_short declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4']; running it on EURJPY D1 would validate a strategy nobody wrote
+- gen_mr_kc_reentry_session_swing_tp_short on EURUSD D1: out_of_universe -- gen_mr_kc_reentry_session_swing_tp_short declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4']; running it on EURUSD D1 would validate a strategy nobody wrote
+- gen_mr_kc_reentry_session_swing_tp_short on GBPJPY H4: out_of_universe -- gen_mr_kc_reentry_session_swing_tp_short declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4']; running it on GBPJPY H4 would validate a strategy nobody wrote
+- gen_mr_kc_reentry_session_swing_tp_short on GBPJPY D1: out_of_universe -- gen_mr_kc_reentry_session_swing_tp_short declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4']; running it on GBPJPY D1 would validate a strategy nobody wrote
+- gen_mr_kc_reentry_session_swing_tp_short on GBPUSD D1: out_of_universe -- gen_mr_kc_reentry_session_swing_tp_short declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4']; running it on GBPUSD D1 would validate a strategy nobody wrote
+- gen_mr_kc_reentry_session_swing_tp_short on NZDUSD D1: out_of_universe -- gen_mr_kc_reentry_session_swing_tp_short declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4']; running it on NZDUSD D1 would validate a strategy nobody wrote
+- gen_mr_kc_reentry_session_swing_tp_short on UK100 H4: out_of_universe -- gen_mr_kc_reentry_session_swing_tp_short declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4']; running it on UK100 H4 would validate a strategy nobody wrote
+- gen_mr_kc_reentry_session_swing_tp_short on UK100 D1: out_of_universe -- gen_mr_kc_reentry_session_swing_tp_short declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4']; running it on UK100 D1 would validate a strategy nobody wrote
+- gen_mr_kc_reentry_session_swing_tp_short on US500 H4: out_of_universe -- gen_mr_kc_reentry_session_swing_tp_short declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4']; running it on US500 H4 would validate a strategy nobody wrote
+- gen_mr_kc_reentry_session_swing_tp_short on US500 D1: out_of_universe -- gen_mr_kc_reentry_session_swing_tp_short declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4']; running it on US500 D1 would validate a strategy nobody wrote
+- gen_mr_kc_reentry_session_swing_tp_short on USDCAD D1: out_of_universe -- gen_mr_kc_reentry_session_swing_tp_short declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4']; running it on USDCAD D1 would validate a strategy nobody wrote
+- gen_mr_kc_reentry_session_swing_tp_short on USDCHF D1: out_of_universe -- gen_mr_kc_reentry_session_swing_tp_short declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4']; running it on USDCHF D1 would validate a strategy nobody wrote
+- gen_mr_kc_reentry_session_swing_tp_short on USDJPY D1: out_of_universe -- gen_mr_kc_reentry_session_swing_tp_short declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4']; running it on USDJPY D1 would validate a strategy nobody wrote
+- gen_mr_kc_reentry_session_swing_tp_short on XAGUSD H4: out_of_universe -- gen_mr_kc_reentry_session_swing_tp_short declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4']; running it on XAGUSD H4 would validate a strategy nobody wrote
+- gen_mr_kc_reentry_session_swing_tp_short on XAGUSD D1: out_of_universe -- gen_mr_kc_reentry_session_swing_tp_short declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4']; running it on XAGUSD D1 would validate a strategy nobody wrote
+- gen_mr_kc_reentry_session_swing_tp_short on XAUUSD H4: out_of_universe -- gen_mr_kc_reentry_session_swing_tp_short declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4']; running it on XAUUSD H4 would validate a strategy nobody wrote
+- gen_mr_kc_reentry_session_swing_tp_short on XAUUSD D1: out_of_universe -- gen_mr_kc_reentry_session_swing_tp_short declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4']; running it on XAUUSD D1 would validate a strategy nobody wrote
+- gen_mr_kc_reentry_session_time_exit on AUDJPY H4: out_of_universe -- gen_mr_kc_reentry_session_time_exit declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4']; running it on AUDJPY H4 would validate a strategy nobody wrote
+- gen_mr_kc_reentry_session_time_exit on AUDJPY D1: out_of_universe -- gen_mr_kc_reentry_session_time_exit declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4']; running it on AUDJPY D1 would validate a strategy nobody wrote
+- gen_mr_kc_reentry_session_time_exit on AUDUSD D1: out_of_universe -- gen_mr_kc_reentry_session_time_exit declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4']; running it on AUDUSD D1 would validate a strategy nobody wrote
+- gen_mr_kc_reentry_session_time_exit on DE40 H4: out_of_universe -- gen_mr_kc_reentry_session_time_exit declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4']; running it on DE40 H4 would validate a strategy nobody wrote
+- gen_mr_kc_reentry_session_time_exit on DE40 D1: out_of_universe -- gen_mr_kc_reentry_session_time_exit declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4']; running it on DE40 D1 would validate a strategy nobody wrote
+- gen_mr_kc_reentry_session_time_exit on EURGBP D1: out_of_universe -- gen_mr_kc_reentry_session_time_exit declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4']; running it on EURGBP D1 would validate a strategy nobody wrote
+- gen_mr_kc_reentry_session_time_exit on EURJPY H4: out_of_universe -- gen_mr_kc_reentry_session_time_exit declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4']; running it on EURJPY H4 would validate a strategy nobody wrote
+- gen_mr_kc_reentry_session_time_exit on EURJPY D1: out_of_universe -- gen_mr_kc_reentry_session_time_exit declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4']; running it on EURJPY D1 would validate a strategy nobody wrote
+- gen_mr_kc_reentry_session_time_exit on EURUSD D1: out_of_universe -- gen_mr_kc_reentry_session_time_exit declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4']; running it on EURUSD D1 would validate a strategy nobody wrote
+- gen_mr_kc_reentry_session_time_exit on GBPJPY H4: out_of_universe -- gen_mr_kc_reentry_session_time_exit declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4']; running it on GBPJPY H4 would validate a strategy nobody wrote
+- gen_mr_kc_reentry_session_time_exit on GBPJPY D1: out_of_universe -- gen_mr_kc_reentry_session_time_exit declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4']; running it on GBPJPY D1 would validate a strategy nobody wrote
+- gen_mr_kc_reentry_session_time_exit on GBPUSD D1: out_of_universe -- gen_mr_kc_reentry_session_time_exit declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4']; running it on GBPUSD D1 would validate a strategy nobody wrote
+- gen_mr_kc_reentry_session_time_exit on NZDUSD D1: out_of_universe -- gen_mr_kc_reentry_session_time_exit declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4']; running it on NZDUSD D1 would validate a strategy nobody wrote
+- gen_mr_kc_reentry_session_time_exit on UK100 H4: out_of_universe -- gen_mr_kc_reentry_session_time_exit declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4']; running it on UK100 H4 would validate a strategy nobody wrote
+- gen_mr_kc_reentry_session_time_exit on UK100 D1: out_of_universe -- gen_mr_kc_reentry_session_time_exit declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4']; running it on UK100 D1 would validate a strategy nobody wrote
+- gen_mr_kc_reentry_session_time_exit on US500 H4: out_of_universe -- gen_mr_kc_reentry_session_time_exit declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4']; running it on US500 H4 would validate a strategy nobody wrote
+- gen_mr_kc_reentry_session_time_exit on US500 D1: out_of_universe -- gen_mr_kc_reentry_session_time_exit declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4']; running it on US500 D1 would validate a strategy nobody wrote
+- gen_mr_kc_reentry_session_time_exit on USDCAD D1: out_of_universe -- gen_mr_kc_reentry_session_time_exit declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4']; running it on USDCAD D1 would validate a strategy nobody wrote
+- gen_mr_kc_reentry_session_time_exit on USDCHF D1: out_of_universe -- gen_mr_kc_reentry_session_time_exit declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4']; running it on USDCHF D1 would validate a strategy nobody wrote
+- gen_mr_kc_reentry_session_time_exit on USDJPY D1: out_of_universe -- gen_mr_kc_reentry_session_time_exit declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4']; running it on USDJPY D1 would validate a strategy nobody wrote
+- gen_mr_kc_reentry_session_time_exit on XAGUSD H4: out_of_universe -- gen_mr_kc_reentry_session_time_exit declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4']; running it on XAGUSD H4 would validate a strategy nobody wrote
+- gen_mr_kc_reentry_session_time_exit on XAGUSD D1: out_of_universe -- gen_mr_kc_reentry_session_time_exit declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4']; running it on XAGUSD D1 would validate a strategy nobody wrote
+- gen_mr_kc_reentry_session_time_exit on XAUUSD H4: out_of_universe -- gen_mr_kc_reentry_session_time_exit declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4']; running it on XAUUSD H4 would validate a strategy nobody wrote
+- gen_mr_kc_reentry_session_time_exit on XAUUSD D1: out_of_universe -- gen_mr_kc_reentry_session_time_exit declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'] and timeframes ['H4']; running it on XAUUSD D1 would validate a strategy nobody wrote
+- gen_sb_range_close_break_adx_gate_swing_tp_short on AUDJPY H4: out_of_universe -- gen_sb_range_close_break_adx_gate_swing_tp_short declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on AUDJPY H4 would validate a strategy nobody wrote
+- gen_sb_range_close_break_adx_gate_swing_tp_short on AUDJPY D1: out_of_universe -- gen_sb_range_close_break_adx_gate_swing_tp_short declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on AUDJPY D1 would validate a strategy nobody wrote
+- gen_sb_range_close_break_adx_gate_swing_tp_short on AUDUSD H4: out_of_universe -- gen_sb_range_close_break_adx_gate_swing_tp_short declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on AUDUSD H4 would validate a strategy nobody wrote
+- gen_sb_range_close_break_adx_gate_swing_tp_short on AUDUSD D1: out_of_universe -- gen_sb_range_close_break_adx_gate_swing_tp_short declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on AUDUSD D1 would validate a strategy nobody wrote
+- gen_sb_range_close_break_adx_gate_swing_tp_short on DE40 D1: out_of_universe -- gen_sb_range_close_break_adx_gate_swing_tp_short declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on DE40 D1 would validate a strategy nobody wrote
+- gen_sb_range_close_break_adx_gate_swing_tp_short on EURGBP D1: out_of_universe -- gen_sb_range_close_break_adx_gate_swing_tp_short declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on EURGBP D1 would validate a strategy nobody wrote
+- gen_sb_range_close_break_adx_gate_swing_tp_short on EURJPY D1: out_of_universe -- gen_sb_range_close_break_adx_gate_swing_tp_short declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on EURJPY D1 would validate a strategy nobody wrote
+- gen_sb_range_close_break_adx_gate_swing_tp_short on EURUSD D1: out_of_universe -- gen_sb_range_close_break_adx_gate_swing_tp_short declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on EURUSD D1 would validate a strategy nobody wrote
+- gen_sb_range_close_break_adx_gate_swing_tp_short on GBPJPY D1: out_of_universe -- gen_sb_range_close_break_adx_gate_swing_tp_short declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on GBPJPY D1 would validate a strategy nobody wrote
+- gen_sb_range_close_break_adx_gate_swing_tp_short on GBPUSD D1: out_of_universe -- gen_sb_range_close_break_adx_gate_swing_tp_short declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on GBPUSD D1 would validate a strategy nobody wrote
+- gen_sb_range_close_break_adx_gate_swing_tp_short on NZDUSD H4: out_of_universe -- gen_sb_range_close_break_adx_gate_swing_tp_short declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on NZDUSD H4 would validate a strategy nobody wrote
+- gen_sb_range_close_break_adx_gate_swing_tp_short on NZDUSD D1: out_of_universe -- gen_sb_range_close_break_adx_gate_swing_tp_short declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on NZDUSD D1 would validate a strategy nobody wrote
+- gen_sb_range_close_break_adx_gate_swing_tp_short on UK100 D1: out_of_universe -- gen_sb_range_close_break_adx_gate_swing_tp_short declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on UK100 D1 would validate a strategy nobody wrote
+- gen_sb_range_close_break_adx_gate_swing_tp_short on US500 H4: out_of_universe -- gen_sb_range_close_break_adx_gate_swing_tp_short declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on US500 H4 would validate a strategy nobody wrote
+- gen_sb_range_close_break_adx_gate_swing_tp_short on US500 D1: out_of_universe -- gen_sb_range_close_break_adx_gate_swing_tp_short declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on US500 D1 would validate a strategy nobody wrote
+- gen_sb_range_close_break_adx_gate_swing_tp_short on USDCAD H4: out_of_universe -- gen_sb_range_close_break_adx_gate_swing_tp_short declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on USDCAD H4 would validate a strategy nobody wrote
+- gen_sb_range_close_break_adx_gate_swing_tp_short on USDCAD D1: out_of_universe -- gen_sb_range_close_break_adx_gate_swing_tp_short declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on USDCAD D1 would validate a strategy nobody wrote
+- gen_sb_range_close_break_adx_gate_swing_tp_short on USDCHF D1: out_of_universe -- gen_sb_range_close_break_adx_gate_swing_tp_short declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on USDCHF D1 would validate a strategy nobody wrote
+- gen_sb_range_close_break_adx_gate_swing_tp_short on USDJPY H4: out_of_universe -- gen_sb_range_close_break_adx_gate_swing_tp_short declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on USDJPY H4 would validate a strategy nobody wrote
+- gen_sb_range_close_break_adx_gate_swing_tp_short on USDJPY D1: out_of_universe -- gen_sb_range_close_break_adx_gate_swing_tp_short declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on USDJPY D1 would validate a strategy nobody wrote
+- gen_sb_range_close_break_adx_gate_swing_tp_short on XAGUSD H4: out_of_universe -- gen_sb_range_close_break_adx_gate_swing_tp_short declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on XAGUSD H4 would validate a strategy nobody wrote
+- gen_sb_range_close_break_adx_gate_swing_tp_short on XAGUSD D1: out_of_universe -- gen_sb_range_close_break_adx_gate_swing_tp_short declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on XAGUSD D1 would validate a strategy nobody wrote
+- gen_sb_range_close_break_adx_gate_swing_tp_short on XAUUSD H4: out_of_universe -- gen_sb_range_close_break_adx_gate_swing_tp_short declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on XAUUSD H4 would validate a strategy nobody wrote
+- gen_sb_range_close_break_adx_gate_swing_tp_short on XAUUSD D1: out_of_universe -- gen_sb_range_close_break_adx_gate_swing_tp_short declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on XAUUSD D1 would validate a strategy nobody wrote
+- gen_sb_range_close_break_adx_gate_time_exit on AUDJPY H4: out_of_universe -- gen_sb_range_close_break_adx_gate_time_exit declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on AUDJPY H4 would validate a strategy nobody wrote
+- gen_sb_range_close_break_adx_gate_time_exit on AUDJPY D1: out_of_universe -- gen_sb_range_close_break_adx_gate_time_exit declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on AUDJPY D1 would validate a strategy nobody wrote
+- gen_sb_range_close_break_adx_gate_time_exit on AUDUSD H4: out_of_universe -- gen_sb_range_close_break_adx_gate_time_exit declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on AUDUSD H4 would validate a strategy nobody wrote
+- gen_sb_range_close_break_adx_gate_time_exit on AUDUSD D1: out_of_universe -- gen_sb_range_close_break_adx_gate_time_exit declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on AUDUSD D1 would validate a strategy nobody wrote
+- gen_sb_range_close_break_adx_gate_time_exit on DE40 D1: out_of_universe -- gen_sb_range_close_break_adx_gate_time_exit declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on DE40 D1 would validate a strategy nobody wrote
+- gen_sb_range_close_break_adx_gate_time_exit on EURGBP D1: out_of_universe -- gen_sb_range_close_break_adx_gate_time_exit declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on EURGBP D1 would validate a strategy nobody wrote
+- gen_sb_range_close_break_adx_gate_time_exit on EURJPY D1: out_of_universe -- gen_sb_range_close_break_adx_gate_time_exit declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on EURJPY D1 would validate a strategy nobody wrote
+- gen_sb_range_close_break_adx_gate_time_exit on EURUSD D1: out_of_universe -- gen_sb_range_close_break_adx_gate_time_exit declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on EURUSD D1 would validate a strategy nobody wrote
+- gen_sb_range_close_break_adx_gate_time_exit on GBPJPY D1: out_of_universe -- gen_sb_range_close_break_adx_gate_time_exit declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on GBPJPY D1 would validate a strategy nobody wrote
+- gen_sb_range_close_break_adx_gate_time_exit on GBPUSD D1: out_of_universe -- gen_sb_range_close_break_adx_gate_time_exit declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on GBPUSD D1 would validate a strategy nobody wrote
+- gen_sb_range_close_break_adx_gate_time_exit on NZDUSD H4: out_of_universe -- gen_sb_range_close_break_adx_gate_time_exit declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on NZDUSD H4 would validate a strategy nobody wrote
+- gen_sb_range_close_break_adx_gate_time_exit on NZDUSD D1: out_of_universe -- gen_sb_range_close_break_adx_gate_time_exit declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on NZDUSD D1 would validate a strategy nobody wrote
+- gen_sb_range_close_break_adx_gate_time_exit on UK100 D1: out_of_universe -- gen_sb_range_close_break_adx_gate_time_exit declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on UK100 D1 would validate a strategy nobody wrote
+- gen_sb_range_close_break_adx_gate_time_exit on US500 H4: out_of_universe -- gen_sb_range_close_break_adx_gate_time_exit declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on US500 H4 would validate a strategy nobody wrote
+- gen_sb_range_close_break_adx_gate_time_exit on US500 D1: out_of_universe -- gen_sb_range_close_break_adx_gate_time_exit declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on US500 D1 would validate a strategy nobody wrote
+- gen_sb_range_close_break_adx_gate_time_exit on USDCAD H4: out_of_universe -- gen_sb_range_close_break_adx_gate_time_exit declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on USDCAD H4 would validate a strategy nobody wrote
+- gen_sb_range_close_break_adx_gate_time_exit on USDCAD D1: out_of_universe -- gen_sb_range_close_break_adx_gate_time_exit declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on USDCAD D1 would validate a strategy nobody wrote
+- gen_sb_range_close_break_adx_gate_time_exit on USDCHF D1: out_of_universe -- gen_sb_range_close_break_adx_gate_time_exit declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on USDCHF D1 would validate a strategy nobody wrote
+- gen_sb_range_close_break_adx_gate_time_exit on USDJPY H4: out_of_universe -- gen_sb_range_close_break_adx_gate_time_exit declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on USDJPY H4 would validate a strategy nobody wrote
+- gen_sb_range_close_break_adx_gate_time_exit on USDJPY D1: out_of_universe -- gen_sb_range_close_break_adx_gate_time_exit declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on USDJPY D1 would validate a strategy nobody wrote
+- gen_sb_range_close_break_adx_gate_time_exit on XAGUSD H4: out_of_universe -- gen_sb_range_close_break_adx_gate_time_exit declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on XAGUSD H4 would validate a strategy nobody wrote
+- gen_sb_range_close_break_adx_gate_time_exit on XAGUSD D1: out_of_universe -- gen_sb_range_close_break_adx_gate_time_exit declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on XAGUSD D1 would validate a strategy nobody wrote
+- gen_sb_range_close_break_adx_gate_time_exit on XAUUSD H4: out_of_universe -- gen_sb_range_close_break_adx_gate_time_exit declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on XAUUSD H4 would validate a strategy nobody wrote
+- gen_sb_range_close_break_adx_gate_time_exit on XAUUSD D1: out_of_universe -- gen_sb_range_close_break_adx_gate_time_exit declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on XAUUSD D1 would validate a strategy nobody wrote
+- gen_sb_range_close_break_none_swing_tp_long on AUDJPY H4: out_of_universe -- gen_sb_range_close_break_none_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on AUDJPY H4 would validate a strategy nobody wrote
+- gen_sb_range_close_break_none_swing_tp_long on AUDJPY D1: out_of_universe -- gen_sb_range_close_break_none_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on AUDJPY D1 would validate a strategy nobody wrote
+- gen_sb_range_close_break_none_swing_tp_long on AUDUSD H4: out_of_universe -- gen_sb_range_close_break_none_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on AUDUSD H4 would validate a strategy nobody wrote
+- gen_sb_range_close_break_none_swing_tp_long on AUDUSD D1: out_of_universe -- gen_sb_range_close_break_none_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on AUDUSD D1 would validate a strategy nobody wrote
+- gen_sb_range_close_break_none_swing_tp_long on DE40 D1: out_of_universe -- gen_sb_range_close_break_none_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on DE40 D1 would validate a strategy nobody wrote
+- gen_sb_range_close_break_none_swing_tp_long on EURGBP D1: out_of_universe -- gen_sb_range_close_break_none_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on EURGBP D1 would validate a strategy nobody wrote
+- gen_sb_range_close_break_none_swing_tp_long on EURJPY D1: out_of_universe -- gen_sb_range_close_break_none_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on EURJPY D1 would validate a strategy nobody wrote
+- gen_sb_range_close_break_none_swing_tp_long on EURUSD D1: out_of_universe -- gen_sb_range_close_break_none_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on EURUSD D1 would validate a strategy nobody wrote
+- gen_sb_range_close_break_none_swing_tp_long on GBPJPY D1: out_of_universe -- gen_sb_range_close_break_none_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on GBPJPY D1 would validate a strategy nobody wrote
+- gen_sb_range_close_break_none_swing_tp_long on GBPUSD D1: out_of_universe -- gen_sb_range_close_break_none_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on GBPUSD D1 would validate a strategy nobody wrote
+- gen_sb_range_close_break_none_swing_tp_long on NZDUSD H4: out_of_universe -- gen_sb_range_close_break_none_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on NZDUSD H4 would validate a strategy nobody wrote
+- gen_sb_range_close_break_none_swing_tp_long on NZDUSD D1: out_of_universe -- gen_sb_range_close_break_none_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on NZDUSD D1 would validate a strategy nobody wrote
+- gen_sb_range_close_break_none_swing_tp_long on UK100 D1: out_of_universe -- gen_sb_range_close_break_none_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on UK100 D1 would validate a strategy nobody wrote
+- gen_sb_range_close_break_none_swing_tp_long on US500 H4: out_of_universe -- gen_sb_range_close_break_none_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on US500 H4 would validate a strategy nobody wrote
+- gen_sb_range_close_break_none_swing_tp_long on US500 D1: out_of_universe -- gen_sb_range_close_break_none_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on US500 D1 would validate a strategy nobody wrote
+- gen_sb_range_close_break_none_swing_tp_long on USDCAD H4: out_of_universe -- gen_sb_range_close_break_none_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on USDCAD H4 would validate a strategy nobody wrote
+- gen_sb_range_close_break_none_swing_tp_long on USDCAD D1: out_of_universe -- gen_sb_range_close_break_none_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on USDCAD D1 would validate a strategy nobody wrote
+- gen_sb_range_close_break_none_swing_tp_long on USDCHF D1: out_of_universe -- gen_sb_range_close_break_none_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on USDCHF D1 would validate a strategy nobody wrote
+- gen_sb_range_close_break_none_swing_tp_long on USDJPY H4: out_of_universe -- gen_sb_range_close_break_none_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on USDJPY H4 would validate a strategy nobody wrote
+- gen_sb_range_close_break_none_swing_tp_long on USDJPY D1: out_of_universe -- gen_sb_range_close_break_none_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on USDJPY D1 would validate a strategy nobody wrote
+- gen_sb_range_close_break_none_swing_tp_long on XAGUSD H4: out_of_universe -- gen_sb_range_close_break_none_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on XAGUSD H4 would validate a strategy nobody wrote
+- gen_sb_range_close_break_none_swing_tp_long on XAGUSD D1: out_of_universe -- gen_sb_range_close_break_none_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on XAGUSD D1 would validate a strategy nobody wrote
+- gen_sb_range_close_break_none_swing_tp_long on XAUUSD H4: out_of_universe -- gen_sb_range_close_break_none_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on XAUUSD H4 would validate a strategy nobody wrote
+- gen_sb_range_close_break_none_swing_tp_long on XAUUSD D1: out_of_universe -- gen_sb_range_close_break_none_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on XAUUSD D1 would validate a strategy nobody wrote
+- gen_sb_range_close_break_none_swing_tp_short on AUDJPY H4: out_of_universe -- gen_sb_range_close_break_none_swing_tp_short declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on AUDJPY H4 would validate a strategy nobody wrote
+- gen_sb_range_close_break_none_swing_tp_short on AUDJPY D1: out_of_universe -- gen_sb_range_close_break_none_swing_tp_short declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on AUDJPY D1 would validate a strategy nobody wrote
+- gen_sb_range_close_break_none_swing_tp_short on AUDUSD H4: out_of_universe -- gen_sb_range_close_break_none_swing_tp_short declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on AUDUSD H4 would validate a strategy nobody wrote
+- gen_sb_range_close_break_none_swing_tp_short on AUDUSD D1: out_of_universe -- gen_sb_range_close_break_none_swing_tp_short declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on AUDUSD D1 would validate a strategy nobody wrote
+- gen_sb_range_close_break_none_swing_tp_short on DE40 D1: out_of_universe -- gen_sb_range_close_break_none_swing_tp_short declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on DE40 D1 would validate a strategy nobody wrote
+- gen_sb_range_close_break_none_swing_tp_short on EURGBP D1: out_of_universe -- gen_sb_range_close_break_none_swing_tp_short declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on EURGBP D1 would validate a strategy nobody wrote
+- gen_sb_range_close_break_none_swing_tp_short on EURJPY D1: out_of_universe -- gen_sb_range_close_break_none_swing_tp_short declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on EURJPY D1 would validate a strategy nobody wrote
+- gen_sb_range_close_break_none_swing_tp_short on EURUSD D1: out_of_universe -- gen_sb_range_close_break_none_swing_tp_short declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on EURUSD D1 would validate a strategy nobody wrote
+- gen_sb_range_close_break_none_swing_tp_short on GBPJPY D1: out_of_universe -- gen_sb_range_close_break_none_swing_tp_short declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on GBPJPY D1 would validate a strategy nobody wrote
+- gen_sb_range_close_break_none_swing_tp_short on GBPUSD D1: out_of_universe -- gen_sb_range_close_break_none_swing_tp_short declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on GBPUSD D1 would validate a strategy nobody wrote
+- gen_sb_range_close_break_none_swing_tp_short on NZDUSD H4: out_of_universe -- gen_sb_range_close_break_none_swing_tp_short declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on NZDUSD H4 would validate a strategy nobody wrote
+- gen_sb_range_close_break_none_swing_tp_short on NZDUSD D1: out_of_universe -- gen_sb_range_close_break_none_swing_tp_short declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on NZDUSD D1 would validate a strategy nobody wrote
+- gen_sb_range_close_break_none_swing_tp_short on UK100 D1: out_of_universe -- gen_sb_range_close_break_none_swing_tp_short declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on UK100 D1 would validate a strategy nobody wrote
+- gen_sb_range_close_break_none_swing_tp_short on US500 H4: out_of_universe -- gen_sb_range_close_break_none_swing_tp_short declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on US500 H4 would validate a strategy nobody wrote
+- gen_sb_range_close_break_none_swing_tp_short on US500 D1: out_of_universe -- gen_sb_range_close_break_none_swing_tp_short declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on US500 D1 would validate a strategy nobody wrote
+- gen_sb_range_close_break_none_swing_tp_short on USDCAD H4: out_of_universe -- gen_sb_range_close_break_none_swing_tp_short declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on USDCAD H4 would validate a strategy nobody wrote
+- gen_sb_range_close_break_none_swing_tp_short on USDCAD D1: out_of_universe -- gen_sb_range_close_break_none_swing_tp_short declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on USDCAD D1 would validate a strategy nobody wrote
+- gen_sb_range_close_break_none_swing_tp_short on USDCHF D1: out_of_universe -- gen_sb_range_close_break_none_swing_tp_short declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on USDCHF D1 would validate a strategy nobody wrote
+- gen_sb_range_close_break_none_swing_tp_short on USDJPY H4: out_of_universe -- gen_sb_range_close_break_none_swing_tp_short declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on USDJPY H4 would validate a strategy nobody wrote
+- gen_sb_range_close_break_none_swing_tp_short on USDJPY D1: out_of_universe -- gen_sb_range_close_break_none_swing_tp_short declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on USDJPY D1 would validate a strategy nobody wrote
+- gen_sb_range_close_break_none_swing_tp_short on XAGUSD H4: out_of_universe -- gen_sb_range_close_break_none_swing_tp_short declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on XAGUSD H4 would validate a strategy nobody wrote
+- gen_sb_range_close_break_none_swing_tp_short on XAGUSD D1: out_of_universe -- gen_sb_range_close_break_none_swing_tp_short declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on XAGUSD D1 would validate a strategy nobody wrote
+- gen_sb_range_close_break_none_swing_tp_short on XAUUSD H4: out_of_universe -- gen_sb_range_close_break_none_swing_tp_short declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on XAUUSD H4 would validate a strategy nobody wrote
+- gen_sb_range_close_break_none_swing_tp_short on XAUUSD D1: out_of_universe -- gen_sb_range_close_break_none_swing_tp_short declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on XAUUSD D1 would validate a strategy nobody wrote
+- gen_sb_range_close_break_none_trail on AUDJPY H4: out_of_universe -- gen_sb_range_close_break_none_trail declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on AUDJPY H4 would validate a strategy nobody wrote
+- gen_sb_range_close_break_none_trail on AUDJPY D1: out_of_universe -- gen_sb_range_close_break_none_trail declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on AUDJPY D1 would validate a strategy nobody wrote
+- gen_sb_range_close_break_none_trail on AUDUSD H4: out_of_universe -- gen_sb_range_close_break_none_trail declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on AUDUSD H4 would validate a strategy nobody wrote
+- gen_sb_range_close_break_none_trail on AUDUSD D1: out_of_universe -- gen_sb_range_close_break_none_trail declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on AUDUSD D1 would validate a strategy nobody wrote
+- gen_sb_range_close_break_none_trail on DE40 D1: out_of_universe -- gen_sb_range_close_break_none_trail declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on DE40 D1 would validate a strategy nobody wrote
+- gen_sb_range_close_break_none_trail on EURGBP D1: out_of_universe -- gen_sb_range_close_break_none_trail declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on EURGBP D1 would validate a strategy nobody wrote
+- gen_sb_range_close_break_none_trail on EURJPY D1: out_of_universe -- gen_sb_range_close_break_none_trail declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on EURJPY D1 would validate a strategy nobody wrote
+- gen_sb_range_close_break_none_trail on EURUSD D1: out_of_universe -- gen_sb_range_close_break_none_trail declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on EURUSD D1 would validate a strategy nobody wrote
+- gen_sb_range_close_break_none_trail on GBPJPY D1: out_of_universe -- gen_sb_range_close_break_none_trail declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on GBPJPY D1 would validate a strategy nobody wrote
+- gen_sb_range_close_break_none_trail on GBPUSD D1: out_of_universe -- gen_sb_range_close_break_none_trail declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on GBPUSD D1 would validate a strategy nobody wrote
+- gen_sb_range_close_break_none_trail on NZDUSD H4: out_of_universe -- gen_sb_range_close_break_none_trail declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on NZDUSD H4 would validate a strategy nobody wrote
+- gen_sb_range_close_break_none_trail on NZDUSD D1: out_of_universe -- gen_sb_range_close_break_none_trail declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on NZDUSD D1 would validate a strategy nobody wrote
+- gen_sb_range_close_break_none_trail on UK100 D1: out_of_universe -- gen_sb_range_close_break_none_trail declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on UK100 D1 would validate a strategy nobody wrote
+- gen_sb_range_close_break_none_trail on US500 H4: out_of_universe -- gen_sb_range_close_break_none_trail declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on US500 H4 would validate a strategy nobody wrote
+- gen_sb_range_close_break_none_trail on US500 D1: out_of_universe -- gen_sb_range_close_break_none_trail declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on US500 D1 would validate a strategy nobody wrote
+- gen_sb_range_close_break_none_trail on USDCAD H4: out_of_universe -- gen_sb_range_close_break_none_trail declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on USDCAD H4 would validate a strategy nobody wrote
+- gen_sb_range_close_break_none_trail on USDCAD D1: out_of_universe -- gen_sb_range_close_break_none_trail declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on USDCAD D1 would validate a strategy nobody wrote
+- gen_sb_range_close_break_none_trail on USDCHF D1: out_of_universe -- gen_sb_range_close_break_none_trail declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on USDCHF D1 would validate a strategy nobody wrote
+- gen_sb_range_close_break_none_trail on USDJPY H4: out_of_universe -- gen_sb_range_close_break_none_trail declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on USDJPY H4 would validate a strategy nobody wrote
+- gen_sb_range_close_break_none_trail on USDJPY D1: out_of_universe -- gen_sb_range_close_break_none_trail declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on USDJPY D1 would validate a strategy nobody wrote
+- gen_sb_range_close_break_none_trail on XAGUSD H4: out_of_universe -- gen_sb_range_close_break_none_trail declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on XAGUSD H4 would validate a strategy nobody wrote
+- gen_sb_range_close_break_none_trail on XAGUSD D1: out_of_universe -- gen_sb_range_close_break_none_trail declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on XAGUSD D1 would validate a strategy nobody wrote
+- gen_sb_range_close_break_none_trail on XAUUSD H4: out_of_universe -- gen_sb_range_close_break_none_trail declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on XAUUSD H4 would validate a strategy nobody wrote
+- gen_sb_range_close_break_none_trail on XAUUSD D1: out_of_universe -- gen_sb_range_close_break_none_trail declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on XAUUSD D1 would validate a strategy nobody wrote
+- gen_sb_range_close_break_rvol_gate_swing_tp_short on AUDJPY H4: out_of_universe -- gen_sb_range_close_break_rvol_gate_swing_tp_short declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on AUDJPY H4 would validate a strategy nobody wrote
+- gen_sb_range_close_break_rvol_gate_swing_tp_short on AUDJPY D1: out_of_universe -- gen_sb_range_close_break_rvol_gate_swing_tp_short declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on AUDJPY D1 would validate a strategy nobody wrote
+- gen_sb_range_close_break_rvol_gate_swing_tp_short on AUDUSD H4: out_of_universe -- gen_sb_range_close_break_rvol_gate_swing_tp_short declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on AUDUSD H4 would validate a strategy nobody wrote
+- gen_sb_range_close_break_rvol_gate_swing_tp_short on AUDUSD D1: out_of_universe -- gen_sb_range_close_break_rvol_gate_swing_tp_short declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on AUDUSD D1 would validate a strategy nobody wrote
+- gen_sb_range_close_break_rvol_gate_swing_tp_short on DE40 D1: out_of_universe -- gen_sb_range_close_break_rvol_gate_swing_tp_short declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on DE40 D1 would validate a strategy nobody wrote
+- gen_sb_range_close_break_rvol_gate_swing_tp_short on EURGBP D1: out_of_universe -- gen_sb_range_close_break_rvol_gate_swing_tp_short declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on EURGBP D1 would validate a strategy nobody wrote
+- gen_sb_range_close_break_rvol_gate_swing_tp_short on EURJPY D1: out_of_universe -- gen_sb_range_close_break_rvol_gate_swing_tp_short declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on EURJPY D1 would validate a strategy nobody wrote
+- gen_sb_range_close_break_rvol_gate_swing_tp_short on EURUSD D1: out_of_universe -- gen_sb_range_close_break_rvol_gate_swing_tp_short declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on EURUSD D1 would validate a strategy nobody wrote
+- gen_sb_range_close_break_rvol_gate_swing_tp_short on GBPJPY D1: out_of_universe -- gen_sb_range_close_break_rvol_gate_swing_tp_short declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on GBPJPY D1 would validate a strategy nobody wrote
+- gen_sb_range_close_break_rvol_gate_swing_tp_short on GBPUSD D1: out_of_universe -- gen_sb_range_close_break_rvol_gate_swing_tp_short declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on GBPUSD D1 would validate a strategy nobody wrote
+- gen_sb_range_close_break_rvol_gate_swing_tp_short on NZDUSD H4: out_of_universe -- gen_sb_range_close_break_rvol_gate_swing_tp_short declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on NZDUSD H4 would validate a strategy nobody wrote
+- gen_sb_range_close_break_rvol_gate_swing_tp_short on NZDUSD D1: out_of_universe -- gen_sb_range_close_break_rvol_gate_swing_tp_short declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on NZDUSD D1 would validate a strategy nobody wrote
+- gen_sb_range_close_break_rvol_gate_swing_tp_short on UK100 D1: out_of_universe -- gen_sb_range_close_break_rvol_gate_swing_tp_short declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on UK100 D1 would validate a strategy nobody wrote
+- gen_sb_range_close_break_rvol_gate_swing_tp_short on US500 H4: out_of_universe -- gen_sb_range_close_break_rvol_gate_swing_tp_short declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on US500 H4 would validate a strategy nobody wrote
+- gen_sb_range_close_break_rvol_gate_swing_tp_short on US500 D1: out_of_universe -- gen_sb_range_close_break_rvol_gate_swing_tp_short declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on US500 D1 would validate a strategy nobody wrote
+- gen_sb_range_close_break_rvol_gate_swing_tp_short on USDCAD H4: out_of_universe -- gen_sb_range_close_break_rvol_gate_swing_tp_short declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on USDCAD H4 would validate a strategy nobody wrote
+- gen_sb_range_close_break_rvol_gate_swing_tp_short on USDCAD D1: out_of_universe -- gen_sb_range_close_break_rvol_gate_swing_tp_short declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on USDCAD D1 would validate a strategy nobody wrote
+- gen_sb_range_close_break_rvol_gate_swing_tp_short on USDCHF D1: out_of_universe -- gen_sb_range_close_break_rvol_gate_swing_tp_short declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on USDCHF D1 would validate a strategy nobody wrote
+- gen_sb_range_close_break_rvol_gate_swing_tp_short on USDJPY H4: out_of_universe -- gen_sb_range_close_break_rvol_gate_swing_tp_short declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on USDJPY H4 would validate a strategy nobody wrote
+- gen_sb_range_close_break_rvol_gate_swing_tp_short on USDJPY D1: out_of_universe -- gen_sb_range_close_break_rvol_gate_swing_tp_short declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on USDJPY D1 would validate a strategy nobody wrote
+- gen_sb_range_close_break_rvol_gate_swing_tp_short on XAGUSD H4: out_of_universe -- gen_sb_range_close_break_rvol_gate_swing_tp_short declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on XAGUSD H4 would validate a strategy nobody wrote
+- gen_sb_range_close_break_rvol_gate_swing_tp_short on XAGUSD D1: out_of_universe -- gen_sb_range_close_break_rvol_gate_swing_tp_short declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on XAGUSD D1 would validate a strategy nobody wrote
+- gen_sb_range_close_break_rvol_gate_swing_tp_short on XAUUSD H4: out_of_universe -- gen_sb_range_close_break_rvol_gate_swing_tp_short declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on XAUUSD H4 would validate a strategy nobody wrote
+- gen_sb_range_close_break_rvol_gate_swing_tp_short on XAUUSD D1: out_of_universe -- gen_sb_range_close_break_rvol_gate_swing_tp_short declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on XAUUSD D1 would validate a strategy nobody wrote
+- gen_sb_range_close_break_session_swing_tp_long on AUDJPY H4: out_of_universe -- gen_sb_range_close_break_session_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on AUDJPY H4 would validate a strategy nobody wrote
+- gen_sb_range_close_break_session_swing_tp_long on AUDJPY D1: out_of_universe -- gen_sb_range_close_break_session_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on AUDJPY D1 would validate a strategy nobody wrote
+- gen_sb_range_close_break_session_swing_tp_long on AUDUSD H4: out_of_universe -- gen_sb_range_close_break_session_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on AUDUSD H4 would validate a strategy nobody wrote
+- gen_sb_range_close_break_session_swing_tp_long on AUDUSD D1: out_of_universe -- gen_sb_range_close_break_session_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on AUDUSD D1 would validate a strategy nobody wrote
+- gen_sb_range_close_break_session_swing_tp_long on DE40 D1: out_of_universe -- gen_sb_range_close_break_session_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on DE40 D1 would validate a strategy nobody wrote
+- gen_sb_range_close_break_session_swing_tp_long on EURGBP D1: out_of_universe -- gen_sb_range_close_break_session_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on EURGBP D1 would validate a strategy nobody wrote
+- gen_sb_range_close_break_session_swing_tp_long on EURJPY D1: out_of_universe -- gen_sb_range_close_break_session_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on EURJPY D1 would validate a strategy nobody wrote
+- gen_sb_range_close_break_session_swing_tp_long on EURUSD D1: out_of_universe -- gen_sb_range_close_break_session_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on EURUSD D1 would validate a strategy nobody wrote
+- gen_sb_range_close_break_session_swing_tp_long on GBPJPY D1: out_of_universe -- gen_sb_range_close_break_session_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on GBPJPY D1 would validate a strategy nobody wrote
+- gen_sb_range_close_break_session_swing_tp_long on GBPUSD D1: out_of_universe -- gen_sb_range_close_break_session_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on GBPUSD D1 would validate a strategy nobody wrote
+- gen_sb_range_close_break_session_swing_tp_long on NZDUSD H4: out_of_universe -- gen_sb_range_close_break_session_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on NZDUSD H4 would validate a strategy nobody wrote
+- gen_sb_range_close_break_session_swing_tp_long on NZDUSD D1: out_of_universe -- gen_sb_range_close_break_session_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on NZDUSD D1 would validate a strategy nobody wrote
+- gen_sb_range_close_break_session_swing_tp_long on UK100 D1: out_of_universe -- gen_sb_range_close_break_session_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on UK100 D1 would validate a strategy nobody wrote
+- gen_sb_range_close_break_session_swing_tp_long on US500 H4: out_of_universe -- gen_sb_range_close_break_session_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on US500 H4 would validate a strategy nobody wrote
+- gen_sb_range_close_break_session_swing_tp_long on US500 D1: out_of_universe -- gen_sb_range_close_break_session_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on US500 D1 would validate a strategy nobody wrote
+- gen_sb_range_close_break_session_swing_tp_long on USDCAD H4: out_of_universe -- gen_sb_range_close_break_session_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on USDCAD H4 would validate a strategy nobody wrote
+- gen_sb_range_close_break_session_swing_tp_long on USDCAD D1: out_of_universe -- gen_sb_range_close_break_session_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on USDCAD D1 would validate a strategy nobody wrote
+- gen_sb_range_close_break_session_swing_tp_long on USDCHF D1: out_of_universe -- gen_sb_range_close_break_session_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on USDCHF D1 would validate a strategy nobody wrote
+- gen_sb_range_close_break_session_swing_tp_long on USDJPY H4: out_of_universe -- gen_sb_range_close_break_session_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on USDJPY H4 would validate a strategy nobody wrote
+- gen_sb_range_close_break_session_swing_tp_long on USDJPY D1: out_of_universe -- gen_sb_range_close_break_session_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on USDJPY D1 would validate a strategy nobody wrote
+- gen_sb_range_close_break_session_swing_tp_long on XAGUSD H4: out_of_universe -- gen_sb_range_close_break_session_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on XAGUSD H4 would validate a strategy nobody wrote
+- gen_sb_range_close_break_session_swing_tp_long on XAGUSD D1: out_of_universe -- gen_sb_range_close_break_session_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on XAGUSD D1 would validate a strategy nobody wrote
+- gen_sb_range_close_break_session_swing_tp_long on XAUUSD H4: out_of_universe -- gen_sb_range_close_break_session_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on XAUUSD H4 would validate a strategy nobody wrote
+- gen_sb_range_close_break_session_swing_tp_long on XAUUSD D1: out_of_universe -- gen_sb_range_close_break_session_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on XAUUSD D1 would validate a strategy nobody wrote
+- gen_sb_range_close_break_session_time_exit on AUDJPY H4: out_of_universe -- gen_sb_range_close_break_session_time_exit declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on AUDJPY H4 would validate a strategy nobody wrote
+- gen_sb_range_close_break_session_time_exit on AUDJPY D1: out_of_universe -- gen_sb_range_close_break_session_time_exit declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on AUDJPY D1 would validate a strategy nobody wrote
+- gen_sb_range_close_break_session_time_exit on AUDUSD H4: out_of_universe -- gen_sb_range_close_break_session_time_exit declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on AUDUSD H4 would validate a strategy nobody wrote
+- gen_sb_range_close_break_session_time_exit on AUDUSD D1: out_of_universe -- gen_sb_range_close_break_session_time_exit declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on AUDUSD D1 would validate a strategy nobody wrote
+- gen_sb_range_close_break_session_time_exit on DE40 D1: out_of_universe -- gen_sb_range_close_break_session_time_exit declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on DE40 D1 would validate a strategy nobody wrote
+- gen_sb_range_close_break_session_time_exit on EURGBP D1: out_of_universe -- gen_sb_range_close_break_session_time_exit declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on EURGBP D1 would validate a strategy nobody wrote
+- gen_sb_range_close_break_session_time_exit on EURJPY D1: out_of_universe -- gen_sb_range_close_break_session_time_exit declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on EURJPY D1 would validate a strategy nobody wrote
+- gen_sb_range_close_break_session_time_exit on EURUSD D1: out_of_universe -- gen_sb_range_close_break_session_time_exit declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on EURUSD D1 would validate a strategy nobody wrote
+- gen_sb_range_close_break_session_time_exit on GBPJPY D1: out_of_universe -- gen_sb_range_close_break_session_time_exit declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on GBPJPY D1 would validate a strategy nobody wrote
+- gen_sb_range_close_break_session_time_exit on GBPUSD D1: out_of_universe -- gen_sb_range_close_break_session_time_exit declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on GBPUSD D1 would validate a strategy nobody wrote
+- gen_sb_range_close_break_session_time_exit on NZDUSD H4: out_of_universe -- gen_sb_range_close_break_session_time_exit declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on NZDUSD H4 would validate a strategy nobody wrote
+- gen_sb_range_close_break_session_time_exit on NZDUSD D1: out_of_universe -- gen_sb_range_close_break_session_time_exit declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on NZDUSD D1 would validate a strategy nobody wrote
+- gen_sb_range_close_break_session_time_exit on UK100 D1: out_of_universe -- gen_sb_range_close_break_session_time_exit declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on UK100 D1 would validate a strategy nobody wrote
+- gen_sb_range_close_break_session_time_exit on US500 H4: out_of_universe -- gen_sb_range_close_break_session_time_exit declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on US500 H4 would validate a strategy nobody wrote
+- gen_sb_range_close_break_session_time_exit on US500 D1: out_of_universe -- gen_sb_range_close_break_session_time_exit declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on US500 D1 would validate a strategy nobody wrote
+- gen_sb_range_close_break_session_time_exit on USDCAD H4: out_of_universe -- gen_sb_range_close_break_session_time_exit declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on USDCAD H4 would validate a strategy nobody wrote
+- gen_sb_range_close_break_session_time_exit on USDCAD D1: out_of_universe -- gen_sb_range_close_break_session_time_exit declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on USDCAD D1 would validate a strategy nobody wrote
+- gen_sb_range_close_break_session_time_exit on USDCHF D1: out_of_universe -- gen_sb_range_close_break_session_time_exit declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on USDCHF D1 would validate a strategy nobody wrote
+- gen_sb_range_close_break_session_time_exit on USDJPY H4: out_of_universe -- gen_sb_range_close_break_session_time_exit declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on USDJPY H4 would validate a strategy nobody wrote
+- gen_sb_range_close_break_session_time_exit on USDJPY D1: out_of_universe -- gen_sb_range_close_break_session_time_exit declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on USDJPY D1 would validate a strategy nobody wrote
+- gen_sb_range_close_break_session_time_exit on XAGUSD H4: out_of_universe -- gen_sb_range_close_break_session_time_exit declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on XAGUSD H4 would validate a strategy nobody wrote
+- gen_sb_range_close_break_session_time_exit on XAGUSD D1: out_of_universe -- gen_sb_range_close_break_session_time_exit declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on XAGUSD D1 would validate a strategy nobody wrote
+- gen_sb_range_close_break_session_time_exit on XAUUSD H4: out_of_universe -- gen_sb_range_close_break_session_time_exit declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on XAUUSD H4 would validate a strategy nobody wrote
+- gen_sb_range_close_break_session_time_exit on XAUUSD D1: out_of_universe -- gen_sb_range_close_break_session_time_exit declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on XAUUSD D1 would validate a strategy nobody wrote
+- gen_sb_range_fresh_cross_adx_gate_swing_tp_short on AUDJPY H4: out_of_universe -- gen_sb_range_fresh_cross_adx_gate_swing_tp_short declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on AUDJPY H4 would validate a strategy nobody wrote
+- gen_sb_range_fresh_cross_adx_gate_swing_tp_short on AUDJPY D1: out_of_universe -- gen_sb_range_fresh_cross_adx_gate_swing_tp_short declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on AUDJPY D1 would validate a strategy nobody wrote
+- gen_sb_range_fresh_cross_adx_gate_swing_tp_short on AUDUSD H4: out_of_universe -- gen_sb_range_fresh_cross_adx_gate_swing_tp_short declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on AUDUSD H4 would validate a strategy nobody wrote
+- gen_sb_range_fresh_cross_adx_gate_swing_tp_short on AUDUSD D1: out_of_universe -- gen_sb_range_fresh_cross_adx_gate_swing_tp_short declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on AUDUSD D1 would validate a strategy nobody wrote
+- gen_sb_range_fresh_cross_adx_gate_swing_tp_short on DE40 D1: out_of_universe -- gen_sb_range_fresh_cross_adx_gate_swing_tp_short declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on DE40 D1 would validate a strategy nobody wrote
+- gen_sb_range_fresh_cross_adx_gate_swing_tp_short on EURGBP D1: out_of_universe -- gen_sb_range_fresh_cross_adx_gate_swing_tp_short declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on EURGBP D1 would validate a strategy nobody wrote
+- gen_sb_range_fresh_cross_adx_gate_swing_tp_short on EURJPY D1: out_of_universe -- gen_sb_range_fresh_cross_adx_gate_swing_tp_short declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on EURJPY D1 would validate a strategy nobody wrote
+- gen_sb_range_fresh_cross_adx_gate_swing_tp_short on EURUSD D1: out_of_universe -- gen_sb_range_fresh_cross_adx_gate_swing_tp_short declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on EURUSD D1 would validate a strategy nobody wrote
+- gen_sb_range_fresh_cross_adx_gate_swing_tp_short on GBPJPY D1: out_of_universe -- gen_sb_range_fresh_cross_adx_gate_swing_tp_short declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on GBPJPY D1 would validate a strategy nobody wrote
+- gen_sb_range_fresh_cross_adx_gate_swing_tp_short on GBPUSD D1: out_of_universe -- gen_sb_range_fresh_cross_adx_gate_swing_tp_short declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on GBPUSD D1 would validate a strategy nobody wrote
+- gen_sb_range_fresh_cross_adx_gate_swing_tp_short on NZDUSD H4: out_of_universe -- gen_sb_range_fresh_cross_adx_gate_swing_tp_short declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on NZDUSD H4 would validate a strategy nobody wrote
+- gen_sb_range_fresh_cross_adx_gate_swing_tp_short on NZDUSD D1: out_of_universe -- gen_sb_range_fresh_cross_adx_gate_swing_tp_short declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on NZDUSD D1 would validate a strategy nobody wrote
+- gen_sb_range_fresh_cross_adx_gate_swing_tp_short on UK100 D1: out_of_universe -- gen_sb_range_fresh_cross_adx_gate_swing_tp_short declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on UK100 D1 would validate a strategy nobody wrote
+- gen_sb_range_fresh_cross_adx_gate_swing_tp_short on US500 H4: out_of_universe -- gen_sb_range_fresh_cross_adx_gate_swing_tp_short declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on US500 H4 would validate a strategy nobody wrote
+- gen_sb_range_fresh_cross_adx_gate_swing_tp_short on US500 D1: out_of_universe -- gen_sb_range_fresh_cross_adx_gate_swing_tp_short declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on US500 D1 would validate a strategy nobody wrote
+- gen_sb_range_fresh_cross_adx_gate_swing_tp_short on USDCAD H4: out_of_universe -- gen_sb_range_fresh_cross_adx_gate_swing_tp_short declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on USDCAD H4 would validate a strategy nobody wrote
+- gen_sb_range_fresh_cross_adx_gate_swing_tp_short on USDCAD D1: out_of_universe -- gen_sb_range_fresh_cross_adx_gate_swing_tp_short declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on USDCAD D1 would validate a strategy nobody wrote
+- gen_sb_range_fresh_cross_adx_gate_swing_tp_short on USDCHF D1: out_of_universe -- gen_sb_range_fresh_cross_adx_gate_swing_tp_short declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on USDCHF D1 would validate a strategy nobody wrote
+- gen_sb_range_fresh_cross_adx_gate_swing_tp_short on USDJPY H4: out_of_universe -- gen_sb_range_fresh_cross_adx_gate_swing_tp_short declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on USDJPY H4 would validate a strategy nobody wrote
+- gen_sb_range_fresh_cross_adx_gate_swing_tp_short on USDJPY D1: out_of_universe -- gen_sb_range_fresh_cross_adx_gate_swing_tp_short declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on USDJPY D1 would validate a strategy nobody wrote
+- gen_sb_range_fresh_cross_adx_gate_swing_tp_short on XAGUSD H4: out_of_universe -- gen_sb_range_fresh_cross_adx_gate_swing_tp_short declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on XAGUSD H4 would validate a strategy nobody wrote
+- gen_sb_range_fresh_cross_adx_gate_swing_tp_short on XAGUSD D1: out_of_universe -- gen_sb_range_fresh_cross_adx_gate_swing_tp_short declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on XAGUSD D1 would validate a strategy nobody wrote
+- gen_sb_range_fresh_cross_adx_gate_swing_tp_short on XAUUSD H4: out_of_universe -- gen_sb_range_fresh_cross_adx_gate_swing_tp_short declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on XAUUSD H4 would validate a strategy nobody wrote
+- gen_sb_range_fresh_cross_adx_gate_swing_tp_short on XAUUSD D1: out_of_universe -- gen_sb_range_fresh_cross_adx_gate_swing_tp_short declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on XAUUSD D1 would validate a strategy nobody wrote
+- gen_sb_range_fresh_cross_adx_gate_time_exit on AUDJPY H4: out_of_universe -- gen_sb_range_fresh_cross_adx_gate_time_exit declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on AUDJPY H4 would validate a strategy nobody wrote
+- gen_sb_range_fresh_cross_adx_gate_time_exit on AUDJPY D1: out_of_universe -- gen_sb_range_fresh_cross_adx_gate_time_exit declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on AUDJPY D1 would validate a strategy nobody wrote
+- gen_sb_range_fresh_cross_adx_gate_time_exit on AUDUSD H4: out_of_universe -- gen_sb_range_fresh_cross_adx_gate_time_exit declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on AUDUSD H4 would validate a strategy nobody wrote
+- gen_sb_range_fresh_cross_adx_gate_time_exit on AUDUSD D1: out_of_universe -- gen_sb_range_fresh_cross_adx_gate_time_exit declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on AUDUSD D1 would validate a strategy nobody wrote
+- gen_sb_range_fresh_cross_adx_gate_time_exit on DE40 D1: out_of_universe -- gen_sb_range_fresh_cross_adx_gate_time_exit declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on DE40 D1 would validate a strategy nobody wrote
+- gen_sb_range_fresh_cross_adx_gate_time_exit on EURGBP D1: out_of_universe -- gen_sb_range_fresh_cross_adx_gate_time_exit declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on EURGBP D1 would validate a strategy nobody wrote
+- gen_sb_range_fresh_cross_adx_gate_time_exit on EURJPY D1: out_of_universe -- gen_sb_range_fresh_cross_adx_gate_time_exit declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on EURJPY D1 would validate a strategy nobody wrote
+- gen_sb_range_fresh_cross_adx_gate_time_exit on EURUSD D1: out_of_universe -- gen_sb_range_fresh_cross_adx_gate_time_exit declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on EURUSD D1 would validate a strategy nobody wrote
+- gen_sb_range_fresh_cross_adx_gate_time_exit on GBPJPY D1: out_of_universe -- gen_sb_range_fresh_cross_adx_gate_time_exit declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on GBPJPY D1 would validate a strategy nobody wrote
+- gen_sb_range_fresh_cross_adx_gate_time_exit on GBPUSD D1: out_of_universe -- gen_sb_range_fresh_cross_adx_gate_time_exit declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on GBPUSD D1 would validate a strategy nobody wrote
+- gen_sb_range_fresh_cross_adx_gate_time_exit on NZDUSD H4: out_of_universe -- gen_sb_range_fresh_cross_adx_gate_time_exit declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on NZDUSD H4 would validate a strategy nobody wrote
+- gen_sb_range_fresh_cross_adx_gate_time_exit on NZDUSD D1: out_of_universe -- gen_sb_range_fresh_cross_adx_gate_time_exit declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on NZDUSD D1 would validate a strategy nobody wrote
+- gen_sb_range_fresh_cross_adx_gate_time_exit on UK100 D1: out_of_universe -- gen_sb_range_fresh_cross_adx_gate_time_exit declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on UK100 D1 would validate a strategy nobody wrote
+- gen_sb_range_fresh_cross_adx_gate_time_exit on US500 H4: out_of_universe -- gen_sb_range_fresh_cross_adx_gate_time_exit declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on US500 H4 would validate a strategy nobody wrote
+- gen_sb_range_fresh_cross_adx_gate_time_exit on US500 D1: out_of_universe -- gen_sb_range_fresh_cross_adx_gate_time_exit declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on US500 D1 would validate a strategy nobody wrote
+- gen_sb_range_fresh_cross_adx_gate_time_exit on USDCAD H4: out_of_universe -- gen_sb_range_fresh_cross_adx_gate_time_exit declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on USDCAD H4 would validate a strategy nobody wrote
+- gen_sb_range_fresh_cross_adx_gate_time_exit on USDCAD D1: out_of_universe -- gen_sb_range_fresh_cross_adx_gate_time_exit declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on USDCAD D1 would validate a strategy nobody wrote
+- gen_sb_range_fresh_cross_adx_gate_time_exit on USDCHF D1: out_of_universe -- gen_sb_range_fresh_cross_adx_gate_time_exit declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on USDCHF D1 would validate a strategy nobody wrote
+- gen_sb_range_fresh_cross_adx_gate_time_exit on USDJPY H4: out_of_universe -- gen_sb_range_fresh_cross_adx_gate_time_exit declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on USDJPY H4 would validate a strategy nobody wrote
+- gen_sb_range_fresh_cross_adx_gate_time_exit on USDJPY D1: out_of_universe -- gen_sb_range_fresh_cross_adx_gate_time_exit declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on USDJPY D1 would validate a strategy nobody wrote
+- gen_sb_range_fresh_cross_adx_gate_time_exit on XAGUSD H4: out_of_universe -- gen_sb_range_fresh_cross_adx_gate_time_exit declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on XAGUSD H4 would validate a strategy nobody wrote
+- gen_sb_range_fresh_cross_adx_gate_time_exit on XAGUSD D1: out_of_universe -- gen_sb_range_fresh_cross_adx_gate_time_exit declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on XAGUSD D1 would validate a strategy nobody wrote
+- gen_sb_range_fresh_cross_adx_gate_time_exit on XAUUSD H4: out_of_universe -- gen_sb_range_fresh_cross_adx_gate_time_exit declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on XAUUSD H4 would validate a strategy nobody wrote
+- gen_sb_range_fresh_cross_adx_gate_time_exit on XAUUSD D1: out_of_universe -- gen_sb_range_fresh_cross_adx_gate_time_exit declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on XAUUSD D1 would validate a strategy nobody wrote
+- gen_sb_range_fresh_cross_none_swing_tp_long on AUDJPY H4: out_of_universe -- gen_sb_range_fresh_cross_none_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on AUDJPY H4 would validate a strategy nobody wrote
+- gen_sb_range_fresh_cross_none_swing_tp_long on AUDJPY D1: out_of_universe -- gen_sb_range_fresh_cross_none_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on AUDJPY D1 would validate a strategy nobody wrote
+- gen_sb_range_fresh_cross_none_swing_tp_long on AUDUSD H4: out_of_universe -- gen_sb_range_fresh_cross_none_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on AUDUSD H4 would validate a strategy nobody wrote
+- gen_sb_range_fresh_cross_none_swing_tp_long on AUDUSD D1: out_of_universe -- gen_sb_range_fresh_cross_none_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on AUDUSD D1 would validate a strategy nobody wrote
+- gen_sb_range_fresh_cross_none_swing_tp_long on DE40 D1: out_of_universe -- gen_sb_range_fresh_cross_none_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on DE40 D1 would validate a strategy nobody wrote
+- gen_sb_range_fresh_cross_none_swing_tp_long on EURGBP D1: out_of_universe -- gen_sb_range_fresh_cross_none_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on EURGBP D1 would validate a strategy nobody wrote
+- gen_sb_range_fresh_cross_none_swing_tp_long on EURJPY D1: out_of_universe -- gen_sb_range_fresh_cross_none_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on EURJPY D1 would validate a strategy nobody wrote
+- gen_sb_range_fresh_cross_none_swing_tp_long on EURUSD D1: out_of_universe -- gen_sb_range_fresh_cross_none_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on EURUSD D1 would validate a strategy nobody wrote
+- gen_sb_range_fresh_cross_none_swing_tp_long on GBPJPY D1: out_of_universe -- gen_sb_range_fresh_cross_none_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on GBPJPY D1 would validate a strategy nobody wrote
+- gen_sb_range_fresh_cross_none_swing_tp_long on GBPUSD D1: out_of_universe -- gen_sb_range_fresh_cross_none_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on GBPUSD D1 would validate a strategy nobody wrote
+- gen_sb_range_fresh_cross_none_swing_tp_long on NZDUSD H4: out_of_universe -- gen_sb_range_fresh_cross_none_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on NZDUSD H4 would validate a strategy nobody wrote
+- gen_sb_range_fresh_cross_none_swing_tp_long on NZDUSD D1: out_of_universe -- gen_sb_range_fresh_cross_none_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on NZDUSD D1 would validate a strategy nobody wrote
+- gen_sb_range_fresh_cross_none_swing_tp_long on UK100 D1: out_of_universe -- gen_sb_range_fresh_cross_none_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on UK100 D1 would validate a strategy nobody wrote
+- gen_sb_range_fresh_cross_none_swing_tp_long on US500 H4: out_of_universe -- gen_sb_range_fresh_cross_none_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on US500 H4 would validate a strategy nobody wrote
+- gen_sb_range_fresh_cross_none_swing_tp_long on US500 D1: out_of_universe -- gen_sb_range_fresh_cross_none_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on US500 D1 would validate a strategy nobody wrote
+- gen_sb_range_fresh_cross_none_swing_tp_long on USDCAD H4: out_of_universe -- gen_sb_range_fresh_cross_none_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on USDCAD H4 would validate a strategy nobody wrote
+- gen_sb_range_fresh_cross_none_swing_tp_long on USDCAD D1: out_of_universe -- gen_sb_range_fresh_cross_none_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on USDCAD D1 would validate a strategy nobody wrote
+- gen_sb_range_fresh_cross_none_swing_tp_long on USDCHF D1: out_of_universe -- gen_sb_range_fresh_cross_none_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on USDCHF D1 would validate a strategy nobody wrote
+- gen_sb_range_fresh_cross_none_swing_tp_long on USDJPY H4: out_of_universe -- gen_sb_range_fresh_cross_none_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on USDJPY H4 would validate a strategy nobody wrote
+- gen_sb_range_fresh_cross_none_swing_tp_long on USDJPY D1: out_of_universe -- gen_sb_range_fresh_cross_none_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on USDJPY D1 would validate a strategy nobody wrote
+- gen_sb_range_fresh_cross_none_swing_tp_long on XAGUSD H4: out_of_universe -- gen_sb_range_fresh_cross_none_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on XAGUSD H4 would validate a strategy nobody wrote
+- gen_sb_range_fresh_cross_none_swing_tp_long on XAGUSD D1: out_of_universe -- gen_sb_range_fresh_cross_none_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on XAGUSD D1 would validate a strategy nobody wrote
+- gen_sb_range_fresh_cross_none_swing_tp_long on XAUUSD H4: out_of_universe -- gen_sb_range_fresh_cross_none_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on XAUUSD H4 would validate a strategy nobody wrote
+- gen_sb_range_fresh_cross_none_swing_tp_long on XAUUSD D1: out_of_universe -- gen_sb_range_fresh_cross_none_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on XAUUSD D1 would validate a strategy nobody wrote
+- gen_sb_range_fresh_cross_none_swing_tp_short on AUDJPY H4: out_of_universe -- gen_sb_range_fresh_cross_none_swing_tp_short declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on AUDJPY H4 would validate a strategy nobody wrote
+- gen_sb_range_fresh_cross_none_swing_tp_short on AUDJPY D1: out_of_universe -- gen_sb_range_fresh_cross_none_swing_tp_short declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on AUDJPY D1 would validate a strategy nobody wrote
+- gen_sb_range_fresh_cross_none_swing_tp_short on AUDUSD H4: out_of_universe -- gen_sb_range_fresh_cross_none_swing_tp_short declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on AUDUSD H4 would validate a strategy nobody wrote
+- gen_sb_range_fresh_cross_none_swing_tp_short on AUDUSD D1: out_of_universe -- gen_sb_range_fresh_cross_none_swing_tp_short declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on AUDUSD D1 would validate a strategy nobody wrote
+- gen_sb_range_fresh_cross_none_swing_tp_short on DE40 D1: out_of_universe -- gen_sb_range_fresh_cross_none_swing_tp_short declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on DE40 D1 would validate a strategy nobody wrote
+- gen_sb_range_fresh_cross_none_swing_tp_short on EURGBP D1: out_of_universe -- gen_sb_range_fresh_cross_none_swing_tp_short declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on EURGBP D1 would validate a strategy nobody wrote
+- gen_sb_range_fresh_cross_none_swing_tp_short on EURJPY D1: out_of_universe -- gen_sb_range_fresh_cross_none_swing_tp_short declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on EURJPY D1 would validate a strategy nobody wrote
+- gen_sb_range_fresh_cross_none_swing_tp_short on EURUSD D1: out_of_universe -- gen_sb_range_fresh_cross_none_swing_tp_short declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on EURUSD D1 would validate a strategy nobody wrote
+- gen_sb_range_fresh_cross_none_swing_tp_short on GBPJPY D1: out_of_universe -- gen_sb_range_fresh_cross_none_swing_tp_short declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on GBPJPY D1 would validate a strategy nobody wrote
+- gen_sb_range_fresh_cross_none_swing_tp_short on GBPUSD D1: out_of_universe -- gen_sb_range_fresh_cross_none_swing_tp_short declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on GBPUSD D1 would validate a strategy nobody wrote
+- gen_sb_range_fresh_cross_none_swing_tp_short on NZDUSD H4: out_of_universe -- gen_sb_range_fresh_cross_none_swing_tp_short declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on NZDUSD H4 would validate a strategy nobody wrote
+- gen_sb_range_fresh_cross_none_swing_tp_short on NZDUSD D1: out_of_universe -- gen_sb_range_fresh_cross_none_swing_tp_short declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on NZDUSD D1 would validate a strategy nobody wrote
+- gen_sb_range_fresh_cross_none_swing_tp_short on UK100 D1: out_of_universe -- gen_sb_range_fresh_cross_none_swing_tp_short declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on UK100 D1 would validate a strategy nobody wrote
+- gen_sb_range_fresh_cross_none_swing_tp_short on US500 H4: out_of_universe -- gen_sb_range_fresh_cross_none_swing_tp_short declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on US500 H4 would validate a strategy nobody wrote
+- gen_sb_range_fresh_cross_none_swing_tp_short on US500 D1: out_of_universe -- gen_sb_range_fresh_cross_none_swing_tp_short declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on US500 D1 would validate a strategy nobody wrote
+- gen_sb_range_fresh_cross_none_swing_tp_short on USDCAD H4: out_of_universe -- gen_sb_range_fresh_cross_none_swing_tp_short declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on USDCAD H4 would validate a strategy nobody wrote
+- gen_sb_range_fresh_cross_none_swing_tp_short on USDCAD D1: out_of_universe -- gen_sb_range_fresh_cross_none_swing_tp_short declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on USDCAD D1 would validate a strategy nobody wrote
+- gen_sb_range_fresh_cross_none_swing_tp_short on USDCHF D1: out_of_universe -- gen_sb_range_fresh_cross_none_swing_tp_short declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on USDCHF D1 would validate a strategy nobody wrote
+- gen_sb_range_fresh_cross_none_swing_tp_short on USDJPY H4: out_of_universe -- gen_sb_range_fresh_cross_none_swing_tp_short declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on USDJPY H4 would validate a strategy nobody wrote
+- gen_sb_range_fresh_cross_none_swing_tp_short on USDJPY D1: out_of_universe -- gen_sb_range_fresh_cross_none_swing_tp_short declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on USDJPY D1 would validate a strategy nobody wrote
+- gen_sb_range_fresh_cross_none_swing_tp_short on XAGUSD H4: out_of_universe -- gen_sb_range_fresh_cross_none_swing_tp_short declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on XAGUSD H4 would validate a strategy nobody wrote
+- gen_sb_range_fresh_cross_none_swing_tp_short on XAGUSD D1: out_of_universe -- gen_sb_range_fresh_cross_none_swing_tp_short declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on XAGUSD D1 would validate a strategy nobody wrote
+- gen_sb_range_fresh_cross_none_swing_tp_short on XAUUSD H4: out_of_universe -- gen_sb_range_fresh_cross_none_swing_tp_short declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on XAUUSD H4 would validate a strategy nobody wrote
+- gen_sb_range_fresh_cross_none_swing_tp_short on XAUUSD D1: out_of_universe -- gen_sb_range_fresh_cross_none_swing_tp_short declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on XAUUSD D1 would validate a strategy nobody wrote
+- gen_sb_range_fresh_cross_none_time_exit on AUDJPY H4: out_of_universe -- gen_sb_range_fresh_cross_none_time_exit declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on AUDJPY H4 would validate a strategy nobody wrote
+- gen_sb_range_fresh_cross_none_time_exit on AUDJPY D1: out_of_universe -- gen_sb_range_fresh_cross_none_time_exit declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on AUDJPY D1 would validate a strategy nobody wrote
+- gen_sb_range_fresh_cross_none_time_exit on AUDUSD H4: out_of_universe -- gen_sb_range_fresh_cross_none_time_exit declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on AUDUSD H4 would validate a strategy nobody wrote
+- gen_sb_range_fresh_cross_none_time_exit on AUDUSD D1: out_of_universe -- gen_sb_range_fresh_cross_none_time_exit declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on AUDUSD D1 would validate a strategy nobody wrote
+- gen_sb_range_fresh_cross_none_time_exit on DE40 D1: out_of_universe -- gen_sb_range_fresh_cross_none_time_exit declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on DE40 D1 would validate a strategy nobody wrote
+- gen_sb_range_fresh_cross_none_time_exit on EURGBP D1: out_of_universe -- gen_sb_range_fresh_cross_none_time_exit declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on EURGBP D1 would validate a strategy nobody wrote
+- gen_sb_range_fresh_cross_none_time_exit on EURJPY D1: out_of_universe -- gen_sb_range_fresh_cross_none_time_exit declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on EURJPY D1 would validate a strategy nobody wrote
+- gen_sb_range_fresh_cross_none_time_exit on EURUSD D1: out_of_universe -- gen_sb_range_fresh_cross_none_time_exit declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on EURUSD D1 would validate a strategy nobody wrote
+- gen_sb_range_fresh_cross_none_time_exit on GBPJPY D1: out_of_universe -- gen_sb_range_fresh_cross_none_time_exit declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on GBPJPY D1 would validate a strategy nobody wrote
+- gen_sb_range_fresh_cross_none_time_exit on GBPUSD D1: out_of_universe -- gen_sb_range_fresh_cross_none_time_exit declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on GBPUSD D1 would validate a strategy nobody wrote
+- gen_sb_range_fresh_cross_none_time_exit on NZDUSD H4: out_of_universe -- gen_sb_range_fresh_cross_none_time_exit declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on NZDUSD H4 would validate a strategy nobody wrote
+- gen_sb_range_fresh_cross_none_time_exit on NZDUSD D1: out_of_universe -- gen_sb_range_fresh_cross_none_time_exit declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on NZDUSD D1 would validate a strategy nobody wrote
+- gen_sb_range_fresh_cross_none_time_exit on UK100 D1: out_of_universe -- gen_sb_range_fresh_cross_none_time_exit declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on UK100 D1 would validate a strategy nobody wrote
+- gen_sb_range_fresh_cross_none_time_exit on US500 H4: out_of_universe -- gen_sb_range_fresh_cross_none_time_exit declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on US500 H4 would validate a strategy nobody wrote
+- gen_sb_range_fresh_cross_none_time_exit on US500 D1: out_of_universe -- gen_sb_range_fresh_cross_none_time_exit declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on US500 D1 would validate a strategy nobody wrote
+- gen_sb_range_fresh_cross_none_time_exit on USDCAD H4: out_of_universe -- gen_sb_range_fresh_cross_none_time_exit declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on USDCAD H4 would validate a strategy nobody wrote
+- gen_sb_range_fresh_cross_none_time_exit on USDCAD D1: out_of_universe -- gen_sb_range_fresh_cross_none_time_exit declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on USDCAD D1 would validate a strategy nobody wrote
+- gen_sb_range_fresh_cross_none_time_exit on USDCHF D1: out_of_universe -- gen_sb_range_fresh_cross_none_time_exit declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on USDCHF D1 would validate a strategy nobody wrote
+- gen_sb_range_fresh_cross_none_time_exit on USDJPY H4: out_of_universe -- gen_sb_range_fresh_cross_none_time_exit declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on USDJPY H4 would validate a strategy nobody wrote
+- gen_sb_range_fresh_cross_none_time_exit on USDJPY D1: out_of_universe -- gen_sb_range_fresh_cross_none_time_exit declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on USDJPY D1 would validate a strategy nobody wrote
+- gen_sb_range_fresh_cross_none_time_exit on XAGUSD H4: out_of_universe -- gen_sb_range_fresh_cross_none_time_exit declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on XAGUSD H4 would validate a strategy nobody wrote
+- gen_sb_range_fresh_cross_none_time_exit on XAGUSD D1: out_of_universe -- gen_sb_range_fresh_cross_none_time_exit declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on XAGUSD D1 would validate a strategy nobody wrote
+- gen_sb_range_fresh_cross_none_time_exit on XAUUSD H4: out_of_universe -- gen_sb_range_fresh_cross_none_time_exit declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on XAUUSD H4 would validate a strategy nobody wrote
+- gen_sb_range_fresh_cross_none_time_exit on XAUUSD D1: out_of_universe -- gen_sb_range_fresh_cross_none_time_exit declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on XAUUSD D1 would validate a strategy nobody wrote
+- gen_sb_range_fresh_cross_rvol_gate_tp_r on AUDJPY H4: out_of_universe -- gen_sb_range_fresh_cross_rvol_gate_tp_r declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on AUDJPY H4 would validate a strategy nobody wrote
+- gen_sb_range_fresh_cross_rvol_gate_tp_r on AUDJPY D1: out_of_universe -- gen_sb_range_fresh_cross_rvol_gate_tp_r declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on AUDJPY D1 would validate a strategy nobody wrote
+- gen_sb_range_fresh_cross_rvol_gate_tp_r on AUDUSD H4: out_of_universe -- gen_sb_range_fresh_cross_rvol_gate_tp_r declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on AUDUSD H4 would validate a strategy nobody wrote
+- gen_sb_range_fresh_cross_rvol_gate_tp_r on AUDUSD D1: out_of_universe -- gen_sb_range_fresh_cross_rvol_gate_tp_r declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on AUDUSD D1 would validate a strategy nobody wrote
+- gen_sb_range_fresh_cross_rvol_gate_tp_r on DE40 D1: out_of_universe -- gen_sb_range_fresh_cross_rvol_gate_tp_r declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on DE40 D1 would validate a strategy nobody wrote
+- gen_sb_range_fresh_cross_rvol_gate_tp_r on EURGBP D1: out_of_universe -- gen_sb_range_fresh_cross_rvol_gate_tp_r declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on EURGBP D1 would validate a strategy nobody wrote
+- gen_sb_range_fresh_cross_rvol_gate_tp_r on EURJPY D1: out_of_universe -- gen_sb_range_fresh_cross_rvol_gate_tp_r declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on EURJPY D1 would validate a strategy nobody wrote
+- gen_sb_range_fresh_cross_rvol_gate_tp_r on EURUSD D1: out_of_universe -- gen_sb_range_fresh_cross_rvol_gate_tp_r declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on EURUSD D1 would validate a strategy nobody wrote
+- gen_sb_range_fresh_cross_rvol_gate_tp_r on GBPJPY D1: out_of_universe -- gen_sb_range_fresh_cross_rvol_gate_tp_r declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on GBPJPY D1 would validate a strategy nobody wrote
+- gen_sb_range_fresh_cross_rvol_gate_tp_r on GBPUSD D1: out_of_universe -- gen_sb_range_fresh_cross_rvol_gate_tp_r declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on GBPUSD D1 would validate a strategy nobody wrote
+- gen_sb_range_fresh_cross_rvol_gate_tp_r on NZDUSD H4: out_of_universe -- gen_sb_range_fresh_cross_rvol_gate_tp_r declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on NZDUSD H4 would validate a strategy nobody wrote
+- gen_sb_range_fresh_cross_rvol_gate_tp_r on NZDUSD D1: out_of_universe -- gen_sb_range_fresh_cross_rvol_gate_tp_r declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on NZDUSD D1 would validate a strategy nobody wrote
+- gen_sb_range_fresh_cross_rvol_gate_tp_r on UK100 D1: out_of_universe -- gen_sb_range_fresh_cross_rvol_gate_tp_r declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on UK100 D1 would validate a strategy nobody wrote
+- gen_sb_range_fresh_cross_rvol_gate_tp_r on US500 H4: out_of_universe -- gen_sb_range_fresh_cross_rvol_gate_tp_r declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on US500 H4 would validate a strategy nobody wrote
+- gen_sb_range_fresh_cross_rvol_gate_tp_r on US500 D1: out_of_universe -- gen_sb_range_fresh_cross_rvol_gate_tp_r declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on US500 D1 would validate a strategy nobody wrote
+- gen_sb_range_fresh_cross_rvol_gate_tp_r on USDCAD H4: out_of_universe -- gen_sb_range_fresh_cross_rvol_gate_tp_r declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on USDCAD H4 would validate a strategy nobody wrote
+- gen_sb_range_fresh_cross_rvol_gate_tp_r on USDCAD D1: out_of_universe -- gen_sb_range_fresh_cross_rvol_gate_tp_r declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on USDCAD D1 would validate a strategy nobody wrote
+- gen_sb_range_fresh_cross_rvol_gate_tp_r on USDCHF D1: out_of_universe -- gen_sb_range_fresh_cross_rvol_gate_tp_r declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on USDCHF D1 would validate a strategy nobody wrote
+- gen_sb_range_fresh_cross_rvol_gate_tp_r on USDJPY H4: out_of_universe -- gen_sb_range_fresh_cross_rvol_gate_tp_r declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on USDJPY H4 would validate a strategy nobody wrote
+- gen_sb_range_fresh_cross_rvol_gate_tp_r on USDJPY D1: out_of_universe -- gen_sb_range_fresh_cross_rvol_gate_tp_r declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on USDJPY D1 would validate a strategy nobody wrote
+- gen_sb_range_fresh_cross_rvol_gate_tp_r on XAGUSD H4: out_of_universe -- gen_sb_range_fresh_cross_rvol_gate_tp_r declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on XAGUSD H4 would validate a strategy nobody wrote
+- gen_sb_range_fresh_cross_rvol_gate_tp_r on XAGUSD D1: out_of_universe -- gen_sb_range_fresh_cross_rvol_gate_tp_r declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on XAGUSD D1 would validate a strategy nobody wrote
+- gen_sb_range_fresh_cross_rvol_gate_tp_r on XAUUSD H4: out_of_universe -- gen_sb_range_fresh_cross_rvol_gate_tp_r declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on XAUUSD H4 would validate a strategy nobody wrote
+- gen_sb_range_fresh_cross_rvol_gate_tp_r on XAUUSD D1: out_of_universe -- gen_sb_range_fresh_cross_rvol_gate_tp_r declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on XAUUSD D1 would validate a strategy nobody wrote
+- gen_sb_range_fresh_cross_session_swing_tp_long on AUDJPY H4: out_of_universe -- gen_sb_range_fresh_cross_session_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on AUDJPY H4 would validate a strategy nobody wrote
+- gen_sb_range_fresh_cross_session_swing_tp_long on AUDJPY D1: out_of_universe -- gen_sb_range_fresh_cross_session_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on AUDJPY D1 would validate a strategy nobody wrote
+- gen_sb_range_fresh_cross_session_swing_tp_long on AUDUSD H4: out_of_universe -- gen_sb_range_fresh_cross_session_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on AUDUSD H4 would validate a strategy nobody wrote
+- gen_sb_range_fresh_cross_session_swing_tp_long on AUDUSD D1: out_of_universe -- gen_sb_range_fresh_cross_session_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on AUDUSD D1 would validate a strategy nobody wrote
+- gen_sb_range_fresh_cross_session_swing_tp_long on DE40 D1: out_of_universe -- gen_sb_range_fresh_cross_session_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on DE40 D1 would validate a strategy nobody wrote
+- gen_sb_range_fresh_cross_session_swing_tp_long on EURGBP D1: out_of_universe -- gen_sb_range_fresh_cross_session_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on EURGBP D1 would validate a strategy nobody wrote
+- gen_sb_range_fresh_cross_session_swing_tp_long on EURJPY D1: out_of_universe -- gen_sb_range_fresh_cross_session_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on EURJPY D1 would validate a strategy nobody wrote
+- gen_sb_range_fresh_cross_session_swing_tp_long on EURUSD D1: out_of_universe -- gen_sb_range_fresh_cross_session_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on EURUSD D1 would validate a strategy nobody wrote
+- gen_sb_range_fresh_cross_session_swing_tp_long on GBPJPY D1: out_of_universe -- gen_sb_range_fresh_cross_session_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on GBPJPY D1 would validate a strategy nobody wrote
+- gen_sb_range_fresh_cross_session_swing_tp_long on GBPUSD D1: out_of_universe -- gen_sb_range_fresh_cross_session_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on GBPUSD D1 would validate a strategy nobody wrote
+- gen_sb_range_fresh_cross_session_swing_tp_long on NZDUSD H4: out_of_universe -- gen_sb_range_fresh_cross_session_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on NZDUSD H4 would validate a strategy nobody wrote
+- gen_sb_range_fresh_cross_session_swing_tp_long on NZDUSD D1: out_of_universe -- gen_sb_range_fresh_cross_session_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on NZDUSD D1 would validate a strategy nobody wrote
+- gen_sb_range_fresh_cross_session_swing_tp_long on UK100 D1: out_of_universe -- gen_sb_range_fresh_cross_session_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on UK100 D1 would validate a strategy nobody wrote
+- gen_sb_range_fresh_cross_session_swing_tp_long on US500 H4: out_of_universe -- gen_sb_range_fresh_cross_session_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on US500 H4 would validate a strategy nobody wrote
+- gen_sb_range_fresh_cross_session_swing_tp_long on US500 D1: out_of_universe -- gen_sb_range_fresh_cross_session_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on US500 D1 would validate a strategy nobody wrote
+- gen_sb_range_fresh_cross_session_swing_tp_long on USDCAD H4: out_of_universe -- gen_sb_range_fresh_cross_session_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on USDCAD H4 would validate a strategy nobody wrote
+- gen_sb_range_fresh_cross_session_swing_tp_long on USDCAD D1: out_of_universe -- gen_sb_range_fresh_cross_session_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on USDCAD D1 would validate a strategy nobody wrote
+- gen_sb_range_fresh_cross_session_swing_tp_long on USDCHF D1: out_of_universe -- gen_sb_range_fresh_cross_session_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on USDCHF D1 would validate a strategy nobody wrote
+- gen_sb_range_fresh_cross_session_swing_tp_long on USDJPY H4: out_of_universe -- gen_sb_range_fresh_cross_session_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on USDJPY H4 would validate a strategy nobody wrote
+- gen_sb_range_fresh_cross_session_swing_tp_long on USDJPY D1: out_of_universe -- gen_sb_range_fresh_cross_session_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on USDJPY D1 would validate a strategy nobody wrote
+- gen_sb_range_fresh_cross_session_swing_tp_long on XAGUSD H4: out_of_universe -- gen_sb_range_fresh_cross_session_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on XAGUSD H4 would validate a strategy nobody wrote
+- gen_sb_range_fresh_cross_session_swing_tp_long on XAGUSD D1: out_of_universe -- gen_sb_range_fresh_cross_session_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on XAGUSD D1 would validate a strategy nobody wrote
+- gen_sb_range_fresh_cross_session_swing_tp_long on XAUUSD H4: out_of_universe -- gen_sb_range_fresh_cross_session_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on XAUUSD H4 would validate a strategy nobody wrote
+- gen_sb_range_fresh_cross_session_swing_tp_long on XAUUSD D1: out_of_universe -- gen_sb_range_fresh_cross_session_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on XAUUSD D1 would validate a strategy nobody wrote
+- gen_sb_range_fresh_cross_session_time_exit on AUDJPY H4: out_of_universe -- gen_sb_range_fresh_cross_session_time_exit declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on AUDJPY H4 would validate a strategy nobody wrote
+- gen_sb_range_fresh_cross_session_time_exit on AUDJPY D1: out_of_universe -- gen_sb_range_fresh_cross_session_time_exit declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on AUDJPY D1 would validate a strategy nobody wrote
+- gen_sb_range_fresh_cross_session_time_exit on AUDUSD H4: out_of_universe -- gen_sb_range_fresh_cross_session_time_exit declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on AUDUSD H4 would validate a strategy nobody wrote
+- gen_sb_range_fresh_cross_session_time_exit on AUDUSD D1: out_of_universe -- gen_sb_range_fresh_cross_session_time_exit declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on AUDUSD D1 would validate a strategy nobody wrote
+- gen_sb_range_fresh_cross_session_time_exit on DE40 D1: out_of_universe -- gen_sb_range_fresh_cross_session_time_exit declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on DE40 D1 would validate a strategy nobody wrote
+- gen_sb_range_fresh_cross_session_time_exit on EURGBP D1: out_of_universe -- gen_sb_range_fresh_cross_session_time_exit declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on EURGBP D1 would validate a strategy nobody wrote
+- gen_sb_range_fresh_cross_session_time_exit on EURJPY D1: out_of_universe -- gen_sb_range_fresh_cross_session_time_exit declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on EURJPY D1 would validate a strategy nobody wrote
+- gen_sb_range_fresh_cross_session_time_exit on EURUSD D1: out_of_universe -- gen_sb_range_fresh_cross_session_time_exit declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on EURUSD D1 would validate a strategy nobody wrote
+- gen_sb_range_fresh_cross_session_time_exit on GBPJPY D1: out_of_universe -- gen_sb_range_fresh_cross_session_time_exit declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on GBPJPY D1 would validate a strategy nobody wrote
+- gen_sb_range_fresh_cross_session_time_exit on GBPUSD D1: out_of_universe -- gen_sb_range_fresh_cross_session_time_exit declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on GBPUSD D1 would validate a strategy nobody wrote
+- gen_sb_range_fresh_cross_session_time_exit on NZDUSD H4: out_of_universe -- gen_sb_range_fresh_cross_session_time_exit declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on NZDUSD H4 would validate a strategy nobody wrote
+- gen_sb_range_fresh_cross_session_time_exit on NZDUSD D1: out_of_universe -- gen_sb_range_fresh_cross_session_time_exit declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on NZDUSD D1 would validate a strategy nobody wrote
+- gen_sb_range_fresh_cross_session_time_exit on UK100 D1: out_of_universe -- gen_sb_range_fresh_cross_session_time_exit declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on UK100 D1 would validate a strategy nobody wrote
+- gen_sb_range_fresh_cross_session_time_exit on US500 H4: out_of_universe -- gen_sb_range_fresh_cross_session_time_exit declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on US500 H4 would validate a strategy nobody wrote
+- gen_sb_range_fresh_cross_session_time_exit on US500 D1: out_of_universe -- gen_sb_range_fresh_cross_session_time_exit declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on US500 D1 would validate a strategy nobody wrote
+- gen_sb_range_fresh_cross_session_time_exit on USDCAD H4: out_of_universe -- gen_sb_range_fresh_cross_session_time_exit declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on USDCAD H4 would validate a strategy nobody wrote
+- gen_sb_range_fresh_cross_session_time_exit on USDCAD D1: out_of_universe -- gen_sb_range_fresh_cross_session_time_exit declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on USDCAD D1 would validate a strategy nobody wrote
+- gen_sb_range_fresh_cross_session_time_exit on USDCHF D1: out_of_universe -- gen_sb_range_fresh_cross_session_time_exit declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on USDCHF D1 would validate a strategy nobody wrote
+- gen_sb_range_fresh_cross_session_time_exit on USDJPY H4: out_of_universe -- gen_sb_range_fresh_cross_session_time_exit declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on USDJPY H4 would validate a strategy nobody wrote
+- gen_sb_range_fresh_cross_session_time_exit on USDJPY D1: out_of_universe -- gen_sb_range_fresh_cross_session_time_exit declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on USDJPY D1 would validate a strategy nobody wrote
+- gen_sb_range_fresh_cross_session_time_exit on XAGUSD H4: out_of_universe -- gen_sb_range_fresh_cross_session_time_exit declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on XAGUSD H4 would validate a strategy nobody wrote
+- gen_sb_range_fresh_cross_session_time_exit on XAGUSD D1: out_of_universe -- gen_sb_range_fresh_cross_session_time_exit declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on XAGUSD D1 would validate a strategy nobody wrote
+- gen_sb_range_fresh_cross_session_time_exit on XAUUSD H4: out_of_universe -- gen_sb_range_fresh_cross_session_time_exit declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on XAUUSD H4 would validate a strategy nobody wrote
+- gen_sb_range_fresh_cross_session_time_exit on XAUUSD D1: out_of_universe -- gen_sb_range_fresh_cross_session_time_exit declares universe ['EURUSD', 'GBPUSD', 'EURGBP', 'USDCHF', 'EURJPY', 'GBPJPY', 'DE40', 'UK100'] and timeframes ['H1', 'H4']; running it on XAUUSD D1 would validate a strategy nobody wrote
+- gen_tp_ema_recross_rvol_gate_trail on AUDJPY H4: out_of_universe -- gen_tp_ema_recross_rvol_gate_trail declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'XAUUSD', 'XAGUSD', 'US500', 'DE40', 'UK100'] and timeframes ['H4', 'D1']; running it on AUDJPY H4 would validate a strategy nobody wrote
+- gen_tp_ema_recross_rvol_gate_trail on AUDJPY D1: out_of_universe -- gen_tp_ema_recross_rvol_gate_trail declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'XAUUSD', 'XAGUSD', 'US500', 'DE40', 'UK100'] and timeframes ['H4', 'D1']; running it on AUDJPY D1 would validate a strategy nobody wrote
+- gen_tp_ema_recross_rvol_gate_trail on EURGBP H4: out_of_universe -- gen_tp_ema_recross_rvol_gate_trail declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'XAUUSD', 'XAGUSD', 'US500', 'DE40', 'UK100'] and timeframes ['H4', 'D1']; running it on EURGBP H4 would validate a strategy nobody wrote
+- gen_tp_ema_recross_rvol_gate_trail on EURGBP D1: out_of_universe -- gen_tp_ema_recross_rvol_gate_trail declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'XAUUSD', 'XAGUSD', 'US500', 'DE40', 'UK100'] and timeframes ['H4', 'D1']; running it on EURGBP D1 would validate a strategy nobody wrote
+- gen_tp_ema_recross_session_trail on AUDJPY H4: out_of_universe -- gen_tp_ema_recross_session_trail declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'XAUUSD', 'XAGUSD', 'US500', 'DE40', 'UK100'] and timeframes ['H4']; running it on AUDJPY H4 would validate a strategy nobody wrote
+- gen_tp_ema_recross_session_trail on AUDJPY D1: out_of_universe -- gen_tp_ema_recross_session_trail declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'XAUUSD', 'XAGUSD', 'US500', 'DE40', 'UK100'] and timeframes ['H4']; running it on AUDJPY D1 would validate a strategy nobody wrote
+- gen_tp_ema_recross_session_trail on AUDUSD D1: out_of_universe -- gen_tp_ema_recross_session_trail declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'XAUUSD', 'XAGUSD', 'US500', 'DE40', 'UK100'] and timeframes ['H4']; running it on AUDUSD D1 would validate a strategy nobody wrote
+- gen_tp_ema_recross_session_trail on DE40 D1: out_of_universe -- gen_tp_ema_recross_session_trail declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'XAUUSD', 'XAGUSD', 'US500', 'DE40', 'UK100'] and timeframes ['H4']; running it on DE40 D1 would validate a strategy nobody wrote
+- gen_tp_ema_recross_session_trail on EURGBP H4: out_of_universe -- gen_tp_ema_recross_session_trail declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'XAUUSD', 'XAGUSD', 'US500', 'DE40', 'UK100'] and timeframes ['H4']; running it on EURGBP H4 would validate a strategy nobody wrote
+- gen_tp_ema_recross_session_trail on EURGBP D1: out_of_universe -- gen_tp_ema_recross_session_trail declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'XAUUSD', 'XAGUSD', 'US500', 'DE40', 'UK100'] and timeframes ['H4']; running it on EURGBP D1 would validate a strategy nobody wrote
+- gen_tp_ema_recross_session_trail on EURJPY D1: out_of_universe -- gen_tp_ema_recross_session_trail declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'XAUUSD', 'XAGUSD', 'US500', 'DE40', 'UK100'] and timeframes ['H4']; running it on EURJPY D1 would validate a strategy nobody wrote
+- gen_tp_ema_recross_session_trail on EURUSD D1: out_of_universe -- gen_tp_ema_recross_session_trail declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'XAUUSD', 'XAGUSD', 'US500', 'DE40', 'UK100'] and timeframes ['H4']; running it on EURUSD D1 would validate a strategy nobody wrote
+- gen_tp_ema_recross_session_trail on GBPJPY D1: out_of_universe -- gen_tp_ema_recross_session_trail declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'XAUUSD', 'XAGUSD', 'US500', 'DE40', 'UK100'] and timeframes ['H4']; running it on GBPJPY D1 would validate a strategy nobody wrote
+- gen_tp_ema_recross_session_trail on GBPUSD D1: out_of_universe -- gen_tp_ema_recross_session_trail declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'XAUUSD', 'XAGUSD', 'US500', 'DE40', 'UK100'] and timeframes ['H4']; running it on GBPUSD D1 would validate a strategy nobody wrote
+- gen_tp_ema_recross_session_trail on NZDUSD D1: out_of_universe -- gen_tp_ema_recross_session_trail declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'XAUUSD', 'XAGUSD', 'US500', 'DE40', 'UK100'] and timeframes ['H4']; running it on NZDUSD D1 would validate a strategy nobody wrote
+- gen_tp_ema_recross_session_trail on UK100 D1: out_of_universe -- gen_tp_ema_recross_session_trail declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'XAUUSD', 'XAGUSD', 'US500', 'DE40', 'UK100'] and timeframes ['H4']; running it on UK100 D1 would validate a strategy nobody wrote
+- gen_tp_ema_recross_session_trail on US500 D1: out_of_universe -- gen_tp_ema_recross_session_trail declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'XAUUSD', 'XAGUSD', 'US500', 'DE40', 'UK100'] and timeframes ['H4']; running it on US500 D1 would validate a strategy nobody wrote
+- gen_tp_ema_recross_session_trail on USDCAD D1: out_of_universe -- gen_tp_ema_recross_session_trail declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'XAUUSD', 'XAGUSD', 'US500', 'DE40', 'UK100'] and timeframes ['H4']; running it on USDCAD D1 would validate a strategy nobody wrote
+- gen_tp_ema_recross_session_trail on USDCHF D1: out_of_universe -- gen_tp_ema_recross_session_trail declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'XAUUSD', 'XAGUSD', 'US500', 'DE40', 'UK100'] and timeframes ['H4']; running it on USDCHF D1 would validate a strategy nobody wrote
+- gen_tp_ema_recross_session_trail on USDJPY D1: out_of_universe -- gen_tp_ema_recross_session_trail declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'XAUUSD', 'XAGUSD', 'US500', 'DE40', 'UK100'] and timeframes ['H4']; running it on USDJPY D1 would validate a strategy nobody wrote
+- gen_tp_ema_recross_session_trail on XAGUSD D1: out_of_universe -- gen_tp_ema_recross_session_trail declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'XAUUSD', 'XAGUSD', 'US500', 'DE40', 'UK100'] and timeframes ['H4']; running it on XAGUSD D1 would validate a strategy nobody wrote
+- gen_tp_ema_recross_session_trail on XAUUSD D1: out_of_universe -- gen_tp_ema_recross_session_trail declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'XAUUSD', 'XAGUSD', 'US500', 'DE40', 'UK100'] and timeframes ['H4']; running it on XAUUSD D1 would validate a strategy nobody wrote
+- gen_tp_kc_recross_adx_gate_swing_tp_short on AUDJPY H4: out_of_universe -- gen_tp_kc_recross_adx_gate_swing_tp_short declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'XAUUSD', 'XAGUSD', 'US500', 'DE40', 'UK100'] and timeframes ['H4', 'D1']; running it on AUDJPY H4 would validate a strategy nobody wrote
+- gen_tp_kc_recross_adx_gate_swing_tp_short on AUDJPY D1: out_of_universe -- gen_tp_kc_recross_adx_gate_swing_tp_short declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'XAUUSD', 'XAGUSD', 'US500', 'DE40', 'UK100'] and timeframes ['H4', 'D1']; running it on AUDJPY D1 would validate a strategy nobody wrote
+- gen_tp_kc_recross_adx_gate_swing_tp_short on EURGBP H4: out_of_universe -- gen_tp_kc_recross_adx_gate_swing_tp_short declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'XAUUSD', 'XAGUSD', 'US500', 'DE40', 'UK100'] and timeframes ['H4', 'D1']; running it on EURGBP H4 would validate a strategy nobody wrote
+- gen_tp_kc_recross_adx_gate_swing_tp_short on EURGBP D1: out_of_universe -- gen_tp_kc_recross_adx_gate_swing_tp_short declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'XAUUSD', 'XAGUSD', 'US500', 'DE40', 'UK100'] and timeframes ['H4', 'D1']; running it on EURGBP D1 would validate a strategy nobody wrote
+- gen_tp_kc_recross_none_swing_tp_long on AUDJPY H4: out_of_universe -- gen_tp_kc_recross_none_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'XAUUSD', 'XAGUSD', 'US500', 'DE40', 'UK100'] and timeframes ['H4', 'D1']; running it on AUDJPY H4 would validate a strategy nobody wrote
+- gen_tp_kc_recross_none_swing_tp_long on AUDJPY D1: out_of_universe -- gen_tp_kc_recross_none_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'XAUUSD', 'XAGUSD', 'US500', 'DE40', 'UK100'] and timeframes ['H4', 'D1']; running it on AUDJPY D1 would validate a strategy nobody wrote
+- gen_tp_kc_recross_none_swing_tp_long on EURGBP H4: out_of_universe -- gen_tp_kc_recross_none_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'XAUUSD', 'XAGUSD', 'US500', 'DE40', 'UK100'] and timeframes ['H4', 'D1']; running it on EURGBP H4 would validate a strategy nobody wrote
+- gen_tp_kc_recross_none_swing_tp_long on EURGBP D1: out_of_universe -- gen_tp_kc_recross_none_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'XAUUSD', 'XAGUSD', 'US500', 'DE40', 'UK100'] and timeframes ['H4', 'D1']; running it on EURGBP D1 would validate a strategy nobody wrote
+- gen_tp_kc_recross_none_time_exit on AUDJPY H4: out_of_universe -- gen_tp_kc_recross_none_time_exit declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'XAUUSD', 'XAGUSD', 'US500', 'DE40', 'UK100'] and timeframes ['H4', 'D1']; running it on AUDJPY H4 would validate a strategy nobody wrote
+- gen_tp_kc_recross_none_time_exit on AUDJPY D1: out_of_universe -- gen_tp_kc_recross_none_time_exit declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'XAUUSD', 'XAGUSD', 'US500', 'DE40', 'UK100'] and timeframes ['H4', 'D1']; running it on AUDJPY D1 would validate a strategy nobody wrote
+- gen_tp_kc_recross_none_time_exit on EURGBP H4: out_of_universe -- gen_tp_kc_recross_none_time_exit declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'XAUUSD', 'XAGUSD', 'US500', 'DE40', 'UK100'] and timeframes ['H4', 'D1']; running it on EURGBP H4 would validate a strategy nobody wrote
+- gen_tp_kc_recross_none_time_exit on EURGBP D1: out_of_universe -- gen_tp_kc_recross_none_time_exit declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'XAUUSD', 'XAGUSD', 'US500', 'DE40', 'UK100'] and timeframes ['H4', 'D1']; running it on EURGBP D1 would validate a strategy nobody wrote
+- gen_tp_kc_recross_none_trail on AUDJPY H4: out_of_universe -- gen_tp_kc_recross_none_trail declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'XAUUSD', 'XAGUSD', 'US500', 'DE40', 'UK100'] and timeframes ['H4', 'D1']; running it on AUDJPY H4 would validate a strategy nobody wrote
+- gen_tp_kc_recross_none_trail on AUDJPY D1: out_of_universe -- gen_tp_kc_recross_none_trail declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'XAUUSD', 'XAGUSD', 'US500', 'DE40', 'UK100'] and timeframes ['H4', 'D1']; running it on AUDJPY D1 would validate a strategy nobody wrote
+- gen_tp_kc_recross_none_trail on EURGBP H4: out_of_universe -- gen_tp_kc_recross_none_trail declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'XAUUSD', 'XAGUSD', 'US500', 'DE40', 'UK100'] and timeframes ['H4', 'D1']; running it on EURGBP H4 would validate a strategy nobody wrote
+- gen_tp_kc_recross_none_trail on EURGBP D1: out_of_universe -- gen_tp_kc_recross_none_trail declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'XAUUSD', 'XAGUSD', 'US500', 'DE40', 'UK100'] and timeframes ['H4', 'D1']; running it on EURGBP D1 would validate a strategy nobody wrote
+- gen_tp_kc_recross_rvol_gate_time_exit on AUDJPY H4: out_of_universe -- gen_tp_kc_recross_rvol_gate_time_exit declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'XAUUSD', 'XAGUSD', 'US500', 'DE40', 'UK100'] and timeframes ['H4', 'D1']; running it on AUDJPY H4 would validate a strategy nobody wrote
+- gen_tp_kc_recross_rvol_gate_time_exit on AUDJPY D1: out_of_universe -- gen_tp_kc_recross_rvol_gate_time_exit declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'XAUUSD', 'XAGUSD', 'US500', 'DE40', 'UK100'] and timeframes ['H4', 'D1']; running it on AUDJPY D1 would validate a strategy nobody wrote
+- gen_tp_kc_recross_rvol_gate_time_exit on EURGBP H4: out_of_universe -- gen_tp_kc_recross_rvol_gate_time_exit declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'XAUUSD', 'XAGUSD', 'US500', 'DE40', 'UK100'] and timeframes ['H4', 'D1']; running it on EURGBP H4 would validate a strategy nobody wrote
+- gen_tp_kc_recross_rvol_gate_time_exit on EURGBP D1: out_of_universe -- gen_tp_kc_recross_rvol_gate_time_exit declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'XAUUSD', 'XAGUSD', 'US500', 'DE40', 'UK100'] and timeframes ['H4', 'D1']; running it on EURGBP D1 would validate a strategy nobody wrote
+- gen_tp_kc_recross_session_trail on AUDJPY H4: out_of_universe -- gen_tp_kc_recross_session_trail declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'XAUUSD', 'XAGUSD', 'US500', 'DE40', 'UK100'] and timeframes ['H4']; running it on AUDJPY H4 would validate a strategy nobody wrote
+- gen_tp_kc_recross_session_trail on AUDJPY D1: out_of_universe -- gen_tp_kc_recross_session_trail declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'XAUUSD', 'XAGUSD', 'US500', 'DE40', 'UK100'] and timeframes ['H4']; running it on AUDJPY D1 would validate a strategy nobody wrote
+- gen_tp_kc_recross_session_trail on AUDUSD D1: out_of_universe -- gen_tp_kc_recross_session_trail declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'XAUUSD', 'XAGUSD', 'US500', 'DE40', 'UK100'] and timeframes ['H4']; running it on AUDUSD D1 would validate a strategy nobody wrote
+- gen_tp_kc_recross_session_trail on DE40 D1: out_of_universe -- gen_tp_kc_recross_session_trail declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'XAUUSD', 'XAGUSD', 'US500', 'DE40', 'UK100'] and timeframes ['H4']; running it on DE40 D1 would validate a strategy nobody wrote
+- gen_tp_kc_recross_session_trail on EURGBP H4: out_of_universe -- gen_tp_kc_recross_session_trail declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'XAUUSD', 'XAGUSD', 'US500', 'DE40', 'UK100'] and timeframes ['H4']; running it on EURGBP H4 would validate a strategy nobody wrote
+- gen_tp_kc_recross_session_trail on EURGBP D1: out_of_universe -- gen_tp_kc_recross_session_trail declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'XAUUSD', 'XAGUSD', 'US500', 'DE40', 'UK100'] and timeframes ['H4']; running it on EURGBP D1 would validate a strategy nobody wrote
+- gen_tp_kc_recross_session_trail on EURJPY D1: out_of_universe -- gen_tp_kc_recross_session_trail declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'XAUUSD', 'XAGUSD', 'US500', 'DE40', 'UK100'] and timeframes ['H4']; running it on EURJPY D1 would validate a strategy nobody wrote
+- gen_tp_kc_recross_session_trail on EURUSD D1: out_of_universe -- gen_tp_kc_recross_session_trail declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'XAUUSD', 'XAGUSD', 'US500', 'DE40', 'UK100'] and timeframes ['H4']; running it on EURUSD D1 would validate a strategy nobody wrote
+- gen_tp_kc_recross_session_trail on GBPJPY D1: out_of_universe -- gen_tp_kc_recross_session_trail declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'XAUUSD', 'XAGUSD', 'US500', 'DE40', 'UK100'] and timeframes ['H4']; running it on GBPJPY D1 would validate a strategy nobody wrote
+- gen_tp_kc_recross_session_trail on GBPUSD D1: out_of_universe -- gen_tp_kc_recross_session_trail declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'XAUUSD', 'XAGUSD', 'US500', 'DE40', 'UK100'] and timeframes ['H4']; running it on GBPUSD D1 would validate a strategy nobody wrote
+- gen_tp_kc_recross_session_trail on NZDUSD D1: out_of_universe -- gen_tp_kc_recross_session_trail declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'XAUUSD', 'XAGUSD', 'US500', 'DE40', 'UK100'] and timeframes ['H4']; running it on NZDUSD D1 would validate a strategy nobody wrote
+- gen_tp_kc_recross_session_trail on UK100 D1: out_of_universe -- gen_tp_kc_recross_session_trail declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'XAUUSD', 'XAGUSD', 'US500', 'DE40', 'UK100'] and timeframes ['H4']; running it on UK100 D1 would validate a strategy nobody wrote
+- gen_tp_kc_recross_session_trail on US500 D1: out_of_universe -- gen_tp_kc_recross_session_trail declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'XAUUSD', 'XAGUSD', 'US500', 'DE40', 'UK100'] and timeframes ['H4']; running it on US500 D1 would validate a strategy nobody wrote
+- gen_tp_kc_recross_session_trail on USDCAD D1: out_of_universe -- gen_tp_kc_recross_session_trail declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'XAUUSD', 'XAGUSD', 'US500', 'DE40', 'UK100'] and timeframes ['H4']; running it on USDCAD D1 would validate a strategy nobody wrote
+- gen_tp_kc_recross_session_trail on USDCHF D1: out_of_universe -- gen_tp_kc_recross_session_trail declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'XAUUSD', 'XAGUSD', 'US500', 'DE40', 'UK100'] and timeframes ['H4']; running it on USDCHF D1 would validate a strategy nobody wrote
+- gen_tp_kc_recross_session_trail on USDJPY D1: out_of_universe -- gen_tp_kc_recross_session_trail declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'XAUUSD', 'XAGUSD', 'US500', 'DE40', 'UK100'] and timeframes ['H4']; running it on USDJPY D1 would validate a strategy nobody wrote
+- gen_tp_kc_recross_session_trail on XAGUSD D1: out_of_universe -- gen_tp_kc_recross_session_trail declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'XAUUSD', 'XAGUSD', 'US500', 'DE40', 'UK100'] and timeframes ['H4']; running it on XAGUSD D1 would validate a strategy nobody wrote
+- gen_tp_kc_recross_session_trail on XAUUSD D1: out_of_universe -- gen_tp_kc_recross_session_trail declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'XAUUSD', 'XAGUSD', 'US500', 'DE40', 'UK100'] and timeframes ['H4']; running it on XAUUSD D1 would validate a strategy nobody wrote
+- gen_tp_sma_recross_adx_gate_swing_tp_long on AUDJPY H4: out_of_universe -- gen_tp_sma_recross_adx_gate_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'XAUUSD', 'XAGUSD', 'US500', 'DE40', 'UK100'] and timeframes ['H4', 'D1']; running it on AUDJPY H4 would validate a strategy nobody wrote
+- gen_tp_sma_recross_adx_gate_swing_tp_long on AUDJPY D1: out_of_universe -- gen_tp_sma_recross_adx_gate_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'XAUUSD', 'XAGUSD', 'US500', 'DE40', 'UK100'] and timeframes ['H4', 'D1']; running it on AUDJPY D1 would validate a strategy nobody wrote
+- gen_tp_sma_recross_adx_gate_swing_tp_long on EURGBP H4: out_of_universe -- gen_tp_sma_recross_adx_gate_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'XAUUSD', 'XAGUSD', 'US500', 'DE40', 'UK100'] and timeframes ['H4', 'D1']; running it on EURGBP H4 would validate a strategy nobody wrote
+- gen_tp_sma_recross_adx_gate_swing_tp_long on EURGBP D1: out_of_universe -- gen_tp_sma_recross_adx_gate_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'XAUUSD', 'XAGUSD', 'US500', 'DE40', 'UK100'] and timeframes ['H4', 'D1']; running it on EURGBP D1 would validate a strategy nobody wrote
+- gen_tp_sma_recross_adx_gate_swing_tp_short on AUDJPY H4: out_of_universe -- gen_tp_sma_recross_adx_gate_swing_tp_short declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'XAUUSD', 'XAGUSD', 'US500', 'DE40', 'UK100'] and timeframes ['H4', 'D1']; running it on AUDJPY H4 would validate a strategy nobody wrote
+- gen_tp_sma_recross_adx_gate_swing_tp_short on AUDJPY D1: out_of_universe -- gen_tp_sma_recross_adx_gate_swing_tp_short declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'XAUUSD', 'XAGUSD', 'US500', 'DE40', 'UK100'] and timeframes ['H4', 'D1']; running it on AUDJPY D1 would validate a strategy nobody wrote
+- gen_tp_sma_recross_adx_gate_swing_tp_short on EURGBP H4: out_of_universe -- gen_tp_sma_recross_adx_gate_swing_tp_short declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'XAUUSD', 'XAGUSD', 'US500', 'DE40', 'UK100'] and timeframes ['H4', 'D1']; running it on EURGBP H4 would validate a strategy nobody wrote
+- gen_tp_sma_recross_adx_gate_swing_tp_short on EURGBP D1: out_of_universe -- gen_tp_sma_recross_adx_gate_swing_tp_short declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'XAUUSD', 'XAGUSD', 'US500', 'DE40', 'UK100'] and timeframes ['H4', 'D1']; running it on EURGBP D1 would validate a strategy nobody wrote
+- gen_tp_sma_recross_adx_gate_time_exit on AUDJPY H4: out_of_universe -- gen_tp_sma_recross_adx_gate_time_exit declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'XAUUSD', 'XAGUSD', 'US500', 'DE40', 'UK100'] and timeframes ['H4', 'D1']; running it on AUDJPY H4 would validate a strategy nobody wrote
+- gen_tp_sma_recross_adx_gate_time_exit on AUDJPY D1: out_of_universe -- gen_tp_sma_recross_adx_gate_time_exit declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'XAUUSD', 'XAGUSD', 'US500', 'DE40', 'UK100'] and timeframes ['H4', 'D1']; running it on AUDJPY D1 would validate a strategy nobody wrote
+- gen_tp_sma_recross_adx_gate_time_exit on EURGBP H4: out_of_universe -- gen_tp_sma_recross_adx_gate_time_exit declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'XAUUSD', 'XAGUSD', 'US500', 'DE40', 'UK100'] and timeframes ['H4', 'D1']; running it on EURGBP H4 would validate a strategy nobody wrote
+- gen_tp_sma_recross_adx_gate_time_exit on EURGBP D1: out_of_universe -- gen_tp_sma_recross_adx_gate_time_exit declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'XAUUSD', 'XAGUSD', 'US500', 'DE40', 'UK100'] and timeframes ['H4', 'D1']; running it on EURGBP D1 would validate a strategy nobody wrote
+- gen_tp_sma_recross_adx_gate_tp_r on AUDJPY H4: out_of_universe -- gen_tp_sma_recross_adx_gate_tp_r declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'XAUUSD', 'XAGUSD', 'US500', 'DE40', 'UK100'] and timeframes ['H4', 'D1']; running it on AUDJPY H4 would validate a strategy nobody wrote
+- gen_tp_sma_recross_adx_gate_tp_r on AUDJPY D1: out_of_universe -- gen_tp_sma_recross_adx_gate_tp_r declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'XAUUSD', 'XAGUSD', 'US500', 'DE40', 'UK100'] and timeframes ['H4', 'D1']; running it on AUDJPY D1 would validate a strategy nobody wrote
+- gen_tp_sma_recross_adx_gate_tp_r on EURGBP H4: out_of_universe -- gen_tp_sma_recross_adx_gate_tp_r declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'XAUUSD', 'XAGUSD', 'US500', 'DE40', 'UK100'] and timeframes ['H4', 'D1']; running it on EURGBP H4 would validate a strategy nobody wrote
+- gen_tp_sma_recross_adx_gate_tp_r on EURGBP D1: out_of_universe -- gen_tp_sma_recross_adx_gate_tp_r declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'XAUUSD', 'XAGUSD', 'US500', 'DE40', 'UK100'] and timeframes ['H4', 'D1']; running it on EURGBP D1 would validate a strategy nobody wrote
+- gen_tp_sma_recross_none_swing_tp_long on AUDJPY H4: out_of_universe -- gen_tp_sma_recross_none_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'XAUUSD', 'XAGUSD', 'US500', 'DE40', 'UK100'] and timeframes ['H4', 'D1']; running it on AUDJPY H4 would validate a strategy nobody wrote
+- gen_tp_sma_recross_none_swing_tp_long on AUDJPY D1: out_of_universe -- gen_tp_sma_recross_none_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'XAUUSD', 'XAGUSD', 'US500', 'DE40', 'UK100'] and timeframes ['H4', 'D1']; running it on AUDJPY D1 would validate a strategy nobody wrote
+- gen_tp_sma_recross_none_swing_tp_long on EURGBP H4: out_of_universe -- gen_tp_sma_recross_none_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'XAUUSD', 'XAGUSD', 'US500', 'DE40', 'UK100'] and timeframes ['H4', 'D1']; running it on EURGBP H4 would validate a strategy nobody wrote
+- gen_tp_sma_recross_none_swing_tp_long on EURGBP D1: out_of_universe -- gen_tp_sma_recross_none_swing_tp_long declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'XAUUSD', 'XAGUSD', 'US500', 'DE40', 'UK100'] and timeframes ['H4', 'D1']; running it on EURGBP D1 would validate a strategy nobody wrote
+- gen_tp_sma_recross_none_swing_tp_short on AUDJPY H4: out_of_universe -- gen_tp_sma_recross_none_swing_tp_short declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'XAUUSD', 'XAGUSD', 'US500', 'DE40', 'UK100'] and timeframes ['H4', 'D1']; running it on AUDJPY H4 would validate a strategy nobody wrote
+- gen_tp_sma_recross_none_swing_tp_short on AUDJPY D1: out_of_universe -- gen_tp_sma_recross_none_swing_tp_short declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'XAUUSD', 'XAGUSD', 'US500', 'DE40', 'UK100'] and timeframes ['H4', 'D1']; running it on AUDJPY D1 would validate a strategy nobody wrote
+- gen_tp_sma_recross_none_swing_tp_short on EURGBP H4: out_of_universe -- gen_tp_sma_recross_none_swing_tp_short declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'XAUUSD', 'XAGUSD', 'US500', 'DE40', 'UK100'] and timeframes ['H4', 'D1']; running it on EURGBP H4 would validate a strategy nobody wrote
+- gen_tp_sma_recross_none_swing_tp_short on EURGBP D1: out_of_universe -- gen_tp_sma_recross_none_swing_tp_short declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'XAUUSD', 'XAGUSD', 'US500', 'DE40', 'UK100'] and timeframes ['H4', 'D1']; running it on EURGBP D1 would validate a strategy nobody wrote
+- gen_tp_sma_recross_rvol_gate_tp_r on AUDJPY H4: out_of_universe -- gen_tp_sma_recross_rvol_gate_tp_r declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'XAUUSD', 'XAGUSD', 'US500', 'DE40', 'UK100'] and timeframes ['H4', 'D1']; running it on AUDJPY H4 would validate a strategy nobody wrote
+- gen_tp_sma_recross_rvol_gate_tp_r on AUDJPY D1: out_of_universe -- gen_tp_sma_recross_rvol_gate_tp_r declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'XAUUSD', 'XAGUSD', 'US500', 'DE40', 'UK100'] and timeframes ['H4', 'D1']; running it on AUDJPY D1 would validate a strategy nobody wrote
+- gen_tp_sma_recross_rvol_gate_tp_r on EURGBP H4: out_of_universe -- gen_tp_sma_recross_rvol_gate_tp_r declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'XAUUSD', 'XAGUSD', 'US500', 'DE40', 'UK100'] and timeframes ['H4', 'D1']; running it on EURGBP H4 would validate a strategy nobody wrote
+- gen_tp_sma_recross_rvol_gate_tp_r on EURGBP D1: out_of_universe -- gen_tp_sma_recross_rvol_gate_tp_r declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'XAUUSD', 'XAGUSD', 'US500', 'DE40', 'UK100'] and timeframes ['H4', 'D1']; running it on EURGBP D1 would validate a strategy nobody wrote
+- gen_tp_sma_recross_rvol_gate_trail on AUDJPY H4: out_of_universe -- gen_tp_sma_recross_rvol_gate_trail declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'XAUUSD', 'XAGUSD', 'US500', 'DE40', 'UK100'] and timeframes ['H4', 'D1']; running it on AUDJPY H4 would validate a strategy nobody wrote
+- gen_tp_sma_recross_rvol_gate_trail on AUDJPY D1: out_of_universe -- gen_tp_sma_recross_rvol_gate_trail declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'XAUUSD', 'XAGUSD', 'US500', 'DE40', 'UK100'] and timeframes ['H4', 'D1']; running it on AUDJPY D1 would validate a strategy nobody wrote
+- gen_tp_sma_recross_rvol_gate_trail on EURGBP H4: out_of_universe -- gen_tp_sma_recross_rvol_gate_trail declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'XAUUSD', 'XAGUSD', 'US500', 'DE40', 'UK100'] and timeframes ['H4', 'D1']; running it on EURGBP H4 would validate a strategy nobody wrote
+- gen_tp_sma_recross_rvol_gate_trail on EURGBP D1: out_of_universe -- gen_tp_sma_recross_rvol_gate_trail declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'XAUUSD', 'XAGUSD', 'US500', 'DE40', 'UK100'] and timeframes ['H4', 'D1']; running it on EURGBP D1 would validate a strategy nobody wrote
+- gen_tp_sma_recross_session_swing_tp_short on AUDJPY H4: out_of_universe -- gen_tp_sma_recross_session_swing_tp_short declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'XAUUSD', 'XAGUSD', 'US500', 'DE40', 'UK100'] and timeframes ['H4']; running it on AUDJPY H4 would validate a strategy nobody wrote
+- gen_tp_sma_recross_session_swing_tp_short on AUDJPY D1: out_of_universe -- gen_tp_sma_recross_session_swing_tp_short declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'XAUUSD', 'XAGUSD', 'US500', 'DE40', 'UK100'] and timeframes ['H4']; running it on AUDJPY D1 would validate a strategy nobody wrote
+- gen_tp_sma_recross_session_swing_tp_short on AUDUSD D1: out_of_universe -- gen_tp_sma_recross_session_swing_tp_short declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'XAUUSD', 'XAGUSD', 'US500', 'DE40', 'UK100'] and timeframes ['H4']; running it on AUDUSD D1 would validate a strategy nobody wrote
+- gen_tp_sma_recross_session_swing_tp_short on DE40 D1: out_of_universe -- gen_tp_sma_recross_session_swing_tp_short declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'XAUUSD', 'XAGUSD', 'US500', 'DE40', 'UK100'] and timeframes ['H4']; running it on DE40 D1 would validate a strategy nobody wrote
+- gen_tp_sma_recross_session_swing_tp_short on EURGBP H4: out_of_universe -- gen_tp_sma_recross_session_swing_tp_short declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'XAUUSD', 'XAGUSD', 'US500', 'DE40', 'UK100'] and timeframes ['H4']; running it on EURGBP H4 would validate a strategy nobody wrote
+- gen_tp_sma_recross_session_swing_tp_short on EURGBP D1: out_of_universe -- gen_tp_sma_recross_session_swing_tp_short declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'XAUUSD', 'XAGUSD', 'US500', 'DE40', 'UK100'] and timeframes ['H4']; running it on EURGBP D1 would validate a strategy nobody wrote
+- gen_tp_sma_recross_session_swing_tp_short on EURJPY D1: out_of_universe -- gen_tp_sma_recross_session_swing_tp_short declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'XAUUSD', 'XAGUSD', 'US500', 'DE40', 'UK100'] and timeframes ['H4']; running it on EURJPY D1 would validate a strategy nobody wrote
+- gen_tp_sma_recross_session_swing_tp_short on EURUSD D1: out_of_universe -- gen_tp_sma_recross_session_swing_tp_short declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'XAUUSD', 'XAGUSD', 'US500', 'DE40', 'UK100'] and timeframes ['H4']; running it on EURUSD D1 would validate a strategy nobody wrote
+- gen_tp_sma_recross_session_swing_tp_short on GBPJPY D1: out_of_universe -- gen_tp_sma_recross_session_swing_tp_short declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'XAUUSD', 'XAGUSD', 'US500', 'DE40', 'UK100'] and timeframes ['H4']; running it on GBPJPY D1 would validate a strategy nobody wrote
+- gen_tp_sma_recross_session_swing_tp_short on GBPUSD D1: out_of_universe -- gen_tp_sma_recross_session_swing_tp_short declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'XAUUSD', 'XAGUSD', 'US500', 'DE40', 'UK100'] and timeframes ['H4']; running it on GBPUSD D1 would validate a strategy nobody wrote
+- gen_tp_sma_recross_session_swing_tp_short on NZDUSD D1: out_of_universe -- gen_tp_sma_recross_session_swing_tp_short declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'XAUUSD', 'XAGUSD', 'US500', 'DE40', 'UK100'] and timeframes ['H4']; running it on NZDUSD D1 would validate a strategy nobody wrote
+- gen_tp_sma_recross_session_swing_tp_short on UK100 D1: out_of_universe -- gen_tp_sma_recross_session_swing_tp_short declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'XAUUSD', 'XAGUSD', 'US500', 'DE40', 'UK100'] and timeframes ['H4']; running it on UK100 D1 would validate a strategy nobody wrote
+- gen_tp_sma_recross_session_swing_tp_short on US500 D1: out_of_universe -- gen_tp_sma_recross_session_swing_tp_short declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'XAUUSD', 'XAGUSD', 'US500', 'DE40', 'UK100'] and timeframes ['H4']; running it on US500 D1 would validate a strategy nobody wrote
+- gen_tp_sma_recross_session_swing_tp_short on USDCAD D1: out_of_universe -- gen_tp_sma_recross_session_swing_tp_short declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'XAUUSD', 'XAGUSD', 'US500', 'DE40', 'UK100'] and timeframes ['H4']; running it on USDCAD D1 would validate a strategy nobody wrote
+- gen_tp_sma_recross_session_swing_tp_short on USDCHF D1: out_of_universe -- gen_tp_sma_recross_session_swing_tp_short declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'XAUUSD', 'XAGUSD', 'US500', 'DE40', 'UK100'] and timeframes ['H4']; running it on USDCHF D1 would validate a strategy nobody wrote
+- gen_tp_sma_recross_session_swing_tp_short on USDJPY D1: out_of_universe -- gen_tp_sma_recross_session_swing_tp_short declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'XAUUSD', 'XAGUSD', 'US500', 'DE40', 'UK100'] and timeframes ['H4']; running it on USDJPY D1 would validate a strategy nobody wrote
+- gen_tp_sma_recross_session_swing_tp_short on XAGUSD D1: out_of_universe -- gen_tp_sma_recross_session_swing_tp_short declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'XAUUSD', 'XAGUSD', 'US500', 'DE40', 'UK100'] and timeframes ['H4']; running it on XAGUSD D1 would validate a strategy nobody wrote
+- gen_tp_sma_recross_session_swing_tp_short on XAUUSD D1: out_of_universe -- gen_tp_sma_recross_session_swing_tp_short declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'XAUUSD', 'XAGUSD', 'US500', 'DE40', 'UK100'] and timeframes ['H4']; running it on XAUUSD D1 would validate a strategy nobody wrote
+- gen_tp_sma_recross_session_time_exit on AUDJPY H4: out_of_universe -- gen_tp_sma_recross_session_time_exit declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'XAUUSD', 'XAGUSD', 'US500', 'DE40', 'UK100'] and timeframes ['H4']; running it on AUDJPY H4 would validate a strategy nobody wrote
+- gen_tp_sma_recross_session_time_exit on AUDJPY D1: out_of_universe -- gen_tp_sma_recross_session_time_exit declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'XAUUSD', 'XAGUSD', 'US500', 'DE40', 'UK100'] and timeframes ['H4']; running it on AUDJPY D1 would validate a strategy nobody wrote
+- gen_tp_sma_recross_session_time_exit on AUDUSD D1: out_of_universe -- gen_tp_sma_recross_session_time_exit declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'XAUUSD', 'XAGUSD', 'US500', 'DE40', 'UK100'] and timeframes ['H4']; running it on AUDUSD D1 would validate a strategy nobody wrote
+- gen_tp_sma_recross_session_time_exit on DE40 D1: out_of_universe -- gen_tp_sma_recross_session_time_exit declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'XAUUSD', 'XAGUSD', 'US500', 'DE40', 'UK100'] and timeframes ['H4']; running it on DE40 D1 would validate a strategy nobody wrote
+- gen_tp_sma_recross_session_time_exit on EURGBP H4: out_of_universe -- gen_tp_sma_recross_session_time_exit declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'XAUUSD', 'XAGUSD', 'US500', 'DE40', 'UK100'] and timeframes ['H4']; running it on EURGBP H4 would validate a strategy nobody wrote
+- gen_tp_sma_recross_session_time_exit on EURGBP D1: out_of_universe -- gen_tp_sma_recross_session_time_exit declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'XAUUSD', 'XAGUSD', 'US500', 'DE40', 'UK100'] and timeframes ['H4']; running it on EURGBP D1 would validate a strategy nobody wrote
+- gen_tp_sma_recross_session_time_exit on EURJPY D1: out_of_universe -- gen_tp_sma_recross_session_time_exit declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'XAUUSD', 'XAGUSD', 'US500', 'DE40', 'UK100'] and timeframes ['H4']; running it on EURJPY D1 would validate a strategy nobody wrote
+- gen_tp_sma_recross_session_time_exit on EURUSD D1: out_of_universe -- gen_tp_sma_recross_session_time_exit declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'XAUUSD', 'XAGUSD', 'US500', 'DE40', 'UK100'] and timeframes ['H4']; running it on EURUSD D1 would validate a strategy nobody wrote
+- gen_tp_sma_recross_session_time_exit on GBPJPY D1: out_of_universe -- gen_tp_sma_recross_session_time_exit declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'XAUUSD', 'XAGUSD', 'US500', 'DE40', 'UK100'] and timeframes ['H4']; running it on GBPJPY D1 would validate a strategy nobody wrote
+- gen_tp_sma_recross_session_time_exit on GBPUSD D1: out_of_universe -- gen_tp_sma_recross_session_time_exit declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'XAUUSD', 'XAGUSD', 'US500', 'DE40', 'UK100'] and timeframes ['H4']; running it on GBPUSD D1 would validate a strategy nobody wrote
+- gen_tp_sma_recross_session_time_exit on NZDUSD D1: out_of_universe -- gen_tp_sma_recross_session_time_exit declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'XAUUSD', 'XAGUSD', 'US500', 'DE40', 'UK100'] and timeframes ['H4']; running it on NZDUSD D1 would validate a strategy nobody wrote
+- gen_tp_sma_recross_session_time_exit on UK100 D1: out_of_universe -- gen_tp_sma_recross_session_time_exit declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'XAUUSD', 'XAGUSD', 'US500', 'DE40', 'UK100'] and timeframes ['H4']; running it on UK100 D1 would validate a strategy nobody wrote
+- gen_tp_sma_recross_session_time_exit on US500 D1: out_of_universe -- gen_tp_sma_recross_session_time_exit declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'XAUUSD', 'XAGUSD', 'US500', 'DE40', 'UK100'] and timeframes ['H4']; running it on US500 D1 would validate a strategy nobody wrote
+- gen_tp_sma_recross_session_time_exit on USDCAD D1: out_of_universe -- gen_tp_sma_recross_session_time_exit declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'XAUUSD', 'XAGUSD', 'US500', 'DE40', 'UK100'] and timeframes ['H4']; running it on USDCAD D1 would validate a strategy nobody wrote
+- gen_tp_sma_recross_session_time_exit on USDCHF D1: out_of_universe -- gen_tp_sma_recross_session_time_exit declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'XAUUSD', 'XAGUSD', 'US500', 'DE40', 'UK100'] and timeframes ['H4']; running it on USDCHF D1 would validate a strategy nobody wrote
+- gen_tp_sma_recross_session_time_exit on USDJPY D1: out_of_universe -- gen_tp_sma_recross_session_time_exit declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'XAUUSD', 'XAGUSD', 'US500', 'DE40', 'UK100'] and timeframes ['H4']; running it on USDJPY D1 would validate a strategy nobody wrote
+- gen_tp_sma_recross_session_time_exit on XAGUSD D1: out_of_universe -- gen_tp_sma_recross_session_time_exit declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'XAUUSD', 'XAGUSD', 'US500', 'DE40', 'UK100'] and timeframes ['H4']; running it on XAGUSD D1 would validate a strategy nobody wrote
+- gen_tp_sma_recross_session_time_exit on XAUUSD D1: out_of_universe -- gen_tp_sma_recross_session_time_exit declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'XAUUSD', 'XAGUSD', 'US500', 'DE40', 'UK100'] and timeframes ['H4']; running it on XAUUSD D1 would validate a strategy nobody wrote
+
+## Mutations refused before any compute
+
+- none
+
+## Rejections by rung
+
+- RUNG 0 SANITY: 1920
+- RUNG 1 IN_SAMPLE_SCREEN: 6
+- RUNG 2 WALK_FORWARD: 25
+- RUNG 4 ROBUSTNESS: 4
+
+## Holdout
+
+```
+{
+  "consumptions": [],
+  "segments": [
+    {
+      "dataset_version_id": "ds_0de0ec59ebfd379cd2ed3978",
+      "data_start": "2006-01-04T00:00:00+00:00",
+      "data_end": "2026-09-29T00:00:00+00:00",
+      "holdout_start": "2022-08-06T09:36:00+00:00",
+      "holdout_fraction": 0.2,
+      "label": "USDCHF D1",
+      "holdout_window": {
+        "name": "holdout::ds_0de0ec59ebfd379cd2ed3978",
+        "start": "2022-08-06T09:36:00+00:00",
+        "end": "2026-09-29T00:00:00+00:00"
+      },
+      "research_window": {
+        "name": "research::ds_0de0ec59ebfd379cd2ed3978",
+        "start": "2006-01-04T00:00:00+00:00",
+        "end": "2022-08-06T09:36:00+00:00"
+      }
+    },
+    {
+      "dataset_version_id": "ds_12849393c960a8aae970127a",
+      "data_start": "2006-01-04T00:00:00+00:00",
+      "data_end": "2026-09-29T00:00:00+00:00",
+      "holdout_start": "2022-08-06T09:36:00+00:00",
+      "holdout_fraction": 0.2,
+      "label": "GBPUSD D1",
+      "holdout_window": {
+        "name": "holdout::ds_12849393c960a8aae970127a",
+        "start": "2022-08-06T09:36:00+00:00",
+        "end": "2026-09-29T00:00:00+00:00"
+      },
+      "research_window": {
+        "name": "research::ds_12849393c960a8aae970127a",
+        "start": "2006-01-04T00:00:00+00:00",
+        "end": "2022-08-06T09:36:00+00:00"
+      }
+    },
+    {
+      "dataset_version_id": "ds_148eb2c812d52bbe45f8e0d6",
+      "data_start": "2006-03-20T00:00:00+00:00",
+      "data_end": "2026-09-29T00:00:00+00:00",
+      "holdout_start": "2022-08-21T09:36:00+00:00",
+      "holdout_fraction": 0.2,
+      "label": "XAUUSD D1",
+      "holdout_window": {
+        "name": "holdout::ds_148eb2c812d52bbe45f8e0d6",
+        "start": "2022-08-21T09:36:00+00:00",
+        "end": "2026-09-29T00:00:00+00:00"
+      },
+      "research_window": {
+        "name": "research::ds_148eb2c812d52bbe45f8e0d6",
+        "start": "2006-03-20T00:00:00+00:00",
+        "end": "2022-08-21T09:36:00+00:00"
+      }
+    },
+    {
+      "dataset_version_id": "ds_1f556ebf7564ba9dd4b2d28c",
+      "data_start": "2006-01-04T00:00:00+00:00",
+      "data_end": "2026-09-29T00:00:00+00:00",
+      "holdout_start": "2022-08-06T09:36:00+00:00",
+      "holdout_fraction": 0.2,
+      "label": "USDCAD D1",
+      "holdout_window": {
+        "name": "holdout::ds_1f556ebf7564ba9dd4b2d28c",
+        "start": "2022-08-06T09:36:00+00:00",
+        "end": "2026-09-29T00:00:00+00:00"
+      },
+      "research_window": {
+        "name": "research::ds_1f556ebf7564ba9dd4b2d28c",
+        "start": "2006-01-04T00:00:00+00:00",
+        "end": "2022-08-06T09:36:00+00:00"
+      }
+    },
+    {
+      "dataset_version_id": "ds_25e55ba40ea1502328b13ccc",
+      "data_start": "2006-03-20T00:00:00+00:00",
+      "data_end": "2026-09-29T00:00:00+00:00",
+      "holdout_start": "2022-08-21T09:36:00+00:00",
+      "holdout_fraction": 0.2,
+      "label": "XAGUSD D1",
+      "holdout_window": {
+        "name": "holdout::ds_25e55ba40ea1502328b13ccc",
+        "start": "2022-08-21T09:36:00+00:00",
+        "end": "2026-09-29T00:00:00+00:00"
+      },
+      "research_window": {
+        "name": "research::ds_25e55ba40ea1502328b13ccc",
+        "start": "2006-03-20T00:00:00+00:00",
+        "end": "2022-08-21T09:36:00+00:00"
+      }
+    },
+    {
+      "dataset_version_id": "ds_39129edf7c2109880bbecf8a",
+      "data_start": "2006-01-04T00:00:00+00:00",
+      "data_end": "2026-09-29T00:00:00+00:00",
+      "holdout_start": "2022-08-06T09:36:00+00:00",
+      "holdout_fraction": 0.2,
+      "label": "AUDJPY D1",
+      "holdout_window": {
+        "name": "holdout::ds_39129edf7c2109880bbecf8a",
+        "start": "2022-08-06T09:36:00+00:00",
+        "end": "2026-09-29T00:00:00+00:00"
+      },
+      "research_window": {
+        "name": "research::ds_39129edf7c2109880bbecf8a",
+        "start": "2006-01-04T00:00:00+00:00",
+        "end": "2022-08-06T09:36:00+00:00"
+      }
+    },
+    {
+      "dataset_version_id": "ds_432d9d9d63b2031014462b15",
+      "data_start": "2006-01-04T00:00:00+00:00",
+      "data_end": "2026-09-29T20:00:00+00:00",
+      "holdout_start": "2022-08-07T01:36:00+00:00",
+      "holdout_fraction": 0.2,
+      "label": "USDCHF H4",
+      "holdout_window": {
+        "name": "holdout::ds_432d9d9d63b2031014462b15",
+        "start": "2022-08-07T01:36:00+00:00",
+        "end": "2026-09-29T20:00:00+00:00"
+      },
+      "research_window": {
+        "name": "research::ds_432d9d9d63b2031014462b15",
+        "start": "2006-01-04T00:00:00+00:00",
+        "end": "2022-08-07T01:36:00+00:00"
+      }
+    },
+    {
+      "dataset_version_id": "ds_4b34c3447a6ca9669e49580f",
+      "data_start": "2006-03-19T20:00:00+00:00",
+      "data_end": "2026-09-29T20:00:00+00:00",
+      "holdout_start": "2022-08-22T00:48:00+00:00",
+      "holdout_fraction": 0.2,
+      "label": "XAUUSD H4",
+      "holdout_window": {
+        "name": "holdout::ds_4b34c3447a6ca9669e49580f",
+        "start": "2022-08-22T00:48:00+00:00",
+        "end": "2026-09-29T20:00:00+00:00"
+      },
+      "research_window": {
+        "name": "research::ds_4b34c3447a6ca9669e49580f",
+        "start": "2006-03-19T20:00:00+00:00",
+        "end": "2022-08-22T00:48:00+00:00"
+      }
+    },
+    {
+      "dataset_version_id": "ds_4e9eb06628c281bdc80af975",
+      "data_start": "2006-03-20T00:00:00+00:00",
+      "data_end": "2026-09-29T20:00:00+00:00",
+      "holdout_start": "2022-08-22T01:36:00+00:00",
+      "holdout_fraction": 0.2,
+      "label": "XAGUSD H4",
+      "holdout_window": {
+        "name": "holdout::ds_4e9eb06628c281bdc80af975",
+        "start": "2022-08-22T01:36:00+00:00",
+        "end": "2026-09-29T20:00:00+00:00"
+      },
+      "research_window": {
+        "name": "research::ds_4e9eb06628c281bdc80af975",
+        "start": "2006-03-20T00:00:00+00:00",
+        "end": "2022-08-22T01:36:00+00:00"
+      }
+    },
+    {
+      "dataset_version_id": "ds_4fda205dc95ef6d3050a338b",
+      "data_start": "2006-01-04T00:00:00+00:00",
+      "data_end": "2026-09-29T20:00:00+00:00",
+      "holdout_start": "2022-08-07T01:36:00+00:00",
+      "holdout_fraction": 0.2,
+      "label": "EURGBP H4",
+      "holdout_window": {
+        "name": "holdout::ds_4fda205dc95ef6d3050a338b",
+        "start": "2022-08-07T01:36:00+00:00",
+        "end": "2026-09-29T20:00:00+00:00"
+      },
+      "research_window": {
+        "name": "research::ds_4fda205dc95ef6d3050a338b",
+        "start": "2006-01-04T00:00:00+00:00",
+        "end": "2022-08-07T01:36:00+00:00"
+      }
+    },
+    {
+      "dataset_version_id": "ds_50533d5c8bd73aae95f4f792",
+      "data_start": "2006-01-04T00:00:00+00:00",
+      "data_end": "2026-09-29T00:00:00+00:00",
+      "holdout_start": "2022-08-06T09:36:00+00:00",
+      "holdout_fraction": 0.2,
+      "label": "US500 D1",
+      "holdout_window": {
+        "name": "holdout::ds_50533d5c8bd73aae95f4f792",
+        "start": "2022-08-06T09:36:00+00:00",
+        "end": "2026-09-29T00:00:00+00:00"
+      },
+      "research_window": {
+        "name": "research::ds_50533d5c8bd73aae95f4f792",
+        "start": "2006-01-04T00:00:00+00:00",
+        "end": "2022-08-06T09:36:00+00:00"
+      }
+    },
+    {
+      "dataset_version_id": "ds_60d1f72c36bb1f79ddd7207b",
+      "data_start": "2006-01-04T08:00:00+00:00",
+      "data_end": "2026-09-29T16:00:00+00:00",
+      "holdout_start": "2022-08-07T00:00:00+00:00",
+      "holdout_fraction": 0.2,
+      "label": "UK100 H4",
+      "holdout_window": {
+        "name": "holdout::ds_60d1f72c36bb1f79ddd7207b",
+        "start": "2022-08-07T00:00:00+00:00",
+        "end": "2026-09-29T16:00:00+00:00"
+      },
+      "research_window": {
+        "name": "research::ds_60d1f72c36bb1f79ddd7207b",
+        "start": "2006-01-04T08:00:00+00:00",
+        "end": "2022-08-07T00:00:00+00:00"
+      }
+    },
+    {
+      "dataset_version_id": "ds_611275defc76fd40bfbafc41",
+      "data_start": "2006-01-04T00:00:00+00:00",
+      "data_end": "2026-09-29T20:00:00+00:00",
+      "holdout_start": "2022-08-07T01:36:00+00:00",
+      "holdout_fraction": 0.2,
+      "label": "US500 H4",
+      "holdout_window": {
+        "name": "holdout::ds_611275defc76fd40bfbafc41",
+        "start": "2022-08-07T01:36:00+00:00",
+        "end": "2026-09-29T20:00:00+00:00"
+      },
+      "research_window": {
+        "name": "research::ds_611275defc76fd40bfbafc41",
+        "start": "2006-01-04T00:00:00+00:00",
+        "end": "2022-08-07T01:36:00+00:00"
+      }
+    },
+    {
+      "dataset_version_id": "ds_75c14e97ca44f2c63d86e7bc",
+      "data_start": "2006-01-04T00:00:00+00:00",
+      "data_end": "2026-09-29T20:00:00+00:00",
+      "holdout_start": "2022-08-07T01:36:00+00:00",
+      "holdout_fraction": 0.2,
+      "label": "USDCAD H4",
+      "holdout_window": {
+        "name": "holdout::ds_75c14e97ca44f2c63d86e7bc",
+        "start": "2022-08-07T01:36:00+00:00",
+        "end": "2026-09-29T20:00:00+00:00"
+      },
+      "research_window": {
+        "name": "research::ds_75c14e97ca44f2c63d86e7bc",
+        "start": "2006-01-04T00:00:00+00:00",
+        "end": "2022-08-07T01:36:00+00:00"
+      }
+    },
+    {
+      "dataset_version_id": "ds_7e580f69920fc10ab3fe3d07",
+      "data_start": "2006-01-04T00:00:00+00:00",
+      "data_end": "2026-09-29T20:00:00+00:00",
+      "holdout_start": "2022-08-07T01:36:00+00:00",
+      "holdout_fraction": 0.2,
+      "label": "EURUSD H4",
+      "holdout_window": {
+        "name": "holdout::ds_7e580f69920fc10ab3fe3d07",
+        "start": "2022-08-07T01:36:00+00:00",
+        "end": "2026-09-29T20:00:00+00:00"
+      },
+      "research_window": {
+        "name": "research::ds_7e580f69920fc10ab3fe3d07",
+        "start": "2006-01-04T00:00:00+00:00",
+        "end": "2022-08-07T01:36:00+00:00"
+      }
+    },
+    {
+      "dataset_version_id": "ds_8a25ca7e3af8bf059992523d",
+      "data_start": "2006-01-04T00:00:00+00:00",
+      "data_end": "2026-09-29T20:00:00+00:00",
+      "holdout_start": "2022-08-07T01:36:00+00:00",
+      "holdout_fraction": 0.2,
+      "label": "EURJPY H4",
+      "holdout_window": {
+        "name": "holdout::ds_8a25ca7e3af8bf059992523d",
+        "start": "2022-08-07T01:36:00+00:00",
+        "end": "2026-09-29T20:00:00+00:00"
+      },
+      "research_window": {
+        "name": "research::ds_8a25ca7e3af8bf059992523d",
+        "start": "2006-01-04T00:00:00+00:00",
+        "end": "2022-08-07T01:36:00+00:00"
+      }
+    },
+    {
+      "dataset_version_id": "ds_902024ed7fe1c90da6160989",
+      "data_start": "2006-01-04T00:00:00+00:00",
+      "data_end": "2026-09-29T00:00:00+00:00",
+      "holdout_start": "2022-08-06T09:36:00+00:00",
+      "holdout_fraction": 0.2,
+      "label": "UK100 D1",
+      "holdout_window": {
+        "name": "holdout::ds_902024ed7fe1c90da6160989",
+        "start": "2022-08-06T09:36:00+00:00",
+        "end": "2026-09-29T00:00:00+00:00"
+      },
+      "research_window": {
+        "name": "research::ds_902024ed7fe1c90da6160989",
+        "start": "2006-01-04T00:00:00+00:00",
+        "end": "2022-08-06T09:36:00+00:00"
+      }
+    },
+    {
+      "dataset_version_id": "ds_955952a677f3dcde348a547a",
+      "data_start": "2006-01-04T00:00:00+00:00",
+      "data_end": "2026-09-29T20:00:00+00:00",
+      "holdout_start": "2022-08-07T01:36:00+00:00",
+      "holdout_fraction": 0.2,
+      "label": "AUDUSD H4",
+      "holdout_window": {
+        "name": "holdout::ds_955952a677f3dcde348a547a",
+        "start": "2022-08-07T01:36:00+00:00",
+        "end": "2026-09-29T20:00:00+00:00"
+      },
+      "research_window": {
+        "name": "research::ds_955952a677f3dcde348a547a",
+        "start": "2006-01-04T00:00:00+00:00",
+        "end": "2022-08-07T01:36:00+00:00"
+      }
+    },
+    {
+      "dataset_version_id": "ds_a919ff4d7be2b3b803731bbd",
+      "data_start": "2006-01-04T00:00:00+00:00",
+      "data_end": "2026-09-29T00:00:00+00:00",
+      "holdout_start": "2022-08-06T09:36:00+00:00",
+      "holdout_fraction": 0.2,
+      "label": "EURUSD D1",
+      "holdout_window": {
+        "name": "holdout::ds_a919ff4d7be2b3b803731bbd",
+        "start": "2022-08-06T09:36:00+00:00",
+        "end": "2026-09-29T00:00:00+00:00"
+      },
+      "research_window": {
+        "name": "research::ds_a919ff4d7be2b3b803731bbd",
+        "start": "2006-01-04T00:00:00+00:00",
+        "end": "2022-08-06T09:36:00+00:00"
+      }
+    },
+    {
+      "dataset_version_id": "ds_b1ff1299fb5de3de52f931cc",
+      "data_start": "2006-01-04T00:00:00+00:00",
+      "data_end": "2026-09-29T20:00:00+00:00",
+      "holdout_start": "2022-08-07T01:36:00+00:00",
+      "holdout_fraction": 0.2,
+      "label": "NZDUSD H4",
+      "holdout_window": {
+        "name": "holdout::ds_b1ff1299fb5de3de52f931cc",
+        "start": "2022-08-07T01:36:00+00:00",
+        "end": "2026-09-29T20:00:00+00:00"
+      },
+      "research_window": {
+        "name": "research::ds_b1ff1299fb5de3de52f931cc",
+        "start": "2006-01-04T00:00:00+00:00",
+        "end": "2022-08-07T01:36:00+00:00"
+      }
+    },
+    {
+      "dataset_version_id": "ds_b4f9c19467618ab630422a6b",
+      "data_start": "2006-01-04T00:00:00+00:00",
+      "data_end": "2026-09-29T00:00:00+00:00",
+      "holdout_start": "2022-08-06T09:36:00+00:00",
+      "holdout_fraction": 0.2,
+      "label": "DE40 D1",
+      "holdout_window": {
+        "name": "holdout::ds_b4f9c19467618ab630422a6b",
+        "start": "2022-08-06T09:36:00+00:00",
+        "end": "2026-09-29T00:00:00+00:00"
+      },
+      "research_window": {
+        "name": "research::ds_b4f9c19467618ab630422a6b",
+        "start": "2006-01-04T00:00:00+00:00",
+        "end": "2022-08-06T09:36:00+00:00"
+      }
+    },
+    {
+      "dataset_version_id": "ds_d52afb357acfafd05c778e99",
+      "data_start": "2006-01-04T00:00:00+00:00",
+      "data_end": "2026-09-29T00:00:00+00:00",
+      "holdout_start": "2022-08-06T09:36:00+00:00",
+      "holdout_fraction": 0.2,
+      "label": "EURJPY D1",
+      "holdout_window": {
+        "name": "holdout::ds_d52afb357acfafd05c778e99",
+        "start": "2022-08-06T09:36:00+00:00",
+        "end": "2026-09-29T00:00:00+00:00"
+      },
+      "research_window": {
+        "name": "research::ds_d52afb357acfafd05c778e99",
+        "start": "2006-01-04T00:00:00+00:00",
+        "end": "2022-08-06T09:36:00+00:00"
+      }
+    },
+    {
+      "dataset_version_id": "ds_dc307b45fa2d2ec9ba010a06",
+      "data_start": "2006-01-04T00:00:00+00:00",
+      "data_end": "2026-09-29T00:00:00+00:00",
+      "holdout_start": "2022-08-06T09:36:00+00:00",
+      "holdout_fraction": 0.2,
+      "label": "EURGBP D1",
+      "holdout_window": {
+        "name": "holdout::ds_dc307b45fa2d2ec9ba010a06",
+        "start": "2022-08-06T09:36:00+00:00",
+        "end": "2026-09-29T00:00:00+00:00"
+      },
+      "research_window": {
+        "name": "research::ds_dc307b45fa2d2ec9ba010a06",
+        "start": "2006-01-04T00:00:00+00:00",
+        "end": "2022-08-06T09:36:00+00:00"
+      }
+    },
+    {
+      "dataset_version_id": "ds_e1707823ba88b2ad1e4e9f06",
+      "data_start": "2006-01-04T00:00:00+00:00",
+      "data_end": "2026-09-29T20:00:00+00:00",
+      "holdout_start": "2022-08-07T01:36:00+00:00",
+      "holdout_fraction": 0.2,
+      "label": "AUDJPY H4",
+      "holdout_window": {
+        "name": "holdout::ds_e1707823ba88b2ad1e4e9f06",
+        "start": "2022-08-07T01:36:00+00:00",
+        "end": "2026-09-29T20:00:00+00:00"
+      },
+      "research_window": {
+        "name": "research::ds_e1707823ba88b2ad1e4e9f06",
+        "start": "2006-01-04T00:00:00+00:00",
+        "end": "2022-08-07T01:36:00+00:00"
+      }
+    },
+    {
+      "dataset_version_id": "ds_e349d738b2104e6b155a2ec1",
+      "data_start": "2006-01-04T00:00:00+00:00",
+      "data_end": "2026-09-29T00:00:00+00:00",
+      "holdout_start": "2022-08-06T09:36:00+00:00",
+      "holdout_fraction": 0.2,
+      "label": "GBPJPY D1",
+      "holdout_window": {
+        "name": "holdout::ds_e349d738b2104e6b155a2ec1",
+        "start": "2022-08-06T09:36:00+00:00",
+        "end": "2026-09-29T00:00:00+00:00"
+      },
+      "research_window": {
+        "name": "research::ds_e349d738b2104e6b155a2ec1",
+        "start": "2006-01-04T00:00:00+00:00",
+        "end": "2022-08-06T09:36:00+00:00"
+      }
+    },
+    {
+      "dataset_version_id": "ds_e8b257e41285cc6df6b308d5",
+      "data_start": "2006-01-04T08:00:00+00:00",
+      "data_end": "2026-09-29T16:00:00+00:00",
+      "holdout_start": "2022-08-07T00:00:00+00:00",
+      "holdout_fraction": 0.2,
+      "label": "DE40 H4",
+      "holdout_window": {
+        "name": "holdout::ds_e8b257e41285cc6df6b308d5",
+        "start": "2022-08-07T00:00:00+00:00",
+        "end": "2026-09-29T16:00:00+00:00"
+      },
+      "research_window": {
+        "name": "research::ds_e8b257e41285cc6df6b308d5",
+        "start": "2006-01-04T08:00:00+00:00",
+        "end": "2022-08-07T00:00:00+00:00"
+      }
+    },
+    {
+      "dataset_version_id": "ds_eb2a6796b8847e9cc6686e3b",
+      "data_start": "2006-01-04T00:00:00+00:00",
+      "data_end": "2026-09-29T20:00:00+00:00",
+      "holdout_start": "2022-08-07T01:36:00+00:00",
+      "holdout_fraction": 0.2,
+      "label": "USDJPY H4",
+      "holdout_window": {
+        "name": "holdout::ds_eb2a6796b8847e9cc6686e3b",
+        "start": "2022-08-07T01:36:00+00:00",
+        "end": "2026-09-29T20:00:00+00:00"
+      },
+      "research_window": {
+        "name": "research::ds_eb2a6796b8847e9cc6686e3b",
+        "start": "2006-01-04T00:00:00+00:00",
+        "end": "2022-08-07T01:36:00+00:00"
+      }
+    },
+    {
+      "dataset_version_id": "ds_f14dfdebdb567d463aedc3cf",
+      "data_start": "2006-01-04T00:00:00+00:00",
+      "data_end": "2026-09-29T00:00:00+00:00",
+      "holdout_start": "2022-08-06T09:36:00+00:00",
+      "holdout_fraction": 0.2,
+      "label": "NZDUSD D1",
+      "holdout_window": {
+        "name": "holdout::ds_f14dfdebdb567d463aedc3cf",
+        "start": "2022-08-06T09:36:00+00:00",
+        "end": "2026-09-29T00:00:00+00:00"
+      },
+      "research_window": {
+        "name": "research::ds_f14dfdebdb567d463aedc3cf",
+        "start": "2006-01-04T00:00:00+00:00",
+        "end": "2022-08-06T09:36:00+00:00"
+      }
+    },
+    {
+      "dataset_version_id": "ds_f588002bfece4d20a887adb2",
+      "data_start": "2006-01-04T00:00:00+00:00",
+      "data_end": "2026-09-29T20:00:00+00:00",
+      "holdout_start": "2022-08-07T01:36:00+00:00",
+      "holdout_fraction": 0.2,
+      "label": "GBPUSD H4",
+      "holdout_window": {
+        "name": "holdout::ds_f588002bfece4d20a887adb2",
+        "start": "2022-08-07T01:36:00+00:00",
+        "end": "2026-09-29T20:00:00+00:00"
+      },
+      "research_window": {
+        "name": "research::ds_f588002bfece4d20a887adb2",
+        "start": "2006-01-04T00:00:00+00:00",
+        "end": "2022-08-07T01:36:00+00:00"
+      }
+    },
+    {
+      "dataset_version_id": "ds_f68583a7243d71629e19871b",
+      "data_start": "2006-01-04T00:00:00+00:00",
+      "data_end": "2026-09-29T00:00:00+00:00",
+      "holdout_start": "2022-08-06T09:36:00+00:00",
+      "holdout_fraction": 0.2,
+      "label": "USDJPY D1",
+      "holdout_window": {
+        "name": "holdout::ds_f68583a7243d71629e19871b",
+        "start": "2022-08-06T09:36:00+00:00",
+        "end": "2026-09-29T00:00:00+00:00"
+      },
+      "research_window": {
+        "name": "research::ds_f68583a7243d71629e19871b",
+        "start": "2006-01-04T00:00:00+00:00",
+        "end": "2022-08-06T09:36:00+00:00"
+      }
+    },
+    {
+      "dataset_version_id": "ds_f995d56522470f8a41815f40",
+      "data_start": "2006-01-04T00:00:00+00:00",
+      "data_end": "2026-09-29T20:00:00+00:00",
+      "holdout_start": "2022-08-07T01:36:00+00:00",
+      "holdout_fraction": 0.2,
+      "label": "GBPJPY H4",
+      "holdout_window": {
+        "name": "holdout::ds_f995d56522470f8a41815f40",
+        "start": "2022-08-07T01:36:00+00:00",
+        "end": "2026-09-29T20:00:00+00:00"
+      },
+      "research_window": {
+        "name": "research::ds_f995d56522470f8a41815f40",
+        "start": "2006-01-04T00:00:00+00:00",
+        "end": "2022-08-07T01:36:00+00:00"
+      }
+    },
+    {
+      "dataset_version_id": "ds_febd942f45e3738497481e26",
+      "data_start": "2006-01-04T00:00:00+00:00",
+      "data_end": "2026-09-29T00:00:00+00:00",
+      "holdout_start": "2022-08-06T09:36:00+00:00",
+      "holdout_fraction": 0.2,
+      "label": "AUDUSD D1",
+      "holdout_window": {
+        "name": "holdout::ds_febd942f45e3738497481e26",
+        "start": "2022-08-06T09:36:00+00:00",
+        "end": "2026-09-29T00:00:00+00:00"
+      },
+      "research_window": {
+        "name": "research::ds_febd942f45e3738497481e26",
+        "start": "2006-01-04T00:00:00+00:00",
+        "end": "2022-08-06T09:36:00+00:00"
+      }
+    }
+  ],
+  "n_consumed": 0,
+  "unconsumed": true,
+  "note": "No candidate reached rung 6, so the holdout segment is untouched and remains available for a future campaign."
+}
+```
+
+## What this does and does not demonstrate
+
+This campaign carried 1955 candidate cell(s) through the validation ladder over 16 instrument(s) (AUDJPY, AUDUSD, DE40, EURGBP, EURJPY, EURUSD, GBPJPY, GBPUSD, NZDUSD, UK100, US500, USDCAD, USDCHF, USDJPY, XAGUSD, XAUUSD) on 2 timeframe(s) (D1, H4), against gate set v2.0.0-audit. The true trial count for the whole search is 20904 (12408 planned in this campaign plus 8496 already spent on the same bars before it began), and that is the number the deflation used -- not the size of any one strategy's own parameter sweep. NOTHING SURVIVED. That is the expected outcome and it is a real result: it says these rule families, on this data, under these costs, do not clear a bar set for a search of this size. It does NOT say the underlying effects do not exist, that another instrument would behave the same way, or that a different cost model would give the same answer.

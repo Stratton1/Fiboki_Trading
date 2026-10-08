@@ -1,0 +1,1515 @@
+  trim USDCAD H4: bars_from=2006-01-04T00:00:00+00:00 dropped 7,530 of 39,635 bars
+  trim USDCHF H4: bars_from=2006-01-04T00:00:00+00:00 dropped 8,393 of 40,494 bars
+  trim DE40 H4: bars_from=2006-01-04T00:00:00+00:00 dropped 0 of 18,061 bars
+  trim AUDJPY H4: bars_from=2006-01-04T00:00:00+00:00 dropped 5,454 of 36,085 bars
+  trim EURJPY H4: bars_from=2006-01-04T00:00:00+00:00 dropped 6,065 of 38,175 bars
+  trim GBPJPY H4: bars_from=2006-01-04T00:00:00+00:00 dropped 5,771 of 37,863 bars
+  trim USDJPY H4: bars_from=2006-01-04T00:00:00+00:00 dropped 8,456 of 40,561 bars
+  trim AUDUSD H4: bars_from=2006-01-04T00:00:00+00:00 dropped 6,903 of 39,010 bars
+  trim EURUSD H4: bars_from=2006-01-04T00:00:00+00:00 dropped 8,430 of 40,540 bars
+  trim GBPUSD H4: bars_from=2006-01-04T00:00:00+00:00 dropped 8,437 of 40,543 bars
+  trim NZDUSD H4: bars_from=2006-01-04T00:00:00+00:00 dropped 609 of 32,714 bars
+  trim US500 H4: bars_from=2006-01-04T00:00:00+00:00 dropped 0 of 24,066 bars
+  trim XAGUSD H4: bars_from=2006-01-04T00:00:00+00:00 dropped 0 of 26,620 bars
+  trim XAUUSD H4: bars_from=2006-01-04T00:00:00+00:00 dropped 0 of 26,837 bars
+  trim EURGBP H4: bars_from=2006-01-04T00:00:00+00:00 dropped 6,065 of 38,170 bars
+  trim UK100 H4: bars_from=2006-01-04T00:00:00+00:00 dropped 0 of 19,684 bars
+==== run_discovery_campaign 2026-09-29T12:03:39+00:00 ====
+campaign_id: k3_multi_instrument_h4_engine_v3
+engine_version: engine_v3_realism (required engine_v3_realism: ok)
+account_ccy: GBP
+fx_label: SeriesFxSource(GBP; daily closes as-of bar close; max_staleness=4 days 00:00:00; pivot=USD; GBPCAD@ds_d0200867a427881e787347e7[derived:H4 last close per UTC day], GBPCHF@ds_181371c2dd3bb8ca28046b86[derived:H4 last close per UTC day], EURGBP@ds_0bafc32b4ed7b8065261e7a4[derived:H4 last close per UTC day], GBPJPY@ds_9f7d5da5c796bd86da1011e8[derived:H4 last close per UTC day], GBPUSD@ds_b34988ed16240d36d2b9248c[derived:H4 last close per UTC day]; fallback via_usd where the direct cross has no fresh rate for CAD, CHF, EUR, JPY using USDCAD@ds_de6aae350c45f9f5025c7f56[derived:H4 last close per UTC day], USDCHF@ds_5a2b99b30031d45d3546c1ca[derived:H4 last close per UTC day], EURUSD@ds_d8739e54df9f12ecf0ce71c8[derived:H4 last close per UTC day], USDJPY@ds_300921ee00603a414fc03e98[derived:H4 last close per UTC day])
+calendar: official: 339 events, declared 2024-01-01 00:00:00+00:00 .. 2026-12-04 13:30:00+00:00, currencies EUR, GBP, JPY, USD; policy enforce-where-covered; allow_empty_calendar=True
+calendar_coverage: 16 series, share of bars inside the declared span 10.0% .. 17.5% (per series below and in calendar_coverage.json)
+construction_policy: construction_v2 (run_validation default 'research_default': allocator equal_risk, tier probationary, lifecycle paper, config_sha256 4fb48d89a56b, correlation unmeasured (unmeasured_correlation=0.3))
+gate_set: v2.0.0-audit (min_trades=400)
+bars_from: 2006-01-04T00:00:00+00:00
+universe: 16 instrument(s) AUDJPY AUDUSD DE40 EURGBP EURJPY EURUSD GBPJPY GBPUSD NZDUSD UK100 US500 USDCAD USDCHF USDJPY XAGUSD XAUUSD; timeframes H4
+budget: max_evaluations=100000 generations=1 grid=8x2 folds=4
+external_prior_trials: 4026
+data_root: var/datastore
+====
+  fx EURGBP: {"dataset_version_id": "ds_0bafc32b4ed7b8065261e7a4", "source_timeframe": "H4", "derivation": "derived from H4 closes: the last H4 bar to close in each UTC day, stamped at that bar's close", "first_known": "2002-03-04 21:00:00+00:00", "last_known": "2026-01-01 01:00:00+00:00", "observations": 7380, "gaps_over_max_staleness": 21}
+  fx EURUSD: {"dataset_version_id": "ds_d8739e54df9f12ecf0ce71c8", "source_timeframe": "H4", "derivation": "derived from H4 closes: the last H4 bar to close in each UTC day, stamped at that bar's close", "first_known": "2000-05-31 21:00:00+00:00", "last_known": "2026-01-01 01:00:00+00:00", "observations": 7840, "gaps_over_max_staleness": 45}
+  fx GBPCAD: {"dataset_version_id": "ds_d0200867a427881e787347e7", "source_timeframe": "H4", "derivation": "derived from H4 closes: the last H4 bar to close in each UTC day, stamped at that bar's close", "first_known": "2007-10-01 01:00:00+00:00", "last_known": "2026-01-01 01:00:00+00:00", "observations": 5646, "gaps_over_max_staleness": 4}
+  fx GBPCHF: {"dataset_version_id": "ds_181371c2dd3bb8ca28046b86", "source_timeframe": "H4", "derivation": "derived from H4 closes: the last H4 bar to close in each UTC day, stamped at that bar's close", "first_known": "2002-08-20 21:00:00+00:00", "last_known": "2026-01-01 01:00:00+00:00", "observations": 7245, "gaps_over_max_staleness": 3}
+  fx GBPJPY: {"dataset_version_id": "ds_9f7d5da5c796bd86da1011e8", "source_timeframe": "H4", "derivation": "derived from H4 closes: the last H4 bar to close in each UTC day, stamped at that bar's close", "first_known": "2002-05-01 21:00:00+00:00", "last_known": "2026-01-01 01:00:00+00:00", "observations": 7320, "gaps_over_max_staleness": 15}
+  fx GBPUSD: {"dataset_version_id": "ds_b34988ed16240d36d2b9248c", "source_timeframe": "H4", "derivation": "derived from H4 closes: the last H4 bar to close in each UTC day, stamped at that bar's close", "first_known": "2000-05-31 21:00:00+00:00", "last_known": "2026-01-01 01:00:00+00:00", "observations": 7836, "gaps_over_max_staleness": 45}
+  fx USDCAD: {"dataset_version_id": "ds_de6aae350c45f9f5025c7f56", "source_timeframe": "H4", "derivation": "derived from H4 closes: the last H4 bar to close in each UTC day, stamped at that bar's close", "first_known": "2000-06-12 21:00:00+00:00", "last_known": "2026-01-01 01:00:00+00:00", "observations": 7667, "gaps_over_max_staleness": 44}
+  fx USDCHF: {"dataset_version_id": "ds_5a2b99b30031d45d3546c1ca", "source_timeframe": "H4", "derivation": "derived from H4 closes: the last H4 bar to close in each UTC day, stamped at that bar's close", "first_known": "2000-05-31 21:00:00+00:00", "last_known": "2026-01-01 01:00:00+00:00", "observations": 7830, "gaps_over_max_staleness": 45}
+  fx USDJPY: {"dataset_version_id": "ds_300921ee00603a414fc03e98", "source_timeframe": "H4", "derivation": "derived from H4 closes: the last H4 bar to close in each UTC day, stamped at that bar's close", "first_known": "2000-05-31 21:00:00+00:00", "last_known": "2026-01-01 01:00:00+00:00", "observations": 7840, "gaps_over_max_staleness": 44}
+  fx route AUDJPY H4: 30,625 bars direct, 6 via_usd (2009-02-22..2009-02-23), 0 without a rate
+  fx route AUDUSD H4: 32,107 bars direct, 0 via_usd, 0 without a rate
+  fx route DE40 H4: 18,061 bars direct, 0 via_usd, 0 without a rate
+  fx route EURJPY H4: 32,104 bars direct, 6 via_usd (2009-02-22..2009-02-23), 0 without a rate
+  fx route EURUSD H4: 32,110 bars direct, 0 via_usd, 0 without a rate
+  fx route GBPJPY H4: 32,086 bars direct, 6 via_usd (2009-02-22..2009-02-23), 0 without a rate
+  fx route GBPUSD H4: 32,106 bars direct, 0 via_usd, 0 without a rate
+  fx route NZDUSD H4: 32,105 bars direct, 0 via_usd, 0 without a rate
+  fx route US500 H4: 24,066 bars direct, 0 via_usd, 0 without a rate
+  fx route USDCAD H4: 29,286 bars direct, 2,819 via_usd (2006-01-04..2019-01-07), 0 without a rate
+  fx route USDCHF H4: 32,078 bars direct, 23 via_usd (2008-10-08..2008-10-13), 0 without a rate
+  fx route USDJPY H4: 32,099 bars direct, 6 via_usd (2009-02-22..2009-02-23), 0 without a rate
+  fx route XAGUSD H4: 26,620 bars direct, 0 via_usd, 0 without a rate
+  fx route XAUUSD H4: 26,837 bars direct, 0 via_usd, 0 without a rate
+  calendar AUDJPY H4: 30,631 bars 2006-01-04..2025-12-31, 10.5% inside the declared span, not carried: AUD
+  calendar AUDUSD H4: 32,107 bars 2006-01-04..2025-12-31, 10.0% inside the declared span, not carried: AUD
+  calendar DE40 H4: 18,061 bars 2010-11-15..2025-12-31, 17.5% inside the declared span
+  calendar EURGBP H4: 32,105 bars 2006-01-04..2025-12-31, 10.0% inside the declared span
+  calendar EURJPY H4: 32,110 bars 2006-01-04..2025-12-31, 10.0% inside the declared span
+  calendar EURUSD H4: 32,110 bars 2006-01-04..2025-12-31, 10.0% inside the declared span
+  calendar GBPJPY H4: 32,092 bars 2006-01-04..2025-12-31, 10.0% inside the declared span
+  calendar GBPUSD H4: 32,106 bars 2006-01-04..2025-12-31, 10.0% inside the declared span
+  calendar NZDUSD H4: 32,105 bars 2006-01-04..2025-12-31, 10.0% inside the declared span, not carried: NZD
+  calendar UK100 H4: 19,684 bars 2010-11-15..2025-12-31, 16.1% inside the declared span
+  calendar US500 H4: 24,066 bars 2010-11-14..2025-12-31, 13.3% inside the declared span
+  calendar USDCAD H4: 32,105 bars 2006-01-04..2025-12-31, 10.0% inside the declared span, not carried: CAD
+  calendar USDCHF H4: 32,101 bars 2006-01-04..2025-12-31, 10.0% inside the declared span, not carried: CHF
+  calendar USDJPY H4: 32,105 bars 2006-01-04..2025-12-31, 10.0% inside the declared span
+  calendar XAGUSD H4: 26,620 bars 2009-05-03..2025-12-31, 12.0% inside the declared span
+  calendar XAUUSD H4: 26,837 bars 2009-03-15..2025-12-31, 11.9% inside the declared span
+seeds: ['donchian_breakout_atr', 'fib_golden_pocket_pullback', 'ichimoku_kumo_trend', 'macd_ema_trend_hybrid', 'rsi_band_mean_reversion']
+hypotheses: ['gold_range_breakout_persists', 'golden_pocket_pullback_holds', 'kumo_state_conditions_trend', 'macd_confirms_ema_trend', 'rsi_band_reversion_in_range']
+  trim AUDUSD H4: bars_from=2006-01-04T00:00:00+00:00 dropped 6,903 of 39,010 bars
+  trim DE40 H4: bars_from=2006-01-04T00:00:00+00:00 dropped 0 of 18,061 bars
+  trim EURJPY H4: bars_from=2006-01-04T00:00:00+00:00 dropped 6,065 of 38,175 bars
+  trim EURUSD H4: bars_from=2006-01-04T00:00:00+00:00 dropped 8,430 of 40,540 bars
+  trim GBPJPY H4: bars_from=2006-01-04T00:00:00+00:00 dropped 5,771 of 37,863 bars
+  trim GBPUSD H4: bars_from=2006-01-04T00:00:00+00:00 dropped 8,437 of 40,543 bars
+  trim NZDUSD H4: bars_from=2006-01-04T00:00:00+00:00 dropped 609 of 32,714 bars
+  trim US500 H4: bars_from=2006-01-04T00:00:00+00:00 dropped 0 of 24,066 bars
+  trim USDCAD H4: bars_from=2006-01-04T00:00:00+00:00 dropped 7,530 of 39,635 bars
+  trim USDCHF H4: bars_from=2006-01-04T00:00:00+00:00 dropped 8,393 of 40,494 bars
+  trim USDJPY H4: bars_from=2006-01-04T00:00:00+00:00 dropped 8,456 of 40,561 bars
+  trim XAUUSD H4: bars_from=2006-01-04T00:00:00+00:00 dropped 0 of 26,837 bars
+  trim EURGBP H4: bars_from=2006-01-04T00:00:00+00:00 dropped 6,065 of 38,170 bars
+  trim AUDJPY H4: bars_from=2006-01-04T00:00:00+00:00 dropped 5,454 of 36,085 bars
+  trim UK100 H4: bars_from=2006-01-04T00:00:00+00:00 dropped 0 of 19,684 bars
+  trim XAGUSD H4: bars_from=2006-01-04T00:00:00+00:00 dropped 0 of 26,620 bars
+
+542 cells queued, 273 skipped, 15 mutations refused
+planned trials 3350 + ledger prior 0 + declared prior 4026 = TRUE TRIAL COUNT 7376
+  declared prior trials: K3 pre-registration: 350 declared prior + K1 326 + K2 3350 = 4026; see RESEARCH_LEDGER.md K3 entry
+  donchian_breakout_atr [8483154d0f17] on AUDUSD H4 via seed (8 trials)
+  donchian_breakout_atr [8483154d0f17] on DE40 H4 via seed (8 trials)
+  donchian_breakout_atr [8483154d0f17] on EURJPY H4 via seed (8 trials)
+  donchian_breakout_atr [8483154d0f17] on EURUSD H4 via seed (8 trials)
+  donchian_breakout_atr [8483154d0f17] on GBPJPY H4 via seed (8 trials)
+  donchian_breakout_atr [8483154d0f17] on GBPUSD H4 via seed (8 trials)
+  donchian_breakout_atr [8483154d0f17] on NZDUSD H4 via seed (8 trials)
+  donchian_breakout_atr [8483154d0f17] on US500 H4 via seed (8 trials)
+  donchian_breakout_atr [8483154d0f17] on USDCAD H4 via seed (8 trials)
+  donchian_breakout_atr [8483154d0f17] on USDCHF H4 via seed (8 trials)
+  donchian_breakout_atr [8483154d0f17] on USDJPY H4 via seed (8 trials)
+  donchian_breakout_atr [8483154d0f17] on XAUUSD H4 via seed (8 trials)
+  fib_golden_pocket_pullback [fd2a53ed9490] on AUDUSD H4 via seed (8 trials)
+  fib_golden_pocket_pullback [fd2a53ed9490] on DE40 H4 via seed (8 trials)
+  fib_golden_pocket_pullback [fd2a53ed9490] on EURJPY H4 via seed (8 trials)
+  fib_golden_pocket_pullback [fd2a53ed9490] on EURUSD H4 via seed (8 trials)
+  fib_golden_pocket_pullback [fd2a53ed9490] on GBPJPY H4 via seed (8 trials)
+  fib_golden_pocket_pullback [fd2a53ed9490] on GBPUSD H4 via seed (8 trials)
+  fib_golden_pocket_pullback [fd2a53ed9490] on NZDUSD H4 via seed (8 trials)
+  fib_golden_pocket_pullback [fd2a53ed9490] on US500 H4 via seed (8 trials)
+  fib_golden_pocket_pullback [fd2a53ed9490] on USDCAD H4 via seed (8 trials)
+  fib_golden_pocket_pullback [fd2a53ed9490] on USDCHF H4 via seed (8 trials)
+  fib_golden_pocket_pullback [fd2a53ed9490] on USDJPY H4 via seed (8 trials)
+  fib_golden_pocket_pullback [fd2a53ed9490] on XAUUSD H4 via seed (8 trials)
+  ichimoku_kumo_trend [75caa48f3c20] on AUDUSD H4 via seed (8 trials)
+  ichimoku_kumo_trend [75caa48f3c20] on DE40 H4 via seed (8 trials)
+  ichimoku_kumo_trend [75caa48f3c20] on EURJPY H4 via seed (8 trials)
+  ichimoku_kumo_trend [75caa48f3c20] on EURUSD H4 via seed (8 trials)
+  ichimoku_kumo_trend [75caa48f3c20] on GBPJPY H4 via seed (8 trials)
+  ichimoku_kumo_trend [75caa48f3c20] on GBPUSD H4 via seed (8 trials)
+  ichimoku_kumo_trend [75caa48f3c20] on NZDUSD H4 via seed (8 trials)
+  ichimoku_kumo_trend [75caa48f3c20] on US500 H4 via seed (8 trials)
+  ichimoku_kumo_trend [75caa48f3c20] on USDCAD H4 via seed (8 trials)
+  ichimoku_kumo_trend [75caa48f3c20] on USDCHF H4 via seed (8 trials)
+  ichimoku_kumo_trend [75caa48f3c20] on USDJPY H4 via seed (8 trials)
+  ichimoku_kumo_trend [75caa48f3c20] on XAUUSD H4 via seed (8 trials)
+  macd_ema_trend_hybrid [78083597c616] on AUDUSD H4 via seed (8 trials)
+  macd_ema_trend_hybrid [78083597c616] on DE40 H4 via seed (8 trials)
+  macd_ema_trend_hybrid [78083597c616] on EURJPY H4 via seed (8 trials)
+  macd_ema_trend_hybrid [78083597c616] on EURUSD H4 via seed (8 trials)
+  macd_ema_trend_hybrid [78083597c616] on GBPJPY H4 via seed (8 trials)
+  macd_ema_trend_hybrid [78083597c616] on GBPUSD H4 via seed (8 trials)
+  macd_ema_trend_hybrid [78083597c616] on NZDUSD H4 via seed (8 trials)
+  macd_ema_trend_hybrid [78083597c616] on US500 H4 via seed (8 trials)
+  macd_ema_trend_hybrid [78083597c616] on USDCAD H4 via seed (8 trials)
+  macd_ema_trend_hybrid [78083597c616] on USDCHF H4 via seed (8 trials)
+  macd_ema_trend_hybrid [78083597c616] on USDJPY H4 via seed (8 trials)
+  macd_ema_trend_hybrid [78083597c616] on XAUUSD H4 via seed (8 trials)
+  rsi_band_mean_reversion [0a1f5a26c24d] on AUDUSD H4 via seed (8 trials)
+  rsi_band_mean_reversion [0a1f5a26c24d] on EURGBP H4 via seed (8 trials)
+  rsi_band_mean_reversion [0a1f5a26c24d] on EURUSD H4 via seed (8 trials)
+  rsi_band_mean_reversion [0a1f5a26c24d] on GBPUSD H4 via seed (8 trials)
+  rsi_band_mean_reversion [0a1f5a26c24d] on NZDUSD H4 via seed (8 trials)
+  rsi_band_mean_reversion [0a1f5a26c24d] on USDCAD H4 via seed (8 trials)
+  rsi_band_mean_reversion [0a1f5a26c24d] on USDCHF H4 via seed (8 trials)
+  rsi_band_mean_reversion [0a1f5a26c24d] on USDJPY H4 via seed (8 trials)
+  donchian_breakout_atr_m3ecf77ae [3ecf77ae20e8] on AUDUSD H4 via add_filter (8 trials)
+  donchian_breakout_atr_m3ecf77ae [3ecf77ae20e8] on DE40 H4 via add_filter (8 trials)
+  donchian_breakout_atr_m3ecf77ae [3ecf77ae20e8] on EURJPY H4 via add_filter (8 trials)
+  donchian_breakout_atr_m3ecf77ae [3ecf77ae20e8] on EURUSD H4 via add_filter (8 trials)
+  donchian_breakout_atr_m3ecf77ae [3ecf77ae20e8] on GBPJPY H4 via add_filter (8 trials)
+  donchian_breakout_atr_m3ecf77ae [3ecf77ae20e8] on GBPUSD H4 via add_filter (8 trials)
+  donchian_breakout_atr_m3ecf77ae [3ecf77ae20e8] on NZDUSD H4 via add_filter (8 trials)
+  donchian_breakout_atr_m3ecf77ae [3ecf77ae20e8] on US500 H4 via add_filter (8 trials)
+  donchian_breakout_atr_m3ecf77ae [3ecf77ae20e8] on USDCAD H4 via add_filter (8 trials)
+  donchian_breakout_atr_m3ecf77ae [3ecf77ae20e8] on USDCHF H4 via add_filter (8 trials)
+  donchian_breakout_atr_m3ecf77ae [3ecf77ae20e8] on USDJPY H4 via add_filter (8 trials)
+  donchian_breakout_atr_m3ecf77ae [3ecf77ae20e8] on XAUUSD H4 via add_filter (8 trials)
+  donchian_breakout_atr_mbdfe4742 [bdfe47424c0b] on AUDUSD H4 via alter_stop_model (4 trials)
+  donchian_breakout_atr_mbdfe4742 [bdfe47424c0b] on DE40 H4 via alter_stop_model (4 trials)
+  donchian_breakout_atr_mbdfe4742 [bdfe47424c0b] on EURJPY H4 via alter_stop_model (4 trials)
+  donchian_breakout_atr_mbdfe4742 [bdfe47424c0b] on EURUSD H4 via alter_stop_model (4 trials)
+  donchian_breakout_atr_mbdfe4742 [bdfe47424c0b] on GBPJPY H4 via alter_stop_model (4 trials)
+  donchian_breakout_atr_mbdfe4742 [bdfe47424c0b] on GBPUSD H4 via alter_stop_model (4 trials)
+  donchian_breakout_atr_mbdfe4742 [bdfe47424c0b] on NZDUSD H4 via alter_stop_model (4 trials)
+  donchian_breakout_atr_mbdfe4742 [bdfe47424c0b] on US500 H4 via alter_stop_model (4 trials)
+  donchian_breakout_atr_mbdfe4742 [bdfe47424c0b] on USDCAD H4 via alter_stop_model (4 trials)
+  donchian_breakout_atr_mbdfe4742 [bdfe47424c0b] on USDCHF H4 via alter_stop_model (4 trials)
+  donchian_breakout_atr_mbdfe4742 [bdfe47424c0b] on USDJPY H4 via alter_stop_model (4 trials)
+  donchian_breakout_atr_mbdfe4742 [bdfe47424c0b] on XAUUSD H4 via alter_stop_model (4 trials)
+  donchian_breakout_atr_m3c934a3b [3c934a3b5ca8] on AUDUSD H4 via alter_target_model (8 trials)
+  donchian_breakout_atr_m3c934a3b [3c934a3b5ca8] on DE40 H4 via alter_target_model (8 trials)
+  donchian_breakout_atr_m3c934a3b [3c934a3b5ca8] on EURJPY H4 via alter_target_model (8 trials)
+  donchian_breakout_atr_m3c934a3b [3c934a3b5ca8] on EURUSD H4 via alter_target_model (8 trials)
+  donchian_breakout_atr_m3c934a3b [3c934a3b5ca8] on GBPJPY H4 via alter_target_model (8 trials)
+  donchian_breakout_atr_m3c934a3b [3c934a3b5ca8] on GBPUSD H4 via alter_target_model (8 trials)
+  donchian_breakout_atr_m3c934a3b [3c934a3b5ca8] on NZDUSD H4 via alter_target_model (8 trials)
+  donchian_breakout_atr_m3c934a3b [3c934a3b5ca8] on US500 H4 via alter_target_model (8 trials)
+  donchian_breakout_atr_m3c934a3b [3c934a3b5ca8] on USDCAD H4 via alter_target_model (8 trials)
+  donchian_breakout_atr_m3c934a3b [3c934a3b5ca8] on USDCHF H4 via alter_target_model (8 trials)
+  donchian_breakout_atr_m3c934a3b [3c934a3b5ca8] on USDJPY H4 via alter_target_model (8 trials)
+  donchian_breakout_atr_m3c934a3b [3c934a3b5ca8] on XAUUSD H4 via alter_target_model (8 trials)
+  donchian_breakout_atr_m76dbb4f7 [76dbb4f768c4] on AUDUSD H4 via change_regime_gate (8 trials)
+  donchian_breakout_atr_m76dbb4f7 [76dbb4f768c4] on DE40 H4 via change_regime_gate (8 trials)
+  donchian_breakout_atr_m76dbb4f7 [76dbb4f768c4] on EURJPY H4 via change_regime_gate (8 trials)
+  donchian_breakout_atr_m76dbb4f7 [76dbb4f768c4] on EURUSD H4 via change_regime_gate (8 trials)
+  donchian_breakout_atr_m76dbb4f7 [76dbb4f768c4] on GBPJPY H4 via change_regime_gate (8 trials)
+  donchian_breakout_atr_m76dbb4f7 [76dbb4f768c4] on GBPUSD H4 via change_regime_gate (8 trials)
+  donchian_breakout_atr_m76dbb4f7 [76dbb4f768c4] on NZDUSD H4 via change_regime_gate (8 trials)
+  donchian_breakout_atr_m76dbb4f7 [76dbb4f768c4] on US500 H4 via change_regime_gate (8 trials)
+  donchian_breakout_atr_m76dbb4f7 [76dbb4f768c4] on USDCAD H4 via change_regime_gate (8 trials)
+  donchian_breakout_atr_m76dbb4f7 [76dbb4f768c4] on USDCHF H4 via change_regime_gate (8 trials)
+  donchian_breakout_atr_m76dbb4f7 [76dbb4f768c4] on USDJPY H4 via change_regime_gate (8 trials)
+  donchian_breakout_atr_m76dbb4f7 [76dbb4f768c4] on XAUUSD H4 via change_regime_gate (8 trials)
+  donchian_breakout_atr_m427fba0e [427fba0e1791] on AUDUSD H4 via change_session_restriction (8 trials)
+  donchian_breakout_atr_m427fba0e [427fba0e1791] on DE40 H4 via change_session_restriction (8 trials)
+  donchian_breakout_atr_m427fba0e [427fba0e1791] on EURJPY H4 via change_session_restriction (8 trials)
+  donchian_breakout_atr_m427fba0e [427fba0e1791] on EURUSD H4 via change_session_restriction (8 trials)
+  donchian_breakout_atr_m427fba0e [427fba0e1791] on GBPJPY H4 via change_session_restriction (8 trials)
+  donchian_breakout_atr_m427fba0e [427fba0e1791] on GBPUSD H4 via change_session_restriction (8 trials)
+  donchian_breakout_atr_m427fba0e [427fba0e1791] on NZDUSD H4 via change_session_restriction (8 trials)
+  donchian_breakout_atr_m427fba0e [427fba0e1791] on US500 H4 via change_session_restriction (8 trials)
+  donchian_breakout_atr_m427fba0e [427fba0e1791] on USDCAD H4 via change_session_restriction (8 trials)
+  donchian_breakout_atr_m427fba0e [427fba0e1791] on USDCHF H4 via change_session_restriction (8 trials)
+  donchian_breakout_atr_m427fba0e [427fba0e1791] on USDJPY H4 via change_session_restriction (8 trials)
+  donchian_breakout_atr_m427fba0e [427fba0e1791] on XAUUSD H4 via change_session_restriction (8 trials)
+  donchian_breakout_atr_m79f18824 [79f1882459a3] on AUDUSD H4 via change_confirmation_rule (8 trials)
+  donchian_breakout_atr_m79f18824 [79f1882459a3] on DE40 H4 via change_confirmation_rule (8 trials)
+  donchian_breakout_atr_m79f18824 [79f1882459a3] on EURJPY H4 via change_confirmation_rule (8 trials)
+  donchian_breakout_atr_m79f18824 [79f1882459a3] on EURUSD H4 via change_confirmation_rule (8 trials)
+  donchian_breakout_atr_m79f18824 [79f1882459a3] on GBPJPY H4 via change_confirmation_rule (8 trials)
+  donchian_breakout_atr_m79f18824 [79f1882459a3] on GBPUSD H4 via change_confirmation_rule (8 trials)
+  donchian_breakout_atr_m79f18824 [79f1882459a3] on NZDUSD H4 via change_confirmation_rule (8 trials)
+  donchian_breakout_atr_m79f18824 [79f1882459a3] on US500 H4 via change_confirmation_rule (8 trials)
+  donchian_breakout_atr_m79f18824 [79f1882459a3] on USDCAD H4 via change_confirmation_rule (8 trials)
+  donchian_breakout_atr_m79f18824 [79f1882459a3] on USDCHF H4 via change_confirmation_rule (8 trials)
+  donchian_breakout_atr_m79f18824 [79f1882459a3] on USDJPY H4 via change_confirmation_rule (8 trials)
+  donchian_breakout_atr_m79f18824 [79f1882459a3] on XAUUSD H4 via change_confirmation_rule (8 trials)
+  donchian_breakout_atr_mf2553d34 [f2553d34ba65] on AUDUSD H4 via simplify (8 trials)
+  donchian_breakout_atr_mf2553d34 [f2553d34ba65] on DE40 H4 via simplify (8 trials)
+  donchian_breakout_atr_mf2553d34 [f2553d34ba65] on EURJPY H4 via simplify (8 trials)
+  donchian_breakout_atr_mf2553d34 [f2553d34ba65] on EURUSD H4 via simplify (8 trials)
+  donchian_breakout_atr_mf2553d34 [f2553d34ba65] on GBPJPY H4 via simplify (8 trials)
+  donchian_breakout_atr_mf2553d34 [f2553d34ba65] on GBPUSD H4 via simplify (8 trials)
+  donchian_breakout_atr_mf2553d34 [f2553d34ba65] on NZDUSD H4 via simplify (8 trials)
+  donchian_breakout_atr_mf2553d34 [f2553d34ba65] on US500 H4 via simplify (8 trials)
+  donchian_breakout_atr_mf2553d34 [f2553d34ba65] on USDCAD H4 via simplify (8 trials)
+  donchian_breakout_atr_mf2553d34 [f2553d34ba65] on USDCHF H4 via simplify (8 trials)
+  donchian_breakout_atr_mf2553d34 [f2553d34ba65] on USDJPY H4 via simplify (8 trials)
+  donchian_breakout_atr_mf2553d34 [f2553d34ba65] on XAUUSD H4 via simplify (8 trials)
+  donchian_breakout_atr_m30945c80 [30945c80cae0] on AUDUSD H4 via combine (2 trials)
+  donchian_breakout_atr_m30945c80 [30945c80cae0] on DE40 H4 via combine (2 trials)
+  donchian_breakout_atr_m30945c80 [30945c80cae0] on EURJPY H4 via combine (2 trials)
+  donchian_breakout_atr_m30945c80 [30945c80cae0] on EURUSD H4 via combine (2 trials)
+  donchian_breakout_atr_m30945c80 [30945c80cae0] on GBPJPY H4 via combine (2 trials)
+  donchian_breakout_atr_m30945c80 [30945c80cae0] on GBPUSD H4 via combine (2 trials)
+  donchian_breakout_atr_m30945c80 [30945c80cae0] on NZDUSD H4 via combine (2 trials)
+  donchian_breakout_atr_m30945c80 [30945c80cae0] on US500 H4 via combine (2 trials)
+  donchian_breakout_atr_m30945c80 [30945c80cae0] on USDCAD H4 via combine (2 trials)
+  donchian_breakout_atr_m30945c80 [30945c80cae0] on USDCHF H4 via combine (2 trials)
+  donchian_breakout_atr_m30945c80 [30945c80cae0] on USDJPY H4 via combine (2 trials)
+  donchian_breakout_atr_m30945c80 [30945c80cae0] on XAUUSD H4 via combine (2 trials)
+  donchian_breakout_atr_m217dad55 [217dad5510d3] on AUDUSD H4 via combine (2 trials)
+  donchian_breakout_atr_m217dad55 [217dad5510d3] on DE40 H4 via combine (2 trials)
+  donchian_breakout_atr_m217dad55 [217dad5510d3] on EURJPY H4 via combine (2 trials)
+  donchian_breakout_atr_m217dad55 [217dad5510d3] on EURUSD H4 via combine (2 trials)
+  donchian_breakout_atr_m217dad55 [217dad5510d3] on GBPJPY H4 via combine (2 trials)
+  donchian_breakout_atr_m217dad55 [217dad5510d3] on GBPUSD H4 via combine (2 trials)
+  donchian_breakout_atr_m217dad55 [217dad5510d3] on NZDUSD H4 via combine (2 trials)
+  donchian_breakout_atr_m217dad55 [217dad5510d3] on US500 H4 via combine (2 trials)
+  donchian_breakout_atr_m217dad55 [217dad5510d3] on USDCAD H4 via combine (2 trials)
+  donchian_breakout_atr_m217dad55 [217dad5510d3] on USDCHF H4 via combine (2 trials)
+  donchian_breakout_atr_m217dad55 [217dad5510d3] on USDJPY H4 via combine (2 trials)
+  donchian_breakout_atr_m217dad55 [217dad5510d3] on XAUUSD H4 via combine (2 trials)
+  donchian_breakout_atr_m4d42994e [4d42994e99c4] on AUDUSD H4 via combine (2 trials)
+  donchian_breakout_atr_m4d42994e [4d42994e99c4] on EURUSD H4 via combine (2 trials)
+  donchian_breakout_atr_m4d42994e [4d42994e99c4] on GBPUSD H4 via combine (2 trials)
+  donchian_breakout_atr_m4d42994e [4d42994e99c4] on NZDUSD H4 via combine (2 trials)
+  donchian_breakout_atr_m4d42994e [4d42994e99c4] on USDCAD H4 via combine (2 trials)
+  donchian_breakout_atr_m4d42994e [4d42994e99c4] on USDCHF H4 via combine (2 trials)
+  donchian_breakout_atr_m4d42994e [4d42994e99c4] on USDJPY H4 via combine (2 trials)
+  fib_golden_pocket_pullback_ma8f9f32b [a8f9f32b44d9] on AUDUSD H4 via add_filter (4 trials)
+  fib_golden_pocket_pullback_ma8f9f32b [a8f9f32b44d9] on DE40 H4 via add_filter (4 trials)
+  fib_golden_pocket_pullback_ma8f9f32b [a8f9f32b44d9] on EURJPY H4 via add_filter (4 trials)
+  fib_golden_pocket_pullback_ma8f9f32b [a8f9f32b44d9] on EURUSD H4 via add_filter (4 trials)
+  fib_golden_pocket_pullback_ma8f9f32b [a8f9f32b44d9] on GBPJPY H4 via add_filter (4 trials)
+  fib_golden_pocket_pullback_ma8f9f32b [a8f9f32b44d9] on GBPUSD H4 via add_filter (4 trials)
+  fib_golden_pocket_pullback_ma8f9f32b [a8f9f32b44d9] on NZDUSD H4 via add_filter (4 trials)
+  fib_golden_pocket_pullback_ma8f9f32b [a8f9f32b44d9] on US500 H4 via add_filter (4 trials)
+  fib_golden_pocket_pullback_ma8f9f32b [a8f9f32b44d9] on USDCAD H4 via add_filter (4 trials)
+  fib_golden_pocket_pullback_ma8f9f32b [a8f9f32b44d9] on USDCHF H4 via add_filter (4 trials)
+  fib_golden_pocket_pullback_ma8f9f32b [a8f9f32b44d9] on USDJPY H4 via add_filter (4 trials)
+  fib_golden_pocket_pullback_ma8f9f32b [a8f9f32b44d9] on XAUUSD H4 via add_filter (4 trials)
+  fib_golden_pocket_pullback_md15c64ac [d15c64ac47e5] on AUDUSD H4 via alter_stop_model (2 trials)
+  fib_golden_pocket_pullback_md15c64ac [d15c64ac47e5] on DE40 H4 via alter_stop_model (2 trials)
+  fib_golden_pocket_pullback_md15c64ac [d15c64ac47e5] on EURJPY H4 via alter_stop_model (2 trials)
+  fib_golden_pocket_pullback_md15c64ac [d15c64ac47e5] on EURUSD H4 via alter_stop_model (2 trials)
+  fib_golden_pocket_pullback_md15c64ac [d15c64ac47e5] on GBPJPY H4 via alter_stop_model (2 trials)
+  fib_golden_pocket_pullback_md15c64ac [d15c64ac47e5] on GBPUSD H4 via alter_stop_model (2 trials)
+  fib_golden_pocket_pullback_md15c64ac [d15c64ac47e5] on NZDUSD H4 via alter_stop_model (2 trials)
+  fib_golden_pocket_pullback_md15c64ac [d15c64ac47e5] on US500 H4 via alter_stop_model (2 trials)
+  fib_golden_pocket_pullback_md15c64ac [d15c64ac47e5] on USDCAD H4 via alter_stop_model (2 trials)
+  fib_golden_pocket_pullback_md15c64ac [d15c64ac47e5] on USDCHF H4 via alter_stop_model (2 trials)
+  fib_golden_pocket_pullback_md15c64ac [d15c64ac47e5] on USDJPY H4 via alter_stop_model (2 trials)
+  fib_golden_pocket_pullback_md15c64ac [d15c64ac47e5] on XAUUSD H4 via alter_stop_model (2 trials)
+  fib_golden_pocket_pullback_mb82cde01 [b82cde013025] on AUDUSD H4 via alter_target_model (4 trials)
+  fib_golden_pocket_pullback_mb82cde01 [b82cde013025] on DE40 H4 via alter_target_model (4 trials)
+  fib_golden_pocket_pullback_mb82cde01 [b82cde013025] on EURJPY H4 via alter_target_model (4 trials)
+  fib_golden_pocket_pullback_mb82cde01 [b82cde013025] on EURUSD H4 via alter_target_model (4 trials)
+  fib_golden_pocket_pullback_mb82cde01 [b82cde013025] on GBPJPY H4 via alter_target_model (4 trials)
+  fib_golden_pocket_pullback_mb82cde01 [b82cde013025] on GBPUSD H4 via alter_target_model (4 trials)
+  fib_golden_pocket_pullback_mb82cde01 [b82cde013025] on NZDUSD H4 via alter_target_model (4 trials)
+  fib_golden_pocket_pullback_mb82cde01 [b82cde013025] on US500 H4 via alter_target_model (4 trials)
+  fib_golden_pocket_pullback_mb82cde01 [b82cde013025] on USDCAD H4 via alter_target_model (4 trials)
+  fib_golden_pocket_pullback_mb82cde01 [b82cde013025] on USDCHF H4 via alter_target_model (4 trials)
+  fib_golden_pocket_pullback_mb82cde01 [b82cde013025] on USDJPY H4 via alter_target_model (4 trials)
+  fib_golden_pocket_pullback_mb82cde01 [b82cde013025] on XAUUSD H4 via alter_target_model (4 trials)
+  fib_golden_pocket_pullback_mdd2357fa [dd2357faad3b] on AUDUSD H4 via change_regime_gate (4 trials)
+  fib_golden_pocket_pullback_mdd2357fa [dd2357faad3b] on DE40 H4 via change_regime_gate (4 trials)
+  fib_golden_pocket_pullback_mdd2357fa [dd2357faad3b] on EURJPY H4 via change_regime_gate (4 trials)
+  fib_golden_pocket_pullback_mdd2357fa [dd2357faad3b] on EURUSD H4 via change_regime_gate (4 trials)
+  fib_golden_pocket_pullback_mdd2357fa [dd2357faad3b] on GBPJPY H4 via change_regime_gate (4 trials)
+  fib_golden_pocket_pullback_mdd2357fa [dd2357faad3b] on GBPUSD H4 via change_regime_gate (4 trials)
+  fib_golden_pocket_pullback_mdd2357fa [dd2357faad3b] on NZDUSD H4 via change_regime_gate (4 trials)
+  fib_golden_pocket_pullback_mdd2357fa [dd2357faad3b] on US500 H4 via change_regime_gate (4 trials)
+  fib_golden_pocket_pullback_mdd2357fa [dd2357faad3b] on USDCAD H4 via change_regime_gate (4 trials)
+  fib_golden_pocket_pullback_mdd2357fa [dd2357faad3b] on USDCHF H4 via change_regime_gate (4 trials)
+  fib_golden_pocket_pullback_mdd2357fa [dd2357faad3b] on USDJPY H4 via change_regime_gate (4 trials)
+  fib_golden_pocket_pullback_mdd2357fa [dd2357faad3b] on XAUUSD H4 via change_regime_gate (4 trials)
+  fib_golden_pocket_pullback_md3507b8f [d3507b8f957a] on AUDUSD H4 via change_session_restriction (4 trials)
+  fib_golden_pocket_pullback_md3507b8f [d3507b8f957a] on DE40 H4 via change_session_restriction (4 trials)
+  fib_golden_pocket_pullback_md3507b8f [d3507b8f957a] on EURJPY H4 via change_session_restriction (4 trials)
+  fib_golden_pocket_pullback_md3507b8f [d3507b8f957a] on EURUSD H4 via change_session_restriction (4 trials)
+  fib_golden_pocket_pullback_md3507b8f [d3507b8f957a] on GBPJPY H4 via change_session_restriction (4 trials)
+  fib_golden_pocket_pullback_md3507b8f [d3507b8f957a] on GBPUSD H4 via change_session_restriction (4 trials)
+  fib_golden_pocket_pullback_md3507b8f [d3507b8f957a] on NZDUSD H4 via change_session_restriction (4 trials)
+  fib_golden_pocket_pullback_md3507b8f [d3507b8f957a] on US500 H4 via change_session_restriction (4 trials)
+  fib_golden_pocket_pullback_md3507b8f [d3507b8f957a] on USDCAD H4 via change_session_restriction (4 trials)
+  fib_golden_pocket_pullback_md3507b8f [d3507b8f957a] on USDCHF H4 via change_session_restriction (4 trials)
+  fib_golden_pocket_pullback_md3507b8f [d3507b8f957a] on USDJPY H4 via change_session_restriction (4 trials)
+  fib_golden_pocket_pullback_md3507b8f [d3507b8f957a] on XAUUSD H4 via change_session_restriction (4 trials)
+  fib_golden_pocket_pullback_m88fd2d1c [88fd2d1c23c2] on AUDUSD H4 via change_confirmation_rule (4 trials)
+  fib_golden_pocket_pullback_m88fd2d1c [88fd2d1c23c2] on DE40 H4 via change_confirmation_rule (4 trials)
+  fib_golden_pocket_pullback_m88fd2d1c [88fd2d1c23c2] on EURJPY H4 via change_confirmation_rule (4 trials)
+  fib_golden_pocket_pullback_m88fd2d1c [88fd2d1c23c2] on EURUSD H4 via change_confirmation_rule (4 trials)
+  fib_golden_pocket_pullback_m88fd2d1c [88fd2d1c23c2] on GBPJPY H4 via change_confirmation_rule (4 trials)
+  fib_golden_pocket_pullback_m88fd2d1c [88fd2d1c23c2] on GBPUSD H4 via change_confirmation_rule (4 trials)
+  fib_golden_pocket_pullback_m88fd2d1c [88fd2d1c23c2] on NZDUSD H4 via change_confirmation_rule (4 trials)
+  fib_golden_pocket_pullback_m88fd2d1c [88fd2d1c23c2] on US500 H4 via change_confirmation_rule (4 trials)
+  fib_golden_pocket_pullback_m88fd2d1c [88fd2d1c23c2] on USDCAD H4 via change_confirmation_rule (4 trials)
+  fib_golden_pocket_pullback_m88fd2d1c [88fd2d1c23c2] on USDCHF H4 via change_confirmation_rule (4 trials)
+  fib_golden_pocket_pullback_m88fd2d1c [88fd2d1c23c2] on USDJPY H4 via change_confirmation_rule (4 trials)
+  fib_golden_pocket_pullback_m88fd2d1c [88fd2d1c23c2] on XAUUSD H4 via change_confirmation_rule (4 trials)
+  fib_golden_pocket_pullback_me01e2d1a [e01e2d1a571a] on AUDUSD H4 via simplify (4 trials)
+  fib_golden_pocket_pullback_me01e2d1a [e01e2d1a571a] on DE40 H4 via simplify (4 trials)
+  fib_golden_pocket_pullback_me01e2d1a [e01e2d1a571a] on EURJPY H4 via simplify (4 trials)
+  fib_golden_pocket_pullback_me01e2d1a [e01e2d1a571a] on EURUSD H4 via simplify (4 trials)
+  fib_golden_pocket_pullback_me01e2d1a [e01e2d1a571a] on GBPJPY H4 via simplify (4 trials)
+  fib_golden_pocket_pullback_me01e2d1a [e01e2d1a571a] on GBPUSD H4 via simplify (4 trials)
+  fib_golden_pocket_pullback_me01e2d1a [e01e2d1a571a] on NZDUSD H4 via simplify (4 trials)
+  fib_golden_pocket_pullback_me01e2d1a [e01e2d1a571a] on US500 H4 via simplify (4 trials)
+  fib_golden_pocket_pullback_me01e2d1a [e01e2d1a571a] on USDCAD H4 via simplify (4 trials)
+  fib_golden_pocket_pullback_me01e2d1a [e01e2d1a571a] on USDCHF H4 via simplify (4 trials)
+  fib_golden_pocket_pullback_me01e2d1a [e01e2d1a571a] on USDJPY H4 via simplify (4 trials)
+  fib_golden_pocket_pullback_me01e2d1a [e01e2d1a571a] on XAUUSD H4 via simplify (4 trials)
+  fib_golden_pocket_pullback_m76354e7e [76354e7e9dd7] on AUDUSD H4 via combine (2 trials)
+  fib_golden_pocket_pullback_m76354e7e [76354e7e9dd7] on DE40 H4 via combine (2 trials)
+  fib_golden_pocket_pullback_m76354e7e [76354e7e9dd7] on EURJPY H4 via combine (2 trials)
+  fib_golden_pocket_pullback_m76354e7e [76354e7e9dd7] on EURUSD H4 via combine (2 trials)
+  fib_golden_pocket_pullback_m76354e7e [76354e7e9dd7] on GBPJPY H4 via combine (2 trials)
+  fib_golden_pocket_pullback_m76354e7e [76354e7e9dd7] on GBPUSD H4 via combine (2 trials)
+  fib_golden_pocket_pullback_m76354e7e [76354e7e9dd7] on NZDUSD H4 via combine (2 trials)
+  fib_golden_pocket_pullback_m76354e7e [76354e7e9dd7] on US500 H4 via combine (2 trials)
+  fib_golden_pocket_pullback_m76354e7e [76354e7e9dd7] on USDCAD H4 via combine (2 trials)
+  fib_golden_pocket_pullback_m76354e7e [76354e7e9dd7] on USDCHF H4 via combine (2 trials)
+  fib_golden_pocket_pullback_m76354e7e [76354e7e9dd7] on USDJPY H4 via combine (2 trials)
+  fib_golden_pocket_pullback_m76354e7e [76354e7e9dd7] on XAUUSD H4 via combine (2 trials)
+  fib_golden_pocket_pullback_mb73e28fd [b73e28fd6b3b] on AUDUSD H4 via combine (2 trials)
+  fib_golden_pocket_pullback_mb73e28fd [b73e28fd6b3b] on DE40 H4 via combine (2 trials)
+  fib_golden_pocket_pullback_mb73e28fd [b73e28fd6b3b] on EURJPY H4 via combine (2 trials)
+  fib_golden_pocket_pullback_mb73e28fd [b73e28fd6b3b] on EURUSD H4 via combine (2 trials)
+  fib_golden_pocket_pullback_mb73e28fd [b73e28fd6b3b] on GBPJPY H4 via combine (2 trials)
+  fib_golden_pocket_pullback_mb73e28fd [b73e28fd6b3b] on GBPUSD H4 via combine (2 trials)
+  fib_golden_pocket_pullback_mb73e28fd [b73e28fd6b3b] on NZDUSD H4 via combine (2 trials)
+  fib_golden_pocket_pullback_mb73e28fd [b73e28fd6b3b] on US500 H4 via combine (2 trials)
+  fib_golden_pocket_pullback_mb73e28fd [b73e28fd6b3b] on USDCAD H4 via combine (2 trials)
+  fib_golden_pocket_pullback_mb73e28fd [b73e28fd6b3b] on USDCHF H4 via combine (2 trials)
+  fib_golden_pocket_pullback_mb73e28fd [b73e28fd6b3b] on USDJPY H4 via combine (2 trials)
+  fib_golden_pocket_pullback_mb73e28fd [b73e28fd6b3b] on XAUUSD H4 via combine (2 trials)
+  ichimoku_kumo_trend_m689694c1 [689694c14345] on AUDUSD H4 via add_filter (8 trials)
+  ichimoku_kumo_trend_m689694c1 [689694c14345] on DE40 H4 via add_filter (8 trials)
+  ichimoku_kumo_trend_m689694c1 [689694c14345] on EURJPY H4 via add_filter (8 trials)
+  ichimoku_kumo_trend_m689694c1 [689694c14345] on EURUSD H4 via add_filter (8 trials)
+  ichimoku_kumo_trend_m689694c1 [689694c14345] on GBPJPY H4 via add_filter (8 trials)
+  ichimoku_kumo_trend_m689694c1 [689694c14345] on GBPUSD H4 via add_filter (8 trials)
+  ichimoku_kumo_trend_m689694c1 [689694c14345] on NZDUSD H4 via add_filter (8 trials)
+  ichimoku_kumo_trend_m689694c1 [689694c14345] on US500 H4 via add_filter (8 trials)
+  ichimoku_kumo_trend_m689694c1 [689694c14345] on USDCAD H4 via add_filter (8 trials)
+  ichimoku_kumo_trend_m689694c1 [689694c14345] on USDCHF H4 via add_filter (8 trials)
+  ichimoku_kumo_trend_m689694c1 [689694c14345] on USDJPY H4 via add_filter (8 trials)
+  ichimoku_kumo_trend_m689694c1 [689694c14345] on XAUUSD H4 via add_filter (8 trials)
+  ichimoku_kumo_trend_m4195c8bf [4195c8bf41a4] on AUDUSD H4 via alter_stop_model (4 trials)
+  ichimoku_kumo_trend_m4195c8bf [4195c8bf41a4] on DE40 H4 via alter_stop_model (4 trials)
+  ichimoku_kumo_trend_m4195c8bf [4195c8bf41a4] on EURJPY H4 via alter_stop_model (4 trials)
+  ichimoku_kumo_trend_m4195c8bf [4195c8bf41a4] on EURUSD H4 via alter_stop_model (4 trials)
+  ichimoku_kumo_trend_m4195c8bf [4195c8bf41a4] on GBPJPY H4 via alter_stop_model (4 trials)
+  ichimoku_kumo_trend_m4195c8bf [4195c8bf41a4] on GBPUSD H4 via alter_stop_model (4 trials)
+  ichimoku_kumo_trend_m4195c8bf [4195c8bf41a4] on NZDUSD H4 via alter_stop_model (4 trials)
+  ichimoku_kumo_trend_m4195c8bf [4195c8bf41a4] on US500 H4 via alter_stop_model (4 trials)
+  ichimoku_kumo_trend_m4195c8bf [4195c8bf41a4] on USDCAD H4 via alter_stop_model (4 trials)
+  ichimoku_kumo_trend_m4195c8bf [4195c8bf41a4] on USDCHF H4 via alter_stop_model (4 trials)
+  ichimoku_kumo_trend_m4195c8bf [4195c8bf41a4] on USDJPY H4 via alter_stop_model (4 trials)
+  ichimoku_kumo_trend_m4195c8bf [4195c8bf41a4] on XAUUSD H4 via alter_stop_model (4 trials)
+  ichimoku_kumo_trend_m8fbcd36c [8fbcd36c228c] on AUDUSD H4 via alter_target_model (8 trials)
+  ichimoku_kumo_trend_m8fbcd36c [8fbcd36c228c] on DE40 H4 via alter_target_model (8 trials)
+  ichimoku_kumo_trend_m8fbcd36c [8fbcd36c228c] on EURJPY H4 via alter_target_model (8 trials)
+  ichimoku_kumo_trend_m8fbcd36c [8fbcd36c228c] on EURUSD H4 via alter_target_model (8 trials)
+  ichimoku_kumo_trend_m8fbcd36c [8fbcd36c228c] on GBPJPY H4 via alter_target_model (8 trials)
+  ichimoku_kumo_trend_m8fbcd36c [8fbcd36c228c] on GBPUSD H4 via alter_target_model (8 trials)
+  ichimoku_kumo_trend_m8fbcd36c [8fbcd36c228c] on NZDUSD H4 via alter_target_model (8 trials)
+  ichimoku_kumo_trend_m8fbcd36c [8fbcd36c228c] on US500 H4 via alter_target_model (8 trials)
+  ichimoku_kumo_trend_m8fbcd36c [8fbcd36c228c] on USDCAD H4 via alter_target_model (8 trials)
+  ichimoku_kumo_trend_m8fbcd36c [8fbcd36c228c] on USDCHF H4 via alter_target_model (8 trials)
+  ichimoku_kumo_trend_m8fbcd36c [8fbcd36c228c] on USDJPY H4 via alter_target_model (8 trials)
+  ichimoku_kumo_trend_m8fbcd36c [8fbcd36c228c] on XAUUSD H4 via alter_target_model (8 trials)
+  ichimoku_kumo_trend_ma4c92c38 [a4c92c38dc3b] on AUDUSD H4 via change_session_restriction (8 trials)
+  ichimoku_kumo_trend_ma4c92c38 [a4c92c38dc3b] on DE40 H4 via change_session_restriction (8 trials)
+  ichimoku_kumo_trend_ma4c92c38 [a4c92c38dc3b] on EURJPY H4 via change_session_restriction (8 trials)
+  ichimoku_kumo_trend_ma4c92c38 [a4c92c38dc3b] on EURUSD H4 via change_session_restriction (8 trials)
+  ichimoku_kumo_trend_ma4c92c38 [a4c92c38dc3b] on GBPJPY H4 via change_session_restriction (8 trials)
+  ichimoku_kumo_trend_ma4c92c38 [a4c92c38dc3b] on GBPUSD H4 via change_session_restriction (8 trials)
+  ichimoku_kumo_trend_ma4c92c38 [a4c92c38dc3b] on NZDUSD H4 via change_session_restriction (8 trials)
+  ichimoku_kumo_trend_ma4c92c38 [a4c92c38dc3b] on US500 H4 via change_session_restriction (8 trials)
+  ichimoku_kumo_trend_ma4c92c38 [a4c92c38dc3b] on USDCAD H4 via change_session_restriction (8 trials)
+  ichimoku_kumo_trend_ma4c92c38 [a4c92c38dc3b] on USDCHF H4 via change_session_restriction (8 trials)
+  ichimoku_kumo_trend_ma4c92c38 [a4c92c38dc3b] on USDJPY H4 via change_session_restriction (8 trials)
+  ichimoku_kumo_trend_ma4c92c38 [a4c92c38dc3b] on XAUUSD H4 via change_session_restriction (8 trials)
+  ichimoku_kumo_trend_me73acb6c [e73acb6c0b69] on AUDUSD H4 via change_confirmation_rule (8 trials)
+  ichimoku_kumo_trend_me73acb6c [e73acb6c0b69] on DE40 H4 via change_confirmation_rule (8 trials)
+  ichimoku_kumo_trend_me73acb6c [e73acb6c0b69] on EURJPY H4 via change_confirmation_rule (8 trials)
+  ichimoku_kumo_trend_me73acb6c [e73acb6c0b69] on EURUSD H4 via change_confirmation_rule (8 trials)
+  ichimoku_kumo_trend_me73acb6c [e73acb6c0b69] on GBPJPY H4 via change_confirmation_rule (8 trials)
+  ichimoku_kumo_trend_me73acb6c [e73acb6c0b69] on GBPUSD H4 via change_confirmation_rule (8 trials)
+  ichimoku_kumo_trend_me73acb6c [e73acb6c0b69] on NZDUSD H4 via change_confirmation_rule (8 trials)
+  ichimoku_kumo_trend_me73acb6c [e73acb6c0b69] on US500 H4 via change_confirmation_rule (8 trials)
+  ichimoku_kumo_trend_me73acb6c [e73acb6c0b69] on USDCAD H4 via change_confirmation_rule (8 trials)
+  ichimoku_kumo_trend_me73acb6c [e73acb6c0b69] on USDCHF H4 via change_confirmation_rule (8 trials)
+  ichimoku_kumo_trend_me73acb6c [e73acb6c0b69] on USDJPY H4 via change_confirmation_rule (8 trials)
+  ichimoku_kumo_trend_me73acb6c [e73acb6c0b69] on XAUUSD H4 via change_confirmation_rule (8 trials)
+  ichimoku_kumo_trend_mca231a0f [ca231a0fc85b] on AUDUSD H4 via simplify (8 trials)
+  ichimoku_kumo_trend_mca231a0f [ca231a0fc85b] on DE40 H4 via simplify (8 trials)
+  ichimoku_kumo_trend_mca231a0f [ca231a0fc85b] on EURJPY H4 via simplify (8 trials)
+  ichimoku_kumo_trend_mca231a0f [ca231a0fc85b] on EURUSD H4 via simplify (8 trials)
+  ichimoku_kumo_trend_mca231a0f [ca231a0fc85b] on GBPJPY H4 via simplify (8 trials)
+  ichimoku_kumo_trend_mca231a0f [ca231a0fc85b] on GBPUSD H4 via simplify (8 trials)
+  ichimoku_kumo_trend_mca231a0f [ca231a0fc85b] on NZDUSD H4 via simplify (8 trials)
+  ichimoku_kumo_trend_mca231a0f [ca231a0fc85b] on US500 H4 via simplify (8 trials)
+  ichimoku_kumo_trend_mca231a0f [ca231a0fc85b] on USDCAD H4 via simplify (8 trials)
+  ichimoku_kumo_trend_mca231a0f [ca231a0fc85b] on USDCHF H4 via simplify (8 trials)
+  ichimoku_kumo_trend_mca231a0f [ca231a0fc85b] on USDJPY H4 via simplify (8 trials)
+  ichimoku_kumo_trend_mca231a0f [ca231a0fc85b] on XAUUSD H4 via simplify (8 trials)
+  ichimoku_kumo_trend_m0bd80cab [0bd80cabb75f] on AUDUSD H4 via combine (4 trials)
+  ichimoku_kumo_trend_m0bd80cab [0bd80cabb75f] on DE40 H4 via combine (4 trials)
+  ichimoku_kumo_trend_m0bd80cab [0bd80cabb75f] on EURJPY H4 via combine (4 trials)
+  ichimoku_kumo_trend_m0bd80cab [0bd80cabb75f] on EURUSD H4 via combine (4 trials)
+  ichimoku_kumo_trend_m0bd80cab [0bd80cabb75f] on GBPJPY H4 via combine (4 trials)
+  ichimoku_kumo_trend_m0bd80cab [0bd80cabb75f] on GBPUSD H4 via combine (4 trials)
+  ichimoku_kumo_trend_m0bd80cab [0bd80cabb75f] on NZDUSD H4 via combine (4 trials)
+  ichimoku_kumo_trend_m0bd80cab [0bd80cabb75f] on US500 H4 via combine (4 trials)
+  ichimoku_kumo_trend_m0bd80cab [0bd80cabb75f] on USDCAD H4 via combine (4 trials)
+  ichimoku_kumo_trend_m0bd80cab [0bd80cabb75f] on USDCHF H4 via combine (4 trials)
+  ichimoku_kumo_trend_m0bd80cab [0bd80cabb75f] on USDJPY H4 via combine (4 trials)
+  ichimoku_kumo_trend_m0bd80cab [0bd80cabb75f] on XAUUSD H4 via combine (4 trials)
+  ichimoku_kumo_trend_m67c7da5a [67c7da5a2765] on AUDUSD H4 via combine (4 trials)
+  ichimoku_kumo_trend_m67c7da5a [67c7da5a2765] on EURUSD H4 via combine (4 trials)
+  ichimoku_kumo_trend_m67c7da5a [67c7da5a2765] on GBPUSD H4 via combine (4 trials)
+  ichimoku_kumo_trend_m67c7da5a [67c7da5a2765] on NZDUSD H4 via combine (4 trials)
+  ichimoku_kumo_trend_m67c7da5a [67c7da5a2765] on USDCAD H4 via combine (4 trials)
+  ichimoku_kumo_trend_m67c7da5a [67c7da5a2765] on USDCHF H4 via combine (4 trials)
+  ichimoku_kumo_trend_m67c7da5a [67c7da5a2765] on USDJPY H4 via combine (4 trials)
+  macd_ema_trend_hybrid_ma2bc336b [a2bc336b2303] on AUDUSD H4 via add_filter (8 trials)
+  macd_ema_trend_hybrid_ma2bc336b [a2bc336b2303] on DE40 H4 via add_filter (8 trials)
+  macd_ema_trend_hybrid_ma2bc336b [a2bc336b2303] on EURJPY H4 via add_filter (8 trials)
+  macd_ema_trend_hybrid_ma2bc336b [a2bc336b2303] on EURUSD H4 via add_filter (8 trials)
+  macd_ema_trend_hybrid_ma2bc336b [a2bc336b2303] on GBPJPY H4 via add_filter (8 trials)
+  macd_ema_trend_hybrid_ma2bc336b [a2bc336b2303] on GBPUSD H4 via add_filter (8 trials)
+  macd_ema_trend_hybrid_ma2bc336b [a2bc336b2303] on NZDUSD H4 via add_filter (8 trials)
+  macd_ema_trend_hybrid_ma2bc336b [a2bc336b2303] on US500 H4 via add_filter (8 trials)
+  macd_ema_trend_hybrid_ma2bc336b [a2bc336b2303] on USDCAD H4 via add_filter (8 trials)
+  macd_ema_trend_hybrid_ma2bc336b [a2bc336b2303] on USDCHF H4 via add_filter (8 trials)
+  macd_ema_trend_hybrid_ma2bc336b [a2bc336b2303] on USDJPY H4 via add_filter (8 trials)
+  macd_ema_trend_hybrid_ma2bc336b [a2bc336b2303] on XAUUSD H4 via add_filter (8 trials)
+  macd_ema_trend_hybrid_m03d3ee23 [03d3ee238d51] on AUDUSD H4 via alter_stop_model (4 trials)
+  macd_ema_trend_hybrid_m03d3ee23 [03d3ee238d51] on DE40 H4 via alter_stop_model (4 trials)
+  macd_ema_trend_hybrid_m03d3ee23 [03d3ee238d51] on EURJPY H4 via alter_stop_model (4 trials)
+  macd_ema_trend_hybrid_m03d3ee23 [03d3ee238d51] on EURUSD H4 via alter_stop_model (4 trials)
+  macd_ema_trend_hybrid_m03d3ee23 [03d3ee238d51] on GBPJPY H4 via alter_stop_model (4 trials)
+  macd_ema_trend_hybrid_m03d3ee23 [03d3ee238d51] on GBPUSD H4 via alter_stop_model (4 trials)
+  macd_ema_trend_hybrid_m03d3ee23 [03d3ee238d51] on NZDUSD H4 via alter_stop_model (4 trials)
+  macd_ema_trend_hybrid_m03d3ee23 [03d3ee238d51] on US500 H4 via alter_stop_model (4 trials)
+  macd_ema_trend_hybrid_m03d3ee23 [03d3ee238d51] on USDCAD H4 via alter_stop_model (4 trials)
+  macd_ema_trend_hybrid_m03d3ee23 [03d3ee238d51] on USDCHF H4 via alter_stop_model (4 trials)
+  macd_ema_trend_hybrid_m03d3ee23 [03d3ee238d51] on USDJPY H4 via alter_stop_model (4 trials)
+  macd_ema_trend_hybrid_m03d3ee23 [03d3ee238d51] on XAUUSD H4 via alter_stop_model (4 trials)
+  macd_ema_trend_hybrid_m3728054d [3728054d7a1a] on AUDUSD H4 via alter_target_model (8 trials)
+  macd_ema_trend_hybrid_m3728054d [3728054d7a1a] on DE40 H4 via alter_target_model (8 trials)
+  macd_ema_trend_hybrid_m3728054d [3728054d7a1a] on EURJPY H4 via alter_target_model (8 trials)
+  macd_ema_trend_hybrid_m3728054d [3728054d7a1a] on EURUSD H4 via alter_target_model (8 trials)
+  macd_ema_trend_hybrid_m3728054d [3728054d7a1a] on GBPJPY H4 via alter_target_model (8 trials)
+  macd_ema_trend_hybrid_m3728054d [3728054d7a1a] on GBPUSD H4 via alter_target_model (8 trials)
+  macd_ema_trend_hybrid_m3728054d [3728054d7a1a] on NZDUSD H4 via alter_target_model (8 trials)
+  macd_ema_trend_hybrid_m3728054d [3728054d7a1a] on US500 H4 via alter_target_model (8 trials)
+  macd_ema_trend_hybrid_m3728054d [3728054d7a1a] on USDCAD H4 via alter_target_model (8 trials)
+  macd_ema_trend_hybrid_m3728054d [3728054d7a1a] on USDCHF H4 via alter_target_model (8 trials)
+  macd_ema_trend_hybrid_m3728054d [3728054d7a1a] on USDJPY H4 via alter_target_model (8 trials)
+  macd_ema_trend_hybrid_m3728054d [3728054d7a1a] on XAUUSD H4 via alter_target_model (8 trials)
+  macd_ema_trend_hybrid_m4b9a1dcd [4b9a1dcd7537] on AUDUSD H4 via change_regime_gate (8 trials)
+  macd_ema_trend_hybrid_m4b9a1dcd [4b9a1dcd7537] on DE40 H4 via change_regime_gate (8 trials)
+  macd_ema_trend_hybrid_m4b9a1dcd [4b9a1dcd7537] on EURJPY H4 via change_regime_gate (8 trials)
+  macd_ema_trend_hybrid_m4b9a1dcd [4b9a1dcd7537] on EURUSD H4 via change_regime_gate (8 trials)
+  macd_ema_trend_hybrid_m4b9a1dcd [4b9a1dcd7537] on GBPJPY H4 via change_regime_gate (8 trials)
+  macd_ema_trend_hybrid_m4b9a1dcd [4b9a1dcd7537] on GBPUSD H4 via change_regime_gate (8 trials)
+  macd_ema_trend_hybrid_m4b9a1dcd [4b9a1dcd7537] on NZDUSD H4 via change_regime_gate (8 trials)
+  macd_ema_trend_hybrid_m4b9a1dcd [4b9a1dcd7537] on US500 H4 via change_regime_gate (8 trials)
+  macd_ema_trend_hybrid_m4b9a1dcd [4b9a1dcd7537] on USDCAD H4 via change_regime_gate (8 trials)
+  macd_ema_trend_hybrid_m4b9a1dcd [4b9a1dcd7537] on USDCHF H4 via change_regime_gate (8 trials)
+  macd_ema_trend_hybrid_m4b9a1dcd [4b9a1dcd7537] on USDJPY H4 via change_regime_gate (8 trials)
+  macd_ema_trend_hybrid_m4b9a1dcd [4b9a1dcd7537] on XAUUSD H4 via change_regime_gate (8 trials)
+  macd_ema_trend_hybrid_m03f1d536 [03f1d5362ff0] on AUDUSD H4 via change_session_restriction (8 trials)
+  macd_ema_trend_hybrid_m03f1d536 [03f1d5362ff0] on DE40 H4 via change_session_restriction (8 trials)
+  macd_ema_trend_hybrid_m03f1d536 [03f1d5362ff0] on EURJPY H4 via change_session_restriction (8 trials)
+  macd_ema_trend_hybrid_m03f1d536 [03f1d5362ff0] on EURUSD H4 via change_session_restriction (8 trials)
+  macd_ema_trend_hybrid_m03f1d536 [03f1d5362ff0] on GBPJPY H4 via change_session_restriction (8 trials)
+  macd_ema_trend_hybrid_m03f1d536 [03f1d5362ff0] on GBPUSD H4 via change_session_restriction (8 trials)
+  macd_ema_trend_hybrid_m03f1d536 [03f1d5362ff0] on NZDUSD H4 via change_session_restriction (8 trials)
+  macd_ema_trend_hybrid_m03f1d536 [03f1d5362ff0] on US500 H4 via change_session_restriction (8 trials)
+  macd_ema_trend_hybrid_m03f1d536 [03f1d5362ff0] on USDCAD H4 via change_session_restriction (8 trials)
+  macd_ema_trend_hybrid_m03f1d536 [03f1d5362ff0] on USDCHF H4 via change_session_restriction (8 trials)
+  macd_ema_trend_hybrid_m03f1d536 [03f1d5362ff0] on USDJPY H4 via change_session_restriction (8 trials)
+  macd_ema_trend_hybrid_m03f1d536 [03f1d5362ff0] on XAUUSD H4 via change_session_restriction (8 trials)
+  macd_ema_trend_hybrid_mb7889927 [b7889927c61c] on AUDUSD H4 via change_confirmation_rule (8 trials)
+  macd_ema_trend_hybrid_mb7889927 [b7889927c61c] on DE40 H4 via change_confirmation_rule (8 trials)
+  macd_ema_trend_hybrid_mb7889927 [b7889927c61c] on EURJPY H4 via change_confirmation_rule (8 trials)
+  macd_ema_trend_hybrid_mb7889927 [b7889927c61c] on EURUSD H4 via change_confirmation_rule (8 trials)
+  macd_ema_trend_hybrid_mb7889927 [b7889927c61c] on GBPJPY H4 via change_confirmation_rule (8 trials)
+  macd_ema_trend_hybrid_mb7889927 [b7889927c61c] on GBPUSD H4 via change_confirmation_rule (8 trials)
+  macd_ema_trend_hybrid_mb7889927 [b7889927c61c] on NZDUSD H4 via change_confirmation_rule (8 trials)
+  macd_ema_trend_hybrid_mb7889927 [b7889927c61c] on US500 H4 via change_confirmation_rule (8 trials)
+  macd_ema_trend_hybrid_mb7889927 [b7889927c61c] on USDCAD H4 via change_confirmation_rule (8 trials)
+  macd_ema_trend_hybrid_mb7889927 [b7889927c61c] on USDCHF H4 via change_confirmation_rule (8 trials)
+  macd_ema_trend_hybrid_mb7889927 [b7889927c61c] on USDJPY H4 via change_confirmation_rule (8 trials)
+  macd_ema_trend_hybrid_mb7889927 [b7889927c61c] on XAUUSD H4 via change_confirmation_rule (8 trials)
+  macd_ema_trend_hybrid_mc45594a0 [c45594a07ef5] on AUDUSD H4 via simplify (8 trials)
+  macd_ema_trend_hybrid_mc45594a0 [c45594a07ef5] on DE40 H4 via simplify (8 trials)
+  macd_ema_trend_hybrid_mc45594a0 [c45594a07ef5] on EURJPY H4 via simplify (8 trials)
+  macd_ema_trend_hybrid_mc45594a0 [c45594a07ef5] on EURUSD H4 via simplify (8 trials)
+  macd_ema_trend_hybrid_mc45594a0 [c45594a07ef5] on GBPJPY H4 via simplify (8 trials)
+  macd_ema_trend_hybrid_mc45594a0 [c45594a07ef5] on GBPUSD H4 via simplify (8 trials)
+  macd_ema_trend_hybrid_mc45594a0 [c45594a07ef5] on NZDUSD H4 via simplify (8 trials)
+  macd_ema_trend_hybrid_mc45594a0 [c45594a07ef5] on US500 H4 via simplify (8 trials)
+  macd_ema_trend_hybrid_mc45594a0 [c45594a07ef5] on USDCAD H4 via simplify (8 trials)
+  macd_ema_trend_hybrid_mc45594a0 [c45594a07ef5] on USDCHF H4 via simplify (8 trials)
+  macd_ema_trend_hybrid_mc45594a0 [c45594a07ef5] on USDJPY H4 via simplify (8 trials)
+  macd_ema_trend_hybrid_mc45594a0 [c45594a07ef5] on XAUUSD H4 via simplify (8 trials)
+  macd_ema_trend_hybrid_m270351c7 [270351c713e3] on AUDUSD H4 via combine (4 trials)
+  macd_ema_trend_hybrid_m270351c7 [270351c713e3] on DE40 H4 via combine (4 trials)
+  macd_ema_trend_hybrid_m270351c7 [270351c713e3] on EURJPY H4 via combine (4 trials)
+  macd_ema_trend_hybrid_m270351c7 [270351c713e3] on EURUSD H4 via combine (4 trials)
+  macd_ema_trend_hybrid_m270351c7 [270351c713e3] on GBPJPY H4 via combine (4 trials)
+  macd_ema_trend_hybrid_m270351c7 [270351c713e3] on GBPUSD H4 via combine (4 trials)
+  macd_ema_trend_hybrid_m270351c7 [270351c713e3] on NZDUSD H4 via combine (4 trials)
+  macd_ema_trend_hybrid_m270351c7 [270351c713e3] on US500 H4 via combine (4 trials)
+  macd_ema_trend_hybrid_m270351c7 [270351c713e3] on USDCAD H4 via combine (4 trials)
+  macd_ema_trend_hybrid_m270351c7 [270351c713e3] on USDCHF H4 via combine (4 trials)
+  macd_ema_trend_hybrid_m270351c7 [270351c713e3] on USDJPY H4 via combine (4 trials)
+  macd_ema_trend_hybrid_m270351c7 [270351c713e3] on XAUUSD H4 via combine (4 trials)
+  macd_ema_trend_hybrid_mbd5c916c [bd5c916c536d] on AUDUSD H4 via combine (4 trials)
+  macd_ema_trend_hybrid_mbd5c916c [bd5c916c536d] on EURUSD H4 via combine (4 trials)
+  macd_ema_trend_hybrid_mbd5c916c [bd5c916c536d] on GBPUSD H4 via combine (4 trials)
+  macd_ema_trend_hybrid_mbd5c916c [bd5c916c536d] on NZDUSD H4 via combine (4 trials)
+  macd_ema_trend_hybrid_mbd5c916c [bd5c916c536d] on USDCAD H4 via combine (4 trials)
+  macd_ema_trend_hybrid_mbd5c916c [bd5c916c536d] on USDCHF H4 via combine (4 trials)
+  macd_ema_trend_hybrid_mbd5c916c [bd5c916c536d] on USDJPY H4 via combine (4 trials)
+  rsi_band_mean_reversion_md48b52cb [d48b52cbf9b5] on AUDUSD H4 via add_filter (8 trials)
+  rsi_band_mean_reversion_md48b52cb [d48b52cbf9b5] on EURGBP H4 via add_filter (8 trials)
+  rsi_band_mean_reversion_md48b52cb [d48b52cbf9b5] on EURUSD H4 via add_filter (8 trials)
+  rsi_band_mean_reversion_md48b52cb [d48b52cbf9b5] on GBPUSD H4 via add_filter (8 trials)
+  rsi_band_mean_reversion_md48b52cb [d48b52cbf9b5] on NZDUSD H4 via add_filter (8 trials)
+  rsi_band_mean_reversion_md48b52cb [d48b52cbf9b5] on USDCAD H4 via add_filter (8 trials)
+  rsi_band_mean_reversion_md48b52cb [d48b52cbf9b5] on USDCHF H4 via add_filter (8 trials)
+  rsi_band_mean_reversion_md48b52cb [d48b52cbf9b5] on USDJPY H4 via add_filter (8 trials)
+  rsi_band_mean_reversion_mdbb3266a [dbb3266af5ff] on AUDUSD H4 via alter_stop_model (8 trials)
+  rsi_band_mean_reversion_mdbb3266a [dbb3266af5ff] on EURGBP H4 via alter_stop_model (8 trials)
+  rsi_band_mean_reversion_mdbb3266a [dbb3266af5ff] on EURUSD H4 via alter_stop_model (8 trials)
+  rsi_band_mean_reversion_mdbb3266a [dbb3266af5ff] on GBPUSD H4 via alter_stop_model (8 trials)
+  rsi_band_mean_reversion_mdbb3266a [dbb3266af5ff] on NZDUSD H4 via alter_stop_model (8 trials)
+  rsi_band_mean_reversion_mdbb3266a [dbb3266af5ff] on USDCAD H4 via alter_stop_model (8 trials)
+  rsi_band_mean_reversion_mdbb3266a [dbb3266af5ff] on USDCHF H4 via alter_stop_model (8 trials)
+  rsi_band_mean_reversion_mdbb3266a [dbb3266af5ff] on USDJPY H4 via alter_stop_model (8 trials)
+  rsi_band_mean_reversion_m6e0465f0 [6e0465f0c222] on AUDUSD H4 via alter_target_model (8 trials)
+  rsi_band_mean_reversion_m6e0465f0 [6e0465f0c222] on EURGBP H4 via alter_target_model (8 trials)
+  rsi_band_mean_reversion_m6e0465f0 [6e0465f0c222] on EURUSD H4 via alter_target_model (8 trials)
+  rsi_band_mean_reversion_m6e0465f0 [6e0465f0c222] on GBPUSD H4 via alter_target_model (8 trials)
+  rsi_band_mean_reversion_m6e0465f0 [6e0465f0c222] on NZDUSD H4 via alter_target_model (8 trials)
+  rsi_band_mean_reversion_m6e0465f0 [6e0465f0c222] on USDCAD H4 via alter_target_model (8 trials)
+  rsi_band_mean_reversion_m6e0465f0 [6e0465f0c222] on USDCHF H4 via alter_target_model (8 trials)
+  rsi_band_mean_reversion_m6e0465f0 [6e0465f0c222] on USDJPY H4 via alter_target_model (8 trials)
+  rsi_band_mean_reversion_me1d6d436 [e1d6d436eea8] on AUDUSD H4 via change_session_restriction (8 trials)
+  rsi_band_mean_reversion_me1d6d436 [e1d6d436eea8] on EURGBP H4 via change_session_restriction (8 trials)
+  rsi_band_mean_reversion_me1d6d436 [e1d6d436eea8] on EURUSD H4 via change_session_restriction (8 trials)
+  rsi_band_mean_reversion_me1d6d436 [e1d6d436eea8] on GBPUSD H4 via change_session_restriction (8 trials)
+  rsi_band_mean_reversion_me1d6d436 [e1d6d436eea8] on NZDUSD H4 via change_session_restriction (8 trials)
+  rsi_band_mean_reversion_me1d6d436 [e1d6d436eea8] on USDCAD H4 via change_session_restriction (8 trials)
+  rsi_band_mean_reversion_me1d6d436 [e1d6d436eea8] on USDCHF H4 via change_session_restriction (8 trials)
+  rsi_band_mean_reversion_me1d6d436 [e1d6d436eea8] on USDJPY H4 via change_session_restriction (8 trials)
+  rsi_band_mean_reversion_m42a36d28 [42a36d280b5c] on AUDUSD H4 via change_confirmation_rule (8 trials)
+  rsi_band_mean_reversion_m42a36d28 [42a36d280b5c] on EURGBP H4 via change_confirmation_rule (8 trials)
+  rsi_band_mean_reversion_m42a36d28 [42a36d280b5c] on EURUSD H4 via change_confirmation_rule (8 trials)
+  rsi_band_mean_reversion_m42a36d28 [42a36d280b5c] on GBPUSD H4 via change_confirmation_rule (8 trials)
+  rsi_band_mean_reversion_m42a36d28 [42a36d280b5c] on NZDUSD H4 via change_confirmation_rule (8 trials)
+  rsi_band_mean_reversion_m42a36d28 [42a36d280b5c] on USDCAD H4 via change_confirmation_rule (8 trials)
+  rsi_band_mean_reversion_m42a36d28 [42a36d280b5c] on USDCHF H4 via change_confirmation_rule (8 trials)
+  rsi_band_mean_reversion_m42a36d28 [42a36d280b5c] on USDJPY H4 via change_confirmation_rule (8 trials)
+  rsi_band_mean_reversion_m7c32d514 [7c32d5149b77] on AUDUSD H4 via simplify (8 trials)
+  rsi_band_mean_reversion_m7c32d514 [7c32d5149b77] on EURGBP H4 via simplify (8 trials)
+  rsi_band_mean_reversion_m7c32d514 [7c32d5149b77] on EURUSD H4 via simplify (8 trials)
+  rsi_band_mean_reversion_m7c32d514 [7c32d5149b77] on GBPUSD H4 via simplify (8 trials)
+  rsi_band_mean_reversion_m7c32d514 [7c32d5149b77] on NZDUSD H4 via simplify (8 trials)
+  rsi_band_mean_reversion_m7c32d514 [7c32d5149b77] on USDCAD H4 via simplify (8 trials)
+  rsi_band_mean_reversion_m7c32d514 [7c32d5149b77] on USDCHF H4 via simplify (8 trials)
+  rsi_band_mean_reversion_m7c32d514 [7c32d5149b77] on USDJPY H4 via simplify (8 trials)
+  rsi_band_mean_reversion_m6113daf1 [6113daf11a68] on AUDUSD H4 via combine (8 trials)
+  rsi_band_mean_reversion_m6113daf1 [6113daf11a68] on EURUSD H4 via combine (8 trials)
+  rsi_band_mean_reversion_m6113daf1 [6113daf11a68] on GBPUSD H4 via combine (8 trials)
+  rsi_band_mean_reversion_m6113daf1 [6113daf11a68] on NZDUSD H4 via combine (8 trials)
+  rsi_band_mean_reversion_m6113daf1 [6113daf11a68] on USDCAD H4 via combine (8 trials)
+  rsi_band_mean_reversion_m6113daf1 [6113daf11a68] on USDCHF H4 via combine (8 trials)
+  rsi_band_mean_reversion_m6113daf1 [6113daf11a68] on USDJPY H4 via combine (8 trials)
+  rsi_band_mean_reversion_md0807760 [d0807760579e] on AUDUSD H4 via combine (8 trials)
+  rsi_band_mean_reversion_md0807760 [d0807760579e] on EURUSD H4 via combine (8 trials)
+  rsi_band_mean_reversion_md0807760 [d0807760579e] on GBPUSD H4 via combine (8 trials)
+  rsi_band_mean_reversion_md0807760 [d0807760579e] on NZDUSD H4 via combine (8 trials)
+  rsi_band_mean_reversion_md0807760 [d0807760579e] on USDCAD H4 via combine (8 trials)
+  rsi_band_mean_reversion_md0807760 [d0807760579e] on USDCHF H4 via combine (8 trials)
+  rsi_band_mean_reversion_md0807760 [d0807760579e] on USDJPY H4 via combine (8 trials)
+  rsi_band_mean_reversion_m29180d06 [29180d067a54] on AUDUSD H4 via combine (8 trials)
+  rsi_band_mean_reversion_m29180d06 [29180d067a54] on EURUSD H4 via combine (8 trials)
+  rsi_band_mean_reversion_m29180d06 [29180d067a54] on GBPUSD H4 via combine (8 trials)
+  rsi_band_mean_reversion_m29180d06 [29180d067a54] on NZDUSD H4 via combine (8 trials)
+  rsi_band_mean_reversion_m29180d06 [29180d067a54] on USDCAD H4 via combine (8 trials)
+  rsi_band_mean_reversion_m29180d06 [29180d067a54] on USDCHF H4 via combine (8 trials)
+  rsi_band_mean_reversion_m29180d06 [29180d067a54] on USDJPY H4 via combine (8 trials)
+
+  SKIP donchian_breakout_atr: mutation_rejected -- the parent declares no filters, so none can be removed
+  SKIP donchian_breakout_atr: mutation_rejected -- incompatible parents: both declare a parameter 'stop_atr_multiple' with different domains, so one document cannot hold both meanings
+  SKIP fib_golden_pocket_pullback: mutation_rejected -- the parent declares no filters, so none can be removed
+  SKIP fib_golden_pocket_pullback: mutation_rejected -- incompatible parents: both declare a parameter 'adx_floor' with different domains, so one document cannot hold both meanings
+  SKIP fib_golden_pocket_pullback: mutation_rejected -- incompatible parents: both declare a parameter 'rsi_ceiling' with different domains, so one document cannot hold both meanings
+  SKIP ichimoku_kumo_trend: mutation_rejected -- the parent declares no filters, so none can be removed
+  SKIP ichimoku_kumo_trend: mutation_rejected -- the regime gate's bounds are parameter REFERENCES, not literals, so there is no width to scale here -- the width is already part of the declared sweep and mov
+  SKIP ichimoku_kumo_trend: mutation_rejected -- incompatible parents: both declare a parameter 'adx_floor' with different domains, so one document cannot hold both meanings
+  SKIP ichimoku_kumo_trend: mutation_rejected -- incompatible parents: both declare a parameter 'adx_floor' with different domains, so one document cannot hold both meanings
+  SKIP macd_ema_trend_hybrid: mutation_rejected -- the parent declares no filters, so none can be removed
+  SKIP macd_ema_trend_hybrid: mutation_rejected -- incompatible parents: both declare a parameter 'stop_atr_multiple' with different domains, so one document cannot hold both meanings
+  SKIP macd_ema_trend_hybrid: mutation_rejected -- incompatible parents: both declare a parameter 'adx_floor' with different domains, so one document cannot hold both meanings
+  SKIP rsi_band_mean_reversion: mutation_rejected -- the parent declares no filters, so none can be removed
+  SKIP rsi_band_mean_reversion: mutation_rejected -- the regime gate's bounds are parameter REFERENCES, not literals, so there is no width to scale here -- the width is already part of the declared sweep and
+  SKIP rsi_band_mean_reversion: mutation_rejected -- incompatible parents: both declare a parameter 'rsi_floor' with different domains, so one document cannot hold both meanings
+  SKIP donchian_breakout_atr on AUDJPY H4: out_of_universe -- donchian_breakout_atr declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'XAUUSD', 'US5
+  SKIP donchian_breakout_atr on EURGBP H4: out_of_universe -- donchian_breakout_atr declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'XAUUSD', 'US5
+  SKIP donchian_breakout_atr on UK100 H4: out_of_universe -- donchian_breakout_atr declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'XAUUSD', 'US50
+  SKIP donchian_breakout_atr on XAGUSD H4: out_of_universe -- donchian_breakout_atr declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'XAUUSD', 'US5
+  SKIP fib_golden_pocket_pullback on AUDJPY H4: out_of_universe -- fib_golden_pocket_pullback declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'XAU
+  SKIP fib_golden_pocket_pullback on EURGBP H4: out_of_universe -- fib_golden_pocket_pullback declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'XAU
+  SKIP fib_golden_pocket_pullback on UK100 H4: out_of_universe -- fib_golden_pocket_pullback declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'XAUU
+  SKIP fib_golden_pocket_pullback on XAGUSD H4: out_of_universe -- fib_golden_pocket_pullback declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'XAU
+  SKIP ichimoku_kumo_trend on AUDJPY H4: out_of_universe -- ichimoku_kumo_trend declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'XAUUSD', 'US500',
+  SKIP ichimoku_kumo_trend on EURGBP H4: out_of_universe -- ichimoku_kumo_trend declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'XAUUSD', 'US500',
+  SKIP ichimoku_kumo_trend on UK100 H4: out_of_universe -- ichimoku_kumo_trend declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'XAUUSD', 'US500', 
+  SKIP ichimoku_kumo_trend on XAGUSD H4: out_of_universe -- ichimoku_kumo_trend declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'XAUUSD', 'US500',
+  SKIP macd_ema_trend_hybrid on AUDJPY H4: out_of_universe -- macd_ema_trend_hybrid declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'XAUUSD', 'US5
+  SKIP macd_ema_trend_hybrid on EURGBP H4: out_of_universe -- macd_ema_trend_hybrid declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'XAUUSD', 'US5
+  SKIP macd_ema_trend_hybrid on UK100 H4: out_of_universe -- macd_ema_trend_hybrid declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'XAUUSD', 'US50
+  SKIP macd_ema_trend_hybrid on XAGUSD H4: out_of_universe -- macd_ema_trend_hybrid declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY', 'XAUUSD', 'US5
+  SKIP rsi_band_mean_reversion on AUDJPY H4: out_of_universe -- rsi_band_mean_reversion declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP', 'AUDNZD', 'EURCHF'] 
+  SKIP rsi_band_mean_reversion on DE40 H4: out_of_universe -- rsi_band_mean_reversion declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP', 'AUDNZD', 'EURCHF'] an
+  SKIP rsi_band_mean_reversion on EURJPY H4: out_of_universe -- rsi_band_mean_reversion declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP', 'AUDNZD', 'EURCHF'] 
+  SKIP rsi_band_mean_reversion on GBPJPY H4: out_of_universe -- rsi_band_mean_reversion declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP', 'AUDNZD', 'EURCHF'] 
+  SKIP rsi_band_mean_reversion on UK100 H4: out_of_universe -- rsi_band_mean_reversion declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP', 'AUDNZD', 'EURCHF'] a
+  SKIP rsi_band_mean_reversion on US500 H4: out_of_universe -- rsi_band_mean_reversion declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP', 'AUDNZD', 'EURCHF'] a
+  SKIP rsi_band_mean_reversion on XAGUSD H4: out_of_universe -- rsi_band_mean_reversion declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP', 'AUDNZD', 'EURCHF'] 
+  SKIP rsi_band_mean_reversion on XAUUSD H4: out_of_universe -- rsi_band_mean_reversion declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP', 'AUDNZD', 'EURCHF'] 
+  SKIP donchian_breakout_atr_m3ecf77ae on AUDJPY H4: out_of_universe -- donchian_breakout_atr_m3ecf77ae declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBP
+  SKIP donchian_breakout_atr_m3ecf77ae on EURGBP H4: out_of_universe -- donchian_breakout_atr_m3ecf77ae declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBP
+  SKIP donchian_breakout_atr_m3ecf77ae on UK100 H4: out_of_universe -- donchian_breakout_atr_m3ecf77ae declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJ
+  SKIP donchian_breakout_atr_m3ecf77ae on XAGUSD H4: out_of_universe -- donchian_breakout_atr_m3ecf77ae declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBP
+  SKIP donchian_breakout_atr_mbdfe4742 on AUDJPY H4: out_of_universe -- donchian_breakout_atr_mbdfe4742 declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBP
+  SKIP donchian_breakout_atr_mbdfe4742 on EURGBP H4: out_of_universe -- donchian_breakout_atr_mbdfe4742 declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBP
+  SKIP donchian_breakout_atr_mbdfe4742 on UK100 H4: out_of_universe -- donchian_breakout_atr_mbdfe4742 declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJ
+  SKIP donchian_breakout_atr_mbdfe4742 on XAGUSD H4: out_of_universe -- donchian_breakout_atr_mbdfe4742 declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBP
+  SKIP donchian_breakout_atr_m3c934a3b on AUDJPY H4: out_of_universe -- donchian_breakout_atr_m3c934a3b declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBP
+  SKIP donchian_breakout_atr_m3c934a3b on EURGBP H4: out_of_universe -- donchian_breakout_atr_m3c934a3b declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBP
+  SKIP donchian_breakout_atr_m3c934a3b on UK100 H4: out_of_universe -- donchian_breakout_atr_m3c934a3b declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJ
+  SKIP donchian_breakout_atr_m3c934a3b on XAGUSD H4: out_of_universe -- donchian_breakout_atr_m3c934a3b declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBP
+  SKIP donchian_breakout_atr_m76dbb4f7 on AUDJPY H4: out_of_universe -- donchian_breakout_atr_m76dbb4f7 declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBP
+  SKIP donchian_breakout_atr_m76dbb4f7 on EURGBP H4: out_of_universe -- donchian_breakout_atr_m76dbb4f7 declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBP
+  SKIP donchian_breakout_atr_m76dbb4f7 on UK100 H4: out_of_universe -- donchian_breakout_atr_m76dbb4f7 declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJ
+  SKIP donchian_breakout_atr_m76dbb4f7 on XAGUSD H4: out_of_universe -- donchian_breakout_atr_m76dbb4f7 declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBP
+  SKIP donchian_breakout_atr_m427fba0e on AUDJPY H4: out_of_universe -- donchian_breakout_atr_m427fba0e declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBP
+  SKIP donchian_breakout_atr_m427fba0e on EURGBP H4: out_of_universe -- donchian_breakout_atr_m427fba0e declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBP
+  SKIP donchian_breakout_atr_m427fba0e on UK100 H4: out_of_universe -- donchian_breakout_atr_m427fba0e declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJ
+  SKIP donchian_breakout_atr_m427fba0e on XAGUSD H4: out_of_universe -- donchian_breakout_atr_m427fba0e declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBP
+  SKIP donchian_breakout_atr_m79f18824 on AUDJPY H4: out_of_universe -- donchian_breakout_atr_m79f18824 declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBP
+  SKIP donchian_breakout_atr_m79f18824 on EURGBP H4: out_of_universe -- donchian_breakout_atr_m79f18824 declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBP
+  SKIP donchian_breakout_atr_m79f18824 on UK100 H4: out_of_universe -- donchian_breakout_atr_m79f18824 declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJ
+  SKIP donchian_breakout_atr_m79f18824 on XAGUSD H4: out_of_universe -- donchian_breakout_atr_m79f18824 declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBP
+  SKIP donchian_breakout_atr_mf2553d34 on AUDJPY H4: out_of_universe -- donchian_breakout_atr_mf2553d34 declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBP
+  SKIP donchian_breakout_atr_mf2553d34 on EURGBP H4: out_of_universe -- donchian_breakout_atr_mf2553d34 declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBP
+  SKIP donchian_breakout_atr_mf2553d34 on UK100 H4: out_of_universe -- donchian_breakout_atr_mf2553d34 declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJ
+  SKIP donchian_breakout_atr_mf2553d34 on XAGUSD H4: out_of_universe -- donchian_breakout_atr_mf2553d34 declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBP
+  SKIP donchian_breakout_atr_m30945c80 on AUDJPY H4: out_of_universe -- donchian_breakout_atr_m30945c80 declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBP
+  SKIP donchian_breakout_atr_m30945c80 on EURGBP H4: out_of_universe -- donchian_breakout_atr_m30945c80 declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBP
+  SKIP donchian_breakout_atr_m30945c80 on UK100 H4: out_of_universe -- donchian_breakout_atr_m30945c80 declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJ
+  SKIP donchian_breakout_atr_m30945c80 on XAGUSD H4: out_of_universe -- donchian_breakout_atr_m30945c80 declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBP
+  SKIP donchian_breakout_atr_m217dad55 on AUDJPY H4: out_of_universe -- donchian_breakout_atr_m217dad55 declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBP
+  SKIP donchian_breakout_atr_m217dad55 on EURGBP H4: out_of_universe -- donchian_breakout_atr_m217dad55 declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBP
+  SKIP donchian_breakout_atr_m217dad55 on UK100 H4: out_of_universe -- donchian_breakout_atr_m217dad55 declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJ
+  SKIP donchian_breakout_atr_m217dad55 on XAGUSD H4: out_of_universe -- donchian_breakout_atr_m217dad55 declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBP
+  SKIP donchian_breakout_atr_m4d42994e on AUDJPY H4: out_of_universe -- donchian_breakout_atr_m4d42994e declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD'] and timeframes
+  SKIP donchian_breakout_atr_m4d42994e on DE40 H4: out_of_universe -- donchian_breakout_atr_m4d42994e declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD'] and timeframes [
+  SKIP donchian_breakout_atr_m4d42994e on EURGBP H4: out_of_universe -- donchian_breakout_atr_m4d42994e declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD'] and timeframes
+  SKIP donchian_breakout_atr_m4d42994e on EURJPY H4: out_of_universe -- donchian_breakout_atr_m4d42994e declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD'] and timeframes
+  SKIP donchian_breakout_atr_m4d42994e on GBPJPY H4: out_of_universe -- donchian_breakout_atr_m4d42994e declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD'] and timeframes
+  SKIP donchian_breakout_atr_m4d42994e on UK100 H4: out_of_universe -- donchian_breakout_atr_m4d42994e declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD'] and timeframes 
+  SKIP donchian_breakout_atr_m4d42994e on US500 H4: out_of_universe -- donchian_breakout_atr_m4d42994e declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD'] and timeframes 
+  SKIP donchian_breakout_atr_m4d42994e on XAGUSD H4: out_of_universe -- donchian_breakout_atr_m4d42994e declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD'] and timeframes
+  SKIP donchian_breakout_atr_m4d42994e on XAUUSD H4: out_of_universe -- donchian_breakout_atr_m4d42994e declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD'] and timeframes
+  SKIP fib_golden_pocket_pullback_ma8f9f32b on AUDJPY H4: out_of_universe -- fib_golden_pocket_pullback_ma8f9f32b declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EUR
+  SKIP fib_golden_pocket_pullback_ma8f9f32b on EURGBP H4: out_of_universe -- fib_golden_pocket_pullback_ma8f9f32b declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EUR
+  SKIP fib_golden_pocket_pullback_ma8f9f32b on UK100 H4: out_of_universe -- fib_golden_pocket_pullback_ma8f9f32b declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJ
+  SKIP fib_golden_pocket_pullback_ma8f9f32b on XAGUSD H4: out_of_universe -- fib_golden_pocket_pullback_ma8f9f32b declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EUR
+  SKIP fib_golden_pocket_pullback_md15c64ac on AUDJPY H4: out_of_universe -- fib_golden_pocket_pullback_md15c64ac declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EUR
+  SKIP fib_golden_pocket_pullback_md15c64ac on EURGBP H4: out_of_universe -- fib_golden_pocket_pullback_md15c64ac declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EUR
+  SKIP fib_golden_pocket_pullback_md15c64ac on UK100 H4: out_of_universe -- fib_golden_pocket_pullback_md15c64ac declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJ
+  SKIP fib_golden_pocket_pullback_md15c64ac on XAGUSD H4: out_of_universe -- fib_golden_pocket_pullback_md15c64ac declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EUR
+  SKIP fib_golden_pocket_pullback_mb82cde01 on AUDJPY H4: out_of_universe -- fib_golden_pocket_pullback_mb82cde01 declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EUR
+  SKIP fib_golden_pocket_pullback_mb82cde01 on EURGBP H4: out_of_universe -- fib_golden_pocket_pullback_mb82cde01 declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EUR
+  SKIP fib_golden_pocket_pullback_mb82cde01 on UK100 H4: out_of_universe -- fib_golden_pocket_pullback_mb82cde01 declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJ
+  SKIP fib_golden_pocket_pullback_mb82cde01 on XAGUSD H4: out_of_universe -- fib_golden_pocket_pullback_mb82cde01 declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EUR
+  SKIP fib_golden_pocket_pullback_mdd2357fa on AUDJPY H4: out_of_universe -- fib_golden_pocket_pullback_mdd2357fa declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EUR
+  SKIP fib_golden_pocket_pullback_mdd2357fa on EURGBP H4: out_of_universe -- fib_golden_pocket_pullback_mdd2357fa declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EUR
+  SKIP fib_golden_pocket_pullback_mdd2357fa on UK100 H4: out_of_universe -- fib_golden_pocket_pullback_mdd2357fa declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJ
+  SKIP fib_golden_pocket_pullback_mdd2357fa on XAGUSD H4: out_of_universe -- fib_golden_pocket_pullback_mdd2357fa declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EUR
+  SKIP fib_golden_pocket_pullback_md3507b8f on AUDJPY H4: out_of_universe -- fib_golden_pocket_pullback_md3507b8f declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EUR
+  SKIP fib_golden_pocket_pullback_md3507b8f on EURGBP H4: out_of_universe -- fib_golden_pocket_pullback_md3507b8f declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EUR
+  SKIP fib_golden_pocket_pullback_md3507b8f on UK100 H4: out_of_universe -- fib_golden_pocket_pullback_md3507b8f declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJ
+  SKIP fib_golden_pocket_pullback_md3507b8f on XAGUSD H4: out_of_universe -- fib_golden_pocket_pullback_md3507b8f declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EUR
+  SKIP fib_golden_pocket_pullback_m88fd2d1c on AUDJPY H4: out_of_universe -- fib_golden_pocket_pullback_m88fd2d1c declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EUR
+  SKIP fib_golden_pocket_pullback_m88fd2d1c on EURGBP H4: out_of_universe -- fib_golden_pocket_pullback_m88fd2d1c declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EUR
+  SKIP fib_golden_pocket_pullback_m88fd2d1c on UK100 H4: out_of_universe -- fib_golden_pocket_pullback_m88fd2d1c declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJ
+  SKIP fib_golden_pocket_pullback_m88fd2d1c on XAGUSD H4: out_of_universe -- fib_golden_pocket_pullback_m88fd2d1c declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EUR
+  SKIP fib_golden_pocket_pullback_me01e2d1a on AUDJPY H4: out_of_universe -- fib_golden_pocket_pullback_me01e2d1a declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EUR
+  SKIP fib_golden_pocket_pullback_me01e2d1a on EURGBP H4: out_of_universe -- fib_golden_pocket_pullback_me01e2d1a declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EUR
+  SKIP fib_golden_pocket_pullback_me01e2d1a on UK100 H4: out_of_universe -- fib_golden_pocket_pullback_me01e2d1a declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJ
+  SKIP fib_golden_pocket_pullback_me01e2d1a on XAGUSD H4: out_of_universe -- fib_golden_pocket_pullback_me01e2d1a declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EUR
+  SKIP fib_golden_pocket_pullback_m76354e7e on AUDJPY H4: out_of_universe -- fib_golden_pocket_pullback_m76354e7e declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EUR
+  SKIP fib_golden_pocket_pullback_m76354e7e on EURGBP H4: out_of_universe -- fib_golden_pocket_pullback_m76354e7e declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EUR
+  SKIP fib_golden_pocket_pullback_m76354e7e on UK100 H4: out_of_universe -- fib_golden_pocket_pullback_m76354e7e declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJ
+  SKIP fib_golden_pocket_pullback_m76354e7e on XAGUSD H4: out_of_universe -- fib_golden_pocket_pullback_m76354e7e declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EUR
+  SKIP fib_golden_pocket_pullback_mb73e28fd on AUDJPY H4: out_of_universe -- fib_golden_pocket_pullback_mb73e28fd declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EUR
+  SKIP fib_golden_pocket_pullback_mb73e28fd on EURGBP H4: out_of_universe -- fib_golden_pocket_pullback_mb73e28fd declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EUR
+  SKIP fib_golden_pocket_pullback_mb73e28fd on UK100 H4: out_of_universe -- fib_golden_pocket_pullback_mb73e28fd declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJ
+  SKIP fib_golden_pocket_pullback_mb73e28fd on XAGUSD H4: out_of_universe -- fib_golden_pocket_pullback_mb73e28fd declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EUR
+  SKIP ichimoku_kumo_trend_m689694c1 on AUDJPY H4: out_of_universe -- ichimoku_kumo_trend_m689694c1 declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY'
+  SKIP ichimoku_kumo_trend_m689694c1 on EURGBP H4: out_of_universe -- ichimoku_kumo_trend_m689694c1 declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY'
+  SKIP ichimoku_kumo_trend_m689694c1 on UK100 H4: out_of_universe -- ichimoku_kumo_trend_m689694c1 declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY',
+  SKIP ichimoku_kumo_trend_m689694c1 on XAGUSD H4: out_of_universe -- ichimoku_kumo_trend_m689694c1 declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY'
+  SKIP ichimoku_kumo_trend_m4195c8bf on AUDJPY H4: out_of_universe -- ichimoku_kumo_trend_m4195c8bf declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY'
+  SKIP ichimoku_kumo_trend_m4195c8bf on EURGBP H4: out_of_universe -- ichimoku_kumo_trend_m4195c8bf declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY'
+  SKIP ichimoku_kumo_trend_m4195c8bf on UK100 H4: out_of_universe -- ichimoku_kumo_trend_m4195c8bf declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY',
+  SKIP ichimoku_kumo_trend_m4195c8bf on XAGUSD H4: out_of_universe -- ichimoku_kumo_trend_m4195c8bf declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY'
+  SKIP ichimoku_kumo_trend_m8fbcd36c on AUDJPY H4: out_of_universe -- ichimoku_kumo_trend_m8fbcd36c declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY'
+  SKIP ichimoku_kumo_trend_m8fbcd36c on EURGBP H4: out_of_universe -- ichimoku_kumo_trend_m8fbcd36c declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY'
+  SKIP ichimoku_kumo_trend_m8fbcd36c on UK100 H4: out_of_universe -- ichimoku_kumo_trend_m8fbcd36c declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY',
+  SKIP ichimoku_kumo_trend_m8fbcd36c on XAGUSD H4: out_of_universe -- ichimoku_kumo_trend_m8fbcd36c declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY'
+  SKIP ichimoku_kumo_trend_ma4c92c38 on AUDJPY H4: out_of_universe -- ichimoku_kumo_trend_ma4c92c38 declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY'
+  SKIP ichimoku_kumo_trend_ma4c92c38 on EURGBP H4: out_of_universe -- ichimoku_kumo_trend_ma4c92c38 declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY'
+  SKIP ichimoku_kumo_trend_ma4c92c38 on UK100 H4: out_of_universe -- ichimoku_kumo_trend_ma4c92c38 declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY',
+  SKIP ichimoku_kumo_trend_ma4c92c38 on XAGUSD H4: out_of_universe -- ichimoku_kumo_trend_ma4c92c38 declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY'
+  SKIP ichimoku_kumo_trend_me73acb6c on AUDJPY H4: out_of_universe -- ichimoku_kumo_trend_me73acb6c declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY'
+  SKIP ichimoku_kumo_trend_me73acb6c on EURGBP H4: out_of_universe -- ichimoku_kumo_trend_me73acb6c declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY'
+  SKIP ichimoku_kumo_trend_me73acb6c on UK100 H4: out_of_universe -- ichimoku_kumo_trend_me73acb6c declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY',
+  SKIP ichimoku_kumo_trend_me73acb6c on XAGUSD H4: out_of_universe -- ichimoku_kumo_trend_me73acb6c declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY'
+  SKIP ichimoku_kumo_trend_mca231a0f on AUDJPY H4: out_of_universe -- ichimoku_kumo_trend_mca231a0f declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY'
+  SKIP ichimoku_kumo_trend_mca231a0f on EURGBP H4: out_of_universe -- ichimoku_kumo_trend_mca231a0f declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY'
+  SKIP ichimoku_kumo_trend_mca231a0f on UK100 H4: out_of_universe -- ichimoku_kumo_trend_mca231a0f declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY',
+  SKIP ichimoku_kumo_trend_mca231a0f on XAGUSD H4: out_of_universe -- ichimoku_kumo_trend_mca231a0f declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY'
+  SKIP ichimoku_kumo_trend_m0bd80cab on AUDJPY H4: out_of_universe -- ichimoku_kumo_trend_m0bd80cab declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY'
+  SKIP ichimoku_kumo_trend_m0bd80cab on EURGBP H4: out_of_universe -- ichimoku_kumo_trend_m0bd80cab declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY'
+  SKIP ichimoku_kumo_trend_m0bd80cab on UK100 H4: out_of_universe -- ichimoku_kumo_trend_m0bd80cab declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY',
+  SKIP ichimoku_kumo_trend_m0bd80cab on XAGUSD H4: out_of_universe -- ichimoku_kumo_trend_m0bd80cab declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJPY'
+  SKIP ichimoku_kumo_trend_m67c7da5a on AUDJPY H4: out_of_universe -- ichimoku_kumo_trend_m67c7da5a declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD'] and timeframes ['H
+  SKIP ichimoku_kumo_trend_m67c7da5a on DE40 H4: out_of_universe -- ichimoku_kumo_trend_m67c7da5a declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD'] and timeframes ['H4'
+  SKIP ichimoku_kumo_trend_m67c7da5a on EURGBP H4: out_of_universe -- ichimoku_kumo_trend_m67c7da5a declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD'] and timeframes ['H
+  SKIP ichimoku_kumo_trend_m67c7da5a on EURJPY H4: out_of_universe -- ichimoku_kumo_trend_m67c7da5a declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD'] and timeframes ['H
+  SKIP ichimoku_kumo_trend_m67c7da5a on GBPJPY H4: out_of_universe -- ichimoku_kumo_trend_m67c7da5a declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD'] and timeframes ['H
+  SKIP ichimoku_kumo_trend_m67c7da5a on UK100 H4: out_of_universe -- ichimoku_kumo_trend_m67c7da5a declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD'] and timeframes ['H4
+  SKIP ichimoku_kumo_trend_m67c7da5a on US500 H4: out_of_universe -- ichimoku_kumo_trend_m67c7da5a declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD'] and timeframes ['H4
+  SKIP ichimoku_kumo_trend_m67c7da5a on XAGUSD H4: out_of_universe -- ichimoku_kumo_trend_m67c7da5a declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD'] and timeframes ['H
+  SKIP ichimoku_kumo_trend_m67c7da5a on XAUUSD H4: out_of_universe -- ichimoku_kumo_trend_m67c7da5a declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD'] and timeframes ['H
+  SKIP macd_ema_trend_hybrid_ma2bc336b on AUDJPY H4: out_of_universe -- macd_ema_trend_hybrid_ma2bc336b declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBP
+  SKIP macd_ema_trend_hybrid_ma2bc336b on EURGBP H4: out_of_universe -- macd_ema_trend_hybrid_ma2bc336b declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBP
+  SKIP macd_ema_trend_hybrid_ma2bc336b on UK100 H4: out_of_universe -- macd_ema_trend_hybrid_ma2bc336b declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJ
+  SKIP macd_ema_trend_hybrid_ma2bc336b on XAGUSD H4: out_of_universe -- macd_ema_trend_hybrid_ma2bc336b declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBP
+  SKIP macd_ema_trend_hybrid_m03d3ee23 on AUDJPY H4: out_of_universe -- macd_ema_trend_hybrid_m03d3ee23 declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBP
+  SKIP macd_ema_trend_hybrid_m03d3ee23 on EURGBP H4: out_of_universe -- macd_ema_trend_hybrid_m03d3ee23 declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBP
+  SKIP macd_ema_trend_hybrid_m03d3ee23 on UK100 H4: out_of_universe -- macd_ema_trend_hybrid_m03d3ee23 declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJ
+  SKIP macd_ema_trend_hybrid_m03d3ee23 on XAGUSD H4: out_of_universe -- macd_ema_trend_hybrid_m03d3ee23 declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBP
+  SKIP macd_ema_trend_hybrid_m3728054d on AUDJPY H4: out_of_universe -- macd_ema_trend_hybrid_m3728054d declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBP
+  SKIP macd_ema_trend_hybrid_m3728054d on EURGBP H4: out_of_universe -- macd_ema_trend_hybrid_m3728054d declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBP
+  SKIP macd_ema_trend_hybrid_m3728054d on UK100 H4: out_of_universe -- macd_ema_trend_hybrid_m3728054d declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJ
+  SKIP macd_ema_trend_hybrid_m3728054d on XAGUSD H4: out_of_universe -- macd_ema_trend_hybrid_m3728054d declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBP
+  SKIP macd_ema_trend_hybrid_m4b9a1dcd on AUDJPY H4: out_of_universe -- macd_ema_trend_hybrid_m4b9a1dcd declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBP
+  SKIP macd_ema_trend_hybrid_m4b9a1dcd on EURGBP H4: out_of_universe -- macd_ema_trend_hybrid_m4b9a1dcd declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBP
+  SKIP macd_ema_trend_hybrid_m4b9a1dcd on UK100 H4: out_of_universe -- macd_ema_trend_hybrid_m4b9a1dcd declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJ
+  SKIP macd_ema_trend_hybrid_m4b9a1dcd on XAGUSD H4: out_of_universe -- macd_ema_trend_hybrid_m4b9a1dcd declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBP
+  SKIP macd_ema_trend_hybrid_m03f1d536 on AUDJPY H4: out_of_universe -- macd_ema_trend_hybrid_m03f1d536 declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBP
+  SKIP macd_ema_trend_hybrid_m03f1d536 on EURGBP H4: out_of_universe -- macd_ema_trend_hybrid_m03f1d536 declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBP
+  SKIP macd_ema_trend_hybrid_m03f1d536 on UK100 H4: out_of_universe -- macd_ema_trend_hybrid_m03f1d536 declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJ
+  SKIP macd_ema_trend_hybrid_m03f1d536 on XAGUSD H4: out_of_universe -- macd_ema_trend_hybrid_m03f1d536 declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBP
+  SKIP macd_ema_trend_hybrid_mb7889927 on AUDJPY H4: out_of_universe -- macd_ema_trend_hybrid_mb7889927 declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBP
+  SKIP macd_ema_trend_hybrid_mb7889927 on EURGBP H4: out_of_universe -- macd_ema_trend_hybrid_mb7889927 declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBP
+  SKIP macd_ema_trend_hybrid_mb7889927 on UK100 H4: out_of_universe -- macd_ema_trend_hybrid_mb7889927 declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJ
+  SKIP macd_ema_trend_hybrid_mb7889927 on XAGUSD H4: out_of_universe -- macd_ema_trend_hybrid_mb7889927 declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBP
+  SKIP macd_ema_trend_hybrid_mc45594a0 on AUDJPY H4: out_of_universe -- macd_ema_trend_hybrid_mc45594a0 declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBP
+  SKIP macd_ema_trend_hybrid_mc45594a0 on EURGBP H4: out_of_universe -- macd_ema_trend_hybrid_mc45594a0 declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBP
+  SKIP macd_ema_trend_hybrid_mc45594a0 on UK100 H4: out_of_universe -- macd_ema_trend_hybrid_mc45594a0 declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJ
+  SKIP macd_ema_trend_hybrid_mc45594a0 on XAGUSD H4: out_of_universe -- macd_ema_trend_hybrid_mc45594a0 declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBP
+  SKIP macd_ema_trend_hybrid_m270351c7 on AUDJPY H4: out_of_universe -- macd_ema_trend_hybrid_m270351c7 declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBP
+  SKIP macd_ema_trend_hybrid_m270351c7 on EURGBP H4: out_of_universe -- macd_ema_trend_hybrid_m270351c7 declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBP
+  SKIP macd_ema_trend_hybrid_m270351c7 on UK100 H4: out_of_universe -- macd_ema_trend_hybrid_m270351c7 declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBPJ
+  SKIP macd_ema_trend_hybrid_m270351c7 on XAGUSD H4: out_of_universe -- macd_ema_trend_hybrid_m270351c7 declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURJPY', 'GBP
+  SKIP macd_ema_trend_hybrid_mbd5c916c on AUDJPY H4: out_of_universe -- macd_ema_trend_hybrid_mbd5c916c declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD'] and timeframes
+  SKIP macd_ema_trend_hybrid_mbd5c916c on DE40 H4: out_of_universe -- macd_ema_trend_hybrid_mbd5c916c declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD'] and timeframes [
+  SKIP macd_ema_trend_hybrid_mbd5c916c on EURGBP H4: out_of_universe -- macd_ema_trend_hybrid_mbd5c916c declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD'] and timeframes
+  SKIP macd_ema_trend_hybrid_mbd5c916c on EURJPY H4: out_of_universe -- macd_ema_trend_hybrid_mbd5c916c declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD'] and timeframes
+  SKIP macd_ema_trend_hybrid_mbd5c916c on GBPJPY H4: out_of_universe -- macd_ema_trend_hybrid_mbd5c916c declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD'] and timeframes
+  SKIP macd_ema_trend_hybrid_mbd5c916c on UK100 H4: out_of_universe -- macd_ema_trend_hybrid_mbd5c916c declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD'] and timeframes 
+  SKIP macd_ema_trend_hybrid_mbd5c916c on US500 H4: out_of_universe -- macd_ema_trend_hybrid_mbd5c916c declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD'] and timeframes 
+  SKIP macd_ema_trend_hybrid_mbd5c916c on XAGUSD H4: out_of_universe -- macd_ema_trend_hybrid_mbd5c916c declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD'] and timeframes
+  SKIP macd_ema_trend_hybrid_mbd5c916c on XAUUSD H4: out_of_universe -- macd_ema_trend_hybrid_mbd5c916c declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD'] and timeframes
+  SKIP rsi_band_mean_reversion_md48b52cb on AUDJPY H4: out_of_universe -- rsi_band_mean_reversion_md48b52cb declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP', 
+  SKIP rsi_band_mean_reversion_md48b52cb on DE40 H4: out_of_universe -- rsi_band_mean_reversion_md48b52cb declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP', 'A
+  SKIP rsi_band_mean_reversion_md48b52cb on EURJPY H4: out_of_universe -- rsi_band_mean_reversion_md48b52cb declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP', 
+  SKIP rsi_band_mean_reversion_md48b52cb on GBPJPY H4: out_of_universe -- rsi_band_mean_reversion_md48b52cb declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP', 
+  SKIP rsi_band_mean_reversion_md48b52cb on UK100 H4: out_of_universe -- rsi_band_mean_reversion_md48b52cb declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP', '
+  SKIP rsi_band_mean_reversion_md48b52cb on US500 H4: out_of_universe -- rsi_band_mean_reversion_md48b52cb declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP', '
+  SKIP rsi_band_mean_reversion_md48b52cb on XAGUSD H4: out_of_universe -- rsi_band_mean_reversion_md48b52cb declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP', 
+  SKIP rsi_band_mean_reversion_md48b52cb on XAUUSD H4: out_of_universe -- rsi_band_mean_reversion_md48b52cb declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP', 
+  SKIP rsi_band_mean_reversion_mdbb3266a on AUDJPY H4: out_of_universe -- rsi_band_mean_reversion_mdbb3266a declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP', 
+  SKIP rsi_band_mean_reversion_mdbb3266a on DE40 H4: out_of_universe -- rsi_band_mean_reversion_mdbb3266a declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP', 'A
+  SKIP rsi_band_mean_reversion_mdbb3266a on EURJPY H4: out_of_universe -- rsi_band_mean_reversion_mdbb3266a declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP', 
+  SKIP rsi_band_mean_reversion_mdbb3266a on GBPJPY H4: out_of_universe -- rsi_band_mean_reversion_mdbb3266a declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP', 
+  SKIP rsi_band_mean_reversion_mdbb3266a on UK100 H4: out_of_universe -- rsi_band_mean_reversion_mdbb3266a declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP', '
+  SKIP rsi_band_mean_reversion_mdbb3266a on US500 H4: out_of_universe -- rsi_band_mean_reversion_mdbb3266a declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP', '
+  SKIP rsi_band_mean_reversion_mdbb3266a on XAGUSD H4: out_of_universe -- rsi_band_mean_reversion_mdbb3266a declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP', 
+  SKIP rsi_band_mean_reversion_mdbb3266a on XAUUSD H4: out_of_universe -- rsi_band_mean_reversion_mdbb3266a declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP', 
+  SKIP rsi_band_mean_reversion_m6e0465f0 on AUDJPY H4: out_of_universe -- rsi_band_mean_reversion_m6e0465f0 declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP', 
+  SKIP rsi_band_mean_reversion_m6e0465f0 on DE40 H4: out_of_universe -- rsi_band_mean_reversion_m6e0465f0 declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP', 'A
+  SKIP rsi_band_mean_reversion_m6e0465f0 on EURJPY H4: out_of_universe -- rsi_band_mean_reversion_m6e0465f0 declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP', 
+  SKIP rsi_band_mean_reversion_m6e0465f0 on GBPJPY H4: out_of_universe -- rsi_band_mean_reversion_m6e0465f0 declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP', 
+  SKIP rsi_band_mean_reversion_m6e0465f0 on UK100 H4: out_of_universe -- rsi_band_mean_reversion_m6e0465f0 declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP', '
+  SKIP rsi_band_mean_reversion_m6e0465f0 on US500 H4: out_of_universe -- rsi_band_mean_reversion_m6e0465f0 declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP', '
+  SKIP rsi_band_mean_reversion_m6e0465f0 on XAGUSD H4: out_of_universe -- rsi_band_mean_reversion_m6e0465f0 declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP', 
+  SKIP rsi_band_mean_reversion_m6e0465f0 on XAUUSD H4: out_of_universe -- rsi_band_mean_reversion_m6e0465f0 declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP', 
+  SKIP rsi_band_mean_reversion_me1d6d436 on AUDJPY H4: out_of_universe -- rsi_band_mean_reversion_me1d6d436 declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP', 
+  SKIP rsi_band_mean_reversion_me1d6d436 on DE40 H4: out_of_universe -- rsi_band_mean_reversion_me1d6d436 declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP', 'A
+  SKIP rsi_band_mean_reversion_me1d6d436 on EURJPY H4: out_of_universe -- rsi_band_mean_reversion_me1d6d436 declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP', 
+  SKIP rsi_band_mean_reversion_me1d6d436 on GBPJPY H4: out_of_universe -- rsi_band_mean_reversion_me1d6d436 declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP', 
+  SKIP rsi_band_mean_reversion_me1d6d436 on UK100 H4: out_of_universe -- rsi_band_mean_reversion_me1d6d436 declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP', '
+  SKIP rsi_band_mean_reversion_me1d6d436 on US500 H4: out_of_universe -- rsi_band_mean_reversion_me1d6d436 declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP', '
+  SKIP rsi_band_mean_reversion_me1d6d436 on XAGUSD H4: out_of_universe -- rsi_band_mean_reversion_me1d6d436 declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP', 
+  SKIP rsi_band_mean_reversion_me1d6d436 on XAUUSD H4: out_of_universe -- rsi_band_mean_reversion_me1d6d436 declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP', 
+  SKIP rsi_band_mean_reversion_m42a36d28 on AUDJPY H4: out_of_universe -- rsi_band_mean_reversion_m42a36d28 declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP', 
+  SKIP rsi_band_mean_reversion_m42a36d28 on DE40 H4: out_of_universe -- rsi_band_mean_reversion_m42a36d28 declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP', 'A
+  SKIP rsi_band_mean_reversion_m42a36d28 on EURJPY H4: out_of_universe -- rsi_band_mean_reversion_m42a36d28 declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP', 
+  SKIP rsi_band_mean_reversion_m42a36d28 on GBPJPY H4: out_of_universe -- rsi_band_mean_reversion_m42a36d28 declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP', 
+  SKIP rsi_band_mean_reversion_m42a36d28 on UK100 H4: out_of_universe -- rsi_band_mean_reversion_m42a36d28 declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP', '
+  SKIP rsi_band_mean_reversion_m42a36d28 on US500 H4: out_of_universe -- rsi_band_mean_reversion_m42a36d28 declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP', '
+  SKIP rsi_band_mean_reversion_m42a36d28 on XAGUSD H4: out_of_universe -- rsi_band_mean_reversion_m42a36d28 declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP', 
+  SKIP rsi_band_mean_reversion_m42a36d28 on XAUUSD H4: out_of_universe -- rsi_band_mean_reversion_m42a36d28 declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP', 
+  SKIP rsi_band_mean_reversion_m7c32d514 on AUDJPY H4: out_of_universe -- rsi_band_mean_reversion_m7c32d514 declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP', 
+  SKIP rsi_band_mean_reversion_m7c32d514 on DE40 H4: out_of_universe -- rsi_band_mean_reversion_m7c32d514 declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP', 'A
+  SKIP rsi_band_mean_reversion_m7c32d514 on EURJPY H4: out_of_universe -- rsi_band_mean_reversion_m7c32d514 declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP', 
+  SKIP rsi_band_mean_reversion_m7c32d514 on GBPJPY H4: out_of_universe -- rsi_band_mean_reversion_m7c32d514 declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP', 
+  SKIP rsi_band_mean_reversion_m7c32d514 on UK100 H4: out_of_universe -- rsi_band_mean_reversion_m7c32d514 declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP', '
+  SKIP rsi_band_mean_reversion_m7c32d514 on US500 H4: out_of_universe -- rsi_band_mean_reversion_m7c32d514 declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP', '
+  SKIP rsi_band_mean_reversion_m7c32d514 on XAGUSD H4: out_of_universe -- rsi_band_mean_reversion_m7c32d514 declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP', 
+  SKIP rsi_band_mean_reversion_m7c32d514 on XAUUSD H4: out_of_universe -- rsi_band_mean_reversion_m7c32d514 declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP', 
+  SKIP rsi_band_mean_reversion_m6113daf1 on AUDJPY H4: out_of_universe -- rsi_band_mean_reversion_m6113daf1 declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD'] and timefr
+  SKIP rsi_band_mean_reversion_m6113daf1 on DE40 H4: out_of_universe -- rsi_band_mean_reversion_m6113daf1 declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD'] and timefram
+  SKIP rsi_band_mean_reversion_m6113daf1 on EURGBP H4: out_of_universe -- rsi_band_mean_reversion_m6113daf1 declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD'] and timefr
+  SKIP rsi_band_mean_reversion_m6113daf1 on EURJPY H4: out_of_universe -- rsi_band_mean_reversion_m6113daf1 declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD'] and timefr
+  SKIP rsi_band_mean_reversion_m6113daf1 on GBPJPY H4: out_of_universe -- rsi_band_mean_reversion_m6113daf1 declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD'] and timefr
+  SKIP rsi_band_mean_reversion_m6113daf1 on UK100 H4: out_of_universe -- rsi_band_mean_reversion_m6113daf1 declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD'] and timefra
+  SKIP rsi_band_mean_reversion_m6113daf1 on US500 H4: out_of_universe -- rsi_band_mean_reversion_m6113daf1 declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD'] and timefra
+  SKIP rsi_band_mean_reversion_m6113daf1 on XAGUSD H4: out_of_universe -- rsi_band_mean_reversion_m6113daf1 declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD'] and timefr
+  SKIP rsi_band_mean_reversion_m6113daf1 on XAUUSD H4: out_of_universe -- rsi_band_mean_reversion_m6113daf1 declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD'] and timefr
+  SKIP rsi_band_mean_reversion_md0807760 on AUDJPY H4: out_of_universe -- rsi_band_mean_reversion_md0807760 declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD'] and timefr
+  SKIP rsi_band_mean_reversion_md0807760 on DE40 H4: out_of_universe -- rsi_band_mean_reversion_md0807760 declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD'] and timefram
+  SKIP rsi_band_mean_reversion_md0807760 on EURGBP H4: out_of_universe -- rsi_band_mean_reversion_md0807760 declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD'] and timefr
+  SKIP rsi_band_mean_reversion_md0807760 on EURJPY H4: out_of_universe -- rsi_band_mean_reversion_md0807760 declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD'] and timefr
+  SKIP rsi_band_mean_reversion_md0807760 on GBPJPY H4: out_of_universe -- rsi_band_mean_reversion_md0807760 declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD'] and timefr
+  SKIP rsi_band_mean_reversion_md0807760 on UK100 H4: out_of_universe -- rsi_band_mean_reversion_md0807760 declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD'] and timefra
+  SKIP rsi_band_mean_reversion_md0807760 on US500 H4: out_of_universe -- rsi_band_mean_reversion_md0807760 declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD'] and timefra
+  SKIP rsi_band_mean_reversion_md0807760 on XAGUSD H4: out_of_universe -- rsi_band_mean_reversion_md0807760 declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD'] and timefr
+  SKIP rsi_band_mean_reversion_md0807760 on XAUUSD H4: out_of_universe -- rsi_band_mean_reversion_md0807760 declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD'] and timefr
+  SKIP rsi_band_mean_reversion_m29180d06 on AUDJPY H4: out_of_universe -- rsi_band_mean_reversion_m29180d06 declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD'] and timefr
+  SKIP rsi_band_mean_reversion_m29180d06 on DE40 H4: out_of_universe -- rsi_band_mean_reversion_m29180d06 declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD'] and timefram
+  SKIP rsi_band_mean_reversion_m29180d06 on EURGBP H4: out_of_universe -- rsi_band_mean_reversion_m29180d06 declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD'] and timefr
+  SKIP rsi_band_mean_reversion_m29180d06 on EURJPY H4: out_of_universe -- rsi_band_mean_reversion_m29180d06 declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD'] and timefr
+  SKIP rsi_band_mean_reversion_m29180d06 on GBPJPY H4: out_of_universe -- rsi_band_mean_reversion_m29180d06 declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD'] and timefr
+  SKIP rsi_band_mean_reversion_m29180d06 on UK100 H4: out_of_universe -- rsi_band_mean_reversion_m29180d06 declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD'] and timefra
+  SKIP rsi_band_mean_reversion_m29180d06 on US500 H4: out_of_universe -- rsi_band_mean_reversion_m29180d06 declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD'] and timefra
+  SKIP rsi_band_mean_reversion_m29180d06 on XAGUSD H4: out_of_universe -- rsi_band_mean_reversion_m29180d06 declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD'] and timefr
+  SKIP rsi_band_mean_reversion_m29180d06 on XAUUSD H4: out_of_universe -- rsi_band_mean_reversion_m29180d06 declares universe ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD'] and timefr
+
+TRUE TRIAL COUNT 7376 (planned 3350 + ledger prior 0 + declared prior 4026)
+  declared prior trials because: K3 pre-registration: 350 declared prior + K1 326 + K2 3350 = 4026; see RESEARCH_LEDGER.md K3 entry
+
+campaign k3_multi_instrument_h4_engine_v3: 542 evaluated, 273 skipped, 0 survived, true trial count 7376
+
+  donchian_breakout_atr on AUDUSD H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -1.60618 at declared defaults is not positive; there is no edge to validate.
+  donchian_breakout_atr on DE40 H4: REJECT at RUNG 0 SANITY -- min_trades: observed 358, required gte 400, short by 42
+  donchian_breakout_atr on EURJPY H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -0.127253 at declared defaults is not positive; there is no edge to validate.
+  donchian_breakout_atr on EURUSD H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -0.876489 at declared defaults is not positive; there is no edge to validate.
+  donchian_breakout_atr on GBPJPY H4: REJECT at RUNG 2 WALK_FORWARD -- walk_forward_efficiency: observed -7.381, required gte 50, short by 57.38
+  donchian_breakout_atr on GBPUSD H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -1.11875 at declared defaults is not positive; there is no edge to validate.
+  donchian_breakout_atr on NZDUSD H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -0.988952 at declared defaults is not positive; there is no edge to validate.
+  donchian_breakout_atr on US500 H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -1.16526 at declared defaults is not positive; there is no edge to validate.
+  donchian_breakout_atr on USDCAD H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -0.270177 at declared defaults is not positive; there is no edge to validate.
+  donchian_breakout_atr on USDCHF H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -0.868505 at declared defaults is not positive; there is no edge to validate.
+  donchian_breakout_atr on USDJPY H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -0.820287 at declared defaults is not positive; there is no edge to validate.
+  donchian_breakout_atr on XAUUSD H4: REJECT at RUNG 2 WALK_FORWARD -- oos_window_hit_rate: observed 0.25, required gte 0.6, short by 0.35
+  fib_golden_pocket_pullback on AUDUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 278, required gte 400, short by 122
+  fib_golden_pocket_pullback on DE40 H4: REJECT at RUNG 0 SANITY -- min_trades: observed 193, required gte 400, short by 207
+  fib_golden_pocket_pullback on EURJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 273, required gte 400, short by 127
+  fib_golden_pocket_pullback on EURUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 261, required gte 400, short by 139
+  fib_golden_pocket_pullback on GBPJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 279, required gte 400, short by 121
+  fib_golden_pocket_pullback on GBPUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 272, required gte 400, short by 128
+  fib_golden_pocket_pullback on NZDUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 257, required gte 400, short by 143
+  fib_golden_pocket_pullback on US500 H4: REJECT at RUNG 0 SANITY -- min_trades: observed 250, required gte 400, short by 150
+  fib_golden_pocket_pullback on USDCAD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 295, required gte 400, short by 105
+  fib_golden_pocket_pullback on USDCHF H4: REJECT at RUNG 0 SANITY -- min_trades: observed 293, required gte 400, short by 107
+  fib_golden_pocket_pullback on USDJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 274, required gte 400, short by 126
+  fib_golden_pocket_pullback on XAUUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 230, required gte 400, short by 170
+  ichimoku_kumo_trend on AUDUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 60, required gte 400, short by 340
+  ichimoku_kumo_trend on DE40 H4: REJECT at RUNG 0 SANITY -- min_trades: observed 47, required gte 400, short by 353
+  ichimoku_kumo_trend on EURJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 69, required gte 400, short by 331
+  ichimoku_kumo_trend on EURUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 59, required gte 400, short by 341
+  ichimoku_kumo_trend on GBPJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 57, required gte 400, short by 343
+  ichimoku_kumo_trend on GBPUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 53, required gte 400, short by 347
+  ichimoku_kumo_trend on NZDUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 66, required gte 400, short by 334
+  ichimoku_kumo_trend on US500 H4: REJECT at RUNG 0 SANITY -- min_trades: observed 43, required gte 400, short by 357
+  ichimoku_kumo_trend on USDCAD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 56, required gte 400, short by 344
+  ichimoku_kumo_trend on USDCHF H4: REJECT at RUNG 0 SANITY -- min_trades: observed 63, required gte 400, short by 337
+  ichimoku_kumo_trend on USDJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 79, required gte 400, short by 321
+  ichimoku_kumo_trend on XAUUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 49, required gte 400, short by 351
+  macd_ema_trend_hybrid on AUDUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 49, required gte 400, short by 351
+  macd_ema_trend_hybrid on DE40 H4: REJECT at RUNG 0 SANITY -- min_trades: observed 31, required gte 400, short by 369
+  macd_ema_trend_hybrid on EURJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 44, required gte 400, short by 356
+  macd_ema_trend_hybrid on EURUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 53, required gte 400, short by 347
+  macd_ema_trend_hybrid on GBPJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 53, required gte 400, short by 347
+  macd_ema_trend_hybrid on GBPUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 68, required gte 400, short by 332
+  macd_ema_trend_hybrid on NZDUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 61, required gte 400, short by 339
+  macd_ema_trend_hybrid on US500 H4: REJECT at RUNG 0 SANITY -- min_trades: observed 55, required gte 400, short by 345
+  macd_ema_trend_hybrid on USDCAD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 60, required gte 400, short by 340
+  macd_ema_trend_hybrid on USDCHF H4: REJECT at RUNG 0 SANITY -- min_trades: observed 55, required gte 400, short by 345
+  macd_ema_trend_hybrid on USDJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 44, required gte 400, short by 356
+  macd_ema_trend_hybrid on XAUUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 41, required gte 400, short by 359
+  rsi_band_mean_reversion on AUDUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 193, required gte 400, short by 207
+  rsi_band_mean_reversion on EURGBP H4: REJECT at RUNG 0 SANITY -- min_trades: observed 173, required gte 400, short by 227
+  rsi_band_mean_reversion on EURUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 135, required gte 400, short by 265
+  rsi_band_mean_reversion on GBPUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 170, required gte 400, short by 230
+  rsi_band_mean_reversion on NZDUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 182, required gte 400, short by 218
+  rsi_band_mean_reversion on USDCAD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 137, required gte 400, short by 263
+  rsi_band_mean_reversion on USDCHF H4: REJECT at RUNG 0 SANITY -- min_trades: observed 155, required gte 400, short by 245
+  rsi_band_mean_reversion on USDJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 157, required gte 400, short by 243
+  donchian_breakout_atr_m3ecf77ae on AUDUSD H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -1.60618 at declared defaults is not positive; there is no edge to validate.
+  donchian_breakout_atr_m3ecf77ae on DE40 H4: REJECT at RUNG 0 SANITY -- min_trades: observed 358, required gte 400, short by 42
+  donchian_breakout_atr_m3ecf77ae on EURJPY H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -0.127253 at declared defaults is not positive; there is no edge to validate.
+  donchian_breakout_atr_m3ecf77ae on EURUSD H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -0.876489 at declared defaults is not positive; there is no edge to validate.
+  donchian_breakout_atr_m3ecf77ae on GBPJPY H4: REJECT at RUNG 2 WALK_FORWARD -- walk_forward_efficiency: observed -7.381, required gte 50, short by 57.38
+  donchian_breakout_atr_m3ecf77ae on GBPUSD H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -1.11875 at declared defaults is not positive; there is no edge to validate.
+  donchian_breakout_atr_m3ecf77ae on NZDUSD H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -0.988952 at declared defaults is not positive; there is no edge to validate.
+  donchian_breakout_atr_m3ecf77ae on US500 H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -1.16526 at declared defaults is not positive; there is no edge to validate.
+  donchian_breakout_atr_m3ecf77ae on USDCAD H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -0.270177 at declared defaults is not positive; there is no edge to validate.
+  donchian_breakout_atr_m3ecf77ae on USDCHF H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -0.868505 at declared defaults is not positive; there is no edge to validate.
+  donchian_breakout_atr_m3ecf77ae on USDJPY H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -0.820287 at declared defaults is not positive; there is no edge to validate.
+  donchian_breakout_atr_m3ecf77ae on XAUUSD H4: REJECT at RUNG 2 WALK_FORWARD -- oos_window_hit_rate: observed 0.25, required gte 0.6, short by 0.35
+  donchian_breakout_atr_mbdfe4742 on AUDUSD H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -1.32239 at declared defaults is not positive; there is no edge to validate.
+  donchian_breakout_atr_mbdfe4742 on DE40 H4: REJECT at RUNG 2 WALK_FORWARD -- walk_forward_efficiency: observed 17.08, required gte 50, short by 32.92
+  donchian_breakout_atr_mbdfe4742 on EURJPY H4: REJECT at RUNG 2 WALK_FORWARD -- walk_forward_efficiency: observed -9.31, required gte 50, short by 59.31
+  donchian_breakout_atr_mbdfe4742 on EURUSD H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -0.587968 at declared defaults is not positive; there is no edge to validate.
+  donchian_breakout_atr_mbdfe4742 on GBPJPY H4: REJECT at RUNG 2 WALK_FORWARD -- walk_forward_efficiency: observed -20.06, required gte 50, short by 70.06
+  donchian_breakout_atr_mbdfe4742 on GBPUSD H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -0.714063 at declared defaults is not positive; there is no edge to validate.
+  donchian_breakout_atr_mbdfe4742 on NZDUSD H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -1.03238 at declared defaults is not positive; there is no edge to validate.
+  donchian_breakout_atr_mbdfe4742 on US500 H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -1.05527 at declared defaults is not positive; there is no edge to validate.
+  donchian_breakout_atr_mbdfe4742 on USDCAD H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -0.467442 at declared defaults is not positive; there is no edge to validate.
+  donchian_breakout_atr_mbdfe4742 on USDCHF H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -0.839418 at declared defaults is not positive; there is no edge to validate.
+  donchian_breakout_atr_mbdfe4742 on USDJPY H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -0.90431 at declared defaults is not positive; there is no edge to validate.
+  donchian_breakout_atr_mbdfe4742 on XAUUSD H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -0.0365832 at declared defaults is not positive; there is no edge to validate.
+  donchian_breakout_atr_m3c934a3b on AUDUSD H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -1.63661 at declared defaults is not positive; there is no edge to validate.
+  donchian_breakout_atr_m3c934a3b on DE40 H4: REJECT at RUNG 0 SANITY -- min_trades: observed 380, required gte 400, short by 20
+  donchian_breakout_atr_m3c934a3b on EURJPY H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -0.167418 at declared defaults is not positive; there is no edge to validate.
+  donchian_breakout_atr_m3c934a3b on EURUSD H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -0.744554 at declared defaults is not positive; there is no edge to validate.
+  donchian_breakout_atr_m3c934a3b on GBPJPY H4: REJECT at RUNG 2 WALK_FORWARD -- walk_forward_efficiency: observed 42.53, required gte 50, short by 7.471
+  donchian_breakout_atr_m3c934a3b on GBPUSD H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -0.911907 at declared defaults is not positive; there is no edge to validate.
+  donchian_breakout_atr_m3c934a3b on NZDUSD H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -0.615493 at declared defaults is not positive; there is no edge to validate.
+  donchian_breakout_atr_m3c934a3b on US500 H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -1.02426 at declared defaults is not positive; there is no edge to validate.
+  donchian_breakout_atr_m3c934a3b on USDCAD H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -0.165885 at declared defaults is not positive; there is no edge to validate.
+  donchian_breakout_atr_m3c934a3b on USDCHF H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -0.447282 at declared defaults is not positive; there is no edge to validate.
+  donchian_breakout_atr_m3c934a3b on USDJPY H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -0.866054 at declared defaults is not positive; there is no edge to validate.
+  donchian_breakout_atr_m3c934a3b on XAUUSD H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -0.634884 at declared defaults is not positive; there is no edge to validate.
+  donchian_breakout_atr_m76dbb4f7 on AUDUSD H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -0.732281 at declared defaults is not positive; there is no edge to validate.
+  donchian_breakout_atr_m76dbb4f7 on DE40 H4: REJECT at RUNG 0 SANITY -- min_trades: observed 262, required gte 400, short by 138
+  donchian_breakout_atr_m76dbb4f7 on EURJPY H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -0.805452 at declared defaults is not positive; there is no edge to validate.
+  donchian_breakout_atr_m76dbb4f7 on EURUSD H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -0.99483 at declared defaults is not positive; there is no edge to validate.
+  donchian_breakout_atr_m76dbb4f7 on GBPJPY H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -0.0476694 at declared defaults is not positive; there is no edge to validate.
+  donchian_breakout_atr_m76dbb4f7 on GBPUSD H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -0.844291 at declared defaults is not positive; there is no edge to validate.
+  donchian_breakout_atr_m76dbb4f7 on NZDUSD H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -1.36594 at declared defaults is not positive; there is no edge to validate.
+  donchian_breakout_atr_m76dbb4f7 on US500 H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -1.1682 at declared defaults is not positive; there is no edge to validate.
+  donchian_breakout_atr_m76dbb4f7 on USDCAD H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -0.994088 at declared defaults is not positive; there is no edge to validate.
+  donchian_breakout_atr_m76dbb4f7 on USDCHF H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -1.0276 at declared defaults is not positive; there is no edge to validate.
+  donchian_breakout_atr_m76dbb4f7 on USDJPY H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -1.13915 at declared defaults is not positive; there is no edge to validate.
+  donchian_breakout_atr_m76dbb4f7 on XAUUSD H4: REJECT at RUNG 2 WALK_FORWARD -- walk_forward_efficiency: observed nan, required gte 50
+  donchian_breakout_atr_m427fba0e on AUDUSD H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -1.01575 at declared defaults is not positive; there is no edge to validate.
+  donchian_breakout_atr_m427fba0e on DE40 H4: REJECT at RUNG 0 SANITY -- min_trades: observed 208, required gte 400, short by 192
+  donchian_breakout_atr_m427fba0e on EURJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 370, required gte 400, short by 30
+  donchian_breakout_atr_m427fba0e on EURUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 367, required gte 400, short by 33
+  donchian_breakout_atr_m427fba0e on GBPJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 391, required gte 400, short by 9
+  donchian_breakout_atr_m427fba0e on GBPUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 386, required gte 400, short by 14
+  donchian_breakout_atr_m427fba0e on NZDUSD H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -1.51589 at declared defaults is not positive; there is no edge to validate.
+  donchian_breakout_atr_m427fba0e on US500 H4: REJECT at RUNG 0 SANITY -- min_trades: observed 382, required gte 400, short by 18
+  donchian_breakout_atr_m427fba0e on USDCAD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 379, required gte 400, short by 21
+  donchian_breakout_atr_m427fba0e on USDCHF H4: REJECT at RUNG 0 SANITY -- min_trades: observed 383, required gte 400, short by 17
+  donchian_breakout_atr_m427fba0e on USDJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 340, required gte 400, short by 60
+  donchian_breakout_atr_m427fba0e on XAUUSD H4: REJECT at RUNG 4 ROBUSTNESS -- parameter_plateau: observed inf, required lte 1.25
+  donchian_breakout_atr_m79f18824 on AUDUSD H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -1.60618 at declared defaults is not positive; there is no edge to validate.
+  donchian_breakout_atr_m79f18824 on DE40 H4: REJECT at RUNG 0 SANITY -- min_trades: observed 358, required gte 400, short by 42
+  donchian_breakout_atr_m79f18824 on EURJPY H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -0.127253 at declared defaults is not positive; there is no edge to validate.
+  donchian_breakout_atr_m79f18824 on EURUSD H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -0.876489 at declared defaults is not positive; there is no edge to validate.
+  donchian_breakout_atr_m79f18824 on GBPJPY H4: REJECT at RUNG 2 WALK_FORWARD -- walk_forward_efficiency: observed -6.292, required gte 50, short by 56.29
+  donchian_breakout_atr_m79f18824 on GBPUSD H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -1.11875 at declared defaults is not positive; there is no edge to validate.
+  donchian_breakout_atr_m79f18824 on NZDUSD H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -0.988952 at declared defaults is not positive; there is no edge to validate.
+  donchian_breakout_atr_m79f18824 on US500 H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -1.16526 at declared defaults is not positive; there is no edge to validate.
+  donchian_breakout_atr_m79f18824 on USDCAD H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -0.270177 at declared defaults is not positive; there is no edge to validate.
+  donchian_breakout_atr_m79f18824 on USDCHF H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -0.868505 at declared defaults is not positive; there is no edge to validate.
+  donchian_breakout_atr_m79f18824 on USDJPY H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -0.820287 at declared defaults is not positive; there is no edge to validate.
+  donchian_breakout_atr_m79f18824 on XAUUSD H4: REJECT at RUNG 2 WALK_FORWARD -- oos_window_hit_rate: observed 0.25, required gte 0.6, short by 0.35
+  donchian_breakout_atr_mf2553d34 on AUDUSD H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -1.60625 at declared defaults is not positive; there is no edge to validate.
+  donchian_breakout_atr_mf2553d34 on DE40 H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -0.32285 at declared defaults is not positive; there is no edge to validate.
+  donchian_breakout_atr_mf2553d34 on EURJPY H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -0.150925 at declared defaults is not positive; there is no edge to validate.
+  donchian_breakout_atr_mf2553d34 on EURUSD H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -1.14951 at declared defaults is not positive; there is no edge to validate.
+  donchian_breakout_atr_mf2553d34 on GBPJPY H4: REJECT at RUNG 2 WALK_FORWARD -- walk_forward_efficiency: observed -18.48, required gte 50, short by 68.48
+  donchian_breakout_atr_mf2553d34 on GBPUSD H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -1.08977 at declared defaults is not positive; there is no edge to validate.
+  donchian_breakout_atr_mf2553d34 on NZDUSD H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -0.892722 at declared defaults is not positive; there is no edge to validate.
+  donchian_breakout_atr_mf2553d34 on US500 H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -1.30608 at declared defaults is not positive; there is no edge to validate.
+  donchian_breakout_atr_mf2553d34 on USDCAD H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -0.251849 at declared defaults is not positive; there is no edge to validate.
+  donchian_breakout_atr_mf2553d34 on USDCHF H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -0.474063 at declared defaults is not positive; there is no edge to validate.
+  donchian_breakout_atr_mf2553d34 on USDJPY H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -0.892337 at declared defaults is not positive; there is no edge to validate.
+  donchian_breakout_atr_mf2553d34 on XAUUSD H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -0.00400073 at declared defaults is not positive; there is no edge to validate.
+  donchian_breakout_atr_m30945c80 on AUDUSD H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -1.06375 at declared defaults is not positive; there is no edge to validate.
+  donchian_breakout_atr_m30945c80 on DE40 H4: REJECT at RUNG 0 SANITY -- min_trades: observed 328, required gte 400, short by 72
+  donchian_breakout_atr_m30945c80 on EURJPY H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -1.44155 at declared defaults is not positive; there is no edge to validate.
+  donchian_breakout_atr_m30945c80 on EURUSD H4: REJECT at RUNG 1 IN_SAMPLE_SCREEN -- RUNG 1 IN_SAMPLE_SCREEN: no parameterisation inside the domains the document declares is positive in sample on sharpe; there is nothing f
+  donchian_breakout_atr_m30945c80 on GBPJPY H4: REJECT at RUNG 1 IN_SAMPLE_SCREEN -- RUNG 1 IN_SAMPLE_SCREEN: no parameterisation inside the domains the document declares is positive in sample on sharpe; there is nothing f
+  donchian_breakout_atr_m30945c80 on GBPUSD H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -1.82054 at declared defaults is not positive; there is no edge to validate.
+  donchian_breakout_atr_m30945c80 on NZDUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 347, required gte 400, short by 53
+  donchian_breakout_atr_m30945c80 on US500 H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -1.59801 at declared defaults is not positive; there is no edge to validate.
+  donchian_breakout_atr_m30945c80 on USDCAD H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -0.949037 at declared defaults is not positive; there is no edge to validate.
+  donchian_breakout_atr_m30945c80 on USDCHF H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -2.1008 at declared defaults is not positive; there is no edge to validate.
+  donchian_breakout_atr_m30945c80 on USDJPY H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -1.27183 at declared defaults is not positive; there is no edge to validate.
+  donchian_breakout_atr_m30945c80 on XAUUSD H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -1.39978 at declared defaults is not positive; there is no edge to validate.
+  donchian_breakout_atr_m217dad55 on AUDUSD H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -1.37811 at declared defaults is not positive; there is no edge to validate.
+  donchian_breakout_atr_m217dad55 on DE40 H4: REJECT at RUNG 0 SANITY -- min_trades: observed 226, required gte 400, short by 174
+  donchian_breakout_atr_m217dad55 on EURJPY H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -0.025867 at declared defaults is not positive; there is no edge to validate.
+  donchian_breakout_atr_m217dad55 on EURUSD H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -0.939387 at declared defaults is not positive; there is no edge to validate.
+  donchian_breakout_atr_m217dad55 on GBPJPY H4: REJECT at RUNG 5 DEFLATION -- deflated_sharpe: observed 0.001595, required gt 0.95, short by 0.9484
+  donchian_breakout_atr_m217dad55 on GBPUSD H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -0.595776 at declared defaults is not positive; there is no edge to validate.
+  donchian_breakout_atr_m217dad55 on NZDUSD H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -1.17934 at declared defaults is not positive; there is no edge to validate.
+  donchian_breakout_atr_m217dad55 on US500 H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -1.35017 at declared defaults is not positive; there is no edge to validate.
+  donchian_breakout_atr_m217dad55 on USDCAD H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -0.442095 at declared defaults is not positive; there is no edge to validate.
+  donchian_breakout_atr_m217dad55 on USDCHF H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -0.641693 at declared defaults is not positive; there is no edge to validate.
+  donchian_breakout_atr_m217dad55 on USDJPY H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -0.982335 at declared defaults is not positive; there is no edge to validate.
+  donchian_breakout_atr_m217dad55 on XAUUSD H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -0.0904837 at declared defaults is not positive; there is no edge to validate.
+  donchian_breakout_atr_m4d42994e on AUDUSD H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -1.05859 at declared defaults is not positive; there is no edge to validate.
+  donchian_breakout_atr_m4d42994e on EURUSD H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -0.482876 at declared defaults is not positive; there is no edge to validate.
+  donchian_breakout_atr_m4d42994e on GBPUSD H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -1.83338 at declared defaults is not positive; there is no edge to validate.
+  donchian_breakout_atr_m4d42994e on NZDUSD H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -0.928092 at declared defaults is not positive; there is no edge to validate.
+  donchian_breakout_atr_m4d42994e on USDCAD H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -0.870538 at declared defaults is not positive; there is no edge to validate.
+  donchian_breakout_atr_m4d42994e on USDCHF H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -1.13979 at declared defaults is not positive; there is no edge to validate.
+  donchian_breakout_atr_m4d42994e on USDJPY H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -1.04136 at declared defaults is not positive; there is no edge to validate.
+  fib_golden_pocket_pullback_ma8f9f32b on AUDUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 278, required gte 400, short by 122
+  fib_golden_pocket_pullback_ma8f9f32b on DE40 H4: REJECT at RUNG 0 SANITY -- min_trades: observed 193, required gte 400, short by 207
+  fib_golden_pocket_pullback_ma8f9f32b on EURJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 273, required gte 400, short by 127
+  fib_golden_pocket_pullback_ma8f9f32b on EURUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 261, required gte 400, short by 139
+  fib_golden_pocket_pullback_ma8f9f32b on GBPJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 279, required gte 400, short by 121
+  fib_golden_pocket_pullback_ma8f9f32b on GBPUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 272, required gte 400, short by 128
+  fib_golden_pocket_pullback_ma8f9f32b on NZDUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 257, required gte 400, short by 143
+  fib_golden_pocket_pullback_ma8f9f32b on US500 H4: REJECT at RUNG 0 SANITY -- min_trades: observed 250, required gte 400, short by 150
+  fib_golden_pocket_pullback_ma8f9f32b on USDCAD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 295, required gte 400, short by 105
+  fib_golden_pocket_pullback_ma8f9f32b on USDCHF H4: REJECT at RUNG 0 SANITY -- min_trades: observed 293, required gte 400, short by 107
+  fib_golden_pocket_pullback_ma8f9f32b on USDJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 274, required gte 400, short by 126
+  fib_golden_pocket_pullback_ma8f9f32b on XAUUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 230, required gte 400, short by 170
+  fib_golden_pocket_pullback_md15c64ac on AUDUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 260, required gte 400, short by 140
+  fib_golden_pocket_pullback_md15c64ac on DE40 H4: REJECT at RUNG 0 SANITY -- min_trades: observed 207, required gte 400, short by 193
+  fib_golden_pocket_pullback_md15c64ac on EURJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 235, required gte 400, short by 165
+  fib_golden_pocket_pullback_md15c64ac on EURUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 220, required gte 400, short by 180
+  fib_golden_pocket_pullback_md15c64ac on GBPJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 252, required gte 400, short by 148
+  fib_golden_pocket_pullback_md15c64ac on GBPUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 237, required gte 400, short by 163
+  fib_golden_pocket_pullback_md15c64ac on NZDUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 234, required gte 400, short by 166
+  fib_golden_pocket_pullback_md15c64ac on US500 H4: REJECT at RUNG 0 SANITY -- min_trades: observed 228, required gte 400, short by 172
+  fib_golden_pocket_pullback_md15c64ac on USDCAD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 248, required gte 400, short by 152
+  fib_golden_pocket_pullback_md15c64ac on USDCHF H4: REJECT at RUNG 0 SANITY -- min_trades: observed 239, required gte 400, short by 161
+  fib_golden_pocket_pullback_md15c64ac on USDJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 236, required gte 400, short by 164
+  fib_golden_pocket_pullback_md15c64ac on XAUUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 214, required gte 400, short by 186
+  fib_golden_pocket_pullback_mb82cde01 on AUDUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 270, required gte 400, short by 130
+  fib_golden_pocket_pullback_mb82cde01 on DE40 H4: REJECT at RUNG 0 SANITY -- min_trades: observed 179, required gte 400, short by 221
+  fib_golden_pocket_pullback_mb82cde01 on EURJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 268, required gte 400, short by 132
+  fib_golden_pocket_pullback_mb82cde01 on EURUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 253, required gte 400, short by 147
+  fib_golden_pocket_pullback_mb82cde01 on GBPJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 274, required gte 400, short by 126
+  fib_golden_pocket_pullback_mb82cde01 on GBPUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 262, required gte 400, short by 138
+  fib_golden_pocket_pullback_mb82cde01 on NZDUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 244, required gte 400, short by 156
+  fib_golden_pocket_pullback_mb82cde01 on US500 H4: REJECT at RUNG 0 SANITY -- min_trades: observed 236, required gte 400, short by 164
+  fib_golden_pocket_pullback_mb82cde01 on USDCAD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 277, required gte 400, short by 123
+  fib_golden_pocket_pullback_mb82cde01 on USDCHF H4: REJECT at RUNG 0 SANITY -- min_trades: observed 283, required gte 400, short by 117
+  fib_golden_pocket_pullback_mb82cde01 on USDJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 259, required gte 400, short by 141
+  fib_golden_pocket_pullback_mb82cde01 on XAUUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 218, required gte 400, short by 182
+  fib_golden_pocket_pullback_mdd2357fa on AUDUSD H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -0.708947 at declared defaults is not positive; there is no edge to validate.
+  fib_golden_pocket_pullback_mdd2357fa on DE40 H4: REJECT at RUNG 0 SANITY -- min_trades: observed 271, required gte 400, short by 129
+  fib_golden_pocket_pullback_mdd2357fa on EURJPY H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -1.29393 at declared defaults is not positive; there is no edge to validate.
+  fib_golden_pocket_pullback_mdd2357fa on EURUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 388, required gte 400, short by 12
+  fib_golden_pocket_pullback_mdd2357fa on GBPJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 389, required gte 400, short by 11
+  fib_golden_pocket_pullback_mdd2357fa on GBPUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 377, required gte 400, short by 23
+  fib_golden_pocket_pullback_mdd2357fa on NZDUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 381, required gte 400, short by 19
+  fib_golden_pocket_pullback_mdd2357fa on US500 H4: REJECT at RUNG 0 SANITY -- min_trades: observed 333, required gte 400, short by 67
+  fib_golden_pocket_pullback_mdd2357fa on USDCAD H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -0.910511 at declared defaults is not positive; there is no edge to validate.
+  fib_golden_pocket_pullback_mdd2357fa on USDCHF H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -0.934842 at declared defaults is not positive; there is no edge to validate.
+  fib_golden_pocket_pullback_mdd2357fa on USDJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 387, required gte 400, short by 13
+  fib_golden_pocket_pullback_mdd2357fa on XAUUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 308, required gte 400, short by 92
+  fib_golden_pocket_pullback_md3507b8f on AUDUSD H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -0.848867 at declared defaults is not positive; there is no edge to validate.
+  fib_golden_pocket_pullback_md3507b8f on DE40 H4: REJECT at RUNG 0 SANITY -- min_trades: observed 249, required gte 400, short by 151
+  fib_golden_pocket_pullback_md3507b8f on EURJPY H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -0.79112 at declared defaults is not positive; there is no edge to validate.
+  fib_golden_pocket_pullback_md3507b8f on EURUSD H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -0.83356 at declared defaults is not positive; there is no edge to validate.
+  fib_golden_pocket_pullback_md3507b8f on GBPJPY H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -1.51138 at declared defaults is not positive; there is no edge to validate.
+  fib_golden_pocket_pullback_md3507b8f on GBPUSD H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -1.3099 at declared defaults is not positive; there is no edge to validate.
+  fib_golden_pocket_pullback_md3507b8f on NZDUSD H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -1.21268 at declared defaults is not positive; there is no edge to validate.
+  fib_golden_pocket_pullback_md3507b8f on US500 H4: REJECT at RUNG 0 SANITY -- min_trades: observed 368, required gte 400, short by 32
+  fib_golden_pocket_pullback_md3507b8f on USDCAD H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -0.653795 at declared defaults is not positive; there is no edge to validate.
+  fib_golden_pocket_pullback_md3507b8f on USDCHF H4: REJECT at RUNG 0 SANITY -- RUNG 0 SANITY: expectancy -1.17594 at declared defaults is not positive; there is no edge to validate.
+  fib_golden_pocket_pullback_md3507b8f on USDJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 341, required gte 400, short by 59
+  fib_golden_pocket_pullback_md3507b8f on XAUUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 375, required gte 400, short by 25
+  fib_golden_pocket_pullback_m88fd2d1c on AUDUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 62, required gte 400, short by 338
+  fib_golden_pocket_pullback_m88fd2d1c on DE40 H4: REJECT at RUNG 0 SANITY -- min_trades: observed 52, required gte 400, short by 348
+  fib_golden_pocket_pullback_m88fd2d1c on EURJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 54, required gte 400, short by 346
+  fib_golden_pocket_pullback_m88fd2d1c on EURUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 61, required gte 400, short by 339
+  fib_golden_pocket_pullback_m88fd2d1c on GBPJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 70, required gte 400, short by 330
+  fib_golden_pocket_pullback_m88fd2d1c on GBPUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 64, required gte 400, short by 336
+  fib_golden_pocket_pullback_m88fd2d1c on NZDUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 61, required gte 400, short by 339
+  fib_golden_pocket_pullback_m88fd2d1c on US500 H4: REJECT at RUNG 0 SANITY -- min_trades: observed 66, required gte 400, short by 334
+  fib_golden_pocket_pullback_m88fd2d1c on USDCAD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 68, required gte 400, short by 332
+  fib_golden_pocket_pullback_m88fd2d1c on USDCHF H4: REJECT at RUNG 0 SANITY -- min_trades: observed 68, required gte 400, short by 332
+  fib_golden_pocket_pullback_m88fd2d1c on USDJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 60, required gte 400, short by 340
+  fib_golden_pocket_pullback_m88fd2d1c on XAUUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 49, required gte 400, short by 351
+  fib_golden_pocket_pullback_me01e2d1a on AUDUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 278, required gte 400, short by 122
+  fib_golden_pocket_pullback_me01e2d1a on DE40 H4: REJECT at RUNG 0 SANITY -- min_trades: observed 193, required gte 400, short by 207
+  fib_golden_pocket_pullback_me01e2d1a on EURJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 273, required gte 400, short by 127
+  fib_golden_pocket_pullback_me01e2d1a on EURUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 261, required gte 400, short by 139
+  fib_golden_pocket_pullback_me01e2d1a on GBPJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 279, required gte 400, short by 121
+  fib_golden_pocket_pullback_me01e2d1a on GBPUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 272, required gte 400, short by 128
+  fib_golden_pocket_pullback_me01e2d1a on NZDUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 257, required gte 400, short by 143
+  fib_golden_pocket_pullback_me01e2d1a on US500 H4: REJECT at RUNG 0 SANITY -- min_trades: observed 250, required gte 400, short by 150
+  fib_golden_pocket_pullback_me01e2d1a on USDCAD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 295, required gte 400, short by 105
+  fib_golden_pocket_pullback_me01e2d1a on USDCHF H4: REJECT at RUNG 0 SANITY -- min_trades: observed 293, required gte 400, short by 107
+  fib_golden_pocket_pullback_me01e2d1a on USDJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 274, required gte 400, short by 126
+  fib_golden_pocket_pullback_me01e2d1a on XAUUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 230, required gte 400, short by 170
+  fib_golden_pocket_pullback_m76354e7e on AUDUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 268, required gte 400, short by 132
+  fib_golden_pocket_pullback_m76354e7e on DE40 H4: REJECT at RUNG 0 SANITY -- min_trades: observed 159, required gte 400, short by 241
+  fib_golden_pocket_pullback_m76354e7e on EURJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 260, required gte 400, short by 140
+  fib_golden_pocket_pullback_m76354e7e on EURUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 258, required gte 400, short by 142
+  fib_golden_pocket_pullback_m76354e7e on GBPJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 273, required gte 400, short by 127
+  fib_golden_pocket_pullback_m76354e7e on GBPUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 261, required gte 400, short by 139
+  fib_golden_pocket_pullback_m76354e7e on NZDUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 236, required gte 400, short by 164
+  fib_golden_pocket_pullback_m76354e7e on US500 H4: REJECT at RUNG 0 SANITY -- min_trades: observed 240, required gte 400, short by 160
+  fib_golden_pocket_pullback_m76354e7e on USDCAD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 274, required gte 400, short by 126
+  fib_golden_pocket_pullback_m76354e7e on USDCHF H4: REJECT at RUNG 0 SANITY -- min_trades: observed 273, required gte 400, short by 127
+  fib_golden_pocket_pullback_m76354e7e on USDJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 257, required gte 400, short by 143
+  fib_golden_pocket_pullback_m76354e7e on XAUUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 217, required gte 400, short by 183
+  fib_golden_pocket_pullback_mb73e28fd on AUDUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 247, required gte 400, short by 153
+  fib_golden_pocket_pullback_mb73e28fd on DE40 H4: REJECT at RUNG 0 SANITY -- min_trades: observed 120, required gte 400, short by 280
+  fib_golden_pocket_pullback_mb73e28fd on EURJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 240, required gte 400, short by 160
+  fib_golden_pocket_pullback_mb73e28fd on EURUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 238, required gte 400, short by 162
+  fib_golden_pocket_pullback_mb73e28fd on GBPJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 251, required gte 400, short by 149
+  fib_golden_pocket_pullback_mb73e28fd on GBPUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 247, required gte 400, short by 153
+  fib_golden_pocket_pullback_mb73e28fd on NZDUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 215, required gte 400, short by 185
+  fib_golden_pocket_pullback_mb73e28fd on US500 H4: REJECT at RUNG 0 SANITY -- min_trades: observed 210, required gte 400, short by 190
+  fib_golden_pocket_pullback_mb73e28fd on USDCAD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 256, required gte 400, short by 144
+  fib_golden_pocket_pullback_mb73e28fd on USDCHF H4: REJECT at RUNG 0 SANITY -- min_trades: observed 254, required gte 400, short by 146
+  fib_golden_pocket_pullback_mb73e28fd on USDJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 233, required gte 400, short by 167
+  fib_golden_pocket_pullback_mb73e28fd on XAUUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 200, required gte 400, short by 200
+  ichimoku_kumo_trend_m689694c1 on AUDUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 60, required gte 400, short by 340
+  ichimoku_kumo_trend_m689694c1 on DE40 H4: REJECT at RUNG 0 SANITY -- min_trades: observed 46, required gte 400, short by 354
+  ichimoku_kumo_trend_m689694c1 on EURJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 68, required gte 400, short by 332
+  ichimoku_kumo_trend_m689694c1 on EURUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 59, required gte 400, short by 341
+  ichimoku_kumo_trend_m689694c1 on GBPJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 56, required gte 400, short by 344
+  ichimoku_kumo_trend_m689694c1 on GBPUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 53, required gte 400, short by 347
+  ichimoku_kumo_trend_m689694c1 on NZDUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 66, required gte 400, short by 334
+  ichimoku_kumo_trend_m689694c1 on US500 H4: REJECT at RUNG 0 SANITY -- min_trades: observed 43, required gte 400, short by 357
+  ichimoku_kumo_trend_m689694c1 on USDCAD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 56, required gte 400, short by 344
+  ichimoku_kumo_trend_m689694c1 on USDCHF H4: REJECT at RUNG 0 SANITY -- min_trades: observed 63, required gte 400, short by 337
+  ichimoku_kumo_trend_m689694c1 on USDJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 78, required gte 400, short by 322
+  ichimoku_kumo_trend_m689694c1 on XAUUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 49, required gte 400, short by 351
+  ichimoku_kumo_trend_m4195c8bf on AUDUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 59, required gte 400, short by 341
+  ichimoku_kumo_trend_m4195c8bf on DE40 H4: REJECT at RUNG 0 SANITY -- min_trades: observed 35, required gte 400, short by 365
+  ichimoku_kumo_trend_m4195c8bf on EURJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 66, required gte 400, short by 334
+  ichimoku_kumo_trend_m4195c8bf on EURUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 59, required gte 400, short by 341
+  ichimoku_kumo_trend_m4195c8bf on GBPJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 56, required gte 400, short by 344
+  ichimoku_kumo_trend_m4195c8bf on GBPUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 52, required gte 400, short by 348
+  ichimoku_kumo_trend_m4195c8bf on NZDUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 63, required gte 400, short by 337
+  ichimoku_kumo_trend_m4195c8bf on US500 H4: REJECT at RUNG 0 SANITY -- min_trades: observed 43, required gte 400, short by 357
+  ichimoku_kumo_trend_m4195c8bf on USDCAD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 55, required gte 400, short by 345
+  ichimoku_kumo_trend_m4195c8bf on USDCHF H4: REJECT at RUNG 0 SANITY -- min_trades: observed 60, required gte 400, short by 340
+  ichimoku_kumo_trend_m4195c8bf on USDJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 77, required gte 400, short by 323
+  ichimoku_kumo_trend_m4195c8bf on XAUUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 48, required gte 400, short by 352
+  ichimoku_kumo_trend_m8fbcd36c on AUDUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 60, required gte 400, short by 340
+  ichimoku_kumo_trend_m8fbcd36c on DE40 H4: REJECT at RUNG 0 SANITY -- min_trades: observed 47, required gte 400, short by 353
+  ichimoku_kumo_trend_m8fbcd36c on EURJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 69, required gte 400, short by 331
+  ichimoku_kumo_trend_m8fbcd36c on EURUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 59, required gte 400, short by 341
+  ichimoku_kumo_trend_m8fbcd36c on GBPJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 57, required gte 400, short by 343
+  ichimoku_kumo_trend_m8fbcd36c on GBPUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 53, required gte 400, short by 347
+  ichimoku_kumo_trend_m8fbcd36c on NZDUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 66, required gte 400, short by 334
+  ichimoku_kumo_trend_m8fbcd36c on US500 H4: REJECT at RUNG 0 SANITY -- min_trades: observed 44, required gte 400, short by 356
+  ichimoku_kumo_trend_m8fbcd36c on USDCAD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 56, required gte 400, short by 344
+  ichimoku_kumo_trend_m8fbcd36c on USDCHF H4: REJECT at RUNG 0 SANITY -- min_trades: observed 63, required gte 400, short by 337
+  ichimoku_kumo_trend_m8fbcd36c on USDJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 79, required gte 400, short by 321
+  ichimoku_kumo_trend_m8fbcd36c on XAUUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 49, required gte 400, short by 351
+  ichimoku_kumo_trend_ma4c92c38 on AUDUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 38, required gte 400, short by 362
+  ichimoku_kumo_trend_ma4c92c38 on DE40 H4: REJECT at RUNG 0 SANITY -- min_trades: observed 28, required gte 400, short by 372
+  ichimoku_kumo_trend_ma4c92c38 on EURJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 38, required gte 400, short by 362
+  ichimoku_kumo_trend_ma4c92c38 on EURUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 34, required gte 400, short by 366
+  ichimoku_kumo_trend_ma4c92c38 on GBPJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 31, required gte 400, short by 369
+  ichimoku_kumo_trend_ma4c92c38 on GBPUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 34, required gte 400, short by 366
+  ichimoku_kumo_trend_ma4c92c38 on NZDUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 35, required gte 400, short by 365
+  ichimoku_kumo_trend_ma4c92c38 on US500 H4: REJECT at RUNG 0 SANITY -- min_trades: observed 26, required gte 400, short by 374
+  ichimoku_kumo_trend_ma4c92c38 on USDCAD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 41, required gte 400, short by 359
+  ichimoku_kumo_trend_ma4c92c38 on USDCHF H4: REJECT at RUNG 0 SANITY -- min_trades: observed 31, required gte 400, short by 369
+  ichimoku_kumo_trend_ma4c92c38 on USDJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 51, required gte 400, short by 349
+  ichimoku_kumo_trend_ma4c92c38 on XAUUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 31, required gte 400, short by 369
+  ichimoku_kumo_trend_me73acb6c on AUDUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 77, required gte 400, short by 323
+  ichimoku_kumo_trend_me73acb6c on DE40 H4: REJECT at RUNG 0 SANITY -- min_trades: observed 65, required gte 400, short by 335
+  ichimoku_kumo_trend_me73acb6c on EURJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 81, required gte 400, short by 319
+  ichimoku_kumo_trend_me73acb6c on EURUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 66, required gte 400, short by 334
+  ichimoku_kumo_trend_me73acb6c on GBPJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 63, required gte 400, short by 337
+  ichimoku_kumo_trend_me73acb6c on GBPUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 67, required gte 400, short by 333
+  ichimoku_kumo_trend_me73acb6c on NZDUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 73, required gte 400, short by 327
+  ichimoku_kumo_trend_me73acb6c on US500 H4: REJECT at RUNG 0 SANITY -- min_trades: observed 46, required gte 400, short by 354
+  ichimoku_kumo_trend_me73acb6c on USDCAD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 63, required gte 400, short by 337
+  ichimoku_kumo_trend_me73acb6c on USDCHF H4: REJECT at RUNG 0 SANITY -- min_trades: observed 75, required gte 400, short by 325
+  ichimoku_kumo_trend_me73acb6c on USDJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 89, required gte 400, short by 311
+  ichimoku_kumo_trend_me73acb6c on XAUUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 60, required gte 400, short by 340
+  ichimoku_kumo_trend_mca231a0f on AUDUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 60, required gte 400, short by 340
+  ichimoku_kumo_trend_mca231a0f on DE40 H4: REJECT at RUNG 0 SANITY -- min_trades: observed 47, required gte 400, short by 353
+  ichimoku_kumo_trend_mca231a0f on EURJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 69, required gte 400, short by 331
+  ichimoku_kumo_trend_mca231a0f on EURUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 59, required gte 400, short by 341
+  ichimoku_kumo_trend_mca231a0f on GBPJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 57, required gte 400, short by 343
+  ichimoku_kumo_trend_mca231a0f on GBPUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 53, required gte 400, short by 347
+  ichimoku_kumo_trend_mca231a0f on NZDUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 66, required gte 400, short by 334
+  ichimoku_kumo_trend_mca231a0f on US500 H4: REJECT at RUNG 0 SANITY -- min_trades: observed 43, required gte 400, short by 357
+  ichimoku_kumo_trend_mca231a0f on USDCAD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 56, required gte 400, short by 344
+  ichimoku_kumo_trend_mca231a0f on USDCHF H4: REJECT at RUNG 0 SANITY -- min_trades: observed 63, required gte 400, short by 337
+  ichimoku_kumo_trend_mca231a0f on USDJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 79, required gte 400, short by 321
+  ichimoku_kumo_trend_mca231a0f on XAUUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 49, required gte 400, short by 351
+  ichimoku_kumo_trend_m0bd80cab on AUDUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 61, required gte 400, short by 339
+  ichimoku_kumo_trend_m0bd80cab on DE40 H4: REJECT at RUNG 0 SANITY -- min_trades: observed 55, required gte 400, short by 345
+  ichimoku_kumo_trend_m0bd80cab on EURJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 69, required gte 400, short by 331
+  ichimoku_kumo_trend_m0bd80cab on EURUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 60, required gte 400, short by 340
+  ichimoku_kumo_trend_m0bd80cab on GBPJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 58, required gte 400, short by 342
+  ichimoku_kumo_trend_m0bd80cab on GBPUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 53, required gte 400, short by 347
+  ichimoku_kumo_trend_m0bd80cab on NZDUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 67, required gte 400, short by 333
+  ichimoku_kumo_trend_m0bd80cab on US500 H4: REJECT at RUNG 0 SANITY -- min_trades: observed 44, required gte 400, short by 356
+  ichimoku_kumo_trend_m0bd80cab on USDCAD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 58, required gte 400, short by 342
+  ichimoku_kumo_trend_m0bd80cab on USDCHF H4: REJECT at RUNG 0 SANITY -- min_trades: observed 63, required gte 400, short by 337
+  ichimoku_kumo_trend_m0bd80cab on USDJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 76, required gte 400, short by 324
+  ichimoku_kumo_trend_m0bd80cab on XAUUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 49, required gte 400, short by 351
+  ichimoku_kumo_trend_m67c7da5a on AUDUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 54, required gte 400, short by 346
+  ichimoku_kumo_trend_m67c7da5a on EURUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 54, required gte 400, short by 346
+  ichimoku_kumo_trend_m67c7da5a on GBPUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 48, required gte 400, short by 352
+  ichimoku_kumo_trend_m67c7da5a on NZDUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 60, required gte 400, short by 340
+  ichimoku_kumo_trend_m67c7da5a on USDCAD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 57, required gte 400, short by 343
+  ichimoku_kumo_trend_m67c7da5a on USDCHF H4: REJECT at RUNG 0 SANITY -- min_trades: observed 61, required gte 400, short by 339
+  ichimoku_kumo_trend_m67c7da5a on USDJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 69, required gte 400, short by 331
+  macd_ema_trend_hybrid_ma2bc336b on AUDUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 49, required gte 400, short by 351
+  macd_ema_trend_hybrid_ma2bc336b on DE40 H4: REJECT at RUNG 0 SANITY -- min_trades: observed 31, required gte 400, short by 369
+  macd_ema_trend_hybrid_ma2bc336b on EURJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 44, required gte 400, short by 356
+  macd_ema_trend_hybrid_ma2bc336b on EURUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 53, required gte 400, short by 347
+  macd_ema_trend_hybrid_ma2bc336b on GBPJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 53, required gte 400, short by 347
+  macd_ema_trend_hybrid_ma2bc336b on GBPUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 68, required gte 400, short by 332
+  macd_ema_trend_hybrid_ma2bc336b on NZDUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 61, required gte 400, short by 339
+  macd_ema_trend_hybrid_ma2bc336b on US500 H4: REJECT at RUNG 0 SANITY -- min_trades: observed 55, required gte 400, short by 345
+  macd_ema_trend_hybrid_ma2bc336b on USDCAD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 60, required gte 400, short by 340
+  macd_ema_trend_hybrid_ma2bc336b on USDCHF H4: REJECT at RUNG 0 SANITY -- min_trades: observed 55, required gte 400, short by 345
+  macd_ema_trend_hybrid_ma2bc336b on USDJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 44, required gte 400, short by 356
+  macd_ema_trend_hybrid_ma2bc336b on XAUUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 41, required gte 400, short by 359
+  macd_ema_trend_hybrid_m03d3ee23 on AUDUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 47, required gte 400, short by 353
+  macd_ema_trend_hybrid_m03d3ee23 on DE40 H4: REJECT at RUNG 0 SANITY -- min_trades: observed 45, required gte 400, short by 355
+  macd_ema_trend_hybrid_m03d3ee23 on EURJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 45, required gte 400, short by 355
+  macd_ema_trend_hybrid_m03d3ee23 on EURUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 51, required gte 400, short by 349
+  macd_ema_trend_hybrid_m03d3ee23 on GBPJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 53, required gte 400, short by 347
+  macd_ema_trend_hybrid_m03d3ee23 on GBPUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 63, required gte 400, short by 337
+  macd_ema_trend_hybrid_m03d3ee23 on NZDUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 64, required gte 400, short by 336
+  macd_ema_trend_hybrid_m03d3ee23 on US500 H4: REJECT at RUNG 0 SANITY -- min_trades: observed 53, required gte 400, short by 347
+  macd_ema_trend_hybrid_m03d3ee23 on USDCAD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 54, required gte 400, short by 346
+  macd_ema_trend_hybrid_m03d3ee23 on USDCHF H4: REJECT at RUNG 0 SANITY -- min_trades: observed 53, required gte 400, short by 347
+  macd_ema_trend_hybrid_m03d3ee23 on USDJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 42, required gte 400, short by 358
+  macd_ema_trend_hybrid_m03d3ee23 on XAUUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 42, required gte 400, short by 358
+  macd_ema_trend_hybrid_m3728054d on AUDUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 49, required gte 400, short by 351
+  macd_ema_trend_hybrid_m3728054d on DE40 H4: REJECT at RUNG 0 SANITY -- min_trades: observed 31, required gte 400, short by 369
+  macd_ema_trend_hybrid_m3728054d on EURJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 44, required gte 400, short by 356
+  macd_ema_trend_hybrid_m3728054d on EURUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 53, required gte 400, short by 347
+  macd_ema_trend_hybrid_m3728054d on GBPJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 53, required gte 400, short by 347
+  macd_ema_trend_hybrid_m3728054d on GBPUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 68, required gte 400, short by 332
+  macd_ema_trend_hybrid_m3728054d on NZDUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 61, required gte 400, short by 339
+  macd_ema_trend_hybrid_m3728054d on US500 H4: REJECT at RUNG 0 SANITY -- min_trades: observed 55, required gte 400, short by 345
+  macd_ema_trend_hybrid_m3728054d on USDCAD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 60, required gte 400, short by 340
+  macd_ema_trend_hybrid_m3728054d on USDCHF H4: REJECT at RUNG 0 SANITY -- min_trades: observed 55, required gte 400, short by 345
+  macd_ema_trend_hybrid_m3728054d on USDJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 44, required gte 400, short by 356
+  macd_ema_trend_hybrid_m3728054d on XAUUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 41, required gte 400, short by 359
+  macd_ema_trend_hybrid_m4b9a1dcd on AUDUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 41, required gte 400, short by 359
+  macd_ema_trend_hybrid_m4b9a1dcd on DE40 H4: REJECT at RUNG 0 SANITY -- min_trades: observed 27, required gte 400, short by 373
+  macd_ema_trend_hybrid_m4b9a1dcd on EURJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 37, required gte 400, short by 363
+  macd_ema_trend_hybrid_m4b9a1dcd on EURUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 41, required gte 400, short by 359
+  macd_ema_trend_hybrid_m4b9a1dcd on GBPJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 36, required gte 400, short by 364
+  macd_ema_trend_hybrid_m4b9a1dcd on GBPUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 50, required gte 400, short by 350
+  macd_ema_trend_hybrid_m4b9a1dcd on NZDUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 40, required gte 400, short by 360
+  macd_ema_trend_hybrid_m4b9a1dcd on US500 H4: REJECT at RUNG 0 SANITY -- min_trades: observed 45, required gte 400, short by 355
+  macd_ema_trend_hybrid_m4b9a1dcd on USDCAD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 44, required gte 400, short by 356
+  macd_ema_trend_hybrid_m4b9a1dcd on USDCHF H4: REJECT at RUNG 0 SANITY -- min_trades: observed 43, required gte 400, short by 357
+  macd_ema_trend_hybrid_m4b9a1dcd on USDJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 35, required gte 400, short by 365
+  macd_ema_trend_hybrid_m4b9a1dcd on XAUUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 32, required gte 400, short by 368
+  macd_ema_trend_hybrid_m03f1d536 on AUDUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 21, required gte 400, short by 379
+  macd_ema_trend_hybrid_m03f1d536 on DE40 H4: REJECT at RUNG 0 SANITY -- min_trades: observed 16, required gte 400, short by 384
+  macd_ema_trend_hybrid_m03f1d536 on EURJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 23, required gte 400, short by 377
+  macd_ema_trend_hybrid_m03f1d536 on EURUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 24, required gte 400, short by 376
+  macd_ema_trend_hybrid_m03f1d536 on GBPJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 25, required gte 400, short by 375
+  macd_ema_trend_hybrid_m03f1d536 on GBPUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 32, required gte 400, short by 368
+  macd_ema_trend_hybrid_m03f1d536 on NZDUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 31, required gte 400, short by 369
+  macd_ema_trend_hybrid_m03f1d536 on US500 H4: REJECT at RUNG 0 SANITY -- min_trades: observed 32, required gte 400, short by 368
+  macd_ema_trend_hybrid_m03f1d536 on USDCAD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 28, required gte 400, short by 372
+  macd_ema_trend_hybrid_m03f1d536 on USDCHF H4: REJECT at RUNG 0 SANITY -- min_trades: observed 33, required gte 400, short by 367
+  macd_ema_trend_hybrid_m03f1d536 on USDJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 24, required gte 400, short by 376
+  macd_ema_trend_hybrid_m03f1d536 on XAUUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 17, required gte 400, short by 383
+  macd_ema_trend_hybrid_mb7889927 on AUDUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 49, required gte 400, short by 351
+  macd_ema_trend_hybrid_mb7889927 on DE40 H4: REJECT at RUNG 0 SANITY -- min_trades: observed 31, required gte 400, short by 369
+  macd_ema_trend_hybrid_mb7889927 on EURJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 44, required gte 400, short by 356
+  macd_ema_trend_hybrid_mb7889927 on EURUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 53, required gte 400, short by 347
+  macd_ema_trend_hybrid_mb7889927 on GBPJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 53, required gte 400, short by 347
+  macd_ema_trend_hybrid_mb7889927 on GBPUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 68, required gte 400, short by 332
+  macd_ema_trend_hybrid_mb7889927 on NZDUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 61, required gte 400, short by 339
+  macd_ema_trend_hybrid_mb7889927 on US500 H4: REJECT at RUNG 0 SANITY -- min_trades: observed 55, required gte 400, short by 345
+  macd_ema_trend_hybrid_mb7889927 on USDCAD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 60, required gte 400, short by 340
+  macd_ema_trend_hybrid_mb7889927 on USDCHF H4: REJECT at RUNG 0 SANITY -- min_trades: observed 55, required gte 400, short by 345
+  macd_ema_trend_hybrid_mb7889927 on USDJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 44, required gte 400, short by 356
+  macd_ema_trend_hybrid_mb7889927 on XAUUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 41, required gte 400, short by 359
+  macd_ema_trend_hybrid_mc45594a0 on AUDUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 127, required gte 400, short by 273
+  macd_ema_trend_hybrid_mc45594a0 on DE40 H4: REJECT at RUNG 0 SANITY -- min_trades: observed 55, required gte 400, short by 345
+  macd_ema_trend_hybrid_mc45594a0 on EURJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 127, required gte 400, short by 273
+  macd_ema_trend_hybrid_mc45594a0 on EURUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 144, required gte 400, short by 256
+  macd_ema_trend_hybrid_mc45594a0 on GBPJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 131, required gte 400, short by 269
+  macd_ema_trend_hybrid_mc45594a0 on GBPUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 156, required gte 400, short by 244
+  macd_ema_trend_hybrid_mc45594a0 on NZDUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 135, required gte 400, short by 265
+  macd_ema_trend_hybrid_mc45594a0 on US500 H4: REJECT at RUNG 0 SANITY -- min_trades: observed 113, required gte 400, short by 287
+  macd_ema_trend_hybrid_mc45594a0 on USDCAD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 139, required gte 400, short by 261
+  macd_ema_trend_hybrid_mc45594a0 on USDCHF H4: REJECT at RUNG 0 SANITY -- min_trades: observed 144, required gte 400, short by 256
+  macd_ema_trend_hybrid_mc45594a0 on USDJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 132, required gte 400, short by 268
+  macd_ema_trend_hybrid_mc45594a0 on XAUUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 120, required gte 400, short by 280
+  macd_ema_trend_hybrid_m270351c7 on AUDUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 47, required gte 400, short by 353
+  macd_ema_trend_hybrid_m270351c7 on DE40 H4: REJECT at RUNG 0 SANITY -- min_trades: observed 37, required gte 400, short by 363
+  macd_ema_trend_hybrid_m270351c7 on EURJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 45, required gte 400, short by 355
+  macd_ema_trend_hybrid_m270351c7 on EURUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 27, required gte 400, short by 373
+  macd_ema_trend_hybrid_m270351c7 on GBPJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 51, required gte 400, short by 349
+  macd_ema_trend_hybrid_m270351c7 on GBPUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 68, required gte 400, short by 332
+  macd_ema_trend_hybrid_m270351c7 on NZDUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 29, required gte 400, short by 371
+  macd_ema_trend_hybrid_m270351c7 on US500 H4: REJECT at RUNG 0 SANITY -- min_trades: observed 52, required gte 400, short by 348
+  macd_ema_trend_hybrid_m270351c7 on USDCAD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 4, required gte 400, short by 396
+  macd_ema_trend_hybrid_m270351c7 on USDCHF H4: REJECT at RUNG 0 SANITY -- min_trades: observed 55, required gte 400, short by 345
+  macd_ema_trend_hybrid_m270351c7 on USDJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 43, required gte 400, short by 357
+  macd_ema_trend_hybrid_m270351c7 on XAUUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 38, required gte 400, short by 362
+  macd_ema_trend_hybrid_mbd5c916c on AUDUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 25, required gte 400, short by 375
+  macd_ema_trend_hybrid_mbd5c916c on EURUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 27, required gte 400, short by 373
+  macd_ema_trend_hybrid_mbd5c916c on GBPUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 66, required gte 400, short by 334
+  macd_ema_trend_hybrid_mbd5c916c on NZDUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 9, required gte 400, short by 391
+  macd_ema_trend_hybrid_mbd5c916c on USDCAD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 43, required gte 400, short by 357
+  macd_ema_trend_hybrid_mbd5c916c on USDCHF H4: REJECT at RUNG 0 SANITY -- min_trades: observed 14, required gte 400, short by 386
+  macd_ema_trend_hybrid_mbd5c916c on USDJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 44, required gte 400, short by 356
+  rsi_band_mean_reversion_md48b52cb on AUDUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 170, required gte 400, short by 230
+  rsi_band_mean_reversion_md48b52cb on EURGBP H4: REJECT at RUNG 0 SANITY -- min_trades: observed 110, required gte 400, short by 290
+  rsi_band_mean_reversion_md48b52cb on EURUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 93, required gte 400, short by 307
+  rsi_band_mean_reversion_md48b52cb on GBPUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 123, required gte 400, short by 277
+  rsi_band_mean_reversion_md48b52cb on NZDUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 168, required gte 400, short by 232
+  rsi_band_mean_reversion_md48b52cb on USDCAD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 81, required gte 400, short by 319
+  rsi_band_mean_reversion_md48b52cb on USDCHF H4: REJECT at RUNG 0 SANITY -- min_trades: observed 111, required gte 400, short by 289
+  rsi_band_mean_reversion_md48b52cb on USDJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 88, required gte 400, short by 312
+  rsi_band_mean_reversion_mdbb3266a on AUDUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 186, required gte 400, short by 214
+  rsi_band_mean_reversion_mdbb3266a on EURGBP H4: REJECT at RUNG 0 SANITY -- min_trades: observed 160, required gte 400, short by 240
+  rsi_band_mean_reversion_mdbb3266a on EURUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 129, required gte 400, short by 271
+  rsi_band_mean_reversion_mdbb3266a on GBPUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 161, required gte 400, short by 239
+  rsi_band_mean_reversion_mdbb3266a on NZDUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 172, required gte 400, short by 228
+  rsi_band_mean_reversion_mdbb3266a on USDCAD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 128, required gte 400, short by 272
+  rsi_band_mean_reversion_mdbb3266a on USDCHF H4: REJECT at RUNG 0 SANITY -- min_trades: observed 145, required gte 400, short by 255
+  rsi_band_mean_reversion_mdbb3266a on USDJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 143, required gte 400, short by 257
+  rsi_band_mean_reversion_m6e0465f0 on AUDUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 185, required gte 400, short by 215
+  rsi_band_mean_reversion_m6e0465f0 on EURGBP H4: REJECT at RUNG 0 SANITY -- min_trades: observed 168, required gte 400, short by 232
+  rsi_band_mean_reversion_m6e0465f0 on EURUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 128, required gte 400, short by 272
+  rsi_band_mean_reversion_m6e0465f0 on GBPUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 163, required gte 400, short by 237
+  rsi_band_mean_reversion_m6e0465f0 on NZDUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 177, required gte 400, short by 223
+  rsi_band_mean_reversion_m6e0465f0 on USDCAD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 134, required gte 400, short by 266
+  rsi_band_mean_reversion_m6e0465f0 on USDCHF H4: REJECT at RUNG 0 SANITY -- min_trades: observed 153, required gte 400, short by 247
+  rsi_band_mean_reversion_m6e0465f0 on USDJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 155, required gte 400, short by 245
+  rsi_band_mean_reversion_me1d6d436 on AUDUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 294, required gte 400, short by 106
+  rsi_band_mean_reversion_me1d6d436 on EURGBP H4: REJECT at RUNG 0 SANITY -- min_trades: observed 246, required gte 400, short by 154
+  rsi_band_mean_reversion_me1d6d436 on EURUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 236, required gte 400, short by 164
+  rsi_band_mean_reversion_me1d6d436 on GBPUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 261, required gte 400, short by 139
+  rsi_band_mean_reversion_me1d6d436 on NZDUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 286, required gte 400, short by 114
+  rsi_band_mean_reversion_me1d6d436 on USDCAD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 256, required gte 400, short by 144
+  rsi_band_mean_reversion_me1d6d436 on USDCHF H4: REJECT at RUNG 0 SANITY -- min_trades: observed 243, required gte 400, short by 157
+  rsi_band_mean_reversion_me1d6d436 on USDJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 247, required gte 400, short by 153
+  rsi_band_mean_reversion_m42a36d28 on AUDUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 0, required gte 400, short by 400
+  rsi_band_mean_reversion_m42a36d28 on EURGBP H4: REJECT at RUNG 0 SANITY -- min_trades: observed 0, required gte 400, short by 400
+  rsi_band_mean_reversion_m42a36d28 on EURUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 0, required gte 400, short by 400
+  rsi_band_mean_reversion_m42a36d28 on GBPUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 0, required gte 400, short by 400
+  rsi_band_mean_reversion_m42a36d28 on NZDUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 0, required gte 400, short by 400
+  rsi_band_mean_reversion_m42a36d28 on USDCAD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 0, required gte 400, short by 400
+  rsi_band_mean_reversion_m42a36d28 on USDCHF H4: REJECT at RUNG 0 SANITY -- min_trades: observed 0, required gte 400, short by 400
+  rsi_band_mean_reversion_m42a36d28 on USDJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 0, required gte 400, short by 400
+  rsi_band_mean_reversion_m7c32d514 on AUDUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 193, required gte 400, short by 207
+  rsi_band_mean_reversion_m7c32d514 on EURGBP H4: REJECT at RUNG 0 SANITY -- min_trades: observed 173, required gte 400, short by 227
+  rsi_band_mean_reversion_m7c32d514 on EURUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 135, required gte 400, short by 265
+  rsi_band_mean_reversion_m7c32d514 on GBPUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 170, required gte 400, short by 230
+  rsi_band_mean_reversion_m7c32d514 on NZDUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 182, required gte 400, short by 218
+  rsi_band_mean_reversion_m7c32d514 on USDCAD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 137, required gte 400, short by 263
+  rsi_band_mean_reversion_m7c32d514 on USDCHF H4: REJECT at RUNG 0 SANITY -- min_trades: observed 155, required gte 400, short by 245
+  rsi_band_mean_reversion_m7c32d514 on USDJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 157, required gte 400, short by 243
+  rsi_band_mean_reversion_m6113daf1 on AUDUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 182, required gte 400, short by 218
+  rsi_band_mean_reversion_m6113daf1 on EURUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 128, required gte 400, short by 272
+  rsi_band_mean_reversion_m6113daf1 on GBPUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 160, required gte 400, short by 240
+  rsi_band_mean_reversion_m6113daf1 on NZDUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 175, required gte 400, short by 225
+  rsi_band_mean_reversion_m6113daf1 on USDCAD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 133, required gte 400, short by 267
+  rsi_band_mean_reversion_m6113daf1 on USDCHF H4: REJECT at RUNG 0 SANITY -- min_trades: observed 150, required gte 400, short by 250
+  rsi_band_mean_reversion_m6113daf1 on USDJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 147, required gte 400, short by 253
+  rsi_band_mean_reversion_md0807760 on AUDUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 202, required gte 400, short by 198
+  rsi_band_mean_reversion_md0807760 on EURUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 136, required gte 400, short by 264
+  rsi_band_mean_reversion_md0807760 on GBPUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 174, required gte 400, short by 226
+  rsi_band_mean_reversion_md0807760 on NZDUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 191, required gte 400, short by 209
+  rsi_band_mean_reversion_md0807760 on USDCAD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 139, required gte 400, short by 261
+  rsi_band_mean_reversion_md0807760 on USDCHF H4: REJECT at RUNG 0 SANITY -- min_trades: observed 162, required gte 400, short by 238
+  rsi_band_mean_reversion_md0807760 on USDJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 161, required gte 400, short by 239
+  rsi_band_mean_reversion_m29180d06 on AUDUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 175, required gte 400, short by 225
+  rsi_band_mean_reversion_m29180d06 on EURUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 127, required gte 400, short by 273
+  rsi_band_mean_reversion_m29180d06 on GBPUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 157, required gte 400, short by 243
+  rsi_band_mean_reversion_m29180d06 on NZDUSD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 166, required gte 400, short by 234
+  rsi_band_mean_reversion_m29180d06 on USDCAD H4: REJECT at RUNG 0 SANITY -- min_trades: observed 129, required gte 400, short by 271
+  rsi_band_mean_reversion_m29180d06 on USDCHF H4: REJECT at RUNG 0 SANITY -- min_trades: observed 144, required gte 400, short by 256
+  rsi_band_mean_reversion_m29180d06 on USDJPY H4: REJECT at RUNG 0 SANITY -- min_trades: observed 146, required gte 400, short by 254
+
+{
+  "campaign_id": "k3_multi_instrument_h4_engine_v3",
+  "engine_version": "engine_v3_realism",
+  "gate_set": "v2.0.0-audit",
+  "datasets": {
+    "AUDJPY_H4": "ds_f4090c2697088bcedb423849",
+    "AUDUSD_H4": "ds_ba66154d681cb623c3780947",
+    "DE40_H4": "ds_b81ab5fe112100c4094cfb73",
+    "EURGBP_H4": "ds_0bafc32b4ed7b8065261e7a4",
+    "EURJPY_H4": "ds_c62e333d89200eecf29e9a12",
+    "EURUSD_H4": "ds_d8739e54df9f12ecf0ce71c8",
+    "GBPJPY_H4": "ds_9f7d5da5c796bd86da1011e8",
+    "GBPUSD_H4": "ds_b34988ed16240d36d2b9248c",
+    "NZDUSD_H4": "ds_af544dc37dc887fdb98c4e62",
+    "UK100_H4": "ds_e5ec1300d41332ab9b36595a",
+    "US500_H4": "ds_f6269df5956668a8fd72e6a1",
+    "USDCAD_H4": "ds_de6aae350c45f9f5025c7f56",
+    "USDCHF_H4": "ds_5a2b99b30031d45d3546c1ca",
+    "USDJPY_H4": "ds_300921ee00603a414fc03e98",
+    "XAGUSD_H4": "ds_0f1ab110d7cf2003134b2b39",
+    "XAUUSD_H4": "ds_af8fc1b3143b3530c3f24ded"
+  },
+  "planned_trials": 3350,
+  "prior_trials": 4026,
+  "trial_accounting": {
+    "planned_in_this_campaign": 3350,
+    "prior_from_ledger": 0,
+    "prior_declared_externally": 4026,
+    "external_reason": "K3 pre-registration: 350 declared prior + K1 326 + K2 3350 = 4026; see RESEARCH_LEDGER.md K3 entry",
+    "true_trial_count": 7376
+  },
+  "true_trial_count": 7376,
+  "ladder_evaluations": 1130,
+  "engine_backtests_run": 1128,
+  "cells_attempted": 542,
+  "cells_skipped": 273,
+  "skips_by_kind": {
+    "mutation_rejected": 15,
+    "out_of_universe": 258
+  },
+  "rejections_by_rung": {
+    "RUNG 0 SANITY": 526,
+    "RUNG 1 IN_SAMPLE_SCREEN": 2,
+    "RUNG 2 WALK_FORWARD": 12,
+    "RUNG 4 ROBUSTNESS": 1,
+    "RUNG 5 DEFLATION": 1
+  },
+  "mutations_refused": 15,
+  "survivors": [],
+  "campaign_deflation_threshold": 0.02979099067550188,
+  "deflation_variance_used": 6.193019147652296e-05,
+  "holdout_unconsumed": true,
+  "wall_clock_seconds": 4187.7
+}
+
+This campaign carried 542 candidate cell(s) through the validation ladder over 13 instrument(s) (AUDUSD, DE40, EURGBP, EURJPY, EURUSD, GBPJPY, GBPUSD, NZDUSD, US500, USDCAD, USDCHF, USDJPY, XAUUSD) on 1 timeframe(s) (H4), against gate set v2.0.0-audit. The true trial count for the whole search is 7376 (3350 planned in this campaign plus 4026 already spent on the same bars before it began), and that is the number the deflation used -- not the size of any one strategy's own parameter sweep. NOTHING SURVIVED. That is the expected outcome and it is a real result: it says these rule families, on this data, under these costs, do not clear a bar set for a search of this size. It does NOT say the underlying effects do not exist, that another instrument would behave the same way, or that a different cost model would give the same answer.
+
+  -> research/reports/campaign_k3_multi_instrument/campaign_k3_multi_instrument_h4_engine_v3.json

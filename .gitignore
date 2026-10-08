@@ -88,3 +88,9 @@ apps/web/tsconfig.tsbuildinfo
 _agent_briefs/
 .coverage.vm.*
 scripts/desktop/Fiboki.icns
+
+# Campaign working files: large and regenerable. The reports, coverage files,
+# run logs and the (small) holdout registries are committed; the per-campaign
+# experiment database and resume checkpoint are kept locally and in backups.
+research/reports/**/experiments.sqlite
+research/reports/**/checkpoint.json
