@@ -244,6 +244,20 @@ def _parse_time(value: Any) -> datetime | None:
     return stamp.replace(tzinfo=UTC) if stamp.tzinfo is None else stamp.astimezone(UTC)
 
 
+def incident_title(message: str) -> str:
+    """The operator sentence, without the exception chain that follows it.
+
+    The full message stays on the incident timeline. The queue title is the
+    clause before the first ``Error`` or ``Exception`` segment, capped so a
+    DNS traceback cannot become the whole Command screen.
+    """
+    head, sep, tail = message.partition(": ")
+    title = head.strip() if sep and ("Error" in tail or "Exception" in tail) else message.strip()
+    if len(title) > 160:
+        title = title[:157] + "..."
+    return title or message
+
+
 def _is_incident_worthy(event: str, severity: str) -> bool:
     if event in _KILL_SWITCH_ALERTS:
         return False
@@ -401,7 +415,7 @@ def derive_incidents(
                 key=group.key,
                 event=group.event,
                 source=group.source,
-                title=group.occurrences[0].message,
+                title=incident_title(group.occurrences[0].message),
                 severity=group.severity,
                 status=state,
                 first_seen=group.first_seen,

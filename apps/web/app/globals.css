@@ -3132,10 +3132,30 @@
   .triage__arrow {
     color: var(--fg-subtle);
   }
+  .triage__body {
+    min-width: 0;
+  }
+  .triage__title {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
   .triage__reason {
     margin: 2px 0 0;
     color: var(--fg-muted);
     max-width: 90ch;
+    overflow-wrap: anywhere;
+  }
+  .triage-foot {
+    margin-top: 12px;
+    color: var(--fg-muted);
+    font-size: 12.5px;
+  }
+  .triage-foot summary {
+    cursor: pointer;
+  }
+  .triage-foot .source-note,
+  .triage-foot .caveats {
+    margin-top: 8px;
   }
   .triage__meta {
     display: flex;

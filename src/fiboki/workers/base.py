@@ -759,6 +759,36 @@ class WorkerConfig:
         self.lease_name = self.lease_name or self.kind
 
 
+_FEED_FAILURE_TYPES = frozenset(
+    {
+        "ProviderError",
+        "ConnectError",
+        "CandleHttpError",
+        "ConnectTimeout",
+        "ReadTimeout",
+        "TimeoutException",
+        "NetworkError",
+    }
+)
+
+
+def cycle_failure_event(exc: BaseException) -> AlertEvent:
+    """A feed or broker outage is not a strategy degradation.
+
+    ``STRATEGY_DEGRADED`` means the strategy's own score or lifecycle moved.
+    A candle fetch that cannot resolve the practice host is the broker path
+    being unreachable, and that is ``BROKER_UNHEALTHY``.
+    """
+    current: BaseException | None = exc
+    for _ in range(6):
+        if current is None:
+            break
+        if type(current).__name__ in _FEED_FAILURE_TYPES:
+            return AlertEvent.BROKER_UNHEALTHY
+        current = current.__cause__ or current.__context__
+    return AlertEvent.STRATEGY_DEGRADED
+
+
 class Worker(abc.ABC):
     """Base class.  Subclasses implement :meth:`run_cycle` and nothing else.
 
@@ -1095,14 +1125,19 @@ class Worker(abc.ABC):
                 )
                 self._report(exc, phase="cycle", cycle=cycles)
                 if self.dispatcher is not None and self.consecutive_failures in (1, 5, 20):
-                    self.dispatcher.fire(
+                    event = (
                         AlertEvent.JOB_DEAD_LETTERED
                         if self.consecutive_failures >= 20
-                        else AlertEvent.STRATEGY_DEGRADED,
+                        else cycle_failure_event(exc)
+                    )
+                    self.dispatcher.fire(
+                        event,
                         f"{self.config.kind} worker cycle failed "
                         f"{self.consecutive_failures}x consecutively: {error}",
                         source=self.worker_id,
-                        dedupe_key=f"cycle_fail:{self.worker_id}",
+                        # Kind, not pid. A launchd restart storm is one outage;
+                        # a new worker id must not open a new incident.
+                        dedupe_key=f"cycle_fail:{self.config.kind}:{event.value}",
                         cycle=cycles,
                     )
                 if (

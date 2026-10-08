@@ -48,6 +48,7 @@ __all__ = [
     "SEVERITY_WEIGHT",
     "AttentionItem",
     "collect_attention",
+    "current_workers",
     "rank_attention",
     "router",
 ]
@@ -140,6 +141,22 @@ def _item(
             unit="score",
         ),
     )
+
+
+def current_workers(workers: Iterable[Any]) -> list[Any]:
+    """The newest non-stopped beat of each kind.
+
+    A replaced process leaves its last heartbeat row as ``idle``. That row is
+    not the worker. Only the newest beat per kind can be called stale.
+    """
+    newest: dict[str, Any] = {}
+    for worker in workers:
+        if getattr(worker, "status", "") in {"stopped", "crashed"}:
+            continue
+        held = newest.get(worker.kind)
+        if held is None or worker.beat_at > held.beat_at:
+            newest[worker.kind] = worker
+    return list(newest.values())
 
 
 def collect_attention(
@@ -316,9 +333,9 @@ def collect_attention(
                 )
             )
         else:
-            for worker in beat.workers:
-                if worker.status in {"stopped", "crashed"}:
-                    continue
+            # A replaced process leaves its last row idle. That row is not the
+            # worker. Only the newest beat of each kind can be stale.
+            for worker in current_workers(beat.workers):
                 if worker.age_seconds >= stale_after:
                     items.append(
                         _item(

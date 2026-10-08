@@ -385,6 +385,52 @@ def test_the_worker_gives_up_after_too_many_consecutive_failures(store):
     assert worker.consecutive_failures == 3
 
 
+def test_a_feed_outage_is_one_broker_incident_across_restarts(store):
+    """A launchd restart changes the pid. It must not open a new incident,
+    and a candle-fetch failure must not be labelled as the strategy degrading.
+    """
+    channel = MemoryChannel()
+    dispatcher = AlertDispatcher().add_channel(channel)
+
+    class ProviderError(Exception):
+        pass
+
+    class ConnectError(Exception):
+        pass
+
+    feed = ProviderError("every candle fetch failed")
+    feed.__cause__ = ConnectError("[Errno 8] nodename nor servname provided")
+    for pid in (101, 202):
+        worker = ScriptedWorker(
+            [feed],
+            _config(max_cycles=1, kind="paper"),
+            store,
+            dispatcher=dispatcher,
+            worker=f"paper@host:{pid}",
+        )
+        worker.run(install_signals=False)
+    alerts = channel.sent
+    assert alerts
+    assert {a.event for a in alerts} == {AlertEvent.BROKER_UNHEALTHY}
+    assert {a.key() for a in alerts} == {"cycle_fail:paper:broker_unhealthy"}
+
+
+def test_an_ordinary_cycle_error_stays_a_strategy_degradation(store):
+    channel = MemoryChannel()
+    dispatcher = AlertDispatcher().add_channel(channel)
+    worker = ScriptedWorker(
+        [RuntimeError("indicator blew up")],
+        _config(max_cycles=1, kind="paper"),
+        store,
+        dispatcher=dispatcher,
+        worker="paper@host:1",
+    )
+    worker.run(install_signals=False)
+    (alert,) = channel.sent
+    assert alert.event is AlertEvent.STRATEGY_DEGRADED
+    assert alert.key() == "cycle_fail:paper:strategy_degraded"
+
+
 def test_a_successful_cycle_resets_the_failure_streak(store):
     worker = ScriptedWorker(
         [RuntimeError("one"), CycleResult.worked(1), RuntimeError("two")],

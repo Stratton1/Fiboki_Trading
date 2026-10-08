@@ -6,11 +6,13 @@ import json
 from datetime import UTC, datetime, timedelta
 from itertools import pairwise
 
+from fiboki.api.platform import WorkerBeat
 from fiboki.api.provenance import Figure
 from fiboki.api.routers.command import (
     CATEGORY_WEIGHT,
     SEVERITY_WEIGHT,
     AttentionItem,
+    current_workers,
     rank_attention,
     score_of,
 )
@@ -76,6 +78,19 @@ def test_within_a_severity_category_decides_then_recency_then_id():
         "a-incident-old",
         "b-review",
     ]
+
+
+def test_a_replaced_process_is_not_a_stale_worker():
+    """The old pid stays idle in the table after launchd starts a new one."""
+    old = WorkerBeat(
+        "paper@old:1", "paper", "idle", NOW - timedelta(hours=2), 7200.0
+    )
+    live = WorkerBeat("paper@new:2", "paper", "idle", NOW, 1.0)
+    stopped = WorkerBeat(
+        "paper@dead:3", "paper", "stopped", NOW, 1.0
+    )
+    chosen = current_workers([old, stopped, live])
+    assert [w.worker_id for w in chosen] == ["paper@new:2"]
 
 
 def test_an_unset_as_of_sorts_after_a_dated_item():

@@ -12,6 +12,7 @@ from fiboki.api.app import create_app
 from fiboki.api.routers.incidents import (
     REOPEN_AFTER,
     derive_incidents,
+    incident_title,
     occurrences_from_alerts,
 )
 from fiboki.api.settings import load_settings
@@ -86,6 +87,18 @@ def test_incident_ids_are_stable_across_reads_and_processes(incident_client, api
     with TestClient(app2, base_url=ORIGIN) as other:
         second = {i["id"] for i in other.get("/api/system/incidents").json()["items"]}
     assert first == second
+
+
+def test_a_feed_failure_title_drops_the_exception_chain():
+    message = (
+        "paper worker cycle failed 1x consecutively: ProviderError: "
+        "every candle fetch failed: EURUSD: ConnectError: [Errno 8] nodename"
+    )
+    assert incident_title(message) == "paper worker cycle failed 1x consecutively"
+    rows = [_alert("broker_unhealthy", T0, message=message, dedupe_key="cycle_fail:paper:broker_unhealthy")]
+    (incident,) = derive_incidents(occurrences_from_alerts(rows), [], count_provenance=Provenance.PAPER)
+    assert incident.title == "paper worker cycle failed 1x consecutively"
+    assert incident.timeline[0].text == message
 
 
 def test_a_gap_longer_than_the_reopen_window_is_a_new_incident():

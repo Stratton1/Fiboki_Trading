@@ -156,7 +156,9 @@ function Row({
             </span>
           )}
         </div>
-        <p className="triage__reason">{item.reason}</p>
+        <p className="triage__reason" title={item.reason}>
+          {item.reason}
+        </p>
         <div className="triage__meta">
           <span className="num" data-testid="attention-age" title={item.as_of ? formatTimestamp(item.as_of) : undefined}>
             {ageText(item.as_of, now)}
@@ -224,10 +226,12 @@ export function AttentionPanel() {
       emptyTitle="Nothing needs you"
       emptyBody="The platform's attention queue is empty: no kill switch armed, no breach, no open incident, no stale worker, no failing health check and no strategy awaiting review. That is the server's answer, not an absence of one."
     >
-      {(page) => (
+      {(page) => {
+        const loud = page.caveats.filter((caveat) => caveat.severity === "warning" || caveat.severity === "critical");
+        const quiet = page.caveats.filter((caveat) => caveat.severity !== "warning" && caveat.severity !== "critical");
+        return (
         <>
-          <SourceBadge source={page.source} />
-          <CaveatList caveats={page.caveats} />
+          <CaveatList caveats={loud} />
           {!allowed.allowed ? (
             <p className="muted" data-testid="attention-role-blocked" role="note">
               Acknowledging is disabled. {allowed.reason}
@@ -248,8 +252,14 @@ export function AttentionPanel() {
           <p className="muted mt-2">
             {page.items.length} of {page.total}, in the platform&apos;s order.
           </p>
+          <details className="triage-foot">
+            <summary>Where this list came from</summary>
+            <SourceBadge source={page.source} />
+            <CaveatList caveats={quiet} />
+          </details>
         </>
-      )}
+        );
+      }}
     </AsyncBoundary>
   );
 }
