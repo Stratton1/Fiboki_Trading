@@ -93,7 +93,7 @@ from fiboki.research.forecasts import (
 )
 from fiboki.strategy.dsl import StrategyDocument
 from fiboki.strategy.registry import StrategyRegistry
-from fiboki.validation.gates import GATE_SET_V2
+from fiboki.validation.gates import PRODUCTION_GATE_SET, sanity_trade_floor
 
 # ---------------------------------------------------------------------------
 # Declarations
@@ -1041,7 +1041,7 @@ class CompareCandidatesOut(_Out):
 #: The trade floor, read from the platform's canonical promotion gates rather
 #: than restated here.  A comparison made below it is a comparison of noise, and
 #: the tool says so rather than leaving it implied.
-MIN_TRADES_FOR_PROMOTION = int(GATE_SET_V2.by_name("min_trades").threshold)
+MIN_TRADES_FOR_PROMOTION = sanity_trade_floor(PRODUCTION_GATE_SET)
 
 _COMPARISON_METRICS = (
     "sharpe",
@@ -1100,7 +1100,7 @@ def _compare_candidates(ctx: ToolContext, inputs: CompareCandidatesIn) -> Compar
     if inputs.min_trades < MIN_TRADES_FOR_PROMOTION:
         caveats.append(
             f"min_trades={inputs.min_trades} is below the platform's promotion "
-            f"floor of {MIN_TRADES_FOR_PROMOTION} ({GATE_SET_V2.version}); a "
+            f"floor of {MIN_TRADES_FOR_PROMOTION} ({PRODUCTION_GATE_SET.version}); a "
             "ranking made below it is a ranking of sampling noise"
         )
     if not rankable:
@@ -3605,7 +3605,7 @@ class RunValidationIn(_In):
     """Note what an agent CANNOT set here: the thresholds.
 
     There is no ``min_trades`` and no ``dsr_threshold`` field, because the bars
-    are the platform's (``GATE_SET_V2``) and moving them is not a research
+    are the platform's (``PRODUCTION_GATE_SET``) and moving them is not a research
     decision. An agent supplies the honest trial count and the seed; the gates
     decide.
     """
@@ -3957,7 +3957,7 @@ def build_registry() -> ToolRegistry:
     )
     add(
         "run_validation",
-        "QUEUE the platform's promotion gates (GATE_SET_V2) over a recorded "
+        "QUEUE the platform's promotion gates (PRODUCTION_GATE_SET) over a recorded "
         "backtest. Gates a single backtest cannot answer are reported as "
         "NOT_EVALUATED, which blocks promotion; the thresholds are not yours to set.",
         RunValidationIn, JobTicketOut, Capability.SUBMIT_JOB, _run_validation,

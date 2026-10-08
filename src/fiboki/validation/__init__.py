@@ -47,6 +47,8 @@ from fiboki.validation.evaluation import (
 )
 from fiboki.validation.gates import (
     GATE_SET_V2,
+    GATE_SET_V2_1_CALIBRATED,
+    PRODUCTION_GATE_SET,
     Comparison,
     Gate,
     GateResult,
@@ -93,6 +95,8 @@ from fiboki.validation.run import ValidationRun, run_validation
 __all__ = [
     "DEFAULT_HOLDOUT_FRACTION",
     "GATE_SET_V2",
+    "GATE_SET_V2_1_CALIBRATED",
+    "PRODUCTION_GATE_SET",
     "REPORT_VERSION",
     "BindingConstraint",
     "Candidate",

@@ -63,6 +63,7 @@ from fiboki.stats.bootstrap import bootstrap_confidence_interval
 from fiboki.stats.sharpe import (
     deflated_sharpe_ratio,
     expected_max_sharpe,
+    minimum_track_record_length,
     probabilistic_sharpe_ratio,
     sharpe_moments,
 )
@@ -70,11 +71,15 @@ from fiboki.stats.stress import net_profit, run_stress_suite, spread_multiplier_
 from fiboki.strategy.compiler import CompiledStrategy, compile_strategy
 from fiboki.strategy.dsl import StrategyDocument
 from fiboki.strategy.registry import StrategyRegistry
-from fiboki.validation.gates import GATE_SET_V2
+from fiboki.validation.gates import (
+    MIN_TRL_FLOOR_TRADES,
+    PRODUCTION_GATE_SET,
+    sanity_trade_floor,
+)
 
 #: The promotion floor, taken from the platform's canonical gate set rather
 #: than restated here. Restating it is how two numbers drift apart.
-MIN_TRADES_FOR_PROMOTION = int(GATE_SET_V2.by_name("min_trades").threshold)
+MIN_TRADES_FOR_PROMOTION = sanity_trade_floor(PRODUCTION_GATE_SET)
 
 
 # ---------------------------------------------------------------------------
@@ -543,7 +548,7 @@ def validation_handler(ctx: JobContext) -> Mapping[str, Any]:
     """Evaluate the PLATFORM's promotion gates. The verdict is not an opinion.
 
     The thresholds are not defined here. They come from
-    :data:`fiboki.validation.gates.GATE_SET_V2`, which is the single place the
+    :data:`fiboki.validation.gates.PRODUCTION_GATE_SET`, which is the single place the
     project states what a candidate must clear. This job computes the metrics
     it can honestly compute from one recorded backtest and hands them to that
     gate set.
@@ -590,6 +595,18 @@ def validation_handler(ctx: JobContext) -> Mapping[str, Any]:
             moments.sr_hat, moments.n_obs, moments.skew, moments.kurtosis, 0.0
         )
         metrics["psr"] = round(psr, 8)
+        # The production set's trade gate: n / max(150, MinTRL_95) >= 1
+        # (Bailey and Lopez de Prado 2012, SR* = 0, this backtest's own moments).
+        # Undefined for SR <= 0, which leaves the gate NOT_EVALUATED (it blocks).
+        if moments.sr_hat > 0.0:
+            min_trl = minimum_track_record_length(
+                moments.sr_hat, 0.0, moments.skew, moments.kurtosis, 0.95
+            )
+            if np.isfinite(min_trl):
+                metrics["min_trl_95"] = round(float(min_trl), 4)
+                gate_values["n_trades_over_min_trl"] = float(record.n_trades) / max(
+                    float(min_trl), float(MIN_TRL_FLOOR_TRADES)
+                )
 
         trials, trial_notes = _ledger_trial_count(ctx, record, declared=declared_trials)
         caveats.extend(trial_notes)
@@ -673,8 +690,8 @@ def validation_handler(ctx: JobContext) -> Mapping[str, Any]:
     metrics["gross_pnl"] = record.metrics.get("gross_pnl")
     metrics["total_costs"] = record.metrics.get("total_costs")
 
-    results = GATE_SET_V2.evaluate(gate_values)
-    binding = GATE_SET_V2.binding_constraint(results)
+    results = PRODUCTION_GATE_SET.evaluate(gate_values)
+    binding = PRODUCTION_GATE_SET.binding_constraint(results)
     checks = tuple(
         {
             "name": r.gate.name,
@@ -707,8 +724,8 @@ def validation_handler(ctx: JobContext) -> Mapping[str, Any]:
             checks=checks,
             metrics={
                 **metrics,
-                "gate_set_version": GATE_SET_V2.version,
-                "gate_set_fingerprint": GATE_SET_V2.fingerprint(),
+                "gate_set_version": PRODUCTION_GATE_SET.version,
+                "gate_set_fingerprint": PRODUCTION_GATE_SET.fingerprint(),
             },
             verdict=verdict,  # type: ignore[arg-type]
             caveats=tuple(caveats),
@@ -721,7 +738,7 @@ def validation_handler(ctx: JobContext) -> Mapping[str, Any]:
         "strategy_id": report.strategy_id,
         "backtest_id": report.backtest_id,
         "verdict": verdict,
-        "gate_set_version": GATE_SET_V2.version,
+        "gate_set_version": PRODUCTION_GATE_SET.version,
         "n_checks": len(checks),
         "n_failed": n_failed,
         "failed_checks": list(report.failed_checks),

@@ -74,7 +74,7 @@ from fiboki.marketstate.calendar import EconomicCalendar, load_official_calendar
 from fiboki.research.experiment import ActorKind, ExperimentDraft, ExperimentLedger, Outcome
 from fiboki.strategy.dsl import StrategyDocument, strategy_key_version
 from fiboki.validation.evaluation import ParameterGrid
-from fiboki.validation.gates import GATE_SET_V2, GateSet
+from fiboki.validation.gates import PRODUCTION_GATE_SET, GateSet, sanity_trade_floor
 from fiboki.validation.holdout import DEFAULT_HOLDOUT_FRACTION, HoldoutRegistry
 from fiboki.validation.ladder import LadderConfig
 from fiboki.validation.report import ValidationReport
@@ -153,7 +153,7 @@ class CampaignSpec:
     account_ccy: str = RESEARCH_ACCOUNT_CCY
     initial_balance: float = 10_000.0
     risk_fraction: float = 0.01
-    gate_set: GateSet = GATE_SET_V2
+    gate_set: GateSet = PRODUCTION_GATE_SET
     holdout_fraction: float = DEFAULT_HOLDOUT_FRACTION
 
     max_evaluations: int = 400
@@ -1005,7 +1005,7 @@ class CampaignRunner:
     def _ladder_config(self, external_trial_count: int) -> LadderConfig:
         """The ladder settings for one cell, carrying the campaign's true N."""
         return LadderConfig(
-            min_trades=int(self.spec.gate_set.by_name("min_trades").threshold),
+            min_trades=sanity_trade_floor(self.spec.gate_set),
             selection_metric=self.spec.selection_metric,
             walk_forward_folds=self.spec.walk_forward_folds,
             stress_samples=self.spec.stress_samples,
@@ -1161,7 +1161,7 @@ class CampaignRunner:
             gate_values=report.gate_values(),
             n_evaluations=outcome.n_evaluations,
             engine_runs=outcome.engine_runs,
-            n_trades=_opt(report.gate_values().get("min_trades")),
+            n_trades=_opt(_report_n_trades(report)),
             deflated_sharpe_ratio=_opt(metrics.get("deflated_sharpe_ratio")),
             selected_sharpe=_opt(metrics.get("selected_sharpe")),
             sr_variance=sr_variance,
@@ -1273,6 +1273,20 @@ class CampaignRunner:
             )
         )
         return state
+
+
+def _report_n_trades(report: Any) -> float | None:
+    """The candidate's default-parameter trade count, whatever the gate set.
+
+    Rung 0 records it as a metric. The audited set also exposed it as the
+    ``min_trades`` gate's value; the calibrated set gates a ratio instead
+    (``n_trades_over_min_trl``), so the gate value is not the count.
+    """
+    for rung in report.rungs:
+        if rung.index == 0 and rung.metrics.get("n_trades") is not None:
+            return float(rung.metrics["n_trades"])
+    value = report.gate_values().get("min_trades")
+    return None if value is None else float(value)
 
 
 def _opt(value: Any) -> float | None:

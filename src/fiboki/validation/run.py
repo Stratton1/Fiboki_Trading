@@ -67,7 +67,7 @@ from fiboki.validation.engine_evaluator import (
     EvaluatorConfig,
     research_construction_policy,
 )
-from fiboki.validation.gates import GATE_SET_V2, GateSet
+from fiboki.validation.gates import PRODUCTION_GATE_SET, GateSet, sanity_trade_floor
 from fiboki.validation.holdout import DEFAULT_HOLDOUT_FRACTION, HoldoutRegistry
 from fiboki.validation.ladder import LadderConfig, ValidationLadder
 from fiboki.validation.report import ValidationReport
@@ -406,7 +406,7 @@ def run_validation(
     fx_store: Any = None,
     initial_balance: float = 10_000.0,
     risk_fraction: float = 0.01,
-    gate_set: GateSet = GATE_SET_V2,
+    gate_set: GateSet = PRODUCTION_GATE_SET,
     ladder_config: LadderConfig | None = None,
     holdout_fraction: float = DEFAULT_HOLDOUT_FRACTION,
     max_grid_points: int = 32,
@@ -522,7 +522,7 @@ def run_validation(
         include=sweep_parameters,
     )
     ladder = ValidationLadder(
-        config=ladder_config or LadderConfig(min_trades=int(gate_set.by_name("min_trades").threshold)),
+        config=ladder_config or LadderConfig(min_trades=sanity_trade_floor(gate_set)),
         gate_set=gate_set,
     )
     report = ladder.run(

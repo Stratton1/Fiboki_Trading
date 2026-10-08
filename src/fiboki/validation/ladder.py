@@ -34,6 +34,7 @@ is how V1 ended up re-discovering the same dead end repeatedly.
 """
 from __future__ import annotations
 
+import dataclasses
 import math
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
@@ -73,7 +74,13 @@ from fiboki.validation.evaluation import (
     WindowEvaluation,
     params_key,
 )
-from fiboki.validation.gates import GATE_SET_V2, GateSet
+from fiboki.validation.gates import (
+    MIN_TRL_FLOOR_TRADES,
+    PRODUCTION_GATE_SET,
+    GateSet,
+    sanity_trade_floor,
+)
+from fiboki.validation.gates import uses_min_trl_gate as _uses_min_trl_gate
 from fiboki.validation.holdout import (
     HoldoutAlreadyConsumed,
     HoldoutKeyVersionMismatch,
@@ -101,10 +108,8 @@ __all__ = [
 #: Multipliers the audit names for the spread stress. 2.0 is the gated one.
 SPREAD_MULTIPLIERS = (1.0, 1.5, 2.0, 3.0)
 
-#: ``n_trades_over_min_trl`` is ``n_trades / max(min_trl_95, MIN_TRL_FLOOR_TRADES)``,
-#: so one ``>= 1.0`` gate reads "n >= max(150, MinTRL_95)" (audit section 3.1).
-#: Part of the METRIC's definition, recorded beside it in the rung-0 metrics.
-MIN_TRL_FLOOR_TRADES = 150
+#: ``MIN_TRL_FLOOR_TRADES`` (150) and :func:`sanity_trade_floor` live in
+#: :mod:`fiboki.validation.gates` and are re-exported here.
 #: One-sided confidence of ``min_trl_95`` (Z = 1.6449) and of the Wilson bound
 #: on the OOS window hit rate.
 MIN_TRL_CONFIDENCE = 0.95
@@ -135,12 +140,16 @@ class LadderConfig:
     asking "how was it measured?" reads this.
     """
 
-    min_trades: int = 400
+    min_trades: int | None = None
     """Rung 0 floor. V1 used 80, which at search scale is statistically vacuous.
 
-    Also the value the ``min_trades`` GATE checks; they are kept equal by
-    :meth:`ValidationLadder.__post_init__` so the ladder cannot admit a candidate
-    the gate would reject, or vice versa.
+    ``None`` (the default) means "the floor the gate set in force implies":
+    :class:`ValidationLadder` resolves it to ``sanity_trade_floor(gate_set)``
+    (150 for the production, calibrated set; 400 for the audited
+    ``GATE_SET_V2``). An explicit value must equal that floor (except in
+    :meth:`ValidationLadder.run_measuring`, where it may be lower); the ladder
+    enforces it, so it cannot admit a candidate the trade gate would reject, or
+    vice versa.
     """
 
     selection_metric: str = "sharpe"
@@ -188,7 +197,7 @@ class LadderConfig:
             raise ValueError("walk_forward_scheme must be 'anchored' or 'rolling'")
         if self.walk_forward_folds < 2:
             raise ValueError("walk_forward_folds must be >= 2")
-        if self.min_trades < 1:
+        if self.min_trades is not None and self.min_trades < 1:
             raise ValueError("min_trades must be >= 1")
         if self.cscv_splits % 2 != 0 or self.cscv_splits < 2:
             raise ValueError("cscv_splits must be an even number >= 2")
@@ -380,7 +389,16 @@ class SanityRung(Rung):
                 + ". A statistic computed from these numbers would be decoration.",
                 metrics,
             )
-        if baseline.n_trades < ctx.config.min_trades:
+        floor = ctx.config.min_trades
+        if floor is None:
+            # Only a ValidationLadder resolves the default; a rung run on its own
+            # with an unresolved config has no floor to apply, and says so.
+            return self._error(
+                "LadderConfig.min_trades is unresolved (None): run the rung through "
+                "ValidationLadder, which sets it from the gate set in force",
+                metrics,
+            )
+        if baseline.n_trades < floor:
             return self._fail(
                 f"{baseline.n_trades} trades at declared defaults, below the "
                 f"{ctx.config.min_trades} minimum. V1 promoted on 80 trades; at "
@@ -1135,10 +1153,16 @@ class ValidationLadder:
     """
 
     config: LadderConfig = field(default_factory=LadderConfig)
-    gate_set: GateSet = GATE_SET_V2
+    gate_set: GateSet = PRODUCTION_GATE_SET
     rungs: tuple[Rung, ...] = field(default_factory=default_rungs)
 
     def __post_init__(self) -> None:
+        if self.config.min_trades is None:
+            # The default: the floor the gate set in force implies, so a ladder
+            # built for any gate set is coherent without restating its floor.
+            self.config = dataclasses.replace(
+                self.config, min_trades=sanity_trade_floor(self.gate_set)
+            )
         if _uses_min_trl_gate(self.gate_set):
             # A candidate set whose rung-0 gate is n / max(MinTRL, floor) >= 1:
             # rung 0's own floor must be that floor, so the rung never rejects
@@ -1396,29 +1420,6 @@ def _blocking_gate_for(ctx: LadderContext, gate_set: GateSet, rung_index: int) -
 # --------------------------------------------------------------------------
 # Helpers
 # --------------------------------------------------------------------------
-
-
-def _uses_min_trl_gate(gate_set: GateSet) -> bool:
-    """True when the set has no ``n_trades`` ``min_trades`` gate but gates MinTRL."""
-    try:
-        if gate_set.by_name("min_trades").metric == "n_trades":
-            return False
-    except KeyError:
-        pass
-    return any(g.metric == "n_trades_over_min_trl" for g in gate_set.gates)
-
-
-def sanity_trade_floor(gate_set: GateSet) -> int:
-    """The ``LadderConfig.min_trades`` a gate set requires.
-
-    The ``min_trades`` gate's threshold for a set that gates ``n_trades`` (the
-    audited set: 400), and :data:`MIN_TRL_FLOOR_TRADES` for a candidate set
-    that gates ``n_trades_over_min_trl`` instead. Raises ``KeyError`` for a set
-    with neither, as :class:`ValidationLadder` does.
-    """
-    if _uses_min_trl_gate(gate_set):
-        return MIN_TRL_FLOOR_TRADES
-    return int(gate_set.by_name("min_trades").threshold)
 
 
 def _finite_or_none(value: Any) -> float | None:

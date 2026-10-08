@@ -18,6 +18,8 @@ procedure.
 """
 from __future__ import annotations
 
+import dataclasses
+
 import pandas as pd
 import pytest
 
@@ -39,12 +41,28 @@ from tests.validation_fixtures import (
 CONFIG = LadderConfig(selection_metric="net_profit", stress_samples=20, spa_bootstraps=200)
 
 
+@dataclasses.dataclass
+class _WithOpeningEquity:
+    """Records an equity base, as every EngineEvaluator run does.
+
+    The production gate set (``v2.1.0-calibrated``) reads walk-forward
+    efficiency on LOG GROWTH, which needs an equity base and has no
+    money-per-day fallback; the synthetic evaluator records none on its own.
+    """
+
+    inner: object
+
+    def __call__(self, params, window):
+        ev = self.inner(params, window)
+        return dataclasses.replace(ev, meta={**ev.meta, "opening_equity": 10_000.0})
+
+
 def _run(evaluator, content_hash: str, config: LadderConfig = CONFIG):
     registry = HoldoutRegistry.in_memory()
     registry.define(DATASET_VERSION, data_start=DATA_START, data_end=DATA_END)
     report = ValidationLadder(config=config).run(
         candidate("moving_regime", content_hash),
-        evaluator,
+        _WithOpeningEquity(evaluator),
         registry=registry,
         dataset_version_id=DATASET_VERSION,
         actor="agent:test",
@@ -82,8 +100,9 @@ class TestTrueWalkForwardCatchesIt:
         assert report.binding_constraint.rung_index == 2
 
     def test_the_binding_constraint_is_walk_forward_efficiency(self, trap) -> None:
+        """Under the production set the WFE gate is the log-growth one (E-2)."""
         report, _ = trap
-        assert report.binding_constraint.name == "walk_forward_efficiency"
+        assert report.binding_constraint.name == "walk_forward_efficiency_log_growth"
         assert report.binding_constraint.observed < 50.0
         assert report.binding_constraint.shortfall > 0.0
 

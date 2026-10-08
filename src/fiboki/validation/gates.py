@@ -33,11 +33,15 @@ __all__ = [
     "GATE_SET_V2",
     "GATE_SET_V2_1_CALIBRATED",
     "GATE_SET_V2_1_CANDIDATES",
+    "MIN_TRL_FLOOR_TRADES",
+    "PRODUCTION_GATE_SET",
     "Comparison",
     "Gate",
     "GateResult",
     "GateSet",
     "GateStatus",
+    "sanity_trade_floor",
+    "uses_min_trl_gate",
 ]
 
 
@@ -616,10 +620,10 @@ CANDIDATE_LADDER_FOLDS: dict[str, int] = {"c_hit_8fold": 8}
 #: audited set, because at the trade counts these documents produce (median 330)
 #: no 95% test of a 0.08 edge has power, whatever the gate
 #: (research/reports/RESEARCH_LEDGER.md, E-2 result). Publishing it is what the
-#: E-1 and E-2 decision rules require; it is NOT the production bar until
-#: ``lifecycle.promotion`` and the ladder default are switched to it, which is a
-#: separate, recorded change. Its rung-0 floor is 150 trades
-#: (``MIN_TRL_FLOOR_TRADES``); the ladder enforces that coupling.
+#: E-1 and E-2 decision rules require. It became the production bar on
+#: 2026-10-08 by the operator's instruction ("confirm switch"): see
+#: :data:`PRODUCTION_GATE_SET`. Its rung-0 floor is 150 trades
+#: (:data:`MIN_TRL_FLOOR_TRADES`); the ladder enforces that coupling.
 GATE_SET_V2_1_CALIBRATED = GateSet(
     version="v2.1.0-calibrated",
     gates=_candidate(
@@ -636,3 +640,49 @@ GATE_SET_V2_1_CALIBRATED = GateSet(
         "it may leave RESEARCH for a paper allocation."
     ),
 )
+
+
+# --------------------------------------------------------------------------
+# The production bar, and the trade floor every gate set implies
+# --------------------------------------------------------------------------
+
+#: The gate set a candidate must clear to leave RESEARCH, in ONE place:
+#: ``lifecycle.promotion``, the ladder's default, ``validation.run``, discovery
+#: campaigns and the agents' promotion-gate job all read this name.
+#: Switched from ``GATE_SET_V2`` (``v2.0.0-audit``) to
+#: ``GATE_SET_V2_1_CALIBRATED`` on 2026-10-08 by the operator's instruction,
+#: after E-2 (research/reports/RESEARCH_LEDGER.md, "E-2 result" and "Production
+#: bar switched"). Measured effect on both E-1 processes: no verdict changes
+#: (0/400 at every injected edge either way); candidates with 150 to 399
+#: trades are now measured through every rung instead of ending at rung 0.
+#: A ValidationReport produced under any other fingerprint is refused by
+#: ``lifecycle.promotion``; every stored report (all v2.0.0-audit, none
+#: promotable) must be re-run under this set before it can support a promotion.
+PRODUCTION_GATE_SET: GateSet = GATE_SET_V2_1_CALIBRATED
+
+#: ``n_trades_over_min_trl`` is ``n_trades / max(min_trl_95, MIN_TRL_FLOOR_TRADES)``,
+#: so one ``>= 1.0`` gate reads "n >= max(150, MinTRL_95)" (audit section 3.1).
+MIN_TRL_FLOOR_TRADES = 150
+
+
+def uses_min_trl_gate(gate_set: GateSet) -> bool:
+    """True when the set has no ``n_trades`` ``min_trades`` gate but gates MinTRL."""
+    try:
+        if gate_set.by_name("min_trades").metric == "n_trades":
+            return False
+    except KeyError:
+        pass
+    return any(g.metric == "n_trades_over_min_trl" for g in gate_set.gates)
+
+
+def sanity_trade_floor(gate_set: GateSet) -> int:
+    """The rung-0 trade floor (``LadderConfig.min_trades``) a gate set requires.
+
+    The ``min_trades`` gate's threshold for a set that gates ``n_trades`` (the
+    audited set: 400), and :data:`MIN_TRL_FLOOR_TRADES` for a set that gates
+    ``n_trades_over_min_trl`` instead (the calibrated, production set: 150).
+    Raises ``KeyError`` for a set with neither.
+    """
+    if uses_min_trl_gate(gate_set):
+        return MIN_TRL_FLOOR_TRADES
+    return int(gate_set.by_name("min_trades").threshold)

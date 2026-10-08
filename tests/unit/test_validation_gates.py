@@ -311,11 +311,33 @@ class TestCalibratedSet:
             assert mine[name] == audited[name]  # oos_window_hit_rate and deflation untouched
         assert "oos_window_hit_rate_wilson" not in mine and "deflated_sharpe_family_n" not in mine
 
-    def test_it_is_not_the_production_bar_until_promotion_is_switched(self) -> None:
+    def test_it_is_the_production_bar_since_the_switch(self) -> None:
+        """Switched 2026-10-08 on the operator's instruction; promotion reads it."""
         from fiboki.lifecycle import promotion
+        from fiboki.validation.gates import PRODUCTION_GATE_SET
 
-        assert promotion.GATE_SET_V2.fingerprint() == GATE_SET_V2.fingerprint()
+        assert PRODUCTION_GATE_SET is self._c()
+        assert promotion.PRODUCTION_GATE_SET.fingerprint() == self._c().fingerprint()
         assert self._c().fingerprint() != GATE_SET_V2.fingerprint()
+
+    def test_every_production_consumer_reads_the_one_name(self) -> None:
+        """No module outside gates.py imports GATE_SET_V2 as the bar it applies:
+        promotion, the ladder, run, campaigns and the agents read PRODUCTION_GATE_SET."""
+        import ast
+        import pathlib
+
+        src = pathlib.Path(__file__).resolve().parents[2] / "src" / "fiboki"
+        allowed = {"validation/gates.py", "validation/__init__.py"}
+        offenders = []
+        for path in src.rglob("*.py"):
+            rel = str(path.relative_to(src))
+            if rel in allowed:
+                continue
+            for node in ast.walk(ast.parse(path.read_text())):
+                if isinstance(node, ast.ImportFrom) and any(a.name == "GATE_SET_V2" for a in node.names):
+                    offenders.append(rel)
+        offenders.sort()
+        assert offenders == []
 
     def test_the_ladder_couples_its_floor_to_150(self) -> None:
         from fiboki.validation.ladder import LadderConfig, ValidationLadder, sanity_trade_floor

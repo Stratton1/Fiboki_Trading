@@ -24,7 +24,8 @@ Where the numbers come from
 The forward stages restate ``docs/v2/DEPLOYMENT.md`` §10, which is itself carried
 forward from the V1 audit:
 
-* **Gate A, research to paper** -- every gate in ``GATE_SET_V2``, plus an
+* **Gate A, research to paper** -- every gate in ``PRODUCTION_GATE_SET`` (``v2.1.0-calibrated``
+  since 2026-10-08), plus an
   automated check that live execution is disabled. Here: ``VALIDATING ->
   CANDIDATE`` (the report) and ``CANDIDATE -> PAPER`` (the config check).
 * **Gate B, paper to broker demo** -- 30 days of continuous paper with no
@@ -78,7 +79,7 @@ from fiboki.lifecycle.state import (
     LifecycleTransition,
 )
 from fiboki.validation.gates import (
-    GATE_SET_V2,
+    PRODUCTION_GATE_SET,
     Comparison,
     Gate,
     GateResult,
@@ -396,13 +397,13 @@ def _check_report(rule: PromotionRule, evidence: PromotionEvidence) -> list[str]
             f"the ValidationReport verdict is {report.verdict.value.upper()}: "
             f"{report.binding_constraint.describe()}"
         )
-    production = GATE_SET_V2.fingerprint()
+    production = PRODUCTION_GATE_SET.fingerprint()
     if report.gate_set_fingerprint != production:
         out.append(
             "the ValidationReport was produced under gate set "
             f"{report.gate_set_version or 'unknown'} "
             f"({report.gate_set_fingerprint[:12] or 'none'}), not the production "
-            f"set {GATE_SET_V2.version} ({production[:12]}). A report that "
+            f"set {PRODUCTION_GATE_SET.version} ({production[:12]}). A report that "
             "cleared a softer bar has not cleared this one"
         )
     blocking = [g for g in report.gate_results if g.status is GateStatus.NOT_EVALUATED]

@@ -21,7 +21,7 @@ from fiboki.lifecycle.state import (
     LifecycleStateMachine,
     TransitionKind,
 )
-from fiboki.validation.gates import GATE_SET_V2, GateStatus
+from fiboki.validation.gates import GATE_SET_V2, PRODUCTION_GATE_SET, GateStatus
 from fiboki.validation.report import RungOutcome, RungResult, ValidationReport, Verdict
 from tests.lifecycle_fixtures import (
     AUTOMATED_ACTORS,
@@ -38,9 +38,14 @@ LADDER_EDGES = list(itertools.pairwise(LADDER))
 
 
 def _passing_report(content_hash: str = HASH_A, **overrides) -> ValidationReport:
+    # Every metric BOTH sets read, so a report passes under the production set
+    # (v2.1.0-calibrated since 2026-10-08) and the audited one alike.
     values = {
         "n_trades": 500.0,
+        "n_trades_over_min_trl": 1.6,
         "walk_forward_efficiency": 72.0,
+        "walk_forward_efficiency_log_growth": 70.0,
+        "walk_forward_min_oos_trades": 60.0,
         "oos_profitable_fraction": 0.71,
         "deflated_sharpe_ratio": 0.97,
         "pbo": 0.11,
@@ -48,14 +53,16 @@ def _passing_report(content_hash: str = HASH_A, **overrides) -> ValidationReport
         "stepm_member": 1.0,
         "net_profit_at_2x_spread": 1200.0,
         "point_plateau_ratio": 1.08,
+        "plateau_neighbourhood_median_ratio": 0.85,
+        "plateau_neighbourhood_min": 0.4,
     }
     values.update(overrides)
     return ValidationReport.build(
         strategy_id="ichimoku_baseline",
         strategy_content_hash=content_hash,
         dataset_version_id="eurusd_h1_v3",
-        gate_set=GATE_SET_V2,
-        gate_results=GATE_SET_V2.evaluate(values),
+        gate_set=PRODUCTION_GATE_SET,
+        gate_results=PRODUCTION_GATE_SET.evaluate(values),
         rungs=[
             RungResult(index=i, name=f"RUNG{i}", outcome=RungOutcome.PASS)
             for i in range(7)
@@ -169,6 +176,38 @@ def test_validating_to_candidate_needs_a_report_and_one_holdout_look():
         )
         assert not decision.allowed
         assert fragment in decision.binding_constraint
+
+
+def test_a_report_under_the_superseded_audited_set_does_not_count():
+    """v2.0.0-audit was the production bar until 2026-10-08. A report that cleared
+    it (all stored reports did, or failed it) is not evidence under the switch."""
+    report = ValidationReport.build(
+        strategy_id="x",
+        strategy_content_hash=HASH_A,
+        dataset_version_id="d",
+        gate_set=GATE_SET_V2,
+        gate_results=GATE_SET_V2.evaluate(
+            {
+                "n_trades": 500.0, "walk_forward_efficiency": 72.0,
+                "oos_profitable_fraction": 0.71, "deflated_sharpe_ratio": 0.97, "pbo": 0.11,
+                "spa_p_consistent": 0.01, "stepm_member": 1.0,
+                "net_profit_at_2x_spread": 1200.0, "point_plateau_ratio": 1.08,
+            }
+        ),
+        rungs=[RungResult(index=i, name=f"RUNG{i}", outcome=RungOutcome.PASS) for i in range(7)],
+        code_version_override="testsha",
+    )
+    assert report.verdict is Verdict.PROMOTE
+    decision = evaluate_promotion(
+        PROMOTION_RULES_V1,
+        StrategyLifecycle.VALIDATING,
+        StrategyLifecycle.CANDIDATE,
+        PromotionEvidence(
+            metrics=promotion_metrics(), validation_report=report, holdout_consumption_count=1,
+        ),
+    )
+    assert not decision.allowed
+    assert "not the production set v2.1.0-calibrated" in decision.binding_constraint
 
 
 def test_a_report_under_a_softer_gate_set_does_not_count():

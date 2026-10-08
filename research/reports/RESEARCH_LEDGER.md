@@ -557,3 +557,31 @@ one-line, recorded change the operator confirms (USER_ACTIONS R3). Measured, the
 verdict on either process (0 and 0 either way); in practice it lets 150-to-400-trade candidates be
 measured through every rung instead of ending at rung 0, which is more information per campaign at
 no measured cost in size.
+
+## Production bar switched to `v2.1.0-calibrated` (2026-10-08, operator instruction "confirm switch")
+
+`PRODUCTION_GATE_SET` (`validation/gates.py`) now names `GATE_SET_V2_1_CALIBRATED`, fingerprint
+`9a195b2a…`; `lifecycle/promotion.py`, the ladder's default, `validation/run.py`, discovery
+campaigns and the agents' promotion-gate job read that one name (an AST test refuses any other
+module importing `GATE_SET_V2`). `LadderConfig.min_trades` now defaults to "the floor the gate set
+in force implies" (150 under the production set, 400 under `GATE_SET_V2`), so a ladder built for
+either set is coherent without restating it; an explicit value must still match. The agents'
+promotion-gate job computes MinTRL_95 from the backtest's own per-trade moments, so its trade
+gate is evaluated rather than left blank. `GATE_SET_V2` is kept, unchanged, as the audited record.
+
+**What this changes, measured.** On both E-1 processes the calibrated set's verdicts are 0/400
+at every injected edge, as under the audited set (E-2 result above): no candidate that was
+rejected is now promoted, and none that would have been promoted is now rejected. Operationally,
+candidates with 150 to 399 trades are measured through every rung instead of ending at rung 0, so
+a campaign records more about each candidate at no measured cost in false promotions. **Stored
+results:** every stored validation report was produced under `v2.0.0-audit`; promotion refuses
+them (fingerprint mismatch) until re-run under the production set. None was promotable, so no
+decision changes. K1 to K5 campaign verdicts stand as records of the audited bar; they are not
+re-scored, because rule 5 of both pre-registrations forbids choosing thresholds by looking at real
+strategies, and a re-score now would be exactly that kind of look.
+
+**Tests updated deliberately, not weakened.** Tests that described the production ladder now
+describe the production set (gate names `min_track_record`, `walk_forward_efficiency_log_growth`,
+`plateau_neighbourhood_*`; the integration ladder's synthetic evaluator records an equity base, as
+the real engine always does, because the log-growth WFE has no money-per-day fallback). Tests that
+pin the audited set still pin it by name.

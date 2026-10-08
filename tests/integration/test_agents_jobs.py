@@ -18,7 +18,7 @@ from fiboki.agents.session import open_session
 from fiboki.core.enums import Timeframe
 from fiboki.research.artefacts import BacktestRecord
 from fiboki.strategy.compiler import compile_strategy
-from fiboki.validation.gates import GATE_SET_V2
+from fiboki.validation.gates import PRODUCTION_GATE_SET
 from tests.agents_fixtures import Harness
 
 
@@ -257,8 +257,8 @@ def test_the_validation_gates_run_and_decide(harness: Harness, backtest_id: str)
     report = harness.research.get_validation_report(result["report_id"])
     check_names = {c["name"] for c in report.checks}
     # The gates are the PLATFORM's, not the agent layer's.
-    assert check_names == {g.name for g in GATE_SET_V2.gates}
-    assert report.metrics["gate_set_version"] == GATE_SET_V2.version
+    assert check_names == {g.name for g in PRODUCTION_GATE_SET.gates}
+    assert report.metrics["gate_set_version"] == PRODUCTION_GATE_SET.version
     assert set(result["failed_checks"]) <= check_names
     assert report.created_by == "worker"
 
@@ -271,7 +271,10 @@ def test_gates_this_job_cannot_compute_block_rather_than_vanish(
     assert record is not None and record.result is not None
     report = harness.research.get_validation_report(str(record.result["report_id"]))
     by_name = {c["name"]: c for c in report.checks}
-    for ladder_only in ("walk_forward_efficiency", "pbo", "spa_consistent_p", "stepm_survivor"):
+    for ladder_only in (
+        "walk_forward_min_oos_trades", "walk_forward_efficiency_log_growth", "pbo",
+        "spa_consistent_p", "stepm_survivor", "plateau_neighbourhood_median",
+    ):
         assert by_name[ladder_only]["status"] == "not_evaluated"
         assert by_name[ladder_only]["passed"] is False
     assert any("NOT_EVALUATED" in c for c in report.caveats)
@@ -286,8 +289,9 @@ def test_an_honestly_bad_strategy_fails_the_gates(harness: Harness, backtest_id:
     record = harness.orchestrator.by_key("validation_main")
     assert record is not None and record.result is not None
     assert record.result["verdict"] == "fail"
-    assert "min_trades" in record.result["failed_checks"]
-    assert record.result["binding_constraint"] == "min_trades"
+    # The production set's trade gate (v2.1.0-calibrated): n >= max(150, MinTRL_95).
+    assert "min_track_record" in record.result["failed_checks"]
+    assert record.result["binding_constraint"] == "min_track_record"
     report = harness.research.get_validation_report(str(record.result["report_id"]))
     # UPDATED DELIBERATELY (audit P1-2): this harness injects no experiment
     # ledger, so the search size is unknown and the DSR is NOT_EVALUATED --

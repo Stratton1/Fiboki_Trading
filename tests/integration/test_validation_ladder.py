@@ -24,7 +24,7 @@ from fiboki.research.experiment import (
 )
 from fiboki.research.lineage import LineageService
 from fiboki.research.memory import ResearchMemory
-from fiboki.validation.gates import GATE_SET_V2, GateStatus
+from fiboki.validation.gates import GATE_SET_V2, PRODUCTION_GATE_SET, GateStatus
 from fiboki.validation.holdout import HoldoutAlreadyConsumed, HoldoutRegistry
 from fiboki.validation.ladder import LadderConfig, ValidationLadder
 from fiboki.validation.report import RungOutcome, ValidationReport, Verdict
@@ -42,6 +42,23 @@ from tests.validation_fixtures import (
 CONFIG = LadderConfig(selection_metric="net_profit", stress_samples=20, spa_bootstraps=200)
 
 
+class WithOpeningEquity:
+    """Records an equity base, as every EngineEvaluator run does. The production
+    gate set reads walk-forward efficiency on LOG growth, which needs one."""
+
+    def __init__(self, inner) -> None:
+        self.inner = inner
+
+    def __call__(self, params, window):
+        import dataclasses
+
+        ev = self.inner(params, window)
+        return dataclasses.replace(ev, meta={**ev.meta, "opening_equity": 10_000.0})
+
+    def __getattr__(self, name):
+        return getattr(self.inner, name)
+
+
 def fresh_registry() -> HoldoutRegistry:
     registry = HoldoutRegistry.in_memory()
     registry.define(DATASET_VERSION, data_start=DATA_START, data_end=DATA_END)
@@ -53,7 +70,7 @@ def run(evaluator, content_hash: str, config: LadderConfig = CONFIG, registry=No
     ladder = ValidationLadder(config=config)
     report = ladder.run(
         candidate("synthetic", content_hash),
-        evaluator,
+        WithOpeningEquity(evaluator),
         registry=registry,
         dataset_version_id=DATASET_VERSION,
         engine_config={"initial_balance": 10_000.0, "account_ccy": "GBP"},
@@ -107,8 +124,8 @@ class TestPureNoiseIsRejected:
         assert report.strategy_content_hash
         assert report.dataset_version_id == DATASET_VERSION
         assert report.code_version
-        assert report.gate_set_version == GATE_SET_V2.version
-        assert report.gate_set_fingerprint == GATE_SET_V2.fingerprint()
+        assert report.gate_set_version == PRODUCTION_GATE_SET.version == "v2.1.0-calibrated"
+        assert report.gate_set_fingerprint == PRODUCTION_GATE_SET.fingerprint()
         assert len(report.rungs) == 7
         assert report.lifecycle_recommendation is StrategyLifecycle.RESEARCH
         assert ValidationReport.from_json(report.to_json()).to_json() == report.to_json()
@@ -135,20 +152,11 @@ class TestAGenuineEdgeSurvives:
 
     @pytest.mark.parametrize(
         "gate",
-        [
-            "min_trades",
-            "walk_forward_efficiency",
-            "oos_window_hit_rate",
-            "deflated_sharpe",
-            "pbo",
-            "spa_consistent_p",
-            "stepm_survivor",
-            "survives_2x_spread",
-            "parameter_plateau",
-        ],
+        [g.name for g in PRODUCTION_GATE_SET.gates],
     )
-    def test_each_audit_gate_was_actually_evaluated(self, edge_report, gate) -> None:
-        """Passing because nobody computed the number is not passing."""
+    def test_each_production_gate_was_actually_evaluated(self, edge_report, gate) -> None:
+        """Passing because nobody computed the number is not passing. Every gate of
+        the production set (v2.1.0-calibrated since 2026-10-08)."""
         assert edge_report.gate(gate).status is GateStatus.PASS
 
     def test_the_purged_cv_rung_produced_a_real_distribution(self, edge_report) -> None:
@@ -204,7 +212,8 @@ class TestAGenuineEdgeSurvives:
     ) -> None:
         assert edge_report.engine_config["account_ccy"] == "GBP"
         assert edge_report.broker_profile["name"] == "ig_realistic"
-        assert edge_report.ladder_config["min_trades"] == 400
+        # The production set's floor: 150 trades, above which the MinTRL gate decides.
+        assert edge_report.ladder_config["min_trades"] == 150
 
 
 class TestTheHoldoutIsSpentExactlyOnce:
@@ -337,8 +346,13 @@ class TestTheWholePipelineRecordsItself:
 
 class TestLadderConfiguration:
     def test_the_ladder_refuses_a_min_trades_that_disagrees_with_its_gate(self) -> None:
+        with pytest.raises(ValueError, match="must equal it"):
+            ValidationLadder(config=LadderConfig(min_trades=80))  # production: floor 150
         with pytest.raises(ValueError, match="disagrees with"):
-            ValidationLadder(config=LadderConfig(min_trades=80))
+            ValidationLadder(config=LadderConfig(min_trades=80), gate_set=GATE_SET_V2)
+        # The default resolves to the floor of whichever set is in force.
+        assert ValidationLadder(gate_set=GATE_SET_V2).config.min_trades == 400
+        assert ValidationLadder().config.min_trades == 150
 
     def test_lowering_the_bar_requires_minting_a_new_gate_version(self) -> None:
         gates = GATE_SET_V2.with_overrides("v2.0.0-intraday", min_trades=100.0)
