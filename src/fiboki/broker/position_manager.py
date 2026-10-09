@@ -824,6 +824,13 @@ class VenuePositionManager:
         #: ``book sequence -> broker_ref``. Survives the position leaving the
         #: book, which is precisely when a final close still has to be sent.
         self._ref_by_seq: dict[int, str] = {}
+        #: ``broker_ref -> (venue position, reason)`` for closes the BOOK made
+        #: and the venue has not confirmed (refused by the gateway, an error on
+        #: the way out). Re-sent on every bar until applied or the venue no
+        #: longer holds the position. Without this a single refused close left
+        #: a real position nobody tracked: the book flat, the account not, and
+        #: nothing that would ever close it (paper forward, 2026-10-06).
+        self.pending_closes: dict[str, tuple[Position, str]] = {}
         self._last_exposure: ManagedExitExposure | None = None
 
     # ------------------------------------------------------------ plumbing
@@ -1103,14 +1110,16 @@ class VenuePositionManager:
                 stray = self.venue_positions.pop(broker_ref, None)
                 self.venue_state.pop(broker_ref, None)
                 if stray is not None:
-                    self._instruct_close(
+                    stray_reason = f"entry_not_modelled:{event.reason}"
+                    if not self._instruct_close(
                         position=stray,
                         size=stray.size,
                         final=True,
                         kind=AmendKind.CORRECTION,
-                        reason=f"entry_not_modelled:{event.reason}",
+                        reason=stray_reason,
                         cycle=cycle,
-                    )
+                    ):
+                        self.pending_closes[broker_ref] = (stray, stray_reason)
                 self._raise_unrealised(
                     IntentDivergence(
                         kind="entry_not_modelled",
@@ -1135,6 +1144,10 @@ class VenuePositionManager:
         #    a close of a position the venue has already closed on its own stop
         #    reports PositionNotFound, which is the state we wanted and is
         #    recorded as such rather than retried.
+        # 0. Closes decided on an earlier bar that the venue never confirmed.
+        #    The decision was made then; this only delivers it.
+        self.retry_pending_closes(cycle)
+
         self._push_closes(result, cycle)
 
         # 2. Whatever is still open: make the one stop and one limit agree.
@@ -1163,6 +1176,7 @@ class VenuePositionManager:
         view = self.driver.slice_for(bars)
         result = self.book.flatten(view, reason=reason, positions=positions)
         cycle = ManagerCycle(at=view.timestamp, advance=result)
+        self.retry_pending_closes(cycle)
         self._push_closes(result, cycle)
         cycle.exposure = self.measure_managed_exit_exposure(view)
         self._last_exposure = cycle.exposure
@@ -1197,7 +1211,7 @@ class VenuePositionManager:
             if venue_position is None:
                 continue
             final = leg.final or leg.position_seq not in still_open
-            self._instruct_close(
+            applied = self._instruct_close(
                 position=venue_position,
                 size=min(leg.size, venue_position.size) if not final else venue_position.size,
                 final=final,
@@ -1209,6 +1223,8 @@ class VenuePositionManager:
                 self.venue_state.pop(ref, None)
                 self.venue_positions.pop(ref, None)
                 self._ref_by_seq.pop(leg.position_seq, None)
+                if not applied:
+                    self.pending_closes[ref] = (venue_position, str(leg.exit_reason))
                 continue
             venue_position.size = max(0.0, venue_position.size - float(leg.size))
             managed = next(
@@ -1238,7 +1254,12 @@ class VenuePositionManager:
         kind: AmendKind,
         reason: str,
         cycle: ManagerCycle,
-    ) -> None:
+    ) -> bool:
+        """Send one closing instruction. True when the venue is now flat for it.
+
+        ``already_flat`` (the venue reports no such position) counts as done:
+        that is the state the close wanted.
+        """
         started = time.monotonic()
         context = self.context_factory(position, "close" if final else "reduce")
         try:
@@ -1292,8 +1313,28 @@ class VenuePositionManager:
                     f"{position.instrument}: the book closed "
                     f"{size} but the venue did not. The modelled ledger and the "
                     f"account now disagree. {record.error}"
+                    + (" The close is re-sent every bar until the venue confirms." if final else "")
                 ),
             )
+        return record.applied
+
+    def retry_pending_closes(self, cycle: ManagerCycle) -> None:
+        """Re-send every close the venue has not confirmed. Through the gateway, as before.
+
+        Not a new decision and not a second route: the book closed these
+        positions on an earlier bar, and this delivers that same instruction
+        through the same ``execution.close`` and the same exit check set.
+        """
+        for ref, (position, reason) in sorted(self.pending_closes.items()):
+            if self._instruct_close(
+                position=position,
+                size=position.size,
+                final=True,
+                kind=AmendKind.CLOSE,
+                reason=f"retry:{reason}",
+                cycle=cycle,
+            ):
+                self.pending_closes.pop(ref, None)
 
     def _push_levels(self, cycle: ManagerCycle) -> None:
         for managed in self.book.open:
@@ -1483,7 +1524,28 @@ class VenuePositionManager:
                     op, intended, kind=AmendKind.CORRECTION, cycle=cycle
                 )
 
+        for ref in [r for r in self.pending_closes if r not in by_ref]:
+            # The venue no longer holds it (its own stop, or a close that did
+            # land): the pending close is complete.
+            self.pending_closes.pop(ref, None)
+
         for ref, venue in sorted(by_ref.items()):
+            if ref in self.pending_closes and ref not in managed:
+                divergences.append(
+                    IntentDivergence(
+                        kind="close_pending",
+                        position_id=venue.position_id,
+                        broker_ref=ref,
+                        instrument=venue.instrument,
+                        venue_stop=venue.stop_loss or None,
+                        detail=(
+                            "the book closed this position and the venue has not "
+                            f"confirmed ({self.pending_closes[ref][1]}); the close "
+                            "is re-sent every bar until it is"
+                        ),
+                    )
+                )
+                continue
             if ref not in managed:
                 divergences.append(
                     IntentDivergence(

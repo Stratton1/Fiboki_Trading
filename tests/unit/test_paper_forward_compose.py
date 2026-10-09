@@ -286,3 +286,21 @@ def test_cli_paper_forward_needs_a_wiring_file(cli_env: Path) -> None:
 
 def test_cli_worker_run_live_still_refuses(cli_env: Path) -> None:
     assert main(["worker", "run", "live"]) == EXIT_MISUSE
+
+
+def test_paper_forward_rides_out_outages_and_names_each_session_in_its_refs(tmp_path: Path) -> None:
+    """Two defects from the first fortnight on the practice account: an offline
+    laptop drove a restart loop that abandoned an open trade, and two trades in
+    one journal shared the reference PFWD-00000001."""
+    from fiboki.workers.base import WorkerStore
+
+    with WorkerStore.sqlite_at(tmp_path / "s.db") as store:
+        worker = compose(
+            _settings(tmp_path), DEFAULT_WIRING, store=store, environ=ENV,
+            transport=RecordedTransport({}),
+            clock=lambda: pd.Timestamp("2026-10-21T10:00:00Z"),
+        )
+        assert worker.lconfig.exit_on_outage is False
+        venue = worker.runtime.venue
+        assert venue.ref_prefix == f"PFWD-S{worker.runtime.restarts:04d}"
+        assert venue._next_ref() == f"{venue.ref_prefix}-00000001"

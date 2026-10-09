@@ -749,6 +749,15 @@ class WorkerConfig:
     #: supervisor restarts it cleanly rather than letting it spin on a poisoned
     #: state forever. 0 = never give up.
     max_consecutive_failures: int = 20
+    #: Whether a run of OUTAGE failures (feed or broker unreachable: see
+    #: :func:`cycle_failure_event`) also counts towards giving up. A restart
+    #: cannot fix the network, and a worker whose state lives in memory (paper
+    #: forward) loses its open positions on every restart: on 2026-10-02 an
+    #: offline laptop drove eleven restarts in three hours and abandoned an open
+    #: trade. False keeps the process alive, backing off up to
+    #: ``outage_backoff_max_seconds``, alerting as before.
+    exit_on_outage: bool = True
+    outage_backoff_max_seconds: float = 300.0
     #: Exponential backoff applied after a failed cycle, capped.
     failure_backoff_seconds: float = 1.0
     failure_backoff_max_seconds: float = 60.0
@@ -1140,9 +1149,12 @@ class Worker(abc.ABC):
                         dedupe_key=f"cycle_fail:{self.config.kind}:{event.value}",
                         cycle=cycles,
                     )
+                outage = cycle_failure_event(exc) is AlertEvent.BROKER_UNHEALTHY
+                ride_out = outage and not self.config.exit_on_outage
                 if (
                     self.config.max_consecutive_failures
                     and self.consecutive_failures >= self.config.max_consecutive_failures
+                    and not ride_out
                 ):
                     _log.critical(
                         "giving up after %s consecutive failures",
@@ -1151,9 +1163,15 @@ class Worker(abc.ABC):
                     )
                     self._stop_reason = "max_consecutive_failures"
                     return EXIT_FATAL
+                cap = (
+                    max(self.config.failure_backoff_max_seconds, self.config.outage_backoff_max_seconds)
+                    if ride_out
+                    else self.config.failure_backoff_max_seconds
+                )
                 sleep_for = min(
-                    self.config.failure_backoff_seconds * (2 ** (self.consecutive_failures - 1)),
-                    self.config.failure_backoff_max_seconds,
+                    self.config.failure_backoff_seconds
+                    * (2 ** min(self.consecutive_failures - 1, 30)),
+                    cap,
                 )
             finally:
                 self._in_cycle.clear()

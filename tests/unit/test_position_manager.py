@@ -852,3 +852,88 @@ def test_position_matches_what_the_manager_thinks_after_a_full_close() -> None:
     assert venue.positions() == ()
     assert ref not in manager.venue_positions
     assert ref not in manager.venue_state
+
+
+# ==========================================================================
+# A refused close is kept and re-sent (paper forward, 2026-10-06)
+# ==========================================================================
+
+
+def _stale_on_demand(manager):
+    """Wrap the context factory so a test can make the next exits see a stale quote."""
+    original = manager.context_factory
+    state = {"stale": False}
+
+    def factory(position, kind):
+        ctx = original(position, kind)
+        if not state["stale"]:
+            return ctx
+        from dataclasses import replace
+
+        old = ctx.now - pd.Timedelta(seconds=PAPER_LIMITS.max_price_age_seconds + 30)
+        return replace(ctx, market=replace(ctx.market, quote_time=old, last_bar_time=old))
+
+    manager.context_factory = factory
+    return state
+
+
+def test_a_close_the_gateway_refuses_is_kept_and_re_sent_until_the_venue_is_flat() -> None:
+    manager, venue, alerts, telemetry, _slept = build()
+    managed = open_one(manager, venue)
+    ref = str(managed.position.venue_ref)
+    state = _stale_on_demand(manager)
+
+    # Bar 2 runs through the stop. The book closes; the gateway refuses the
+    # venue close on a stale quote, as it did on 2026-10-06.
+    state["stale"] = True
+    venue.set_time(bar(2).timestamp)
+    manager.on_bar(
+        {SYMBOL: bar(2, low=STOP - 0.0010)}, bar_index=2, timestamp=bar(2).timestamp
+    )
+    assert manager.book.open == []
+    assert [p.venue_ref for p in venue.positions()] == [ref], "the venue should still hold it"
+    assert ref in manager.pending_closes
+    assert any("re-sent every bar" in m for _k, m in alerts), alerts
+    assert any(t.error == "risk_gateway_blocked_exit" for t in telemetry)
+
+    # Reconciliation names it for what it is, not as a position nobody manages.
+    assert [d.kind for d in manager.reconcile(repair=False)] == ["close_pending"]
+
+    # Bar 3: fresh quote. The same close goes through the same gateway and lands.
+    state["stale"] = False
+    venue.set_time(bar(3).timestamp)
+    manager.on_bar({SYMBOL: bar(3)}, bar_index=3, timestamp=bar(3).timestamp)
+    assert venue.positions() == ()
+    assert manager.pending_closes == {}
+    assert manager.reconcile(repair=False) == []
+
+
+def test_a_pending_close_is_dropped_once_the_venue_no_longer_holds_the_position() -> None:
+    manager, venue, _alerts, _telemetry, _slept = build()
+    managed = open_one(manager, venue)
+    ref = str(managed.position.venue_ref)
+    state = _stale_on_demand(manager)
+    state["stale"] = True
+    venue.set_time(bar(2).timestamp)
+    manager.on_bar(
+        {SYMBOL: bar(2, low=STOP - 0.0010)}, bar_index=2, timestamp=bar(2).timestamp
+    )
+    assert ref in manager.pending_closes
+    venue._positions.pop(ref)  # the venue's own stop took it
+    assert manager.reconcile(repair=False) == []
+    assert manager.pending_closes == {}
+
+
+def test_a_refused_flatten_is_also_kept_pending() -> None:
+    from fiboki.core.enums import ExitReason
+
+    manager, venue, _alerts, _telemetry, _slept = build()
+    managed = open_one(manager, venue)
+    ref = str(managed.position.venue_ref)
+    state = _stale_on_demand(manager)
+    state["stale"] = True
+    manager.flatten({SYMBOL: bar(2)}, reason=ExitReason.RISK_HALT)
+    assert ref in manager.pending_closes
+    state["stale"] = False
+    manager.flatten({SYMBOL: bar(3)}, reason=ExitReason.RISK_HALT)
+    assert venue.positions() == () and manager.pending_closes == {}

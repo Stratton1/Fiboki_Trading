@@ -474,8 +474,16 @@ class OandaPollingBarFeed:
             return "absent", 0
         except Exception as exc:  # retries already exhausted
             report.errors[symbol] = f"{type(exc).__name__}: {exc}"
-            _log.error(
-                "candle fetch failed after retries",
+            # WARNING, not ERROR: this attempt is re-polled within the boundary.
+            # The outcomes that matter are raised where they are decided: a
+            # candle still missing after the re-polls is a DATA_QUALITY_DEFECT
+            # (``_late_candle``), and a boundary where nothing answered fails
+            # the cycle (ProviderError below). OANDA's practice candle endpoint
+            # answers 401 for tens of seconds at some H4 boundaries while
+            # pricing on the same token works; every one has recovered on
+            # re-poll so far (2026-09-30 to 2026-10-09: no late candle).
+            _log.warning(
+                "candle fetch failed; will re-poll",
                 extra={"instrument": symbol, "error": report.errors[symbol]},
             )
             return "error", 0

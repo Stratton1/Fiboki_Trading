@@ -82,8 +82,14 @@ class ForwardPaperVenue(BrokerAdapter):
         account: Callable[[], AccountState],
         clock: Callable[[], pd.Timestamp],
         strategy_id: str = "",
+        ref_prefix: str = "PFWD",
     ) -> None:
         self.profile = profile
+        #: Names the session, so a reference is unique across restarts. The
+        #: counter below starts at 1 in every process; with a bare "PFWD" two
+        #: different trades in one journal shared PFWD-00000001 (2026-10-01 and
+        #: 2026-10-05).
+        self.ref_prefix = ref_prefix
         self._account = account
         self.clock = clock
         self.strategy_id = strategy_id
@@ -119,7 +125,7 @@ class ForwardPaperVenue(BrokerAdapter):
 
     def _next_ref(self) -> str:
         self._seq += 1
-        return f"PFWD-{self._seq:08d}"
+        return f"{self.ref_prefix}-{self._seq:08d}"
 
     # -- BrokerAdapter -----------------------------------------------------
 

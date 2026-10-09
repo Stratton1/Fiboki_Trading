@@ -458,3 +458,41 @@ def test_idle_sleep_is_interrupted_by_a_stop_request(store):
     thread.join(timeout=5)
     assert not thread.is_alive(), "the worker slept through its stop request"
     assert time.monotonic() - started < 5.0
+
+
+class ConnectError(Exception):
+    """Named like httpx's: classified as an outage by cycle_failure_event."""
+
+
+def test_an_outage_is_ridden_out_when_exit_on_outage_is_off(store):
+    script = [ConnectError("offline")] * 5 + [CycleResult.idle()]
+    worker = ScriptedWorker(
+        script,
+        _config(max_cycles=6, max_consecutive_failures=3, exit_on_outage=False),
+        store,
+        worker="a@h:1",
+    )
+    assert worker.run(install_signals=False) == EXIT_OK
+    assert worker.calls == 6
+    assert worker.consecutive_failures == 0
+
+
+def test_an_outage_still_ends_the_worker_by_default(store):
+    worker = ScriptedWorker(
+        [ConnectError("offline")],
+        _config(max_cycles=0, max_consecutive_failures=3),
+        store,
+        worker="a@h:1",
+    )
+    assert worker.run(install_signals=False) == EXIT_FATAL
+
+
+def test_a_non_outage_failure_still_ends_the_worker_with_exit_on_outage_off(store):
+    worker = ScriptedWorker(
+        [RuntimeError("poisoned state")],
+        _config(max_cycles=0, max_consecutive_failures=3, exit_on_outage=False),
+        store,
+        worker="a@h:1",
+    )
+    assert worker.run(install_signals=False) == EXIT_FATAL
+    assert worker.consecutive_failures == 3

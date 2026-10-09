@@ -1466,6 +1466,9 @@ def compose_runtime(
         account=lambda: holder["account"](),
         clock=clock,
         strategy_id=document.strategy_id,
+        # One prefix per session (session_start count), so references never
+        # repeat across restarts within one journal.
+        ref_prefix=f"PFWD-S{restarts:04d}",
     )
     switch = KillSwitch(FileKillSwitchJournal(_killswitch_path(settings)))
     recorder = StampedAttemptRecorder(journal, wired.stamp())
@@ -1614,6 +1617,10 @@ def compose_runtime(
             # Settings.health: the same DATA_STALE threshold the health page
             # and the watchdog read (FIBOKI_DATA_STALE_SECONDS).
             data_stale_after_seconds=_health(settings).data_stale_after_seconds,
+            # The book and the paper venue are in memory: a restart abandons
+            # open positions, and a restart cannot bring the network back. Ride
+            # out a feed outage, backing off and alerting, instead of exiting.
+            exit_on_outage=bool(wcfg.get("exit_on_outage", False)),
         ),
         dispatcher=dispatcher,
         worker=worker_id,
