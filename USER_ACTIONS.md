@@ -2,6 +2,8 @@
 
 **Generated:** 19 September 2026, at the end of the V2 build programme. **Updated 29 September 2026** after the agentic-integration wave (see `docs/v2/AGENTIC_INTEGRATION_PLAN.md` §3 and `docs/v2/BUILD_LOG.md`).
 
+**Status line (10 October 2026):** Paper trading had four defects, three now fixed (5c9c12e; `docs/v2/PLATFORM_STATUS.md` section 1); the fourth (open paper positions do not survive a restart) is not built yet. **New for you: keep the MacBook on its charger with the lid open.** It ran on battery and slept from 05:18 to 23:15 on 9 October, so Fiboki saw nothing for 18 hours; no software setting can stop a battery-forced or lid-closed sleep. The local model is not installed (`fiboki doctor` FAIL: Ollama runs but has no `qwen3:4b`), so the agents and the headline classifier are idle.
+
 **Status line (9 October 2026):** Everything is committed and pushed: the dev checkout, GitHub
 `main` and `v2/integration` are all at the same commit, and the runtime checkout `~/fiboki` runs it
 (web rebuilt, all six services restarted). The quote recorder is installed and verified on the
