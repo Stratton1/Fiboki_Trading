@@ -828,6 +828,7 @@ for (const route of allRoutes()) {
     mkdirSync(join(OUT, "findings"), { recursive: true });
     await page.goto(route);
     await settle(page);
+    await page.screenshot({ path: join(OUT, `${slug(route)}-1440x900-view.png`) });
     await page.screenshot({ path: join(OUT, `${slug(route)}-1440x900.png`), fullPage: true });
 
     // Everything above ran on the page's own life; chords navigate away.
@@ -838,6 +839,7 @@ for (const route of allRoutes()) {
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto(route);
     await settle(page);
+    await page.screenshot({ path: join(OUT, `${slug(route)}-390x844-view.png`) });
     await page.screenshot({ path: join(OUT, `${slug(route)}-390x844.png`), fullPage: true });
 
     writeFileSync(join(OUT, "findings", `${slug(route)}.json`), JSON.stringify(rec, null, 2));
