@@ -314,7 +314,10 @@ test.describe("closing a popover leaves no dead zone (inventory F-6)", () => {
     await cdp.send("Animation.enable");
     await cdp.send("Animation.setPlaybackRate", { playbackRate: 0.1 });
     const trigger = page.getByRole("button", { name: "Popover", exact: true });
-    const select = page.getByRole("combobox").first();
+    // (The shell's command line is also a combobox; this is the legend's Select.)
+    const select = page
+      .locator('[role="combobox"]:not([data-testid="command-line-input"])')
+      .first();
     await trigger.click();
     await expect(page.getByRole("dialog")).toBeVisible();
     await page.keyboard.press("Escape");
@@ -347,6 +350,8 @@ test.describe("tooltips", () => {
     await page.goto("/trading/risk");
     await expect(page.getByTestId("mode-banner")).toHaveAttribute("data-mode", "paper");
     await page.keyboard.press("Tab"); // skip link
+    await page.keyboard.press("Tab"); // command line
+    await page.keyboard.press("Tab"); // the function-key row (one tab stop)
     await page.keyboard.press("Tab"); // first rail icon
     await expect(page.getByTestId("rail-command")).toBeFocused();
     // A closing tooltip lingers for its exit transition; read the open one.

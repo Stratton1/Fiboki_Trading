@@ -91,6 +91,15 @@ in `tests/e2e/sse.ts`.
 - **Keyboard** (`components/shell/Hotkeys.tsx`, `ShellCommands.tsx`): ⌘K
   palette (cmdk, lazy; go to, open by id, actions that only open dialogs),
   `g` chords per section, `?` shortcut sheet, ⇧K OPENS the kill-switch dialog.
+- **Terminal chrome** (`components/shell/TopBar.tsx`): a command line under the
+  mode banner (`/` focuses it; a mnemonic such as `RSK`, `LAB`, `EXPO`, a name
+  fragment, or an instrument symbol goes to that view or chart; `?` opens the
+  shortcut sheet, `KILL` opens the kill-switch dialog, an empty Enter opens the
+  palette) and a row of function keys, F1 to F9, one per section (F5 is left to
+  the browser's reload). Mnemonics live in `components/shell/sections.ts`. The
+  theme is a black field with amber ink; green/red stay P&L only; links and
+  interactive keys are cyan-blue; every colour is a token in `app/globals.css`,
+  checked by `npm run contrast`.
 - **Charts** (`components/charts.tsx`): tokens only (a source rule bans hex),
   responsive width, a UTC time axis, gaps drawn as hatched gaps, arrow-key
   readout and a "View data" table on every chart.

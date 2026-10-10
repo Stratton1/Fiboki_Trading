@@ -191,6 +191,7 @@ function CommandLine() {
         type="button"
         className="cmdline__go"
         data-testid="command-line-go"
+        tabIndex={-1}
         // mousedown, not click: the input's blur would close the list first.
         onMouseDown={(event) => event.preventDefault()}
         onClick={() => run(showList ? (matches[current] ?? null) : (matches[0] ?? null))}
@@ -232,6 +233,30 @@ function FunctionKeys() {
   const pathname = usePathname();
   const router = useRouter();
   const active = sectionFor(pathname);
+  const nav = useRef<HTMLElement>(null);
+  // One tab stop for the whole row (the current section's key, else the
+  // first); arrows, Home and End move between keys. Nine more tab stops
+  // before the rail and the page would be nine more for every keyboard user.
+  const tabStop = SECTIONS.findIndex((section) => section === active);
+
+  const onNavKey = (event: KeyboardEvent<HTMLElement>) => {
+    const links = Array.from(nav.current?.querySelectorAll<HTMLAnchorElement>("a.fkey") ?? []);
+    const at = links.indexOf(document.activeElement as HTMLAnchorElement);
+    if (at < 0) return;
+    const next =
+      event.key === "ArrowRight"
+        ? (at + 1) % links.length
+        : event.key === "ArrowLeft"
+          ? (at - 1 + links.length) % links.length
+          : event.key === "Home"
+            ? 0
+            : event.key === "End"
+              ? links.length - 1
+              : -1;
+    if (next < 0) return;
+    event.preventDefault();
+    links[next]?.focus();
+  };
 
   useEffect(() => {
     const onKey = (event: globalThis.KeyboardEvent) => {
@@ -251,7 +276,13 @@ function FunctionKeys() {
   }, [router]);
 
   return (
-    <nav className="fkeys" aria-label="Section keys" data-testid="function-keys">
+    <nav
+      ref={nav}
+      className="fkeys"
+      aria-label="Section keys"
+      data-testid="function-keys"
+      onKeyDown={onNavKey}
+    >
       {SECTIONS.map((section, index) => {
         const first = section.links[0];
         if (!first) return null;
@@ -262,6 +293,7 @@ function FunctionKeys() {
             className="fkey"
             data-active={section === active}
             data-testid={`fkey-${section.id}`}
+            tabIndex={index === Math.max(0, tabStop) ? 0 : -1}
             aria-current={section === active ? "true" : undefined}
             aria-description={`${section.title}. ${section.question}`}
             title={`${section.title}${index === 4 ? " (F5 stays the browser's reload; click)" : ""}`}
@@ -279,7 +311,7 @@ export function TopBar() {
   return (
     <header className="topbar" data-testid="topbar">
       <div className="topbar__line">
-        <Link href="/" className="topbar__brand" aria-label="Fiboki, go to Command">
+        <Link href="/" className="topbar__brand" aria-label="Fiboki, go to Command" tabIndex={-1}>
           FIBOKI
         </Link>
         <CommandLine />
