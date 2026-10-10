@@ -1,0 +1,38 @@
+{
+  "schema": "fiboki-campaign-spec:1",
+  "id": "crypto_discovery_c1",
+  "status": "DRAFT 2026-10-10: ready to run, NOT pre-registered. Nothing has been evaluated on crypto bars. Filing it (fixing the trial accounting below in a commit before the first evaluation) is the operator's decision; until then a result from this spec is exploratory.",
+  "question": "Does any existing seed or K5 grammar document, its rules unchanged, show an edge net of Coinbase UK retail costs on GBP spot crypto, long only, under the production gate set?",
+  "universe": "crypto_majors_v1",
+  "universe_note": "fiboki.research.universes: BTCGBP ETHGBP SOLGBP LINKGBP ADAGBP DOTGBP (Coinbase GBP books with mean daily turnover >= GBP 100,000 over the 30 days to 2026-10-10). A SEPARATE universe: nothing here touches the filed E-4 run (k5_e4_v1).",
+  "timeframes": ["H4", "D1"],
+  "documents": {
+    "seeds": "research/strategies/*.json (six), retargeted onto crypto_majors_v1 (<id>__cmaj1) by --retarget-to-universe",
+    "k5": "research/generated/*.json (K5's 100), retargeted the same way",
+    "k6": "the large-scale generator on wave/k6 (not in this branch): when it lands, pass its directory as --generated-dir with --universe crypto_majors_v1 --retarget-to-universe, or generate onto the universe directly",
+    "why_retarget": "A document's universe is part of its content hash, so a retargeted document is a NEW candidate with its own holdout claim; its rules, stops, exits and parameters are byte-identical to the parent's (tests/unit/test_crypto_backfill_and_universes.py)."
+  },
+  "profile": "COINBASE_UK_SPOT",
+  "stress_profile": "COINBASE_UK_SPOT_STRESS",
+  "costs_note": "60 bps taker per leg (Coinbase Advanced, lowest tier, published 0.40%/0.60%), recorded median spread in bps (floor 2), 5 bps slippage, no financing. The ladder's 2x-spread survival gate reprices SPREAD only; on crypto the fee is ~95% of the friction, so a survivor must also be re-run under the stress profile (80 bps per leg, 3x spread, 25 bps slippage, one bar of latency) before anyone reads it as more than a hypothesis.",
+  "direction": "long only, enforced by the engine (rejection 'short_not_permitted') and the risk gateway (direction_permitted). Documents keep their short rules; their short signals are counted and refused.",
+  "account": "GBP 10,000 per series (research default); GBP-quoted pairs need no FX conversion",
+  "calendar": "official, enforce-where-covered (GBP releases only: crypto's base currencies are not in the calendar)",
+  "gates": "production (GATE_SET_V2_1_CALIBRATED), unchanged",
+  "data": {
+    "source": "coinbase_exchange_public, last_as_mid (trade prints as a mid proxy, bound half the spread)",
+    "history": "BTCGBP from 2015-04-21, ETHGBP 2018-09-07, LINKGBP 2020-07-21, ADAGBP 2021-03-18, DOTGBP 2021-06-16, SOLGBP 2021-06-17; H1 and D1 fetched, H4 resampled from H1",
+    "bars_from": "not trimmed: each series uses its own history. A POOLED (E-4 style) evaluation of this universe would start at the latest constituent, 2021-06-17."
+  },
+  "trial_accounting": {
+    "candidates": "(6 seeds + 100 K5) x 6 series x 2 timeframes, less out-of-timeframe cells, times the campaign's grid (max 8 points per candidate)",
+    "external_prior_trials": "0 for crypto bars at filing, because no crypto bar has been evaluated in this project. Any crypto search run elsewhere (wave/k6, ad hoc notebooks) BEFORE filing must be added with --external-prior-trials and a reason. Nothing can enforce this (AGENTS.md section 2).",
+    "note": "The K5 grammar was written after FX results existed; it was never fitted to crypto bars, but its documents are not independent of the earlier FX search either. A survivor is a hypothesis to re-author as a crypto seed with its own written story, never a result."
+  },
+  "commands": {
+    "backfill": "FIBOKI_DATA_ROOT=$PWD/var/datastore .venv/bin/fiboki data coinbase-backfill --universe crypto_majors_v1 --from 2015-01-01",
+    "plan": ".venv/bin/python research/run_discovery_campaign.py --data-root var/datastore --out research/reports/crypto_discovery_c1 --campaign-id crypto_discovery_c1 --universe crypto_majors_v1 --retarget-to-universe --generated-dir research/generated --timeframes H4 D1 --gates production --plan-only",
+    "campaign": ".venv/bin/python research/run_discovery_campaign.py --data-root var/datastore --out research/reports/crypto_discovery_c1 --campaign-id crypto_discovery_c1 --universe crypto_majors_v1 --retarget-to-universe --generated-dir research/generated --timeframes H4 D1 --gates production --engine-version-check",
+    "stress": "re-run any survivor's report with --profile COINBASE_UK_SPOT_STRESS under a new --campaign-id (crypto_discovery_c1_stress); the trial count does not drop for it"
+  }
+}

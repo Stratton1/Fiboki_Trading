@@ -316,7 +316,9 @@ def research_mid_frame(
 ) -> tuple[pd.DataFrame, dict[str, Any]]:
     """Bars the engine can trade, and the record of how they got there.
 
-    * ``mid`` / ``synthetic_mid``: returned unchanged.
+    * ``mid`` / ``synthetic_mid`` / ``last_as_mid``: returned unchanged (the
+      last is an exchange's trade prints, declared a mid proxy at ingest with
+      its bound recorded; ``data/providers/coinbase.py``).
     * ``bid``: converted with
       :func:`fiboki.data.providers.histdata.bid_to_mid` at the instrument's
       REGISTERED typical spread, and stamped ``synthetic_mid``. The lineage
@@ -330,7 +332,7 @@ def research_mid_frame(
     if "price_basis" not in frame.columns:
         return frame, {"basis": "assumed_mid"}
     bases = sorted({str(getattr(b, "value", b)).lower() for b in frame["price_basis"].unique()})
-    if bases in (["mid"], ["synthetic_mid"]):
+    if bases in (["mid"], ["synthetic_mid"], ["last_as_mid"]):
         return frame, {"basis": bases[0]}
     if bases == ["bid"]:
         spec = get_instrument(symbol)
@@ -345,7 +347,7 @@ def research_mid_frame(
             "pip_size": float(spec.pip_size),
         }
     raise ValueError(
-        f"{symbol}: bars are priced on {bases}; only mid, synthetic_mid or bid "
+        f"{symbol}: bars are priced on {bases}; only mid, synthetic_mid, last_as_mid or bid "
         "(converted with bid_to_mid) can be validated. The fill model assumes "
         "mid bars."
     )

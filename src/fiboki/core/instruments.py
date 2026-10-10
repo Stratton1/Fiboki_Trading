@@ -10,6 +10,11 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from fiboki.core.enums import AssetClass
+from fiboki.core.instruments_crypto import (
+    CRYPTO_INSTRUMENTS_2026_10_10,
+    CRYPTO_TABLE_FIELDS,
+    CRYPTO_VENUE,
+)
 from fiboki.core.instruments_oanda_table import (
     OANDA_INSTRUMENTS_2026_09_30,
     OANDA_TABLE_FIELDS,
@@ -31,6 +36,26 @@ class Instrument:
     retail_leverage: float = 20.0
     annual_financing_bps: float = 250.0
     trading_hours: str = "fx_24_5"
+    #: Typical spread in BASIS POINTS OF MID, for an instrument whose spread is a
+    #: proportion of price rather than a number of ticks (spot crypto). ``None``
+    #: (every CFD) means the spread is ``typical_spread_pips * pip_size``. When
+    #: set, it is authoritative for the cost model and the gateway's
+    #: ``abnormal_spread`` check.
+    typical_spread_bps: float | None = None
+    #: Whether a SHORT position can be opened at all. A CFD can be sold short; a
+    #: spot holding cannot without borrowed coins (margin), which the modelled
+    #: crypto venue does not offer these products on. ``False`` is enforced by
+    #: the risk gateway (``direction_permitted``) and by the backtest engine,
+    #: never by a strategy.
+    shortable: bool = True
+    #: The venue whose contract this is: ``"oanda"`` (practice CFDs) or
+    #: ``"coinbase"`` (UK spot, ``core/instruments_crypto.py``).
+    venue: str = "oanda"
+
+    @property
+    def is_spot(self) -> bool:
+        """An outright cash holding, not a CFD: no leverage, no financing."""
+        return self.venue == CRYPTO_VENUE
 
     @property
     def is_fx(self) -> bool:
@@ -116,6 +141,8 @@ DEFAULT_ANNUAL_FINANCING_BPS: dict[AssetClass, float] = {
     AssetClass.ENERGY: 350.0,
     AssetClass.COMMODITY: 350.0,
     AssetClass.BOND: 300.0,
+    # Spot (core/instruments_crypto.py): an outright holding pays no financing.
+    AssetClass.CRYPTO: 0.0,
 }
 
 #: ``Instrument.trading_hours`` label per class for OANDA-derived entries. The
@@ -131,6 +158,7 @@ TRADING_HOURS_BY_CLASS: dict[AssetClass, str] = {
     AssetClass.ENERGY: "energy",
     AssetClass.COMMODITY: "commodity_cfd",
     AssetClass.BOND: "bond_cfd",
+    AssetClass.CRYPTO: "crypto_24_7",
 }
 
 
@@ -337,6 +365,75 @@ for _row in _ROWS:
         trading_hours=str(_row["trading_hours"]),
     ))
     SPREAD_PROVENANCE[_sym] = str(_row["spread_provenance"])
+
+# =====================================================================
+# Spot crypto on Coinbase UK (core/instruments_crypto.py)
+# =====================================================================
+#
+# Registered beside the OANDA CFDs so that the DSL, the store, the engine and
+# the API resolve them like any other symbol. They are NOT OANDA instruments:
+# ``oanda_name_for`` raises for them, and every OANDA path (the OANDA backfill,
+# the practice candle feed, the pricing source) refuses them by that route.
+
+_CRYPTO_ROWS: tuple[dict[str, object], ...] = tuple(
+    dict(zip(CRYPTO_TABLE_FIELDS, row, strict=True)) for row in CRYPTO_INSTRUMENTS_2026_10_10
+)
+_PRODUCT_BY_SYMBOL: dict[str, str] = {}
+for _row in _CRYPTO_ROWS:
+    _sym = str(_row["symbol"])
+    if _sym in _REGISTRY:
+        raise ImportError(f"crypto symbol {_sym} collides with a registered instrument")
+    _tick = float(_row["quote_increment"])  # type: ignore[arg-type]
+    _bps = float(_row["typical_spread_bps"])  # type: ignore[arg-type]
+    _mid = float(_row["snapshot_mid"])  # type: ignore[arg-type]
+    _step = float(_row["base_increment"])  # type: ignore[arg-type]
+    _add(Instrument(
+        symbol=_sym,
+        asset_class=AssetClass.CRYPTO,
+        base=str(_row["base"]),
+        quote=str(_row["quote"]),
+        pip_size=_tick,
+        contract_size=1.0,
+        min_size=_step,
+        size_step=_step,
+        price_precision=int(_row["price_precision"]),  # type: ignore[call-overload]
+        # The bps snapshot restated in ticks at the snapshot mid, for pip readers.
+        typical_spread_pips=round(_bps * 1e-4 * _mid / _tick, 4),
+        retail_leverage=1.0,
+        annual_financing_bps=0.0,
+        trading_hours="crypto_24_7",
+        typical_spread_bps=_bps,
+        shortable=False,
+        venue=CRYPTO_VENUE,
+    ))
+    _PRODUCT_BY_SYMBOL[_sym] = str(_row["product_id"])
+    SPREAD_PROVENANCE[_sym] = (
+        "coinbase public ticker, median of 6 top-of-book samples ~10 s apart, "
+        "2026-10-10T19:27Z (Saturday); snapshot, not a measured distribution"
+    )
+
+#: The spot crypto symbols (Coinbase UK). Not OANDA instruments.
+CRYPTO_REGISTERED: frozenset[str] = frozenset(_PRODUCT_BY_SYMBOL)
+_SYMBOL_BY_PRODUCT: dict[str, str] = {v: k for k, v in _PRODUCT_BY_SYMBOL.items()}
+
+
+def coinbase_product_for(symbol: str) -> str:
+    """The Coinbase product id for a registered crypto symbol (``BTCGBP`` -> ``BTC-GBP``)."""
+    key = symbol.upper()
+    if key not in _PRODUCT_BY_SYMBOL:
+        raise KeyError(
+            f"No Coinbase product for {symbol!r}. The mapping is the committed table in "
+            "core/instruments_crypto.py; a guessed product id prices the wrong market."
+        )
+    return _PRODUCT_BY_SYMBOL[key]
+
+
+def symbol_for_coinbase_product(product_id: str) -> str:
+    """The registered symbol for a Coinbase product id (``ETH-GBP`` -> ``ETHGBP``)."""
+    if product_id not in _SYMBOL_BY_PRODUCT:
+        raise KeyError(f"Unknown Coinbase product {product_id!r}; it is not in the 2026-10-10 table")
+    return _SYMBOL_BY_PRODUCT[product_id]
+
 
 _OANDA_NAME_BY_SYMBOL: dict[str, str] = {str(r["symbol"]): str(r["oanda_name"]) for r in _ROWS}
 _SYMBOL_BY_OANDA_NAME: dict[str, str] = {v: k for k, v in _OANDA_NAME_BY_SYMBOL.items()}

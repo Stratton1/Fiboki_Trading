@@ -127,6 +127,8 @@ from fiboki.research.experiment import (
     ExperimentLedger,
     Outcome,
 )
+from fiboki.research.universes import assert_single_venue, get_universe, retarget
+from fiboki.sim.profiles import assert_profile_covers, get_profile
 from fiboki.strategy.dsl import StrategyDocument
 from fiboki.validation.engine_evaluator import research_construction_policy
 from fiboki.validation.gates import GATE_SET_V2, GateSet
@@ -765,7 +767,36 @@ def main(argv: list[str] | None = None) -> int:
             "with the directory's MANIFEST.json sha256. --seeds filters the combined roster."
         ),
     )
-    parser.add_argument("--instruments", nargs="+", default=["XAUUSD"])
+    parser.add_argument("--instruments", nargs="+", default=None,
+                        help="Explicit symbols (default XAUUSD). Mutually exclusive with --universe.")
+    parser.add_argument(
+        "--universe",
+        default=None,
+        metavar="NAME",
+        help=(
+            "A NAMED universe from fiboki.research.universes (e.g. crypto_majors_v1, "
+            "crypto_core_v1, k5_e4_v1). Sets the instruments and, unless --profile is "
+            "given, the cost profile. Recorded in run.log and the report notes."
+        ),
+    )
+    parser.add_argument(
+        "--retarget-to-universe",
+        action="store_true",
+        help=(
+            "Retarget every roster document (seeds and --generated-dir) onto --universe "
+            "with fiboki.research.universes.retarget: same rules, new candidates "
+            "(<id>__<universe>, new content hashes, their own holdout claims). Needed to "
+            "run the FX-universe seeds and K5 documents on a crypto universe."
+        ),
+    )
+    parser.add_argument(
+        "--profile",
+        default=None,
+        help=(
+            "Execution profile (default: the universe's, else IG_REALISTIC). A spot "
+            "crypto universe refuses a CFD profile (sim.profiles.assert_profile_covers)."
+        ),
+    )
     parser.add_argument("--timeframes", nargs="+", default=["H4"])
     parser.add_argument(
         "--bars-from",
@@ -849,6 +880,21 @@ def main(argv: list[str] | None = None) -> int:
     )
     args = parser.parse_args(argv)
 
+    # Before any side effect: a universe that cannot be resolved, or both ways of
+    # naming the instruments at once, is refused before the out dir exists.
+    if args.universe and args.instruments:
+        print("REFUSED: pass --universe or --instruments, not both", file=sys.stderr)
+        return 2
+    if args.retarget_to_universe and not args.universe:
+        print("REFUSED: --retarget-to-universe needs --universe", file=sys.stderr)
+        return 2
+    if args.universe:
+        try:
+            get_universe(args.universe)
+        except KeyError as exc:
+            print(f"REFUSED: {exc.args[0]}", file=sys.stderr)
+            return 2
+
     # Before any side effect: a stale engine must not even create the out dir.
     if args.engine_version_check is not None and args.engine_version_check != ENGINE_VERSION:
         print(
@@ -903,10 +949,24 @@ def _run_with_store(args: argparse.Namespace, store: DataStore) -> int:
     if args.seeds:  # validated in main() before any side effect
         known = {d.strategy_id: d for d in seeds}
         seeds = tuple(known[s] for s in sorted(set(args.seeds)))
+    if args.retarget_to_universe:  # validated in main(): --universe is set
+        target = get_universe(args.universe)
+        seeds = tuple(retarget(d, target) for d in seeds)
+        print(f"retargeted {len(seeds)} document(s) onto {target.name}")
     hypotheses = load_hypotheses(HYPOTHESIS_DIR)
     account_ccy = str(args.account_ccy).upper()
 
-    instruments = [s.upper() for s in args.instruments]
+    universe = get_universe(args.universe) if args.universe else None
+    if universe is not None:
+        instruments = list(universe.symbols)
+        print(f"universe {universe.name}: {universe.description}")
+    else:
+        instruments = [s.upper() for s in (args.instruments or ["XAUUSD"])]
+    assert_single_venue(instruments)
+    profile_name = args.profile or (universe.profile if universe is not None else "IG_REALISTIC")
+    profile = get_profile(profile_name)
+    for symbol in instruments:
+        assert_profile_covers(profile, get_instrument(symbol))
     timeframes = [Timeframe(t) for t in args.timeframes]
     bars_from = pd.Timestamp(args.bars_from, tz="UTC") if args.bars_from else None
     if bars_from is not None and bars_from.tzinfo is None:
@@ -1024,6 +1084,7 @@ def _run_with_store(args: argparse.Namespace, store: DataStore) -> int:
         hypotheses=hypotheses,
         actor=args.actor,
         actor_kind=ActorKind.AGENT,
+        profile_name=profile.name,
         account_ccy=account_ccy,
         gate_set=gates,
         max_evaluations=args.max_evaluations,
@@ -1043,7 +1104,8 @@ def _run_with_store(args: argparse.Namespace, store: DataStore) -> int:
             f"{len(instruments)} instrument(s) {', '.join(instruments)} "
             f"{', '.join(args.timeframes)}, {args.gates} gate set, "
             f"engine {ENGINE_VERSION}, "
-            f"{account_ccy} account, IG_REALISTIC profile, "
+            + (f"named universe {universe.name}, " if universe is not None else "")
+            + f"{account_ccy} account, {profile.name} profile, "
             + (
                 f"quote currencies converted by {fx_label}. "
                 if fx is not None

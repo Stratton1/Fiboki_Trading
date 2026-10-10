@@ -239,6 +239,26 @@ class FxSessionCalendar(SessionCalendar):
         return not (dow == 6 and local.hour < self.open_hour)
 
 
+class ContinuousSessionCalendar(FxSessionCalendar):
+    """A venue that never closes: spot crypto (``trading_hours = "crypto_24_7"``).
+
+    A subclass of :class:`FxSessionCalendar` only so that the lock clock
+    (``fiboki.backtest.locks.SESSION_CLOSURES``), which is typed on it, can hold
+    one; ``continuous`` is what the clock reads, and it counts every slot of
+    the week as a session bar. Exchange maintenance windows are not modelled.
+    """
+
+    continuous = True
+
+    def __init__(self) -> None:
+        super().__init__(close_hour=17, open_hour=17, tz="UTC")
+
+    def is_open(self, instrument: Instrument, when: pd.Timestamp) -> bool:
+        if when.tzinfo is None:
+            raise ValueError(f"ContinuousSessionCalendar needs a tz-aware timestamp, got {when}")
+        return True
+
+
 # --------------------------------------------------------------------------
 # Price-ordering helpers
 # --------------------------------------------------------------------------

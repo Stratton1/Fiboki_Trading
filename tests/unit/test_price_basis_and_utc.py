@@ -96,7 +96,7 @@ def test_research_converts_bid_bars_with_the_typical_spread_and_says_so() -> Non
 
 
 def test_research_refuses_ask_bars() -> None:
-    with pytest.raises(ValueError, match="only mid, synthetic_mid or bid"):
+    with pytest.raises(ValueError, match="only mid, synthetic_mid, last_as_mid or bid"):
         research_mid_frame(_labelled(PriceBasis.ASK), "EURUSD")
 
 

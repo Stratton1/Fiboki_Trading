@@ -46,11 +46,19 @@ class PriceBasis(str, Enum):
     MID = "mid"
     LAST = "last"
     SYNTHETIC_MID = "synthetic_mid"  # (bid+ask)/2 computed by us, not quoted
+    #: An exchange's TRADE-PRINT OHLC (``LAST``) declared, at ingest and with a
+    #: recorded adjustment, as a proxy for mid. On a deep central limit order
+    #: book each print sits at the bid or the ask, so a bar's open and close are
+    #: within half a spread of mid and its high and low overstate the mid's
+    #: range by at most half a spread. ``data/providers/coinbase.py`` states the
+    #: bound and its direction; the fill model then adds the half spread as for
+    #: any mid bar. Never produced from a broker feed.
+    LAST_AS_MID = "last_as_mid"
 
     @property
     def is_executable_both_sides(self) -> bool:
         """True only if a buy and a sell can both be priced off this basis."""
-        return self in (PriceBasis.MID, PriceBasis.SYNTHETIC_MID)
+        return self in (PriceBasis.MID, PriceBasis.SYNTHETIC_MID, PriceBasis.LAST_AS_MID)
 
 
 class MarketState(str, Enum):

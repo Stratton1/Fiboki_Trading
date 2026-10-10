@@ -100,7 +100,7 @@ import pandas as pd
 
 from fiboki.core.enums import Timeframe
 from fiboki.core.instruments import get as get_instrument
-from fiboki.sim.fills import FxSessionCalendar
+from fiboki.sim.fills import ContinuousSessionCalendar, FxSessionCalendar
 
 __all__ = [
     "ClosedTrade",
@@ -171,6 +171,13 @@ SESSION_CLOSURES: dict[str, FxSessionCalendar] = {
     # approximation index and energy already carry.
     "commodity_cfd": _INTERBANK_WEEKEND,
     "bond_cfd": _INTERBANK_WEEKEND,
+    # Spot crypto (core/instruments_crypto.py) trades every hour of every day,
+    # so every slot is a session bar and a lock expires on the wall clock. That
+    # is correct here, not the freqtrade defect the module docstring describes:
+    # bars DO exist through the weekend. The policy fingerprint's ``calendar``
+    # field still names the interbank week (LOCK_CALENDAR_ID, unchanged so no
+    # stored fingerprint moves); the instrument's ``trading_hours`` decides.
+    "crypto_24_7": ContinuousSessionCalendar(),
 }
 
 #: What a lock fingerprint says the bars were counted on.
@@ -241,7 +248,13 @@ class SessionBarClock:
 _CalendarKey = tuple[str, int, int]
 
 
+#: The key of a calendar with no closure at all (spot crypto).
+_CONTINUOUS_KEY: _CalendarKey = ("continuous", -1, -1)
+
+
 def _calendar_key(calendar: FxSessionCalendar) -> _CalendarKey:
+    if getattr(calendar, "continuous", False):
+        return _CONTINUOUS_KEY
     return (str(calendar.tz), int(calendar.close_hour), int(calendar.open_hour))
 
 
@@ -254,6 +267,8 @@ def _week_closure(key: _CalendarKey, week: int) -> tuple[tuple[int, int], ...]:
     in New York happens on a Sunday at 02:00 local, INSIDE the closure) gives
     a 47- or 49-hour weekend rather than a constant's 48.
     """
+    if key == _CONTINUOUS_KEY:
+        return ()
     tz_name, close_hour, open_hour = key
     zone = ZoneInfo(tz_name)
     monday = _ANCHOR_DT + pd.Timedelta(weeks=week).to_pytimedelta()

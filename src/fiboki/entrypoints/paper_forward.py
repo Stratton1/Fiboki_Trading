@@ -108,6 +108,7 @@ import pandas as pd
 
 from fiboki.backtest.exits import ExitPolicy, ReversalMode, exit_policy_from_document
 from fiboki.backtest.position import BookConfig, PositionBook
+from fiboki.broker.coinbase_ticker import CoinbaseTickerSpreadSource
 from fiboki.broker.execution_service import ExecutionService, JsonlIntentStore
 from fiboki.broker.http_transport import HttpxTransport, bearer_token_from_env
 from fiboki.broker.oanda import OANDA_LIVE_HOST, OANDA_PRACTICE_HOST, RateLimiter
@@ -125,6 +126,12 @@ from fiboki.core.enums import (
 )
 from fiboki.core.instruments import get as get_instrument
 from fiboki.core.money import IdentityFxSource
+from fiboki.data.providers.base import ProviderError
+from fiboki.data.providers.coinbase import (
+    COINBASE_EXCHANGE_HOST,
+    CoinbaseCandlesProvider,
+    assert_coinbase_host,
+)
 from fiboki.data.providers.oanda import OandaCandlesProvider
 from fiboki.entrypoints import paper_state
 from fiboki.entrypoints.paper_venue import ForwardPaperVenue
@@ -143,7 +150,7 @@ from fiboki.risk.gateway import ExecutionAttempt, ExitContext, RiskGateway
 from fiboki.risk.killswitch import FileKillSwitchJournal, KillSwitch, RequestKind
 from fiboki.risk.limits import get_limit_set
 from fiboki.sim.fills import Bar, FillSimulator, IntrabarPolicy
-from fiboki.sim.profiles import get_profile
+from fiboki.sim.profiles import ProfileMismatch, assert_profile_covers, get_profile
 from fiboki.strategy.compiler import compile_strategy
 from fiboki.strategy.dsl import StrategyDocument
 from fiboki.workers.base import WorkerStore
@@ -157,6 +164,7 @@ from fiboki.workers.runtime import (
 )
 
 __all__ = [
+    "CRYPTO_WIRING",
     "DEFAULT_WIRING",
     "ENV_ACCOUNT",
     "ENV_TOKEN",
@@ -179,6 +187,13 @@ _log = get_logger("fiboki.entrypoints.paper_forward")
 WIRING_SCHEMA = "fiboki.paper_forward.wiring/1"
 #: The committed wiring the desktop service runs.
 DEFAULT_WIRING = Path(__file__).resolve().parent / "wiring" / "paper_forward_v1.json"
+#: The committed 24/7 spot-crypto wiring (``scripts/fiboki-service.sh paper-crypto``).
+CRYPTO_WIRING = Path(__file__).resolve().parent / "wiring" / "paper_forward_crypto_v1.json"
+#: ``venue.market_data`` values: where candles and quotes are READ from. Neither
+#: is ever written to; every order fills at the paper venue.
+MARKET_DATA_OANDA = "oanda_practice"
+MARKET_DATA_COINBASE = "coinbase_public"
+MARKET_DATA_SOURCES = (MARKET_DATA_OANDA, MARKET_DATA_COINBASE)
 #: Credentials, read once from the environment. Never logged. Declared in
 #: ``fiboki.api.settings.ENV_REGISTRY``.
 ENV_TOKEN = "FIBOKI_OANDA_PRACTICE_TOKEN"
@@ -235,6 +250,9 @@ class PaperForwardWiring:
     max_quote_age_s: float
     worker: Mapping[str, Any]
     allowed_modes: tuple[str, ...] = ("paper",)
+    #: Where candles and quotes come from (``venue.market_data``). The default is
+    #: the original wiring's: OANDA practice, read-only, with credentials.
+    market_data: str = MARKET_DATA_OANDA
 
     @property
     def short_hash(self) -> str:
@@ -320,10 +338,26 @@ def load_wiring(path: str | Path) -> PaperForwardWiring:
             "fiboki/entrypoints/paper_forward.py, never a wiring edit."
         )
     venue = dict(_require(body, "venue"))
-    _no_extra(venue, frozenset({"kind", "market_data_base_url", "max_requests_per_second"}), "venue")
+    _no_extra(
+        venue,
+        frozenset({"kind", "market_data", "market_data_base_url", "max_requests_per_second"}),
+        "venue",
+    )
     if venue.get("kind") != "paper_forward":
         raise WiringError("venue.kind must be 'paper_forward' (instant-fill paper venue)")
-    base_url = assert_practice_host(str(_require(venue, "market_data_base_url", "venue")))
+    market_data = str(venue.get("market_data", MARKET_DATA_OANDA))
+    if market_data not in MARKET_DATA_SOURCES:
+        raise WiringError(
+            f"venue.market_data {market_data!r} is not one of {list(MARKET_DATA_SOURCES)}"
+        )
+    raw_url = str(_require(venue, "market_data_base_url", "venue"))
+    if market_data == MARKET_DATA_OANDA:
+        base_url = assert_practice_host(raw_url)
+    else:
+        try:
+            base_url = assert_coinbase_host(raw_url)
+        except ProviderError as exc:
+            raise WiringError(str(exc)) from exc
 
     strategies_raw = _require(body, "strategies")
     if not isinstance(strategies_raw, list) or len(strategies_raw) != 1:
@@ -398,6 +432,7 @@ def load_wiring(path: str | Path) -> PaperForwardWiring:
         max_quote_age_s=float(pricing.get("max_quote_age_s", 120.0)),
         worker=worker,
         allowed_modes=allowed,
+        market_data=market_data,
     )
 
 
@@ -1013,7 +1048,7 @@ class ForwardFeed:
         self,
         *,
         feed: OandaPollingBarFeed,
-        spread: OandaPricingSpreadSource,
+        spread: OandaPricingSpreadSource | CoinbaseTickerSpreadSource,
         manager: VenuePositionManager,
         builder: RiskContextBuilder,
         signals: ForwardSignalSource,
@@ -1063,7 +1098,7 @@ class ForwardFeed:
             self._alert(
                 AlertEvent.BROKER_UNHEALTHY,
                 (
-                    f"OANDA practice pricing sample incomplete (missing "
+                    f"{self.wiring.market_data} pricing sample incomplete (missing "
                     f"{list(sample.missing)}; {sample.error or 'no quote returned'}). "
                     "abnormal_spread blocks those instruments until a fresh quote arrives."
                 ),
@@ -1383,7 +1418,7 @@ class PaperForwardRuntime:
     builder: RiskContextBuilder
     evaluator: SignalEvaluator
     signals: ForwardSignalSource
-    spread: OandaPricingSpreadSource
+    spread: OandaPricingSpreadSource | CoinbaseTickerSpreadSource
     journal: ForwardJournal
     kill_switch: KillSwitch
     transport: Any
@@ -1582,13 +1617,17 @@ def compose_runtime(
     sleeper = sleeper or _time.sleep
     monotonic = monotonic or _time.monotonic
 
-    # -- credentials, read once -------------------------------------------
-    token = bearer_token_from_env(env, ENV_TOKEN)
-    account_id = str(env.get(ENV_ACCOUNT, "") or "").strip()
-    if not account_id:
-        raise WiringError(
-            f"{ENV_ACCOUNT} is not set; the pricing read needs the practice account id"
-        )
+    # -- credentials, read once (OANDA only: the Coinbase reads are public) --
+    crypto = wired.market_data == MARKET_DATA_COINBASE
+    token = ""
+    account_id = ""
+    if not crypto:
+        token = bearer_token_from_env(env, ENV_TOKEN)
+        account_id = str(env.get(ENV_ACCOUNT, "") or "").strip()
+        if not account_id:
+            raise WiringError(
+                f"{ENV_ACCOUNT} is not set; the pricing read needs the practice account id"
+            )
 
     # -- the reviewed pieces ------------------------------------------------
     limits = get_limit_set(wired.limits_version)
@@ -1604,6 +1643,20 @@ def compose_runtime(
     outside = [s for s in wired.instruments if s not in {u.upper() for u in document.universe}]
     if outside:
         raise WiringError(f"{outside} are outside {document.strategy_id}'s universe")
+    for symbol in wired.instruments:
+        spec = get_instrument(symbol)
+        # The market-data source must be the instrument's own venue, and the cost
+        # profile must model that product: a CFD profile on spot crypto would
+        # charge financing and no commission (sim.profiles.assert_profile_covers).
+        if spec.is_spot != crypto:
+            raise WiringError(
+                f"{symbol} is a {spec.venue} instrument; venue.market_data is "
+                f"{wired.market_data}. Candles and quotes come from the instrument's venue."
+            )
+        try:
+            assert_profile_covers(profile, spec)
+        except ProfileMismatch as exc:
+            raise WiringError(str(exc)) from exc
     for symbol in wired.instruments:
         if get_instrument(symbol).quote != wired.account_ccy:
             raise WiringError(
@@ -1713,10 +1766,12 @@ def compose_runtime(
                 )
     book_balance = carried_balance if carried_balance is not None else initial_balance
 
-    # -- the network: practice host only ------------------------------------
+    # -- the network: ONE read-only host (OANDA practice, or Coinbase public) --
     transport_created = transport is None
     if transport is None:
-        transport = HttpxTransport(allowed_hosts=(OANDA_PRACTICE_HOST,))
+        transport = HttpxTransport(
+            allowed_hosts=(COINBASE_EXCHANGE_HOST if crypto else OANDA_PRACTICE_HOST,)
+        )
     limiter = RateLimiter(
         wired.max_requests_per_second, clock=monotonic, sleeper=sleeper
     )
@@ -1724,12 +1779,20 @@ def compose_runtime(
     def _retry() -> ReadRetry:
         return ReadRetry(rate_limiter=limiter, clock=monotonic, sleeper=sleeper)
 
-    provider = OandaCandlesProvider(
-        api_token=token,
-        account_id=account_id,
-        host=wired.market_data_base_url,
-        http_client=TransportHttpClient(transport),
-    )
+    provider: Any
+    if crypto:
+        provider = CoinbaseCandlesProvider(
+            http_client=TransportHttpClient(transport),
+            base_url=wired.market_data_base_url,
+            clock=clock,
+        )
+    else:
+        provider = OandaCandlesProvider(
+            api_token=token,
+            account_id=account_id,
+            host=wired.market_data_base_url,
+            http_client=TransportHttpClient(transport),
+        )
     feed_cfg = wired.feed
     feed = OandaPollingBarFeed(
         provider,
@@ -1748,17 +1811,27 @@ def compose_runtime(
         sleeper=sleeper,
         read_retry=_retry(),
         dispatcher=dispatcher,
-        source="paper-forward-feed",
+        source="paper-forward-crypto-feed" if crypto else "paper-forward-feed",
     )
-    spread = OandaPricingSpreadSource(
-        transport=transport,
-        account_id=account_id,
-        api_token=token,
-        base_url=wired.market_data_base_url,
-        read_retry=_retry(),
-        clock=clock,
-        max_quote_age_s=wired.max_quote_age_s,
-    )
+    spread: Any
+    if crypto:
+        spread = CoinbaseTickerSpreadSource(
+            transport=transport,
+            base_url=wired.market_data_base_url,
+            read_retry=_retry(),
+            clock=clock,
+            max_quote_age_s=wired.max_quote_age_s,
+        )
+    else:
+        spread = OandaPricingSpreadSource(
+            transport=transport,
+            account_id=account_id,
+            api_token=token,
+            base_url=wired.market_data_base_url,
+            read_retry=_retry(),
+            clock=clock,
+            max_quote_age_s=wired.max_quote_age_s,
+        )
 
     # -- the book, the venue, the manager -----------------------------------
     book = PositionBook(
@@ -1809,7 +1882,13 @@ def compose_runtime(
         mode=ExecutionMode.PAPER,
     )
 
-    sizing = SizingPolicy(risk_fraction=wired.risk_fraction, policy_id=wired.sizing_policy_id)
+    # v2 prices the stop-out with the WIRED profile (the one the book charges),
+    # not the sizing module's default; v1 ignores it (resolved_cost_profile).
+    sizing = SizingPolicy(
+        risk_fraction=wired.risk_fraction,
+        policy_id=wired.sizing_policy_id,
+        cost_profile=profile,
+    )
     builder = RiskContextBuilder(
         adapter=venue,
         clock=clock,
