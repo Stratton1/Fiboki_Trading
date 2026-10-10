@@ -597,3 +597,50 @@ def test_a_snapshot_that_verifies_but_does_not_load_is_refused_not_half_restored
     refused = _assert_abandoned(acct, "corrupt")
     assert "did not load" in refused["reason"]
     acct.close()
+
+
+def test_a_trade_closed_in_a_cycle_that_failed_before_the_ledger_write_is_not_lost(
+    tmp_path: Path, frame: pd.DataFrame, baseline: Account
+) -> None:
+    """The book closes a trade; a journal write raises before ``record_trades``
+    runs; the cycle fails and the snapshot is still written (``finally``). The
+    process that does not restart writes the trade on its next bar, because
+    ``record_trades`` is idempotent and runs every bar. A restored process
+    must too: the snapshot's watermark is taken only after every closed trade
+    the book holds is in ``trades.jsonl``. Otherwise the balance carries the
+    loss and no ledger does, and the daily and weekly loss limits never see it."""
+    entry, trade = _open_at(baseline)[0]
+    exit_bar = pd.Timestamp(trade["exit_time"])
+    k = int((exit_bar - (FIRST_POLL - H1)) / H1) + 1
+    acct = Account(tmp_path, frame)
+    acct.start()
+    for _ in range(k - 2):
+        acct.next_bar()
+    runtime = acct.runtime
+    assert runtime is not None
+    real_event = runtime.journal.event
+
+    def failing_journal(kind: str, **fields: Any) -> dict[str, Any]:
+        if kind == "venue_instruction":  # written after the book's close, before the ledger
+            raise OSError(5, "Input/output error")
+        return real_event(kind, **fields)
+
+    runtime.journal.event = failing_journal  # type: ignore[method-assign]
+    with pytest.raises(OSError):
+        acct.next_bar()
+    runtime.journal.event = real_event  # type: ignore[method-assign]
+    assert not runtime.manager.open_positions and len(runtime.manager.book.trades) == 1
+    assert len(acct.trades()) == 1, "the snapshot write flushed the closed trade to the ledger"
+    # -- restart; the trade is in the ledger exactly once, with the baseline's values
+    acct.clock.now = acct.clock.now + pd.Timedelta(minutes=20)
+    second = acct.start()
+    assert second.snapshot_status["status"] == "restore"
+    for _ in range(N_POLLS - k):
+        acct.next_bar()
+    acct.close()
+    mine = [t for t in acct.trades() if t["entry_time"] == trade["entry_time"]]
+    assert len(mine) == 1 and _clean(mine[0]) == _clean(trade)
+    assert record(acct)["trades"] == record(baseline)["trades"]
+    assert second.manager.book.realised == pytest.approx(
+        sum(float(t["net_pnl"]) for t in acct.trades())
+    ), "the realised P&L and the ledger agree"

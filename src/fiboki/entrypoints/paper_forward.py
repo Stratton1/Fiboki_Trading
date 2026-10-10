@@ -1400,10 +1400,22 @@ class PaperForwardRuntime:
         ``stale`` and abandons, which is the honest outcome. It is logged and
         alerted every time, so a disk that cannot take the snapshot is seen
         before a restart depends on it.
+
+        Every closed trade the book holds is in ``trades.jsonl`` BEFORE the
+        snapshot is captured. The book does not carry its closed trades across
+        a restart (they are history, and the ledger is the record), so a trade
+        the book closed in a cycle that then failed before ``record_trades``
+        ran (a journal write raised) would otherwise be in the snapshot's
+        balance and in no ledger: the restored process would never write it,
+        while the process that did not restart would have, on its next bar.
+        ``record_trades`` is idempotent on ``trade_id``; this is the same call
+        the next bar makes. If it raises, no snapshot is written and the one
+        on disk stays older than the book, which the next start handles.
         """
         if self.snapshot_path is None:
             return False
         try:
+            self.journal.record_trades(self.manager.book.trades)
             body = self.capture()
             key = json.dumps(body, sort_keys=True, separators=(",", ":"))
             if key == self._last_snapshot:
