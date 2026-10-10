@@ -816,6 +816,9 @@ since it was written. What you see:
   fill model gives, exactly as a backtest would. **No new signal is evaluated on a missed bar**
   (an order cannot be dealt at a price that has gone), so a trade the strategy would have opened
   during the gap is not taken. That is the one decision a restart can still change.
+- `feed_window_shortfall` in the journal (with a `data_quality_defect` alert) means the restored
+  feed could not fetch back to the first bar of the indicator window the previous process held;
+  indicator values differ from the uninterrupted run until the window has slid past the gap.
 
 When the snapshot cannot be trusted the process falls back to the old behaviour and says why:
 `state_snapshot_refused` in the journal (status `corrupt`, `mismatch` or `stale`, with the
