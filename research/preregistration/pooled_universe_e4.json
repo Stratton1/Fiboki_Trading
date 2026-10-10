@@ -182,6 +182,6 @@
   ],
   "decision_date": "The first day on which both merged P0 files exist (P0 is decided then, before the main stage runs); the main stage is decided on the first day its merged file exists.",
   "filed_at": "2026-10-10T01:11:00Z",
-  "filed_commit": null,
+  "filed_commit": "78f1dba",
   "filing_note": "Filed 2026-10-10 on the operator's approval of R3. filed_commit is recorded in the following commit, as E-1 and E-2 did. Decisions taken at filing, before any E-4 result: (1) the effective count is the design effect on max(daily, weekly) P&L sums, floored at 1; (2) N_eff replaces N at exactly three sites; (3) the candidate set is K5's roster by rule (172 pooled candidates, 1,064 trials, true N 21,968); (4) P0 is one process (the joint day bootstrap), 400 replicates per timeframe, and the engine-path process is not built; (5) the holdout is deferred in the main stage and spent at most once, for one seed survivor, by rule."
 }

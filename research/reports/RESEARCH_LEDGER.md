@@ -586,11 +586,11 @@ describe the production set (gate names `min_track_record`, `walk_forward_effici
 the real engine always does, because the log-growth WFE has no money-per-day fallback). Tests that
 pin the audited set still pin it by name.
 
-## E-4 filed, `pooled_universe_e4` (filed 2026-10-10; no results)
+## E-4 filed, `pooled_universe_e4` (filed 2026-10-10 at 78f1dba; no results)
 
 **Filed before any E-4 result exists** (`research/preregistration/pooled_universe_e4.json`, status
-FILED 2026-10-10, on the operator's approval of USER_ACTIONS R3; filed commit recorded in the
-filing's `filed_commit`). No P0 replicate and no main-stage candidate has been run on the evidence
+FILED 2026-10-10, on the operator's approval of USER_ACTIONS R3; filed commit 78f1dba,
+recorded in the following commit as E-1 and E-2 did). No P0 replicate and no main-stage candidate has been run on the evidence
 data. The id is E-4 because E-3 (the effective campaign trial count) is assigned, though never filed.
 
 **What it tests.** E-2's finding was that the binding constraint is trades per candidate (median
