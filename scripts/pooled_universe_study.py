@@ -101,6 +101,11 @@ GENERATED_MANIFEST = "MANIFEST.json"
 PRIOR_TRIALS = 20_904
 TIMEFRAMES = ("H4", "D1")
 SR_GRID = (0.0, 0.03, 0.05, 0.08, 0.12)
+#: The filed base seed (data_rules); an evidence run uses no other.
+BASE_SEED = 20_261_010
+#: The filed replicate counts: 400, or 800 once under the filing's replicate_rule
+#: (size within 2 Monte Carlo SE of 0.05 doubles that timeframe's replicates once).
+FILED_REPLICATES = (400, 800)
 #: The K5 cell shape: grid capped at 8 points, 2 values per axis.
 MAX_GRID_POINTS = 8
 MAX_VALUES_PER_AXIS = 2
@@ -1038,9 +1043,52 @@ def _common(ap: argparse.ArgumentParser) -> None:
     ap.add_argument("--folds", type=int, default=LadderConfig().walk_forward_folds)
     ap.add_argument("--spa-bootstraps", type=int, default=LadderConfig().spa_bootstraps)
     ap.add_argument("--stress-samples", type=int, default=LadderConfig().stress_samples)
-    ap.add_argument("--seed", type=int, default=20261010)
+    ap.add_argument("--seed", type=int, default=BASE_SEED)
     ap.add_argument("--out", type=Path, required=True)
     ap.add_argument("--resume", action="store_true")
+
+
+def _is_evidence(args: argparse.Namespace) -> bool:
+    return not getattr(args, "starter", False) and getattr(args, "data_root", None) is not None
+
+
+def require_filed_configuration(args: argparse.Namespace, stage: str) -> None:
+    """An EVIDENCE run (``--data-root``) may use no setting the filing does not fix.
+
+    The filing fixes the universe and trim (K5's), the ladder configuration
+    (``LadderConfig`` defaults), the base seed, the injected-Sharpe grid and the
+    replicate count. Every one of them is an argparse option, because the harness
+    checks on starter data need them; an evidence run that moved one would carry
+    ``evidence: true`` into a file the admission and holdout rules then read.
+    Refused here, before any bar is read. A starter run is untouched.
+    """
+    if not _is_evidence(args):
+        return
+    defaults = LadderConfig()
+    wrong: list[str] = []
+    if getattr(args, "instruments", None):
+        wrong.append("--instruments (the filed universe is K5's sixteen series)")
+    if getattr(args, "bars_from", None) is not None:
+        wrong.append(f"--bars-from (the filed trim is {gps.K5_BARS_FROM})")
+    if args.folds != defaults.walk_forward_folds:
+        wrong.append(f"--folds {args.folds} (filed: {defaults.walk_forward_folds})")
+    if args.spa_bootstraps != defaults.spa_bootstraps:
+        wrong.append(f"--spa-bootstraps {args.spa_bootstraps} (filed: {defaults.spa_bootstraps})")
+    if args.stress_samples != defaults.stress_samples:
+        wrong.append(f"--stress-samples {args.stress_samples} (filed: {defaults.stress_samples})")
+    if int(args.seed) != BASE_SEED:
+        wrong.append(f"--seed {args.seed} (filed: {BASE_SEED})")
+    if stage == "p0":
+        if [float(s) for s in args.sr] != [float(s) for s in SR_GRID]:
+            wrong.append(f"--sr {list(args.sr)} (filed: {list(SR_GRID)})")
+        if int(args.replicates) not in FILED_REPLICATES:
+            wrong.append(f"--replicates {args.replicates} (filed: {FILED_REPLICATES[0]}, or "
+                         f"{FILED_REPLICATES[1]} once under the replicate rule)")
+    if wrong:
+        raise SystemExit(
+            f"an evidence run of {stage} must use the filed configuration ({PREREGISTRATION}); "
+            "these settings differ: " + "; ".join(wrong) + ". Use --starter for a harness check."
+        )
 
 
 def _header(stage: str, args: argparse.Namespace, plan_meta: Mapping[str, Any]) -> dict[str, Any]:
@@ -1079,6 +1127,7 @@ def cmd_plan(args: argparse.Namespace) -> int:
 def cmd_p0(args: argparse.Namespace) -> int:
     if not (args.starter or args.data_root is not None):
         raise SystemExit("p0 reads real bars: pass --data-root (evidence) or --starter (harness check)")
+    require_filed_configuration(args, "p0")
     plan, plan_meta = build_plan()
     gps._check_grid_against_filing()
     start, end = (0, args.replicates) if args.replicate_range is None else tuple(args.replicate_range)
@@ -1133,6 +1182,7 @@ def cmd_main(args: argparse.Namespace) -> int:
         # A subset plan would charge each candidate only the subset's trials: an
         # honest-looking, flattering external trial count. The filed plan only.
         raise SystemExit("--documents/--seeds-only are for harness checks; an evidence run uses the filed plan")
+    require_filed_configuration(args, "main")
     plan, plan_meta = build_plan(seed_ids=args.documents, include_generated=not args.seeds_only)
     n = len(plan)
     if args.candidate_range is not None and args.shard is not None:
@@ -1205,6 +1255,10 @@ def admitted_timeframes(args: argparse.Namespace) -> dict[str, dict[str, Any]]:
         if not found:
             out[tf] = {"admitted": False, "why": f"no P0 file for {tf}"}
             continue
+        if len(found) > 1:
+            # Two files for one timeframe (a 400 and an 800 under the replicate
+            # rule, say): which one decides is not a choice this code may make.
+            raise SystemExit(f"{len(found)} P0 files for {tf}; pass exactly one per timeframe")
         ok, why = p0_admits(found[0], tf, filing)
         out[tf] = {"admitted": ok, "why": why,
                    "p0_size": found[0]["summary"].get("0", {}).get("rate"),
@@ -1233,8 +1287,33 @@ def p0_admits(p0_doc: Mapping[str, Any], timeframe: str, filing: Mapping[str, An
     if not p0_doc.get("evidence"):
         return False, "P0 was not run on evidence data"
     rule = filing["p0"]["decision_rule_parameters"]
-    if int(p0_doc["config"]["replicates"]) < int(rule["min_replicates"]):
+    config = p0_doc["config"]
+    replicates = int(config["replicates"])
+    if replicates < int(rule["min_replicates"]):
         return False, "P0 ran fewer replicates than filed"
+    # The file must BE the filed run, whole: every replicate (a completed shard
+    # is not partial, but covers a fraction), the filed edge grid, the filed seed,
+    # the filed gate set and the filed trial count. Anything else is a different
+    # study, whatever its header says.
+    if shard_indices(p0_doc["shard"]) != set(range(replicates)):
+        return False, f"P0 file covers {p0_doc['shard']}, not all {replicates} replicates (merge the shards)"
+    at_zero = [r for r in p0_doc["runs"] if float(r["sr"]) == 0.0]
+    if len(at_zero) != replicates or len(p0_doc["runs"]) != replicates * len(config["sr_grid"]):
+        return False, f"P0 file holds {len(at_zero)} sr = 0 rows for {replicates} replicates"
+    if [float(s) for s in config["sr_grid"]] != [float(s) for s in filing["p0"]["injected_sharpe_grid"]]:
+        return False, f"P0 edge grid {config['sr_grid']} is not the filed {filing['p0']['injected_sharpe_grid']}"
+    if int(config.get("seed", -1)) != BASE_SEED:
+        return False, f"P0 seed {config.get('seed')} is not the filed {BASE_SEED}"
+    if p0_doc.get("gate_set_fingerprint") != PRODUCTION_GATE_SET.fingerprint() or (
+        p0_doc.get("gate_set_fingerprint") not in filing["code"]["gate_set"]
+    ):
+        return False, "P0 was judged under a gate set other than the filed production set"
+    true_n = int(filing["candidate_set"]["true_trial_count"])
+    if int(p0_doc["plan"]["true_trial_count"]) != true_n or (
+        int(config["external_trial_count"]) != true_n - MAX_GRID_POINTS
+    ):
+        return False, (f"P0 trial accounting ({p0_doc['plan'].get('true_trial_count')}, "
+                       f"{config.get('external_trial_count')}) is not the filed ({true_n}, {true_n - MAX_GRID_POINTS})")
     size = p0_doc["summary"].get("0", {}).get("rate")
     if size is None or size > float(rule["size_max"]):
         return False, f"P0 size {size} exceeds {rule['size_max']}"
@@ -1250,7 +1329,16 @@ def cmd_holdout(args: argparse.Namespace) -> int:
     filing = json.loads((ROOT / PREREGISTRATION).read_text(encoding="utf-8"))
     if not str(filing.get("status", "")).startswith("FILED"):
         raise SystemExit("the pre-registration is not FILED")
+    if not _is_evidence(args):
+        raise SystemExit("the holdout look is spent on evidence data only: pass --data-root")
+    require_filed_configuration(args, "holdout")
     main_doc = json.loads(args.main.read_text(encoding="utf-8"))
+    if not main_doc.get("evidence"):
+        raise SystemExit("refused: the main-stage file was not run on evidence data")
+    if main_doc.get("gate_set_fingerprint") != PRODUCTION_GATE_SET.fingerprint():
+        raise SystemExit("refused: the main-stage file was judged under a gate set other than the filed one")
+    if int(main_doc["plan"]["true_trial_count"]) != int(filing["candidate_set"]["true_trial_count"]):
+        raise SystemExit("refused: the main-stage file's trial accounting is not the filed one")
     chosen = choose_holdout_candidate(main_doc)
     if chosen is None:
         print("no seed candidate cleared rungs 0 to 5: no holdout is spent", flush=True)

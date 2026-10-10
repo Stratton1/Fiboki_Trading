@@ -696,12 +696,74 @@ def test_the_holdout_choice_follows_the_filed_rule() -> None:
         e4.choose_holdout_candidate({**doc, "partial": True})
     with pytest.raises(ValueError):
         e4.choose_holdout_candidate({**doc, "shard": {"start": 0, "end": 3, "of": 4}})
+
+
+def _filed_p0_doc(e4, replicates: int = 400) -> dict[str, Any]:
+    """A merged P0 file exactly as the filed run writes it (headers only)."""
+    grid = list(e4.SR_GRID)
+    return {
+        "stage": "p0", "partial": False, "timeframe": "H4", "evidence": True,
+        "gate_set_fingerprint": PRODUCTION_GATE_SET.fingerprint(),
+        "plan": {"true_trial_count": 21_968},
+        "shard": {"start": 0, "end": replicates, "of": replicates},
+        "config": {"replicates": replicates, "sr_grid": grid, "seed": e4.BASE_SEED,
+                   "external_trial_count": 21_960},
+        "runs": [{"sr": sr, "replicate": r} for r in range(replicates) for sr in grid],
+        "summary": {"0": {"rate": 0.0}},
+        "e4": {"z_calibration_at_sr_0": {"effective": {"variance": 1.1}}},
+    }
+
+
+def test_p0_admits_the_filed_run_and_only_the_filed_run() -> None:
+    """The admission gate is what protects the filing: it must read the WHOLE filed
+    run, not a shard, a different edge grid, seed, gate set or trial count."""
+    e4 = _script()
     filing = json.loads(PREREG.read_text(encoding="utf-8"))
-    p0 = {"stage": "p0", "partial": False, "timeframe": "H4", "evidence": True,
-          "config": {"replicates": 400}, "summary": {"0": {"rate": 0.0}},
-          "e4": {"z_calibration_at_sr_0": {"effective": {"variance": 1.1}}}}
-    assert e4.p0_admits(p0, "H4", filing)[0]
-    assert not e4.p0_admits(p0, "D1", filing)[0]
-    assert not e4.p0_admits({**p0, "summary": {"0": {"rate": 0.06}}}, "H4", filing)[0]
-    assert not e4.p0_admits({**p0, "e4": {"z_calibration_at_sr_0": {"effective": {"variance": 1.3}}}}, "H4", filing)[0]
-    assert not e4.p0_admits({**p0, "evidence": False}, "H4", filing)[0]
+    p0 = _filed_p0_doc(e4)
+    assert e4.p0_admits(p0, "H4", filing) == (True, "P0 admits")
+    assert e4.p0_admits(_filed_p0_doc(e4, 800), "H4", filing)[0]  # the replicate rule's doubling
+    refused = {
+        "timeframe": {**p0, "timeframe": "D1"},
+        "size": {**p0, "summary": {"0": {"rate": 0.06}}},
+        "z": {**p0, "e4": {"z_calibration_at_sr_0": {"effective": {"variance": 1.3}}}},
+        "evidence": {**p0, "evidence": False},
+        "partial": {**p0, "partial": True},
+        "a completed shard": {**p0, "shard": {"start": 0, "end": 100, "of": 400}},
+        "a residue shard": {**p0, "shard": {"k": 0, "n": 4, "of": 400}},
+        "missing rows": {**p0, "runs": p0["runs"][:-1]},
+        "edge grid": {**p0, "config": {**p0["config"], "sr_grid": [0.0, 0.5]}},
+        "seed": {**p0, "config": {**p0["config"], "seed": 7}},
+        "replicates": {**p0, "config": {**p0["config"], "replicates": 200},
+                       "shard": {"start": 0, "end": 200, "of": 200}},
+        "gate set": {**p0, "gate_set_fingerprint": GATE_SET_V2.fingerprint()},
+        "trial count": {**p0, "plan": {"true_trial_count": 20_904}},
+        "external trials": {**p0, "config": {**p0["config"], "external_trial_count": 1_056}},
+    }
+    for why, doc in refused.items():
+        ok, reason = e4.p0_admits(doc, "H4", filing)
+        assert not ok, (why, reason)
+
+
+def test_an_evidence_run_may_use_no_setting_the_filing_does_not_fix(tmp_path: Path) -> None:
+    e4 = _script()
+    import argparse
+
+    def ns(stage: str, **over: Any) -> argparse.Namespace:
+        base = {"starter": False, "data_root": tmp_path, "instruments": None, "bars_from": None,
+                "folds": LadderConfig().walk_forward_folds, "spa_bootstraps": LadderConfig().spa_bootstraps,
+                "stress_samples": LadderConfig().stress_samples, "seed": e4.BASE_SEED,
+                "sr": list(e4.SR_GRID), "replicates": 400}
+        return argparse.Namespace(**{**base, **over})
+
+    for stage in ("p0", "main", "holdout"):
+        e4.require_filed_configuration(ns(stage), stage)  # the filed configuration passes
+    e4.require_filed_configuration(ns("p0", replicates=800), "p0")  # the replicate rule's doubling
+    e4.require_filed_configuration(ns("p0", starter=True, data_root=None, seed=7, folds=2), "p0")  # harness
+    for stage, over in (
+        ("p0", {"sr": [0.0, 0.5]}), ("p0", {"replicates": 200}), ("p0", {"seed": 7}),
+        ("main", {"folds": 2}), ("main", {"spa_bootstraps": 30}), ("main", {"stress_samples": 5}),
+        ("main", {"instruments": ["EURUSD", "GBPUSD"]}), ("main", {"bars_from": "2010-01-01"}),
+        ("holdout", {"seed": 1}),
+    ):
+        with pytest.raises(SystemExit, match="filed configuration"):
+            e4.require_filed_configuration(ns(stage, **over), stage)

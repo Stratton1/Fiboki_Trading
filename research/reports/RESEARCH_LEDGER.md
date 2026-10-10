@@ -637,3 +637,15 @@ constraint to address next, not a threshold.
 generated candidate) about 5 hours on the M1 with four shards; expected total under 24 hours; the
 deterministic worst case is about 44 hours. Runbook: `research/reports/e4_pooled/README.md`.
 **Run pending on the Mac.**
+
+**Amendment 1 (2026-10-10, still no results).** An adversarial review of the filed instrument found
+that `p0_admits` would have admitted a timeframe from a completed P0 SHARD (100 of 400 replicates),
+or from a run with a non-filed edge grid, seed, gate set or trial count, because none of those was
+checked; and that an evidence run could pass harness-only options (`--instruments`, `--folds`,
+`--sr`, ...) and still be labelled evidence. Both are now refused; the holdout command refuses a
+non-evidence or differently judged main-stage file; two P0 files for one timeframe are refused
+rather than the first taken. The filing is unchanged; the amendment
+(`research/preregistration/pooled_universe_e4_amendment_1.md`) records why each change is
+admissible (every one refuses a run the filing never allowed), reads the replicate rule (the
+800-replicate file decides when it exists), and corrects the memory claim to an estimate with a
+runbook check. No hypothesis, threshold, candidate, trial count, grid, seed or replicate count moved.

@@ -22,7 +22,7 @@ PY="${PY:-.venv/bin/python}"
 DATA_ROOT="${FIBOKI_DATA_ROOT:-var/datastore}"
 OUT=research/reports/e4_pooled
 SHARDS="$OUT/shards"
-REPLICATES=400
+REPLICATES="${REPLICATES:-400}"   # 800 only under the filing's replicate rule (README step 2)
 mkdir -p "$SHARDS"
 test -f "$DATA_ROOT/.fiboki-data-root" || { echo "not a marked data root: $DATA_ROOT" >&2; exit 2; }
 run() { nohup nice -n "$NICE" caffeinate -i "$PY" scripts/pooled_universe_study.py "$@"; }
@@ -37,7 +37,7 @@ case "${1:-}" in
     for ((w = 0; w < WORKERS; w++)); do
       start=$(( w * per )); end=$(( start + per )); (( end > REPLICATES )) && end=$REPLICATES
       (( start >= end )) && break
-      out="$SHARDS/p0_$tf.$start-$end.json"; log="$SHARDS/p0_$tf.$start-$end.log"
+      out="$SHARDS/p0_$tf.r$REPLICATES.$start-$end.json"; log="$SHARDS/p0_$tf.r$REPLICATES.$start-$end.log"
       resume=""; test -f "$out" && resume="--resume"
       run p0 --timeframe "$tf" --data-root "$DATA_ROOT" --replicates $REPLICATES \
         --replicate-range "$start" "$end" $resume --out "$out" >> "$log" 2>&1 &
@@ -46,11 +46,11 @@ case "${1:-}" in
     ;;
   merge-p0)
     tf="${2:?usage: $0 merge-p0 H4|D1}"
-    "$PY" scripts/pooled_universe_study.py merge "$SHARDS"/p0_"$tf".*.json --out "$OUT/e4_p0_$tf.json"
+    "$PY" scripts/pooled_universe_study.py merge "$SHARDS"/p0_"$tf".r"$REPLICATES".*.json --out "$OUT/e4_p0_$tf.r$REPLICATES.json"
     ;;
   main)
     for tf in H4 D1; do
-      test -f "$OUT/e4_p0_$tf.json" || { echo "merge P0 $tf first ($OUT/e4_p0_$tf.json)" >&2; exit 3; }
+      test -f "$OUT/e4_p0_$tf.json" || { echo "P0 $tf is not decided: copy the merged file the ledger names (e4_p0_$tf.r400.json, or r800 under the replicate rule) to $OUT/e4_p0_$tf.json" >&2; exit 3; }
     done
     for ((w = 0; w < WORKERS; w++)); do
       out="$SHARDS/main.$w-of-$WORKERS.json"; log="$SHARDS/main.$w-of-$WORKERS.log"
@@ -66,6 +66,13 @@ case "${1:-}" in
     ;;
   status)
     grep -h "first replicate\|resuming" "$SHARDS"/*.log 2>/dev/null || true
+    # Resident size (MB) of every running shard: the runbook's memory check.
+    pids=$(pgrep -f "scripts/pooled_universe_study.py" || true)
+    if [ -n "$pids" ]; then
+      echo "running shards (pid, resident MB, elapsed):"
+      # shellcheck disable=SC2086
+      ps -o pid=,rss=,etime= -p $pids | awk '{ printf "  %s %.0f MB %s\n", $1, $2 / 1024, $3 }'
+    fi
     "$PY" - "$SHARDS" <<'PYEOF'
 import glob, json, sys
 for p in sorted(glob.glob(sys.argv[1] + "/*.json")):

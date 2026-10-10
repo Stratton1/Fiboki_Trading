@@ -38,15 +38,23 @@ research/reports/e4_pooled/run_e4_mac.sh plan
 # 1. Process P0 FIRST, both timeframes (4 shards each; WORKERS=3 if memory is tight).
 research/reports/e4_pooled/run_e4_mac.sh p0 H4
 research/reports/e4_pooled/run_e4_mac.sh status          # until every p0_H4 shard says done
-research/reports/e4_pooled/run_e4_mac.sh merge-p0 H4     # -> research/reports/e4_pooled/e4_p0_H4.json
+research/reports/e4_pooled/run_e4_mac.sh merge-p0 H4     # -> research/reports/e4_pooled/e4_p0_H4.r400.json
 research/reports/e4_pooled/run_e4_mac.sh p0 D1
-research/reports/e4_pooled/run_e4_mac.sh merge-p0 D1     # -> e4_p0_D1.json
+research/reports/e4_pooled/run_e4_mac.sh merge-p0 D1     # -> e4_p0_D1.r400.json
 
 # 2. STOP. P0 is read and recorded in the ledger under the filed rule (size <= 0.05 and
-#    z_variance <= 1.25 per timeframe) before the main stage starts.
+#    z_variance <= 1.25 per timeframe) before the main stage starts. If a timeframe's size
+#    point estimate lies within 2 Monte Carlo SE of 0.05, the filing's replicate rule applies:
+#    re-run that timeframe's P0 once with REPLICATES=800 (a fresh set of shards; the merged 400
+#    file is kept and both are recorded in the ledger) and the 800-replicate file is the one
+#    passed to `main --p0` (see research/preregistration/pooled_universe_e4_amendment_1.md).
 
-# 3. The main stage (4 interleaved shards; refuses to start without both merged P0 files, and
-#    skips, as not_admitted, every candidate of a timeframe P0 did not admit).
+# 3. Name the deciding P0 file per timeframe (the r400 one, or the r800 one if the replicate
+#    rule applied; the ledger entry for P0 says which), then the main stage (4 interleaved
+#    shards; refuses to start without both files, and skips, as not_admitted, every candidate of
+#    a timeframe P0 did not admit).
+cp research/reports/e4_pooled/e4_p0_H4.r400.json research/reports/e4_pooled/e4_p0_H4.json
+cp research/reports/e4_pooled/e4_p0_D1.r400.json research/reports/e4_pooled/e4_p0_D1.json
 research/reports/e4_pooled/run_e4_mac.sh main
 research/reports/e4_pooled/run_e4_mac.sh status
 research/reports/e4_pooled/run_e4_mac.sh merge-main      # -> e4_main.json, reports/ beside it
@@ -57,14 +65,14 @@ Equivalent single commands, for one shard by hand:
 ```bash
 nice -n 10 caffeinate -i .venv/bin/python scripts/pooled_universe_study.py p0 --timeframe H4 \
     --data-root "$FIBOKI_DATA_ROOT" --replicates 400 --replicate-range 0 100 \
-    --out research/reports/e4_pooled/shards/p0_H4.0-100.json          # add --resume to continue
+    --out research/reports/e4_pooled/shards/p0_H4.r400.0-100.json     # add --resume to continue
 nice -n 10 caffeinate -i .venv/bin/python scripts/pooled_universe_study.py main \
     --data-root "$FIBOKI_DATA_ROOT" --shard 0 4 \
     --p0 research/reports/e4_pooled/e4_p0_H4.json research/reports/e4_pooled/e4_p0_D1.json \
     --reports-dir research/reports/e4_pooled/reports \
     --out research/reports/e4_pooled/shards/main.0-of-4.json
-.venv/bin/python scripts/pooled_universe_study.py merge research/reports/e4_pooled/shards/p0_H4.*.json \
-    --out research/reports/e4_pooled/e4_p0_H4.json
+.venv/bin/python scripts/pooled_universe_study.py merge research/reports/e4_pooled/shards/p0_H4.r400.*.json \
+    --out research/reports/e4_pooled/e4_p0_H4.r400.json
 ```
 
 Shards must tile the range exactly: `merge` refuses a gap, an overlap, a partial checkpoint or a
@@ -84,9 +92,23 @@ The basis is measured, not assumed: E-1 process 2 ran about 26,000 H4 backtests 
 Mac with four shards (about 1,770 per hour) and K5 ran 2,947 mixed backtests in 7,923 s. A run over
 24 hours is reported as such and is never truncated; its result does not depend on wall time.
 
-Memory: under 1 GB per shard. Disk: about 20 to 40 MB per merged P0 file, a few MB per main-stage
-shard, up to about 100 MB of main-stage `reports/` (one full ValidationReport per candidate, pass or
-fail). `shards/` is git-ignored; the merged files and the reports are the record.
+Memory (an estimate, NOT measured on the Mac): one cached full-window H4 evaluation is about 1 MB
+(measured: 24,000 per-bar returns and 330 trades serialised, 0.98 MB), a full ladder run keeps about
+30 full-window-equivalents per sleeve in the candidate's in-memory cache, and a seed candidate has up
+to 16 sleeves, so a main-stage shard peaks somewhere between 0.5 and 1.5 GB while it is on a seed
+candidate; P0 shards are smaller (synthetic trades, no engine cache). Because the main-stage shards
+interleave (`--shard K N`), all four are on seed candidates at the same time at the start, which is
+the memory peak of the whole run. **Check it once, after the first seed candidate of each shard has
+logged**: `research/reports/e4_pooled/run_e4_mac.sh status` prints each shard's resident size; if the
+four together exceed about 5 GB, or the Mac starts swapping (Activity Monitor, Memory Pressure
+yellow), stop the shards (`kill` the pids; nothing is lost beyond the candidate in progress) and
+re-run `main` with `WORKERS=3` or `WORKERS=2`; the shard files are then different shards and the
+old ones must be deleted before re-running, or `merge` will refuse the overlap. Fewer shards only
+lengthen the run; the result does not depend on how it was sharded.
+
+Disk: about 20 to 40 MB per merged P0 file, a few MB per main-stage shard, up to about 100 MB of
+main-stage `reports/` (one full ValidationReport per candidate, pass or fail). `shards/` is
+git-ignored; the merged files and the reports are the record.
 
 ### The one look at the holdout
 
