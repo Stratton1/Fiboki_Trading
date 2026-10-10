@@ -1056,6 +1056,7 @@ class ForwardFeed:
 
     def poll(self) -> BarBatch:
         batch = self.feed.poll()
+        self._report_window_shortfall()
         sample = self.spread.sample(self.wiring.instruments)
         self.journal.event("pricing", sample=sample.as_row())
         if sample.error or sample.missing:
@@ -1087,6 +1088,38 @@ class ForwardFeed:
         return batch
 
     # -- pieces ------------------------------------------------------------
+
+    def _report_window_shortfall(self) -> None:
+        """A restored feed that could not fetch back to its window's first bar.
+
+        The feed records it (``floor_shortfall``) and nothing else would say
+        so; but every indicator is then computed over a different window from
+        the one the uninterrupted process used, which is exactly the parity
+        the restore promises. Journalled and alerted once per occurrence.
+        """
+        shortfall = getattr(self.feed, "floor_shortfall", None)
+        if not shortfall:
+            return
+        detail = {
+            sym: {"window_from": wanted, "obtained_from": got}
+            for sym, (wanted, got) in sorted(shortfall.items())
+        }
+        self.journal.event(
+            "feed_window_shortfall",
+            instruments=detail,
+            note=(
+                "the restored feed could not fetch back to the first bar of the window "
+                "the previous process held; indicators are computed over a shorter "
+                "window until it has slid past the gap"
+            ),
+        )
+        self._alert(
+            AlertEvent.DATA_QUALITY_DEFECT,
+            f"paper forward restored feed window short for {sorted(detail)}: indicator "
+            "values may differ from the uninterrupted run; see feed_window_shortfall",
+            dedupe_key="paper_forward_feed_window_shortfall",
+        )
+        shortfall.clear()
 
     def _catch_up(self, batch: BarBatch, stamp: pd.Timestamp) -> None:
         """Step the book through every closed bar it has not seen, in order.

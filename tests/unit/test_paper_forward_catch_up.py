@@ -170,3 +170,24 @@ def test_a_bar_older_than_the_books_step_is_journalled_not_applied() -> None:
         {"instrument": "B", "bar_time": T("2026-10-19 11:00"), "reason": "older_than_book_step"}
     ]
 
+
+
+def test_a_restored_feeds_window_shortfall_is_journalled_and_alerted_once() -> None:
+    """The feed records that it could not reach its window's first bar; the
+    runtime says so in the journal and alerts, then clears it so it is said once."""
+    feed = FeedStub({"A": _frame("2026-10-19 10:00")})
+    feed.floor_shortfall = {"A": (T("2026-10-01 00:00"), T("2026-10-05 00:00"))}  # type: ignore[attr-defined]
+    journal = JournalStub()
+    fired: list[Any] = []
+    forward = _forward(feed, ManagerStub("2026-10-19 10:00", {}), journal)
+    forward.dispatcher = SimpleNamespace(fire=lambda *a, **k: fired.append((a, k)))
+
+    forward._report_window_shortfall()
+    forward._report_window_shortfall()
+
+    (short,) = [f for k, f in journal.events if k == "feed_window_shortfall"]
+    assert short["instruments"] == {
+        "A": {"window_from": T("2026-10-01 00:00"), "obtained_from": T("2026-10-05 00:00")}
+    }
+    assert len(fired) == 1 and fired[0][1]["dedupe_key"] == "paper_forward_feed_window_shortfall"
+    assert feed.floor_shortfall == {}  # type: ignore[attr-defined]
