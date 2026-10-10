@@ -17,8 +17,9 @@ worker `humorous-grace`, which had still been running, on 8 October); only the V
 database remains (C2). The executable-price recorder is built and running (P2). Superseded files
 are gathered in `~/Fiboki_Old` (M1). A one-folder migration kit exists
 (`scripts/migration-kit.sh`, M1). Still needing you: the Finnhub and FRED keys (P6, five minutes
-each), P1's two venue questions, the pooled-universe pre-registration decision (R3), D2 to D4
-before any broker demo, and the desktop itself (M2, M3).
+each), P1's two venue questions, D2 to D4 before any broker demo, and the desktop itself (M2,
+M3). **Update 10 October 2026:** R3 approved; E-4 (pooled-universe candidates) is filed and built;
+its run is yours, on the Mac (R3, runbook in `research/reports/e4_pooled/README.md`).
 
 **Status line (3 October 2026):** V1 is down (Vercel paused, Railway deployment removed). E-1 and
 E-2 are complete and decided: the audited gate set has no power against edges up to 0.12 per trade
@@ -341,11 +342,17 @@ because the documents produce a median of 330 trades and a 95% test of that edge
   processes: no verdict changes; candidates with 150 to 399 trades are measured through every rung
   instead of ending at rung 0. Every stored validation report was produced under `v2.0.0-audit`
   and is refused by promotion until re-run (none was promotable).
-- [ ] **Choose the next experiment.** My recommendation is to pre-register pooled-universe
-  candidates (one document across its 16 series as a single candidate, ~5,000 trades), which is the
-  only route that makes a 0.08 edge testable at all; the alternatives are to accept that only edges
-  of 0.12+ per trade can ever be certified, or lower timeframes where costs dominate. E-3 (effective
-  campaign trial count) is demoted: H2 failed.
+- [x] **Choose the next experiment. Approved 2026-10-10; E-4 filed; built; run pending on the
+  Mac.** Pooled-universe candidates (one document across its 16 series as a single candidate, with
+  an effective trade count `N / DEFF` from the sleeves' P&L covariance at every count-based gate):
+  `research/preregistration/pooled_universe_e4.json`, ledger "E-4 filed". 172 pooled candidates,
+  true N 21,968; process P0 (size, power and calibration of the effective count) runs first and
+  decides which timeframes the main stage may run. **Your action:** on the MacBook, follow the
+  runbook in `research/reports/e4_pooled/README.md` (P0 H4 and D1 first, about 1 to 2 hours; stop
+  and have P0 read; then the main stage, about 3 to 4 hours guaranteed, expected under 24 hours in
+  total, under `nice` beside the paper service). Expectation filed in advance: size holds, but at
+  21,968 trials the deflated Sharpe becomes the binding gate and power at 0.08 on H4 is expected to
+  stay below 0.5; if it is below 0.2 the next question is E-3 (the deflation's trial count).
 
 ### R4. Is there a better way to run the platform? (review of 30 projects, 8 October 2026)
 

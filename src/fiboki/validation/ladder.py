@@ -84,7 +84,7 @@ from fiboki.validation.gates import uses_min_trl_gate as _uses_min_trl_gate
 from fiboki.validation.holdout import (
     HoldoutAlreadyConsumed,
     HoldoutKeyVersionMismatch,
-    HoldoutRegistry,
+    HoldoutLedger,
     HoldoutSegment,
 )
 from fiboki.validation.report import RungOutcome, RungResult, ValidationReport
@@ -241,7 +241,7 @@ class LadderContext:
     evaluator: Evaluator
     segment: HoldoutSegment
     config: LadderConfig
-    registry: HoldoutRegistry
+    registry: HoldoutLedger
     experiment_id: str = ""
     actor: str = ""
 
@@ -357,7 +357,13 @@ class SanityRung(Rung):
     def run(self, ctx: LadderContext) -> RungResult:
         baseline = ctx.evaluate(ctx.candidate.default_params, ctx.research_window)
         ctx.scratch["baseline"] = baseline
-        ctx.gate_values["n_trades"] = float(baseline.n_trades)
+        # The trade count AS A SAMPLE SIZE. For a single-series evaluation it is
+        # the trade count; for a pooled-universe evaluation it is the effective
+        # count N / design effect (fiboki.validation.pooled), because trades on
+        # correlated series are not independent observations. Expectancy and
+        # the MinTRL moments still use every trade (they are means, not counts).
+        n_sample = baseline.n_trades_effective
+        ctx.gate_values["n_trades"] = float(n_sample)
         ctx.label("n_trades", Provenance.BACKTEST)
         # Candidate-gate inputs (E-2). Measured for every gate set; read only by
         # a gate set that names them.
@@ -365,7 +371,7 @@ class SanityRung(Rung):
         over_min_trl = (
             None
             if min_trl is None
-            else float(baseline.n_trades) / max(min_trl, float(MIN_TRL_FLOOR_TRADES))
+            else float(n_sample) / max(min_trl, float(MIN_TRL_FLOOR_TRADES))
         )
         ctx.gate_values["min_trl_95"] = min_trl
         ctx.gate_values["n_trades_over_min_trl"] = over_min_trl
@@ -381,6 +387,9 @@ class SanityRung(Rung):
             "n_trades_over_min_trl": over_min_trl,
             "min_trl_basis": min_trl_basis,
         }
+        if baseline.is_pooled:
+            metrics["n_trades_effective"] = float(n_sample)
+            metrics["design_effect"] = baseline.meta.get("design_effect")
         degeneracies = baseline.degeneracies()
         if degeneracies:
             return self._fail(
@@ -398,9 +407,14 @@ class SanityRung(Rung):
                 "ValidationLadder, which sets it from the gate set in force",
                 metrics,
             )
-        if baseline.n_trades < floor:
+        if n_sample < floor:
+            counted = (
+                f"{n_sample:.1f} effective trades ({baseline.n_trades} pooled)"
+                if baseline.is_pooled
+                else f"{baseline.n_trades} trades"
+            )
             return self._fail(
-                f"{baseline.n_trades} trades at declared defaults, below the "
+                f"{counted} at declared defaults, below the "
                 f"{ctx.config.min_trades} minimum. V1 promoted on 80 trades; at "
                 "this search scale that cannot separate an edge from the best of "
                 "many coin flips.",
@@ -486,6 +500,7 @@ class WalkForwardRung(Rung):
         slices = ctx.research_window.slices(cfg.walk_forward_folds + 1, prefix="wf")
         folds: list[dict[str, Any]] = []
         log_rates: list[tuple[float, float] | None] = []
+        oos_sample_sizes: list[float] = []
         for i in range(cfg.walk_forward_folds):
             if cfg.walk_forward_scheme == "anchored":
                 train = DateWindow(f"wf_train_{i}", slices[0].start, slices[i].end)
@@ -504,25 +519,27 @@ class WalkForwardRung(Rung):
             is_rate, oos_rate, fixed_rate, basis = _fold_rates(trained[chosen], oos, fixed)
             log_rates.append(_log_growth_rates(trained[chosen], oos))
 
-            folds.append(
-                {
-                    "fold": i,
-                    "train": train.to_dict(),
-                    "test": test.to_dict(),
-                    "selected_params": selected_params,
-                    "rate_basis": basis,
-                    "is_rate": is_rate,
-                    "is_profit_per_day": trained[chosen].profit_per_day,
-                    "is_net_profit": trained[chosen].net_profit,
-                    "oos_rate": oos_rate,
-                    "oos_profit_per_day": oos.profit_per_day,
-                    "oos_net_profit": oos.net_profit,
-                    "oos_trades": oos.n_trades,
-                    "oos_sharpe": oos.sharpe,
-                    "fixed_param_oos_rate": fixed_rate,
-                    "fixed_param_oos_net_profit": fixed.net_profit,
-                }
-            )
+            fold_row: dict[str, Any] = {
+                "fold": i,
+                "train": train.to_dict(),
+                "test": test.to_dict(),
+                "selected_params": selected_params,
+                "rate_basis": basis,
+                "is_rate": is_rate,
+                "is_profit_per_day": trained[chosen].profit_per_day,
+                "is_net_profit": trained[chosen].net_profit,
+                "oos_rate": oos_rate,
+                "oos_profit_per_day": oos.profit_per_day,
+                "oos_net_profit": oos.net_profit,
+                "oos_trades": oos.n_trades,
+                "oos_sharpe": oos.sharpe,
+                "fixed_param_oos_rate": fixed_rate,
+                "fixed_param_oos_net_profit": fixed.net_profit,
+            }
+            if oos.is_pooled:
+                fold_row["oos_trades_effective"] = oos.n_trades_effective
+            folds.append(fold_row)
+            oos_sample_sizes.append(oos.n_trades_effective)
 
         is_rates = np.array([f["is_rate"] for f in folds], dtype=float)
         oos_rates = np.array([f["oos_rate"] for f in folds], dtype=float)
@@ -542,7 +559,8 @@ class WalkForwardRung(Rung):
             if complete and len(complete) == len(log_rates)
             else float("nan")
         )
-        min_oos_trades = float(min(f["oos_trades"] for f in folds)) if folds else None
+        # As a sample size: the effective count for a pooled evaluation.
+        min_oos_trades = float(min(oos_sample_sizes)) if oos_sample_sizes else None
         n_profitable = int(sum(f["oos_net_profit"] > 0.0 for f in folds))
         hit_wilson = wilson_lower_bound(n_profitable, len(folds), WILSON_CONFIDENCE)
 
@@ -1110,9 +1128,15 @@ class HoldoutRung(Rung):
         metrics["token"] = token.token
         ctx.label("holdout_net_profit", Provenance.HOLDOUT)
 
-        if result.n_trades < ctx.config.holdout_min_trades:
+        if result.n_trades_effective < ctx.config.holdout_min_trades:
+            counted = (
+                f"{result.n_trades_effective:.1f} effective holdout trades "
+                f"({result.n_trades} pooled)"
+                if result.is_pooled
+                else f"{result.n_trades} holdout trades"
+            )
             return self._fail(
-                f"{result.n_trades} holdout trades, below the "
+                f"{counted}, below the "
                 f"{ctx.config.holdout_min_trades} the ladder requires for the "
                 "result to mean anything. The look is spent regardless.",
                 metrics,
@@ -1190,7 +1214,7 @@ class ValidationLadder:
         candidate: Candidate,
         evaluator: Evaluator,
         *,
-        registry: HoldoutRegistry,
+        registry: HoldoutLedger,
         dataset_version_id: str,
         engine_config: Mapping[str, Any] | None = None,
         broker_profile: Mapping[str, Any] | None = None,
@@ -1236,7 +1260,7 @@ class ValidationLadder:
         candidate: Candidate,
         evaluator: Evaluator,
         *,
-        registry: HoldoutRegistry,
+        registry: HoldoutLedger,
         dataset_version_id: str,
         gate_sets: Mapping[str, GateSet],
         engine_config: Mapping[str, Any] | None = None,

@@ -363,6 +363,34 @@ class WindowEvaluation:
     # ------------------------------------------------------------ metrics
 
     @property
+    def is_pooled(self) -> bool:
+        """True when this evaluation pools several series as ONE candidate.
+
+        Set by ``fiboki.validation.pooled.PooledEvaluator`` (``meta``
+        ``"n_trades_effective"``); every single-series evaluator leaves it unset.
+        """
+        return "n_trades_effective" in self.meta
+
+    @property
+    def n_trades_effective(self) -> float:
+        """The trade count AS A SAMPLE SIZE: what a count-based gate may read.
+
+        For a single series this is ``n_trades``. For a pooled-universe
+        evaluation it is ``n_trades / design_effect``: trades taken on
+        correlated series at the same time are not independent observations,
+        so they carry less information about the per-trade mean than their
+        number suggests (``fiboki.validation.pooled.design_effect``). Never
+        larger than ``n_trades``.
+        """
+        raw = self.meta.get("n_trades_effective")
+        if raw is None:
+            return float(self.n_trades)
+        value = float(raw)
+        if not math.isfinite(value) or value < 0.0:
+            raise ValueError(f"n_trades_effective {raw!r} is not a non-negative number")
+        return min(value, float(self.n_trades))
+
+    @property
     def expectancy(self) -> float:
         """Mean P&L per trade. Zero trades has no expectancy, and says so."""
         if self.n_trades <= 0:

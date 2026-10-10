@@ -44,7 +44,7 @@ import uuid
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any
+from typing import Any, Protocol
 
 import pandas as pd
 from sqlalchemy import (
@@ -81,6 +81,7 @@ __all__ = [
     "HoldoutError",
     "HoldoutKeyVersionMismatch",
     "HoldoutLeak",
+    "HoldoutLedger",
     "HoldoutRegistry",
     "HoldoutSegment",
     "HoldoutToken",
@@ -794,6 +795,40 @@ class HoldoutRegistry:
 
     def consumed_hashes(self, dataset_version_id: str) -> tuple[str, ...]:
         return tuple(c.strategy_content_hash for c in self.consumptions(dataset_version_id))
+
+
+class HoldoutLedger(Protocol):
+    """What the validation ladder needs from a holdout registry.
+
+    :class:`HoldoutRegistry` is the implementation. The protocol exists so a
+    candidate that spans several dataset versions (a pooled-universe candidate,
+    ``fiboki.validation.pooled.PooledHoldoutRegistry``) can present ONE segment
+    to the ladder while every check and every claim is still made, per
+    constituent, against the real registry underneath. ``db_path`` is ``None``
+    for an in-memory registry, which is what ``run_measuring`` insists on.
+    """
+
+    @property
+    def db_path(self) -> Path | None: ...
+
+    def segment(self, dataset_version_id: str) -> HoldoutSegment: ...
+
+    def assert_untouched(self, dataset_version_id: str, *windows: DateWindow) -> None: ...
+
+    def claim(
+        self,
+        dataset_version_id: str,
+        strategy_content_hash: str,
+        *,
+        strategy_id: str = "",
+        experiment_id: str = "",
+        actor: str = "",
+        code_version: str = "",
+        note: str = "",
+        key_version: str | None = None,
+    ) -> HoldoutToken: ...
+
+    def record_outcome(self, token: HoldoutToken | str, outcome: dict[str, Any]) -> None: ...
 
 
 def _segment_from_row(row: HoldoutSegmentRow) -> HoldoutSegment:
