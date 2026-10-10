@@ -34,22 +34,6 @@ import { useExecutionMode, useOperator } from "./shell/platform";
  * platform supplies one, and a kill-switch control that is always visible. The
  * kill-switch state is shown in every mode, armed or not.
  */
-/**
- * Publishes the banner's real height as `--banner-h`, so everything that
- * sticks beneath it (the command line, the rail) sits flush even when the
- * banner wraps to several lines on a phone. A ref callback with a cleanup:
- * the banner is a different element in each of its states.
- */
-function trackHeight(el: HTMLElement | null) {
-  if (!el || typeof ResizeObserver === "undefined") return;
-  const root = document.documentElement;
-  const publish = () => root.style.setProperty("--banner-h", `${el.offsetHeight}px`);
-  publish();
-  const observer = new ResizeObserver(publish);
-  observer.observe(el);
-  return () => observer.disconnect();
-}
-
 export function ModeBanner() {
   const { handle: state, freshness, mode, stale } = useExecutionMode();
   const operator = useOperator();
@@ -66,13 +50,7 @@ export function ModeBanner() {
 
   if (state.status === "loading") {
     return (
-      <div
-        ref={trackHeight}
-        className="mode-banner"
-        data-testid="mode-banner"
-        data-mode="loading"
-        role="status"
-      >
+      <div className="mode-banner" data-testid="mode-banner" data-mode="loading" role="status">
         <span className="mode-banner__mode">MODE …</span>
         <span className="mode-banner__detail">Reading the execution mode from the platform.</span>
       </div>
@@ -81,13 +59,7 @@ export function ModeBanner() {
 
   if (state.status === "error") {
     return (
-      <div
-        ref={trackHeight}
-        className="mode-banner"
-        data-testid="mode-banner"
-        data-mode="unknown"
-        role="alert"
-      >
+      <div className="mode-banner" data-testid="mode-banner" data-mode="unknown" role="alert">
         <span className="mode-banner__mode" data-testid="mode-banner-mode">
           MODE UNKNOWN
         </span>
@@ -107,7 +79,6 @@ export function ModeBanner() {
   const live = banner.mode === "live";
   return (
     <div
-      ref={trackHeight}
       className="mode-banner"
       data-testid="mode-banner"
       data-mode={banner.mode}

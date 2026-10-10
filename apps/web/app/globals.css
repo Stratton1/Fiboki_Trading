@@ -762,11 +762,11 @@
   .fkey:focus-visible {
     outline-offset: -3px;
   }
-  .fkey[data-active="true"] {
+  .fkey[aria-current="true"] {
     background: var(--strip-solid-bg);
     color: var(--strip-solid-fg);
   }
-  .fkey[data-active="true"] .fkey__k {
+  .fkey[aria-current="true"] .fkey__k {
     color: inherit;
   }
 

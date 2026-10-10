@@ -24,10 +24,9 @@ export interface Section {
   icon: LucideIcon;
   /** The `g <chord>` key that goes to this section's first view. */
   chord: string;
-  /** The command-line mnemonic and function-key label of the section. */
+  /** The function-key label of the section (the command line's codes for each view are in CommandLine.tsx). */
   mnemonic: string;
-  /** `mnemonic` is the command-line code that goes straight to the view. */
-  links: { href: string; label: string; mnemonic: string }[];
+  links: { href: string; label: string }[];
   /**
    * Entity routes that belong to the section without being one of its views
    * (`/lifecycle/<hash>`, `/system/incidents/<id>`): the header and rail
@@ -45,9 +44,9 @@ export const SECTIONS: Section[] = [
     question: "Is anything wrong, and what needs me now?",
     icon: House,
     links: [
-      { href: "/", label: "Overview", mnemonic: "CMD" },
-      { href: "/market-pulse", label: "Market Pulse", mnemonic: "PULSE" },
-      { href: "/alerts", label: "Alerts", mnemonic: "ALRT" },
+      { href: "/", label: "Overview" },
+      { href: "/market-pulse", label: "Market Pulse" },
+      { href: "/alerts", label: "Alerts" },
     ],
   },
   {
@@ -57,7 +56,7 @@ export const SECTIONS: Section[] = [
     title: "Fleet & Positions",
     question: "What is every bot doing and what is open?",
     icon: Crosshair,
-    links: [{ href: "/trading/portfolio", label: "Portfolio", mnemonic: "FLT" }],
+    links: [{ href: "/trading/portfolio", label: "Portfolio" }],
   },
   {
     id: "lifecycle",
@@ -66,7 +65,7 @@ export const SECTIONS: Section[] = [
     title: "Strategy Lifecycle",
     question: "What should be promoted, demoted or retired?",
     icon: ArrowUpDown,
-    links: [{ href: "/trading/candidates", label: "Candidates", mnemonic: "LIF" }],
+    links: [{ href: "/trading/candidates", label: "Candidates" }],
     entityPrefixes: ["/lifecycle"],
   },
   {
@@ -77,13 +76,13 @@ export const SECTIONS: Section[] = [
     question: "What have we tried and what does the evidence say?",
     icon: FlaskConical,
     links: [
-      { href: "/research", label: "Lab", mnemonic: "LAB" },
-      { href: "/research/hypotheses", label: "Hypotheses", mnemonic: "HYP" },
-      { href: "/research/experiments", label: "Experiments", mnemonic: "XPR" },
-      { href: "/research/strategies", label: "Strategies", mnemonic: "STR" },
-      { href: "/research/parameter-lab", label: "Parameter Lab", mnemonic: "PARAM" },
-      { href: "/research/validation", label: "Validation", mnemonic: "VAL" },
-      { href: "/research/datasets", label: "Datasets", mnemonic: "DSET" },
+      { href: "/research", label: "Lab" },
+      { href: "/research/hypotheses", label: "Hypotheses" },
+      { href: "/research/experiments", label: "Experiments" },
+      { href: "/research/strategies", label: "Strategies" },
+      { href: "/research/parameter-lab", label: "Parameter Lab" },
+      { href: "/research/validation", label: "Validation" },
+      { href: "/research/datasets", label: "Datasets" },
     ],
   },
   {
@@ -94,12 +93,12 @@ export const SECTIONS: Section[] = [
     question: "What is the market doing, and what did the agents conclude?",
     icon: Radar,
     links: [
-      { href: "/markets", label: "Explorer", mnemonic: "MKT" },
-      { href: "/markets/regimes", label: "Regimes", mnemonic: "REGM" },
-      { href: "/markets/correlations", label: "Correlations", mnemonic: "CORR" },
-      { href: "/intelligence/agents", label: "Agents", mnemonic: "AGT" },
-      { href: "/intelligence/runs", label: "Agent runs", mnemonic: "RUNS" },
-      { href: "/intelligence/research-memory", label: "Research Memory", mnemonic: "MEM" },
+      { href: "/markets", label: "Explorer" },
+      { href: "/markets/regimes", label: "Regimes" },
+      { href: "/markets/correlations", label: "Correlations" },
+      { href: "/intelligence/agents", label: "Agents" },
+      { href: "/intelligence/runs", label: "Agent runs" },
+      { href: "/intelligence/research-memory", label: "Research Memory" },
     ],
   },
   {
@@ -110,8 +109,8 @@ export const SECTIONS: Section[] = [
     question: "How close are we to any limit?",
     icon: ShieldAlert,
     links: [
-      { href: "/trading/risk", label: "Risk", mnemonic: "RSK" },
-      { href: "/trading/exposure", label: "Exposure", mnemonic: "EXPO" },
+      { href: "/trading/risk", label: "Risk" },
+      { href: "/trading/exposure", label: "Exposure" },
     ],
   },
   {
@@ -122,8 +121,8 @@ export const SECTIONS: Section[] = [
     question: "Can we trust the inputs?",
     icon: Database,
     links: [
-      { href: "/markets/data-quality", label: "Market data", mnemonic: "DQ" },
-      { href: "/system/data-health", label: "Data Health", mnemonic: "DH" },
+      { href: "/markets/data-quality", label: "Market data" },
+      { href: "/system/data-health", label: "Data Health" },
     ],
   },
   {
@@ -134,12 +133,12 @@ export const SECTIONS: Section[] = [
     question: "Is every process up, and what happened?",
     icon: Server,
     links: [
-      { href: "/system/services", label: "Services", mnemonic: "SYS" },
-      { href: "/system/workers", label: "Workers", mnemonic: "WRK" },
-      { href: "/system/broker-health", label: "Broker Health", mnemonic: "BRK" },
-      { href: "/system/logs", label: "Audit log", mnemonic: "LOG" },
-      { href: "/system/settings", label: "Settings", mnemonic: "SET" },
-      { href: "/system/legend", label: "Legend", mnemonic: "LEG" },
+      { href: "/system/services", label: "Services" },
+      { href: "/system/workers", label: "Workers" },
+      { href: "/system/broker-health", label: "Broker Health" },
+      { href: "/system/logs", label: "Audit log" },
+      { href: "/system/settings", label: "Settings" },
+      { href: "/system/legend", label: "Legend" },
     ],
     entityPrefixes: ["/system/incidents"],
   },
@@ -150,7 +149,7 @@ export const SECTIONS: Section[] = [
     title: "Journal",
     question: "What did we trade, why, and what did we learn?",
     icon: NotebookPen,
-    links: [{ href: "/trading/execution", label: "Trades", mnemonic: "JRN" }],
+    links: [{ href: "/trading/execution", label: "Trades" }],
   },
 ];
 
