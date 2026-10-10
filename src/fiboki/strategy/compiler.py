@@ -42,6 +42,7 @@ from fiboki.strategy.dsl import (
     TradeDirection,
 )
 from fiboki.strategy.primitives import (
+    Context,
     EvalContext,
     IndicatorOperand,
     IndicatorSpec,
@@ -103,20 +104,7 @@ class CompiledStrategy:
     ) -> Signal | None:
         if idx < 0 or idx >= len(df):
             raise IndexError(f"idx {idx} out of range for a frame of {len(df)} bars")
-        doc = self.document
-
-        symbol = (instrument or doc.universe[0]).upper()
-        if symbol not in doc.universe:
-            raise CompilationError(
-                f"{doc.strategy_id}: {symbol} is not in the permitted universe "
-                f"{list(doc.universe)}"
-            )
-        tf = Timeframe(timeframe) if timeframe is not None else doc.timeframes[0]
-        if tf not in doc.timeframes:
-            raise CompilationError(
-                f"{doc.strategy_id}: {tf.value} is not a permitted timeframe "
-                f"{[t.value for t in doc.timeframes]}"
-            )
+        symbol, tf = self.target(instrument, timeframe)
 
         if idx < self.warmup_period:
             return None
@@ -132,7 +120,38 @@ class CompiledStrategy:
                 "strategy frames must be indexed by tz-aware UTC timestamps"
             )
         ctx = EvalContext(frame=view, bar_time=bar_time)
+        return self.decide(ctx, symbol, tf)
 
+    def target(
+        self, instrument: str | None, timeframe: Timeframe | str | None
+    ) -> tuple[str, Timeframe]:
+        """The (symbol, timeframe) a signal is for, refused outside the document."""
+        doc = self.document
+        symbol = (instrument or doc.universe[0]).upper()
+        if symbol not in doc.universe:
+            raise CompilationError(
+                f"{doc.strategy_id}: {symbol} is not in the permitted universe "
+                f"{list(doc.universe)}"
+            )
+        tf = Timeframe(timeframe) if timeframe is not None else doc.timeframes[0]
+        if tf not in doc.timeframes:
+            raise CompilationError(
+                f"{doc.strategy_id}: {tf.value} is not a permitted timeframe "
+                f"{[t.value for t in doc.timeframes]}"
+            )
+        return symbol, tf
+
+    def decide(self, ctx: Context, symbol: str, tf: Timeframe) -> Signal | None:
+        """The signal on the context's bar, or ``None``. The one decision path.
+
+        Shared by :meth:`generate_signal` (a frame truncated at the bar) and by
+        :class:`fiboki.strategy.kernel.SignalKernel` (column arrays and a
+        position), so the two can differ only in how an operand is READ, and
+        :class:`~fiboki.strategy.primitives.ArrayEvalContext` reads exactly what
+        the frame context reads.
+        """
+        doc = self.document
+        bar_time = ctx.bar_time
         if not self._gates_pass(ctx):
             return None
 
@@ -151,7 +170,7 @@ class CompiledStrategy:
         side = triggered[0]
 
         inst = get_instrument(symbol)
-        reference = float(view["close"].iat[-1])
+        reference = float(ctx.raw_last("close"))
         if not math.isfinite(reference) or reference <= 0:
             return None
 
@@ -184,7 +203,7 @@ class CompiledStrategy:
 
     # -------------------------------------------------------------- gates
 
-    def _gates_pass(self, ctx: EvalContext) -> bool:
+    def _gates_pass(self, ctx: Context) -> bool:
         doc = self.document
         if not _all(doc.regime, ctx):
             return False
@@ -192,7 +211,7 @@ class CompiledStrategy:
             return False
         return self._session_allows(ctx)
 
-    def _session_allows(self, ctx: EvalContext) -> bool:
+    def _session_allows(self, ctx: Context) -> bool:
         sessions = self.document.sessions
         if sessions is None:
             return True
@@ -210,7 +229,7 @@ class CompiledStrategy:
                 return True
         return False
 
-    def _side_triggers(self, ctx: EvalContext, side: Side) -> bool:
+    def _side_triggers(self, ctx: Context, side: Side) -> bool:
         doc = self.document
         if not _all(doc.setup.for_direction(side), ctx):
             return False
@@ -223,13 +242,13 @@ class CompiledStrategy:
 
     # --------------------------------------------------------------- exits
 
-    def _atr(self, ctx: EvalContext, operand: IndicatorOperand | None) -> float:
+    def _atr(self, ctx: Context, operand: IndicatorOperand | None) -> float:
         if operand is None:
             return math.nan
         return ctx.read(operand)
 
     def _stop_price(
-        self, ctx: EvalContext, side: Side, reference: float, inst: Instrument
+        self, ctx: Context, side: Side, reference: float, inst: Instrument
     ) -> float | None:
         model: StopModel = self.document.stop
         sign = 1.0 if side == "long" else -1.0
@@ -272,7 +291,7 @@ class CompiledStrategy:
 
     def _take_profits(
         self,
-        ctx: EvalContext,
+        ctx: Context,
         side: Side,
         reference: float,
         stop: float,
@@ -339,7 +358,7 @@ class CompiledStrategy:
 
     def _leg_price(
         self,
-        ctx: EvalContext,
+        ctx: Context,
         leg: TakeProfitLeg,
         sign: float,
         reference: float,
@@ -363,7 +382,7 @@ class CompiledStrategy:
             return level if math.isfinite(level) else None
         raise CompilationError(f"unhandled take-profit kind {leg.kind!r}")  # pragma: no cover
 
-    def _features(self, ctx: EvalContext) -> dict[str, float]:
+    def _features(self, ctx: Context) -> dict[str, float]:
         """A small, deterministic snapshot for post-hoc analysis.
 
         A document that declares locks also stamps
@@ -375,8 +394,8 @@ class CompiledStrategy:
         out: dict[str, float] = {}
         for ind in self.indicators:
             col = ind.output_columns[0]
-            if col in ctx.frame.columns:
-                value = ctx.frame[col].iat[-1]
+            if ctx.has_column(col):
+                value = ctx.raw_last(col)
                 if value is not None and math.isfinite(float(value)):
                     out[col] = float(value)
         if self.document.locks is not None:
@@ -384,11 +403,11 @@ class CompiledStrategy:
         return out
 
 
-def _all(rules: tuple[Rule, ...], ctx: EvalContext) -> bool:
+def _all(rules: tuple[Rule, ...], ctx: Context) -> bool:
     return all(r.evaluate(ctx) for r in rules)
 
 
-def _any(rules: tuple[Rule, ...], ctx: EvalContext) -> bool:
+def _any(rules: tuple[Rule, ...], ctx: Context) -> bool:
     return any(r.evaluate(ctx) for r in rules)
 
 

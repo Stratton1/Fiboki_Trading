@@ -313,6 +313,96 @@ def realised_portfolio_vol(
     different factors and guessing 252 for both overstates the hourly one by a
     factor of five.
     """
+    if (
+        isinstance(equity, pd.Series)
+        and equity.dtype == np.float64
+        and isinstance(equity.index, pd.DatetimeIndex)
+    ):
+        return _realised_vol_arrays(
+            equity.to_numpy(), equity.index, periods_per_year, min_observations
+        )
+    return _realised_portfolio_vol_reference(
+        equity,
+        periods_per_year=periods_per_year,
+        min_observations=min_observations,
+        index=index,
+    )
+
+
+def _realised_vol_arrays(
+    values: np.ndarray,
+    index: pd.DatetimeIndex,
+    periods_per_year: float | None,
+    min_observations: int,
+) -> float:
+    """:func:`realised_portfolio_vol` for a float64 series on a DatetimeIndex, in NumPy.
+
+    The engine calls the realised-vol function on every decision bar with the
+    WHOLE equity curve so far, so the pandas version (about 7 ms at 15,000 bars)
+    made a 20-year backtest quadratic in its length. This is the same
+    computation, operation for operation, without the Series machinery:
+
+    * ``_as_series``: ``astype(float).dropna()`` -- drop the NaN rows;
+    * ``ffill()`` is then a no-op (nothing left to fill);
+    * ``pct_change(fill_method=None)`` is ``x[i] / x[i-1] - 1``, and the
+      following ``dropna()`` plus the ``isfinite`` filter keep the finite ones;
+    * ``Series.std(ddof=1)`` is pandas' two-pass ``nanvar``:
+      ``avg = sum(x) / n``, ``sum((avg - x) ** 2) / (n - 1)``, then ``sqrt``;
+    * ``_periods_per_year``: the median spacing as a ``Timedelta``.
+
+    ``tests/unit/test_realised_vol_fast_path.py`` asserts equality (``==``, not
+    a tolerance) with :func:`_realised_portfolio_vol_reference` on thousands of
+    seeded curves, including NaN gaps, zero equity, irregular spacing and the
+    observation-count edges.
+    """
+    keep = ~np.isnan(values)
+    if not keep.all():
+        values = values[keep]
+        index = index[keep]
+    if values.shape[0] == 0 or values.shape[0] < min_observations + 1:
+        return 0.0
+    with np.errstate(divide="ignore", invalid="ignore"):
+        returns = values[1:] / values[:-1] - 1
+    returns = returns[np.isfinite(returns)]
+    n = returns.shape[0]
+    if n < min_observations:
+        return 0.0
+    scale = periods_per_year
+    if scale is None:
+        scale = _periods_per_year_arrays(index)
+    if scale is None or scale <= 0:
+        return 0.0
+    if n < 2:
+        return 0.0  # ``std(ddof=1)`` of one value is NaN, refused below as in pandas
+    count = np.float64(n)
+    avg = returns.sum(dtype=np.float64) / count
+    var = ((avg - returns) ** 2).sum(dtype=np.float64) / (count - np.float64(1))
+    sigma = float(np.sqrt(var))
+    if not np.isfinite(sigma) or sigma <= 0:
+        return 0.0
+    return float(sigma * np.sqrt(scale))
+
+
+def _periods_per_year_arrays(index: pd.DatetimeIndex) -> float | None:
+    """:func:`_periods_per_year` without building a Series of timedeltas."""
+    if len(index) < 3:
+        return None
+    deltas = np.diff(index.asi8).astype(np.float64)
+    median = pd.Timedelta(np.timedelta64(int(np.median(deltas)), "ns"))
+    seconds = float(median.total_seconds())
+    if seconds <= 0:
+        return None
+    return (365.0 * 24.0 * 60.0 * 60.0) / seconds
+
+
+def _realised_portfolio_vol_reference(
+    equity: Sequence[float] | pd.Series | Mapping[Any, float],
+    *,
+    periods_per_year: float | None = None,
+    min_observations: int = 20,
+    index: pd.DatetimeIndex | None = None,
+) -> float:
+    """The pandas definition of :func:`realised_portfolio_vol`; the parity reference."""
     series = _as_series(equity, index)
     if series is None or len(series) < min_observations + 1:
         return 0.0
