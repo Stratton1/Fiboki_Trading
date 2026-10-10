@@ -2,6 +2,8 @@
 
 **Generated:** 19 September 2026, at the end of the V2 build programme. **Updated 29 September 2026** after the agentic-integration wave (see `docs/v2/AGENTIC_INTEGRATION_PLAN.md` §3 and `docs/v2/BUILD_LOG.md`).
 
+**Status line (10 October 2026, crypto):** Spot crypto is built as a paper-only, 24/7 asset class (Coinbase UK spot, GBP pairs, long only; `docs/v2/research/CRYPTO_VENUES_2026-10.md`). Yours: run the crypto backfill and, if you want it, start the crypto paper service (L2b); nothing about real crypto trading is decided or built.
+
 **Status line (10 October 2026):** Paper trading had four defects, three now fixed (5c9c12e; `docs/v2/PLATFORM_STATUS.md` section 1); the fourth (open paper positions do not survive a restart) is not built yet. **New for you: keep the MacBook on its charger with the lid open.** It ran on battery and slept from 05:18 to 23:15 on 9 October, so Fiboki saw nothing for 18 hours; no software setting can stop a battery-forced or lid-closed sleep. The local model is not installed (`fiboki doctor` FAIL: Ollama runs but has no `qwen3:4b`), so the agents and the headline classifier are idle.
 
 **Status line (9 October 2026):** Everything is committed and pushed: the dev checkout, GitHub
@@ -410,6 +412,35 @@ and spread-bet losses cannot be set against other gains; (2) P1's open question 
 API can trade a spread-bet sub-account) is therefore worth answering before live money, whatever
 the profit level. I am not a tax adviser; check the current HMRC position when you reach the
 threshold.
+
+### L2b. Crypto: what is paper-only, and what you would have to decide first (added 10 October 2026)
+
+**What exists.** Eight GBP spot products (BTC, ETH, SOL, LINK, ADA, DOT, LTC, DOGE) modelled on
+Coinbase UK, unleveraged and long only, because a UK retail client may not buy crypto
+derivatives (FCA COBS 22.6.5R, unchanged in 2026). Backtests and research on Coinbase public
+candles, and a second PAPER session on BTC and ETH H4. **Everything is paper.** There is no
+exchange adapter, no exchange credential is read anywhere, and nothing can send an order to any
+crypto venue.
+
+**To run it (yours, on the Mac):** `fiboki data coinbase-backfill --universe crypto_majors_v1`
+(about eight minutes, no key), then, if you want the 24/7 paper session,
+`scripts/launchd-install.sh --services paper-crypto --load` (`docs/v2/OPERATIONS.md` §6.2,
+§13.7). The crypto discovery campaign spec (`research/campaigns/crypto_discovery_c1.json`) is a
+DRAFT: filing it, and its trial accounting, is your decision.
+
+**Before any real crypto trading, none of which is done or advised here:**
+
+1. **Venue and account.** Open and verify (KYC) a Coinbase account yourself, check CB Payments
+   Ltd on the FCA register, and confirm the fee tier when logged in (modelled at 0.60% taker per
+   leg). Note the FCA's new crypto regime from 25 October 2027 changes which firms may serve you.
+2. **Data terms.** Coinbase's Market Data Terms allow your own research; decide whether Tom's use
+   counts as "you and your entity's officers and employees".
+3. **Tax (flag only, not advice).** HMRC treats each crypto disposal by an individual as a
+   Capital Gains Tax disposal with pooling and same-day and 30-day matching rules
+   (HMRC Cryptoassets Manual, CRYPTO22200 onwards); a strategy trading every few days creates
+   many disposals. This is separate from L2's spread-bet point and is yours to take advice on.
+4. **Custody and risk.** Spot crypto is not FSCS-protected; what you hold on an exchange is
+   exposed to that exchange.
 
 ### L3. Complete the live-execution authorisation chain (details)
 

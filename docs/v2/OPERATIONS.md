@@ -358,6 +358,42 @@ lists the new versions (source `oanda_practice`, basis `mid`). Any row whose qua
 before running research on it. A 401 means the token is wrong or is a live (fxTrade) token; a 400
 naming an instrument is OANDA refusing that instrument or granularity and is not retried.
 
+### 6.2 Coinbase spot crypto backfill (`fiboki data coinbase-backfill`)
+
+Added 2026-10-10 (wave/crypto). Writes Coinbase Exchange **public** candles for the spot crypto
+products in `core/instruments_crypto.py` as source `coinbase_exchange_public`: H1 and D1 are
+fetched (RAW, then VALIDATED against the 24/7 calendar, nothing repaired); H4 is not a Coinbase
+granularity and is **resampled from the validated H1** (a RESAMPLED version whose lineage names
+the H1 version, then VALIDATED). Bars are exchange trade prints stored as `last_as_mid`, with the
+half-spread bound recorded (`docs/v2/research/CRYPTO_VENUES_2026-10.md`).
+
+No credential exists or is needed; the transport can reach `api.exchange.coinbase.com` only.
+Coinbase allows 10 requests per second per IP on public endpoints; the default here is 3/s and
+the maximum 8/s. A fresh H1 job first finds the product's first daily candle, so years before a
+listing are not paged. Empty pages (hours with no trades) are not the end of history and nothing
+is filled; the integrity report lists those hours as unexpected gaps (a warning, not a
+rejection). A rerun resumes from the last stored bar; nothing new writes nothing. Exit 1 if any
+job was refused. **Terms:** the data is licensed for the operator's own research; never commit
+or share the bars.
+
+```bash
+export FIBOKI_DATA_ROOT=<the Mac's data root>          # e.g. ~/fiboki/var/datastore
+
+# The paper universe (BTC, ETH) first, then the research universe; plan, then run.
+.venv/bin/fiboki data coinbase-backfill --universe crypto_core_v1 --dry-run
+.venv/bin/fiboki data coinbase-backfill --universe crypto_core_v1
+.venv/bin/fiboki data coinbase-backfill --universe crypto_majors_v1     # + SOL LINK ADA DOT
+# Single symbols, or the two registered products outside the universe:
+.venv/bin/fiboki data coinbase-backfill -i LTCGBP,DOGEGBP -g H1,H4,D1
+```
+
+Request budget, worked from the listing dates (300 candles a page): about 335 H1 pages for BTC
+(from 2015-04-21), 240 for ETH (2018-09-07), 155 to 180 for LINK, ADA, DOT and SOL (2020-21),
+plus up to 15 D1 pages and up to 15 listing-probe pages per product: roughly 1,400 requests for
+`crypto_majors_v1`, about eight minutes at 3/s. `--dry-run` prints the upper bound per job. Afterwards
+`.venv/bin/fiboki data version --catalogue "$FIBOKI_DATA_ROOT/catalogue.db"` lists the new
+versions (source `coinbase_exchange_public`, basis `last_as_mid`).
+
 ## 7. Research operations
 
 ```bash
@@ -840,3 +876,44 @@ used by the gateway's `abnormal_spread` check (and journalled per bar), not char
 converted (all three instruments are USD-quoted, the account is USD). The regime is `unknown`
 (no market-state engine is wired), which the sizing policy treats as a reason to size down.
 
+
+### 13.7 Paper forward, crypto (24/7, Coinbase public prices, paper fills)
+
+Added 2026-10-10 (wave/crypto). A second, independent paper session: the Donchian seed
+**retargeted** onto BTC and ETH against GBP (`research/strategies/crypto/donchian_breakout_atr__ccore1.json`:
+the seed's rules unchanged, universe `crypto_core_v1`), H4, priced from Coinbase Exchange
+**public** candles and its public ticker, filled by the paper venue, costed by `COINBASE_UK_SPOT`
+(60 bps taker per leg, spread in bps of mid, no financing), sized by `fixed_fractional_v2` on
+that profile (so a stop-out's risk includes both legs' fees), long only. Wiring:
+`src/fiboki/entrypoints/wiring/paper_forward_crypto_v1.json`. Nothing is sent to any exchange.
+
+**What is different from the FX session.** No credential at all (`environ` needs nothing); the
+transport's only allowed host is `api.exchange.coinbase.com`. The market never closes: the
+crypto calendar is continuous, so the feed polls every four hours through the weekend and the
+gateway's freshness checks apply on Saturday as on Tuesday (a sleeping Mac at the weekend is
+now a stale-data refusal, not a closed market). A SHORT breakout is refused by the gateway as
+`short_not_permitted:<symbol>:coinbase` and journalled in `attempts.jsonl`; that is expected,
+not a fault. It shares the operator's kill switch with the FX session; it has its own lease
+(`paper-forward-crypto`), ledger directory and session directory.
+
+```bash
+.venv/bin/fiboki paper forward --wiring src/fiboki/entrypoints/wiring/paper_forward_crypto_v1.json --check
+scripts/fiboki-service.sh paper-crypto      # foreground; Ctrl-C stops it cleanly
+scripts/launchd-install.sh --services paper-crypto --load
+launchctl print gui/$(id -u)/uk.fiboki.paper-crypto
+tail -f var/logs/paper-crypto.log
+scripts/launchd-install.sh --services paper-crypto --unload
+```
+
+**Where things land.** `<FIBOKI_STATE_DIR>/paper_forward/paper_forward_crypto_v1/` (journal,
+trades, attempts, intents, state snapshot, as for FX) and
+`<FIBOKI_PAPER_ROOT>/forward-paper_forward_crypto_v1/` (summary, trades.csv, positions.csv).
+Restarts restore from the snapshot exactly as the FX session does.
+
+**Known limits.** The economic calendar is still required (GBP releases blackout entries) and is
+declared to 2026-12-04: both paper services refuse to start once it covers fewer than 14 days
+ahead, so refresh it before 2026-11-20. Coinbase candles have no completeness flag: the feed
+polls 20 seconds after each boundary and the provider drops any candle whose period has not
+ended by the clock. The quote used by `abnormal_spread` is the ticker's top of book stamped at
+receipt (the ticker's own time is the last trade's). Exchange maintenance windows are not
+modelled. The fee tier is the lowest; a real account above USD 10,000 a month pays less.
