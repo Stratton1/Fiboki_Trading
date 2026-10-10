@@ -24,6 +24,8 @@ test.beforeEach(async ({ page }, testInfo) => {
 
 async function ready(page: Page) {
   await expect(page.getByTestId("mode-banner")).not.toHaveAttribute("data-mode", "loading");
+  // The command line's engine loads right after hydration (TopBar.tsx).
+  await expect(page.getByTestId("command-line")).toHaveAttribute("data-ready", "true");
   await page.evaluate(() => document.fonts.ready);
 }
 

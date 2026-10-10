@@ -631,6 +631,32 @@
     align-items: stretch;
     border-left: 1px solid var(--border);
   }
+  /* Until the engine has loaded (a moment after hydration) the box shows the
+     prompt as a ghost, so the bar never flashes empty. Decorative only. */
+  .cmdline[data-ready="false"]::before {
+    content: "▸  Mnemonic or symbol: RSK, LAB, EURUSD  ( / to focus, ? help )" / "";
+    align-self: center;
+    flex: 1 1 auto;
+    min-width: 0;
+    padding: 0 10px;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    color: var(--fg-subtle);
+    font-size: 12.5px;
+  }
+  .cmdline[data-ready="false"]::after {
+    content: "GO" / "";
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    padding: 0 12px;
+    background: var(--accent);
+    color: var(--fg-on-fill);
+    font-weight: 800;
+    letter-spacing: 0.12em;
+    font-size: 11px;
+  }
   .cmdline__prompt {
     display: inline-flex;
     align-items: center;
