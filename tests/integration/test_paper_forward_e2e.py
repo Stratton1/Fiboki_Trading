@@ -342,35 +342,68 @@ def test_a_wide_live_spread_blocks_the_signal_as_abnormal(tmp_path: Path) -> Non
         rig.close()
 
 
-def test_a_restart_carries_the_balance_and_records_abandoned_positions(rig: Rig) -> None:
+def _recompose(rig: Rig, name: str) -> tuple[Any, WorkerStore]:
+    from fiboki.entrypoints.paper_forward import compose_runtime
+
+    store = WorkerStore.sqlite_at(rig.tmp / f"{name}.db")
+    again = compose_runtime(
+        rig.settings,
+        rig.runtime.wiring,
+        store=store,
+        environ=ENV,
+        transport=rig.transport,
+        dispatcher=AlertDispatcher([rig.channel]),
+        strategies_dir=rig.tmp / "strategies",
+        clock=rig.clock,
+        sleeper=rig.clock.sleep,
+        monotonic=rig.clock.mono,
+        worker_id=f"paper@test:{name}",
+    )
+    return again, store
+
+
+def test_a_restart_restores_the_open_position_from_the_state_snapshot(rig: Rig) -> None:
+    rig.start()
+    rig.next_bar()
+    rig.next_bar()
+    (before,) = rig.runtime.manager.open_positions
+    again, store = _recompose(rig, "state2")
+    try:
+        assert again.restarts == 1
+        assert again.abandoned_positions == []
+        (restored,) = again.restored_positions
+        assert restored["state"] == "open"
+        assert restored["broker_ref"] == before.position.venue_ref
+        assert again.journal.events("positions_restored_at_restart")
+        assert not again.journal.events("positions_abandoned_at_restart")
+        (after,) = again.manager.open_positions
+        assert after.position.stop_loss == before.position.stop_loss
+        assert after.position.position_id == before.position.position_id
+        assert [p.venue_ref for p in again.venue.positions()] == [before.position.venue_ref]
+        assert again.venue.ref_prefix == rig.runtime.venue.ref_prefix, "references continue"
+        assert again.carried_balance == pytest.approx(rig.runtime.manager.book.balance)
+    finally:
+        store.close()
+
+
+def test_a_restart_without_a_snapshot_still_records_abandoned_positions(rig: Rig) -> None:
+    """The previous, honest behaviour, kept for when there is nothing to restore."""
     rig.start()
     rig.next_bar()
     rig.next_bar()
     assert len(rig.runtime.manager.open_positions) == 1
-    rig.store.close()
-    from fiboki.entrypoints.paper_forward import compose_runtime
-
-    store = WorkerStore.sqlite_at(rig.tmp / "state2.db")
+    (rig.runtime.journal.ledger_dir / "state_snapshot.json").unlink()
+    again, store = _recompose(rig, "state2")
     try:
-        again = compose_runtime(
-            rig.settings,
-            rig.runtime.wiring,
-            store=store,
-            environ=ENV,
-            transport=rig.transport,
-            strategies_dir=rig.tmp / "strategies",
-            clock=rig.clock,
-            sleeper=rig.clock.sleep,
-            monotonic=rig.clock.mono,
-            worker_id="paper@test:2",
-        )
         assert again.restarts == 1
         assert len(again.abandoned_positions) == 1
-        assert again.journal.events("positions_abandoned_at_restart")
+        (event,) = again.journal.events("positions_abandoned_at_restart")
+        assert event["snapshot"] == "absent"
+        assert not again.journal.events("state_snapshot_refused"), "absent is not refused"
         assert again.carried_balance == pytest.approx(rig.runtime.manager.book.balance)
+        assert again.manager.open_positions == [] and again.venue.positions() == ()
     finally:
         store.close()
-        rig.store = WorkerStore.sqlite_at(rig.tmp / "state.db")
 
 
 def test_compose_refuses_without_credentials(tmp_path: Path) -> None:

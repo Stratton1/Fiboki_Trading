@@ -437,6 +437,7 @@ data lives under `FIBOKI_DATA_ROOT`.
 | holdout registry (SQLite) | which strategy has spent its one look | **No.** Losing it silently grants second looks |
 | `killswitch.jsonl` | switch state and history | **No.** State is recovered from this file |
 | intent store (`*.jsonl`) | orders, including PENDING and UNKNOWN | **No.** This is how a crashed order is found again |
+| `paper_forward/<wiring>/state_snapshot.json` | open paper positions, book and venue state | Not on its own: restore it only together with the same wiring's `trades.jsonl` and `intents.jsonl` (its watermark must match them), or the next start refuses it and abandons the positions |
 | agent audit ledger | hash-chained agent actions | **No** |
 | `api_audit.jsonl` | hash-chained operator actions | **No** |
 | quote recorder segments | executable prices | **No.** The quotes are gone otherwise; value grows with elapsed time |
@@ -765,8 +766,9 @@ The service is not in the installer's default list on purpose: it starts only wh
 **Where things land.** `<FIBOKI_STATE_DIR>/paper_forward/paper_forward_v1/`: `journal.jsonl`
 (every bar, pricing sample, venue fill, book entry, venue instruction, closed trade, restart),
 `trades.jsonl` (the P&L ledger the daily and weekly loss limits read, across restarts),
-`attempts.jsonl` (every gateway attempt, allowed or blocked, with `wiring_sha256`) and
-`intents.jsonl` (the fsynced order intents). `<FIBOKI_PAPER_ROOT>/forward-paper_forward_v1/`
+`attempts.jsonl` (every gateway attempt, allowed or blocked, with `wiring_sha256`),
+`intents.jsonl` (the fsynced order intents) and `state_snapshot.json` (what a restart restores;
+see Restarts below). `<FIBOKI_PAPER_ROOT>/forward-paper_forward_v1/`
 holds `summary.json`, `trades.csv` and `positions.csv`, rewritten after every bar, which the
 trading pages read as one continuous PAPER account.
 
@@ -787,12 +789,45 @@ bars rather than trading them. Check with `pmset -g assertions | grep caffeinate
 `pmset -g` (look at `sleep` and `displaysleep`). On a desktop Mac set "Prevent automatic
 sleeping when the display is off" in System Settings, Energy.
 
-**Restarts (read before trusting a number).** The book and the paper venue live in memory. A
-restart carries forward the realised balance, the peak equity (so the drawdown limit does not
-reset) and every closed trade (so the loss windows do not reset). Positions open at the last
-bar are **abandoned**: journalled as `positions_abandoned_at_restart`, alerted at WARNING, and
-their unrealised P&L is not carried. Keep restarts rare; each one is visible in `summary.json`
-(`restarts`, `abandoned_at_restart`).
+**Restarts (read before trusting a number).** Since 2026-10-10 open paper positions survive a
+restart. After every worker cycle (and at start-up and shutdown) the process writes
+`state_snapshot.json` beside the ledgers: one CRC-framed record, written atomically, holding the
+position book (balance, open positions with their stops, targets, trail and ladder state, pending
+entries, the fill model's sequence counter), the venue position manager (both pictures of every
+position, closes the venue has not confirmed), the paper venue (positions by reference, the
+reference counter) and the feed's position (the last bar delivered, the first bar of its
+indicator window). It is stamped with the wiring sha256, the strategy content hash, the limits
+version and the byte lengths of `trades.jsonl` and `intents.jsonl`.
+
+On start the process restores from it when every stamp matches and the ledgers have not grown
+since it was written. What you see:
+
+- journal: `positions_restored_at_restart` (each open position with its broker reference, stop,
+  target and bars held; entries the venue filled that the book models at the next open; closes
+  still to be confirmed), then the usual `session_start` with `restored_positions`;
+- `summary.json`: `restarts` goes up by one, `restored_at_restart` is the count restored,
+  `abandoned_at_restart` is 0, `snapshot_at_start` is `restore`;
+- venue references continue the old sequence (the prefix does not change on a restore);
+- start-up reconciliation comes back clean; a close the gateway had refused before the restart
+  is re-sent on the next bar, as it would have been;
+- if bars closed while the process was down, the first poll applies them to the book in order
+  (`bars_caught_up` in the journal, and a `bar` row per missed bar with `caught_up: true`): a
+  stop or target hit during the gap closes the trade on the bar it was hit, at the price the
+  fill model gives, exactly as a backtest would. **No new signal is evaluated on a missed bar**
+  (an order cannot be dealt at a price that has gone), so a trade the strategy would have opened
+  during the gap is not taken. That is the one decision a restart can still change.
+
+When the snapshot cannot be trusted the process falls back to the old behaviour and says why:
+`state_snapshot_refused` in the journal (status `corrupt`, `mismatch` or `stale`, with the
+reason), the refused file kept as `state_snapshot.json.refused-<UTC>`, a
+`reconciliation_divergence` alert (CRITICAL for `corrupt`, WARNING otherwise), and positions
+open at the last bar journalled as `positions_abandoned_at_restart` (alerted at WARNING; their
+unrealised P&L is not carried; the realised balance, peak equity and closed trades still are).
+`mismatch` is expected after a reviewed wiring, strategy or limits change: positions opened under
+one configuration are not carried into another. `stale` means the previous process died part-way
+through a cycle, after a ledger write the snapshot does not contain. A snapshot that cannot be
+written (a full disk) does not stop trading; it raises `strategy_degraded` at ERROR every cycle
+until it can, and a restart in that state would be refused as `stale`.
 
 **What the numbers are.** The ledger of record is the position book, which fills entries at the
 next bar's open through the fill simulator exactly as a backtest does, and charges the

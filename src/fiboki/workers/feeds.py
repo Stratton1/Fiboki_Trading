@@ -44,7 +44,11 @@ before. If the worker was down for three bars, the three are appended to the
 history but only the newest is offered for evaluation, and the gateway's
 freshness check decides whether it is still tradeable. Evaluating the older
 ones late would be a signal computed on information the market has already
-moved past.
+moved past. The older ones are NOT dropped: the feed keeps each one's full
+window (:meth:`OandaPollingBarFeed.history_through`) so a caller that manages
+open positions can still step them through those bars in order, as the
+paper-forward runtime does (it applies a stop or target hit during the gap
+exactly as a backtest would, and evaluates no new signal on them).
 
 What it is not
 --------------
@@ -289,6 +293,12 @@ class OandaPollingBarFeed:
         self._last_boundary: pd.Timestamp | None = None
         self._history: dict[str, pd.DataFrame] = {}
         self._delivered: dict[str, pd.Timestamp] = {}
+        #: ``symbol -> first bar of the window to rebuild``, set by
+        #: :meth:`restore_state` and consumed by the first fetch.
+        self._floor: dict[str, pd.Timestamp] = {}
+        #: ``symbol -> (floor wanted, first bar obtained)`` when a restored
+        #: feed could not fetch back as far as its floor (the request cap).
+        self.floor_shortfall: dict[str, tuple[pd.Timestamp, pd.Timestamp]] = {}
         self._observers: list[Any] = []
         self.reports: list[PollReport] = []
         self.polls = 0
@@ -309,7 +319,36 @@ class OandaPollingBarFeed:
         return self
 
     def history(self, symbol: str) -> pd.DataFrame:
-        """Every complete bar held for ``symbol``, oldest first. A copy."""
+        """The window of complete bars for ``symbol`` ending at the newest, oldest first.
+
+        At most ``history_bars`` long. A copy.
+        """
+        frame = self._held(symbol)
+        return frame.iloc[-self.config.history_bars :].copy()
+
+    def history_through(self, symbol: str, at: pd.Timestamp) -> pd.DataFrame:
+        """The window :meth:`history` returned, or would have, when ``at`` was newest.
+
+        For bars the feed holds but has not delivered one at a time (a run of
+        bars that closed while the process was down, or during an outage): the
+        caller can still see each one through exactly the window it would have
+        seen it through, because the feed keeps those windows whole until the
+        bars are delivered (see :meth:`_trim`).
+        """
+        frame = self._held(symbol)
+        upto = frame.loc[frame.index <= at]
+        return upto.iloc[-self.config.history_bars :].copy()
+
+    def bars_between(
+        self, symbol: str, after: pd.Timestamp, before: pd.Timestamp
+    ) -> pd.DataFrame:
+        """Held complete bars starting strictly between ``after`` and ``before``. A copy."""
+        frame = self._history.get(symbol)
+        if frame is None or frame.empty:
+            return pd.DataFrame(columns=["open", "high", "low", "close"])
+        return frame.loc[(frame.index > after) & (frame.index < before)].copy()
+
+    def _held(self, symbol: str) -> pd.DataFrame:
         frame = self._history.get(symbol)
         if frame is None:
             raise KeyError(
@@ -317,7 +356,56 @@ class OandaPollingBarFeed:
                 "An empty frame here would be indistinguishable from an "
                 "instrument with no history."
             )
-        return frame.copy()
+        return frame
+
+    def _trim(self, symbol: str, frame: pd.DataFrame) -> pd.DataFrame:
+        """Keep the newest window, plus whatever older bars an UNDELIVERED bar's window needs.
+
+        Normally that is just the last ``history_bars``. When more than one bar
+        arrives undelivered, the oldest of them still needs its own full
+        window, so the frame is kept from that window's first bar; the slack
+        goes at the next fetch, once they have been delivered.
+        """
+        hb = self.config.history_bars
+        if len(frame) <= hb:
+            return frame
+        last = self._delivered.get(symbol)
+        newest_start = len(frame) - hb
+        if last is None:
+            return frame.iloc[newest_start:]
+        first_undelivered = int(frame.index.searchsorted(last, side="right"))
+        start = max(0, min(newest_start, first_undelivered - hb + 1))
+        return frame.iloc[start:]
+
+    # -- durable state ----------------------------------------------------
+
+    def export_state(self) -> dict[str, Any]:
+        """Per symbol: the newest bar delivered and the first bar of its window.
+
+        Not the bars themselves: they are the venue's, and are fetched again.
+        """
+        out: dict[str, Any] = {"delivered": {}, "floor": {}}
+        for sym in sorted(self._delivered):
+            out["delivered"][sym] = self._delivered[sym].isoformat()
+        for sym in sorted(self._history):
+            window = self.history(sym)
+            if not window.empty:
+                out["floor"][sym] = window.index[0].isoformat()
+        return out
+
+    def restore_state(self, state: Mapping[str, Any]) -> None:
+        """Resume as the feed that wrote ``state``: nothing re-delivered, same windows.
+
+        A bar already delivered (and so already evaluated and traded on) is not
+        offered again; the first fetch reaches back to the first bar of the
+        window the writer held, so every indicator is computed over the same
+        bars as the uninterrupted feed would have used.
+        """
+        if self._history or self._delivered:
+            raise ValueError("restore_state needs a feed that has not polled")
+        utc = lambda v: pd.Timestamp(v).tz_convert("UTC")  # noqa: E731
+        self._delivered = {s: utc(v) for s, v in (state.get("delivered") or {}).items()}
+        self._floor = {s: utc(v) for s, v in (state.get("floor") or {}).items()}
 
     # -- calendar ---------------------------------------------------------
 
@@ -452,7 +540,14 @@ class OandaPollingBarFeed:
     ) -> tuple[str, int]:
         """Fetch and merge. Returns ``("ok"|"absent"|"error", incomplete_dropped)``."""
         held = self._history.get(symbol)
-        if held is None or held.empty:
+        floor = self._floor.get(symbol) if held is None or held.empty else None
+        if floor is not None:
+            # A restored feed: reach back to the window the writer held. The
+            # count is by wall time, so it over-asks across weekends; the
+            # surplus is cut at the floor below.
+            span = int((expected_start - floor) / self._tf) + 2
+            count = min(self.config.max_request_bars, max(self.config.warmup_bars, span))
+        elif held is None or held.empty:
             count = self.config.warmup_bars
         else:
             behind = int((expected_start - held.index[-1]) / self._tf)
@@ -495,7 +590,13 @@ class OandaPollingBarFeed:
         # evaluated. A venue that later sends a different "complete" candle for
         # the same stamp does not get to rewrite it silently.
         merged = merged[~merged.index.duplicated(keep="first")].sort_index()
-        self._history[symbol] = merged.iloc[-self.config.history_bars :]
+        if floor is not None:
+            self._floor.pop(symbol, None)
+            if not merged.empty and merged.index[0] > floor:
+                self.floor_shortfall[symbol] = (floor, merged.index[0])
+            cut = merged.loc[merged.index >= floor]
+            merged = cut if not cut.empty else merged
+        self._history[symbol] = self._trim(symbol, merged)
         newest = self._history[symbol].index[-1]
         return ("ok" if newest >= expected_start else "absent"), incomplete
 

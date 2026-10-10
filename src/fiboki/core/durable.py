@@ -84,8 +84,10 @@ __all__ = [
     "full_fsync",
     "install_sqlite_pragmas",
     "read_payloads",
+    "read_record",
     "set_torn_tail_hook",
     "touch_durable",
+    "write_record_atomic",
 ]
 
 _log = logging.getLogger("fiboki.core.durable")
@@ -401,6 +403,55 @@ def touch_durable(path: str | Path) -> None:
     finally:
         os.close(fd)
     fsync_directory(target.parent)
+
+
+def write_record_atomic(path: str | Path, payload: str) -> None:
+    """Replace ``path`` with ONE CRC-framed record, atomically and durably.
+
+    For state that is REPLACED rather than appended (a snapshot): write a
+    sibling temporary file, flush it to stable storage (``F_FULLFSYNC`` on
+    Darwin), ``rename`` it over the target and flush the directory. A crash at
+    any point leaves either the previous complete record or the new one, never
+    a mixture, and the CRC lets :func:`read_record` prove which.
+    """
+    target = Path(path)
+    target.parent.mkdir(parents=True, exist_ok=True)
+    data = (frame_line(payload) + "\n").encode("utf-8")
+    tmp = target.with_name(f".{target.name}.{os.getpid()}.tmp")
+    fd = os.open(os.fspath(tmp), os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o644)
+    try:
+        view = memoryview(data)
+        while view:
+            view = view[os.write(fd, view) :]
+        full_fsync(fd)
+    except BaseException:
+        os.close(fd)
+        tmp.unlink(missing_ok=True)
+        raise
+    os.close(fd)
+    os.replace(tmp, target)
+    fsync_directory(target.parent)
+
+
+def read_record(path: str | Path) -> str:
+    """The verified payload of a :func:`write_record_atomic` file.
+
+    Raises ``FileNotFoundError`` when there is none and :class:`FrameError`
+    when the bytes are not exactly one record whose CRC matches. A record that
+    does not verify is never half-trusted: the caller decides what to do
+    without it.
+    """
+    blob = Path(path).read_bytes()
+    try:
+        text = blob.decode("utf-8")
+    except UnicodeDecodeError as exc:
+        raise FrameError(f"not UTF-8: {exc}") from exc
+    if not text.endswith("\n") or text.count("\n") != 1:
+        raise FrameError("a record file holds exactly one newline-terminated line")
+    payload, framed = decode_line(text[:-1])
+    if not framed:
+        raise FrameError("record is not CRC-framed")
+    return payload
 
 
 def read_payloads(path: str | Path, *, quarantine: bool = True) -> list[str]:
