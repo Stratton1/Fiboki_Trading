@@ -585,3 +585,67 @@ describe the production set (gate names `min_track_record`, `walk_forward_effici
 `plateau_neighbourhood_*`; the integration ladder's synthetic evaluator records an equity base, as
 the real engine always does, because the log-growth WFE has no money-per-day fallback). Tests that
 pin the audited set still pin it by name.
+
+## E-4 filed, `pooled_universe_e4` (filed 2026-10-10 at 78f1dba; no results)
+
+**Filed before any E-4 result exists** (`research/preregistration/pooled_universe_e4.json`, status
+FILED 2026-10-10, on the operator's approval of USER_ACTIONS R3; filed commit 78f1dba,
+recorded in the following commit as E-1 and E-2 did). No P0 replicate and no main-stage candidate has been run on the evidence
+data. The id is E-4 because E-3 (the effective campaign trial count) is assigned, though never filed.
+
+**What it tests.** E-2's finding was that the binding constraint is trades per candidate (median
+about 330 on twenty years of H4 against MinTRL_95 = 425 at a 0.08 per-trade Sharpe), not
+thresholds. E-4 evaluates one document across its whole universe (K5's sixteen OANDA MID series,
+H4 and D1) as ONE candidate: one equal-capital sleeve per instrument, each run by the existing
+`EngineEvaluator` with its own costs, spread, FX and calendar (no second backtester; a sleeve's
+trades are byte for byte the single-series path's), P&L summed on the union of the sleeves' bar
+calendars. Gates are `v2.1.0-calibrated`, every threshold unchanged.
+
+**The effective sample size.** `N_eff = N / DEFF`, `DEFF = 1'S1 / trace(S) = 1 + (m - 1) rho_bar`
+(Kish's design effect) from the covariance of the sleeves' per-period P&L, on daily and on weekly
+sums, the larger, floored at 1 (`fiboki.validation.pooled.design_effect`). It replaces the raw
+count at exactly three sites: rung 0 (the `n_trades` gate value, the 150-trade floor and the MinTRL
+gate's numerator), rung 2 (the 30-trade OOS-fold floor) and rung 6 (the holdout trade floor). It
+does NOT enter the expectancy, the MinTRL moments, or anything computed on the pooled per-period
+series (deflated Sharpe, PBO, SPA, StepM, purged-CV paths), whose variance already holds every
+cross-sleeve covariance, nor the deflation's trial count. For every single-series candidate
+`N_eff = N`, so no stored or future single-series verdict changes.
+
+**Candidates and trials.** K5's whole roster by rule: 172 pooled candidates (6 seed and 100
+generated documents x their declared timeframes with at least two of the sixteen series), 1,064
+trials (a pooled grid point is one trial), external count per candidate 20,904 + 1,064 - its own
+grid, true N **21,968**. Every later campaign on these bars declares at least that.
+
+**Order.** Process P0 first, per timeframe: a joint calendar-day stationary bootstrap of the six
+seeds' real default-binding sleeve trades (every sleeve copies the same source day, so the real
+cross-instrument dependence is kept), each sleeve demeaned, pooled per-trade Sharpe 0 / 0.03 / 0.05
+/ 0.08 / 0.12 injected, 400 replicates, measuring ladder. A timeframe is admitted only if its size
+is <= 0.05 and the variance of the defaults' `N_eff`-scaled z-statistic at zero edge is <= 1.25
+(the calibration check of the effective count). Then the main stage, admitted timeframes only,
+fail-fast, rungs 0 to 5, holdout DEFERRED. At most one holdout look, for the single seed survivor
+with the highest deflated Sharpe, by the `holdout` command; a generated survivor is a hypothesis.
+
+**Expectations, written now.** Size at or below 0.01 on both timeframes; `DEFF` 1.5 to 4 on H4;
+`z_variance` near 1 with `N_eff` and 1.5 to 4 with the raw count. Pooling clears MinTRL on H4, so
+the deflated Sharpe at 21,968 trials becomes the binding gate: power at 0.08 on H4 expected between
+0.05 and 0.30 (H1_power expected to FAIL), at 0.12 between 0.30 and 0.70; D1 power at 0.08 below
+0.10. Zero main-stage survivors expected. If power at 0.08 on H4 is below 0.20 (falsification F3),
+a main-stage null says nothing about 0.08 edges and the deflation's trial-count design (E-3) is the
+constraint to address next, not a threshold.
+
+**Compute.** Guaranteed part (P0 both timeframes, the seeds at full depth, rung 0 of every
+generated candidate) about 5 hours on the M1 with four shards; expected total under 24 hours; the
+deterministic worst case is about 44 hours. Runbook: `research/reports/e4_pooled/README.md`.
+**Run pending on the Mac.**
+
+**Amendment 1 (2026-10-10, still no results).** An adversarial review of the filed instrument found
+that `p0_admits` would have admitted a timeframe from a completed P0 SHARD (100 of 400 replicates),
+or from a run with a non-filed edge grid, seed, gate set or trial count, because none of those was
+checked; and that an evidence run could pass harness-only options (`--instruments`, `--folds`,
+`--sr`, ...) and still be labelled evidence. Both are now refused; the holdout command refuses a
+non-evidence or differently judged main-stage file; two P0 files for one timeframe are refused
+rather than the first taken. The filing is unchanged; the amendment
+(`research/preregistration/pooled_universe_e4_amendment_1.md`) records why each change is
+admissible (every one refuses a run the filing never allowed), reads the replicate rule (the
+800-replicate file decides when it exists), and corrects the memory claim to an estimate with a
+runbook check. No hypothesis, threshold, candidate, trial count, grid, seed or replicate count moved.

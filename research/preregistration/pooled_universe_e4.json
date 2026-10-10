@@ -1,0 +1,187 @@
+{
+  "schema": "fiboki-preregistration:1",
+  "id": "pooled_universe_e4",
+  "experiment": "E-4: pooled-universe candidates. One strategy document evaluated across its whole instrument universe as ONE candidate, with an effective sample size",
+  "status": "FILED 2026-10-10 (this commit), on the operator's approval of USER_ACTIONS R3 ('pre-register and build pooled-universe candidates'), before any E-4 result exists: no P0 replicate and no main-stage candidate has been run on the evidence data. Nothing in validation/gates.py changes under this file.",
+  "experiment_id_note": "E-3 is assigned (research/preregistration/gate_calibration_e2.json decision_rule 4 and the ledger's E-2 result: the effective campaign trial count, demoted when H2 failed). It was never filed, but the id is taken, so this is E-4. The audit's earlier informal 'E-3'/'E-4' (F_backend_audit.md: event slippage, measured spreads) were never filed experiments and are not this.",
+  "plan_reference": "research/reports/RESEARCH_LEDGER.md (E-2 result, 'What would change the answer' route (a); 'Production bar switched'); USER_ACTIONS.md R3 and R4; docs/v2/research/PLATFORM_SURVEY_2026-10.md (pysystemtrade-style pooling across instruments with per-instrument costs)",
+  "motivation": "E-2 measured power 0/400 at a 0.08 per-trade Sharpe under every admissible gate set on both E-1 processes, because a single (document, series) candidate produces a median of about 330 trades on twenty years of H4 bars and MinTRL_95 at 0.08 is 425 trades. The binding constraint is trades per candidate, not thresholds. Pooling a document across its universe multiplies the trades; because trades on correlated series are not independent, the evidence must be counted as an EFFECTIVE sample size, not the raw trade count.",
+  "code": {
+    "pooled_evaluator": "fiboki.validation.pooled.PooledEvaluator: one EngineEvaluator per series (the existing engine path, its own instrument, costs, FX and calendar), P&L summed on the union of the sleeves' bar calendars; no second backtester",
+    "effective_count": "fiboki.validation.pooled.design_effect; WindowEvaluation.n_trades_effective",
+    "holdout": "fiboki.validation.pooled.PooledHoldoutRegistry (composite segment, per-constituent checks and claims); DeferredHoldoutRung / rungs_with_deferred_holdout for the main stage",
+    "ladder_change": "fiboki.validation.ladder: rung 0 (n_trades gate value, rung-0 floor, n_trades_over_min_trl), rung 2 (walk_forward_min_oos_trades) and rung 6 (holdout_min_trades) read WindowEvaluation.n_trades_effective, which equals n_trades for every single-series evaluation, so no single-series verdict or gate value changes",
+    "study_script": "scripts/pooled_universe_study.py (plan, p0, main, holdout, merge; shards, resume and merge as scripts/gate_power_study.py, whose functions it reuses)",
+    "engine_version": "engine_v3_realism",
+    "gate_set": "PRODUCTION_GATE_SET = GATE_SET_V2_1_CALIBRATED, v2.1.0-calibrated, fingerprint 9a195b2aed052b245fac2d42d99931a8bb509c6661e120de54dbacfbda6218fc, unchanged",
+    "reference_gate_set": "GATE_SET_V2, v2.0.0-audit, fingerprint fe7daa4c71e886b120f7ebe2e14cd5331e0c906b89e473f290f394e6de6e3ea2, judged beside it in P0 for reference only"
+  },
+  "question": "Does pooling one document across its instrument universe, with every count-based gate reading an effective trade count, give the production ladder (v2.1.0-calibrated, unchanged thresholds) acceptable size and usable power against a 0.08 per-trade edge; and, if so, does any of K5's 106 documents have an edge net of costs when pooled?",
+  "universe": {
+    "series": [
+      "AUDJPY",
+      "AUDUSD",
+      "DE40",
+      "EURGBP",
+      "EURJPY",
+      "EURUSD",
+      "GBPJPY",
+      "GBPUSD",
+      "NZDUSD",
+      "UK100",
+      "US500",
+      "USDCAD",
+      "USDCHF",
+      "USDJPY",
+      "XAGUSD",
+      "XAUUSD"
+    ],
+    "timeframes": [
+      "H4",
+      "D1"
+    ],
+    "source": "OANDA practice MID bars, the latest validated dataset version of each series in the Mac's data store (FIBOKI_DATA_ROOT, var/datastore), as K5 read them; the outputs record every dataset version id, and an id that differs from K5's is reported, not hidden",
+    "bars_from": "2006-01-04T00:00:00Z (K3 to K5's trim)",
+    "account": "GBP; quote currencies converted by build_research_fx_source exactly as K5 (D1 GBP crosses, via-USD fallback, 4-day staleness)",
+    "calendar": "the official calendar, enforce-where-covered, as K5 and E-1",
+    "construction": "construction_v2 (research_construction_policy), as K5 and E-1",
+    "sleeves_per_candidate": "the document's declared universe intersected with these 16 series; a document x timeframe with fewer than two such series is not a pool and is not planned"
+  },
+  "pooling_method": {
+    "definition": "A pooled candidate is one document x one timeframe. Each series in it is a SLEEVE: its own EngineEvaluator with its own opening balance (GBP 10,000), instrument, spread, slippage, financing, FX conversion, minimum stop and event calendar. Every binding the ladder asks for is run on every sleeve over the same window; the pooled evaluation's trades are the union of the sleeves' trades (each keeping its own costs), its net profit the sum, its opening equity the sum, and its per-period returns the per-bar P&L summed on the UNION of the sleeves' bar timestamps inside the window (a sleeve contributes zero on a bar it does not have).",
+    "weighting": "Equal risk per instrument: every sleeve has the same capital and the same fixed-fractional sizing (fixed_fractional_v2 at risk_fraction 0.01 through construction_v2), so every trade on every instrument risks the same fraction of the same capital. No instrument is up- or down-weighted by its result.",
+    "parity": "A sleeve's trades for a binding and window are exactly the single-series research path's (the same EngineEvaluator), so backtest/paper parity holds sleeve by sleeve; pinned by tests/integration/test_pooled_ladder_real_engine.py",
+    "windows": "The pooled research window is [latest constituent data start, EARLIEST constituent holdout start); the pooled holdout window is [LATEST constituent holdout start, earliest constituent data end). The span between is research for some constituents and holdout for others and is read by no rung.",
+    "grid": "As K5: Candidate.from_document with max_grid_points 8, max_values_per_axis 2, the campaign's SWEEP_AXES for the seeds; one binding is applied to every sleeve (a pooled candidate has ONE parameterisation per grid point, not one per instrument)"
+  },
+  "effective_sample_size": {
+    "method": "Kish design effect from the cross-sleeve covariance of per-period strategy P&L: DEFF = 1'S1 / trace(S) = 1 + (m - 1) * rho_bar, S the sample covariance of the m active sleeves' P&L, computed on DAILY and on WEEKLY (Monday-start UTC) sums of the per-bar P&L of the evaluation's own window; DEFF = max(1, DEFF_daily, DEFF_weekly); N_eff = N_raw / DEFF. A frequency with fewer than 60 daily or 26 weekly periods is not used; if neither is usable, DEFF = m_active (the most conservative value). Deterministic: no resampling.",
+    "why_this_method": "The quantity a count-based gate needs is the variance of the pooled per-trade mean relative to independent trades. The sum of all trade P&L equals the sum over periods of the sleeves' per-period P&L, so the inflation of its variance by cross-sleeve co-movement is exactly Var(sum_i X_i) / sum_i Var(X_i), the design effect. It needs no model of WHY sleeves co-move (a dollar factor, a risk-off week), is exact at both ends (independent sleeves: N_eff = N; identical sleeves: N_eff = N/m), is computed from the very P&L the gates judge, and adds no Monte Carlo noise to a gate input. Weekly sums guard against the Epps effect (sessions of index CFDs, metals and FX close at different times, which biases a daily correlation towards zero); taking the larger of the two and flooring at 1 only ever makes N_eff smaller.",
+    "rejected_alternative": "A block or cluster bootstrap of the pooled per-trade mean would also capture serial dependence, but it is random (a gate input would depend on a bootstrap seed), costs a resample per evaluation (about 60 evaluations per ladder run), and yields a variance rather than a count, so the MinTRL gate would need a different form. Its job, checking that the effective count is not anti-conservative, is done instead by P0's calibration metric (z_variance below), once, with no gate depending on it.",
+    "where_N_eff_replaces_N": [
+      "rung 0: the n_trades gate value, the rung-0 trade floor (150), and the MinTRL gate's numerator: n_trades_over_min_trl = N_eff / max(150, MinTRL_95)",
+      "rung 2: walk_forward_min_oos_trades (the 30-trade floor on the smallest out-of-sample fold) uses each fold's N_eff",
+      "rung 6: holdout_min_trades (30) uses the holdout evaluation's N_eff"
+    ],
+    "where_N_eff_does_not_replace_N": [
+      "Expectancy and the MinTRL_95 moments (per-trade Sharpe, skew, kurtosis): means and shapes use every trade; only the count of independent observations is corrected",
+      "Deflated Sharpe, PBO, SPA, StepM and the purged-CV path Sharpes: computed on the pooled PER-PERIOD P&L series, whose variance already contains every cross-sleeve covariance and whose length is a number of periods; substituting N_eff would count the correlation twice",
+      "The deflation's trial count: N_eff is a sample size; the number of trials a search made is a different quantity and is counted in full (trial_accounting)",
+      "There is no other per-trade t-statistic in the ladder: the MinTRL gate is the one (N_eff >= MinTRL_95 is PSR(0) >= 0.95 at N_eff)"
+    ],
+    "approximations": [
+      "Cross-sectional only: serial dependence of one sleeve's trade outcomes is not corrected, as the single-series ladder does not correct it; P0's z_variance measures the combined effect",
+      "DEFF is computed on money P&L of compounding sleeves, so late trades of a sleeve that grew weigh more than a return-on-equity series would give them (the single-series MinTRL carries the same approximation)",
+      "the max of two noisy estimates, floored at 1, is biased upwards: for 12 independent Gaussian sleeves over 20 years of H4 bars it averaged 1.012 (largest 1.030 in 10 draws, measured on synthetic data at filing), so N_eff is about 1% low even with no dependence: conservative"
+    ]
+  },
+  "gate_set": "v2.1.0-calibrated (PRODUCTION_GATE_SET), every threshold unchanged; the ONLY change is that the three count sites above read N_eff, which is identical to N for every single-series candidate. No gate is added, removed or loosened. The ladder runs with LadderConfig defaults (5 anchored walk-forward folds, 6 purged-CV groups with k = 2, 500 SPA bootstraps, 100 stress samples), the configuration E-1 and E-2 measured.",
+  "candidate_set": {
+    "rule": "Every document K5 ran (6 seeds + 100 generated, research/generated manifest sha256 4f87aaedb5fbb63887e462953793d006a6d28f68fa0188f3d27233d6f513148e) x every timeframe in {H4, D1} it declares, whose universe holds at least two of the 16 series. Fixed by this rule, not by any result: no document is chosen or dropped by how it scored in K5.",
+    "n_candidates": 172,
+    "by_tier_and_timeframe": {
+      "seed:H4": 6,
+      "seed:D1": 5,
+      "generated:H4": 100,
+      "generated:D1": 61
+    },
+    "sleeves": {
+      "H4": 1174,
+      "D1": 781,
+      "note": "equal to K5's 1,174 H4 and 781 D1 cells: the same (document, series) pairs, pooled"
+    },
+    "grid_points": "88 candidates x 8, 82 x 4, 2 x 16 (tsmom_dual_horizon, which SWEEP_AXES does not restrict)",
+    "planned_trials": 1064,
+    "true_trial_count": 21968,
+    "order": "seeds first, then generated; within a tier by strategy id, H4 before D1 (scripts/pooled_universe_study.py plan prints it; plan --check exits 3 if it differs from these numbers)",
+    "what_has_been_seen": "K5 published every (document, series) cell's rung-0 figures on nearly the same research windows, so a pooled candidate's rung 0 on real data is not blind to K5. That is why the candidate set is K5's whole roster by rule and why K5's trials are charged in full (trial_accounting)."
+  },
+  "trial_accounting": {
+    "external_trial_count_per_candidate": "20,904 + 1,064 - the candidate's own grid points (21,960 for an 8-point candidate)",
+    "prior": "20,904 = K5's true trial count, which contains K4's 8,496, K3's 7,376 and the 4,026 before them: every trial run on these sixteen series' bars (research/reports/RESEARCH_LEDGER.md, K5 result)",
+    "e4": "1,064 = the grid points of all 172 pooled candidates. A pooled candidate's grid point is ONE trial (one binding, every sleeve), not one per instrument: that is the honest count of what was selected among. The pooled trials ADD to the prior; K5's per-series trials on the same documents are not netted off.",
+    "p0": "P0's simulated candidates are not trials on real data and are not counted; each P0 ladder run is charged the main stage's external count (21,960) so the size and power measured are those of the procedure as it will be applied",
+    "e1_e2": "E-1 and E-2 selected nothing on real outcomes (calibration studies on resampled data) and are not counted, as before",
+    "later": "Every later campaign on these bars declares at least 21,968"
+  },
+  "p0": {
+    "name": "pooled_block_bootstrap",
+    "role": "Runs FIRST, per timeframe. A size and power check of the pooled procedure (pooling + N_eff + production gates + trial count) on data with the real cross-instrument dependence and no edge, then with a known edge. The main stage's verdicts for a timeframe are read only if P0 admits that timeframe.",
+    "definition": "For each seed document with the timeframe (H4: all 6; D1: the 5 that declare D1), fresh engine_v3_realism runs of its DEFAULT binding on every sleeve over the research window COMMON to its sleeves (holdout never read) give each sleeve's trades as returns on equity at entry with their costs. A replicate draws ONE sequence of source calendar days by a stationary bootstrap (Politis-Romano; mean block length by Politis-White on the pooled daily demeaned return), and every sleeve copies the trades of the SAME source day, so trades that coincided in real time coincide in the simulation and the cross-sleeve dependence the effective count must correct for is the data's own. Each sleeve's returns are demeaned by that sleeve's mean (no edge on any instrument) and shifted by sr x plateau_factor(d) x sd_pooled, so the POOLED per-trade Sharpe at the defaults is exactly sr. Grid: E-1 process 1's abstract 2x2x2 grid; a grid point takes the common day with probability sqrt(0.7) and its own draw otherwise (all sleeves together). P&L on GBP 10,000 per sleeve, non-compounding, spread linearly over the bars a trade is held. Replicate r uses documents[r % n]. The pooled candidate goes through the MEASURING ladder (rung-0 floor 150), judged under v2.1.0-calibrated (primary) and v2.0.0-audit (reference), with external_trial_count 21,960, through PooledEvaluator and PooledHoldoutRegistry (in-memory registries; the simulated holdout is synthetic).",
+    "injected_sharpe_grid": [
+      0.0,
+      0.03,
+      0.05,
+      0.08,
+      0.12
+    ],
+    "replicates": 400,
+    "replicate_rule": "400 per (sr, timeframe), common random numbers across sr within a replicate; if the size point estimate lies within 2 Monte Carlo SE of 0.05, double that timeframe's replicates once and report both",
+    "hypotheses": {
+      "H0_size": "Per timeframe, P(promoted under v2.1.0-calibrated | sr = 0) <= 0.05 per candidate. The family-wise union bound 1 - (1 - p0)^172 is reported beside it and is unresolvable at 400 replicates (0 of 400 gives 1 - (1 - 0.0075)^172 = 0.73), exactly as E-1 and E-2 record.",
+      "H1_power": "Per timeframe, P(promoted | sr = 0.08) >= 0.50 (the E-1 target). Reported whatever it is.",
+      "H_calibration": "Per timeframe, the variance across sr = 0 replicates of z_eff = SR_hat x sqrt(N_eff), the defaults' pooled per-trade Sharpe scaled by the effective count, is <= 1.25. 1 means N_eff is the true information content; above 1 means it overstates it. The same statistic with the raw count (z_naive) is reported beside it, so the size of the correction is visible."
+    },
+    "decision_rule_parameters": {
+      "size_max": 0.05,
+      "z_variance_max": 1.25,
+      "min_replicates": 400,
+      "power_target_at_0_08": 0.5
+    },
+    "secondary": [
+      "power at 0.03, 0.05, 0.12",
+      "the binding gate's distribution at each sr (gate_power_study.secondary)",
+      "the distribution of DEFF, N_raw and N_eff of the defaults at each sr",
+      "the share of sr = 0 replicates whose defaults would clear the MinTRL gate with the RAW count versus N_eff (what pooling without the correction would have admitted)",
+      "the v2.0.0-audit verdicts beside the production ones"
+    ],
+    "not_built": "An engine-path analogue (synchronised perturbed price paths through the engine, E-1 process 2's pooled counterpart) is NOT part of E-4: about 715 H4 backtests per pooled replicate, roughly 40 hours for 100 replicates on the M1. E-4's calibration therefore rests on one process where E-1 used two; stated as a limitation."
+  },
+  "main_stage": {
+    "runs_after": "P0 for the timeframe; a timeframe P0 does not admit is not run",
+    "ladder": "ValidationLadder.run (fail-fast, exactly as promotion runs it) under v2.1.0-calibrated with rungs 0 to 5 and rung 6 DEFERRED (DeferredHoldoutRung: NOT_REACHED, so a candidate that clears rungs 0 to 5 is INCOMPLETE, never PROMOTE, and nothing is claimed)",
+    "outputs": "One row per candidate (verdict, binding constraint, every gate value, N_raw, N_eff, DEFF, the deflated Sharpe, engine runs) and the full ValidationReport of every candidate, pass or fail",
+    "survivor": "a pooled candidate whose rungs 0 to 5 all pass and whose gates at rungs 0 to 5 all pass"
+  },
+  "holdout_handling": [
+    "P0: synthetic data, in-memory registries only; no real holdout is touched.",
+    "Main stage: no rung reads any holdout window (DeferredHoldoutRung); every research window is asserted against EVERY constituent's own holdout by PooledHoldoutRegistry.assert_untouched before any rung runs; the in-memory registry's segments are defined exactly as run_validation defines them (first bar, last bar, 20%).",
+    "The one look: only for the single SEED candidate that cleared rungs 0 to 5 with the highest deflated Sharpe (ties: the lower plan index), chosen by rule from the complete merged main-stage file before the look, and only if P0 admitted its timeframe (scripts/pooled_universe_study.py holdout enforces both). A generated survivor is a HYPOTHESIS, as K5 ruled: it must be re-authored as a seed with a written economic story, and its look is spent then, not here.",
+    "The look is claimed in the platform's persistent registry (resolve_paths().holdout_db, var/holdout.sqlite) on EVERY constituent series for the document's default-binding content hash (the key every single-series look uses), after checking that no constituent was already looked at there or in the K3, K4 and K5 campaign registries (--prior-registry). A pooled look therefore spends the document's look on each of its series; a second look, pooled or single, is refused.",
+    "No result of the main stage, and nothing from any holdout, is read before P0 has been read under this rule."
+  ],
+  "expectations_stated_before_results": {
+    "trades": "H4: the seeds' single-series defaults trade a median of about 330 times (E-1/E-2); about 11 sleeves per seed gives about 3,600 pooled trades. D1: tens per series, a few hundred pooled.",
+    "design_effect": "H4 FX-heavy universes share a dollar factor and risk-on/risk-off weeks: DEFF between 1.5 and 4 expected, so N_eff about 900 to 2,400 for an H4 seed. D1 similar DEFF on far fewer trades: N_eff about 100 to 400.",
+    "min_trl": "MinTRL_95 is 425 trades at a per-trade Sharpe of 0.08 and 190 at 0.12. On H4, N_eff clears it for a candidate whose realised Sharpe is near the injected one: MinTRL is expected to bind in under 10% of sr = 0.08 replicates (against 64% single-series in E-1). On D1 it is expected to bind in most of them.",
+    "deflation": "The deflation becomes the binding gate. At N = 21,968 trials the expected maximum of the null Sharpe distribution is about 3.9 cross-trial standard deviations. For an H4 pooled candidate, a 0.08 per-trade edge is a per-bar Sharpe of roughly 0.02 over about 27,000 research bars (standard error about 0.006); the trial-Sharpe dispersion of an 8-point grid correlated at 0.7 gives a deflation hurdle of roughly 0.018, so the deflated Sharpe of a true 0.08 edge sits around 0.6 and rarely clears 0.95.",
+    "size": "H0_size holds on both timeframes, with a point estimate at or below 0.01.",
+    "power": "H4: power at 0.08 between 0.05 and 0.30 (H1_power is expected to FAIL), at 0.12 between 0.30 and 0.70; binding at 0.08 mostly deflated_sharpe, then pbo and the plateau median. D1: power at 0.08 below 0.10.",
+    "calibration": "z_variance for N_eff between 0.9 and 1.2 (H_calibration holds); for the raw count, between 1.5 and 4 (the correction matters).",
+    "main_stage": "Zero survivors is the expected outcome, as in K1 to K5. If H1_power fails as expected, that null is reported as underpowered against 0.08 edges with the measured power, and the next question is the trial-count design (E-3, effective campaign trial count), which E-2's rule 4 demoted only because MinTRL bound first."
+  },
+  "falsification": [
+    "F1 size: P0 size > 0.05 on a timeframe. Pooling with N_eff is then too lax there; that timeframe's main stage is not run (or, if run, its verdicts are void) and no holdout is spent on it.",
+    "F2 calibration: z_variance > 1.25 at sr = 0 on a timeframe. N_eff overstates the information in pooled trades (unmodelled serial or cross dependence); same consequence as F1, and the effective-count method must be replaced (for example by a block bootstrap of the pooled mean that includes serial dependence) under a new filing.",
+    "F3 power: P0 power at 0.08 below 0.20 on H4. Pooling does not make a 0.08 edge testable under the production set at this trial count; a main-stage null says nothing about 0.08 edges, and the deflation's trial count (E-3) is the constraint to address, not a threshold.",
+    "F4 parity: any test showing a sleeve's trades differ from the single-series engine run for the same binding and window. Not a data outcome: tests/integration/test_pooled_ladder_real_engine.py pins it, and a failure there stops the run."
+  ],
+  "decision_rule": "1. Run P0 for H4 and D1 (400 replicates each, all five sr values) before the main stage. 2. A timeframe is ADMITTED if its P0 size (v2.1.0-calibrated, sr = 0) is <= 0.05 and its z_variance is <= 1.25; the main stage runs only admitted timeframes. 3. Main-stage verdicts are read under v2.1.0-calibrated at the external trial counts above; a candidate clearing rungs 0 to 5 is a pooled survivor, reported with its N_raw, N_eff, DEFF and deflated Sharpe. 4. The holdout is spent at most once, for the single seed survivor with the highest deflated Sharpe in an admitted timeframe, by the holdout command; a generated survivor is a hypothesis only. A survivor that passes rung 6 becomes a pooled CANDIDATE for paper allocation under the lifecycle rules (USER_ACTIONS D2 first); one that fails is rejected and its look is spent. 5. Every null is reported beside P0's measured power at 0.08 and 0.12 for its timeframe; a null with power below 0.5 is described as underpowered, with the number. 6. No threshold is moved, no gate added or removed, and no candidate added or removed by looking at any result; the N to N_eff substitution at the three count sites is the only change.",
+  "compute": {
+    "basis": "Measured on the MacBook (Apple M1, 8 GB): E-1 process 2 ran about 26,000 H4 engine_v3_realism backtests in 14.7 h with four shards, about 1,770 per hour; K5 ran 2,947 mixed H4/D1 backtests in 7,923 s in one process. A full ladder run costs about 58 engine runs per sleeve (8 research sweep points, 5 folds x (8 + 2)); a rung-0 rejection costs 1. D1 bars are about one fifth of H4's, so D1 runs about five times faster.",
+    "p0": "Source build: one default backtest per (seed, sleeve), 66 H4 and 58 D1, a few minutes per shard. Ladder: about 10 s per full pooled measuring run on one core of the cloud sandbox (measured on a synthetic 11-sleeve, 3,600-trade candidate), expected 4 to 6 s on an M1 core; about 4.5 full runs per replicate (sr = 0 often stops at rung 0). 400 replicates: about 2.5 core-hours for H4, under 1 for D1; with four shards, about 1 hour of wall time in total.",
+    "main_stage_bounds": "Tier 1 (11 seed candidates) at full depth: at most 66 H4 and 58 D1 sleeves x 58 runs, about 2.2 h + 0.4 h. Tier 2 (161 generated) rung 0: 1,108 H4 + 723 D1 runs, about 0.7 h. Each generated H4 candidate that passes rung 0 adds about 0.36 h (about 640 runs).",
+    "total": "Guaranteed part (P0 both timeframes + tier 1 at full depth + tier 2 rung 0): about 5 hours. Expected total under 24 hours unless more than about 50 of the 100 generated H4 candidates pass rung 0 under the MinTRL gate with N_eff; the deterministic worst case (every candidate to full depth) is about 44 hours. The run is resumable and its result does not depend on wall time; a run over 24 hours is reported as such, not truncated.",
+    "memory_and_disk": "Under 1 GB per shard (16 series of bars per timeframe, an in-memory evaluation cache per candidate). Output: about 20 to 40 MB per P0 timeframe file, up to about 100 MB of main-stage reports."
+  },
+  "data_rules": [
+    "Bars are read through gate_power_study.load_series exactly as E-1: the latest validated dataset version per series, K5's bars_from trim, mid bars, the GBP FX source; a series without a GBP conversion is skipped and named.",
+    "The holdout segment of every series is excluded from every P0 source and from every main-stage rung (holdout_handling).",
+    "Seeds are fixed in the script (base seed 20261010) and recorded in the output; a re-run reproduces the output byte for byte apart from wall-clock fields; shards merged with merge equal one uninterrupted run.",
+    "P0 is run in full on each timeframe before any main-stage output is read."
+  ],
+  "decision_date": "The first day on which both merged P0 files exist (P0 is decided then, before the main stage runs); the main stage is decided on the first day its merged file exists.",
+  "filed_at": "2026-10-10T01:11:00Z",
+  "filed_commit": "78f1dba",
+  "filing_note": "Filed 2026-10-10 on the operator's approval of R3. filed_commit is recorded in the following commit, as E-1 and E-2 did. Decisions taken at filing, before any E-4 result: (1) the effective count is the design effect on max(daily, weekly) P&L sums, floored at 1; (2) N_eff replaces N at exactly three sites; (3) the candidate set is K5's roster by rule (172 pooled candidates, 1,064 trials, true N 21,968); (4) P0 is one process (the joint day bootstrap), 400 replicates per timeframe, and the engine-path process is not built; (5) the holdout is deferred in the main stage and spent at most once, for one seed survivor, by rule."
+}
