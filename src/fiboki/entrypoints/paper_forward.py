@@ -1123,7 +1123,13 @@ class ForwardFeed:
         for sym in sorted(batch.frames):
             seen = self.manager.driver.last_bars.get(sym)
             after = seen.timestamp if seen is not None else now
-            frame = self.feed.bars_between(sym, after, stamp)
+            # Strictly before THIS instrument's newest bar, not the batch's
+            # newest stamp: an instrument whose latest candle lags the others
+            # (a late candle, a different session) has its newest bar in
+            # ``batch.frames`` already, and the main step applies it. Bounding
+            # by the batch stamp would apply that bar here as well, and the
+            # book would see it twice.
+            frame = self.feed.bars_between(sym, after, batch.frames[sym].timestamp)
             for ts, row in frame.iterrows():
                 try:
                     bar = Bar(
