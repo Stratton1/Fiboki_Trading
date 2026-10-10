@@ -12,6 +12,16 @@ export const SHORTCUTS: readonly { keys: string[]; label: string; what: string }
   { keys: ["?"], label: "Question mark", what: "Show these shortcuts" },
   { keys: ["g", "…"], label: "g then a letter", what: "Go to a screen (see the list below)" },
   {
+    keys: ["/"],
+    label: "Slash",
+    what: "Focus the command line: a mnemonic (RSK, LAB, EXPO), a name, or an instrument symbol, then Enter. ? opens this sheet, KILL opens the kill-switch dialog, an empty Enter opens the palette.",
+  },
+  {
+    keys: ["F1", "…", "F9"],
+    label: "F1 to F9",
+    what: "Go to a section from the function-key row (F5 stays the browser's reload; use its key on screen). Arrows, Home and End move along the row.",
+  },
+  {
     keys: ["⇧", "K"],
     label: "Shift K",
     what: "Open the kill-switch dialog. It never arms by itself: you still choose PAUSE or FLATTEN and give a reason.",

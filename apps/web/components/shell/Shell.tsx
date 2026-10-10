@@ -18,6 +18,7 @@ import { QueryProvider } from "./QueryProvider";
 import { Rail } from "./Rail";
 import { StatusBar } from "./StatusBar";
 import { StreamBanner, StreamStarter } from "./Stream";
+import { TopBar } from "./TopBar";
 
 /**
  * The workstation shell (report E §5.1):
@@ -60,6 +61,7 @@ export function Shell({ children }: { children: ReactNode }) {
                 </main>
               ) : (
                 <>
+                  <TopBar />
                   <StreamBanner />
                   <NavDrawerProvider>
                     <div className="shell" data-rail={railExpanded ? "expanded" : "collapsed"}>

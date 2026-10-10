@@ -157,7 +157,8 @@ for (const size of SHELL_WIDTHS) {
       const rowHeight = await page.evaluate(() =>
         getComputedStyle(document.documentElement).getPropertyValue("--row-h").trim(),
       );
-      expect(rowHeight).toBe(size.density === "comfortable" ? "40px" : "32px");
+      // The terminal wave's row heights (globals.css density tokens).
+      expect(rowHeight).toBe(size.density === "comfortable" ? "34px" : "24px");
     });
 
     test(size.drawer ? "the rail is a closed drawer" : "the rail is a 56px icon column", async ({

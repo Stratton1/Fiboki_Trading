@@ -24,6 +24,8 @@ export interface Section {
   icon: LucideIcon;
   /** The `g <chord>` key that goes to this section's first view. */
   chord: string;
+  /** The function-key label of the section (the command line's codes for each view are in CommandLine.tsx). */
+  mnemonic: string;
   links: { href: string; label: string }[];
   /**
    * Entity routes that belong to the section without being one of its views
@@ -36,6 +38,7 @@ export interface Section {
 export const SECTIONS: Section[] = [
   {
     id: "command",
+    mnemonic: "CMD",
     chord: "c",
     title: "Command",
     question: "Is anything wrong, and what needs me now?",
@@ -48,6 +51,7 @@ export const SECTIONS: Section[] = [
   },
   {
     id: "fleet",
+    mnemonic: "FLT",
     chord: "f",
     title: "Fleet & Positions",
     question: "What is every bot doing and what is open?",
@@ -56,6 +60,7 @@ export const SECTIONS: Section[] = [
   },
   {
     id: "lifecycle",
+    mnemonic: "LIF",
     chord: "l",
     title: "Strategy Lifecycle",
     question: "What should be promoted, demoted or retired?",
@@ -65,6 +70,7 @@ export const SECTIONS: Section[] = [
   },
   {
     id: "research",
+    mnemonic: "LAB",
     chord: "r",
     title: "Research Lab",
     question: "What have we tried and what does the evidence say?",
@@ -81,6 +87,7 @@ export const SECTIONS: Section[] = [
   },
   {
     id: "markets",
+    mnemonic: "MKT",
     chord: "m",
     title: "Market Intelligence",
     question: "What is the market doing, and what did the agents conclude?",
@@ -96,6 +103,7 @@ export const SECTIONS: Section[] = [
   },
   {
     id: "risk",
+    mnemonic: "RSK",
     chord: "x",
     title: "Risk & Exposure",
     question: "How close are we to any limit?",
@@ -107,6 +115,7 @@ export const SECTIONS: Section[] = [
   },
   {
     id: "data",
+    mnemonic: "DQ",
     chord: "d",
     title: "Data Quality",
     question: "Can we trust the inputs?",
@@ -118,6 +127,7 @@ export const SECTIONS: Section[] = [
   },
   {
     id: "system",
+    mnemonic: "SYS",
     chord: "s",
     title: "System & Incidents",
     question: "Is every process up, and what happened?",
@@ -134,6 +144,7 @@ export const SECTIONS: Section[] = [
   },
   {
     id: "journal",
+    mnemonic: "JRN",
     chord: "j",
     title: "Journal",
     question: "What did we trade, why, and what did we learn?",

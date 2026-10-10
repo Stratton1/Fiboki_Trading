@@ -280,6 +280,17 @@ export const PAIRS = [
   ...["--regime-trend", "--regime-range", "--regime-stress", "--regime-unknown"].flatMap((tint) =>
     on("--fg-muted", [["--chart-bg", tint]], "text", "regime ribbon label"),
   ),
+  // Terminal chrome: data ink on every surface, panel header strips, the
+  // solid strip (active function key, page title, selected palette row) and
+  // the inverted mode block in the banner.
+  ...on("--fg-data", SURFACES, "text", "figure ink"),
+  { fg: "--strip-fg", bg: ["--strip-bg"], kind: "text", note: "panel header strip" },
+  { fg: "--strip-solid-fg", bg: ["--strip-solid-bg"], kind: "text", note: "solid strip / active key" },
+  { fg: "--accent", bg: ["--strip-bg"], kind: "text", note: "link on a strip" },
+  ...["--mode-backtest", "--mode-paper", "--mode-shadow", "--mode-demo", "--critical", "--mode-unknown"].map(
+    (bg) => ({ fg: "--fg-on-fill", bg: [bg], kind: "text", note: "inverted mode block" }),
+  ),
+  ...on("--fg-on-fill", ["--accent", "--warn", "--ok"], "text", "inverted interactive / state key"),
 ];
 
 /**

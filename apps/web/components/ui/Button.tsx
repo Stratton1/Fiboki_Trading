@@ -5,7 +5,7 @@ export type ButtonVariant = "secondary" | "primary" | "danger" | "warn" | "ghost
 export type ButtonSize = "sm" | "md" | "icon";
 
 const BASE =
-  "inline-flex items-center justify-center gap-1.5 rounded-sm border font-medium whitespace-nowrap select-none " +
+  "inline-flex items-center justify-center gap-1.5 rounded-sm border font-semibold uppercase tracking-[0.04em] whitespace-nowrap select-none " +
   "transition-[background-color,border-color,color] duration-[var(--dur-xs)] ease-standard " +
   "disabled:opacity-45 disabled:pointer-events-none " +
   // aria-disabled keeps the control focusable, so the reason it cannot be
@@ -21,7 +21,7 @@ const VARIANT: Record<ButtonVariant, string> = {
 };
 
 const SIZE: Record<ButtonSize, string> = {
-  sm: "h-6 px-2 text-xs",
+  sm: "h-[22px] px-2 text-xs",
   md: "h-[var(--control-h)] px-3 text-sm",
   // Square, no padding: an icon at 16px must not be squeezed by px-3.
   icon: "h-[var(--control-h)] w-[var(--control-h)] shrink-0 p-0 text-sm",
