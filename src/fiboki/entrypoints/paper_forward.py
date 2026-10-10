@@ -74,12 +74,19 @@ What is modelled, and what is not (read before believing a number)
 * FX: v1 supports instruments quoted in the account currency only
   (``IdentityFxSource``); a wiring that needs conversion is refused.
 * No market-state engine is wired: the regime is ``unknown`` on every context.
-* A restart loses the in-memory book and venue. The journal carries the
-  realised balance, the peak equity (so the drawdown limit does not reset) and
-  every closed trade (so the daily and weekly loss limits do not reset) across
-  restarts; positions open at the last bar before the restart are recorded as
-  ABANDONED in the journal and alerted, not silently dropped, and their
-  unrealised P&L is not carried.
+* A restart RESTORES the book, the venue and the manager from the crash-safe
+  state snapshot written after every completed cycle
+  (``entrypoints/paper_state``): open positions keep their stops, targets,
+  trail and ladder state and their venue references, and closed bars missed
+  while the process was down are applied to the book in order on the first
+  poll, so a stop or target hit during the gap is realised as a backtest
+  would realise it (no new signal is evaluated on a missed bar). The journal
+  says ``positions_restored_at_restart``. Where the snapshot cannot be
+  trusted (it fails its CRC, it was written under a different wiring,
+  strategy or limits version, or the ledgers grew after it was written) the
+  previous behaviour stands: the journal carries the realised balance, the
+  peak equity and every closed trade, and positions open at the last bar are
+  recorded as ABANDONED and alerted, with the reason, never silently dropped.
 """
 from __future__ import annotations
 
@@ -119,6 +126,7 @@ from fiboki.core.enums import (
 from fiboki.core.instruments import get as get_instrument
 from fiboki.core.money import IdentityFxSource
 from fiboki.data.providers.oanda import OandaCandlesProvider
+from fiboki.entrypoints import paper_state
 from fiboki.entrypoints.paper_venue import ForwardPaperVenue
 from fiboki.marketstate.calendar import (
     CalendarError,
@@ -134,7 +142,7 @@ from fiboki.risk.accounting import RealisedPnlLedger, correlation_from_frames
 from fiboki.risk.gateway import ExecutionAttempt, ExitContext, RiskGateway
 from fiboki.risk.killswitch import FileKillSwitchJournal, KillSwitch, RequestKind
 from fiboki.risk.limits import get_limit_set
-from fiboki.sim.fills import FillSimulator, IntrabarPolicy
+from fiboki.sim.fills import Bar, FillSimulator, IntrabarPolicy
 from fiboki.sim.profiles import get_profile
 from fiboki.strategy.compiler import compile_strategy
 from fiboki.strategy.dsl import StrategyDocument
@@ -913,6 +921,15 @@ class ForwardPositionReconciler:
     itself adopted that exact broker reference and is waiting for the book's
     entry; every other divergence, including an unmanaged position with any
     other reference, passes through untouched.
+
+    The same holds for ``close_pending``: a close the BOOK made that the venue
+    has not confirmed, which the manager itself tracks in ``pending_closes``,
+    re-sends through the gateway on every bar and alerts as
+    ``close_not_realised`` each time it is refused. Reporting it here as well
+    added nothing but, at start-up, it made the fail-closed reconciliation
+    refuse to start a process restored mid-retry, which a process that never
+    restarted would simply have kept retrying. It is suppressed ONLY while the
+    manager holds that exact reference in ``pending_closes``.
     """
 
     def __init__(self, manager: VenuePositionManager) -> None:
@@ -924,10 +941,12 @@ class ForwardPositionReconciler:
             str(op.position.venue_ref) for op in self.manager.open_positions if op.position.venue_ref
         }
         awaiting = {ref for ref in self.manager.venue_positions if ref not in managed}
+        retrying = set(self.manager.pending_closes)
         return [
             d
             for d in found
             if not (getattr(d, "kind", "") == "unmanaged_at_venue" and d.broker_ref in awaiting)
+            and not (getattr(d, "kind", "") == "close_pending" and d.broker_ref in retrying)
         ]
 
 
@@ -1037,6 +1056,7 @@ class ForwardFeed:
 
     def poll(self) -> BarBatch:
         batch = self.feed.poll()
+        self._report_window_shortfall()
         sample = self.spread.sample(self.wiring.instruments)
         self.journal.event("pricing", sample=sample.as_row())
         if sample.error or sample.missing:
@@ -1050,8 +1070,9 @@ class ForwardFeed:
                 dedupe_key="paper_forward_pricing",
             )
         if batch.frames:
-            self.bar_index += 1
             stamp = max(bar.timestamp for bar in batch.frames.values())
+            self._catch_up(batch, stamp)
+            self.bar_index += 1
             histories = {sym: self.feed.history(sym) for sym in batch.frames}
             cycle = self.manager.on_bar(
                 batch.frames,
@@ -1068,7 +1089,132 @@ class ForwardFeed:
 
     # -- pieces ------------------------------------------------------------
 
-    def _journal_cycle(self, cycle: Any, stamp: pd.Timestamp) -> None:
+    def _report_window_shortfall(self) -> None:
+        """A restored feed that could not fetch back to its window's first bar.
+
+        The feed records it (``floor_shortfall``) and nothing else would say
+        so; but every indicator is then computed over a different window from
+        the one the uninterrupted process used, which is exactly the parity
+        the restore promises. Journalled and alerted once per occurrence.
+        """
+        shortfall = getattr(self.feed, "floor_shortfall", None)
+        if not shortfall:
+            return
+        detail = {
+            sym: {"window_from": wanted, "obtained_from": got}
+            for sym, (wanted, got) in sorted(shortfall.items())
+        }
+        self.journal.event(
+            "feed_window_shortfall",
+            instruments=detail,
+            note=(
+                "the restored feed could not fetch back to the first bar of the window "
+                "the previous process held; indicators are computed over a shorter "
+                "window until it has slid past the gap"
+            ),
+        )
+        self._alert(
+            AlertEvent.DATA_QUALITY_DEFECT,
+            f"paper forward restored feed window short for {sorted(detail)}: indicator "
+            "values may differ from the uninterrupted run; see feed_window_shortfall",
+            dedupe_key="paper_forward_feed_window_shortfall",
+        )
+        shortfall.clear()
+
+    def _catch_up(self, batch: BarBatch, stamp: pd.Timestamp) -> None:
+        """Step the book through every closed bar it has not seen, in order.
+
+        The feed offers only the NEWEST bar for evaluation. Bars that closed
+        while this process was down (or while the feed could not reach the
+        venue) are held but were never shown to the book, so a stop or a
+        target touched during the gap was silently skipped: the position
+        stayed open in the record while a real account would have closed it.
+
+        Here each missed bar is applied to the book exactly as the backtester
+        applies a bar (financing, reversal closes, the entry the venue already
+        filled, then exits with the bar's own high and low and its own
+        trailing-stop series), with its own bar index, BEFORE the newest bar.
+        Closes it decides are sent to the venue at the current price.
+
+        What is NOT done on a missed bar: evaluating a new signal. An order
+        cannot be dealt at a price that has already gone, so a signal the
+        backtester would have taken during the gap is not traded here; that
+        is a real difference between a process that was down and one that was
+        not, and the journal records the gap (``bars_caught_up``) so it is
+        visible.
+
+        A bar older than the book's last step (a candle that arrived late for
+        one instrument while others moved on) cannot be stepped backwards
+        into a timeline; it is journalled as ``bars_not_modelled``, never
+        dropped silently.
+        """
+        now = self.manager.now
+        if now is None:
+            return
+        missed: dict[pd.Timestamp, dict[str, Bar]] = {}
+        not_modelled: list[dict[str, Any]] = []
+        for sym in sorted(batch.frames):
+            seen = self.manager.driver.last_bars.get(sym)
+            after = seen.timestamp if seen is not None else now
+            # Strictly before THIS instrument's newest bar, not the batch's
+            # newest stamp: an instrument whose latest candle lags the others
+            # (a late candle, a different session) has its newest bar in
+            # ``batch.frames`` already, and the main step applies it. Bounding
+            # by the batch stamp would apply that bar here as well, and the
+            # book would see it twice.
+            frame = self.feed.bars_between(sym, after, batch.frames[sym].timestamp)
+            for ts, row in frame.iterrows():
+                try:
+                    bar = Bar(
+                        ts, float(row["open"]), float(row["high"]), float(row["low"]),
+                        float(row["close"]),
+                    )
+                except ValueError as exc:
+                    not_modelled.append({"instrument": sym, "bar_time": ts, "reason": str(exc)})
+                    continue
+                if ts <= now:
+                    not_modelled.append(
+                        {"instrument": sym, "bar_time": ts, "reason": "older_than_book_step"}
+                    )
+                    continue
+                missed.setdefault(ts, {})[sym] = bar
+        if not_modelled:
+            self.journal.event("bars_not_modelled", bars=not_modelled)
+            self._alert(
+                AlertEvent.DATA_QUALITY_DEFECT,
+                f"{len(not_modelled)} closed bar(s) could not be applied to the paper "
+                "book (late or incoherent); see bars_not_modelled in the journal",
+                dedupe_key="paper_forward_bars_not_modelled",
+            )
+        if not missed:
+            return
+        times = sorted(missed)
+        self.journal.event(
+            "bars_caught_up",
+            count=len(times),
+            first=times[0],
+            last=times[-1],
+            newest=stamp,
+            open_positions=len(self.manager.open_positions),
+            note=(
+                "closed bars the book had not seen, applied in order before the "
+                "newest bar: exits, trails and pending entries as a backtest would; "
+                "no new signal is evaluated on them"
+            ),
+        )
+        for ts in times:
+            bars = missed[ts]
+            self.bar_index += 1
+            histories = {sym: self.feed.history_through(sym, ts) for sym in bars}
+            cycle = self.manager.on_bar(
+                bars,
+                bar_index=self.bar_index,
+                timestamp=ts,
+                series=self.signals.exit_series(histories),
+            )
+            self._journal_cycle(cycle, ts, caught_up=True)
+
+    def _journal_cycle(self, cycle: Any, stamp: pd.Timestamp, *, caught_up: bool = False) -> None:
         for event in getattr(cycle.advance, "entries", ()) or ():
             if getattr(event, "filled", False) and getattr(event, "managed", None) is not None:
                 pos = event.managed.position
@@ -1090,6 +1236,7 @@ class ForwardFeed:
         self.journal.event(
             "bar",
             bar_time=stamp,
+            caught_up=caught_up,
             balance=account.balance,
             equity=account.equity,
             peak_equity=account.peak_equity,
@@ -1171,7 +1318,13 @@ class ForwardFeed:
 
 
 class PaperForwardWorker(LiveWorker):
-    """A :class:`LiveWorker` that journals its start and closes its transport."""
+    """A :class:`LiveWorker` that journals its start, snapshots its state, closes its transport.
+
+    The state snapshot (``entrypoints/paper_state``) is written at the end of
+    EVERY cycle, whether it traded, idled or failed (``finally``), after the
+    start-up reconciliation and at shutdown. A cycle is the unit the worker
+    commits; a snapshot taken inside one would hold half its decisions.
+    """
 
     runtime: PaperForwardRuntime
 
@@ -1185,6 +1338,8 @@ class PaperForwardWorker(LiveWorker):
             carried_balance=runtime.carried_balance,
             restarts=runtime.restarts,
             abandoned_positions=runtime.abandoned_positions,
+            restored_positions=runtime.restored_positions,
+            snapshot=runtime.snapshot_status,
             instruments=list(runtime.wiring.instruments),
             timeframe=runtime.wiring.timeframe.value,
             strategy_content_hashes=[s.content_hash for s in runtime.wiring.strategies],
@@ -1192,10 +1347,18 @@ class PaperForwardWorker(LiveWorker):
             broker_profile=runtime.wiring.broker_profile,
         )
         runtime.forward.write_session()
+        runtime.persist()
+
+    def run_cycle(self) -> Any:
+        try:
+            return super().run_cycle()
+        finally:
+            self.runtime.persist()
 
     def teardown(self) -> None:
         try:
             self.runtime.forward.write_session()
+            self.runtime.persist()
             self.runtime.journal.event("session_stop", summary=self.summary())
         finally:
             close = getattr(self.runtime.transport, "close", None)
@@ -1228,6 +1391,109 @@ class PaperForwardRuntime:
     carried_balance: float | None = None
     restarts: int = 0
     abandoned_positions: list[dict[str, Any]] = field(default_factory=list)
+    restored_positions: list[dict[str, Any]] = field(default_factory=list)
+    #: What start-up found on disk (``paper_state.SnapshotAssessment.summary``).
+    snapshot_status: dict[str, Any] = field(default_factory=dict)
+    snapshot_path: Path | None = None
+    account: ModelledAccount | None = None
+    _last_snapshot: str = ""
+
+    # -- the state snapshot ------------------------------------------------
+
+    def capture(self) -> dict[str, Any]:
+        """Everything a restart needs to carry on as if it had not happened."""
+        wired = self.wiring
+        return {
+            **paper_state.stamps(
+                wiring_sha256=wired.sha256,
+                strategy_hashes=[s.content_hash for s in wired.strategies],
+                limits_version=wired.limits_version,
+            ),
+            "wiring_version": wired.version,
+            "last_bar": None if self.manager.now is None else self.manager.now.isoformat(),
+            "watermark": paper_state.watermark(
+                self.journal.trades_path, self.journal.intents_path
+            ),
+            "state": {
+                "manager": self.manager.export_state(),
+                "venue": self.venue.export_state(),
+                "feed": self.feed.export_state(),
+                "forward": {
+                    "bar_index": int(self.forward.bar_index),
+                    "last_bar_time": (
+                        None
+                        if self.forward.last_bar_time is None
+                        else self.forward.last_bar_time.isoformat()
+                    ),
+                    "flattens": int(self.forward.flattens),
+                },
+                "account_peak": None if self.account is None else float(self.account.peak),
+            },
+        }
+
+    def persist(self) -> bool:
+        """Write the snapshot if anything in it changed. True when written.
+
+        A failed write does NOT stop paper trading: the snapshot on disk is
+        then older than the ledgers, and the next start refuses it as
+        ``stale`` and abandons, which is the honest outcome. It is logged and
+        alerted every time, so a disk that cannot take the snapshot is seen
+        before a restart depends on it.
+
+        Every closed trade the book holds is in ``trades.jsonl`` BEFORE the
+        snapshot is captured. The book does not carry its closed trades across
+        a restart (they are history, and the ledger is the record), so a trade
+        the book closed in a cycle that then failed before ``record_trades``
+        ran (a journal write raised) would otherwise be in the snapshot's
+        balance and in no ledger: the restored process would never write it,
+        while the process that did not restart would have, on its next bar.
+        ``record_trades`` is idempotent on ``trade_id``; this is the same call
+        the next bar makes. If it raises, no snapshot is written and the one
+        on disk stays older than the book, which the next start handles.
+        """
+        if self.snapshot_path is None:
+            return False
+        try:
+            self.journal.record_trades(self.manager.book.trades)
+            body = self.capture()
+            key = json.dumps(body, sort_keys=True, separators=(",", ":"))
+            if key == self._last_snapshot:
+                return False
+            paper_state.write(
+                self.snapshot_path,
+                {**body, "written_at": self.journal.clock().isoformat(),
+                 "process": self.journal.process_id},
+            )
+        except Exception as exc:
+            message = (
+                f"paper forward could not write its state snapshot "
+                f"({type(exc).__name__}: {exc}); a restart now would abandon open "
+                "paper positions instead of restoring them"
+            )
+            _log.error(message, extra={"path": str(self.snapshot_path)})
+            self.forward._alert(
+                AlertEvent.STRATEGY_DEGRADED,
+                message,
+                severity=Severity.ERROR,
+                dedupe_key="paper_forward_snapshot_write",
+            )
+            return False
+        self._last_snapshot = key
+        return True
+
+    def restore(self, state: Mapping[str, Any]) -> None:
+        """Load a snapshot's state into this freshly composed runtime."""
+        self.manager.restore_state(state["manager"])
+        self.venue.restore_state(state["venue"])
+        self.feed.restore_state(state["feed"])
+        fwd = state["forward"]
+        self.forward.bar_index = int(fwd["bar_index"])
+        self.forward.last_bar_time = (
+            None if fwd["last_bar_time"] is None else pd.Timestamp(fwd["last_bar_time"])
+        )
+        self.forward.flattens = int(fwd["flattens"])
+        if self.account is not None and state.get("account_peak") is not None:
+            self.account.peak = float(state["account_peak"])
 
 
 # ===========================================================================
@@ -1299,6 +1565,7 @@ def compose_runtime(
     monotonic: Callable[[], float] | None = None,
     worker_id: str | None = None,
     max_cycles: int = 0,
+    _snapshot: paper_state.SnapshotAssessment | None = None,
 ) -> PaperForwardRuntime:
     """Assemble the paper-forward runtime from ``settings`` and a wiring file.
 
@@ -1371,31 +1638,83 @@ def compose_runtime(
     previous = journal.last_account()
     carried_balance = None if previous is None else float(previous["balance"])
     carried_peak = 0.0 if previous is None else float(previous.get("peak_equity") or 0.0)
-    abandoned = list(previous.get("open_positions") or []) if previous else []
     restarts = len(journal.events("session_start"))
     initial_balance = wired.initial_balance
-    book_balance = carried_balance if carried_balance is not None else initial_balance
-    if abandoned:
-        journal.event(
-            "positions_abandoned_at_restart",
-            positions=abandoned,
-            note=(
-                "the book and the paper venue are in memory; these positions were open "
-                "at the last journalled bar and died with the previous process. Their "
-                "unrealised P&L is NOT carried."
-            ),
-        )
-        if dispatcher is not None:
-            dispatcher.fire(
-                AlertEvent.RECONCILIATION_DIVERGENCE,
-                f"paper forward restarted with {len(abandoned)} paper position(s) "
-                "open at the last bar; they were abandoned, not recovered",
-                severity=Severity.WARNING,
-                source="paper-forward",
-                dedupe_key="paper_forward_abandoned",
+
+    # -- the state snapshot: restore, or say exactly why not ---------------
+    snapshot_path = journal.ledger_dir / paper_state.SNAPSHOT_FILE
+    assessment = _snapshot or paper_state.assess(
+        snapshot_path,
+        wiring_sha256=wired.sha256,
+        strategy_hashes=[s.content_hash for s in wired.strategies],
+        limits_version=wired.limits_version,
+        trades_path=journal.trades_path,
+        intents_path=journal.intents_path,
+    )
+    abandoned: list[dict[str, Any]] = []
+    if assessment.restorable:
+        try:
+            state = assessment.state
+            restored_balance = float(state["manager"]["book"]["balance"])
+            restored_peak = state.get("account_peak")
+            restored_peak = None if restored_peak is None else float(restored_peak)
+        except (KeyError, TypeError, ValueError) as exc:
+            assessment = paper_state.SnapshotAssessment(
+                "corrupt", f"snapshot did not load: {type(exc).__name__}: {exc}",
+                assessment.body,
             )
+        else:
+            carried_balance = restored_balance
+            if restored_peak is not None:
+                carried_peak = restored_peak
+    if not assessment.restorable:
+        if assessment.status != "absent":
+            kept = paper_state.quarantine(snapshot_path, clock)
+            journal.event(
+                "state_snapshot_refused",
+                status=assessment.status,
+                reason=assessment.reason,
+                kept_as=None if kept is None else kept.name,
+            )
+            if dispatcher is not None:
+                dispatcher.fire(
+                    AlertEvent.RECONCILIATION_DIVERGENCE,
+                    f"paper forward could not restore its state snapshot "
+                    f"({assessment.status}): {assessment.reason}. Open paper positions "
+                    "fall back to being abandoned.",
+                    severity=(
+                        Severity.CRITICAL if assessment.status == "corrupt" else Severity.WARNING
+                    ),
+                    source="paper-forward",
+                    dedupe_key="paper_forward_snapshot_refused",
+                )
+        abandoned = list(previous.get("open_positions") or []) if previous else []
+        if abandoned:
+            journal.event(
+                "positions_abandoned_at_restart",
+                positions=abandoned,
+                snapshot=assessment.status,
+                reason=assessment.reason,
+                note=(
+                    "no state snapshot this process may restore from (see reason); "
+                    "these positions were open at the last journalled bar and died "
+                    "with the previous process. Their unrealised P&L is NOT carried."
+                ),
+            )
+            if dispatcher is not None:
+                dispatcher.fire(
+                    AlertEvent.RECONCILIATION_DIVERGENCE,
+                    f"paper forward restarted with {len(abandoned)} paper position(s) "
+                    f"open at the last bar; they were abandoned, not recovered "
+                    f"(snapshot {assessment.status})",
+                    severity=Severity.WARNING,
+                    source="paper-forward",
+                    dedupe_key="paper_forward_abandoned",
+                )
+    book_balance = carried_balance if carried_balance is not None else initial_balance
 
     # -- the network: practice host only ------------------------------------
+    transport_created = transport is None
     if transport is None:
         transport = HttpxTransport(allowed_hosts=(OANDA_PRACTICE_HOST,))
     limiter = RateLimiter(
@@ -1591,7 +1910,12 @@ def compose_runtime(
         wiring=wired,
         dispatcher=dispatcher,
         equity_marks=journal.equity_marks(),
-        session_extra={"restarts": restarts, "abandoned_at_restart": len(abandoned)},
+        session_extra={
+            "restarts": restarts,
+            "abandoned_at_restart": len(abandoned),
+            "restored_at_restart": 0,
+            "snapshot_at_start": assessment.status,
+        },
     )
     builder.equity_curve = forward.equity_curve
     managed = ManagedExecution(execution, manager, policy, journal)
@@ -1617,9 +1941,10 @@ def compose_runtime(
             # Settings.health: the same DATA_STALE threshold the health page
             # and the watchdog read (FIBOKI_DATA_STALE_SECONDS).
             data_stale_after_seconds=_health(settings).data_stale_after_seconds,
-            # The book and the paper venue are in memory: a restart abandons
-            # open positions, and a restart cannot bring the network back. Ride
-            # out a feed outage, backing off and alerting, instead of exiting.
+            # A restart cannot bring the network back, and each restart is a
+            # snapshot restore at best. Ride out a feed outage, backing off and
+            # alerting, instead of exiting; the bars missed meanwhile are
+            # caught up in order when the feed returns.
             exit_on_outage=bool(wcfg.get("exit_on_outage", False)),
         ),
         dispatcher=dispatcher,
@@ -1648,8 +1973,49 @@ def compose_runtime(
         carried_balance=carried_balance,
         restarts=restarts,
         abandoned_positions=abandoned,
+        snapshot_status=assessment.summary(),
+        snapshot_path=snapshot_path,
+        account=account,
     )
     worker.runtime = runtime
+    if assessment.restorable:
+        try:
+            runtime.restore(assessment.state)
+        except Exception as exc:
+            # A record that verified but does not load (a shape this code
+            # cannot read) is refused like a corrupt one, and the runtime is
+            # composed afresh: half-restored objects are never traded on.
+            if transport_created:
+                close = getattr(transport, "close", None)
+                if callable(close):
+                    close()
+            return compose_runtime(
+                settings, wired, store=store, environ=environ,
+                transport=None if transport_created else transport,
+                dispatcher=dispatcher, strategies_dir=strategies_dir, calendar=calendar,
+                clock=clock, sleeper=sleeper, monotonic=monotonic, worker_id=worker_id,
+                max_cycles=max_cycles,
+                _snapshot=paper_state.SnapshotAssessment(
+                    "corrupt", f"snapshot did not load: {type(exc).__name__}: {exc}",
+                    assessment.body,
+                ),
+            )
+        restored = _restored_positions(manager)
+        runtime.restored_positions = restored
+        forward.session_extra["restored_at_restart"] = len(restored)
+        journal.event(
+            "positions_restored_at_restart",
+            positions=restored,
+            last_bar=assessment.summary()["last_bar"],
+            snapshot_written_at=assessment.summary()["written_at"],
+            bar_index=forward.bar_index,
+            venue_ref_prefix=venue.ref_prefix,
+            note=(
+                "the book, the venue and the manager were restored from the state "
+                "snapshot written after the last completed cycle; closed bars missed "
+                "while down are applied in order on the first poll"
+            ),
+        )
     _log.info(
         "paper forward composed",
         extra={
@@ -1665,6 +2031,50 @@ def compose_runtime(
         },
     )
     return runtime
+
+
+def _restored_positions(manager: VenuePositionManager) -> list[dict[str, Any]]:
+    """What came back, for the journal: book positions, venue fills awaiting the book,
+    and closes the venue has still to confirm."""
+    out: list[dict[str, Any]] = []
+    for op in manager.open_positions:
+        pos = op.position
+        out.append(
+            {
+                "state": "open",
+                "position_id": pos.position_id,
+                "broker_ref": pos.venue_ref,
+                "instrument": pos.instrument,
+                "direction": pos.direction.value,
+                "size": pos.size,
+                "entry_price": pos.entry_price,
+                "stop_loss": pos.stop_loss,
+                "take_profit": op.active_target(),
+                "bars_held": pos.bars_held,
+            }
+        )
+    for entry in manager.book.pending:
+        out.append(
+            {
+                "state": "entry_pending_in_book",
+                "broker_ref": entry.ref,
+                "instrument": entry.instrument.symbol,
+                "direction": entry.direction.value,
+                "size": entry.size,
+                "actionable_index": entry.actionable_index,
+            }
+        )
+    for ref, (pos, reason) in sorted(manager.pending_closes.items()):
+        out.append(
+            {
+                "state": "close_pending_at_venue",
+                "broker_ref": ref,
+                "instrument": pos.instrument,
+                "size": pos.size,
+                "reason": reason,
+            }
+        )
+    return out
 
 
 def compose(

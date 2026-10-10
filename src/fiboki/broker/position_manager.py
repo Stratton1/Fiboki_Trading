@@ -89,7 +89,13 @@ from fiboki.backtest.position import (
     ManagedPosition,
     PendingEntry,
     PositionBook,
+    bar_from_state,
+    bar_to_state,
     plan_legs,
+    position_from_state,
+    position_to_state,
+    ts_from_state,
+    ts_to_state,
 )
 from fiboki.broker.base import OrderAck
 from fiboki.core.contracts import AccountState, Order, Position
@@ -1748,6 +1754,85 @@ class VenuePositionManager:
             if improved > 0:
                 managed.stop_trailed = True
         return managed
+
+    # ------------------------------------------------------- durable state
+
+    def export_state(self) -> dict[str, Any]:
+        """The book, the timeline and BOTH pictures of every position, as JSON types.
+
+        Unlike :meth:`resume`, which re-derives what it can of a dead process
+        from the order intents and reports the rest as divergences, this
+        carries the manager's own state verbatim, so a process restored from it
+        manages its positions exactly as the one that wrote it would have:
+        the book (trail state, ladder legs, bar counts, the RNG sequence), the
+        driver's bar index and staleness bookkeeping, what the venue holds per
+        broker reference, the entries the venue has filled and the book has
+        not yet modelled, and the closes the venue has not confirmed.
+        """
+        driver = self.driver
+        return {
+            "book": self.book.export_state(),
+            "driver": {
+                "bar_index": int(driver.bar_index),
+                "now": ts_to_state(driver.now),
+                "last_bars": {s: bar_to_state(b) for s, b in sorted(driver.last_bars.items())},
+                "previous_times": {
+                    s: ts_to_state(t) for s, t in sorted(driver.previous_times.items())
+                },
+                "intervals": {
+                    s: int(iv.value) for s, iv in sorted(driver.intervals.items())
+                },
+            },
+            "venue_state": {
+                ref: [vi.stop_loss, vi.take_profit] for ref, vi in sorted(self.venue_state.items())
+            },
+            "venue_positions": {
+                ref: position_to_state(p) for ref, p in sorted(self.venue_positions.items())
+            },
+            "venue_entry": dict(sorted(self.venue_entry.items())),
+            "pending_orders": {
+                str(seq): [ref, sym] for seq, (ref, sym) in sorted(self._pending_orders.items())
+            },
+            "ref_by_seq": {str(seq): ref for seq, ref in sorted(self._ref_by_seq.items())},
+            "pending_closes": {
+                ref: [position_to_state(p), reason]
+                for ref, (p, reason) in sorted(self.pending_closes.items())
+            },
+            "peak_equity": getattr(self, "_peak_equity", None),
+        }
+
+    def restore_state(self, state: Mapping[str, Any]) -> None:
+        """Load :meth:`export_state` output into a manager that has seen no bar."""
+        if self.driver.bar_index >= 0 or self.venue_positions or self.pending_closes:
+            raise ValueError("restore_state needs a fresh manager; this one has run")
+        self.book.restore_state(state["book"])
+        d = state["driver"]
+        self.driver.bar_index = int(d["bar_index"])
+        self.driver.now = ts_from_state(d["now"])
+        self.driver.last_bars = {s: bar_from_state(b) for s, b in d["last_bars"].items()}
+        self.driver.previous_times = {
+            s: ts_from_state(t) for s, t in d["previous_times"].items()
+        }
+        for sym, iv in d["intervals"].items():
+            self.driver.intervals.setdefault(sym, pd.Timedelta(int(iv), unit="ns"))
+        self.venue_state = {
+            ref: VenueIntent(stop_loss=v[0], take_profit=v[1])
+            for ref, v in state["venue_state"].items()
+        }
+        self.venue_positions = {
+            ref: position_from_state(p) for ref, p in state["venue_positions"].items()
+        }
+        self.venue_entry = {ref: float(v) for ref, v in state["venue_entry"].items()}
+        self._pending_orders = {
+            int(seq): (str(v[0]), str(v[1])) for seq, v in state["pending_orders"].items()
+        }
+        self._ref_by_seq = {int(seq): str(ref) for seq, ref in state["ref_by_seq"].items()}
+        self.pending_closes = {
+            ref: (position_from_state(v[0]), str(v[1]))
+            for ref, v in state["pending_closes"].items()
+        }
+        if state.get("peak_equity") is not None:
+            self._peak_equity = float(state["peak_equity"])
 
     # ------------------------------------------------------------- exposure
 

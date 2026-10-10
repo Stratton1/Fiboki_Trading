@@ -45,7 +45,7 @@ better client code, and it is recorded in ``docs/v2/USER_ACTIONS.md``.
 from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, fields
 from typing import Any
 
 import numpy as np
@@ -60,6 +60,7 @@ from fiboki.backtest.exits import (
 from fiboki.core.contracts import Position, Trade
 from fiboki.core.enums import Direction, ExitReason, Provenance
 from fiboki.core.instruments import Instrument
+from fiboki.core.instruments import get as get_instrument
 from fiboki.core.money import FxRateSource, round_size
 from fiboki.sim.fills import Bar, FillSimulator, LegCosts
 
@@ -76,9 +77,19 @@ __all__ = [
     "PendingEntry",
     "PositionBook",
     "TakeProfitLeg",
+    "bar_from_state",
+    "bar_to_state",
     "financing_nights",
+    "managed_from_state",
+    "managed_to_state",
+    "pending_from_state",
+    "pending_to_state",
     "plan_legs",
+    "position_from_state",
+    "position_to_state",
     "snap_to_step",
+    "ts_from_state",
+    "ts_to_state",
 ]
 
 
@@ -1208,6 +1219,211 @@ class PositionBook:
 
     def _rate(self, from_ccy: str, when: pd.Timestamp) -> float:
         return float(self.fx.rate(from_ccy, self.config.account_ccy, when))
+
+
+    # ------------------------------------------------------- durable state
+
+    #: Bump when the exported shape changes; a snapshot of another version is
+    #: refused rather than half-read.
+    STATE_VERSION = 1
+
+    def export_state(self) -> dict[str, Any]:
+        """Everything a later decision of this book depends on, as plain JSON types.
+
+        Used to carry a forward paper book across a process restart so the
+        restored book makes exactly the decisions the uninterrupted one would.
+        Included: balance, realised P&L, cost totals, rejection counters, the
+        SEQUENCE COUNTER (it keys the fill simulator's counter-based RNG, so a
+        restored book that restarted it at zero would draw different slippage),
+        every open position with its ladder and trail state, every pending
+        entry and reversal close, and the cooldowns.
+
+        NOT included: the closed ``trades`` and ``exit_legs``. They are history,
+        not state: no rule reads them, and the forward runtime's ledger of
+        record is its append-only ``trades.jsonl``.
+        """
+        return {
+            "version": self.STATE_VERSION,
+            "balance": self.balance,
+            "realised": self.realised,
+            "costs": {f.name: getattr(self.costs, f.name) for f in fields(CostBreakdown)},
+            "rejections": dict(sorted(self.rejections.items())),
+            "seq": int(self.seq),
+            "open": [managed_to_state(op) for op in self.open],
+            "pending": [pending_to_state(p) for p in self.pending],
+            "pending_closes": [
+                {f.name: getattr(c, f.name) for f in fields(PendingClose)}
+                for c in self.pending_closes
+            ],
+            "cooldown_until": {k: int(v) for k, v in sorted(self.cooldown_until.items())},
+        }
+
+    def restore_state(self, state: Mapping[str, Any]) -> None:
+        """Load :meth:`export_state` output into a FRESH book. Refuses a used one."""
+        if int(state.get("version", -1)) != self.STATE_VERSION:
+            raise ValueError(
+                f"book state version {state.get('version')!r} is not {self.STATE_VERSION}"
+            )
+        if self.open or self.pending or self.pending_closes or self.seq or self.trades:
+            raise ValueError("restore_state needs a fresh book; this one has already traded")
+        self.balance = float(state["balance"])
+        self.realised = float(state["realised"])
+        self.costs = CostBreakdown(**{k: float(v) for k, v in state["costs"].items()})
+        self.rejections = {str(k): int(v) for k, v in state["rejections"].items()}
+        self.seq = int(state["seq"])
+        self.open = [managed_from_state(s) for s in state["open"]]
+        self.pending = [pending_from_state(s) for s in state["pending"]]
+        self.pending_closes = [
+            PendingClose(
+                seq=int(c["seq"]),
+                position_seq=int(c["position_seq"]),
+                instrument=str(c["instrument"]),
+                actionable_index=int(c["actionable_index"]),
+            )
+            for c in state["pending_closes"]
+        ]
+        self.cooldown_until = {str(k): int(v) for k, v in state["cooldown_until"].items()}
+
+
+# --------------------------------------------------------------------------
+# State encoding (JSON types only, exact round trip)
+# --------------------------------------------------------------------------
+
+
+def ts_to_state(value: pd.Timestamp | None) -> str | None:
+    return None if value is None else pd.Timestamp(value).isoformat()
+
+
+def ts_from_state(value: str | None) -> pd.Timestamp | None:
+    if value is None:
+        return None
+    ts = pd.Timestamp(value)
+    return ts.tz_convert("UTC") if ts.tzinfo is not None else ts
+
+
+def _ref_to_state(ref: Any) -> str | None:
+    if ref is None or isinstance(ref, str):
+        return ref
+    raise TypeError(
+        f"a position reference of type {type(ref).__name__} cannot be carried across "
+        "a restart; only a broker reference string (or none) can"
+    )
+
+
+def position_to_state(pos: Position) -> dict[str, Any]:
+    out: dict[str, Any] = {}
+    for f in fields(Position):
+        value = getattr(pos, f.name)
+        if f.name == "direction":
+            value = value.value
+        elif f.name == "entry_time":
+            value = ts_to_state(value)
+        elif f.name == "take_profit_targets":
+            value = [float(v) for v in value]
+        out[f.name] = value
+    return out
+
+
+def position_from_state(state: Mapping[str, Any]) -> Position:
+    known = {f.name for f in fields(Position)}
+    unknown = set(state) - known
+    if unknown:
+        raise ValueError(f"position state has unknown field(s) {sorted(unknown)}")
+    body = dict(state)
+    body["direction"] = Direction(body["direction"])
+    body["entry_time"] = ts_from_state(body["entry_time"])
+    body["take_profit_targets"] = [float(v) for v in body.get("take_profit_targets", [])]
+    return Position(**body)
+
+
+#: ManagedPosition fields that need more than a JSON scalar. Every other field
+#: is a float, int, bool, str or None and is carried verbatim; a new field of
+#: any other type fails the round-trip test rather than vanishing.
+_MANAGED_SPECIAL = frozenset(
+    {"position", "instrument", "legs", "last_financing_time", "entry_costs_account", "ref"}
+)
+
+
+def managed_to_state(op: ManagedPosition) -> dict[str, Any]:
+    out: dict[str, Any] = {}
+    for f in fields(ManagedPosition):
+        value = getattr(op, f.name)
+        if f.name == "position":
+            value = position_to_state(value)
+        elif f.name == "instrument":
+            value = value.symbol
+        elif f.name == "legs":
+            value = [[float(leg.price), float(leg.size)] for leg in value]
+        elif f.name == "last_financing_time":
+            value = ts_to_state(value)
+        elif f.name == "entry_costs_account":
+            value = {str(k): float(v) for k, v in value.items()}
+        elif f.name == "ref":
+            value = _ref_to_state(value)
+        elif not (value is None or isinstance(value, bool | int | float | str)):
+            raise TypeError(f"ManagedPosition.{f.name} ({type(value).__name__}) is not encodable")
+        out[f.name] = value
+    return out
+
+
+def managed_from_state(state: Mapping[str, Any]) -> ManagedPosition:
+    known = {f.name for f in fields(ManagedPosition)}
+    unknown = set(state) - known
+    if unknown:
+        raise ValueError(f"managed-position state has unknown field(s) {sorted(unknown)}")
+    body = dict(state)
+    body["position"] = position_from_state(body["position"])
+    body["instrument"] = get_instrument(str(body["instrument"]))
+    body["legs"] = [TakeProfitLeg(float(p), float(s)) for p, s in body.get("legs", [])]
+    body["last_financing_time"] = ts_from_state(body.get("last_financing_time"))
+    body["entry_costs_account"] = {
+        str(k): float(v) for k, v in body["entry_costs_account"].items()
+    }
+    if body.get("extreme") is None:
+        # json carries NaN as NaN; tolerate a null from another encoder.
+        body["extreme"] = float("nan")
+    return ManagedPosition(**body)
+
+
+def pending_to_state(entry: PendingEntry) -> dict[str, Any]:
+    return {
+        "seq": int(entry.seq),
+        "instrument": entry.instrument.symbol,
+        "direction": entry.direction.value,
+        "size": float(entry.size),
+        "stop_price": float(entry.stop_price),
+        "take_profit_prices": [float(p) for p in entry.take_profit_prices],
+        "take_profit_allocations": [float(a) for a in entry.take_profit_allocations],
+        "strategy_id": entry.strategy_id,
+        "actionable_index": int(entry.actionable_index),
+        "created_index": int(entry.created_index),
+        "ref": _ref_to_state(entry.ref),
+    }
+
+
+def pending_from_state(state: Mapping[str, Any]) -> PendingEntry:
+    return PendingEntry(
+        seq=int(state["seq"]),
+        instrument=get_instrument(str(state["instrument"])),
+        direction=Direction(state["direction"]),
+        size=float(state["size"]),
+        stop_price=float(state["stop_price"]),
+        take_profit_prices=tuple(float(p) for p in state["take_profit_prices"]),
+        take_profit_allocations=tuple(float(a) for a in state["take_profit_allocations"]),
+        strategy_id=str(state["strategy_id"]),
+        actionable_index=int(state["actionable_index"]),
+        created_index=int(state["created_index"]),
+        ref=state.get("ref"),
+    )
+
+
+def bar_to_state(bar: Bar) -> list[Any]:
+    return [ts_to_state(bar.timestamp), bar.open, bar.high, bar.low, bar.close]
+
+
+def bar_from_state(state: Sequence[Any]) -> Bar:
+    ts, o, h, low, c = state
+    return Bar(ts_from_state(ts), float(o), float(h), float(low), float(c))
 
 
 # --------------------------------------------------------------------------

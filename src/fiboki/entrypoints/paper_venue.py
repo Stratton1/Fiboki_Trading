@@ -36,9 +36,12 @@ What this venue models, and what it does not
   records as ``already_flat``.
 * **No partial fills, no rejections, no latency.** The friction a venue adds
   is :class:`~fiboki.broker.simulated_venue.SimulatedVenue`'s job in tests.
-* **In memory.** A process restart loses the venue and its positions, exactly
-  as it loses the book; the forward journal records the positions that were
-  open at the last bar so the loss is visible (see ``entrypoints/paper_forward``).
+* **Carried across a restart by snapshot, not by itself.** The venue lives in
+  memory; :meth:`export_state` / :meth:`restore_state` let the forward runtime
+  write it into its crash-safe state snapshot after every cycle and load it
+  back on start, together with the book and the manager, so a restart neither
+  forgets a position nor reuses a reference (``entrypoints/paper_forward``).
+  When no matching snapshot exists the positions are recorded as abandoned.
 
 Sizing: none. ``order.size`` is dealt unchanged; this module never calls a
 sizer (``tests/unit/test_paper_forward_compose.py`` asserts it over the AST).
@@ -47,9 +50,16 @@ from __future__ import annotations
 
 from collections.abc import Callable, Mapping
 from dataclasses import replace
+from typing import Any
 
 import pandas as pd
 
+from fiboki.backtest.position import (
+    position_from_state,
+    position_to_state,
+    ts_from_state,
+    ts_to_state,
+)
 from fiboki.broker.base import (
     BrokerAdapter,
     BrokerHealth,
@@ -126,6 +136,41 @@ class ForwardPaperVenue(BrokerAdapter):
     def _next_ref(self) -> str:
         self._seq += 1
         return f"{self.ref_prefix}-{self._seq:08d}"
+
+    # -- durable state -----------------------------------------------------
+
+    def export_state(self) -> dict[str, Any]:
+        """What this venue holds, as JSON types: positions, references, marks."""
+        return {
+            "ref_prefix": self.ref_prefix,
+            "seq": int(self._seq),
+            "positions": {
+                ref: position_to_state(p) for ref, p in sorted(self._positions.items())
+            },
+            "seen": dict(sorted(self._seen.items())),
+            "marks": {
+                sym: [ts_to_state(at), float(px)] for sym, (at, px) in sorted(self.marks.items())
+            },
+        }
+
+    def restore_state(self, state: Mapping[str, Any]) -> None:
+        """Load :meth:`export_state` output. The reference sequence CONTINUES.
+
+        The restored prefix and counter are the ones the venue had, so the
+        next reference is the one the uninterrupted venue would have issued
+        and none is ever issued twice.
+        """
+        if self._positions or self._seq or self._seen:
+            raise ValueError("restore_state needs a fresh venue; this one has dealt")
+        self.ref_prefix = str(state["ref_prefix"])
+        self._seq = int(state["seq"])
+        self._positions = {
+            ref: position_from_state(p) for ref, p in state["positions"].items()
+        }
+        self._seen = {str(k): str(v) for k, v in state["seen"].items()}
+        self.marks = {
+            sym: (ts_from_state(v[0]), float(v[1])) for sym, v in state["marks"].items()
+        }
 
     # -- BrokerAdapter -----------------------------------------------------
 

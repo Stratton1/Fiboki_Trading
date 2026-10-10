@@ -344,3 +344,60 @@ def test_one_instrument_failing_does_not_blind_the_others() -> None:
     assert "EURUSD" in feed.reports[-1].errors
     alert = next(a for a in channel.sent if a.event is AlertEvent.DATA_QUALITY_DEFECT)
     assert "unfetchable" in alert.message
+
+
+# ------------------------------------------------------- restore and catch-up
+
+
+def test_a_restored_feed_never_re_delivers_and_rebuilds_the_same_window() -> None:
+    """After a restart the bar already traded on is not offered again, and the
+    history reaches back to the first bar of the window the writer held, so an
+    indicator with memory (an EMA) is computed over the same bars."""
+    clock = FakeClock(WED_10 + pd.Timedelta(seconds=5))
+    starts = _hours(WED_10 - H1, 80)
+    first, _ = _feed({CANDLES: [_payload(starts[-60:])]}, clock, warmup_bars=60,
+                     history_bars=60)
+    first.poll()
+    state = first.export_state()
+    assert state["floor"]["EURUSD"] == starts[-60].isoformat()
+
+    restored, transport = _feed({CANDLES: [_payload(starts)]}, clock, warmup_bars=50,
+                                history_bars=60)
+    restored.restore_state(state)
+    batch = restored.poll()
+    assert batch.frames == {}, "09:00 was delivered (and traded on) before the restart"
+    asked = parse_qs(transport.calls[0]["query"])
+    assert int(asked["count"][0]) >= 60, "it asked far enough back to reach its floor"
+    pd.testing.assert_frame_equal(restored.history("EURUSD"), first.history("EURUSD"))
+
+
+def test_bars_missed_while_down_keep_their_own_windows_until_delivered() -> None:
+    clock = FakeClock(WED_10 + pd.Timedelta(seconds=5))
+    starts = _hours(WED_10 + 3 * H1, 60)  # through the 13:00 bar
+    first, _ = _feed({CANDLES: [_payload(starts[:-4])]}, clock, warmup_bars=50,
+                     history_bars=50)
+    first.poll()
+    window_at_09 = first.history("EURUSD")
+    clock.now = WED_10 + 4 * H1 + pd.Timedelta(seconds=5)
+    feed, _ = _feed({CANDLES: [_payload(starts)]}, clock, warmup_bars=50, history_bars=50)
+    feed.restore_state(first.export_state())
+    batch = feed.poll()
+    assert [b.timestamp for b in batch.frames.values()] == [starts[-1]], "newest only"
+    missed = feed.bars_between("EURUSD", starts[-5], starts[-1])
+    assert list(missed.index) == starts[-4:-1], "10:00, 11:00, 12:00 are held"
+    for ts in missed.index:
+        window = feed.history_through("EURUSD", ts)
+        assert len(window) == 50 and window.index[-1] == ts
+    # 10:00's window is 09:00's slid by one bar, exactly as it would have been.
+    assert feed.history_through("EURUSD", starts[-4]).index[0] == window_at_09.index[1]
+    assert len(feed.history("EURUSD")) == 50
+
+
+def test_a_floor_out_of_reach_is_reported_not_hidden() -> None:
+    clock = FakeClock(WED_10 + pd.Timedelta(seconds=5))
+    starts = _hours(WED_10 - H1, 30)
+    feed, _ = _feed({CANDLES: [_payload(starts)]}, clock, warmup_bars=20, history_bars=40)
+    floor = starts[0] - 10 * H1  # older than anything the venue returns
+    feed.restore_state({"delivered": {}, "floor": {"EURUSD": floor.isoformat()}})
+    feed.poll()
+    assert feed.floor_shortfall["EURUSD"] == (floor, starts[0])
