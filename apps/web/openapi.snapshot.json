@@ -1720,6 +1720,11 @@
           "retail_leverage": {
             "$ref": "#/components/schemas/Figure"
           },
+          "shortable": {
+            "default": true,
+            "title": "Shortable",
+            "type": "boolean"
+          },
           "size_step": {
             "$ref": "#/components/schemas/Figure"
           },
@@ -1731,8 +1736,23 @@
             "title": "Trading Hours",
             "type": "string"
           },
+          "typical_spread_bps": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Figure"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "typical_spread_pips": {
             "$ref": "#/components/schemas/Figure"
+          },
+          "venue": {
+            "default": "oanda",
+            "title": "Venue",
+            "type": "string"
           }
         },
         "required": [

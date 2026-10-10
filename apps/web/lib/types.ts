@@ -452,6 +452,12 @@ export interface InstrumentRow {
   typical_spread_pips: Figure;
   retail_leverage: Figure;
   annual_financing_bps: Figure;
+  /** "oanda" (practice CFDs) or "coinbase" (UK spot crypto). */
+  venue: string;
+  /** False for spot crypto: the risk gateway refuses a short entry. */
+  shortable: boolean;
+  /** Spot crypto only: typical spread in bps of mid (what the cost model reads). */
+  typical_spread_bps?: Figure | null;
 }
 
 export interface RegimeRow {
