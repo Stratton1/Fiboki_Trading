@@ -85,6 +85,7 @@ from fiboki.risk.accounting import realised_portfolio_vol
 from fiboki.sim.profiles import ExecutionProfile, get_profile
 from fiboki.strategy.compiler import CompiledStrategy, compile_strategy
 from fiboki.strategy.dsl import StrategyDocument
+from fiboki.strategy.kernel import SignalKernel, kernel_or_none
 from fiboki.validation.evaluation import (
     Candidate,
     DateWindow,
@@ -209,6 +210,13 @@ class EvaluatorConfig:
 # --------------------------------------------------------------------------
 
 
+#: Replay signals through :class:`~fiboki.strategy.kernel.SignalKernel`. It is
+#: identical to ``generate_signal`` by test, so it is NOT part of the engine
+#: fingerprint or any cache key; the switch exists so a parity check (and an
+#: operator who doubts a result) can run the reference path. Not a tuning knob.
+SIGNAL_KERNEL_ENABLED = True
+
+
 class WindowedStrategyRunner:
     """Adapts a compiled document to the engine, gated to one window.
 
@@ -230,6 +238,7 @@ class WindowedStrategyRunner:
         frame: pd.DataFrame,
         timeframe: Timeframe,
         window: DateWindow,
+        use_kernel: bool | None = None,
     ) -> None:
         self.compiled = compiled
         self.symbol = symbol
@@ -239,6 +248,16 @@ class WindowedStrategyRunner:
         self._index = {ts: i for i, ts in enumerate(self.prepared.index)}
         self.signals_emitted = 0
         self.bars_offered = 0
+        # The array kernel replays ``generate_signal`` on this frame signal for
+        # signal (``strategy/kernel.py``; parity in
+        # ``tests/unit/test_signal_kernel_parity.py``). ``None`` -- the
+        # reference path -- when the module switch is off or the frame does not
+        # qualify.
+        self.kernel: SignalKernel | None = (
+            kernel_or_none(compiled, self.prepared)
+            if (SIGNAL_KERNEL_ENABLED if use_kernel is None else use_kernel)
+            else None
+        )
 
     def on_bar(self, ctx: BarContext) -> Sequence[Signal]:
         ts = ctx.timestamp
@@ -248,9 +267,12 @@ class WindowedStrategyRunner:
         if idx is None:  # pragma: no cover - single-instrument frames always hit
             return ()
         self.bars_offered += 1
-        signal = self.compiled.generate_signal(
-            self.prepared, idx, instrument=self.symbol, timeframe=self.timeframe
-        )
+        if self.kernel is not None:
+            signal = self.kernel.signal_at(idx, instrument=self.symbol, timeframe=self.timeframe)
+        else:
+            signal = self.compiled.generate_signal(
+                self.prepared, idx, instrument=self.symbol, timeframe=self.timeframe
+            )
         if signal is None:
             return ()
         self.signals_emitted += 1
@@ -656,21 +678,8 @@ class EngineEvaluator:
         bound = self.bind(params)
         compiled = self.compiled_for(params)
         symbol = self.config.instrument.upper()
-
-        index = self.frame.index
-        lo = int(index.searchsorted(window.start, side="left"))
-        hi = int(index.searchsorted(window.end, side="left"))  # half-open [start, end)
+        lo, start, hi, fed = self._fed(compiled, window)
         n_window = hi - lo
-        if n_window < self.config.min_window_bars:
-            raise ValueError(
-                f"window {window} holds {n_window} bars of {self.config.instrument} "
-                f"{self.config.timeframe.value}, below the "
-                f"{self.config.min_window_bars} this evaluator requires. A number "
-                "computed from that is not about the market."
-            )
-        prologue = compiled.warmup_period + int(self.config.warmup_margin_bars)
-        start = max(0, lo - prologue)
-        fed = self.frame.iloc[start:hi]
         if lo - start < compiled.warmup_period:
             available = lo - start
             # Not fatal, but it means the early part of the window ran cold, and
@@ -763,6 +772,58 @@ class EngineEvaluator:
             notes=warmup_note,
             meta=meta,
         )
+
+    def _fed(
+        self, compiled: CompiledStrategy, window: DateWindow
+    ) -> tuple[int, int, int, pd.DataFrame]:
+        """``(lo, start, hi, frame[start:hi])``: the window plus its warmup prologue."""
+        index = self.frame.index
+        lo = int(index.searchsorted(window.start, side="left"))
+        hi = int(index.searchsorted(window.end, side="left"))  # half-open [start, end)
+        n_window = hi - lo
+        if n_window < self.config.min_window_bars:
+            raise ValueError(
+                f"window {window} holds {n_window} bars of {self.config.instrument} "
+                f"{self.config.timeframe.value}, below the "
+                f"{self.config.min_window_bars} this evaluator requires. A number "
+                "computed from that is not about the market."
+            )
+        prologue = compiled.warmup_period + int(self.config.warmup_margin_bars)
+        start = max(0, lo - prologue)
+        return lo, start, hi, self.frame.iloc[start:hi]
+
+    def signal_count(self, params: Mapping[str, Any], window: DateWindow) -> int:
+        """Signals the strategy would emit over ``window``, WITHOUT running the engine.
+
+        The same prologue-plus-window frame and the same runner as an evaluation,
+        offered every window bar. An evaluation's ``signals_emitted`` can only be
+        smaller (the engine stops offering bars after a bankruptcy), and every
+        trade starts from one emitted signal (a scale-out adds at most one trade
+        row per take-profit leg), so ``signal_count * (1 + legs)`` bounds the
+        evaluation's trade count from above. K6's screen uses that bound to skip
+        the engine for a document that cannot reach rung 0's trade floor;
+        ``tests/unit/test_campaign_k6.py`` pins the bound against real runs.
+        """
+        compiled = self.compiled_for(params)
+        _, _, _, fed = self._fed(compiled, window)
+        runner = WindowedStrategyRunner(
+            compiled, self.config.instrument.upper(), fed, self.config.timeframe, window
+        )
+        kernel = runner.kernel
+        count = 0
+        for idx, ts in enumerate(runner.prepared.index):
+            if not window.contains(ts):
+                continue
+            if kernel is not None:
+                signal = kernel.signal_at(idx, instrument=runner.symbol,
+                                          timeframe=runner.timeframe)
+            else:
+                signal = compiled.generate_signal(runner.prepared, idx,
+                                                  instrument=runner.symbol,
+                                                  timeframe=runner.timeframe)
+            if signal is not None:
+                count += 1
+        return count
 
     @staticmethod
     def _exit_series(

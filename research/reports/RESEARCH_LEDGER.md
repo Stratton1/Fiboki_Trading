@@ -649,3 +649,40 @@ rather than the first taken. The filing is unchanged; the amendment
 admissible (every one refuses a run the filing never allowed), reads the replicate rule (the
 800-replicate file decides when it exists), and corrects the memory claim to an estimate with a
 runbook check. No hypothesis, threshold, candidate, trial count, grid, seed or replicate count moved.
+
+## K6 drafted, `campaign_k6_generated_100k` (DRAFT 2026-10-10, not filed; no compute on evidence data)
+
+**Why it exists.** The operator asked for "100,000 more" strategies. Tested one by one that would be
+100,000 unrecorded looks; K6 makes it one pre-registered campaign in which every document counts.
+The filing is `research/preregistration/campaign_k6.json` (plain-words page `campaign_k6.md`,
+runbook `research/reports/campaign_k6/README.md`). **It is filed only after E-4's P0 has been run
+and read**, only if P0 did not falsify pooling on a timeframe K6 would run, and on the operator's
+approval; until then `scripts/campaign_k6.py` refuses evidence runs.
+
+**What is fixed.** 100,000 documents from a seven-axis grammar (`research/generate_families_k6.py`,
+families-v2-k6, seed 20261011; 962,280 cells, 888,624 after exclusions, 100,010 visited, 10 dropped
+because their rules equal a seed's or a K5 document's), each distinct on its structure, rules and
+body hashes, cost-aware (stops at least 2 ATR, targets at least 2R or 3 ATR, time exits at least 20
+bars, no H1), at most 8 grid points. Each document x admitted timeframe is one pooled candidate
+over a named universe (`fx_pooled_k5` = E-4's sixteen series; `crypto_majors_v1` declared and
+refused until amended), screened by rung 0 alone (S0a: a pooled signal-count bound that can only
+remove documents rung 0 would reject; S0b: rung 0 with its gate block), then the fail-fast ladder,
+rungs 0 to 5, holdout deferred, for at most 5,000 survivors per timeframe in generation order.
+Gates `v2.1.0-calibrated`, unchanged, with E-4's `N_eff`. K6 reads no holdout.
+
+**Trial count, declared now: 495,290** (E-4's 21,968 + 2 universes x 166,661 screen trials + 2 x 2
+timeframes x 5,000 x 7). Never lowered. Every later campaign on these bars declares at least that.
+
+**What that N buys.** E[max of N null z] rises from 4.05 (N = 21,968) to 4.73 (N = 495,290), about
+17%. Certifiable per-trade Sharpe at DSR 0.95 is roughly (E[max Z] + 1.645)/sqrt(T): 0.20 at
+T = 1,000 effective trades, 0.14 at 2,000, 0.10 at 4,000; a 0.08 edge needs about 6,300 effective
+trades. With E-4's expected H4 `N_eff` of 1,300 to 3,500, K6 can certify only edges of about 0.11 to
+0.18 per trade or more on H4. Expected outcome: zero survivors; such a null says nothing about
+0.03 to 0.08 edges.
+
+**Engine, same day (commit 40d471a on wave/k6).** Signal kernel (arrays plus a superset pre-filter)
+and a NumPy realised-vol path, both proven identical to the reference (golden tests unchanged;
+signal-for-signal parity on every bar of 106 documents x 2 bindings x 3 frames and 40 K6 cells;
+whole-run ledger parity with the kernel on and off; `==` parity of realised vol on 6,000 curves).
+Synthetic H4 benchmark: 5.67 to 1.15 s per document-series at 6,000 bars and 15.76 to 2.49 s at
+15,600 (6.3x), identical ledgers on all 16 before/after pairs. **No stored result is invalidated.**

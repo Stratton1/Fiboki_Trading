@@ -364,6 +364,75 @@ class EvalContext:
         value = self.frame[column].iat[i]
         return math.nan if value is None else float(value)
 
+    def previous(self) -> EvalContext | None:
+        """The same context one bar earlier, or ``None`` before the first bar."""
+        prev = self.frame.iloc[:-1]
+        if len(prev) == 0:
+            return None
+        return EvalContext(prev, self.bar_time)
+
+    def has_column(self, column: str) -> bool:
+        return column in self.frame.columns
+
+    def raw_last(self, column: str) -> Any:
+        """The unconverted value of ``column`` on the evaluation bar."""
+        return self.frame[column].iat[-1]
+
+
+@dataclass(frozen=True, slots=True)
+class ArrayEvalContext:
+    """:class:`EvalContext` over column ARRAYS and a position, for the engine's hot loop.
+
+    The frame-backed context pays a pandas slice and a ``frame[column].iat`` per
+    operand per bar (the 2026-09-28 audit measured 274 us per bar, most of it
+    there). This one holds the prepared frame's columns as NumPy arrays, built
+    once, and the evaluation bar's POSITION. Its :meth:`read` is the frame
+    context's line for line: same ``nan`` before the first bar, same
+    ``SpecError`` for a missing column, same ``float(value)`` of the same array
+    element, so every rule evaluates to the same bool on the same bar.
+
+    Causality is kept the same way the frame context keeps it: the only access
+    path is :meth:`read` (and :meth:`raw_last`), which index at ``pos - offset``
+    with ``offset >= 0`` by schema, so no row after ``pos`` is reachable.
+    ``tests/unit/test_signal_kernel_parity.py`` proves the two contexts agree,
+    signal for signal, on seeded documents and frames.
+    """
+
+    columns: Mapping[str, Any]
+    pos: int
+    bar_time: pd.Timestamp
+
+    def read(self, operand: Any) -> float:
+        kind = operand.kind
+        if kind == "constant":
+            return _number(operand.value, "ConstantOperand.value")
+        i = self.pos - operand.offset
+        if i < 0:
+            return math.nan
+        column = operand.field if kind == "price" else operand.column
+        array = self.columns.get(column)
+        if array is None:
+            raise SpecError(
+                f"column {column!r} missing from the prepared frame; the compiler "
+                "should have computed it"
+            )
+        value = array[i]
+        return math.nan if value is None else float(value)
+
+    def previous(self) -> ArrayEvalContext | None:
+        if self.pos - 1 < 0:
+            return None
+        return ArrayEvalContext(self.columns, self.pos - 1, self.bar_time)
+
+    def has_column(self, column: str) -> bool:
+        return column in self.columns
+
+    def raw_last(self, column: str) -> Any:
+        return self.columns[column][self.pos]
+
+
+#: Either evaluation context; rules read through ``read`` and ``previous`` only.
+Context: TypeAlias = "EvalContext | ArrayEvalContext"
 
 def _finite(*values: float) -> bool:
     return all(isinstance(v, float) and math.isfinite(v) for v in values)
@@ -381,7 +450,7 @@ class _BaseRule(BaseModel):
     def max_lookback(self) -> int:  # pragma: no cover
         raise NotImplementedError
 
-    def evaluate(self, ctx: EvalContext) -> bool:  # pragma: no cover
+    def evaluate(self, ctx: Context) -> bool:  # pragma: no cover
         raise NotImplementedError
 
 
@@ -407,7 +476,7 @@ class ThresholdRule(_BaseRule):
     def max_lookback(self) -> int:
         return _offset_of(self.operand)
 
-    def evaluate(self, ctx: EvalContext) -> bool:
+    def evaluate(self, ctx: Context) -> bool:
         threshold = _number(self.value, "ThresholdRule.value")
         a = ctx.read(self.operand)
         return bool(_COMPARATORS[self.comparator](a, threshold)) if _finite(a) else False
@@ -427,7 +496,7 @@ class IndicatorVsIndicatorRule(_BaseRule):
     def max_lookback(self) -> int:
         return _offset_of(self.left, self.right)
 
-    def evaluate(self, ctx: EvalContext) -> bool:
+    def evaluate(self, ctx: Context) -> bool:
         a, b = ctx.read(self.left), ctx.read(self.right)
         return bool(_COMPARATORS[self.comparator](a, b)) if _finite(a, b) else False
 
@@ -447,7 +516,7 @@ class IndicatorVsPriceRule(_BaseRule):
     def max_lookback(self) -> int:
         return _offset_of(self.indicator, self.price)
 
-    def evaluate(self, ctx: EvalContext) -> bool:
+    def evaluate(self, ctx: Context) -> bool:
         a, b = ctx.read(self.indicator), ctx.read(self.price)
         return bool(_COMPARATORS[self.comparator](a, b)) if _finite(a, b) else False
 
@@ -466,10 +535,10 @@ class CrossoverRule(_BaseRule):
     def max_lookback(self) -> int:
         return _offset_of(self.fast, self.slow) + 1
 
-    def evaluate(self, ctx: EvalContext) -> bool:
+    def evaluate(self, ctx: Context) -> bool:
         now_f, now_s = ctx.read(self.fast), ctx.read(self.slow)
-        prev_ctx = EvalContext(ctx.frame.iloc[:-1], ctx.bar_time)
-        if len(prev_ctx.frame) == 0:
+        prev_ctx = ctx.previous()
+        if prev_ctx is None:
             return False
         prev_f, prev_s = prev_ctx.read(self.fast), prev_ctx.read(self.slow)
         if not _finite(now_f, now_s, prev_f, prev_s):
@@ -509,7 +578,7 @@ class RegimeGateRule(_BaseRule):
     def max_lookback(self) -> int:
         return _offset_of(self.metric)
 
-    def evaluate(self, ctx: EvalContext) -> bool:
+    def evaluate(self, ctx: Context) -> bool:
         lo = None if self.min_value is None else _number(self.min_value, "regime_gate.min_value")
         hi = None if self.max_value is None else _number(self.max_value, "regime_gate.max_value")
         v = ctx.read(self.metric)
@@ -543,7 +612,7 @@ class SessionWindowRule(_BaseRule):
     def max_lookback(self) -> int:
         return 0
 
-    def evaluate(self, ctx: EvalContext) -> bool:
+    def evaluate(self, ctx: Context) -> bool:
         ts = ctx.bar_time
         if ts.tzinfo is None:
             raise SpecError("session_window requires tz-aware UTC bar times")
@@ -573,7 +642,7 @@ class AllOfRule(_BaseRule):
     def max_lookback(self) -> int:
         return max(r.max_lookback() for r in self.rules)
 
-    def evaluate(self, ctx: EvalContext) -> bool:
+    def evaluate(self, ctx: Context) -> bool:
         return all(r.evaluate(ctx) for r in self.rules)
 
 
@@ -594,7 +663,7 @@ class AnyOfRule(_BaseRule):
     def max_lookback(self) -> int:
         return max(r.max_lookback() for r in self.rules)
 
-    def evaluate(self, ctx: EvalContext) -> bool:
+    def evaluate(self, ctx: Context) -> bool:
         return any(r.evaluate(ctx) for r in self.rules)
 
 
@@ -608,7 +677,7 @@ class NotRule(_BaseRule):
     def max_lookback(self) -> int:
         return self.rule.max_lookback()
 
-    def evaluate(self, ctx: EvalContext) -> bool:
+    def evaluate(self, ctx: Context) -> bool:
         return not self.rule.evaluate(ctx)
 
 

@@ -909,6 +909,18 @@ class BacktestEngine:
             assert_profile_covers(config.profile, self.instruments[sym])
 
         self.timeline: pd.DatetimeIndex = _union_timeline(self.frames, self.symbols)
+        # The same Timestamps, boxed once. ``DatetimeIndex.__getitem__`` boxes a
+        # new Timestamp on every call, and the bar loop asked for one per bar
+        # (plus one per instrument in ``_slice``); a list lookup returns an
+        # equal Timestamp for a fraction of the cost. Values are identical, so
+        # nothing downstream can tell the difference.
+        self._timeline_ts: list[pd.Timestamp] = list(self.timeline)
+        self._utc_timeline = pd.DatetimeIndex(
+            self.timeline.asi8.astype("datetime64[ns]"), tz="UTC"
+        )
+        self._frame_ts: dict[str, list[pd.Timestamp]] = {
+            sym: list(self.frames[sym].index) for sym in self.symbols
+        }
         self._positions: dict[str, np.ndarray] = {
             sym: self.frames[sym].index.searchsorted(self.timeline, side="right") - 1
             for sym in self.symbols
@@ -1032,8 +1044,9 @@ class BacktestEngine:
 
         prev_ts: pd.Timestamp | None = None
 
+        timeline_ts = self._timeline_ts
         for i in range(n):
-            ts = self.timeline[i]
+            ts = timeline_ts[i]
             view = self._slice(i, ts, prev_ts)
 
             # -- 1/2/3. financing, reversals, entries at the open, exits.
@@ -1296,11 +1309,12 @@ class BacktestEngine:
         ts = view.timestamp
 
         def equity_curve() -> pd.Series:
-            # One row per bar, as the paper venue's ``equity_curve`` has.
-            return pd.Series(
-                eq_equity[:written].copy(),
-                index=pd.DatetimeIndex(eq_ts[:written], tz="UTC"),
-            )
+            # One row per bar, as the paper venue's ``equity_curve`` has. The
+            # index is a slice of the run's UTC timeline, built once: row k of
+            # ``eq_ts`` IS timeline[k] (one row is written per bar, in order),
+            # so the values are the ones ``pd.DatetimeIndex(eq_ts[:written],
+            # tz="UTC")`` would build, without rebuilding it on every decision.
+            return pd.Series(eq_equity[:written].copy(), index=self._utc_timeline[:written])
 
         return ConstructionRequest(
             as_of=ts,
@@ -1341,7 +1355,7 @@ class BacktestEngine:
             bar = Bar(ts, float(o), float(h), float(low), float(c))
             carried[sym] = bar
             last_closes[sym] = float(c)
-            previous_times[sym] = self.frames[sym].index[j - 1] if j > 0 else None
+            previous_times[sym] = self._frame_ts[sym][j - 1] if j > 0 else None
             intervals[sym] = self._intervals[sym]
             if self._exact[sym][i]:
                 bars[sym] = bar
