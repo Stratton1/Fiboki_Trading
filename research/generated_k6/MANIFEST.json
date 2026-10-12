@@ -1,0 +1,199 @@
+{
+  "axes": {
+    "confirmation": [
+      "none",
+      "adx_rising",
+      "rsi_not_extreme",
+      "macd_hist_rising",
+      "close_vs_ema20",
+      "atr_expanding",
+      "bb_width_rising",
+      "roc_side",
+      "plus_di_side"
+    ],
+    "direction": [
+      "both",
+      "long",
+      "short"
+    ],
+    "entry": [
+      "ema_recross",
+      "sma_recross",
+      "kc_pullback",
+      "donchian_close_break",
+      "donchian_fresh_cross",
+      "kc_break",
+      "bb_break",
+      "bb_reentry",
+      "rsi_exit_extreme",
+      "cci_reversal",
+      "stoch_extreme_cross",
+      "macd_signal_cross",
+      "macd_zero_cross",
+      "rsi_50_cross",
+      "cci_thrust",
+      "roc_zero_cross",
+      "tk_cross",
+      "chikou_flip",
+      "kijun_cross",
+      "ma_cross",
+      "psar_flip",
+      "di_cross"
+    ],
+    "exit": [
+      "time_exit",
+      "tp_r",
+      "trail",
+      "tp_trail",
+      "atr_target",
+      "swing_tp"
+    ],
+    "filter": [
+      "none",
+      "london_ny",
+      "midweek"
+    ],
+    "regime": [
+      "none",
+      "adx_floor",
+      "adx_ceiling",
+      "rvol_band",
+      "compression",
+      "atr_expansion"
+    ],
+    "state": [
+      "none",
+      "ema_side",
+      "sma_side",
+      "wma_side",
+      "ma_stack",
+      "kumo_side",
+      "macd_hist_side",
+      "macd_line_side",
+      "rsi_side",
+      "roc_side",
+      "donchian_mid_side",
+      "psar_side",
+      "di_side",
+      "stoch_side",
+      "cci_side"
+    ]
+  },
+  "campaign": "K6",
+  "cells_file": "cells.csv.gz",
+  "cells_sha256": "bfcd9d42d357b2e3754cae942115616e4ebfbf636ea3786d736b99c96a461447",
+  "cells_visited": 100010,
+  "checked": true,
+  "declared_grid_points_first_2000": {
+    "2": 276,
+    "4": 1295,
+    "8": 429
+  },
+  "document_timeframe_cells": 166661,
+  "dropped": {
+    "rules of a seed or K5 document": 10
+  },
+  "generator": "research/generate_families_k6.py",
+  "generator_sha256": "8a2acf4af88842dfadde0f537f67a5e2e0ebf42b609912e51187c342483e7c83",
+  "generator_version": "families-v2-k6",
+  "grammar_excluded": {
+    "confirmation restates state": 6804,
+    "entry implies state": 14580,
+    "swing stop needs a one-sided document": 52272
+  },
+  "grammar_size": 962280,
+  "grammar_valid": 888624,
+  "hash_chain_sha256": "1dcd1cb74d02e15984cbea15e293cfb6981396263801cb7ed389c64e1c9bec7c",
+  "k5_generator_sha256": "7180a8ec5ec81be115d9da4e58b44feecbd3a377558d62b2071aaf4fb6b55919",
+  "per_axis": {
+    "confirmation": {
+      "adx_rising": 11132,
+      "atr_expanding": 11287,
+      "bb_width_rising": 11211,
+      "close_vs_ema20": 11073,
+      "macd_hist_rising": 11367,
+      "none": 11218,
+      "plus_di_side": 10397,
+      "roc_side": 11171,
+      "rsi_not_extreme": 11144
+    },
+    "direction": {
+      "both": 29511,
+      "long": 35127,
+      "short": 35362
+    },
+    "entry": {
+      "bb_break": 4695,
+      "bb_reentry": 4678,
+      "cci_reversal": 4588,
+      "cci_thrust": 4660,
+      "chikou_flip": 4705,
+      "di_cross": 4357,
+      "donchian_close_break": 4540,
+      "donchian_fresh_cross": 4533,
+      "ema_recross": 4669,
+      "kc_break": 4624,
+      "kc_pullback": 4593,
+      "kijun_cross": 4630,
+      "ma_cross": 4534,
+      "macd_signal_cross": 4687,
+      "macd_zero_cross": 4270,
+      "psar_flip": 4194,
+      "roc_zero_cross": 4300,
+      "rsi_50_cross": 4288,
+      "rsi_exit_extreme": 4637,
+      "sma_recross": 4574,
+      "stoch_extreme_cross": 4673,
+      "tk_cross": 4571
+    },
+    "exit": {
+      "atr_target": 17854,
+      "swing_tp": 11642,
+      "time_exit": 17872,
+      "tp_r": 17701,
+      "tp_trail": 17473,
+      "trail": 17458
+    },
+    "filter": {
+      "london_ny": 33339,
+      "midweek": 33235,
+      "none": 33426
+    },
+    "regime": {
+      "adx_ceiling": 16557,
+      "adx_floor": 16483,
+      "atr_expansion": 16641,
+      "compression": 16712,
+      "none": 16656,
+      "rvol_band": 16951
+    },
+    "state": {
+      "cci_side": 6704,
+      "di_side": 5826,
+      "donchian_mid_side": 6907,
+      "ema_side": 6643,
+      "kumo_side": 6648,
+      "ma_stack": 6828,
+      "macd_hist_side": 6441,
+      "macd_line_side": 6794,
+      "none": 6903,
+      "psar_side": 6567,
+      "roc_side": 6578,
+      "rsi_side": 6489,
+      "sma_side": 6770,
+      "stoch_side": 6861,
+      "wma_side": 7041
+    }
+  },
+  "per_family": {
+    "breakout_vol": 18392,
+    "ichimoku_variants": 13906,
+    "mean_reversion_band": 18576,
+    "momentum_oscillator": 22205,
+    "trend_pullback": 13836,
+    "trend_signal": 13085
+  },
+  "prior_documents_checked": 106,
+  "rng_seed": 20261011,
+  "size": 100000
+}

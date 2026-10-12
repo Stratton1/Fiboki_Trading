@@ -196,3 +196,31 @@ def test_engine_runs_are_byte_identical_with_and_without_the_kernel(
         traded += int(ref["n_trades"] > 0)  # type: ignore[operator]
     assert traded >= 8
 
+
+@pytest.mark.timeout(600)
+def test_kernel_equals_generate_signal_on_k6_grammar_documents() -> None:
+    """Forty seeded cells of the K6 grammar (every rule shape it can emit)."""
+    sys.path.insert(0, str(ROOT / "research"))
+    import generate_families_k6 as k6gen
+
+    rng = random.Random("k6-kernel-parity")
+    total = k6gen.grammar_size()
+    cells = []
+    while len(cells) < 40:
+        cell = k6gen.cell_at(rng.randrange(total))
+        if k6gen.exclusion(cell) is None:
+            cells.append(cell)
+    frame = _fat_tailed(700, 99)
+    signals = 0
+    for n, cell in enumerate(cells):
+        doc = k6gen.build_document(n, cell)
+        for binding in _bindings(doc, rng):
+            compiled = compile_strategy(doc.bind({**doc.default_values(), **binding}))
+            prepared = compiled.prepare(frame)
+            kernel = SignalKernel(compiled, prepared)
+            for idx in range(len(prepared)):
+                ref = compiled.generate_signal(prepared, idx, timeframe=Timeframe.H4)
+                fast = kernel.signal_at(idx, timeframe=Timeframe.H4)
+                assert _signal_view(fast) == _signal_view(ref), (cell.code, binding, idx)
+                signals += ref is not None
+    assert signals > 200

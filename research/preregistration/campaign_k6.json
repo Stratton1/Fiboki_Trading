@@ -1,0 +1,345 @@
+{
+  "schema": "fiboki-preregistration:1",
+  "id": "campaign_k6_generated_100k",
+  "experiment": "K6: 100,000 structurally distinct, cost-aware generated strategy documents, each evaluated as ONE pooled candidate per admitted timeframe over a named universe (E-4's pooling and N_eff), screened by rung 0 run alone, then the fail-fast ladder (rungs 0 to 5, holdout deferred) on the screen's survivors, deflated at a trial count fixed now and never lowered.",
+  "status": "DRAFT 2026-10-10. NOT FILED. It is filed only (a) after E-4's process P0 has been run on the Mac and read for both timeframes (research/preregistration/pooled_universe_e4.json, decision rule 2), (b) if neither F1 (size) nor F2 (calibration of N_eff) falsified E-4 on a timeframe K6 would run, and (c) on the operator's approval. Until the status reads FILED, scripts/campaign_k6.py refuses every evidence run (--data-root) and runs only the harness. A change to anything below after filing is a new campaign id, not an edit.",
+  "depends_on": {
+    "e4_p0": "research/reports/e4_pooled/e4_p0_H4.json and e4_p0_D1.json, merged, complete, admitted by pooled_universe_study.p0_admits; K6 runs a timeframe only where E-4's P0 admits it",
+    "e4_main_stage": "not required: K6 does not read E-4's main-stage results, and its prior trial count already includes every E-4 trial (21,968)",
+    "why": "K6 relies on pooling with N_eff being correctly sized (E-4 P0, H0_size and H_calibration). Running 100,000 pooled candidates before that is known would multiply an uncalibrated procedure by 100,000."
+  },
+  "motivation": "K1 to K5 and E-4's plan cover about 6,700 candidates and cells; none passed. E-1 and E-2 showed the binding constraint is trades per candidate (median 90 to 330 on twenty years against MinTRL_95 = 425 at a 0.08 per-trade Sharpe), not the thresholds. E-4 pools a document across 16 series with an effective-N correction to address exactly that. The operator asked for '100,000 more' strategies. This filing makes that request a single pre-registered campaign whose every document counts in the deflation, rather than 100,000 unrecorded looks.",
+  "question": "Among 100,000 generated recombinations of seven documented mechanisms (state x entry event x confirmation x regime x filter x exit x direction), evaluated as pooled candidates under v2.1.0-calibrated with N_eff, does any clear rungs 0 to 5 at the declared trial count?",
+  "what_it_can_and_cannot_say": "The deflation bar grows with the trial count like sqrt(2 ln N): the expected maximum of N null z-scores is 4.05 at E-4's N = 21,968 and 4.73 at K6's declared N = 495,290 (sqrt(2 ln N) = 4.47 and 5.12). Going from about 22 thousand to about 495 thousand trials therefore raises the bar by about 17%, not by a factor of 20: multiple testing is cheap in N, and expensive in what it still demands. In per-trade Sharpe, with T effective (pooled, N_eff) trades, a deflated Sharpe of 0.95 needs roughly SR >= (E[max Z] + 1.645) / sqrt(T): at T = 1,000 about 0.2015, at T = 2,000 about 0.1425, at T = 4,000 about 0.1007. Certifying a 0.08 per-trade edge needs about 6,344 effective trades (it needs 5,066 already at E-4's N); a 0.12 edge about 2,820. E-4 expects N_eff of roughly 1,300 to 3,500 on H4 (16 sleeves, DEFF 1.5 to 4), so K6 can certify only per-trade Sharpes of about 0.11 to 0.18 or more on H4, and on D1 (tens of trades per sleeve, N_eff of a few hundred) nothing below about 0.3 to 0.5. K1 to K5 give no reason to expect edges that large in these families. A null result from K6 says 'no edge of about 0.11+ per trade in this grammar'; it says nothing about 0.03 to 0.08 edges, which this platform cannot certify at any N it can reach on these bars. The arithmetic here is the plain-words Gaussian approximation (V = 1/T); the ladder's own DSR uses the per-period returns, the trials' observed Sharpe variance and their moments.",
+  "code": {
+    "generator": "research/generate_families_k6.py (families-v2-k6; imports K5's generator, never edits it)",
+    "runner": "scripts/campaign_k6.py (plan, screen, ladder, merge, status; JSON-lines shards, resume)",
+    "pooled_evaluator": "fiboki.validation.pooled.PooledEvaluator, as E-4",
+    "engine": "engine_v3_realism through EngineEvaluator, with the signal kernel (strategy/kernel.py) and the NumPy realised-vol path (risk/accounting.py), both proven identical to the reference paths (tests/unit/test_signal_kernel_parity.py, tests/unit/test_realised_vol_fast_path.py); no stored result or cache key changes",
+    "gate_set": "PRODUCTION_GATE_SET v2.1.0-calibrated, fingerprint 9a195b2aed052b245fac2d42d99931a8bb509c6661e120de54dbacfbda6218fc",
+    "reference_gate_set": "v2.0.0-audit, fingerprint fe7daa4c71e886b120f7ebe2e14cd5331e0c906b89e473f290f394e6de6e3ea2 (not judged in K6)",
+    "runbook": "research/reports/campaign_k6/README.md and run_k6_mac.sh"
+  },
+  "universes": {
+    "parameter": "--universe NAME; scripts/campaign_k6.UNIVERSES; an unknown name is refused",
+    "fx_pooled_k5": {
+      "instruments": [
+        "AUDJPY",
+        "AUDUSD",
+        "DE40",
+        "EURGBP",
+        "EURJPY",
+        "EURUSD",
+        "GBPJPY",
+        "GBPUSD",
+        "NZDUSD",
+        "UK100",
+        "US500",
+        "USDCAD",
+        "USDCHF",
+        "USDJPY",
+        "XAGUSD",
+        "XAUUSD"
+      ],
+      "bars_from": "2006-01-04",
+      "definition_sha256": "748f7fb4ce6e8228e0756d16db38c8c3011af3fd2553002d1b5d900703056805",
+      "source": "OANDA practice MID bars, latest validated version per series, as E-4 (gate_power_study.load_series)",
+      "account_and_costs": "GBP, IG_REALISTIC, construction_v2, official calendar enforce-where-covered: as E-4",
+      "p0": "E-4's P0 per timeframe"
+    },
+    "crypto_majors_v1": {
+      "status": "DECLARED PLACEHOLDER. Its instruments, bars and calendar are added on wave/crypto and are not defined on this branch; the runner refuses the name until they are.",
+      "before_any_crypto_compute": [
+        "its instrument list, bars_from and definition_sha256 recorded here by amendment",
+        "its own P0 (an E-4-style size and calibration study on that universe, joint day bootstrap of seed sleeves) filed, run and admitting the timeframe",
+        "a crypto cost profile and a 24/7 calendar reviewed (no FX session filter means the same thing there)",
+        "long only (the venue cannot short): only documents whose direction is 'long' are eligible there; a both-sided or short document is not run on it and is not rewritten to fit",
+        "the runner's evaluator factory switched to that universe's profile (gate_power_study._evaluator_for uses the research FX/CFD path)"
+      ],
+      "resolution": "scripts/campaign_k6.resolve_universe reads fiboki.research.universes.get_universe when that module exists (wave/crypto); it resolves the NAME only, and admitted() still refuses every evidence run on it",
+      "trials": "already counted in the declared N below (N_UNIVERSES_DECLARED = 2), whether or not it is ever run"
+    }
+  },
+  "timeframes": {
+    "declared": [
+      "H4",
+      "D1"
+    ],
+    "rule": "A (universe, timeframe) runs only if that universe's P0 admits it. Documents with the London/New York window declare H4 only (D1 bars have no intraday hours); every other document declares both.",
+    "order": "H4 screen, H4 ladder, then D1 screen and ladder."
+  },
+  "generator": {
+    "script": "research/generate_families_k6.py",
+    "version": "families-v2-k6",
+    "generator_sha256": "8a2acf4af88842dfadde0f537f67a5e2e0ebf42b609912e51187c342483e7c83",
+    "k5_generator_sha256": "7180a8ec5ec81be115d9da4e58b44feecbd3a377558d62b2071aaf4fb6b55919",
+    "rng_seed": 20261011,
+    "size": 100000,
+    "axes": {
+      "confirmation": [
+        "none",
+        "adx_rising",
+        "rsi_not_extreme",
+        "macd_hist_rising",
+        "close_vs_ema20",
+        "atr_expanding",
+        "bb_width_rising",
+        "roc_side",
+        "plus_di_side"
+      ],
+      "direction": [
+        "both",
+        "long",
+        "short"
+      ],
+      "entry": [
+        "ema_recross",
+        "sma_recross",
+        "kc_pullback",
+        "donchian_close_break",
+        "donchian_fresh_cross",
+        "kc_break",
+        "bb_break",
+        "bb_reentry",
+        "rsi_exit_extreme",
+        "cci_reversal",
+        "stoch_extreme_cross",
+        "macd_signal_cross",
+        "macd_zero_cross",
+        "rsi_50_cross",
+        "cci_thrust",
+        "roc_zero_cross",
+        "tk_cross",
+        "chikou_flip",
+        "kijun_cross",
+        "ma_cross",
+        "psar_flip",
+        "di_cross"
+      ],
+      "exit": [
+        "time_exit",
+        "tp_r",
+        "trail",
+        "tp_trail",
+        "atr_target",
+        "swing_tp"
+      ],
+      "filter": [
+        "none",
+        "london_ny",
+        "midweek"
+      ],
+      "regime": [
+        "none",
+        "adx_floor",
+        "adx_ceiling",
+        "rvol_band",
+        "compression",
+        "atr_expansion"
+      ],
+      "state": [
+        "none",
+        "ema_side",
+        "sma_side",
+        "wma_side",
+        "ma_stack",
+        "kumo_side",
+        "macd_hist_side",
+        "macd_line_side",
+        "rsi_side",
+        "roc_side",
+        "donchian_mid_side",
+        "psar_side",
+        "di_side",
+        "stoch_side",
+        "cci_side"
+      ]
+    },
+    "grammar_size": 962280,
+    "grammar_excluded": {
+      "confirmation restates state": 6804,
+      "entry implies state": 14580,
+      "swing stop needs a one-sided document": 52272
+    },
+    "grammar_valid": 888624,
+    "cells_visited": 100010,
+    "dropped": {
+      "rules of a seed or K5 document": 10
+    },
+    "per_family": {
+      "breakout_vol": 18392,
+      "ichimoku_variants": 13906,
+      "mean_reversion_band": 18576,
+      "momentum_oscillator": 22205,
+      "trend_pullback": 13836,
+      "trend_signal": 13085
+    },
+    "cells_file": "research/generated_k6/cells.csv.gz",
+    "cells_sha256": "bfcd9d42d357b2e3754cae942115616e4ebfbf636ea3786d736b99c96a461447",
+    "hash_chain_sha256": "1dcd1cb74d02e15984cbea15e293cfb6981396263801cb7ed389c64e1c9bec7c",
+    "manifest_sha256": "0ea33c5768f25abefe5d01f802a09fb873c77a83fb68498d75c97d3a440880eb",
+    "distinctness": "Every kept document has a structure hash (numbers elided), a rules hash (structure with universe, timeframes and family fixed) and a body hash (canonical JSON without identity, prose and universe) that no earlier kept document has; its rules hash is not any of the six seeds' or K5's hundred generated documents'. Two documents differing only in a period, threshold or multiple are the same structure and the second is dropped.",
+    "cost_awareness": "Stops at least 2 ATR(14) (3 ATR under a time exit; a 1-ATR floor under a swing stop), R targets at least 2R, ATR targets at least 3 ATR, time exits at least 20 bars, no H1. Costs are measured per document by the screen (cost share of gross P&L), not assumed small.",
+    "grid": "at most three declared parameters, each a two-value choice: at most 8 grid points (K5's shape)",
+    "reproduce": "python research/generate_families_k6.py --check (about an hour on one core)"
+  },
+  "stages": {
+    "S0a_signal_bound": "Per document and timeframe: the pooled signal count over the research window at the default binding, from the signal kernel without the engine (EngineEvaluator.signal_count). Trades never exceed signals and N_eff <= N, so a pooled count below rung 0's floor (150) cannot pass rung 0; such a document is recorded as failed at S0a and its engine runs are skipped. Removes nothing rung 0 keeps.",
+    "S0b_rung0": "Rung 0 of the production ladder alone (SanityRung plus the rung-0 gate block: n_trades_over_min_trl on N_eff, the 150 floor, positive expectancy, no degeneracies), default binding, research window, every sleeve. A document passes the screen exactly when the fail-fast ladder would pass rung 0 (tests/unit/test_campaign_k6.py pins the equivalence). Records N, N_eff, DEFF, expectancy, MinTRL, and the cost split.",
+    "S1_ladder": "Screen survivors in generation-index order, at most 5,000 per (universe, timeframe): ValidationLadder.run, fail-fast, rungs 0 to 5, holdout deferred (rungs_with_deferred_holdout), external_trial_count = declared N - the candidate's own grid points. Every report written, pass or fail.",
+    "cap_rule": "If more than the cap survive the screen, the first cap survivors by generation index are laddered (an order fixed by the seed, not by any outcome); the rest are reported as 'survived S0, not laddered' and no verdict is drawn about them. They are already counted in N.",
+    "sharding": "interleaved shards (k, k+n, ...), so a partial run is a random subsample of the generation order"
+  },
+  "gates": {
+    "set": "v2.1.0-calibrated unchanged, fingerprint 9a195b2aed052b245fac2d42d99931a8bb509c6661e120de54dbacfbda6218fc",
+    "pooled_n_eff": "as E-4: N_eff = N / DEFF replaces N at rung 0, rung 2's OOS-fold floor and rung 6's floor only",
+    "no_threshold_moves": "Nothing in K6 changes a gate. A gate lowered until something passes would be V1 again."
+  },
+  "trial_accounting": {
+    "unit": "one (document, universe, timeframe) at its default binding is one trial; a laddered survivor adds its other grid points",
+    "prior": "21,968 = E-4's true N, which contains K5's 20,904",
+    "screen_per_universe_both_timeframes": 166661,
+    "screen_fx_h4": 100000,
+    "screen_fx_d1": 66661,
+    "documents_h4_only": 33339,
+    "declared": {
+      "prior_trials": 21968,
+      "screen_trials": 333322,
+      "ladder_trials_max": 140000,
+      "campaign_trials": 473322,
+      "declared_true_n": 495290
+    },
+    "formula": "declared_true_n = prior + 2 universes x screen trials (both timeframes) + 2 universes x 2 timeframes x cap x 7",
+    "rules": [
+      "Every one of the 100,000 documents counts, whether it fails S0a, S0b, the ladder, or is never run because a stop rule fired.",
+      "The declared N is fixed here, before any result, and is never lowered: not if a timeframe is not admitted, not if the crypto universe is never run, not if fewer survivors than the cap reach the ladder.",
+      "external_trial_count for a laddered candidate = declared_true_n - its own grid points.",
+      "Default-binding trials are counted at the screen and again inside the survivor's grid: conservative, deliberately.",
+      "Every later campaign on these bars declares at least 495,290."
+    ]
+  },
+  "deflation_arithmetic": {
+    "plain_words": "E[max of N null z-scores] = 4.049 at N = 21,968 and 4.727 at N = 495,290; it grows like sqrt(2 ln N). The certifiable per-trade Sharpe at DSR 0.95 is roughly (E[max Z] + 1.645) / sqrt(T) for T effective trades.",
+    "table": [
+      {
+        "n_trials": 106,
+        "expected_max_z": 2.551,
+        "sqrt_2_ln_n": 3.054,
+        "sr0_T425": 0.1237,
+        "certifiable_T425": 0.2035,
+        "sr0_T1000": 0.0807,
+        "certifiable_T1000": 0.1327,
+        "sr0_T2000": 0.057,
+        "certifiable_T2000": 0.0938,
+        "sr0_T4000": 0.0403,
+        "certifiable_T4000": 0.0663,
+        "sr0_T8000": 0.0285,
+        "certifiable_T8000": 0.0469
+      },
+      {
+        "n_trials": 21968,
+        "expected_max_z": 4.049,
+        "sqrt_2_ln_n": 4.472,
+        "sr0_T425": 0.1964,
+        "certifiable_T425": 0.2762,
+        "sr0_T1000": 0.128,
+        "certifiable_T1000": 0.1801,
+        "sr0_T2000": 0.0905,
+        "certifiable_T2000": 0.1273,
+        "sr0_T4000": 0.064,
+        "certifiable_T4000": 0.09,
+        "sr0_T8000": 0.0453,
+        "certifiable_T8000": 0.0637
+      },
+      {
+        "n_trials": 100000,
+        "expected_max_z": 4.391,
+        "sqrt_2_ln_n": 4.799,
+        "sr0_T425": 0.213,
+        "certifiable_T425": 0.2928,
+        "sr0_T1000": 0.1389,
+        "certifiable_T1000": 0.1909,
+        "sr0_T2000": 0.0982,
+        "certifiable_T2000": 0.135,
+        "sr0_T4000": 0.0694,
+        "certifiable_T4000": 0.0954,
+        "sr0_T8000": 0.0491,
+        "certifiable_T8000": 0.0675
+      },
+      {
+        "n_trials": 495290,
+        "expected_max_z": 4.727,
+        "sqrt_2_ln_n": 5.121,
+        "sr0_T425": 0.2293,
+        "certifiable_T425": 0.3091,
+        "sr0_T1000": 0.1495,
+        "certifiable_T1000": 0.2015,
+        "sr0_T2000": 0.1057,
+        "certifiable_T2000": 0.1425,
+        "sr0_T4000": 0.0747,
+        "certifiable_T4000": 0.1007,
+        "sr0_T8000": 0.0528,
+        "certifiable_T8000": 0.0712
+      }
+    ],
+    "effective_trades_needed": {
+      "sr_0.08": {
+        "at_prior_n": 5066,
+        "at_k6_n": 6344
+      },
+      "sr_0.12": {
+        "at_prior_n": 2251,
+        "at_k6_n": 2820
+      },
+      "sr_0.20": {
+        "at_prior_n": 810,
+        "at_k6_n": 1015
+      }
+    },
+    "source": "scripts/campaign_k6.deflation_table, built on fiboki.stats.sharpe.expected_max_sharpe(N, V=1)"
+  },
+  "holdout_handling": [
+    "K6 reads NO holdout. Every rung below 6 is asserted against every constituent's holdout (E-4's PooledHoldoutRegistry); rung 6 is deferred.",
+    "A K6 survivor is a hypothesis. It may be re-authored as a seed with its own written economic story under its own filing; that filing is where its single holdout look is spent (one look, keyed on the content hash, by the holdout command), and that filing's trial count includes K6's declared N.",
+    "No survivor, however strong, is promoted, paper-traded or quoted as performance from K6."
+  ],
+  "expectations_stated_before_results": {
+    "screen": "H4: the screen passes a document only when its default binding is already significant at about the 5% level on N_eff after costs (n_eff >= MinTRL_95). With no true edge and costs pushing expectancy negative, expect 1% to 5% of H4 documents to pass (1,000 to 5,000), fewer on D1. S0a removes few FX documents (16 sleeves pool hundreds of signals).",
+    "ladder": "Most survivors die at rung 2 (walk-forward) or rung 4 (plateau), as in K5; any that reach rung 5 die at deflation at this N.",
+    "survivors": "Zero survivors of rungs 0 to 5 is the expected outcome.",
+    "families": "No family is expected to differ from another by more than the screen's sampling noise."
+  },
+  "falsification_and_alarms": [
+    "If more than 10% of H4 documents pass the screen, the screen or the pooling is suspected before any market explanation: stop, report, and check P0's calibration against the screen's z-statistics.",
+    "If one family supplies more than half of all survivors, report it as a family-level observation, not a strategy.",
+    "Any error rate above 1% of rows after the first 1,000 documents stops the stage (an instrument bug)."
+  ],
+  "decision_rule": [
+    "1. Before any evidence run: research/generate_families_k6.py --check reproduces cells_sha256 and hash_chain_sha256; campaign_k6.py plan --check reproduces the declared N.",
+    "2. Per (universe, timeframe): run only if that universe's P0 admits the timeframe.",
+    "3. Run S0 on every document of that timeframe (interleaved shards), merge (refuses gaps and overlaps).",
+    "4. Run S1 on the survivors up to the cap, merge.",
+    "5. Report every row; survivors of rungs 0 to 5 are listed as hypotheses with their family, cell code and binding constraint. No holdout is read.",
+    "6. The ledger entry states the declared N, the rows run, the rows not run (and why), and the certifiable effect size at the realised N_eff."
+  ],
+  "compute": {
+    "basis": "scripts/k6_engine_benchmark.py on synthetic H4 bars in the cloud sandbox (2 shared CPUs, not the Mac): before the K6 engine change 945 to 1,011 us per bar (mean 5.7 s per 6,000-bar and 15.8 s per 15,600-bar document-series); after, 160 to 190 us per bar (1.15 s and 2.49 s; 5.1 s at 31,200 bars), identical ledgers on all 16 before/after pairs (and again after the final engine commit, when a heavier concurrent load made the same runs 1.50 s and 4.11 s: timings here carry +-50% noise from the shared CPUs). E-1 process 2 measured about 8.1 s per H4 backtest per shard-core on the Mac before the change.",
+    "screen_work_fx": "H4: 100,000 documents x 16 sleeves = 1.6 million default-binding backtests over the research window; D1: 66,661 documents x 16 = 1,066,576 (each about a sixth of an H4 run).",
+    "screen_measured_here": "scripts/k6_engine_benchmark.py --k6-screen 4 --sleeves 16 --bars 26000: 25.5 s per document (30 s for one that reaches S0b, 6.5 s for one stopped at S0a), peak resident 278 MB per process; synthetic USD sleeves, this sandbox.",
+    "estimate_mac_m1_4_shards": "Two calibrations, both stated. (a) E-1's Mac figure (about 8.1 s per pre-change H4 backtest per core) against about 27 s for the same work here puts an M1 core about 3.3x faster than this sandbox: about 8 s per screened H4 document, H4 screen about 2.3 days on 4 shards. (b) Conservatively, 1.2 s per sleeve run (8.1 s / 6.5x) x 16: about 19 s per document, H4 screen about 5.5 days. D1 screen 0.4 to 1 day. Ladder: E-4's 0.36 h per full-depth generated H4 candidate / 6 = about 0.06 h; 1,000 to 5,000 survivors = 0.6 to 3 days per timeframe on 4 shards. Total about 4 to 12 days of continuous running. Step 0 of the runbook replaces this with the Mac's own figure before anything is filed.",
+    "budget_and_stop_rules": [
+      "Budget: H4 screen 14 days wall, D1 screen 5 days, each ladder 5 days, on 4 shards.",
+      "After the first 2,000 documents of a stage, if the projected wall time exceeds 1.5x its budget, the stage stops. The run is reported as partial: documents not run are named, no verdict is drawn about them, and the declared N is NOT lowered.",
+      "Memory: a shard stops (resumably) above 1.5 GB resident; re-run with WORKERS=3.",
+      "A failed generate --check, plan --check or P0 admission stops everything."
+    ],
+    "memory_and_disk": "Per shard: one timeframe's 16 series of bars, plus one document's prepared frames and its in-memory evaluation cache (released per document): 278 MB peak measured here for a screen process (Linux, synthetic bars); a ladder shard holds a candidate's whole cache, estimated 0.5 to 1.5 GB as in E-4; not measured on the Mac. Disk: about 0.5 KB per screen row (about 100 MB for both timeframes), one ValidationReport per laddered survivor (a few hundred MB at the cap)."
+  },
+  "data_rules": [
+    "Bars through gate_power_study.load_series exactly as E-4: latest validated version per series, K5's bars_from trim, mid bars, the GBP FX source; a series without a GBP conversion is skipped and recorded, never invented.",
+    "The research window is each constituent's [first bar, holdout start) as run_validation defines it (DEFAULT_HOLDOUT_FRACTION); no stage reads a holdout bar."
+  ],
+  "decision_date": "None while DRAFT. Set at filing: the day both merged screen files for the admitted timeframes exist for the screen; the ladder's on the day its merged file exists.",
+  "drafted_at": "2026-10-10",
+  "drafted_on_commit": "wave/k6 (from v2/integration 0ade323)"
+}
