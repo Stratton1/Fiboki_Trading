@@ -173,9 +173,12 @@ def test_universes_are_names_and_unknown_ones_are_refused() -> None:
     assert len(fx["instruments"]) == 16 and len(fx["sha256"]) == 64
     with pytest.raises(SystemExit):
         k6.resolve_universe("fx_everything")
-    with pytest.raises(SystemExit) as exc:
-        k6.resolve_universe("crypto_majors_v1")
-    assert "wave/crypto" in str(exc.value)
+    # The crypto NAME resolves once fiboki.research.universes exists (wave/crypto is merged),
+    # exactly as the filing says; every evidence run on it is still refused.
+    crypto = k6.resolve_universe("crypto_majors_v1")
+    assert crypto["instruments"] and len(crypto["sha256"]) == 64
+    ok, why = k6.admitted("H4", "crypto_majors_v1", None, evidence=True)
+    assert not ok and "crypto_majors_v1" in why
 
 
 def test_an_evidence_run_is_refused_while_the_filing_is_draft() -> None:
