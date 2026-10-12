@@ -269,6 +269,21 @@ SOURCE_REGISTRY: tuple[SourceEntry, ...] = (
         PERS, "Served to the account holder for their own use",
         (), "live recorder / on demand", "per v20 limits", "closed candles only",
         "fiboki.data.providers.oanda", True),
+    SourceEntry(
+        "coinbase_candles", PR, "free, no key", "https://www.coinbase.com/legal/market_data",
+        PERS, "Market Data Terms (last updated 2026-08-07, read 2026-10-10): a limited, revocable "
+        "licence for 'personal or research purposes' of the user and its entity's officers and "
+        "employees; no redistribution or display to third parties, no Derived Works shared "
+        "outside the organisation, no use to train or validate an AI model, no index or "
+        "benchmark, without written consent",
+        (), "backfill + paper-forward poll (public, 10 req/s per IP)",
+        "BTC-GBP from 2015-04-21; ETH/LTC-GBP 2018; others 2020-21 (H1, D1; H4 resampled)",
+        "closed candles only (no finality flag: dropped by the clock)",
+        "fiboki.data.providers.coinbase", True,
+        notes="Spot crypto (docs/v2/research/CRYPTO_VENUES_2026-10.md). Bulk bars are never "
+              "committed; the store keeps them on the operator's Mac.",
+        extra_urls=("https://docs.cdp.coinbase.com/exchange/reference/exchangerestapi_getproductcandles",
+                    "https://docs.cdp.coinbase.com/exchange/rest-api/rate-limits")),
     # ------------------------------------------------ not implemented, by terms
     SourceEntry(
         "investing_com", C, "n/a", "https://www.investing.com/about-us/terms-and-conditions", NO,

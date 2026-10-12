@@ -649,6 +649,152 @@ def data_oanda_backfill(
         raise typer.Exit(EXIT_FAIL)
 
 
+@data_app.command("coinbase-backfill")
+def data_coinbase_backfill(
+    instruments: list[str] | None = typer.Option(
+        None, "--instruments", "-i",
+        help="Registered crypto symbols (BTCGBP,ETHGBP); repeat or comma-separate.",
+    ),
+    universe: str | None = typer.Option(
+        None, "--universe", "-u",
+        help="A named crypto universe instead (crypto_core_v1, crypto_majors_v1).",
+    ),
+    granularities: list[str] = typer.Option(
+        ["H1", "H4", "D1"], "--granularities", "-g",
+        help="H1 and D1 are fetched; H4 is resampled from H1. Repeat or comma-separate.",
+    ),
+    start: str = typer.Option("2015-01-01", "--from", help="First bar, UTC (ISO date)."),
+    root: Path | None = typer.Option(
+        None, "--data-root", help=f"Marked data root; overrides ${ENV_DATA_ROOT}."
+    ),
+    dry_run: bool = typer.Option(False, "--dry-run", help="Print the plan; no network."),
+    max_requests: int | None = typer.Option(
+        None, "--max-requests",
+        help="Request budget (upper-bound estimates); whole jobs that do not fit are deferred.",
+    ),
+    requests_per_second: float = typer.Option(
+        3.0, "--requests-per-second",
+        help="Client-side pace; Coinbase allows 10/s per IP on public endpoints (at most 8 here).",
+    ),
+    as_json: bool = typer.Option(False, "--json"),
+) -> None:
+    """Backfill Coinbase PUBLIC spot candles (no key) as source ``coinbase_exchange_public``.
+
+    Writes RAW + VALIDATED versions per instrument for H1 and D1, and a
+    RESAMPLED + VALIDATED H4 derived from the validated H1. Bars are trade prints
+    stored as ``last_as_mid`` (bound recorded). Resumes from the last stored bar;
+    a rerun with nothing new writes nothing. Exits 1 if any job was refused.
+    Coinbase's Market Data Terms: the operator's own research only, never
+    redistributed; nothing here commits bars to the repository.
+    """
+    from fiboki.data import crypto_backfill as cb
+    from fiboki.data.backfill import BackfillRefused
+    from fiboki.data.store import DataStore
+    from fiboki.research.universes import UnknownUniverse, get_universe
+
+    if universe and instruments:
+        _fail("pass --instruments or --universe, not both", EXIT_MISUSE)
+    if universe:
+        try:
+            u = get_universe(universe)
+        except UnknownUniverse as exc:
+            _fail(str(exc.args[0]), EXIT_MISUSE)
+        if u.venue != "coinbase":
+            _fail(f"universe {u.name} is not a Coinbase universe", EXIT_MISUSE)
+        symbols = list(u.symbols)
+    else:
+        symbols = _split_values(instruments)
+    if not symbols:
+        _fail("no instruments: pass --instruments or --universe", EXIT_MISUSE)
+    if not 0 < requests_per_second <= 8:
+        _fail("--requests-per-second must be in (0, 8]", EXIT_MISUSE)
+    target = root or data_root()
+    if target is None:
+        _fail(f"no data root: pass --data-root or set ${ENV_DATA_ROOT}", EXIT_MISUSE)
+    assert target is not None
+    try:
+        store = DataStore(target)
+    except Exception as exc:
+        _fail(f"could not open the data store at {target}: {exc}", EXIT_MISUSE)
+    try:
+        jobs = cb.plan_crypto_backfill(store, symbols, _split_values(granularities), start)
+        selected, deferred = cb.select_within_budget(jobs, max_requests)
+    except (BackfillRefused, ValueError) as exc:
+        _fail(str(exc), EXIT_MISUSE)
+
+    plan_rows = cb.describe_plan(jobs, deferred)
+    estimate = sum(j.estimated_requests() for j in selected)
+    if not as_json:
+        table = Table(title=f"coinbase-backfill plan -> {store.root}")
+        for column in ("instrument", "gran", "action", "from", "to (excl.)", "≤ requests"):
+            table.add_column(column)
+        for row in plan_rows:
+            table.add_row(
+                row["instrument"], row["granularity"] + (" +H4" if row["derive_h4"] else ""),
+                row["action"] + (" (deferred)" if row["deferred"] else ""),
+                row["from"][:16], row["to_exclusive"][:16], str(row["estimated_requests"]),
+            )
+        console.print(table)
+        console.print(
+            f"{len(selected)} job(s), at most {estimate} request(s) at {requests_per_second:g}/s "
+            f"(plus a listing probe per fresh H1 job); {len(deferred)} deferred"
+        )
+    if dry_run:
+        if as_json:
+            _emit({"dry_run": True, "plan": plan_rows, "estimated_requests": estimate},
+                  as_json=True, render=lambda: None)
+        else:
+            _ok(f"dry run: nothing fetched, nothing written in {store.root}")
+        return
+
+    from fiboki.broker.http_transport import HttpxTransport
+    from fiboki.broker.retry import ReadRetry
+    from fiboki.data.providers.coinbase import COINBASE_EXCHANGE_HOST, CoinbaseCandlesProvider
+    from fiboki.data.providers.ratelimit import SlidingWindowLimiter
+    from fiboki.workers.feeds import TransportHttpClient
+
+    # The public Exchange API host is the ONLY host this transport can reach;
+    # no credential exists for it and none is sent.
+    with HttpxTransport(
+        allowed_hosts=(COINBASE_EXCHANGE_HOST,), user_agent="fiboki/2 coinbase-backfill"
+    ) as transport:
+        provider = CoinbaseCandlesProvider(
+            http_client=TransportHttpClient(transport, timeout=30.0),
+            limiter=SlidingWindowLimiter(1, 1.0 / requests_per_second, name="coinbase-backfill"),
+        )
+        retry = ReadRetry(max_attempts=5, deadline_s=120.0, base_delay_s=1.0, max_delay_s=30.0)
+        report = cb.run_crypto_backfill(
+            selected, provider, store, retry=retry,
+            log=(lambda _m: None) if as_json else console.print, deferred=deferred,
+        )
+
+    payload = report.to_dict()
+
+    def _render() -> None:
+        table = Table(title=f"coinbase-backfill: {report.requests} request(s)")
+        for column in ("instrument", "gran", "status", "new bars", "rows", "validated",
+                       "quality", "reason"):
+            table.add_column(column, overflow="fold")
+        colours = {"written": "green", "skipped": "white", "refused": "red",
+                   "deferred": "yellow"}
+        for o in report.outcomes:
+            table.add_row(
+                o.job.instrument, o.job.granularity,
+                Text(o.status, style=colours.get(o.status, "white")),
+                str(o.new_bars), str(o.total_rows), o.validated_version_id or "",
+                o.quality or "", o.reason,
+            )
+        console.print(table)
+        console.print(
+            f"written {payload['written']}, skipped-as-current {payload['skipped']}, "
+            f"refused {payload['refused']}, deferred {payload['deferred']}"
+        )
+
+    _emit(payload, as_json=as_json, render=_render)
+    if report.refused:
+        raise typer.Exit(EXIT_FAIL)
+
+
 # ---------------------------------------------------------------------------
 # research
 # ---------------------------------------------------------------------------
@@ -3546,7 +3692,7 @@ def events_shadow_report(
 # ===========================================================================
 
 paper_app = typer.Typer(
-    help="PAPER trading forward on live OANDA practice prices, from a committed wiring file.",
+    help="PAPER trading forward on live prices (OANDA practice, or Coinbase public for spot crypto), from a committed wiring file.",
     no_args_is_help=True,
 )
 app.add_typer(paper_app, name="paper")

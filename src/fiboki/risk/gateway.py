@@ -43,7 +43,7 @@ from fiboki.core.contracts import (
     VetoAssessment,
     is_shadow_reason,
 )
-from fiboki.core.enums import ExecutionMode, StrategyLifecycle
+from fiboki.core.enums import Direction, ExecutionMode, StrategyLifecycle
 from fiboki.core.instruments import Instrument
 from fiboki.core.instruments import get as get_instrument
 from fiboki.portfolio.construction import PortfolioSnapshot
@@ -387,6 +387,7 @@ class RiskGateway:
         "kill_switch",
         "strategy_lifecycle",
         "market_state",
+        "direction_permitted",
         "data_freshness",
         "stale_price",
         "abnormal_spread",
@@ -723,6 +724,18 @@ class RiskGateway:
         if not ctx.market.market_open:
             self._block("market_closed")
 
+    def _check_direction_permitted(self, ctx: RiskContext, limits: LimitSet) -> None:
+        """A SHORT entry on an instrument that cannot be sold short. Entries only.
+
+        ``Instrument.shortable`` is a market fact (``core/instruments.py``): a
+        spot crypto holding cannot be shorted without borrowed coins, which the
+        modelled venue does not lend. The backtest engine refuses the same
+        signal (``short_not_permitted``), so paper and research agree. Not in
+        :attr:`EXIT_CHECKS`: closing a long is never refused for this.
+        """
+        if ctx.plan.direction is Direction.SHORT and not ctx.instrument.shortable:
+            self._block(f"short_not_permitted:{ctx.instrument.symbol}:{ctx.instrument.venue}")
+
     def _check_data_freshness(self, ctx: RiskContext, limits: LimitSet) -> None:
         age = self._age_seconds(ctx.market.last_bar_time, ctx.now)
         if age < 0:
@@ -744,7 +757,16 @@ class RiskGateway:
             return
         if spread < 0:
             self._block(f"negative_spread:{spread}")
-        typical = ctx.instrument.typical_spread_pips * ctx.instrument.pip_size
+        if ctx.instrument.typical_spread_bps is not None:
+            # A proportional spread (spot crypto): typical is bps of the mid,
+            # so the check means the same thing at GBP 150 and GBP 90,000.
+            mid = ctx.market.mid_price
+            if mid is None or not mid > 0:
+                self._block("spread_reference_mid_unknown")
+                return
+            typical = ctx.instrument.typical_spread_bps * 1e-4 * float(mid)
+        else:
+            typical = ctx.instrument.typical_spread_pips * ctx.instrument.pip_size
         if typical <= 0:
             return
         multiple = spread / typical

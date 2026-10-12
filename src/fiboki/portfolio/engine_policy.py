@@ -136,8 +136,9 @@ def position_cost_per_unit(
     if cost_profile is None:
         return 0.0
     entry_time = pd.Timestamp(pos.entry_time)
-    spread = cost_profile.spread_price(instrument, int(entry_time.hour), float(pos.entry_price))
-    return float(spread + 2.0 * cost_profile.expected_slippage_price(instrument))
+    return cost_profile.stop_out_cost_per_unit(
+        instrument, int(entry_time.hour), float(pos.entry_price)
+    )
 
 
 def open_risk_by_instrument(

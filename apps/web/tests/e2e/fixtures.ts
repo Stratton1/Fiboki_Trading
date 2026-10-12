@@ -276,6 +276,9 @@ export function instrumentsPage() {
     typical_spread_pips: figure(spread, "backtest", "pips"),
     retail_leverage: figure(30, "backtest", "x"),
     annual_financing_bps: figure(-250, "backtest", "bps"),
+    venue: "oanda",
+    shortable: true,
+    typical_spread_bps: null,
   });
   const items = [make("EURUSD", 0.0001, 0.6), make("USDJPY", 0.01, 0.9), make("GBPUSD", 0.0001, 0.9)];
   return { items, total: items.length, offset: 0, limit: 100, source: source("seed"), caveats: [] };

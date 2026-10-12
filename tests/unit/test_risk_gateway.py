@@ -48,7 +48,9 @@ def test_a_clean_plan_is_allowed_and_every_check_is_named() -> None:
     assert decision.checks_run == RiskGateway.CHECKS
     # 19 -> 20: ``event_veto`` (agentic plan Wave 4, the agent event channel).
     # It passes here because no veto source is wired into make_context().
-    assert len(decision.checks_run) == 20
+    # 20 -> 21: ``direction_permitted`` (spot crypto cannot be shorted); it
+    # passes for the EURUSD plan make_context() builds.
+    assert len(decision.checks_run) == 21
     assert decision.decided_at == NOW
 
 
@@ -400,7 +402,7 @@ def test_a_blocked_attempt_renders_as_execution_telemetry() -> None:
     assert telemetry.rejected_size > 0
     assert "weekly_loss" in telemetry.venue_error
     assert telemetry.extra["blocked_by_risk_gateway"] is True
-    assert len(telemetry.extra["checks_run"]) == 20  # + event_veto (Wave 4)
+    assert len(telemetry.extra["checks_run"]) == 21  # + event_veto, direction_permitted
 
 
 def test_nothing_is_dropped_silently_over_many_attempts() -> None:

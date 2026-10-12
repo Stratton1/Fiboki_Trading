@@ -2,7 +2,7 @@
 # Fiboki V2: run ONE desktop service in the foreground. launchd calls this
 # (deploy/launchd/uk.fiboki.<service>.plist); you can too, to debug one.
 #
-#   scripts/fiboki-service.sh api|worker|web|news|quotes|llama|paper
+#   scripts/fiboki-service.sh api|worker|web|news|quotes|llama|paper|paper-crypto
 #
 # Environment, in order of precedence:
 #   1. ~/.fiboki/env (operator-owned, chmod 600, never in the repository):
@@ -15,6 +15,11 @@
 # (not an environment variable: which strategy trades, where, under which
 # limits, is a reviewed file, and its sha256 is stamped on every decision). It
 # needs FIBOKI_OANDA_PRACTICE_TOKEN and FIBOKI_OANDA_PRACTICE_ACCOUNT_ID in ~/.fiboki/env.
+#
+# `paper-crypto` is the 24/7 spot-crypto paper session against its own committed
+# wiring (paper_forward_crypto_v1.json): Coinbase PUBLIC candles and ticker, no
+# credential at all, its own lease, journal and session directory. It shares
+# the operator's kill switch with `paper`. Paper is forced exactly as for `paper`.
 #
 # Paper only, enforced here: FIBOKI_EXECUTION_MODE is forced to paper and the
 # live controls are unset AFTER the env file is read, so a line in that file
@@ -110,8 +115,17 @@ case "$SERVICE" in
     exec "$ROOT/.venv/bin/fiboki" paper forward \
       --wiring "$ROOT/src/fiboki/entrypoints/wiring/paper_forward_v1.json"
     ;;
+  paper-crypto)
+    # 24/7: crypto bars close every four hours, weekends included, so the sleep
+    # assertion matters more here than for FX. Same caffeinate as `paper`.
+    if command -v caffeinate >/dev/null 2>&1; then
+      caffeinate -is -w $$ &
+    fi
+    exec "$ROOT/.venv/bin/fiboki" paper forward \
+      --wiring "$ROOT/src/fiboki/entrypoints/wiring/paper_forward_crypto_v1.json"
+    ;;
   *)
-    echo "usage: $0 api|worker|web|news|quotes|llama|paper" >&2
+    echo "usage: $0 api|worker|web|news|quotes|llama|paper|paper-crypto" >&2
     exit 2
     ;;
 esac

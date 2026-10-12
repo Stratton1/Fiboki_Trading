@@ -1146,8 +1146,9 @@ class RiskContextBuilder:
         if profile is None:
             return 0.0
         entry_time = pd.Timestamp(pos.entry_time)
-        spread = profile.spread_price(instrument, int(entry_time.hour), float(pos.entry_price))
-        return float(spread + 2.0 * profile.expected_slippage_price(instrument))
+        return profile.stop_out_cost_per_unit(
+            instrument, int(entry_time.hour), float(pos.entry_price)
+        )
 
     def open_risk_by_instrument(self, now: pd.Timestamp) -> dict[str, float]:
         """Risk to stop per instrument, ACCOUNT currency. ``open_risk`` sums it.

@@ -1750,12 +1750,23 @@ export interface components {
             /** Quote */
             quote: string;
             retail_leverage: components["schemas"]["Figure"];
+            /**
+             * Shortable
+             * @default true
+             */
+            shortable: boolean;
             size_step: components["schemas"]["Figure"];
             /** Symbol */
             symbol: string;
             /** Trading Hours */
             trading_hours: string;
+            typical_spread_bps?: components["schemas"]["Figure"] | null;
             typical_spread_pips: components["schemas"]["Figure"];
+            /**
+             * Venue
+             * @default oanda
+             */
+            venue: string;
         };
         /**
          * KillSwitchDisarmPreflightView

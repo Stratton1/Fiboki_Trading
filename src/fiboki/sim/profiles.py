@@ -56,12 +56,17 @@ from fiboki.core.instruments import Instrument
 PROFILE_FINGERPRINT_VERSION = "profile_v2"
 
 __all__ = [
+    "COINBASE_UK_SPOT",
+    "COINBASE_UK_SPOT_STRESS",
     "IBKR_REALISTIC",
     "IDEALISED_RESEARCH",
     "IG_REALISTIC",
     "OANDA_REALISTIC",
     "PROFILES",
     "SEVERE_STRESS",
+    "SPOT_CRYPTO_PROFILES",
+    "BpsOfMidSpread",
+    "BpsSlippage",
     "CommissionModel",
     "ExecutionProfile",
     "FinancingModel",
@@ -71,10 +76,12 @@ __all__ = [
     "MinStopRule",
     "NoSlippage",
     "ProbabilisticAdverseTickSlippage",
+    "ProfileMismatch",
     "SlippageModel",
     "SpreadModel",
     "TimeOfDayWideningSpread",
     "TypicalMultiplierSpread",
+    "assert_profile_covers",
     "expected_slippage_price",
     "get_profile",
     "rng_for",
@@ -133,6 +140,39 @@ class TypicalMultiplierSpread:
     def spread_price(self, instrument: Instrument, hour_utc: int, mid_price: float) -> float:
         pips = max(instrument.typical_spread_pips * self.multiplier, self.floor_pips)
         return pips * instrument.pip_size
+
+
+@dataclass(frozen=True, slots=True)
+class BpsOfMidSpread:
+    """A multiple of the instrument's typical spread in BASIS POINTS OF MID.
+
+    For instruments whose spread is a proportion of price (spot crypto,
+    ``Instrument.typical_spread_bps``): ``max(typical_bps * multiplier,
+    floor_bps) * 1e-4 * mid``. A price-unit spread would be wrong by the price's
+    own range -- BTC has traded from GBP 150 to GBP 90,000 -- so a fixed number
+    of ticks would charge 2015 bars five per cent and 2025 bars nothing.
+
+    An instrument with no ``typical_spread_bps`` RAISES rather than falling back
+    to pips: this model was chosen for a market whose spread is not in pips.
+    """
+
+    multiplier: float = 1.0
+    floor_bps: float = 0.0
+
+    def __post_init__(self) -> None:
+        if self.multiplier <= 0 or self.floor_bps < 0:
+            raise ValueError("BpsOfMidSpread needs multiplier > 0 and floor_bps >= 0")
+
+    def spread_price(self, instrument: Instrument, hour_utc: int, mid_price: float) -> float:
+        if instrument.typical_spread_bps is None:
+            raise ValueError(
+                f"{instrument.symbol} has no typical_spread_bps; BpsOfMidSpread prices "
+                "spreads that are a proportion of price (spot crypto) only"
+            )
+        if not mid_price > 0:
+            raise ValueError(f"{instrument.symbol}: a bps spread needs a positive mid, got {mid_price}")
+        bps = max(instrument.typical_spread_bps * self.multiplier, self.floor_bps)
+        return bps * 1e-4 * float(mid_price)
 
 
 @dataclass(frozen=True, slots=True)
@@ -250,7 +290,36 @@ class ProbabilisticAdverseTickSlippage:
         return magnitude * self.tick_pips * instrument.pip_size
 
 
-def expected_slippage_price(model: SlippageModel, instrument: Instrument) -> float:
+@dataclass(frozen=True, slots=True)
+class BpsSlippage:
+    """A deterministic adverse amount in BASIS POINTS OF MID on every fill.
+
+    Spot crypto is a central limit order book: a market order of retail size
+    walks at most the first level or two, so the expected cost beyond the half
+    spread is small and roughly proportional to price. Modelled as a constant,
+    which is a named approximation: it ignores size, time of day and the thin
+    weekend book, and the stress profile is where that is priced in.
+    """
+
+    bps: float
+
+    def __post_init__(self) -> None:
+        if self.bps < 0:
+            raise ValueError("Slippage bps must be >= 0; negative means price improvement")
+
+    def slippage_price(
+        self,
+        instrument: Instrument,
+        direction: Direction,
+        mid_price: float,
+        rng: np.random.Generator,
+    ) -> float:
+        return self.bps * 1e-4 * float(mid_price)
+
+
+def expected_slippage_price(
+    model: SlippageModel, instrument: Instrument, mid_price: float | None = None
+) -> float:
     """The EXPECTED adverse slippage of one fill under ``model``, in price units.
 
     Used by sizing (``fixed_fractional_v2``) to price the stop-out it is sizing
@@ -262,10 +331,20 @@ def expected_slippage_price(model: SlippageModel, instrument: Instrument) -> flo
     * :class:`ProbabilisticAdverseTickSlippage` ->
       ``probability * mean(1..max_ticks) * tick_pips * pip_size``, i.e.
       ``p * (max_ticks + 1) / 2 * tick_pips * pip_size``. For IG_REALISTIC that
-      is ``0.30 * 2 * 0.4 = 0.24`` pips.
+      is ``0.30 * 2 * 0.4 = 0.24`` pips;
+    * :class:`BpsSlippage` -> ``bps * 1e-4 * mid_price``, which is why
+      ``mid_price`` exists: a proportional cost has no value without a price,
+      and a missing one RAISES rather than reading as zero.
 
     An unknown model raises: guessing its mean would be inventing a cost.
     """
+    if isinstance(model, BpsSlippage):
+        if mid_price is None or not mid_price > 0:
+            raise ValueError(
+                f"{instrument.symbol}: BpsSlippage needs the price it is a proportion of; "
+                "got none. Pass mid_price rather than let sizing price the stop-out at zero."
+            )
+        return model.bps * 1e-4 * float(mid_price)
     if isinstance(model, NoSlippage):
         return 0.0
     if isinstance(model, FixedPointsSlippage):
@@ -479,9 +558,34 @@ class ExecutionProfile:
             return rules[key].distance_pips(instrument) * instrument.pip_size
         return self.min_stop_distance_pips * instrument.pip_size
 
-    def expected_slippage_price(self, instrument: Instrument) -> float:
+    def expected_slippage_price(
+        self, instrument: Instrument, mid_price: float | None = None
+    ) -> float:
         """Expected adverse slippage of ONE fill. See :func:`expected_slippage_price`."""
-        return expected_slippage_price(self.slippage, instrument)
+        return expected_slippage_price(self.slippage, instrument, mid_price)
+
+    def stop_out_cost_per_unit(
+        self, instrument: Instrument, hour_utc: int, price: float
+    ) -> float:
+        """Expected round-trip friction of a stopped position, price units per unit.
+
+        ``spread + 2 * E[slippage]`` at ``hour_utc`` and ``price``; THE formula
+        the sizing rule (``fixed_fractional_v2``), the engine's construction
+        policy and the paper runtime's open-risk view all read, so the three
+        cannot drift apart.
+
+        For a SPOT instrument the bps-of-notional commission of both legs is
+        added (``2 * bps * 1e-4 * price``): at 60 bps a leg it is the largest
+        cost of a crypto trade, and leaving it out would size a 3% stop as if a
+        stop-out lost 3% when it loses 4.2%. CFD profiles keep the historical
+        rule (commission excluded: per ticket and in its own currency), so no
+        stored CFD result moves.
+        """
+        spread = self.spread_price(instrument, hour_utc, price)
+        cost = spread + 2.0 * self.expected_slippage_price(instrument, price)
+        if instrument.is_spot and self.commission.bps_of_notional:
+            cost += 2.0 * self.commission.bps_of_notional * 1e-4 * abs(float(price))
+        return float(cost)
 
     def guaranteed_stop_premium_price(self, instrument: Instrument) -> float:
         return self.guaranteed_stop_premium_pips * instrument.pip_size
@@ -687,6 +791,77 @@ SEVERE_STRESS = ExecutionProfile(
 )
 
 
+#: Coinbase UK spot (Advanced Trade), GBP pairs, a UK retail account at the
+#: LOWEST volume tier. ``docs/v2/research/CRYPTO_VENUES_2026-10.md`` records the
+#: sources; the numbers are:
+#:
+#: * commission: 60 bps of notional per leg, charged in the quote currency
+#:   (GBP). That is the published TAKER rate below USD 10,000 of 30-day volume
+#:   (maker 40 bps). Every entry the engine models is a market order at the
+#:   next bar's open and every stop and target a market order, so every leg is
+#:   a taker leg. A round trip costs 120 bps before spread and slippage;
+#: * spread: the instrument's recorded median spread in bps of mid
+#:   (``Instrument.typical_spread_bps``), floored at 2 bps;
+#: * slippage: 5 bps of mid, deterministic, every fill (``BpsSlippage``);
+#: * financing: none (a spot holding is not financed);
+#: * no minimum stop distance: a spot stop is a client-side or venue stop
+#:   order at any price; ``ALLOW``;
+#: * no rejection or partial-fill model: the paper venue fills or refuses.
+#:
+#: The fee tier is the honest default, not the cheapest: an operator trading
+#: more than USD 10,000 a month pays less, and the stress profile charges more.
+COINBASE_UK_SPOT = ExecutionProfile(
+    name="COINBASE_UK_SPOT",
+    spread=BpsOfMidSpread(multiplier=1.0, floor_bps=2.0),
+    slippage=BpsSlippage(bps=5.0),
+    commission=CommissionModel(bps_of_notional=60.0, currency="quote"),
+    financing=FinancingModel(),
+    min_deal_size=0.0,
+    min_stop_distance_pips=0.0,
+    min_stop_policy=MinStopPolicy.ALLOW,
+    partial_fill_probability=0.0,
+    rejection_probability=0.0,
+    latency_bars=0,
+    seed=20261010,
+    notes=(
+        "Coinbase UK spot, lowest fee tier: 60 bps taker per leg (GBP), recorded "
+        "median spread in bps floored at 2, 5 bps slippage, no financing, no "
+        "minimum stop. Long only (Instrument.shortable is False). Fee schedule as "
+        "published October 2026; see docs/v2/research/CRYPTO_VENUES_2026-10.md."
+    ),
+)
+
+#: The crypto survivability bound: three times the recorded spread (floor
+#: 6 bps), 25 bps slippage per fill (a thin weekend book, or an alt walked two
+#: levels), the same taker fee plus 20 bps (a worse venue, or a card-funded
+#: instant buy), one bar of latency. If an edge survives this it is probably
+#: not a fee artefact.
+COINBASE_UK_SPOT_STRESS = ExecutionProfile(
+    name="COINBASE_UK_SPOT_STRESS",
+    spread=BpsOfMidSpread(multiplier=3.0, floor_bps=6.0),
+    slippage=BpsSlippage(bps=25.0),
+    commission=CommissionModel(bps_of_notional=80.0, currency="quote"),
+    financing=FinancingModel(),
+    min_deal_size=0.0,
+    min_stop_distance_pips=0.0,
+    min_stop_policy=MinStopPolicy.ALLOW,
+    partial_fill_probability=0.0,
+    rejection_probability=0.0,
+    latency_bars=1,
+    seed=20261010,
+    notes=(
+        "Crypto stress: 3x recorded spread (floor 6 bps), 25 bps slippage, 80 bps "
+        "fee per leg, one bar of latency. A survivability test, not a forecast."
+    ),
+)
+
+#: The profiles that model SPOT crypto. ``IDEALISED_RESEARCH`` is admitted as
+#: the frictionless numerator, as for every other market.
+SPOT_CRYPTO_PROFILES: frozenset[str] = frozenset(
+    {COINBASE_UK_SPOT.name, COINBASE_UK_SPOT_STRESS.name, IDEALISED_RESEARCH.name}
+)
+
+
 PROFILES: dict[str, ExecutionProfile] = {
     p.name: p
     for p in (
@@ -695,8 +870,38 @@ PROFILES: dict[str, ExecutionProfile] = {
         OANDA_REALISTIC,
         IBKR_REALISTIC,
         SEVERE_STRESS,
+        COINBASE_UK_SPOT,
+        COINBASE_UK_SPOT_STRESS,
     )
 }
+
+
+class ProfileMismatch(ValueError):
+    """A cost profile asked to price a market it does not model."""
+
+
+def assert_profile_covers(profile: ExecutionProfile, instrument: Instrument) -> None:
+    """Refuse a profile that would price ``instrument`` as a different product.
+
+    A CFD profile on a spot crypto instrument charges CFD financing every night
+    and no commission: on Coinbase that understates a round trip by 120 bps,
+    which is the flattering direction. A spot crypto profile on a CFD has no
+    bps spread to read. Both are refused here, by the engine and by the paper
+    composition root, before a single bar is priced.
+    """
+    if instrument.is_spot:
+        if profile.name not in SPOT_CRYPTO_PROFILES:
+            raise ProfileMismatch(
+                f"{instrument.symbol} is spot crypto ({instrument.venue}); profile "
+                f"{profile.name} models CFDs (financing, no commission). Use one of "
+                f"{sorted(SPOT_CRYPTO_PROFILES)}."
+            )
+        return
+    if profile.name in SPOT_CRYPTO_PROFILES - {IDEALISED_RESEARCH.name}:
+        raise ProfileMismatch(
+            f"{profile.name} models spot crypto; {instrument.symbol} is a "
+            f"{instrument.venue} {instrument.asset_class.value} CFD"
+        )
 
 
 def get_profile(name: str) -> ExecutionProfile:

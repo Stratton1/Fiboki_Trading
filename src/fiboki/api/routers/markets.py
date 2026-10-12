@@ -43,6 +43,13 @@ class InstrumentView(BaseModel):
     typical_spread_pips: Figure
     retail_leverage: Figure
     annual_financing_bps: Figure
+    #: ``oanda`` (practice CFDs) or ``coinbase`` (UK spot crypto).
+    venue: str = "oanda"
+    #: False for spot crypto: a short entry is refused by the risk gateway.
+    shortable: bool = True
+    #: Spot crypto only: the typical spread in basis points of mid, which is
+    #: what the cost model and the gateway read for these instruments.
+    typical_spread_bps: Figure | None = None
 
 
 class DataQualityRow(BaseModel):
@@ -121,6 +128,29 @@ def instruments(
                 retail_leverage=Figure(value=inst.retail_leverage, provenance=p, unit="x"),
                 annual_financing_bps=Figure(
                     value=inst.annual_financing_bps, provenance=p, unit="bps"
+                ),
+                venue=inst.venue,
+                shortable=inst.shortable,
+                typical_spread_bps=(
+                    None
+                    if inst.typical_spread_bps is None
+                    else Figure(
+                        value=inst.typical_spread_bps,
+                        provenance=p,
+                        unit="bps",
+                        estimated=True,
+                        caveats=(
+                            Caveat(
+                                code="snapshot_spread",
+                                severity="warning",
+                                message="Median of six top-of-book samples on one "
+                                "Saturday evening (2026-10-10); not a measured "
+                                "distribution, and thin weekend books widen.",
+                                affects="spread",
+                                direction="optimistic",
+                            ),
+                        ),
+                    )
                 ),
             )
         )

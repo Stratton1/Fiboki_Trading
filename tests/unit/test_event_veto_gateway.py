@@ -73,7 +73,8 @@ def test_the_fake_satisfies_the_protocol_and_so_does_the_real_source(tmp_path) -
 
 
 def test_event_veto_is_the_twentieth_named_check_and_not_an_exit_check() -> None:
-    assert len(RiskGateway.CHECKS) == 20
+    # Twentieth when added; 21 checks since ``direction_permitted`` (2026-10-10).
+    assert len(RiskGateway.CHECKS) == 21
     assert RiskGateway.CHECKS.index("event_veto") == RiskGateway.CHECKS.index("event_blackout") + 1
     assert "event_veto" not in RiskGateway.EXIT_CHECKS
 

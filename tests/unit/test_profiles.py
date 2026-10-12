@@ -201,8 +201,11 @@ def test_a_negative_bps_means_the_position_earns_financing():
 # ==========================================================================
 
 
-def test_all_five_named_profiles_are_registered():
+def test_all_named_profiles_are_registered():
+    # Five CFD/research profiles, plus the two spot-crypto profiles (2026-10-10).
     assert sorted(PROFILES) == [
+        "COINBASE_UK_SPOT",
+        "COINBASE_UK_SPOT_STRESS",
         "IBKR_REALISTIC",
         "IDEALISED_RESEARCH",
         "IG_REALISTIC",

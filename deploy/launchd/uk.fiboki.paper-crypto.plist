@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  Fiboki V2 desktop service: PAPER trading forward, 24/7, on SPOT CRYPTO
+  (fiboki paper forward, wired by src/fiboki/entrypoints/wiring/paper_forward_crypto_v1.json:
+  BTCGBP and ETHGBP H4, Coinbase PUBLIC candles and ticker, COINBASE_UK_SPOT costs).
+
+  TEMPLATE. Do not copy by hand: scripts/launchd-install.sh substitutes
+  __FIBOKI_ROOT__ (the repository) and writes the result to
+  ~/Library/LaunchAgents/uk.fiboki.paper-crypto.plist. It is NOT in the
+  installer's default service list; install it explicitly by name (the exact
+  command is in docs/v2/OPERATIONS.md, "Paper forward, crypto").
+
+  * Runs scripts/fiboki-service.sh paper-crypto, which reads ~/.fiboki/env,
+    forces FIBOKI_EXECUTION_MODE=paper and unsets every live control. The
+    crypto market data is public: no credential is needed or read, and none
+    is set anywhere in this file. Nothing is ever sent to an exchange.
+  * Its own lease (paper-forward-crypto), journal (var/paper_forward/
+    paper_forward_crypto_v1) and session directory; it runs beside the FX
+    paper service and shares the operator's kill switch with it.
+  * ProcessType Standard and a `caffeinate -is` assertion, as for the FX paper
+    service: crypto bars close every four hours, weekends included.
+  * KeepAlive restarts a crash (non-zero exit) but not a clean exit; exit 75
+    (lease held, or a divergence only an operator can resolve) is retried
+    slowly by ThrottleInterval.
+  * ExitTimeOut (45 s) exceeds WorkerConfig.shutdown_grace_seconds (30 s).
+  * Logs go to var/logs/ inside the repository.
+-->
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>uk.fiboki.paper-crypto</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>/bin/bash</string>
+        <string>__FIBOKI_ROOT__/scripts/fiboki-service.sh</string>
+        <string>paper-crypto</string>
+    </array>
+
+    <key>WorkingDirectory</key>
+    <string>__FIBOKI_ROOT__</string>
+
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>FIBOKI_EXECUTION_MODE</key>
+        <string>paper</string>
+    </dict>
+
+    <key>RunAtLoad</key>
+    <true/>
+
+    <key>KeepAlive</key>
+    <dict>
+        <key>SuccessfulExit</key>
+        <false/>
+    </dict>
+
+    <key>ThrottleInterval</key>
+    <integer>60</integer>
+
+    <key>ExitTimeOut</key>
+    <integer>45</integer>
+
+    <key>ProcessType</key>
+    <string>Standard</string>
+
+    <key>StandardOutPath</key>
+    <string>__FIBOKI_ROOT__/var/logs/paper-crypto.log</string>
+    <key>StandardErrorPath</key>
+    <string>__FIBOKI_ROOT__/var/logs/paper-crypto.err.log</string>
+</dict>
+</plist>

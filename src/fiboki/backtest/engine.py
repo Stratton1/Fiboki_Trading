@@ -146,7 +146,7 @@ from fiboki.core.contracts import (
     Signal,
     Trade,
 )
-from fiboki.core.enums import ExitReason, Provenance, Timeframe
+from fiboki.core.enums import Direction, ExitReason, Provenance, Timeframe
 from fiboki.core.instruments import Instrument
 from fiboki.core.instruments import get as get_instrument
 from fiboki.core.money import FxRateSource, round_size
@@ -157,7 +157,7 @@ from fiboki.sim.fills import (
     IntrabarPolicy,
     SessionCalendar,
 )
-from fiboki.sim.profiles import IG_REALISTIC, ExecutionProfile
+from fiboki.sim.profiles import IG_REALISTIC, ExecutionProfile, assert_profile_covers
 
 __all__ = [
     "SIZING_POLICY_V1",
@@ -283,13 +283,14 @@ def stop_out_cost_per_unit(
     Stated approximations: the exit spread is priced at the ENTRY hour (the exit
     hour is unknown when sizing), stale-bar widening is not anticipated,
     commission is excluded (it is per ticket and in its own currency, so it is
-    not linear in size), and financing is excluded (it depends on the holding
+    not linear in size) EXCEPT on a spot instrument, where its bps-of-notional
+    part is included (``ExecutionProfile.stop_out_cost_per_unit``), and
+    financing is excluded (it depends on the holding
     period). Each makes the v2 figure a floor on the realised stop-out loss,
     never a ceiling.
     """
     hour = int(expected_entry_time(signal).hour)
-    spread = profile.spread_price(instrument, hour, float(signal.reference_price))
-    return float(spread + 2.0 * profile.expected_slippage_price(instrument))
+    return profile.stop_out_cost_per_unit(instrument, hour, float(signal.reference_price))
 
 
 @dataclass(frozen=True, slots=True)
@@ -903,6 +904,9 @@ class BacktestEngine:
             self.frames[sym] = frame
             self.price_basis[sym] = basis
             self.instruments[sym] = get_instrument(sym)
+            # A CFD cost profile on a spot instrument (or the reverse) prices a
+            # different product; refused before a bar is read.
+            assert_profile_covers(config.profile, self.instruments[sym])
 
         self.timeline: pd.DatetimeIndex = _union_timeline(self.frames, self.symbols)
         self._positions: dict[str, np.ndarray] = {
@@ -1106,6 +1110,15 @@ class BacktestEngine:
                 )
                 if scheduled and policy.reversal is ReversalMode.CLOSE_ONLY:
                     book.bump("reversal_close_only")
+                    continue
+
+                # A short ENTRY on an instrument that cannot be shorted (spot
+                # crypto: Instrument.shortable) is refused here exactly as the
+                # risk gateway's ``direction_permitted`` refuses it in paper.
+                # AFTER the reversal is scheduled, so the opposite signal still
+                # closes a long: refusing new risk never blocks an exit.
+                if signal.direction is Direction.SHORT and not instr.shortable:
+                    book.bump("short_not_permitted")
                     continue
 
                 # Entry locks, AFTER the reversal is scheduled: a lock refuses
@@ -1484,7 +1497,9 @@ _plan_legs = plan_legs
 
 
 #: ``price_basis`` values the fill model can price both sides from.
-EXECUTABLE_PRICE_BASES = frozenset({"mid", "synthetic_mid"})
+#: ``last_as_mid`` is an exchange's trade-print OHLC declared as a mid proxy at
+#: ingest (``data/providers/coinbase.py``), with its error bound recorded there.
+EXECUTABLE_PRICE_BASES = frozenset({"mid", "synthetic_mid", "last_as_mid"})
 
 _UTC_NAMES = frozenset({"UTC", "Etc/UTC", "tzutc()", "UTC+00:00", "Etc/Universal", "Universal", "Zulu"})
 

@@ -222,6 +222,18 @@ ALL_EXPECTED: dict[str, float] = {
     **{sym: row[0] for sym, row in OANDA_EXPECTED.items()},
 }
 
+#: SPOT crypto on Coinbase UK (registered 2026-10-10, core/instruments_crypto.py).
+#: Not CFDs, so the ESMA/FCA CFD table does not apply: a UK retail client may
+#: not buy a crypto derivative at all (COBS 22.6.5R, in force since 6 January
+#: 2021 and restated by the FCA on 1 August 2025 when it reopened cETNs), so the
+#: only crypto exposure open to the operator is an outright, unleveraged
+#: purchase: 1:1. Every product's ``margin_enabled`` is false in
+#: tests/fixtures/coinbase/products_2026-10-10.json. Written out by hand.
+SPOT_EXPECTED: dict[str, float] = {
+    "ADAGBP": 1.0, "BTCGBP": 1.0, "DOGEGBP": 1.0, "DOTGBP": 1.0,
+    "ETHGBP": 1.0, "LINKGBP": 1.0, "LTCGBP": 1.0, "SOLGBP": 1.0,
+}
+
 
 def _fixture_margin_rates() -> dict[str, str]:
     payload = json.loads(OANDA_FIXTURE.read_text(encoding="utf-8"))
@@ -233,7 +245,24 @@ def test_the_table_covers_every_registered_instrument_and_nothing_else() -> None
     assert len(OANDA_EXPECTED) == 82
     assert not set(EXPECTED) & set(OANDA_EXPECTED)
     assert len(ALL_EXPECTED) == 123
-    assert sorted(ALL_EXPECTED) == all_symbols()
+    assert len(SPOT_EXPECTED) == 8
+    assert not set(SPOT_EXPECTED) & set(ALL_EXPECTED)
+    assert sorted({**ALL_EXPECTED, **SPOT_EXPECTED}) == all_symbols()
+
+
+@pytest.mark.parametrize("symbol", sorted(SPOT_EXPECTED))
+def test_spot_crypto_is_unleveraged_and_long_only(symbol: str) -> None:
+    """Spot: 1:1, no financing, cannot be sold short (no borrowed coins)."""
+    inst = get(symbol)
+    assert inst.asset_class is AssetClass.CRYPTO
+    assert inst.retail_leverage == SPOT_EXPECTED[symbol]
+    assert inst.annual_financing_bps == 0.0
+    assert inst.shortable is False
+    assert inst.is_spot and inst.venue == "coinbase"
+    # Never above what the regulation would allow even a crypto CFD (2:1).
+    assert inst.retail_leverage <= esma_retail_leverage(
+        symbol, inst.asset_class, inst.base, inst.quote
+    )
 
 
 @pytest.mark.parametrize("symbol", sorted(EXPECTED))

@@ -1,0 +1,143 @@
+{
+ "last_ticker": {
+  "ADA-GBP": {
+   "ask": "0.19067",
+   "bid": "0.19057",
+   "price": "0.19099",
+   "rfq_volume": "32507.938276",
+   "size": "2.62",
+   "time": "2026-10-10T19:22:36.810182196Z",
+   "trade_id": 7802597,
+   "volume": "1253256.39"
+  },
+  "BTC-GBP": {
+   "ask": "62720",
+   "bid": "62714.58",
+   "price": "62721.82",
+   "rfq_volume": "0.000666",
+   "size": "0.00492762",
+   "time": "2026-10-10T19:25:51.606060188Z",
+   "trade_id": 49567894,
+   "volume": "32.50595556"
+  },
+  "DOGE-GBP": {
+   "ask": "0.06508",
+   "bid": "0.06506",
+   "price": "0.06511",
+   "size": "15.4",
+   "time": "2026-10-10T19:22:08.500466035Z",
+   "trade_id": 4509909,
+   "volume": "262123"
+  },
+  "DOT-GBP": {
+   "ask": "0.9475",
+   "bid": "0.9468",
+   "price": "0.9469",
+   "rfq_volume": "1180.726844",
+   "size": "88.104",
+   "time": "2026-10-10T19:27:36.229212790Z",
+   "trade_id": 1863684,
+   "volume": "300242.405"
+  },
+  "ETH-GBP": {
+   "ask": "1899.24",
+   "bid": "1898.71",
+   "price": "1899.24",
+   "rfq_volume": "31.471437",
+   "size": "0.05011835",
+   "time": "2026-10-10T19:27:26.428488157Z",
+   "trade_id": 27711217,
+   "volume": "332.77417192"
+  },
+  "LINK-GBP": {
+   "ask": "9.87628",
+   "bid": "9.87206",
+   "price": "9.88299",
+   "rfq_volume": "69.032102",
+   "size": "16.59",
+   "time": "2026-10-10T19:22:10.757349695Z",
+   "trade_id": 5237230,
+   "volume": "5552.83"
+  },
+  "LTC-GBP": {
+   "ask": "48.456",
+   "bid": "48.433",
+   "price": "48.456",
+   "rfq_volume": "1350.777690",
+   "size": "0.20752916",
+   "time": "2026-10-10T19:27:32.442517813Z",
+   "trade_id": 7026952,
+   "volume": "2322.20478849"
+  },
+  "SOL-GBP": {
+   "ask": "83.45",
+   "bid": "83.44",
+   "price": "83.45",
+   "rfq_volume": "2823.305253",
+   "size": "0.048",
+   "time": "2026-10-10T19:26:53.152957664Z",
+   "trade_id": 11943867,
+   "volume": "6385.267"
+  }
+ },
+ "method": "6 samples per product of GET /products/{id}/ticker about 10 s apart; spread = (ask-bid)/mid",
+ "recorded_at": "2026-10-10T19:27:45Z",
+ "stats": {
+  "ADA-GBP": {
+   "last_price": "0.19099",
+   "max_spread_bps": 5.246,
+   "median_spread_bps": 5.245,
+   "n": 6,
+   "volume_24h_base": "1253256.39"
+  },
+  "BTC-GBP": {
+   "last_price": "62721.82",
+   "max_spread_bps": 1.36,
+   "median_spread_bps": 0.823,
+   "n": 6,
+   "volume_24h_base": "32.50595556"
+  },
+  "DOGE-GBP": {
+   "last_price": "0.06511",
+   "max_spread_bps": 3.074,
+   "median_spread_bps": 3.073,
+   "n": 6,
+   "volume_24h_base": "262123"
+  },
+  "DOT-GBP": {
+   "last_price": "0.9469",
+   "max_spread_bps": 9.496,
+   "median_spread_bps": 7.39,
+   "n": 6,
+   "volume_24h_base": "300242.405"
+  },
+  "ETH-GBP": {
+   "last_price": "1899.24",
+   "max_spread_bps": 2.844,
+   "median_spread_bps": 2.791,
+   "n": 6,
+   "volume_24h_base": "332.77417192"
+  },
+  "LINK-GBP": {
+   "last_price": "9.88299",
+   "max_spread_bps": 4.274,
+   "median_spread_bps": 4.274,
+   "n": 6,
+   "volume_24h_base": "5552.83"
+  },
+  "LTC-GBP": {
+   "last_price": "48.456",
+   "max_spread_bps": 7.019,
+   "median_spread_bps": 4.645,
+   "n": 6,
+   "volume_24h_base": "2322.20478849"
+  },
+  "SOL-GBP": {
+   "last_price": "83.45",
+   "max_spread_bps": 2.397,
+   "median_spread_bps": 2.397,
+   "n": 6,
+   "volume_24h_base": "6385.267"
+  }
+ }
+}

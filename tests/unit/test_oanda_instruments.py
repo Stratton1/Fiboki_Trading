@@ -194,9 +194,15 @@ def test_the_mapping_is_complete_and_bidirectional(specs) -> None:
     assert len(set(symbols)) == 123, "two OANDA names map to one symbol"
     for name in specs:
         assert to_oanda_name(to_fiboki_symbol(name)) == name
-    for symbol in registry.all_symbols():
+    # Every registered instrument but the spot crypto (Coinbase, not OANDA:
+    # core/instruments_crypto.py) is an OANDA instrument.
+    oanda_symbols = sorted(set(registry.all_symbols()) - registry.CRYPTO_REGISTERED)
+    for symbol in oanda_symbols:
         assert to_fiboki_symbol(to_oanda_name(symbol)) == symbol
-    assert sorted(symbols) == registry.all_symbols()
+    assert sorted(symbols) == oanda_symbols
+    for symbol in registry.CRYPTO_REGISTERED:
+        with pytest.raises(KeyError):
+            registry.oanda_name_for(symbol)
 
 
 def test_the_committed_mapping_is_the_rule(specs) -> None:
@@ -448,13 +454,15 @@ def test_xagusd_spread_is_the_same_price_in_the_new_pip() -> None:
 
 
 def test_82_instruments_are_oanda_derived() -> None:
-    derived = set(registry.all_symbols()) - registry.HAND_REGISTERED
+    derived = set(registry.all_symbols()) - registry.HAND_REGISTERED - registry.CRYPTO_REGISTERED
     assert len(derived) == 82
-    assert len(registry.all_symbols()) == 123
+    # 123 OANDA instruments plus the 8 spot crypto products (2026-10-10).
+    assert len(registry.all_symbols()) == 123 + 8
 
 
 @pytest.mark.parametrize(
-    "symbol", sorted(set(registry.all_symbols()) - registry.HAND_REGISTERED)
+    "symbol",
+    sorted(set(registry.all_symbols()) - registry.HAND_REGISTERED - registry.CRYPTO_REGISTERED),
 )
 def test_new_instrument_is_exactly_the_derivation(symbol, specs, snaps) -> None:
     name = to_oanda_name(symbol)
@@ -553,7 +561,10 @@ def test_every_class_and_label_has_its_rules() -> None:
     classes = {registry.get(s).asset_class for s in registry.all_symbols()}
     labels = {registry.get(s).trading_hours for s in registry.all_symbols()}
     assert {AssetClass.BOND, AssetClass.COMMODITY} <= classes
-    assert labels == {"fx_24_5", "index", "energy", "commodity_cfd", "bond_cfd"}
+    assert labels == {
+        "fx_24_5", "index", "energy", "commodity_cfd", "bond_cfd",
+        "crypto_24_7",  # spot crypto, core/instruments_crypto.py
+    }
     assert labels <= set(SESSION_CLOSURES)
     assert {c.value for c in classes} <= set(TRIPLE_ROLLOVER_WEEKDAY)
     assert set(registry.TRADING_HOURS_BY_CLASS) == set(registry.DEFAULT_ANNUAL_FINANCING_BPS)

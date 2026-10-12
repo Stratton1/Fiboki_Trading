@@ -630,6 +630,7 @@ or the terms arguably prohibit it: behind an explicit opt-in, off by default, ne
 | `histdata` | prices | free | [opt_in_unclear](https://www.histdata.com/f-a-q/) | none | bulk download | historical bars; no availability semantics needed | `fiboki.data.providers.histdata` |
 | `dukascopy` | prices | free | [opt_in_unclear](https://www.dukascopy.com/swiss/english/legal-pages/terms-of-use/) | none | not fetched | historical ticks | `fiboki.data.providers.dukascopy` |
 | `oanda_candles` | prices | free with an OANDA account | [personal_only](https://www.oanda.com/site/terms-of-use) | none | live recorder / on demand | closed candles only | `fiboki.data.providers.oanda` |
+| `coinbase_candles` | prices | free, no key | [personal_only](https://www.coinbase.com/legal/market_data) | none | backfill + paper-forward poll (public, 10 req/s per IP) | closed candles only (no finality flag: dropped by the clock) | `fiboki.data.providers.coinbase` |
 | `investing_com` | calendar | n/a | [forbidden](https://www.investing.com/about-us/terms-and-conditions) | none | n/a | n/a | not implemented |
 | `tradingview_undocumented` | prices | n/a | [forbidden](https://www.tradingview.com/policies/) | none | n/a | n/a | not implemented |
 | `myfxbook_scraping` | positioning | n/a | [forbidden](https://www.myfxbook.com/terms) | none | n/a | n/a | not implemented |
