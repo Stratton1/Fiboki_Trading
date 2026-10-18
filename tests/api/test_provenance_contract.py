@@ -33,6 +33,15 @@ ALLOWED_BARE_NUMERIC = {
     ("Page", "limit"),
     ("HealthReport", "uptime_seconds"),
     ("HealthReport", "worker_heartbeat_age_seconds"),
+    # The configured threshold the worker verdict used (settings, like
+    # SettingsView.session_ttl_seconds), not a measurement.
+    ("HealthReport", "worker_stale_after_seconds"),
+    # A display step (0 to 5) of the utilisation Figure on the same row, so the
+    # exposure matrix bins nothing itself; the number it steps is labelled.
+    ("LimitRowView", "heat"),
+    # A search-match rank (0 exact to 3 substring): an ordinal of string
+    # matching, not a figure about the market or the book.
+    ("SearchHit", "tier"),
     ("HealthCheck", "latency_ms"),
     ("AuditEntryView", "sequence"),
     ("AuditIntegrityView", "first_broken_sequence"),

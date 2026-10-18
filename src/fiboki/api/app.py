@@ -26,13 +26,16 @@ from fiboki.api.logging import (
 )
 from fiboki.api.platform import build_platform
 from fiboki.api.routers import auth as auth_router
+from fiboki.api.routers import board as board_router
 from fiboki.api.routers import chart as chart_router
 from fiboki.api.routers import command as command_router
+from fiboki.api.routers import fleet as fleet_router
 from fiboki.api.routers import incidents as incidents_router
 from fiboki.api.routers import intelligence as intelligence_router
 from fiboki.api.routers import lifecycle as lifecycle_router
 from fiboki.api.routers import markets as markets_router
 from fiboki.api.routers import research as research_router
+from fiboki.api.routers import search as search_router
 from fiboki.api.routers import stream as stream_router
 from fiboki.api.routers import system as system_router
 from fiboki.api.routers import trading as trading_router
@@ -163,14 +166,17 @@ def create_app(settings: Settings | None = None, *, configure_logs: bool = True)
     for module in (
         auth_router,
         system_router,
+        board_router,
         incidents_router,
         trading_router,
+        fleet_router,
         lifecycle_router,
         research_router,
         markets_router,
         chart_router,
         intelligence_router,
         command_router,
+        search_router,
         stream_router,
     ):
         app.include_router(module.router)

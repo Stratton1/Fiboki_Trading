@@ -17,7 +17,7 @@ assertion. ``ok`` requires every critical check to pass.
 from __future__ import annotations
 
 import platform as py_platform
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -63,6 +63,16 @@ class HealthReport(BaseModel):
     migration_revision: str | None
     execution_mode: str
     worker_heartbeat_age_seconds: float | None
+    #: The platform's verdict on the worker: ``ok`` | ``stale`` | ``absent``.
+    #: The workstation shows this; it never judges an age itself.
+    worker_state: str = Field(default="absent", pattern="^(ok|stale|absent)$")
+    #: The threshold the verdict used (configuration, not a measurement).
+    worker_stale_after_seconds: float | None = None
+    #: When an ``ok`` verdict expires if no newer beat arrives: the newest beat
+    #: plus the threshold. ``None`` unless ``worker_state`` is ``ok``. Past
+    #: it, the report is out of date and the workstation says "unconfirmed";
+    #: it does not promote itself to a verdict of its own.
+    worker_stale_at: datetime | None = None
     uptime_seconds: float
     python_version: str
     checks: tuple[HealthCheck, ...]
@@ -326,6 +336,13 @@ def build_health(platform: Platform, settings: Settings) -> HealthReport:
         migration_revision=revision,
         execution_mode=settings.execution_mode.value,
         worker_heartbeat_age_seconds=age,
+        worker_state=beat.state if beat.state in ("ok", "stale") else "absent",
+        worker_stale_after_seconds=float(settings.worker_heartbeat_stale_seconds),
+        worker_stale_at=(
+            beat.newest_beat_at + timedelta(seconds=settings.worker_heartbeat_stale_seconds)
+            if beat.state == "ok" and beat.newest_beat_at is not None
+            else None
+        ),
         uptime_seconds=round(platform.uptime_seconds, 1),
         python_version=py_platform.python_version(),
         checks=tuple(checks),

@@ -20,6 +20,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from fiboki.api.deps import AuditDep, PlatformDep, SettingsDep
 from fiboki.api.errors import ApiError
+from fiboki.api.limit_board import LimitBoardView, build_limit_board
 from fiboki.api.logging import current_correlation_id
 from fiboki.api.models import Envelope, Page, SourceNote
 from fiboki.api.provenance import Caveat, Figure, Series, SeriesPoint, figure, realism_caveats
@@ -1188,4 +1189,39 @@ def execution_telemetry(
         total=len(items),
         limit=limit,
         source=_note(platform.data_source, "Execution telemetry for the current mode."),
+    )
+
+
+# -------------------------------------------------------------- limit board
+
+
+@router.get("/limits", response_model=Envelope[LimitBoardView])
+def limits(platform: PlatformDep, settings: SettingsDep) -> Envelope[LimitBoardView]:
+    """Every limit with its utilisation, headroom and band, ordered most used first.
+
+    The workstation draws these bars and decides nothing about them; the
+    attention queue lists the same rows (``api/limit_board.py``).
+    """
+    board = build_limit_board(platform, settings)
+    caveats: list[Caveat] = list(_record_caveats(platform))
+    if platform.data_source == "seed":
+        caveats.append(
+            Caveat(
+                code="limits_on_fixture",
+                severity="warning",
+                message="The bars are computed from the demonstration fixture, so no limit "
+                "here is a measurement and none is raised on the attention queue.",
+                affects="utilisation_pct",
+                direction="unknown",
+            )
+        )
+    return Envelope(
+        data=board,
+        source=_note(
+            platform.data_source,
+            f"Limit set {board.limits_version}: /api/trading/risk and /api/trading/exposure, "
+            "banded and ordered by the API. " + platform.trade_record_detail(),
+            board.sources["risk"].as_of,
+        ),
+        caveats=tuple(caveats),
     )

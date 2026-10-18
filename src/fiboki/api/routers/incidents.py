@@ -63,6 +63,7 @@ __all__ = [
     "IncidentView",
     "derive_incidents",
     "load_incidents",
+    "read_alert_log",
     "router",
 ]
 
@@ -454,11 +455,8 @@ def alert_log_path(request_state: Any = None) -> Path | None:
     return Path(raw) if raw else None
 
 
-def load_incidents(
-    platform: Any, settings: Any, *, alert_log: Path | None, now: datetime | None = None
-) -> IncidentSnapshot:
-    """Read every source and derive the incident list. Read-only."""
-    stamp = now or datetime.now(tz=UTC)
+def read_alert_log(alert_log: Path | None) -> tuple[list[dict[str, Any]], list[Caveat], list[str]]:
+    """Every parsed row of the alert log, with caveats and a detail note. Read-only."""
     caveats: list[Caveat] = []
     rows: list[dict[str, Any]] = []
     detail_parts: list[str] = []
@@ -516,6 +514,15 @@ def load_incidents(
                 )
             )
         detail_parts.append(f"{len(rows)} alert(s) in {alert_log.name}")
+    return rows, caveats, detail_parts
+
+
+def load_incidents(
+    platform: Any, settings: Any, *, alert_log: Path | None, now: datetime | None = None
+) -> IncidentSnapshot:
+    """Read every source and derive the incident list. Read-only."""
+    stamp = now or datetime.now(tz=UTC)
+    rows, caveats, detail_parts = read_alert_log(alert_log)
     ks_events = platform.kill_switch.history()
     detail_parts.append(f"{len(ks_events)} kill-switch journal event(s)")
     occurrences = occurrences_from_alerts(rows) + occurrences_from_kill_switch(ks_events)

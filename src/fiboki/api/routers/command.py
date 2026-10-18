@@ -11,7 +11,10 @@ Sources, all read-only and all the same readers the REST routes use:
 category               source
 =====================  ======================================================
 ``kill_switch``        kill-switch journal, replayed now
-``limit_breach``       ``/api/trading/risk`` breaches and ``/exposure`` rows
+``limit_breach``       limit-board rows in the ``breached`` band
+``limit_near``         limit-board rows in the ``critical`` / ``warn`` bands
+                       (``api/limit_board.py``: the same rows the Risk bars
+                       draw, so the queue and the bars cannot disagree)
 ``incident``           the incident read model (open incidents only)
 ``stale_worker``       the ``worker_heartbeat`` table reader
 ``health``             ``build_health`` checks that are not ok
@@ -30,16 +33,19 @@ from __future__ import annotations
 
 import hashlib
 from collections.abc import Iterable
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from fastapi import APIRouter, Request
 from pydantic import BaseModel, ConfigDict, Field
 
+from fiboki.api import links
 from fiboki.api.deps import PlatformDep, SettingsDep
 from fiboki.api.health import build_health
-from fiboki.api.models import Page, SourceNote
-from fiboki.api.provenance import Caveat, Figure
+from fiboki.api.limit_board import attention_rows, build_limit_board
+from fiboki.api.market_sessions import MarketSessionView, market_sessions
+from fiboki.api.models import Envelope, Page, SourceNote
+from fiboki.api.provenance import Caveat, Figure, figure
 
 router = APIRouter(prefix="/api/command", tags=["command"])
 
@@ -68,6 +74,7 @@ SEVERITY_WEIGHT: dict[str, int] = {
 CATEGORY_WEIGHT: dict[str, int] = {
     "kill_switch": 90,
     "limit_breach": 80,
+    "limit_near": 75,
     "incident": 70,
     "stale_worker": 60,
     "health": 50,
@@ -194,7 +201,7 @@ def collect_attention(
                     title=f"{name} could not be read",
                     reason=f"The {name} source raised {type(exc).__name__}; its items "
                     "are missing from this queue, which is therefore incomplete.",
-                    deep_link="/system",
+                    deep_link=links.SYSTEM,
                     as_of=stamp,
                 )
             )
@@ -215,49 +222,44 @@ def collect_attention(
                 title=f"Kill switch ARMED ({mode.upper()})",
                 reason=f"Armed by {state.operator or 'an unrecorded operator'}: "
                 f"{state.reason or 'no reason recorded'}. New risk is refused.",
-                deep_link="/risk",
+                deep_link=links.RISK,
                 as_of=since,
             )
         )
 
-    # -- limit breaches --------------------------------------------------
+    # -- limits: the limit board's own bands -------------------------------
     def breaches() -> None:
         # A breach computed on the demonstration fixture is not a breach of
         # anything; the seed_fixture caveat item already says nothing is
         # measured. Raising a critical alarm from generated rows would be the
-        # V1 error of a fixture that looks like a measurement.
+        # V1 error of a fixture that looks like a measurement. The board says
+        # the same thing (``fixture: true``), so the two still agree.
         if platform.data_source == "seed":
             return
-        risk = trading_router.risk_state(platform, settings)
-        as_of = risk.source.as_of
-        for index, text in enumerate(risk.data.breaches):
-            items.append(
-                _item(
-                    p,
-                    id=f"limit_breach:risk:{index}",
-                    category="limit_breach",
-                    severity="critical",
-                    title="Risk limit breached",
-                    reason=text,
-                    deep_link="/risk",
-                    as_of=as_of,
-                )
+        board = build_limit_board(platform, settings)
+        as_of = board.sources["risk"].as_of
+        for row, severity in attention_rows(board):
+            used = row.utilisation_pct.value
+            if row.breached:
+                title = f"{row.label}: limit breached"
+            else:
+                title = f"{row.label} at {used:.0f}% of its limit"
+            what = f"{row.kind} " if row.kind else ""
+            reason = (
+                f"{what}{row.label}: {used:.1f}% of the limit used"
+                if used is not None
+                else f"{what}{row.label}: breached; utilisation not computable"
             )
-        exposure = trading_router.exposure(platform, settings)
-        for row in exposure.items:
-            if not row.breached:
-                continue
             items.append(
                 _item(
                     p,
-                    id=f"limit_breach:{row.key}",
-                    category="limit_breach",
-                    severity="critical",
-                    title=f"Exposure limit breached: {row.label}",
-                    reason=f"{row.key} exposure {row.exposure_pct.value}% exceeds its "
-                    f"{row.limit_pct.value}% limit.",
-                    deep_link="/risk",
-                    as_of=exposure.source.as_of,
+                    id=f"limit:{row.key}",
+                    category="limit_breach" if row.breached else "limit_near",
+                    severity=severity,
+                    title=title,
+                    reason=reason + f" (band {row.band.upper()}, limit set {board.limits_version}).",
+                    deep_link=row.deep_link,
+                    as_of=row.value.as_of if row.value is not None and row.value.as_of else as_of,
                 )
             )
 
@@ -293,7 +295,7 @@ def collect_attention(
                         severity=caveat.severity,
                         title=f"Incident feed: {caveat.code}",
                         reason=caveat.message,
-                        deep_link="/system",
+                        deep_link=links.SYSTEM,
                         as_of=stamp,
                     )
                 )
@@ -312,7 +314,7 @@ def collect_attention(
                     title="Worker heartbeat is stale",
                     reason=f"The newest worker beat is {beat.age_seconds:.0f}s old "
                     f"(stale at {stale_after:.0f}s). Nothing may be evaluating signals.",
-                    deep_link="/system",
+                    deep_link=links.SYSTEM,
                     as_of=beat.newest_beat_at,
                 )
             )
@@ -328,7 +330,7 @@ def collect_attention(
                     if unreadable
                     else "No worker has ever beaten",
                     reason=beat.detail,
-                    deep_link="/system",
+                    deep_link=links.SYSTEM,
                     as_of=stamp,
                 )
             )
@@ -346,7 +348,7 @@ def collect_attention(
                             title=f"Worker {worker.worker_id} is stale",
                             reason=f"Last beat {worker.age_seconds:.0f}s ago while "
                             "another worker is alive.",
-                            deep_link="/system",
+                            deep_link=links.SYSTEM,
                             as_of=worker.beat_at,
                         )
                     )
@@ -367,7 +369,7 @@ def collect_attention(
                     severity=severity,
                     title=f"Health check {check.name} is {check.status}",
                     reason=check.detail,
-                    deep_link="/system",
+                    deep_link=links.SYSTEM,
                     as_of=report.checked_at,
                 )
             )
@@ -376,7 +378,7 @@ def collect_attention(
     def strategies() -> None:
         for status_obj in platform.lifecycle.statuses():
             state = status_obj.lifecycle.value
-            link = f"/lifecycle/{status_obj.strategy_content_hash}"
+            link = links.lifecycle(status_obj.strategy_content_hash)
             as_of = status_obj.last_evaluated_at or status_obj.entered_state_at
             sid = status_obj.strategy_id
             base = f"strategy_review:{status_obj.strategy_content_hash}"
@@ -444,7 +446,7 @@ def collect_attention(
                     severity=caveat.severity,
                     title=f"Trade record: {caveat.code}",
                     reason=caveat.message,
-                    deep_link="/journal",
+                    deep_link=links.JOURNAL,
                     as_of=platform.journal_as_of(),
                 )
             )
@@ -503,4 +505,174 @@ def attention(request: Request, platform: PlatformDep, settings: SettingsDep) ->
             as_of=stamp,
         ),
         caveats=caveats,
+    )
+
+
+# ------------------------------------------------------------- money strip
+
+
+class BotCounts(BaseModel):
+    model_config = ConfigDict(frozen=True)
+
+    total: Figure
+    running: Figure
+    idle: Figure
+    stale: Figure
+    halted: Figure
+    finished: Figure
+    failed: Figure
+
+
+class CommandSummaryView(BaseModel):
+    """The money strip: the book, the fleet and the research load, all decided here."""
+
+    model_config = ConfigDict(frozen=True)
+
+    provenance: str
+    currency: str | None
+    equity: Figure
+    balance: Figure
+    unrealised_pnl: Figure
+    day_pnl: Figure
+    day_pnl_pct: Figure
+    week_pnl: Figure
+    open_positions: Figure
+    bots: BotCounts
+    research_in_flight: Figure
+    kill_switch_active: bool
+    kill_switch_mode: str | None
+    new_risk_permitted: bool
+    #: The UTC day "today" means for day P&L (the account's last bar).
+    pnl_day: str | None
+    #: Monday of the ISO week "week P&L" covers.
+    pnl_week_start: str | None
+    server_time: datetime
+    sessions: list[MarketSessionView]
+    links: dict[str, str]
+
+
+def command_summary(platform: Any, settings: Any, *, now: datetime | None = None) -> CommandSummaryView:
+    from fiboki.api.routers import fleet as fleet_router
+    from fiboki.api.routers import trading as trading_router
+
+    stamp = now or datetime.now(tz=UTC)
+    p = settings.provenance_for_execution()
+    portfolio = trading_router.portfolio(platform, settings).data
+    risk = trading_router.risk_state(platform, settings).data
+    ccy = portfolio.equity.unit or None
+    account = trading_router._mode_account(platform, p)
+    as_of = account.as_of if account is not None else None
+    starting = account.initial_balance if account is not None else None
+    executed, _ = platform.trades(provenance={p}, limit=100_000)
+    reason = (
+        "No paper account exists (the trade record is "
+        f"{platform.data_source}), so day and week P&L are unknown, not zero."
+    )
+    if account is not None and as_of is not None:
+        day = as_of.date()
+        week_start = day - timedelta(days=day.weekday())
+        day_trades = [t for t in executed if t.exit_time.date() == day]
+        week_trades = [t for t in executed if week_start <= t.exit_time.date() <= day]
+        day_value = round(sum(t.net_pnl for t in day_trades), 2)
+        day_pnl = figure(
+            day_value, p, settings=settings, unit=ccy or "", as_of=as_of,
+            sample_size=len(day_trades), affects="net_pnl",
+        )
+        week_pnl = figure(
+            round(sum(t.net_pnl for t in week_trades), 2), p, settings=settings,
+            unit=ccy or "", as_of=as_of, sample_size=len(week_trades), affects="net_pnl",
+        )
+        day_pct = Figure(
+            value=round(day_value / starting * 100.0, 3) if starting else None,
+            provenance=p, unit="pct", as_of=as_of, sample_size=len(day_trades),
+        )
+        pnl_day, pnl_week = day.isoformat(), week_start.isoformat()
+    else:
+        day_pnl = Figure.missing(p, unit=ccy or "", reason=reason)
+        week_pnl = Figure.missing(p, unit=ccy or "", reason=reason)
+        day_pct = Figure.missing(p, unit="pct", reason=reason)
+        pnl_day = pnl_week = None
+
+    rows = fleet_router.fleet_rows(platform, settings, now=stamp)
+    journal_as_of = platform.journal_as_of()
+
+    def count(state: str | None) -> Figure:
+        if platform.journal is None:
+            return Figure.missing(
+                p, unit="count", reason="No paper journal: no bot has run. Not an idle fleet."
+            )
+        n = len(rows) if state is None else sum(1 for r in rows if r.state == state)
+        return Figure(value=float(n), provenance=p, unit="count", as_of=journal_as_of)
+
+    ks = platform.kill_switch_replayed()
+    return CommandSummaryView(
+        provenance=p.value,
+        currency=ccy,
+        equity=portfolio.equity,
+        balance=portfolio.balance,
+        unrealised_pnl=portfolio.unrealised_pnl,
+        day_pnl=day_pnl,
+        day_pnl_pct=day_pct,
+        week_pnl=week_pnl,
+        open_positions=portfolio.open_positions,
+        bots=BotCounts(
+            total=count(None),
+            running=count("running"),
+            idle=count("idle"),
+            stale=count("stale"),
+            halted=count("halted"),
+            finished=count("finished"),
+            failed=count("failed"),
+        ),
+        research_in_flight=Figure.missing(
+            p,
+            unit="count",
+            reason="No research orchestrator is attached to this deployment, so jobs in "
+            "flight are unknown. Not zero.",
+        ),
+        kill_switch_active=bool(ks.active),
+        kill_switch_mode=ks.mode.value if ks.mode else None,
+        new_risk_permitted=risk.new_risk_permitted,
+        pnl_day=pnl_day,
+        pnl_week_start=pnl_week,
+        server_time=stamp,
+        sessions=market_sessions(stamp),
+        links={
+            "equity": "/trading/portfolio",
+            "positions": links.FLEET,
+            "bots": links.FLEET,
+            "day_pnl": links.JOURNAL,
+            "research": "/research",
+            "risk": links.RISK,
+        },
+    )
+
+
+@router.get("/summary", response_model=Envelope[CommandSummaryView])
+def summary(platform: PlatformDep, settings: SettingsDep) -> Envelope[CommandSummaryView]:
+    """Equity, day and week P&L, positions, bots and research load. Server-computed."""
+    from fiboki.api.routers import trading as trading_router
+
+    view = command_summary(platform, settings)
+    caveats: list[Caveat] = list(trading_router._record_caveats(platform))
+    caveats.append(
+        Caveat(
+            code="day_is_last_bar",
+            severity="info",
+            message="Day and week P&L count closed trades by the UTC date of the account's "
+            "last bar (a replayed journal's 'today' is its last replayed day), not the wall "
+            "clock. Unrealised P&L is not included in either.",
+            affects="day_pnl",
+            direction="unknown",
+        )
+    )
+    return Envelope(
+        data=view,
+        source=SourceNote(
+            kind="seed" if platform.data_source == "seed" else "live",
+            detail="Portfolio, risk state, paper sessions and the kill-switch journal, read now. "
+            + platform.trade_record_detail(),
+            as_of=platform.journal_as_of() or view.server_time,
+        ),
+        caveats=tuple(caveats),
     )
