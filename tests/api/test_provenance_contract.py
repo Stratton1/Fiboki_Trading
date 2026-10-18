@@ -58,6 +58,49 @@ ALLOWED_BARE_NUMERIC = {
     ("DrawingSetView", "version"),
     ("DrawingSetView", "max_drawings"),
     ("OtherDrawingSet", "version"),
+    # Research analytics (routers/research_analytics.py). Every MEASURED number
+    # there is a Figure, or a list inside a container that declares its
+    # provenance and unit (Series, HistogramView, ExcursionTable, the fan).
+    # These are indices, calendar keys, sample sizes, counts of rows or runs,
+    # and configuration constants (a gate threshold, a seed, a window), not
+    # measurements of the market or the book.
+    ("GateCheckView", "threshold"),  # the gate set's declared threshold
+    ("GateCheckView", "rung"),  # ladder rung index
+    ("PlateauGateView", "threshold"),  # the gate set's declared threshold
+    ("DrawdownPeriodView", "rank"),  # 1..5, ordinal
+    ("MonthlyCellView", "year"),  # calendar key
+    ("MonthlyCellView", "month"),  # calendar key
+    ("YearReturnView", "year"),  # calendar key
+    ("HistogramView", "n"),  # sample size of the binned trades
+    ("ComparedRunView", "daily_returns"),  # sample size (days)
+    ("ComparisonView", "min_common_days"),  # configured minimum overlap
+    ("CorrelationCellView", "n_common"),  # sample size, also on rho.sample_size
+    ("CorrelationMatrixView", "window"),  # requested window, configuration
+    ("CorrelationMatrixView", "bars_used"),  # sample size of the matrix
+    ("MonteCarloView", "seed"),  # RNG seed, shown so a re-draw is exact
+    ("MonteCarloView", "n_paths"),  # requested path count, configuration
+    ("MonteCarloView", "n_trades"),  # sample size resampled
+    ("MonteCarloView", "risk_fraction"),  # sizing configuration of the run
+    ("MonteCarloView", "ruin_fraction"),  # requested ruin definition
+    ("RungView", "index"),  # ladder rung index
+    ("FoldView", "fold"),  # fold index
+    ("SurfaceCellView", "x"),  # declared parameter value (grid coordinate)
+    ("SurfaceCellView", "y"),  # declared parameter value (grid coordinate)
+    ("SurfaceCellView", "n_runs"),  # count of stored runs in the cell
+    ("ParameterSurfaceView", "radius"),  # ladder configuration
+    ("ParameterSurfaceView", "runs_considered"),  # row counts
+    ("ParameterSurfaceView", "runs_used"),
+    ("ParameterSurfaceView", "runs_other_params"),
+    ("ParameterSurfaceView", "runs_unknown_params"),
+    ("ProvenanceBlock", "initial_balance"),  # run configuration, as stored
+    ("StrategyOverviewView", "runs_total"),  # row count
+    ("TearsheetView", "rolling_window_days"),  # configured window
+    ("WalkForwardView", "n_folds"),  # fold count
+    ("WalkForwardView", "parameter_repeats"),  # count of folds
+    ("JobView", "attempts"),  # job ledger counter
+    ("JobView", "max_attempts"),  # job configuration
+    ("ShardView", "done"),  # rows written by the shard
+    ("ShardView", "total"),  # rows the shard declares
 }
 
 

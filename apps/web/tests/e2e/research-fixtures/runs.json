@@ -1,0 +1,2249 @@
+{
+ "caveats": [],
+ "items": [
+  {
+   "max_drawdown_pct": {
+    "as_of": null,
+    "caveats": [],
+    "estimated": false,
+    "provenance": "backtest",
+    "sample_size": null,
+    "unit": "pct",
+    "value": -3.6349657763270766
+   },
+   "profit_factor": {
+    "as_of": null,
+    "caveats": [],
+    "estimated": false,
+    "provenance": "backtest",
+    "sample_size": null,
+    "unit": "ratio",
+    "value": 2.1932880037494216
+   },
+   "run": {
+    "created_at": "2026-10-18T16:58:22.178162Z",
+    "dataset_version_ids": [
+     "inmem:EURUSD:H4:6000"
+    ],
+    "engine_current": true,
+    "engine_version": "engine_v3_realism",
+    "gate_report_id": null,
+    "gate_verdict": "not_evaluated",
+    "instruments": [
+     "EURUSD"
+    ],
+    "kind": "backtest",
+    "label": "",
+    "provenance": "backtest",
+    "run_id": "bt_0026",
+    "strategy_id": "ichimoku_kumo_trend",
+    "superseded": false,
+    "timeframe": "H4",
+    "trade_count": {
+     "as_of": null,
+     "caveats": [],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "count",
+     "value": 31.0
+    },
+    "trades_on_symbol": {
+     "as_of": null,
+     "caveats": [],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "count",
+     "value": 31.0
+    },
+    "trades_with_stops": {
+     "as_of": null,
+     "caveats": [],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "count",
+     "value": 31.0
+    }
+   },
+   "sharpe": {
+    "as_of": null,
+    "caveats": [],
+    "estimated": false,
+    "provenance": "backtest",
+    "sample_size": null,
+    "unit": "ratio",
+    "value": 1.3130158396388973
+   },
+   "tearsheet": "/research/runs/bt_0026",
+   "total_return_pct": {
+    "as_of": null,
+    "caveats": [],
+    "estimated": false,
+    "provenance": "backtest",
+    "sample_size": null,
+    "unit": "pct",
+    "value": 16.21879749126831
+   }
+  },
+  {
+   "max_drawdown_pct": {
+    "as_of": null,
+    "caveats": [],
+    "estimated": false,
+    "provenance": "backtest",
+    "sample_size": null,
+    "unit": "pct",
+    "value": -4.358322252423806
+   },
+   "profit_factor": {
+    "as_of": null,
+    "caveats": [],
+    "estimated": false,
+    "provenance": "backtest",
+    "sample_size": null,
+    "unit": "ratio",
+    "value": 1.75735496153591
+   },
+   "run": {
+    "created_at": "2026-10-18T16:58:13.817008Z",
+    "dataset_version_ids": [
+     "inmem:EURUSD:H4:6000"
+    ],
+    "engine_current": true,
+    "engine_version": "engine_v3_realism",
+    "gate_report_id": null,
+    "gate_verdict": "not_evaluated",
+    "instruments": [
+     "EURUSD"
+    ],
+    "kind": "backtest",
+    "label": "",
+    "provenance": "backtest",
+    "run_id": "bt_0025",
+    "strategy_id": "ichimoku_kumo_trend",
+    "superseded": false,
+    "timeframe": "H4",
+    "trade_count": {
+     "as_of": null,
+     "caveats": [],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "count",
+     "value": 31.0
+    },
+    "trades_on_symbol": {
+     "as_of": null,
+     "caveats": [],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "count",
+     "value": 31.0
+    },
+    "trades_with_stops": {
+     "as_of": null,
+     "caveats": [],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "count",
+     "value": 31.0
+    }
+   },
+   "sharpe": {
+    "as_of": null,
+    "caveats": [],
+    "estimated": false,
+    "provenance": "backtest",
+    "sample_size": null,
+    "unit": "ratio",
+    "value": 0.9738152554279336
+   },
+   "tearsheet": "/research/runs/bt_0025",
+   "total_return_pct": {
+    "as_of": null,
+    "caveats": [],
+    "estimated": false,
+    "provenance": "backtest",
+    "sample_size": null,
+    "unit": "pct",
+    "value": 11.010252897124783
+   }
+  },
+  {
+   "max_drawdown_pct": {
+    "as_of": null,
+    "caveats": [],
+    "estimated": false,
+    "provenance": "backtest",
+    "sample_size": null,
+    "unit": "pct",
+    "value": -4.396130736643576
+   },
+   "profit_factor": {
+    "as_of": null,
+    "caveats": [],
+    "estimated": false,
+    "provenance": "backtest",
+    "sample_size": null,
+    "unit": "ratio",
+    "value": 1.8902032822330066
+   },
+   "run": {
+    "created_at": "2026-10-18T16:58:07.669870Z",
+    "dataset_version_ids": [
+     "inmem:EURUSD:H4:6000"
+    ],
+    "engine_current": true,
+    "engine_version": "engine_v3_realism",
+    "gate_report_id": null,
+    "gate_verdict": "not_evaluated",
+    "instruments": [
+     "EURUSD"
+    ],
+    "kind": "backtest",
+    "label": "",
+    "provenance": "backtest",
+    "run_id": "bt_0024",
+    "strategy_id": "ichimoku_kumo_trend",
+    "superseded": false,
+    "timeframe": "H4",
+    "trade_count": {
+     "as_of": null,
+     "caveats": [],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "count",
+     "value": 31.0
+    },
+    "trades_on_symbol": {
+     "as_of": null,
+     "caveats": [],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "count",
+     "value": 31.0
+    },
+    "trades_with_stops": {
+     "as_of": null,
+     "caveats": [],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "count",
+     "value": 31.0
+    }
+   },
+   "sharpe": {
+    "as_of": null,
+    "caveats": [],
+    "estimated": false,
+    "provenance": "backtest",
+    "sample_size": null,
+    "unit": "ratio",
+    "value": 1.1235828019878868
+   },
+   "tearsheet": "/research/runs/bt_0024",
+   "total_return_pct": {
+    "as_of": null,
+    "caveats": [],
+    "estimated": false,
+    "provenance": "backtest",
+    "sample_size": null,
+    "unit": "pct",
+    "value": 12.852395060319278
+   }
+  },
+  {
+   "max_drawdown_pct": {
+    "as_of": null,
+    "caveats": [],
+    "estimated": false,
+    "provenance": "backtest",
+    "sample_size": null,
+    "unit": "pct",
+    "value": -4.915525876949109
+   },
+   "profit_factor": {
+    "as_of": null,
+    "caveats": [],
+    "estimated": false,
+    "provenance": "backtest",
+    "sample_size": null,
+    "unit": "ratio",
+    "value": 1.8571332728723324
+   },
+   "run": {
+    "created_at": "2026-10-18T16:57:59.597001Z",
+    "dataset_version_ids": [
+     "inmem:EURUSD:H4:6000"
+    ],
+    "engine_current": true,
+    "engine_version": "engine_v3_realism",
+    "gate_report_id": null,
+    "gate_verdict": "not_evaluated",
+    "instruments": [
+     "EURUSD"
+    ],
+    "kind": "backtest",
+    "label": "",
+    "provenance": "backtest",
+    "run_id": "bt_0023",
+    "strategy_id": "ichimoku_kumo_trend",
+    "superseded": false,
+    "timeframe": "H4",
+    "trade_count": {
+     "as_of": null,
+     "caveats": [],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "count",
+     "value": 35.0
+    },
+    "trades_on_symbol": {
+     "as_of": null,
+     "caveats": [],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "count",
+     "value": 35.0
+    },
+    "trades_with_stops": {
+     "as_of": null,
+     "caveats": [],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "count",
+     "value": 35.0
+    }
+   },
+   "sharpe": {
+    "as_of": null,
+    "caveats": [],
+    "estimated": false,
+    "provenance": "backtest",
+    "sample_size": null,
+    "unit": "ratio",
+    "value": 1.1580918343878785
+   },
+   "tearsheet": "/research/runs/bt_0023",
+   "total_return_pct": {
+    "as_of": null,
+    "caveats": [],
+    "estimated": false,
+    "provenance": "backtest",
+    "sample_size": null,
+    "unit": "pct",
+    "value": 14.07419088667341
+   }
+  },
+  {
+   "max_drawdown_pct": {
+    "as_of": null,
+    "caveats": [],
+    "estimated": false,
+    "provenance": "backtest",
+    "sample_size": null,
+    "unit": "pct",
+    "value": -3.482814961651068
+   },
+   "profit_factor": {
+    "as_of": null,
+    "caveats": [],
+    "estimated": false,
+    "provenance": "backtest",
+    "sample_size": null,
+    "unit": "ratio",
+    "value": 1.8854419908618243
+   },
+   "run": {
+    "created_at": "2026-10-18T16:57:50.575123Z",
+    "dataset_version_ids": [
+     "inmem:EURUSD:H4:6000"
+    ],
+    "engine_current": true,
+    "engine_version": "engine_v3_realism",
+    "gate_report_id": null,
+    "gate_verdict": "not_evaluated",
+    "instruments": [
+     "EURUSD"
+    ],
+    "kind": "backtest",
+    "label": "",
+    "provenance": "backtest",
+    "run_id": "bt_0022",
+    "strategy_id": "ichimoku_kumo_trend",
+    "superseded": false,
+    "timeframe": "H4",
+    "trade_count": {
+     "as_of": null,
+     "caveats": [],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "count",
+     "value": 38.0
+    },
+    "trades_on_symbol": {
+     "as_of": null,
+     "caveats": [],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "count",
+     "value": 38.0
+    },
+    "trades_with_stops": {
+     "as_of": null,
+     "caveats": [],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "count",
+     "value": 38.0
+    }
+   },
+   "sharpe": {
+    "as_of": null,
+    "caveats": [],
+    "estimated": false,
+    "provenance": "backtest",
+    "sample_size": null,
+    "unit": "ratio",
+    "value": 1.2678518842330713
+   },
+   "tearsheet": "/research/runs/bt_0022",
+   "total_return_pct": {
+    "as_of": null,
+    "caveats": [],
+    "estimated": false,
+    "provenance": "backtest",
+    "sample_size": null,
+    "unit": "pct",
+    "value": 16.055474449635465
+   }
+  },
+  {
+   "max_drawdown_pct": {
+    "as_of": null,
+    "caveats": [],
+    "estimated": false,
+    "provenance": "backtest",
+    "sample_size": null,
+    "unit": "pct",
+    "value": -4.066780267304074
+   },
+   "profit_factor": {
+    "as_of": null,
+    "caveats": [],
+    "estimated": false,
+    "provenance": "backtest",
+    "sample_size": null,
+    "unit": "ratio",
+    "value": 1.8037531829182205
+   },
+   "run": {
+    "created_at": "2026-10-18T16:57:43.086578Z",
+    "dataset_version_ids": [
+     "inmem:EURUSD:H4:6000"
+    ],
+    "engine_current": true,
+    "engine_version": "engine_v3_realism",
+    "gate_report_id": null,
+    "gate_verdict": "not_evaluated",
+    "instruments": [
+     "EURUSD"
+    ],
+    "kind": "backtest",
+    "label": "",
+    "provenance": "backtest",
+    "run_id": "bt_0021",
+    "strategy_id": "ichimoku_kumo_trend",
+    "superseded": false,
+    "timeframe": "H4",
+    "trade_count": {
+     "as_of": null,
+     "caveats": [],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "count",
+     "value": 34.0
+    },
+    "trades_on_symbol": {
+     "as_of": null,
+     "caveats": [],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "count",
+     "value": 34.0
+    },
+    "trades_with_stops": {
+     "as_of": null,
+     "caveats": [],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "count",
+     "value": 34.0
+    }
+   },
+   "sharpe": {
+    "as_of": null,
+    "caveats": [],
+    "estimated": false,
+    "provenance": "backtest",
+    "sample_size": null,
+    "unit": "ratio",
+    "value": 0.9785819763468209
+   },
+   "tearsheet": "/research/runs/bt_0021",
+   "total_return_pct": {
+    "as_of": null,
+    "caveats": [],
+    "estimated": false,
+    "provenance": "backtest",
+    "sample_size": null,
+    "unit": "pct",
+    "value": 12.55764446999008
+   }
+  },
+  {
+   "max_drawdown_pct": {
+    "as_of": null,
+    "caveats": [],
+    "estimated": false,
+    "provenance": "backtest",
+    "sample_size": null,
+    "unit": "pct",
+    "value": -3.8269878997828433
+   },
+   "profit_factor": {
+    "as_of": null,
+    "caveats": [],
+    "estimated": false,
+    "provenance": "backtest",
+    "sample_size": null,
+    "unit": "ratio",
+    "value": 1.4745407158721524
+   },
+   "run": {
+    "created_at": "2026-10-18T16:57:32.460942Z",
+    "dataset_version_ids": [
+     "inmem:EURUSD:H4:6000"
+    ],
+    "engine_current": true,
+    "engine_version": "engine_v3_realism",
+    "gate_report_id": null,
+    "gate_verdict": "not_evaluated",
+    "instruments": [
+     "EURUSD"
+    ],
+    "kind": "backtest",
+    "label": "",
+    "provenance": "backtest",
+    "run_id": "bt_0020",
+    "strategy_id": "ichimoku_kumo_trend",
+    "superseded": false,
+    "timeframe": "H4",
+    "trade_count": {
+     "as_of": null,
+     "caveats": [],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "count",
+     "value": 34.0
+    },
+    "trades_on_symbol": {
+     "as_of": null,
+     "caveats": [],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "count",
+     "value": 34.0
+    },
+    "trades_with_stops": {
+     "as_of": null,
+     "caveats": [],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "count",
+     "value": 34.0
+    }
+   },
+   "sharpe": {
+    "as_of": null,
+    "caveats": [],
+    "estimated": false,
+    "provenance": "backtest",
+    "sample_size": null,
+    "unit": "ratio",
+    "value": 0.6740664464365154
+   },
+   "tearsheet": "/research/runs/bt_0020",
+   "total_return_pct": {
+    "as_of": null,
+    "caveats": [],
+    "estimated": false,
+    "provenance": "backtest",
+    "sample_size": null,
+    "unit": "pct",
+    "value": 7.976018606486512
+   }
+  },
+  {
+   "max_drawdown_pct": {
+    "as_of": null,
+    "caveats": [],
+    "estimated": false,
+    "provenance": "backtest",
+    "sample_size": null,
+    "unit": "pct",
+    "value": -4.71060690488851
+   },
+   "profit_factor": {
+    "as_of": null,
+    "caveats": [],
+    "estimated": false,
+    "provenance": "backtest",
+    "sample_size": null,
+    "unit": "ratio",
+    "value": 1.3789138724138408
+   },
+   "run": {
+    "created_at": "2026-10-18T16:57:23.046367Z",
+    "dataset_version_ids": [
+     "inmem:EURUSD:H4:6000"
+    ],
+    "engine_current": true,
+    "engine_version": "engine_v3_realism",
+    "gate_report_id": null,
+    "gate_verdict": "not_evaluated",
+    "instruments": [
+     "EURUSD"
+    ],
+    "kind": "backtest",
+    "label": "",
+    "provenance": "backtest",
+    "run_id": "bt_0019",
+    "strategy_id": "ichimoku_kumo_trend",
+    "superseded": false,
+    "timeframe": "H4",
+    "trade_count": {
+     "as_of": null,
+     "caveats": [],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "count",
+     "value": 32.0
+    },
+    "trades_on_symbol": {
+     "as_of": null,
+     "caveats": [],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "count",
+     "value": 32.0
+    },
+    "trades_with_stops": {
+     "as_of": null,
+     "caveats": [],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "count",
+     "value": 32.0
+    }
+   },
+   "sharpe": {
+    "as_of": null,
+    "caveats": [],
+    "estimated": false,
+    "provenance": "backtest",
+    "sample_size": null,
+    "unit": "ratio",
+    "value": 0.5660115831992222
+   },
+   "tearsheet": "/research/runs/bt_0019",
+   "total_return_pct": {
+    "as_of": null,
+    "caveats": [],
+    "estimated": false,
+    "provenance": "backtest",
+    "sample_size": null,
+    "unit": "pct",
+    "value": 6.4224696505303935
+   }
+  },
+  {
+   "max_drawdown_pct": {
+    "as_of": null,
+    "caveats": [],
+    "estimated": false,
+    "provenance": "backtest",
+    "sample_size": null,
+    "unit": "pct",
+    "value": -4.7276227799162704
+   },
+   "profit_factor": {
+    "as_of": null,
+    "caveats": [],
+    "estimated": false,
+    "provenance": "backtest",
+    "sample_size": null,
+    "unit": "ratio",
+    "value": 1.5425847033989784
+   },
+   "run": {
+    "created_at": "2026-10-18T16:57:12.697576Z",
+    "dataset_version_ids": [
+     "inmem:EURUSD:H4:6000"
+    ],
+    "engine_current": true,
+    "engine_version": "engine_v3_realism",
+    "gate_report_id": null,
+    "gate_verdict": "not_evaluated",
+    "instruments": [
+     "EURUSD"
+    ],
+    "kind": "backtest",
+    "label": "",
+    "provenance": "backtest",
+    "run_id": "bt_0018",
+    "strategy_id": "ichimoku_kumo_trend",
+    "superseded": false,
+    "timeframe": "H4",
+    "trade_count": {
+     "as_of": null,
+     "caveats": [],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "count",
+     "value": 32.0
+    },
+    "trades_on_symbol": {
+     "as_of": null,
+     "caveats": [],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "count",
+     "value": 32.0
+    },
+    "trades_with_stops": {
+     "as_of": null,
+     "caveats": [],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "count",
+     "value": 32.0
+    }
+   },
+   "sharpe": {
+    "as_of": null,
+    "caveats": [],
+    "estimated": false,
+    "provenance": "backtest",
+    "sample_size": null,
+    "unit": "ratio",
+    "value": 0.7372451733587472
+   },
+   "tearsheet": "/research/runs/bt_0018",
+   "total_return_pct": {
+    "as_of": null,
+    "caveats": [],
+    "estimated": false,
+    "provenance": "backtest",
+    "sample_size": null,
+    "unit": "pct",
+    "value": 8.645647987176197
+   }
+  },
+  {
+   "max_drawdown_pct": {
+    "as_of": null,
+    "caveats": [],
+    "estimated": false,
+    "provenance": "backtest",
+    "sample_size": null,
+    "unit": "pct",
+    "value": -7.0594203261954425
+   },
+   "profit_factor": {
+    "as_of": null,
+    "caveats": [],
+    "estimated": false,
+    "provenance": "backtest",
+    "sample_size": null,
+    "unit": "ratio",
+    "value": 1.5666148679219583
+   },
+   "run": {
+    "created_at": "2026-10-18T16:57:02.987231Z",
+    "dataset_version_ids": [
+     "inmem:EURUSD:H4:6000"
+    ],
+    "engine_current": true,
+    "engine_version": "engine_v3_realism",
+    "gate_report_id": null,
+    "gate_verdict": "not_evaluated",
+    "instruments": [
+     "EURUSD"
+    ],
+    "kind": "backtest",
+    "label": "",
+    "provenance": "backtest",
+    "run_id": "bt_0017",
+    "strategy_id": "ichimoku_kumo_trend",
+    "superseded": false,
+    "timeframe": "H4",
+    "trade_count": {
+     "as_of": null,
+     "caveats": [],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "count",
+     "value": 41.0
+    },
+    "trades_on_symbol": {
+     "as_of": null,
+     "caveats": [],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "count",
+     "value": 41.0
+    },
+    "trades_with_stops": {
+     "as_of": null,
+     "caveats": [],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "count",
+     "value": 41.0
+    }
+   },
+   "sharpe": {
+    "as_of": null,
+    "caveats": [],
+    "estimated": false,
+    "provenance": "backtest",
+    "sample_size": null,
+    "unit": "ratio",
+    "value": 0.8738614294352843
+   },
+   "tearsheet": "/research/runs/bt_0017",
+   "total_return_pct": {
+    "as_of": null,
+    "caveats": [],
+    "estimated": false,
+    "provenance": "backtest",
+    "sample_size": null,
+    "unit": "pct",
+    "value": 11.760157967522078
+   }
+  },
+  {
+   "max_drawdown_pct": {
+    "as_of": null,
+    "caveats": [],
+    "estimated": false,
+    "provenance": "backtest",
+    "sample_size": null,
+    "unit": "pct",
+    "value": -2.9724607189888737
+   },
+   "profit_factor": {
+    "as_of": null,
+    "caveats": [],
+    "estimated": false,
+    "provenance": "backtest",
+    "sample_size": null,
+    "unit": "ratio",
+    "value": 2.1165492092736535
+   },
+   "run": {
+    "created_at": "2026-10-18T16:56:56.329326Z",
+    "dataset_version_ids": [
+     "inmem:EURUSD:H4:6000"
+    ],
+    "engine_current": true,
+    "engine_version": "engine_v3_realism",
+    "gate_report_id": null,
+    "gate_verdict": "not_evaluated",
+    "instruments": [
+     "EURUSD"
+    ],
+    "kind": "backtest",
+    "label": "",
+    "provenance": "backtest",
+    "run_id": "bt_0016",
+    "strategy_id": "ichimoku_kumo_trend",
+    "superseded": false,
+    "timeframe": "H4",
+    "trade_count": {
+     "as_of": null,
+     "caveats": [],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "count",
+     "value": 32.0
+    },
+    "trades_on_symbol": {
+     "as_of": null,
+     "caveats": [],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "count",
+     "value": 32.0
+    },
+    "trades_with_stops": {
+     "as_of": null,
+     "caveats": [],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "count",
+     "value": 32.0
+    }
+   },
+   "sharpe": {
+    "as_of": null,
+    "caveats": [],
+    "estimated": false,
+    "provenance": "backtest",
+    "sample_size": null,
+    "unit": "ratio",
+    "value": 1.219968909594841
+   },
+   "tearsheet": "/research/runs/bt_0016",
+   "total_return_pct": {
+    "as_of": null,
+    "caveats": [],
+    "estimated": false,
+    "provenance": "backtest",
+    "sample_size": null,
+    "unit": "pct",
+    "value": 15.257574743201797
+   }
+  },
+  {
+   "max_drawdown_pct": {
+    "as_of": null,
+    "caveats": [],
+    "estimated": false,
+    "provenance": "backtest",
+    "sample_size": null,
+    "unit": "pct",
+    "value": -4.455344307710221
+   },
+   "profit_factor": {
+    "as_of": null,
+    "caveats": [],
+    "estimated": false,
+    "provenance": "backtest",
+    "sample_size": null,
+    "unit": "ratio",
+    "value": 1.656205265772983
+   },
+   "run": {
+    "created_at": "2026-10-18T16:56:47.245216Z",
+    "dataset_version_ids": [
+     "inmem:EURUSD:H4:6000"
+    ],
+    "engine_current": true,
+    "engine_version": "engine_v3_realism",
+    "gate_report_id": null,
+    "gate_verdict": "not_evaluated",
+    "instruments": [
+     "EURUSD"
+    ],
+    "kind": "backtest",
+    "label": "",
+    "provenance": "backtest",
+    "run_id": "bt_0015",
+    "strategy_id": "ichimoku_kumo_trend",
+    "superseded": false,
+    "timeframe": "H4",
+    "trade_count": {
+     "as_of": null,
+     "caveats": [],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "count",
+     "value": 30.0
+    },
+    "trades_on_symbol": {
+     "as_of": null,
+     "caveats": [],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "count",
+     "value": 30.0
+    },
+    "trades_with_stops": {
+     "as_of": null,
+     "caveats": [],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "count",
+     "value": 30.0
+    }
+   },
+   "sharpe": {
+    "as_of": null,
+    "caveats": [],
+    "estimated": false,
+    "provenance": "backtest",
+    "sample_size": null,
+    "unit": "ratio",
+    "value": 0.8162331088503547
+   },
+   "tearsheet": "/research/runs/bt_0015",
+   "total_return_pct": {
+    "as_of": null,
+    "caveats": [],
+    "estimated": false,
+    "provenance": "backtest",
+    "sample_size": null,
+    "unit": "pct",
+    "value": 8.859220634460518
+   }
+  },
+  {
+   "max_drawdown_pct": {
+    "as_of": null,
+    "caveats": [],
+    "estimated": false,
+    "provenance": "backtest",
+    "sample_size": null,
+    "unit": "pct",
+    "value": -4.352470948160048
+   },
+   "profit_factor": {
+    "as_of": null,
+    "caveats": [],
+    "estimated": false,
+    "provenance": "backtest",
+    "sample_size": null,
+    "unit": "ratio",
+    "value": 1.4636009188209256
+   },
+   "run": {
+    "created_at": "2026-10-18T16:56:38.537063Z",
+    "dataset_version_ids": [
+     "inmem:EURUSD:H4:6000"
+    ],
+    "engine_current": true,
+    "engine_version": "engine_v3_realism",
+    "gate_report_id": null,
+    "gate_verdict": "not_evaluated",
+    "instruments": [
+     "EURUSD"
+    ],
+    "kind": "backtest",
+    "label": "",
+    "provenance": "backtest",
+    "run_id": "bt_0014",
+    "strategy_id": "ichimoku_kumo_trend",
+    "superseded": false,
+    "timeframe": "H4",
+    "trade_count": {
+     "as_of": null,
+     "caveats": [],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "count",
+     "value": 30.0
+    },
+    "trades_on_symbol": {
+     "as_of": null,
+     "caveats": [],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "count",
+     "value": 30.0
+    },
+    "trades_with_stops": {
+     "as_of": null,
+     "caveats": [],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "count",
+     "value": 30.0
+    }
+   },
+   "sharpe": {
+    "as_of": null,
+    "caveats": [],
+    "estimated": false,
+    "provenance": "backtest",
+    "sample_size": null,
+    "unit": "ratio",
+    "value": 0.6490449833135538
+   },
+   "tearsheet": "/research/runs/bt_0014",
+   "total_return_pct": {
+    "as_of": null,
+    "caveats": [],
+    "estimated": false,
+    "provenance": "backtest",
+    "sample_size": null,
+    "unit": "pct",
+    "value": 6.867760934503653
+   }
+  },
+  {
+   "max_drawdown_pct": {
+    "as_of": null,
+    "caveats": [],
+    "estimated": false,
+    "provenance": "backtest",
+    "sample_size": null,
+    "unit": "pct",
+    "value": -4.2986805121025515
+   },
+   "profit_factor": {
+    "as_of": null,
+    "caveats": [],
+    "estimated": false,
+    "provenance": "backtest",
+    "sample_size": null,
+    "unit": "ratio",
+    "value": 1.224512912538803
+   },
+   "run": {
+    "created_at": "2026-10-18T16:56:29.093471Z",
+    "dataset_version_ids": [
+     "inmem:EURUSD:H4:6000"
+    ],
+    "engine_current": true,
+    "engine_version": "engine_v3_realism",
+    "gate_report_id": null,
+    "gate_verdict": "not_evaluated",
+    "instruments": [
+     "EURUSD"
+    ],
+    "kind": "backtest",
+    "label": "",
+    "provenance": "backtest",
+    "run_id": "bt_0013",
+    "strategy_id": "ichimoku_kumo_trend",
+    "superseded": false,
+    "timeframe": "H4",
+    "trade_count": {
+     "as_of": null,
+     "caveats": [],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "count",
+     "value": 36.0
+    },
+    "trades_on_symbol": {
+     "as_of": null,
+     "caveats": [],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "count",
+     "value": 36.0
+    },
+    "trades_with_stops": {
+     "as_of": null,
+     "caveats": [],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "count",
+     "value": 36.0
+    }
+   },
+   "sharpe": {
+    "as_of": null,
+    "caveats": [],
+    "estimated": false,
+    "provenance": "backtest",
+    "sample_size": null,
+    "unit": "ratio",
+    "value": 0.39593645611848577
+   },
+   "tearsheet": "/research/runs/bt_0013",
+   "total_return_pct": {
+    "as_of": null,
+    "caveats": [],
+    "estimated": false,
+    "provenance": "backtest",
+    "sample_size": null,
+    "unit": "pct",
+    "value": 4.41189250296572
+   }
+  },
+  {
+   "max_drawdown_pct": {
+    "as_of": null,
+    "caveats": [],
+    "estimated": false,
+    "provenance": "backtest",
+    "sample_size": null,
+    "unit": "pct",
+    "value": -4.513684970989164
+   },
+   "profit_factor": {
+    "as_of": null,
+    "caveats": [],
+    "estimated": false,
+    "provenance": "backtest",
+    "sample_size": null,
+    "unit": "ratio",
+    "value": 1.734420621188324
+   },
+   "run": {
+    "created_at": "2026-10-18T16:56:24.324698Z",
+    "dataset_version_ids": [
+     "inmem:EURUSD:H4:6000"
+    ],
+    "engine_current": true,
+    "engine_version": "engine_v3_realism",
+    "gate_report_id": null,
+    "gate_verdict": "not_evaluated",
+    "instruments": [
+     "EURUSD"
+    ],
+    "kind": "backtest",
+    "label": "",
+    "provenance": "backtest",
+    "run_id": "bt_0012",
+    "strategy_id": "ichimoku_kumo_trend",
+    "superseded": false,
+    "timeframe": "H4",
+    "trade_count": {
+     "as_of": null,
+     "caveats": [],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "count",
+     "value": 27.0
+    },
+    "trades_on_symbol": {
+     "as_of": null,
+     "caveats": [],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "count",
+     "value": 27.0
+    },
+    "trades_with_stops": {
+     "as_of": null,
+     "caveats": [],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "count",
+     "value": 27.0
+    }
+   },
+   "sharpe": {
+    "as_of": null,
+    "caveats": [],
+    "estimated": false,
+    "provenance": "backtest",
+    "sample_size": null,
+    "unit": "ratio",
+    "value": 0.8729723443122774
+   },
+   "tearsheet": "/research/runs/bt_0012",
+   "total_return_pct": {
+    "as_of": null,
+    "caveats": [],
+    "estimated": false,
+    "provenance": "backtest",
+    "sample_size": null,
+    "unit": "pct",
+    "value": 9.347775533903512
+   }
+  },
+  {
+   "max_drawdown_pct": {
+    "as_of": null,
+    "caveats": [],
+    "estimated": false,
+    "provenance": "backtest",
+    "sample_size": null,
+    "unit": "pct",
+    "value": -5.00143700536157
+   },
+   "profit_factor": {
+    "as_of": null,
+    "caveats": [],
+    "estimated": false,
+    "provenance": "backtest",
+    "sample_size": null,
+    "unit": "ratio",
+    "value": 1.1312620428898563
+   },
+   "run": {
+    "created_at": "2026-10-18T16:56:15.886828Z",
+    "dataset_version_ids": [
+     "inmem:EURUSD:H4:6000"
+    ],
+    "engine_current": true,
+    "engine_version": "engine_v3_realism",
+    "gate_report_id": null,
+    "gate_verdict": "not_evaluated",
+    "instruments": [
+     "EURUSD"
+    ],
+    "kind": "backtest",
+    "label": "",
+    "provenance": "backtest",
+    "run_id": "bt_0011",
+    "strategy_id": "ichimoku_kumo_trend",
+    "superseded": false,
+    "timeframe": "H4",
+    "trade_count": {
+     "as_of": null,
+     "caveats": [],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "count",
+     "value": 26.0
+    },
+    "trades_on_symbol": {
+     "as_of": null,
+     "caveats": [],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "count",
+     "value": 26.0
+    },
+    "trades_with_stops": {
+     "as_of": null,
+     "caveats": [],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "count",
+     "value": 26.0
+    }
+   },
+   "sharpe": {
+    "as_of": null,
+    "caveats": [],
+    "estimated": false,
+    "provenance": "backtest",
+    "sample_size": null,
+    "unit": "ratio",
+    "value": 0.20895217485655443
+   },
+   "tearsheet": "/research/runs/bt_0011",
+   "total_return_pct": {
+    "as_of": null,
+    "caveats": [],
+    "estimated": false,
+    "provenance": "backtest",
+    "sample_size": null,
+    "unit": "pct",
+    "value": 1.7812843548493884
+   }
+  },
+  {
+   "max_drawdown_pct": {
+    "as_of": null,
+    "caveats": [],
+    "estimated": false,
+    "provenance": "backtest",
+    "sample_size": null,
+    "unit": "pct",
+    "value": -4.879845482484221
+   },
+   "profit_factor": {
+    "as_of": null,
+    "caveats": [],
+    "estimated": false,
+    "provenance": "backtest",
+    "sample_size": null,
+    "unit": "ratio",
+    "value": 1.2916088190485036
+   },
+   "run": {
+    "created_at": "2026-10-18T16:56:08.758856Z",
+    "dataset_version_ids": [
+     "inmem:EURUSD:H4:6000"
+    ],
+    "engine_current": true,
+    "engine_version": "engine_v3_realism",
+    "gate_report_id": null,
+    "gate_verdict": "not_evaluated",
+    "instruments": [
+     "EURUSD"
+    ],
+    "kind": "backtest",
+    "label": "",
+    "provenance": "backtest",
+    "run_id": "bt_0010",
+    "strategy_id": "ichimoku_kumo_trend",
+    "superseded": false,
+    "timeframe": "H4",
+    "trade_count": {
+     "as_of": null,
+     "caveats": [],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "count",
+     "value": 23.0
+    },
+    "trades_on_symbol": {
+     "as_of": null,
+     "caveats": [],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "count",
+     "value": 23.0
+    },
+    "trades_with_stops": {
+     "as_of": null,
+     "caveats": [],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "count",
+     "value": 23.0
+    }
+   },
+   "sharpe": {
+    "as_of": null,
+    "caveats": [],
+    "estimated": false,
+    "provenance": "backtest",
+    "sample_size": null,
+    "unit": "ratio",
+    "value": 0.4193877602490507
+   },
+   "tearsheet": "/research/runs/bt_0010",
+   "total_return_pct": {
+    "as_of": null,
+    "caveats": [],
+    "estimated": false,
+    "provenance": "backtest",
+    "sample_size": null,
+    "unit": "pct",
+    "value": 3.611821289441952
+   }
+  },
+  {
+   "max_drawdown_pct": {
+    "as_of": null,
+    "caveats": [],
+    "estimated": false,
+    "provenance": "backtest",
+    "sample_size": null,
+    "unit": "pct",
+    "value": -4.879845482484221
+   },
+   "profit_factor": {
+    "as_of": null,
+    "caveats": [],
+    "estimated": false,
+    "provenance": "backtest",
+    "sample_size": null,
+    "unit": "ratio",
+    "value": 1.1194867845568275
+   },
+   "run": {
+    "created_at": "2026-10-18T16:56:00.023618Z",
+    "dataset_version_ids": [
+     "inmem:EURUSD:H4:6000"
+    ],
+    "engine_current": true,
+    "engine_version": "engine_v3_realism",
+    "gate_report_id": null,
+    "gate_verdict": "not_evaluated",
+    "instruments": [
+     "EURUSD"
+    ],
+    "kind": "backtest",
+    "label": "",
+    "provenance": "backtest",
+    "run_id": "bt_0009",
+    "strategy_id": "ichimoku_kumo_trend",
+    "superseded": false,
+    "timeframe": "H4",
+    "trade_count": {
+     "as_of": null,
+     "caveats": [],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "count",
+     "value": 24.0
+    },
+    "trades_on_symbol": {
+     "as_of": null,
+     "caveats": [],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "count",
+     "value": 24.0
+    },
+    "trades_with_stops": {
+     "as_of": null,
+     "caveats": [],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "count",
+     "value": 24.0
+    }
+   },
+   "sharpe": {
+    "as_of": null,
+    "caveats": [],
+    "estimated": false,
+    "provenance": "backtest",
+    "sample_size": null,
+    "unit": "ratio",
+    "value": 0.19080310264267344
+   },
+   "tearsheet": "/research/runs/bt_0009",
+   "total_return_pct": {
+    "as_of": null,
+    "caveats": [],
+    "estimated": false,
+    "provenance": "backtest",
+    "sample_size": null,
+    "unit": "pct",
+    "value": 1.5920612422084979
+   }
+  },
+  {
+   "max_drawdown_pct": {
+    "as_of": null,
+    "caveats": [],
+    "estimated": false,
+    "provenance": "backtest",
+    "sample_size": null,
+    "unit": "pct",
+    "value": -6.5540710570897405
+   },
+   "profit_factor": {
+    "as_of": null,
+    "caveats": [],
+    "estimated": false,
+    "provenance": "backtest",
+    "sample_size": null,
+    "unit": "ratio",
+    "value": 1.3985425576965926
+   },
+   "run": {
+    "created_at": "2026-10-18T16:55:52.006508Z",
+    "dataset_version_ids": [
+     "inmem:EURUSD:H4:6000"
+    ],
+    "engine_current": true,
+    "engine_version": "engine_v3_realism",
+    "gate_report_id": null,
+    "gate_verdict": "not_evaluated",
+    "instruments": [
+     "EURUSD"
+    ],
+    "kind": "backtest",
+    "label": "",
+    "provenance": "backtest",
+    "run_id": "bt_0008",
+    "strategy_id": "ichimoku_kumo_trend",
+    "superseded": false,
+    "timeframe": "H4",
+    "trade_count": {
+     "as_of": null,
+     "caveats": [],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "count",
+     "value": 28.0
+    },
+    "trades_on_symbol": {
+     "as_of": null,
+     "caveats": [],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "count",
+     "value": 28.0
+    },
+    "trades_with_stops": {
+     "as_of": null,
+     "caveats": [],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "count",
+     "value": 28.0
+    }
+   },
+   "sharpe": {
+    "as_of": null,
+    "caveats": [],
+    "estimated": false,
+    "provenance": "backtest",
+    "sample_size": null,
+    "unit": "ratio",
+    "value": 0.5986605676634892
+   },
+   "tearsheet": "/research/runs/bt_0008",
+   "total_return_pct": {
+    "as_of": null,
+    "caveats": [],
+    "estimated": false,
+    "provenance": "backtest",
+    "sample_size": null,
+    "unit": "pct",
+    "value": 5.719070190855335
+   }
+  },
+  {
+   "max_drawdown_pct": {
+    "as_of": null,
+    "caveats": [],
+    "estimated": false,
+    "provenance": "backtest",
+    "sample_size": null,
+    "unit": "pct",
+    "value": -3.5886951442359303
+   },
+   "profit_factor": {
+    "as_of": null,
+    "caveats": [],
+    "estimated": false,
+    "provenance": "backtest",
+    "sample_size": null,
+    "unit": "ratio",
+    "value": 2.284087415370527
+   },
+   "run": {
+    "created_at": "2026-10-18T16:55:44.127458Z",
+    "dataset_version_ids": [
+     "inmem:EURUSD:H4:6000"
+    ],
+    "engine_current": true,
+    "engine_version": "engine_v3_realism",
+    "gate_report_id": null,
+    "gate_verdict": "not_evaluated",
+    "instruments": [
+     "EURUSD"
+    ],
+    "kind": "backtest",
+    "label": "",
+    "provenance": "backtest",
+    "run_id": "bt_0007",
+    "strategy_id": "ichimoku_kumo_trend",
+    "superseded": false,
+    "timeframe": "H4",
+    "trade_count": {
+     "as_of": null,
+     "caveats": [],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "count",
+     "value": 21.0
+    },
+    "trades_on_symbol": {
+     "as_of": null,
+     "caveats": [],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "count",
+     "value": 21.0
+    },
+    "trades_with_stops": {
+     "as_of": null,
+     "caveats": [],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "count",
+     "value": 21.0
+    }
+   },
+   "sharpe": {
+    "as_of": null,
+    "caveats": [],
+    "estimated": false,
+    "provenance": "backtest",
+    "sample_size": null,
+    "unit": "ratio",
+    "value": 1.0310248298350253
+   },
+   "tearsheet": "/research/runs/bt_0007",
+   "total_return_pct": {
+    "as_of": null,
+    "caveats": [],
+    "estimated": false,
+    "provenance": "backtest",
+    "sample_size": null,
+    "unit": "pct",
+    "value": 10.644606524507205
+   }
+  },
+  {
+   "max_drawdown_pct": {
+    "as_of": null,
+    "caveats": [],
+    "estimated": false,
+    "provenance": "backtest",
+    "sample_size": null,
+    "unit": "pct",
+    "value": -5.161874752431577
+   },
+   "profit_factor": {
+    "as_of": null,
+    "caveats": [],
+    "estimated": false,
+    "provenance": "backtest",
+    "sample_size": null,
+    "unit": "ratio",
+    "value": 1.2759257588758304
+   },
+   "run": {
+    "created_at": "2026-10-18T16:55:38.629262Z",
+    "dataset_version_ids": [
+     "inmem:EURUSD:H4:6000"
+    ],
+    "engine_current": true,
+    "engine_version": "engine_v3_realism",
+    "gate_report_id": null,
+    "gate_verdict": "not_evaluated",
+    "instruments": [
+     "EURUSD"
+    ],
+    "kind": "backtest",
+    "label": "",
+    "provenance": "backtest",
+    "run_id": "bt_0006",
+    "strategy_id": "ichimoku_kumo_trend",
+    "superseded": false,
+    "timeframe": "H4",
+    "trade_count": {
+     "as_of": null,
+     "caveats": [],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "count",
+     "value": 22.0
+    },
+    "trades_on_symbol": {
+     "as_of": null,
+     "caveats": [],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "count",
+     "value": 22.0
+    },
+    "trades_with_stops": {
+     "as_of": null,
+     "caveats": [],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "count",
+     "value": 22.0
+    }
+   },
+   "sharpe": {
+    "as_of": null,
+    "caveats": [],
+    "estimated": false,
+    "provenance": "backtest",
+    "sample_size": null,
+    "unit": "ratio",
+    "value": 0.3436000429085849
+   },
+   "tearsheet": "/research/runs/bt_0006",
+   "total_return_pct": {
+    "as_of": null,
+    "caveats": [],
+    "estimated": false,
+    "provenance": "backtest",
+    "sample_size": null,
+    "unit": "pct",
+    "value": 3.111201998516133
+   }
+  },
+  {
+   "max_drawdown_pct": {
+    "as_of": null,
+    "caveats": [],
+    "estimated": false,
+    "provenance": "backtest",
+    "sample_size": null,
+    "unit": "pct",
+    "value": -3.2013994201688267
+   },
+   "profit_factor": {
+    "as_of": null,
+    "caveats": [],
+    "estimated": false,
+    "provenance": "backtest",
+    "sample_size": null,
+    "unit": "ratio",
+    "value": 2.0112243244670647
+   },
+   "run": {
+    "created_at": "2026-10-18T16:55:28.720477Z",
+    "dataset_version_ids": [
+     "inmem:EURUSD:H4:6000"
+    ],
+    "engine_current": true,
+    "engine_version": "engine_v3_realism",
+    "gate_report_id": null,
+    "gate_verdict": "not_evaluated",
+    "instruments": [
+     "EURUSD"
+    ],
+    "kind": "backtest",
+    "label": "",
+    "provenance": "backtest",
+    "run_id": "bt_0005",
+    "strategy_id": "ichimoku_kumo_trend",
+    "superseded": false,
+    "timeframe": "H4",
+    "trade_count": {
+     "as_of": null,
+     "caveats": [],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "count",
+     "value": 18.0
+    },
+    "trades_on_symbol": {
+     "as_of": null,
+     "caveats": [],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "count",
+     "value": 18.0
+    },
+    "trades_with_stops": {
+     "as_of": null,
+     "caveats": [],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "count",
+     "value": 18.0
+    }
+   },
+   "sharpe": {
+    "as_of": null,
+    "caveats": [],
+    "estimated": false,
+    "provenance": "backtest",
+    "sample_size": null,
+    "unit": "ratio",
+    "value": 0.9017979949348164
+   },
+   "tearsheet": "/research/runs/bt_0005",
+   "total_return_pct": {
+    "as_of": null,
+    "caveats": [],
+    "estimated": false,
+    "provenance": "backtest",
+    "sample_size": null,
+    "unit": "pct",
+    "value": 7.996627155062241
+   }
+  },
+  {
+   "max_drawdown_pct": {
+    "as_of": null,
+    "caveats": [],
+    "estimated": false,
+    "provenance": "backtest",
+    "sample_size": null,
+    "unit": "pct",
+    "value": -4.283848357613551
+   },
+   "profit_factor": {
+    "as_of": null,
+    "caveats": [],
+    "estimated": false,
+    "provenance": "backtest",
+    "sample_size": null,
+    "unit": "ratio",
+    "value": 1.5303007714567878
+   },
+   "run": {
+    "created_at": "2026-10-18T16:55:20.691936Z",
+    "dataset_version_ids": [
+     "inmem:EURUSD:H4:6000"
+    ],
+    "engine_current": true,
+    "engine_version": "engine_v3_realism",
+    "gate_report_id": null,
+    "gate_verdict": "not_evaluated",
+    "instruments": [
+     "EURUSD"
+    ],
+    "kind": "backtest",
+    "label": "",
+    "provenance": "backtest",
+    "run_id": "bt_0004",
+    "strategy_id": "ichimoku_kumo_trend",
+    "superseded": false,
+    "timeframe": "H4",
+    "trade_count": {
+     "as_of": null,
+     "caveats": [],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "count",
+     "value": 21.0
+    },
+    "trades_on_symbol": {
+     "as_of": null,
+     "caveats": [],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "count",
+     "value": 21.0
+    },
+    "trades_with_stops": {
+     "as_of": null,
+     "caveats": [],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "count",
+     "value": 21.0
+    }
+   },
+   "sharpe": {
+    "as_of": null,
+    "caveats": [],
+    "estimated": false,
+    "provenance": "backtest",
+    "sample_size": null,
+    "unit": "ratio",
+    "value": 0.5868041104562441
+   },
+   "tearsheet": "/research/runs/bt_0004",
+   "total_return_pct": {
+    "as_of": null,
+    "caveats": [],
+    "estimated": false,
+    "provenance": "backtest",
+    "sample_size": null,
+    "unit": "pct",
+    "value": 5.430685523631529
+   }
+  },
+  {
+   "max_drawdown_pct": {
+    "as_of": null,
+    "caveats": [],
+    "estimated": false,
+    "provenance": "backtest",
+    "sample_size": null,
+    "unit": "pct",
+    "value": -3.8432746124055637
+   },
+   "profit_factor": {
+    "as_of": null,
+    "caveats": [],
+    "estimated": false,
+    "provenance": "backtest",
+    "sample_size": null,
+    "unit": "ratio",
+    "value": 1.757631448480788
+   },
+   "run": {
+    "created_at": "2026-10-18T16:55:12.875274Z",
+    "dataset_version_ids": [
+     "inmem:EURUSD:H4:6000"
+    ],
+    "engine_current": true,
+    "engine_version": "engine_v3_realism",
+    "gate_report_id": null,
+    "gate_verdict": "not_evaluated",
+    "instruments": [
+     "EURUSD"
+    ],
+    "kind": "backtest",
+    "label": "",
+    "provenance": "backtest",
+    "run_id": "bt_0003",
+    "strategy_id": "ichimoku_kumo_trend",
+    "superseded": false,
+    "timeframe": "H4",
+    "trade_count": {
+     "as_of": null,
+     "caveats": [],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "count",
+     "value": 24.0
+    },
+    "trades_on_symbol": {
+     "as_of": null,
+     "caveats": [],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "count",
+     "value": 24.0
+    },
+    "trades_with_stops": {
+     "as_of": null,
+     "caveats": [],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "count",
+     "value": 24.0
+    }
+   },
+   "sharpe": {
+    "as_of": null,
+    "caveats": [],
+    "estimated": false,
+    "provenance": "backtest",
+    "sample_size": null,
+    "unit": "ratio",
+    "value": 0.8039312510228476
+   },
+   "tearsheet": "/research/runs/bt_0003",
+   "total_return_pct": {
+    "as_of": null,
+    "caveats": [],
+    "estimated": false,
+    "provenance": "backtest",
+    "sample_size": null,
+    "unit": "pct",
+    "value": 7.820915821877583
+   }
+  },
+  {
+   "max_drawdown_pct": {
+    "as_of": null,
+    "caveats": [],
+    "estimated": false,
+    "provenance": "backtest",
+    "sample_size": null,
+    "unit": "pct",
+    "value": -7.720830951458492
+   },
+   "profit_factor": {
+    "as_of": null,
+    "caveats": [],
+    "estimated": false,
+    "provenance": "backtest",
+    "sample_size": null,
+    "unit": "ratio",
+    "value": 0.8019904566131979
+   },
+   "run": {
+    "created_at": "2026-10-18T16:55:05.894555Z",
+    "dataset_version_ids": [
+     "inmem:EURUSD:H1:9000"
+    ],
+    "engine_current": true,
+    "engine_version": "engine_v3_realism",
+    "gate_report_id": null,
+    "gate_verdict": "not_evaluated",
+    "instruments": [
+     "EURUSD"
+    ],
+    "kind": "backtest",
+    "label": "",
+    "provenance": "backtest",
+    "run_id": "bt_0002",
+    "strategy_id": "rsi_band_mean_reversion",
+    "superseded": false,
+    "timeframe": "H1",
+    "trade_count": {
+     "as_of": null,
+     "caveats": [],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "count",
+     "value": 39.0
+    },
+    "trades_on_symbol": {
+     "as_of": null,
+     "caveats": [],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "count",
+     "value": 39.0
+    },
+    "trades_with_stops": {
+     "as_of": null,
+     "caveats": [],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "count",
+     "value": 39.0
+    }
+   },
+   "sharpe": {
+    "as_of": null,
+    "caveats": [],
+    "estimated": false,
+    "provenance": "backtest",
+    "sample_size": null,
+    "unit": "ratio",
+    "value": -0.6177871176914891
+   },
+   "tearsheet": "/research/runs/bt_0002",
+   "total_return_pct": {
+    "as_of": null,
+    "caveats": [],
+    "estimated": false,
+    "provenance": "backtest",
+    "sample_size": null,
+    "unit": "pct",
+    "value": -3.589804934716545
+   }
+  },
+  {
+   "max_drawdown_pct": {
+    "as_of": null,
+    "caveats": [],
+    "estimated": false,
+    "provenance": "backtest",
+    "sample_size": null,
+    "unit": "pct",
+    "value": -4.456319647225681
+   },
+   "profit_factor": {
+    "as_of": null,
+    "caveats": [],
+    "estimated": false,
+    "provenance": "backtest",
+    "sample_size": null,
+    "unit": "ratio",
+    "value": 1.4999579127372642
+   },
+   "run": {
+    "created_at": "2026-10-18T16:54:59.743169Z",
+    "dataset_version_ids": [
+     "inmem:EURUSD:H4:6000"
+    ],
+    "engine_current": true,
+    "engine_version": "engine_v3_realism",
+    "gate_report_id": "val_0001",
+    "gate_verdict": "fail",
+    "instruments": [
+     "EURUSD"
+    ],
+    "kind": "backtest",
+    "label": "",
+    "provenance": "backtest",
+    "run_id": "bt_0001",
+    "strategy_id": "ichimoku_kumo_trend",
+    "superseded": false,
+    "timeframe": "H4",
+    "trade_count": {
+     "as_of": null,
+     "caveats": [],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "count",
+     "value": 28.0
+    },
+    "trades_on_symbol": {
+     "as_of": null,
+     "caveats": [],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "count",
+     "value": 28.0
+    },
+    "trades_with_stops": {
+     "as_of": null,
+     "caveats": [],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "count",
+     "value": 28.0
+    }
+   },
+   "sharpe": {
+    "as_of": null,
+    "caveats": [],
+    "estimated": false,
+    "provenance": "backtest",
+    "sample_size": null,
+    "unit": "ratio",
+    "value": 0.6736836945769702
+   },
+   "tearsheet": "/research/runs/bt_0001",
+   "total_return_pct": {
+    "as_of": null,
+    "caveats": [],
+    "estimated": false,
+    "provenance": "backtest",
+    "sample_size": null,
+    "unit": "pct",
+    "value": 6.951449094741502
+   }
+  }
+ ],
+ "limit": 300,
+ "offset": 0,
+ "source": {
+  "as_of": "2026-10-18T12:00:00Z",
+  "detail": "Research ledger (append-only), read-only.",
+  "kind": "live"
+ },
+ "total": 26
+}

@@ -88,6 +88,11 @@ export const SECTIONS: Section[] = [
       { href: "/research/parameter-lab", label: "Parameter Lab", code: "PARAM", description: "Parameter spaces per strategy." },
       { href: "/research/validation", label: "Validation", code: "VAL", description: "Validation ladder reports, pass and fail." },
       { href: "/research/datasets", label: "Datasets", code: "DSET", description: "Dataset versions and lineage." },
+      { href: "/research/runs", label: "Runs", code: "RUNS", description: "Every stored run; tick two to six to compare." },
+      { href: "/research/compare", label: "Compare", code: "CMP", description: "Runs side by side: equity, stats, correlation." },
+      { href: "/research/walk-forward", label: "Walk-forward", code: "WF", description: "In-sample and out-of-sample folds per strategy." },
+      { href: "/research/jobs", label: "Jobs", code: "JOBS", description: "Research jobs and study shards in flight." },
+      { href: "/research/correlations", label: "Correlations", code: "CORR", description: "Return correlation across the universe." },
     ],
   },
   {

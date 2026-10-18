@@ -1,0 +1,269 @@
+{
+ "caveats": [],
+ "data": {
+  "deflation_warning": "Sweeping this space is 12,623,688 parameterisation(s). Every one is a trial, and the deflated Sharpe in any validation report must be deflated by that count. Searching more is not finding more.",
+  "parameters": [
+   {
+    "current": {
+     "as_of": null,
+     "caveats": [],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "",
+     "value": 20.0
+    },
+    "description": "Trend-regime gate",
+    "kind": "float",
+    "maximum": {
+     "as_of": null,
+     "caveats": [],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "",
+     "value": 35.0
+    },
+    "minimum": {
+     "as_of": null,
+     "caveats": [],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "",
+     "value": 10.0
+    },
+    "name": "adx_floor",
+    "step": {
+     "as_of": null,
+     "caveats": [],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "",
+     "value": 2.5
+    }
+   },
+   {
+    "current": {
+     "as_of": null,
+     "caveats": [],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "",
+     "value": 26.0
+    },
+    "description": "Base line lookback",
+    "kind": "int",
+    "maximum": {
+     "as_of": null,
+     "caveats": [],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "",
+     "value": 40.0
+    },
+    "minimum": {
+     "as_of": null,
+     "caveats": [],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "",
+     "value": 17.0
+    },
+    "name": "kijun_period",
+    "step": {
+     "as_of": null,
+     "caveats": [],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "",
+     "value": 1.0
+    }
+   },
+   {
+    "current": {
+     "as_of": null,
+     "caveats": [],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "",
+     "value": 52.0
+    },
+    "description": "Leading span B lookback",
+    "kind": "int",
+    "maximum": {
+     "as_of": null,
+     "caveats": [],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "",
+     "value": 78.0
+    },
+    "minimum": {
+     "as_of": null,
+     "caveats": [],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "",
+     "value": 34.0
+    },
+    "name": "senkou_b_period",
+    "step": {
+     "as_of": null,
+     "caveats": [],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "",
+     "value": 2.0
+    }
+   },
+   {
+    "current": {
+     "as_of": null,
+     "caveats": [],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "",
+     "value": 26.0
+    },
+    "description": "Cloud displacement, INDEPENDENT of chikou",
+    "kind": "int",
+    "maximum": {
+     "as_of": null,
+     "caveats": [],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "",
+     "value": 39.0
+    },
+    "minimum": {
+     "as_of": null,
+     "caveats": [],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "",
+     "value": 13.0
+    },
+    "name": "senkou_shift",
+    "step": {
+     "as_of": null,
+     "caveats": [],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "",
+     "value": 1.0
+    }
+   },
+   {
+    "current": {
+     "as_of": null,
+     "caveats": [],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "",
+     "value": 0.5
+    },
+    "description": "ATR buffer beyond the kijun",
+    "kind": "float",
+    "maximum": {
+     "as_of": null,
+     "caveats": [],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "",
+     "value": 1.5
+    },
+    "minimum": {
+     "as_of": null,
+     "caveats": [],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "",
+     "value": 0.0
+    },
+    "name": "stop_buffer_atr",
+    "step": {
+     "as_of": null,
+     "caveats": [],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "",
+     "value": 0.25
+    }
+   },
+   {
+    "current": {
+     "as_of": null,
+     "caveats": [],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "",
+     "value": 9.0
+    },
+    "description": "Conversion line lookback",
+    "kind": "int",
+    "maximum": {
+     "as_of": null,
+     "caveats": [],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "",
+     "value": 15.0
+    },
+    "minimum": {
+     "as_of": null,
+     "caveats": [],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "",
+     "value": 5.0
+    },
+    "name": "tenkan_period",
+    "step": {
+     "as_of": null,
+     "caveats": [],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "",
+     "value": 1.0
+    }
+   }
+  ],
+  "search_space_size": {
+   "as_of": null,
+   "caveats": [],
+   "estimated": false,
+   "provenance": "backtest",
+   "sample_size": null,
+   "unit": "count",
+   "value": 12623688.0
+  },
+  "strategy_id": "ichimoku_kumo_trend"
+ },
+ "source": {
+  "as_of": "2026-10-18T12:00:00Z",
+  "detail": "Declared parameter domains.",
+  "kind": "live"
+ }
+}

@@ -1,13 +1,15 @@
 "use client";
 
+import Link from "next/link";
 import { ListPage, type Column } from "@/components/ListPage";
 import { FigureValue } from "@/components/FigureValue";
+import { researchHref } from "@/lib/research";
 import type { StrategyRow } from "@/lib/types";
 
 /** RESEARCH · Strategies: the registry, as declarative documents. */
 export default function StrategiesPage() {
   const columns: Column<StrategyRow>[] = [
-    { key: "name", header: "Name", cell: (row) => row.name },
+    { key: "name", header: "Name", cell: (row) => <Link href={researchHref.strategy(row.strategy_id)}>{row.name}</Link> },
     { key: "id", header: "Id", cell: (row) => <span className="mono">{row.strategy_id}</span> },
     { key: "family", header: "Family", cell: (row) => row.family },
     { key: "tf", header: "Timeframes", cell: (row) => row.timeframes.join(", ") },

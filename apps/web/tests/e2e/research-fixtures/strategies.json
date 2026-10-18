@@ -1,0 +1,346 @@
+{
+ "caveats": [],
+ "items": [
+  {
+   "author": "fiboki-v2-seed",
+   "complexity": {
+    "as_of": null,
+    "caveats": [],
+    "estimated": false,
+    "provenance": "backtest",
+    "sample_size": null,
+    "unit": "score",
+    "value": null
+   },
+   "content_hash": "8483154d0f17",
+   "family": "breakout",
+   "hypothesis": "ECONOMIC STORY. A breakout of the prior 20-bar range is the classic time-series momentum expression. The economic mechanism most often advanced is slow information diffusion plus flow effects from risk management and option hedging: positions are added as price extends, so a range break is followed by further movement in the same direction more often than a coin flip. Moskowitz, Ooi and Pedersen (2012) document 12-month time-series momentum across asset classes; Hurst, Ooi and Pedersen (2017) extend it back to 1880. The 100-bar EMA filter restricts entries to the side of the longer trend, which is a crude proxy for the same effect at a slower frequency, and the ATR stop makes risk stationary across instruments and volatility regimes.\n\nEVIDENCE AGAINST, STATED PLAINLY. The channel-breakout family is exactly the family that fails multiple-testing correction on FX: Coakley, Marzano and Nankervis (2016) find that technical trading rules on currencies do not survive Step-SPA once the full universe of rules considered is priced in. Managed-futures trend returns have also decayed materially since 2009 (widely documented in practitioner replication work), so historical Sharpe from long samples is likely an overestimate of forward performance. And crucially, the '20-bar high' is computed from the PRIOR window (donchian_upper_prior) -- a channel that includes the current bar's own high can never be broken by that bar, which is the kind of detail that turns a flat strategy into a spectacular backtest and nothing else.",
+   "name": "Donchian Breakout with ATR Stop",
+   "notes": "",
+   "parameter_count": {
+    "as_of": null,
+    "caveats": [],
+    "estimated": false,
+    "provenance": "backtest",
+    "sample_size": null,
+    "unit": "count",
+    "value": 4.0
+   },
+   "parent_strategy_ids": [],
+   "rule_count": {
+    "as_of": null,
+    "caveats": [],
+    "estimated": false,
+    "provenance": "backtest",
+    "sample_size": null,
+    "unit": "count",
+    "value": 5.0
+   },
+   "schema_version": "2.0.0",
+   "strategy_id": "donchian_breakout_atr",
+   "timeframes": [
+    "H4",
+    "D1"
+   ],
+   "universe": [
+    "EURUSD",
+    "GBPUSD",
+    "USDJPY",
+    "AUDUSD",
+    "USDCAD",
+    "USDCHF",
+    "NZDUSD",
+    "EURJPY",
+    "GBPJPY",
+    "XAUUSD",
+    "US500",
+    "DE40"
+   ]
+  },
+  {
+   "author": "fiboki-v2-seed",
+   "complexity": {
+    "as_of": null,
+    "caveats": [],
+    "estimated": false,
+    "provenance": "backtest",
+    "sample_size": null,
+    "unit": "score",
+    "value": null
+   },
+   "content_hash": "fd2a53ed9490",
+   "family": "fibonacci",
+   "hypothesis": "ECONOMIC STORY -- AND IT IS A WEAK ONE. The defensible part of this strategy is not Fibonacci at all: it is 'buy a shallow pullback inside an established trend', which is a momentum-continuation trade with a decent prior. The 0.618-0.786 zone is simply a rule for defining 'shallow but not trivial', and the confirmed swing low that anchors it doubles as a natural, structural stop level, which makes the risk definition objective rather than arbitrary. To the extent this works it works because of trend continuation and because a cluster of stop orders sits under a prior swing, creating a real liquidity feature at that price.\n\nEVIDENCE AGAINST, STATED PLAINLY. There is no credible academic evidence that Fibonacci ratios have predictive power in financial prices. The numbers have no theoretical basis in market microstructure or asset pricing; the ratios are imported from a growth sequence with no connection to price formation, and studies that test them tend to find that any apparent effect is explained by ordinary support/resistance at prior swing levels -- which is to say the SWING matters and the RATIO does not. This strategy is therefore included to be falsified: the correct experiment is to compare it against the identical system using arbitrary retracement depths (e.g. 0.55-0.72). If the Fibonacci version does not beat the arbitrary version out of sample, the ratios add nothing and the family should be retired rather than tuned. Note also that V1's Fibonacci code was direction-blind and emitted nothing whenever the last swing low sat above the last swing high, so any V1 backtest of this family measured a broken implementation, not the idea.",
+   "name": "Fibonacci Golden-Pocket Trend Pullback",
+   "notes": "Falsification target: compare against identical rules with arbitrary (non-Fibonacci) retracement depths.",
+   "parameter_count": {
+    "as_of": null,
+    "caveats": [],
+    "estimated": false,
+    "provenance": "backtest",
+    "sample_size": null,
+    "unit": "count",
+    "value": 7.0
+   },
+   "parent_strategy_ids": [],
+   "rule_count": {
+    "as_of": null,
+    "caveats": [],
+    "estimated": false,
+    "provenance": "backtest",
+    "sample_size": null,
+    "unit": "count",
+    "value": 9.0
+   },
+   "schema_version": "2.0.0",
+   "strategy_id": "fib_golden_pocket_pullback",
+   "timeframes": [
+    "H1",
+    "H4",
+    "D1"
+   ],
+   "universe": [
+    "EURUSD",
+    "GBPUSD",
+    "USDJPY",
+    "AUDUSD",
+    "USDCAD",
+    "USDCHF",
+    "NZDUSD",
+    "EURJPY",
+    "GBPJPY",
+    "XAUUSD",
+    "US500",
+    "DE40"
+   ]
+  },
+  {
+   "author": "fiboki-v2-seed",
+   "complexity": {
+    "as_of": null,
+    "caveats": [],
+    "estimated": false,
+    "provenance": "backtest",
+    "sample_size": null,
+    "unit": "score",
+    "value": null
+   },
+   "content_hash": "75caa48f3c20",
+   "family": "ichimoku",
+   "hypothesis": "ECONOMIC STORY. The Ichimoku lines are, stripped of the folklore, a set of Donchian midpoints over 9/26/52 bars plus a 26-bar displacement. A close above both spans with tenkan above kijun is therefore a compact statement that price is above its 9-, 26- and 52-bar equilibrium and that the short equilibrium is rising. If time-series momentum exists in FX and index CFDs at the daily-to-4-hour horizon -- and Moskowitz, Ooi and Pedersen (2012) and Hurst, Ooi and Pedersen (2017) document it across 50+ futures over a century -- then this is one cheap, low-parameter way to express it, and the displacement gives a natural trailing reference in the kijun.\n\nEVIDENCE AGAINST, STATED PLAINLY. The specific claim that Ichimoku adds value in FX has an explicitly NEGATIVE published result: Deng, Sakurai and Ueda (2021) test Ichimoku rules on major currency pairs and find no significant profitability once data snooping is accounted for. Ichimoku is also drawn from the same moving-average family as the rules in Coakley, Marzano and Nankervis (2016), which did NOT survive Step-SPA multiple-testing correction on FX. The honest prior on this strategy is therefore 'expected edge approximately zero before costs, negative after spread'. It is included as a baseline: if the research pipeline cannot show this underperforming, the pipeline is broken. Any positive result here must clear a deliberately high bar and survive the holdout untouched.",
+   "name": "Ichimoku Kumo Trend",
+   "notes": "Baseline. Expected to underperform; retained as a negative control.",
+   "parameter_count": {
+    "as_of": null,
+    "caveats": [],
+    "estimated": false,
+    "provenance": "backtest",
+    "sample_size": null,
+    "unit": "count",
+    "value": 6.0
+   },
+   "parent_strategy_ids": [],
+   "rule_count": {
+    "as_of": null,
+    "caveats": [],
+    "estimated": false,
+    "provenance": "backtest",
+    "sample_size": null,
+    "unit": "count",
+    "value": 9.0
+   },
+   "schema_version": "2.0.0",
+   "strategy_id": "ichimoku_kumo_trend",
+   "timeframes": [
+    "H4",
+    "D1"
+   ],
+   "universe": [
+    "EURUSD",
+    "GBPUSD",
+    "USDJPY",
+    "AUDUSD",
+    "USDCAD",
+    "USDCHF",
+    "NZDUSD",
+    "EURJPY",
+    "GBPJPY",
+    "XAUUSD",
+    "US500",
+    "DE40"
+   ]
+  },
+  {
+   "author": "fiboki-v2-seed",
+   "complexity": {
+    "as_of": null,
+    "caveats": [],
+    "estimated": false,
+    "provenance": "backtest",
+    "sample_size": null,
+    "unit": "score",
+    "value": null
+   },
+   "content_hash": "78083597c616",
+   "family": "trend_following",
+   "hypothesis": "ECONOMIC STORY. This separates the two jobs a trend system has to do. The 50/200 EMA relationship is the slow state variable -- it answers 'which way is this market drifting over months' -- while the MACD line crossing its signal is the fast timing trigger that answers 'is momentum re-accelerating now'. Taking the fast trigger only in the direction of the slow state is a standard way to cut the whipsaw rate of a bare crossover roughly in half without giving up the large moves, which is where all the money in time-series momentum is made (Moskowitz, Ooi and Pedersen 2012). The MACD histogram is a difference of two EMAs, so this is an intentionally low-parameter expression of one idea rather than two ideas bolted together.\n\nEVIDENCE AGAINST, STATED PLAINLY. This is the single worst-supported family in the academic literature once snooping is priced in. Moving-average crossover rules -- exactly these -- did NOT survive Step-SPA correction in Coakley, Marzano and Nankervis (2016) on FX. Earlier positive results such as Brock, Lakonishok and LeBaron (1992) are the canonical example of results that shrank when White's Reality Check was applied (Sullivan, Timmermann and White 1999). The 200-EMA filter also costs roughly 600 bars of warmup, which removes a real slice of any sample and makes the effective test period shorter than it looks. Expect a positive but small gross edge in trending instruments, and expect spread and slippage to consume most of it on anything faster than H4.",
+   "name": "MACD / EMA Trend Hybrid",
+   "notes": "",
+   "parameter_count": {
+    "as_of": null,
+    "caveats": [],
+    "estimated": false,
+    "provenance": "backtest",
+    "sample_size": null,
+    "unit": "count",
+    "value": 7.0
+   },
+   "parent_strategy_ids": [],
+   "rule_count": {
+    "as_of": null,
+    "caveats": [],
+    "estimated": false,
+    "provenance": "backtest",
+    "sample_size": null,
+    "unit": "count",
+    "value": 9.0
+   },
+   "schema_version": "2.0.0",
+   "strategy_id": "macd_ema_trend_hybrid",
+   "timeframes": [
+    "H4",
+    "D1"
+   ],
+   "universe": [
+    "EURUSD",
+    "GBPUSD",
+    "USDJPY",
+    "AUDUSD",
+    "USDCAD",
+    "USDCHF",
+    "NZDUSD",
+    "EURJPY",
+    "GBPJPY",
+    "XAUUSD",
+    "US500",
+    "DE40"
+   ]
+  },
+  {
+   "author": "fiboki-v2-seed",
+   "complexity": {
+    "as_of": null,
+    "caveats": [],
+    "estimated": false,
+    "provenance": "backtest",
+    "sample_size": null,
+    "unit": "score",
+    "value": null
+   },
+   "content_hash": "0a1f5a26c24d",
+   "family": "mean_reversion",
+   "hypothesis": "ECONOMIC STORY. Short-horizon reversal is one of the better-evidenced anomalies, and it has a mechanism rather than just a backtest: liquidity provision. Nagel (2012) shows that returns to short-term reversal strategies are compensation for supplying liquidity when it is scarce, and that those returns scale with measures of funding stress. The trade is therefore specified as a RE-ENTRY, not a touch: price must close back INSIDE the lower Bollinger band having closed outside it, with RSI still depressed. Waiting for the re-cross matters a great deal in practice -- at the moment of the band break RSI is still falling and the imbalance is still being created, so entering there is buying into the flow rather than supplying liquidity to it. The ADX ceiling is the load-bearing condition: mean reversion applied during a trend is just a slow way to lose money. The time stop caps the cost of being wrong about which regime we are in.\n\nEVIDENCE AGAINST, STATED PLAINLY. Nagel's premium is measured on US equities at daily frequency with essentially zero spread; the FX and CFD version pays a spread on every leg and the effect must clear it. RSI-threshold rules specifically belong to the oscillator family that Coakley, Marzano and Nankervis (2016) found does not survive Step-SPA correction on currencies. The strategy also carries a structural negative skew: many small wins into the band midline, occasional large losses when the regime classifier is wrong, which flatters Sharpe and hides tail risk. Rank this one on tail-aware statistics, not Sharpe, and treat anything below a 1.4 profit factor as noise.",
+   "name": "RSI Band Mean Reversion",
+   "notes": "",
+   "parameter_count": {
+    "as_of": null,
+    "caveats": [],
+    "estimated": false,
+    "provenance": "backtest",
+    "sample_size": null,
+    "unit": "count",
+    "value": 7.0
+   },
+   "parent_strategy_ids": [],
+   "rule_count": {
+    "as_of": null,
+    "caveats": [],
+    "estimated": false,
+    "provenance": "backtest",
+    "sample_size": null,
+    "unit": "count",
+    "value": 9.0
+   },
+   "schema_version": "2.0.0",
+   "strategy_id": "rsi_band_mean_reversion",
+   "timeframes": [
+    "H1",
+    "H4"
+   ],
+   "universe": [
+    "EURUSD",
+    "GBPUSD",
+    "USDJPY",
+    "AUDUSD",
+    "USDCAD",
+    "USDCHF",
+    "NZDUSD",
+    "EURGBP",
+    "AUDNZD",
+    "EURCHF"
+   ]
+  },
+  {
+   "author": "fiboki-v2-seed",
+   "complexity": {
+    "as_of": null,
+    "caveats": [],
+    "estimated": false,
+    "provenance": "backtest",
+    "sample_size": null,
+    "unit": "score",
+    "value": null
+   },
+   "content_hash": "6fd25ce7669f",
+   "family": "momentum",
+   "hypothesis": "ECONOMIC STORY. This is time-series momentum in its original form: the SIGN of an instrument's own past return predicts the sign of its next return. It is deliberately NOT a price-level breakout -- no channel, no moving-average state, no retracement level -- so it is a different bet from every other seed rather than another expression of 'price crossed a line'. The mechanisms advanced are slow information diffusion (prices under-react to news and catch up over weeks), herding and extrapolative flows, and hedging and risk-management flows that add to positions as they move. Moskowitz, Ooi and Pedersen (2012) document it across 58 futures and forwards at a 12-month lookback and 1-month hold; Hurst, Ooi and Pedersen (2017) extend it back to 1880; Baltas and Kosowski (2013) study it with volatility-scaled positions. Here the slow return (roc over slow_lookback bars, above or below zero) is the state and the fast return crossing zero in the same direction is the entry event, so a position is opened when short-horizon momentum re-aligns with the long-horizon sign, and held for a fixed number of bars as in MOP. The entry is a CrossoverRule of roc(fast) against a ConstantOperand of 0, not an EMA crossover, so the signal really is the sign of a return. Lookbacks are in BARS: on D1, 126 bars is about six months and 21 bars a month, which is the bet; on H4 the same numbers are about three weeks and three days, a much shorter horizon, and H4 is carried only so the campaign machinery can run it on the H4 store.\n\nEVIDENCE AGAINST, STATED PLAINLY. Huang, Li, Wang and Zhou (2020, JFE, 'Time series momentum: Is it there?') find TSMOM largely insignificant asset by asset; the headline significance comes from pooled regressions that let a few assets carry the rest. Kim, Tse and Wald (2016) attribute much of the TSMOM Sharpe ratio to volatility scaling rather than to the sign signal, and Goyal and Jegadeesh (2018) show that TSMOM's advantage over cross-sectional momentum is largely a time-varying net long position. Trend-following returns decayed materially after 2009. On FX specifically, Menkhoff, Sarno, Schmeling and Schrimpf (2012) find currency momentum concentrated in high-cost, illiquid currencies -- not the majors traded here. This document deliberately does NOT vol-scale position size: sizing is the portfolio layer's job, not the strategy's, so it tests the SIGN signal alone, which is the harder claim and the one the evidence above most doubts. At D1 with a 21-bar hold the sample is small per instrument, and the ladder's min-trades gate is expected to bind on short histories; a failure there is a verdict on the sample, not on the idea. FALSIFIER: if the D1 default binding shows no positive deflated edge net of spread across the pooled universe out of sample, the sign signal adds nothing here.",
+   "name": "Time-Series Momentum, Dual Horizon",
+   "notes": "Different bet: the sign of past returns, not a price-level breakout. Not vol-scaled by design. Exit is the ATR stop or the holding_bars time exit. Default events block keeps avoid_rollover_hour: on a D1 series stamped at the rollover hour it blocks every entry (backtest/exits.py).",
+   "parameter_count": {
+    "as_of": null,
+    "caveats": [],
+    "estimated": false,
+    "provenance": "backtest",
+    "sample_size": null,
+    "unit": "count",
+    "value": 4.0
+   },
+   "parent_strategy_ids": [],
+   "rule_count": {
+    "as_of": null,
+    "caveats": [],
+    "estimated": false,
+    "provenance": "backtest",
+    "sample_size": null,
+    "unit": "count",
+    "value": 5.0
+   },
+   "schema_version": "2.0.0",
+   "strategy_id": "tsmom_dual_horizon",
+   "timeframes": [
+    "D1",
+    "H4"
+   ],
+   "universe": [
+    "EURUSD",
+    "GBPUSD",
+    "USDJPY",
+    "AUDUSD",
+    "USDCAD",
+    "USDCHF",
+    "NZDUSD",
+    "XAUUSD",
+    "US500",
+    "DE40"
+   ]
+  }
+ ],
+ "limit": 100,
+ "offset": 0,
+ "source": {
+  "as_of": "2026-10-18T12:00:00Z",
+  "detail": "Strategy registry, 6 document(s) from research/strategies.",
+  "kind": "live"
+ },
+ "total": 6
+}

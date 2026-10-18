@@ -1,0 +1,1762 @@
+{
+ "caveats": [],
+ "data": {
+  "counts": {
+   "dead_letter": 1,
+   "failed": 0,
+   "pending": 1,
+   "running": 0,
+   "succeeded": 27
+  },
+  "eta_method": "Job ETA: the median duration of this job type's succeeded attempts in the ledger, less the elapsed time (an estimate). Shard ETA: remaining units times the shard's own mean seconds per unit.",
+  "job_ledger": "Job ledger /var/fiboki/state/jobs.sqlite (read-only).",
+  "jobs": [
+   {
+    "attempts": 0,
+    "elapsed_seconds": {
+     "as_of": null,
+     "caveats": [
+      {
+       "affects": "",
+       "code": "value_unavailable",
+       "direction": "unknown",
+       "message": "Not running.",
+       "severity": "warning"
+      }
+     ],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "s",
+     "value": null
+    },
+    "error": "",
+    "eta_seconds": {
+     "as_of": null,
+     "caveats": [],
+     "estimated": true,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "s",
+     "value": 8.175971
+    },
+    "instrument": "EURUSD",
+    "job_id": "job_31d96eceb6af81c9",
+    "job_type": "backtest",
+    "max_attempts": 3,
+    "next_attempt_at": "2026-10-18T16:58:22.247975Z",
+    "outputs": {},
+    "queue": "research",
+    "started_at": null,
+    "status": "pending",
+    "strategy_id": "ichimoku_kumo_trend",
+    "submitted_at": "2026-10-18T16:58:22.247975Z"
+   },
+   {
+    "attempts": 1,
+    "elapsed_seconds": {
+     "as_of": null,
+     "caveats": [
+      {
+       "affects": "",
+       "code": "value_unavailable",
+       "direction": "unknown",
+       "message": "Not running.",
+       "severity": "warning"
+      }
+     ],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "s",
+     "value": null
+    },
+    "error": "ValueError: ichimoku_kumo_trend: M5 is not a permitted timeframe ['H4', 'D1']",
+    "eta_seconds": {
+     "as_of": null,
+     "caveats": [
+      {
+       "affects": "",
+       "code": "value_unavailable",
+       "direction": "unknown",
+       "message": "Not queued or running.",
+       "severity": "warning"
+      }
+     ],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "s",
+     "value": null
+    },
+    "instrument": "EURUSD",
+    "job_id": "job_e5723fc92626f2fc",
+    "job_type": "backtest",
+    "max_attempts": 1,
+    "next_attempt_at": null,
+    "outputs": {},
+    "queue": "slow",
+    "started_at": "2026-10-18T16:58:22.257281Z",
+    "status": "dead_letter",
+    "strategy_id": "ichimoku_kumo_trend",
+    "submitted_at": "2026-10-18T16:58:22.251944Z"
+   },
+   {
+    "attempts": 1,
+    "elapsed_seconds": {
+     "as_of": null,
+     "caveats": [
+      {
+       "affects": "",
+       "code": "value_unavailable",
+       "direction": "unknown",
+       "message": "Not running.",
+       "severity": "warning"
+      }
+     ],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "s",
+     "value": null
+    },
+    "error": "",
+    "eta_seconds": {
+     "as_of": null,
+     "caveats": [
+      {
+       "affects": "",
+       "code": "value_unavailable",
+       "direction": "unknown",
+       "message": "Not queued or running.",
+       "severity": "warning"
+      }
+     ],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "s",
+     "value": null
+    },
+    "instrument": "EURUSD",
+    "job_id": "job_61d22a061828125e",
+    "job_type": "backtest",
+    "max_attempts": 3,
+    "next_attempt_at": null,
+    "outputs": {
+     "strategy": "/research/strategies/ichimoku_kumo_trend",
+     "tearsheet": "/research/runs/bt_0026"
+    },
+    "queue": "research",
+    "started_at": "2026-10-18T16:58:13.847088Z",
+    "status": "succeeded",
+    "strategy_id": "ichimoku_kumo_trend",
+    "submitted_at": "2026-10-18T16:58:13.839747Z"
+   },
+   {
+    "attempts": 1,
+    "elapsed_seconds": {
+     "as_of": null,
+     "caveats": [
+      {
+       "affects": "",
+       "code": "value_unavailable",
+       "direction": "unknown",
+       "message": "Not running.",
+       "severity": "warning"
+      }
+     ],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "s",
+     "value": null
+    },
+    "error": "",
+    "eta_seconds": {
+     "as_of": null,
+     "caveats": [
+      {
+       "affects": "",
+       "code": "value_unavailable",
+       "direction": "unknown",
+       "message": "Not queued or running.",
+       "severity": "warning"
+      }
+     ],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "s",
+     "value": null
+    },
+    "instrument": "EURUSD",
+    "job_id": "job_6f1e89d840356fd8",
+    "job_type": "backtest",
+    "max_attempts": 3,
+    "next_attempt_at": null,
+    "outputs": {
+     "strategy": "/research/strategies/ichimoku_kumo_trend",
+     "tearsheet": "/research/runs/bt_0025"
+    },
+    "queue": "research",
+    "started_at": "2026-10-18T16:58:07.705035Z",
+    "status": "succeeded",
+    "strategy_id": "ichimoku_kumo_trend",
+    "submitted_at": "2026-10-18T16:58:07.698564Z"
+   },
+   {
+    "attempts": 1,
+    "elapsed_seconds": {
+     "as_of": null,
+     "caveats": [
+      {
+       "affects": "",
+       "code": "value_unavailable",
+       "direction": "unknown",
+       "message": "Not running.",
+       "severity": "warning"
+      }
+     ],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "s",
+     "value": null
+    },
+    "error": "",
+    "eta_seconds": {
+     "as_of": null,
+     "caveats": [
+      {
+       "affects": "",
+       "code": "value_unavailable",
+       "direction": "unknown",
+       "message": "Not queued or running.",
+       "severity": "warning"
+      }
+     ],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "s",
+     "value": null
+    },
+    "instrument": "EURUSD",
+    "job_id": "job_b0899139b7a8a57d",
+    "job_type": "backtest",
+    "max_attempts": 3,
+    "next_attempt_at": null,
+    "outputs": {
+     "strategy": "/research/strategies/ichimoku_kumo_trend",
+     "tearsheet": "/research/runs/bt_0024"
+    },
+    "queue": "research",
+    "started_at": "2026-10-18T16:57:59.667629Z",
+    "status": "succeeded",
+    "strategy_id": "ichimoku_kumo_trend",
+    "submitted_at": "2026-10-18T16:57:59.654791Z"
+   },
+   {
+    "attempts": 1,
+    "elapsed_seconds": {
+     "as_of": null,
+     "caveats": [
+      {
+       "affects": "",
+       "code": "value_unavailable",
+       "direction": "unknown",
+       "message": "Not running.",
+       "severity": "warning"
+      }
+     ],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "s",
+     "value": null
+    },
+    "error": "",
+    "eta_seconds": {
+     "as_of": null,
+     "caveats": [
+      {
+       "affects": "",
+       "code": "value_unavailable",
+       "direction": "unknown",
+       "message": "Not queued or running.",
+       "severity": "warning"
+      }
+     ],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "s",
+     "value": null
+    },
+    "instrument": "EURUSD",
+    "job_id": "job_a98f0e76b86a5bfd",
+    "job_type": "backtest",
+    "max_attempts": 3,
+    "next_attempt_at": null,
+    "outputs": {
+     "strategy": "/research/strategies/ichimoku_kumo_trend",
+     "tearsheet": "/research/runs/bt_0023"
+    },
+    "queue": "research",
+    "started_at": "2026-10-18T16:57:50.676202Z",
+    "status": "succeeded",
+    "strategy_id": "ichimoku_kumo_trend",
+    "submitted_at": "2026-10-18T16:57:50.662080Z"
+   },
+   {
+    "attempts": 1,
+    "elapsed_seconds": {
+     "as_of": null,
+     "caveats": [
+      {
+       "affects": "",
+       "code": "value_unavailable",
+       "direction": "unknown",
+       "message": "Not running.",
+       "severity": "warning"
+      }
+     ],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "s",
+     "value": null
+    },
+    "error": "",
+    "eta_seconds": {
+     "as_of": null,
+     "caveats": [
+      {
+       "affects": "",
+       "code": "value_unavailable",
+       "direction": "unknown",
+       "message": "Not queued or running.",
+       "severity": "warning"
+      }
+     ],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "s",
+     "value": null
+    },
+    "instrument": "EURUSD",
+    "job_id": "job_53564419eb1bd7f2",
+    "job_type": "backtest",
+    "max_attempts": 3,
+    "next_attempt_at": null,
+    "outputs": {
+     "strategy": "/research/strategies/ichimoku_kumo_trend",
+     "tearsheet": "/research/runs/bt_0022"
+    },
+    "queue": "research",
+    "started_at": "2026-10-18T16:57:43.221646Z",
+    "status": "succeeded",
+    "strategy_id": "ichimoku_kumo_trend",
+    "submitted_at": "2026-10-18T16:57:43.219405Z"
+   },
+   {
+    "attempts": 1,
+    "elapsed_seconds": {
+     "as_of": null,
+     "caveats": [
+      {
+       "affects": "",
+       "code": "value_unavailable",
+       "direction": "unknown",
+       "message": "Not running.",
+       "severity": "warning"
+      }
+     ],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "s",
+     "value": null
+    },
+    "error": "",
+    "eta_seconds": {
+     "as_of": null,
+     "caveats": [
+      {
+       "affects": "",
+       "code": "value_unavailable",
+       "direction": "unknown",
+       "message": "Not queued or running.",
+       "severity": "warning"
+      }
+     ],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "s",
+     "value": null
+    },
+    "instrument": "EURUSD",
+    "job_id": "job_75490c18898f0fc8",
+    "job_type": "backtest",
+    "max_attempts": 3,
+    "next_attempt_at": null,
+    "outputs": {
+     "strategy": "/research/strategies/ichimoku_kumo_trend",
+     "tearsheet": "/research/runs/bt_0021"
+    },
+    "queue": "research",
+    "started_at": "2026-10-18T16:57:32.485412Z",
+    "status": "succeeded",
+    "strategy_id": "ichimoku_kumo_trend",
+    "submitted_at": "2026-10-18T16:57:32.484186Z"
+   },
+   {
+    "attempts": 1,
+    "elapsed_seconds": {
+     "as_of": null,
+     "caveats": [
+      {
+       "affects": "",
+       "code": "value_unavailable",
+       "direction": "unknown",
+       "message": "Not running.",
+       "severity": "warning"
+      }
+     ],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "s",
+     "value": null
+    },
+    "error": "",
+    "eta_seconds": {
+     "as_of": null,
+     "caveats": [
+      {
+       "affects": "",
+       "code": "value_unavailable",
+       "direction": "unknown",
+       "message": "Not queued or running.",
+       "severity": "warning"
+      }
+     ],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "s",
+     "value": null
+    },
+    "instrument": "EURUSD",
+    "job_id": "job_16c350644647215a",
+    "job_type": "backtest",
+    "max_attempts": 3,
+    "next_attempt_at": null,
+    "outputs": {
+     "strategy": "/research/strategies/ichimoku_kumo_trend",
+     "tearsheet": "/research/runs/bt_0020"
+    },
+    "queue": "research",
+    "started_at": "2026-10-18T16:57:23.126321Z",
+    "status": "succeeded",
+    "strategy_id": "ichimoku_kumo_trend",
+    "submitted_at": "2026-10-18T16:57:23.121492Z"
+   },
+   {
+    "attempts": 1,
+    "elapsed_seconds": {
+     "as_of": null,
+     "caveats": [
+      {
+       "affects": "",
+       "code": "value_unavailable",
+       "direction": "unknown",
+       "message": "Not running.",
+       "severity": "warning"
+      }
+     ],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "s",
+     "value": null
+    },
+    "error": "",
+    "eta_seconds": {
+     "as_of": null,
+     "caveats": [
+      {
+       "affects": "",
+       "code": "value_unavailable",
+       "direction": "unknown",
+       "message": "Not queued or running.",
+       "severity": "warning"
+      }
+     ],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "s",
+     "value": null
+    },
+    "instrument": "EURUSD",
+    "job_id": "job_d25d09ad9d43176b",
+    "job_type": "backtest",
+    "max_attempts": 3,
+    "next_attempt_at": null,
+    "outputs": {
+     "strategy": "/research/strategies/ichimoku_kumo_trend",
+     "tearsheet": "/research/runs/bt_0019"
+    },
+    "queue": "research",
+    "started_at": "2026-10-18T16:57:12.935592Z",
+    "status": "succeeded",
+    "strategy_id": "ichimoku_kumo_trend",
+    "submitted_at": "2026-10-18T16:57:12.893238Z"
+   },
+   {
+    "attempts": 1,
+    "elapsed_seconds": {
+     "as_of": null,
+     "caveats": [
+      {
+       "affects": "",
+       "code": "value_unavailable",
+       "direction": "unknown",
+       "message": "Not running.",
+       "severity": "warning"
+      }
+     ],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "s",
+     "value": null
+    },
+    "error": "",
+    "eta_seconds": {
+     "as_of": null,
+     "caveats": [
+      {
+       "affects": "",
+       "code": "value_unavailable",
+       "direction": "unknown",
+       "message": "Not queued or running.",
+       "severity": "warning"
+      }
+     ],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "s",
+     "value": null
+    },
+    "instrument": "EURUSD",
+    "job_id": "job_99a9b5d75c78a4b6",
+    "job_type": "backtest",
+    "max_attempts": 3,
+    "next_attempt_at": null,
+    "outputs": {
+     "strategy": "/research/strategies/ichimoku_kumo_trend",
+     "tearsheet": "/research/runs/bt_0018"
+    },
+    "queue": "research",
+    "started_at": "2026-10-18T16:57:03.086468Z",
+    "status": "succeeded",
+    "strategy_id": "ichimoku_kumo_trend",
+    "submitted_at": "2026-10-18T16:57:03.080770Z"
+   },
+   {
+    "attempts": 1,
+    "elapsed_seconds": {
+     "as_of": null,
+     "caveats": [
+      {
+       "affects": "",
+       "code": "value_unavailable",
+       "direction": "unknown",
+       "message": "Not running.",
+       "severity": "warning"
+      }
+     ],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "s",
+     "value": null
+    },
+    "error": "",
+    "eta_seconds": {
+     "as_of": null,
+     "caveats": [
+      {
+       "affects": "",
+       "code": "value_unavailable",
+       "direction": "unknown",
+       "message": "Not queued or running.",
+       "severity": "warning"
+      }
+     ],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "s",
+     "value": null
+    },
+    "instrument": "EURUSD",
+    "job_id": "job_38d492b3fdf7f922",
+    "job_type": "backtest",
+    "max_attempts": 3,
+    "next_attempt_at": null,
+    "outputs": {
+     "strategy": "/research/strategies/ichimoku_kumo_trend",
+     "tearsheet": "/research/runs/bt_0017"
+    },
+    "queue": "research",
+    "started_at": "2026-10-18T16:56:56.370232Z",
+    "status": "succeeded",
+    "strategy_id": "ichimoku_kumo_trend",
+    "submitted_at": "2026-10-18T16:56:56.366527Z"
+   },
+   {
+    "attempts": 1,
+    "elapsed_seconds": {
+     "as_of": null,
+     "caveats": [
+      {
+       "affects": "",
+       "code": "value_unavailable",
+       "direction": "unknown",
+       "message": "Not running.",
+       "severity": "warning"
+      }
+     ],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "s",
+     "value": null
+    },
+    "error": "",
+    "eta_seconds": {
+     "as_of": null,
+     "caveats": [
+      {
+       "affects": "",
+       "code": "value_unavailable",
+       "direction": "unknown",
+       "message": "Not queued or running.",
+       "severity": "warning"
+      }
+     ],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "s",
+     "value": null
+    },
+    "instrument": "EURUSD",
+    "job_id": "job_ac039084bf55aa93",
+    "job_type": "backtest",
+    "max_attempts": 3,
+    "next_attempt_at": null,
+    "outputs": {
+     "strategy": "/research/strategies/ichimoku_kumo_trend",
+     "tearsheet": "/research/runs/bt_0016"
+    },
+    "queue": "research",
+    "started_at": "2026-10-18T16:56:47.333414Z",
+    "status": "succeeded",
+    "strategy_id": "ichimoku_kumo_trend",
+    "submitted_at": "2026-10-18T16:56:47.322691Z"
+   },
+   {
+    "attempts": 1,
+    "elapsed_seconds": {
+     "as_of": null,
+     "caveats": [
+      {
+       "affects": "",
+       "code": "value_unavailable",
+       "direction": "unknown",
+       "message": "Not running.",
+       "severity": "warning"
+      }
+     ],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "s",
+     "value": null
+    },
+    "error": "",
+    "eta_seconds": {
+     "as_of": null,
+     "caveats": [
+      {
+       "affects": "",
+       "code": "value_unavailable",
+       "direction": "unknown",
+       "message": "Not queued or running.",
+       "severity": "warning"
+      }
+     ],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "s",
+     "value": null
+    },
+    "instrument": "EURUSD",
+    "job_id": "job_069d17b63d30aefe",
+    "job_type": "backtest",
+    "max_attempts": 3,
+    "next_attempt_at": null,
+    "outputs": {
+     "strategy": "/research/strategies/ichimoku_kumo_trend",
+     "tearsheet": "/research/runs/bt_0015"
+    },
+    "queue": "research",
+    "started_at": "2026-10-18T16:56:38.670760Z",
+    "status": "succeeded",
+    "strategy_id": "ichimoku_kumo_trend",
+    "submitted_at": "2026-10-18T16:56:38.642959Z"
+   },
+   {
+    "attempts": 1,
+    "elapsed_seconds": {
+     "as_of": null,
+     "caveats": [
+      {
+       "affects": "",
+       "code": "value_unavailable",
+       "direction": "unknown",
+       "message": "Not running.",
+       "severity": "warning"
+      }
+     ],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "s",
+     "value": null
+    },
+    "error": "",
+    "eta_seconds": {
+     "as_of": null,
+     "caveats": [
+      {
+       "affects": "",
+       "code": "value_unavailable",
+       "direction": "unknown",
+       "message": "Not queued or running.",
+       "severity": "warning"
+      }
+     ],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "s",
+     "value": null
+    },
+    "instrument": "EURUSD",
+    "job_id": "job_9b5056cb4de6166e",
+    "job_type": "backtest",
+    "max_attempts": 3,
+    "next_attempt_at": null,
+    "outputs": {
+     "strategy": "/research/strategies/ichimoku_kumo_trend",
+     "tearsheet": "/research/runs/bt_0014"
+    },
+    "queue": "research",
+    "started_at": "2026-10-18T16:56:29.143862Z",
+    "status": "succeeded",
+    "strategy_id": "ichimoku_kumo_trend",
+    "submitted_at": "2026-10-18T16:56:29.135926Z"
+   },
+   {
+    "attempts": 1,
+    "elapsed_seconds": {
+     "as_of": null,
+     "caveats": [
+      {
+       "affects": "",
+       "code": "value_unavailable",
+       "direction": "unknown",
+       "message": "Not running.",
+       "severity": "warning"
+      }
+     ],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "s",
+     "value": null
+    },
+    "error": "",
+    "eta_seconds": {
+     "as_of": null,
+     "caveats": [
+      {
+       "affects": "",
+       "code": "value_unavailable",
+       "direction": "unknown",
+       "message": "Not queued or running.",
+       "severity": "warning"
+      }
+     ],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "s",
+     "value": null
+    },
+    "instrument": "EURUSD",
+    "job_id": "job_6c025eab72388c1e",
+    "job_type": "backtest",
+    "max_attempts": 3,
+    "next_attempt_at": null,
+    "outputs": {
+     "strategy": "/research/strategies/ichimoku_kumo_trend",
+     "tearsheet": "/research/runs/bt_0013"
+    },
+    "queue": "research",
+    "started_at": "2026-10-18T16:56:24.450748Z",
+    "status": "succeeded",
+    "strategy_id": "ichimoku_kumo_trend",
+    "submitted_at": "2026-10-18T16:56:24.419653Z"
+   },
+   {
+    "attempts": 1,
+    "elapsed_seconds": {
+     "as_of": null,
+     "caveats": [
+      {
+       "affects": "",
+       "code": "value_unavailable",
+       "direction": "unknown",
+       "message": "Not running.",
+       "severity": "warning"
+      }
+     ],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "s",
+     "value": null
+    },
+    "error": "",
+    "eta_seconds": {
+     "as_of": null,
+     "caveats": [
+      {
+       "affects": "",
+       "code": "value_unavailable",
+       "direction": "unknown",
+       "message": "Not queued or running.",
+       "severity": "warning"
+      }
+     ],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "s",
+     "value": null
+    },
+    "instrument": "EURUSD",
+    "job_id": "job_ad8dc61078e3b1e3",
+    "job_type": "backtest",
+    "max_attempts": 3,
+    "next_attempt_at": null,
+    "outputs": {
+     "strategy": "/research/strategies/ichimoku_kumo_trend",
+     "tearsheet": "/research/runs/bt_0012"
+    },
+    "queue": "research",
+    "started_at": "2026-10-18T16:56:16.027373Z",
+    "status": "succeeded",
+    "strategy_id": "ichimoku_kumo_trend",
+    "submitted_at": "2026-10-18T16:56:15.968479Z"
+   },
+   {
+    "attempts": 1,
+    "elapsed_seconds": {
+     "as_of": null,
+     "caveats": [
+      {
+       "affects": "",
+       "code": "value_unavailable",
+       "direction": "unknown",
+       "message": "Not running.",
+       "severity": "warning"
+      }
+     ],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "s",
+     "value": null
+    },
+    "error": "",
+    "eta_seconds": {
+     "as_of": null,
+     "caveats": [
+      {
+       "affects": "",
+       "code": "value_unavailable",
+       "direction": "unknown",
+       "message": "Not queued or running.",
+       "severity": "warning"
+      }
+     ],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "s",
+     "value": null
+    },
+    "instrument": "EURUSD",
+    "job_id": "job_8418561ce947b6bd",
+    "job_type": "backtest",
+    "max_attempts": 3,
+    "next_attempt_at": null,
+    "outputs": {
+     "strategy": "/research/strategies/ichimoku_kumo_trend",
+     "tearsheet": "/research/runs/bt_0011"
+    },
+    "queue": "research",
+    "started_at": "2026-10-18T16:56:08.824470Z",
+    "status": "succeeded",
+    "strategy_id": "ichimoku_kumo_trend",
+    "submitted_at": "2026-10-18T16:56:08.802569Z"
+   },
+   {
+    "attempts": 1,
+    "elapsed_seconds": {
+     "as_of": null,
+     "caveats": [
+      {
+       "affects": "",
+       "code": "value_unavailable",
+       "direction": "unknown",
+       "message": "Not running.",
+       "severity": "warning"
+      }
+     ],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "s",
+     "value": null
+    },
+    "error": "",
+    "eta_seconds": {
+     "as_of": null,
+     "caveats": [
+      {
+       "affects": "",
+       "code": "value_unavailable",
+       "direction": "unknown",
+       "message": "Not queued or running.",
+       "severity": "warning"
+      }
+     ],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "s",
+     "value": null
+    },
+    "instrument": "EURUSD",
+    "job_id": "job_d2db6eed5ceb367c",
+    "job_type": "backtest",
+    "max_attempts": 3,
+    "next_attempt_at": null,
+    "outputs": {
+     "strategy": "/research/strategies/ichimoku_kumo_trend",
+     "tearsheet": "/research/runs/bt_0010"
+    },
+    "queue": "research",
+    "started_at": "2026-10-18T16:56:00.154142Z",
+    "status": "succeeded",
+    "strategy_id": "ichimoku_kumo_trend",
+    "submitted_at": "2026-10-18T16:56:00.132059Z"
+   },
+   {
+    "attempts": 1,
+    "elapsed_seconds": {
+     "as_of": null,
+     "caveats": [
+      {
+       "affects": "",
+       "code": "value_unavailable",
+       "direction": "unknown",
+       "message": "Not running.",
+       "severity": "warning"
+      }
+     ],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "s",
+     "value": null
+    },
+    "error": "",
+    "eta_seconds": {
+     "as_of": null,
+     "caveats": [
+      {
+       "affects": "",
+       "code": "value_unavailable",
+       "direction": "unknown",
+       "message": "Not queued or running.",
+       "severity": "warning"
+      }
+     ],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "s",
+     "value": null
+    },
+    "instrument": "EURUSD",
+    "job_id": "job_c8d25cfc5a1c903d",
+    "job_type": "backtest",
+    "max_attempts": 3,
+    "next_attempt_at": null,
+    "outputs": {
+     "strategy": "/research/strategies/ichimoku_kumo_trend",
+     "tearsheet": "/research/runs/bt_0009"
+    },
+    "queue": "research",
+    "started_at": "2026-10-18T16:55:52.070418Z",
+    "status": "succeeded",
+    "strategy_id": "ichimoku_kumo_trend",
+    "submitted_at": "2026-10-18T16:55:52.068309Z"
+   },
+   {
+    "attempts": 1,
+    "elapsed_seconds": {
+     "as_of": null,
+     "caveats": [
+      {
+       "affects": "",
+       "code": "value_unavailable",
+       "direction": "unknown",
+       "message": "Not running.",
+       "severity": "warning"
+      }
+     ],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "s",
+     "value": null
+    },
+    "error": "",
+    "eta_seconds": {
+     "as_of": null,
+     "caveats": [
+      {
+       "affects": "",
+       "code": "value_unavailable",
+       "direction": "unknown",
+       "message": "Not queued or running.",
+       "severity": "warning"
+      }
+     ],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "s",
+     "value": null
+    },
+    "instrument": "EURUSD",
+    "job_id": "job_e00e4a1b247dfae7",
+    "job_type": "backtest",
+    "max_attempts": 3,
+    "next_attempt_at": null,
+    "outputs": {
+     "strategy": "/research/strategies/ichimoku_kumo_trend",
+     "tearsheet": "/research/runs/bt_0008"
+    },
+    "queue": "research",
+    "started_at": "2026-10-18T16:55:44.241346Z",
+    "status": "succeeded",
+    "strategy_id": "ichimoku_kumo_trend",
+    "submitted_at": "2026-10-18T16:55:44.235678Z"
+   },
+   {
+    "attempts": 1,
+    "elapsed_seconds": {
+     "as_of": null,
+     "caveats": [
+      {
+       "affects": "",
+       "code": "value_unavailable",
+       "direction": "unknown",
+       "message": "Not running.",
+       "severity": "warning"
+      }
+     ],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "s",
+     "value": null
+    },
+    "error": "",
+    "eta_seconds": {
+     "as_of": null,
+     "caveats": [
+      {
+       "affects": "",
+       "code": "value_unavailable",
+       "direction": "unknown",
+       "message": "Not queued or running.",
+       "severity": "warning"
+      }
+     ],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "s",
+     "value": null
+    },
+    "instrument": "EURUSD",
+    "job_id": "job_5562d5ee54fd126c",
+    "job_type": "backtest",
+    "max_attempts": 3,
+    "next_attempt_at": null,
+    "outputs": {
+     "strategy": "/research/strategies/ichimoku_kumo_trend",
+     "tearsheet": "/research/runs/bt_0007"
+    },
+    "queue": "research",
+    "started_at": "2026-10-18T16:55:38.714379Z",
+    "status": "succeeded",
+    "strategy_id": "ichimoku_kumo_trend",
+    "submitted_at": "2026-10-18T16:55:38.702205Z"
+   },
+   {
+    "attempts": 1,
+    "elapsed_seconds": {
+     "as_of": null,
+     "caveats": [
+      {
+       "affects": "",
+       "code": "value_unavailable",
+       "direction": "unknown",
+       "message": "Not running.",
+       "severity": "warning"
+      }
+     ],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "s",
+     "value": null
+    },
+    "error": "",
+    "eta_seconds": {
+     "as_of": null,
+     "caveats": [
+      {
+       "affects": "",
+       "code": "value_unavailable",
+       "direction": "unknown",
+       "message": "Not queued or running.",
+       "severity": "warning"
+      }
+     ],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "s",
+     "value": null
+    },
+    "instrument": "EURUSD",
+    "job_id": "job_ba55d44f3f4d77f3",
+    "job_type": "backtest",
+    "max_attempts": 3,
+    "next_attempt_at": null,
+    "outputs": {
+     "strategy": "/research/strategies/ichimoku_kumo_trend",
+     "tearsheet": "/research/runs/bt_0006"
+    },
+    "queue": "research",
+    "started_at": "2026-10-18T16:55:28.744100Z",
+    "status": "succeeded",
+    "strategy_id": "ichimoku_kumo_trend",
+    "submitted_at": "2026-10-18T16:55:28.740925Z"
+   },
+   {
+    "attempts": 1,
+    "elapsed_seconds": {
+     "as_of": null,
+     "caveats": [
+      {
+       "affects": "",
+       "code": "value_unavailable",
+       "direction": "unknown",
+       "message": "Not running.",
+       "severity": "warning"
+      }
+     ],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "s",
+     "value": null
+    },
+    "error": "",
+    "eta_seconds": {
+     "as_of": null,
+     "caveats": [
+      {
+       "affects": "",
+       "code": "value_unavailable",
+       "direction": "unknown",
+       "message": "Not queued or running.",
+       "severity": "warning"
+      }
+     ],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "s",
+     "value": null
+    },
+    "instrument": "EURUSD",
+    "job_id": "job_f75f0538ed51c1b3",
+    "job_type": "backtest",
+    "max_attempts": 3,
+    "next_attempt_at": null,
+    "outputs": {
+     "strategy": "/research/strategies/ichimoku_kumo_trend",
+     "tearsheet": "/research/runs/bt_0005"
+    },
+    "queue": "research",
+    "started_at": "2026-10-18T16:55:20.727978Z",
+    "status": "succeeded",
+    "strategy_id": "ichimoku_kumo_trend",
+    "submitted_at": "2026-10-18T16:55:20.725105Z"
+   },
+   {
+    "attempts": 1,
+    "elapsed_seconds": {
+     "as_of": null,
+     "caveats": [
+      {
+       "affects": "",
+       "code": "value_unavailable",
+       "direction": "unknown",
+       "message": "Not running.",
+       "severity": "warning"
+      }
+     ],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "s",
+     "value": null
+    },
+    "error": "",
+    "eta_seconds": {
+     "as_of": null,
+     "caveats": [
+      {
+       "affects": "",
+       "code": "value_unavailable",
+       "direction": "unknown",
+       "message": "Not queued or running.",
+       "severity": "warning"
+      }
+     ],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "s",
+     "value": null
+    },
+    "instrument": "EURUSD",
+    "job_id": "job_50a4f7aac83b9556",
+    "job_type": "backtest",
+    "max_attempts": 3,
+    "next_attempt_at": null,
+    "outputs": {
+     "strategy": "/research/strategies/ichimoku_kumo_trend",
+     "tearsheet": "/research/runs/bt_0004"
+    },
+    "queue": "research",
+    "started_at": "2026-10-18T16:55:13.158113Z",
+    "status": "succeeded",
+    "strategy_id": "ichimoku_kumo_trend",
+    "submitted_at": "2026-10-18T16:55:13.112007Z"
+   },
+   {
+    "attempts": 1,
+    "elapsed_seconds": {
+     "as_of": null,
+     "caveats": [
+      {
+       "affects": "",
+       "code": "value_unavailable",
+       "direction": "unknown",
+       "message": "Not running.",
+       "severity": "warning"
+      }
+     ],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "s",
+     "value": null
+    },
+    "error": "",
+    "eta_seconds": {
+     "as_of": null,
+     "caveats": [
+      {
+       "affects": "",
+       "code": "value_unavailable",
+       "direction": "unknown",
+       "message": "Not queued or running.",
+       "severity": "warning"
+      }
+     ],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "s",
+     "value": null
+    },
+    "instrument": "EURUSD",
+    "job_id": "job_70b6379f24790752",
+    "job_type": "backtest",
+    "max_attempts": 3,
+    "next_attempt_at": null,
+    "outputs": {
+     "strategy": "/research/strategies/ichimoku_kumo_trend",
+     "tearsheet": "/research/runs/bt_0003"
+    },
+    "queue": "research",
+    "started_at": "2026-10-18T16:55:05.935873Z",
+    "status": "succeeded",
+    "strategy_id": "ichimoku_kumo_trend",
+    "submitted_at": "2026-10-18T16:55:05.925794Z"
+   },
+   {
+    "attempts": 1,
+    "elapsed_seconds": {
+     "as_of": null,
+     "caveats": [
+      {
+       "affects": "",
+       "code": "value_unavailable",
+       "direction": "unknown",
+       "message": "Not running.",
+       "severity": "warning"
+      }
+     ],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "s",
+     "value": null
+    },
+    "error": "",
+    "eta_seconds": {
+     "as_of": null,
+     "caveats": [
+      {
+       "affects": "",
+       "code": "value_unavailable",
+       "direction": "unknown",
+       "message": "Not queued or running.",
+       "severity": "warning"
+      }
+     ],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "s",
+     "value": null
+    },
+    "instrument": "EURUSD",
+    "job_id": "job_f71a14d6d0ab67f7",
+    "job_type": "backtest",
+    "max_attempts": 3,
+    "next_attempt_at": null,
+    "outputs": {
+     "strategy": "/research/strategies/rsi_band_mean_reversion",
+     "tearsheet": "/research/runs/bt_0002"
+    },
+    "queue": "research",
+    "started_at": "2026-10-18T16:54:59.803873Z",
+    "status": "succeeded",
+    "strategy_id": "rsi_band_mean_reversion",
+    "submitted_at": "2026-10-18T16:54:59.801524Z"
+   },
+   {
+    "attempts": 1,
+    "elapsed_seconds": {
+     "as_of": null,
+     "caveats": [
+      {
+       "affects": "",
+       "code": "value_unavailable",
+       "direction": "unknown",
+       "message": "Not running.",
+       "severity": "warning"
+      }
+     ],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "s",
+     "value": null
+    },
+    "error": "",
+    "eta_seconds": {
+     "as_of": null,
+     "caveats": [
+      {
+       "affects": "",
+       "code": "value_unavailable",
+       "direction": "unknown",
+       "message": "Not queued or running.",
+       "severity": "warning"
+      }
+     ],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "s",
+     "value": null
+    },
+    "instrument": "",
+    "job_id": "job_5f8dd30d175a7de3",
+    "job_type": "validation",
+    "max_attempts": 3,
+    "next_attempt_at": null,
+    "outputs": {
+     "gate report": "/research/runs/bt_0001#gates",
+     "strategy": "/research/strategies/ichimoku_kumo_trend",
+     "tearsheet": "/research/runs/bt_0001"
+    },
+    "queue": "research",
+    "started_at": "2026-10-18T16:54:59.779899Z",
+    "status": "succeeded",
+    "strategy_id": "",
+    "submitted_at": "2026-10-18T16:54:59.777855Z"
+   },
+   {
+    "attempts": 1,
+    "elapsed_seconds": {
+     "as_of": null,
+     "caveats": [
+      {
+       "affects": "",
+       "code": "value_unavailable",
+       "direction": "unknown",
+       "message": "Not running.",
+       "severity": "warning"
+      }
+     ],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "s",
+     "value": null
+    },
+    "error": "",
+    "eta_seconds": {
+     "as_of": null,
+     "caveats": [
+      {
+       "affects": "",
+       "code": "value_unavailable",
+       "direction": "unknown",
+       "message": "Not queued or running.",
+       "severity": "warning"
+      }
+     ],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "s",
+     "value": null
+    },
+    "instrument": "EURUSD",
+    "job_id": "job_0e3b01cabbea48d5",
+    "job_type": "backtest",
+    "max_attempts": 3,
+    "next_attempt_at": null,
+    "outputs": {
+     "strategy": "/research/strategies/ichimoku_kumo_trend",
+     "tearsheet": "/research/runs/bt_0001"
+    },
+    "queue": "research",
+    "started_at": "2026-10-18T16:54:51.475226Z",
+    "status": "succeeded",
+    "strategy_id": "ichimoku_kumo_trend",
+    "submitted_at": "2026-10-18T16:54:51.469926Z"
+   }
+  ],
+  "shards": [
+   {
+    "age_seconds": {
+     "as_of": null,
+     "caveats": [],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "s",
+     "value": 220.980299
+    },
+    "done": 200,
+    "error": "",
+    "eta_seconds": {
+     "as_of": null,
+     "caveats": [
+      {
+       "affects": "",
+       "code": "value_unavailable",
+       "direction": "unknown",
+       "message": "Done.",
+       "severity": "warning"
+      }
+     ],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "s",
+     "value": null
+    },
+    "partial": false,
+    "path": "reports/campaign_k6/shards/fx16/screen_H4.0-of-2.jsonl",
+    "progress": {
+     "as_of": null,
+     "caveats": [],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": 200,
+     "unit": "ratio",
+     "value": 1.0
+    },
+    "seconds_per_unit": {
+     "as_of": null,
+     "caveats": [],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "s",
+     "value": 41.5
+    },
+    "stage": "screen",
+    "study": "campaign_k6",
+    "total": 200,
+    "unit": "documents",
+    "updated_at": "2026-10-18T16:54:46.849665Z"
+   },
+   {
+    "age_seconds": {
+     "as_of": null,
+     "caveats": [],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "s",
+     "value": 220.9811
+    },
+    "done": 18,
+    "error": "",
+    "eta_seconds": {
+     "as_of": null,
+     "caveats": [],
+     "estimated": true,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "s",
+     "value": 1525.0
+    },
+    "partial": true,
+    "path": "reports/e4_pooled/shards/main.0-of-4.json",
+    "progress": {
+     "as_of": null,
+     "caveats": [],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": 43,
+     "unit": "ratio",
+     "value": 0.4186046511627907
+    },
+    "seconds_per_unit": {
+     "as_of": null,
+     "caveats": [],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "s",
+     "value": 61.0
+    },
+    "stage": "main",
+    "study": "e4_pooled",
+    "total": 43,
+    "unit": "candidates",
+    "updated_at": "2026-10-18T16:54:46.848864Z"
+   },
+   {
+    "age_seconds": {
+     "as_of": null,
+     "caveats": [],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "s",
+     "value": 220.981004
+    },
+    "done": 26,
+    "error": "",
+    "eta_seconds": {
+     "as_of": null,
+     "caveats": [],
+     "estimated": true,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "s",
+     "value": 1037.0
+    },
+    "partial": true,
+    "path": "reports/e4_pooled/shards/main.1-of-4.json",
+    "progress": {
+     "as_of": null,
+     "caveats": [],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": 43,
+     "unit": "ratio",
+     "value": 0.6046511627906976
+    },
+    "seconds_per_unit": {
+     "as_of": null,
+     "caveats": [],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "s",
+     "value": 61.0
+    },
+    "stage": "main",
+    "study": "e4_pooled",
+    "total": 43,
+    "unit": "candidates",
+    "updated_at": "2026-10-18T16:54:46.848960Z"
+   },
+   {
+    "age_seconds": {
+     "as_of": null,
+     "caveats": [],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "s",
+     "value": 220.980913
+    },
+    "done": 34,
+    "error": "",
+    "eta_seconds": {
+     "as_of": null,
+     "caveats": [],
+     "estimated": true,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "s",
+     "value": 549.0
+    },
+    "partial": true,
+    "path": "reports/e4_pooled/shards/main.2-of-4.json",
+    "progress": {
+     "as_of": null,
+     "caveats": [],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": 43,
+     "unit": "ratio",
+     "value": 0.7906976744186046
+    },
+    "seconds_per_unit": {
+     "as_of": null,
+     "caveats": [],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "s",
+     "value": 61.0
+    },
+    "stage": "main",
+    "study": "e4_pooled",
+    "total": 43,
+    "unit": "candidates",
+    "updated_at": "2026-10-18T16:54:46.849051Z"
+   },
+   {
+    "age_seconds": {
+     "as_of": null,
+     "caveats": [],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "s",
+     "value": 220.980847
+    },
+    "done": 42,
+    "error": "",
+    "eta_seconds": {
+     "as_of": null,
+     "caveats": [],
+     "estimated": true,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "s",
+     "value": 61.0
+    },
+    "partial": true,
+    "path": "reports/e4_pooled/shards/main.3-of-4.json",
+    "progress": {
+     "as_of": null,
+     "caveats": [],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": 43,
+     "unit": "ratio",
+     "value": 0.9767441860465116
+    },
+    "seconds_per_unit": {
+     "as_of": null,
+     "caveats": [],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "s",
+     "value": 61.0
+    },
+    "stage": "main",
+    "study": "e4_pooled",
+    "total": 43,
+    "unit": "candidates",
+    "updated_at": "2026-10-18T16:54:46.849117Z"
+   }
+  ],
+  "shards_root": "/var/fiboki/reports/*/shards"
+ },
+ "source": {
+  "as_of": "2026-10-18T12:00:00Z",
+  "detail": "Job ledger /var/fiboki/state/jobs.sqlite (read-only). Shards under /var/fiboki/reports/*/shards.",
+  "kind": "live"
+ }
+}

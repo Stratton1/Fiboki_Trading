@@ -35,6 +35,7 @@ from fiboki.api.routers import intelligence as intelligence_router
 from fiboki.api.routers import lifecycle as lifecycle_router
 from fiboki.api.routers import markets as markets_router
 from fiboki.api.routers import research as research_router
+from fiboki.api.routers import research_analytics as research_analytics_router
 from fiboki.api.routers import search as search_router
 from fiboki.api.routers import stream as stream_router
 from fiboki.api.routers import system as system_router
@@ -172,6 +173,7 @@ def create_app(settings: Settings | None = None, *, configure_logs: bool = True)
         fleet_router,
         lifecycle_router,
         research_router,
+        research_analytics_router,
         markets_router,
         chart_router,
         intelligence_router,

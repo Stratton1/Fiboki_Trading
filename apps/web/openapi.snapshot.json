@@ -1233,6 +1233,215 @@
         "title": "CommandSummaryView",
         "type": "object"
       },
+      "ComparedRunView": {
+        "properties": {
+          "daily_returns": {
+            "title": "Daily Returns",
+            "type": "integer"
+          },
+          "rebased": {
+            "$ref": "#/components/schemas/Series"
+          },
+          "run": {
+            "$ref": "#/components/schemas/BacktestRunView"
+          },
+          "stats": {
+            "items": {
+              "$ref": "#/components/schemas/StatView"
+            },
+            "title": "Stats",
+            "type": "array"
+          }
+        },
+        "required": [
+          "run",
+          "rebased",
+          "stats",
+          "daily_returns"
+        ],
+        "title": "ComparedRunView",
+        "type": "object"
+      },
+      "ComparisonView": {
+        "properties": {
+          "correlations": {
+            "items": {
+              "$ref": "#/components/schemas/CorrelationCellView"
+            },
+            "title": "Correlations",
+            "type": "array"
+          },
+          "definitions": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/DefinitionView"
+            },
+            "title": "Definitions",
+            "type": "object"
+          },
+          "min_common_days": {
+            "title": "Min Common Days",
+            "type": "integer"
+          },
+          "runs": {
+            "items": {
+              "$ref": "#/components/schemas/ComparedRunView"
+            },
+            "title": "Runs",
+            "type": "array"
+          }
+        },
+        "required": [
+          "runs",
+          "correlations",
+          "min_common_days",
+          "definitions"
+        ],
+        "title": "ComparisonView",
+        "type": "object"
+      },
+      "CorrelationCellView": {
+        "properties": {
+          "a": {
+            "title": "A",
+            "type": "string"
+          },
+          "b": {
+            "title": "B",
+            "type": "string"
+          },
+          "n_common": {
+            "title": "N Common",
+            "type": "integer"
+          },
+          "rho": {
+            "$ref": "#/components/schemas/Figure"
+          }
+        },
+        "required": [
+          "a",
+          "b",
+          "rho",
+          "n_common"
+        ],
+        "title": "CorrelationCellView",
+        "type": "object"
+      },
+      "CorrelationMatrixView": {
+        "properties": {
+          "bars_used": {
+            "title": "Bars Used",
+            "type": "integer"
+          },
+          "dataset_version_ids": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "title": "Dataset Version Ids",
+            "type": "object"
+          },
+          "excluded": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "title": "Excluded",
+            "type": "object"
+          },
+          "first_common": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "First Common"
+          },
+          "instruments": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Instruments",
+            "type": "array"
+          },
+          "last_common": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Common"
+          },
+          "matrix": {
+            "items": {
+              "items": {
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "type": "array"
+            },
+            "title": "Matrix",
+            "type": "array"
+          },
+          "method": {
+            "title": "Method",
+            "type": "string"
+          },
+          "provenance": {
+            "$ref": "#/components/schemas/Provenance"
+          },
+          "timeframe": {
+            "title": "Timeframe",
+            "type": "string"
+          },
+          "timeframes": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Timeframes",
+            "type": "array"
+          },
+          "window": {
+            "title": "Window",
+            "type": "integer"
+          },
+          "windows": {
+            "items": {
+              "type": "integer"
+            },
+            "title": "Windows",
+            "type": "array"
+          }
+        },
+        "required": [
+          "timeframe",
+          "provenance",
+          "window",
+          "windows",
+          "timeframes",
+          "instruments",
+          "matrix",
+          "bars_used",
+          "first_common",
+          "last_common",
+          "dataset_version_ids",
+          "excluded",
+          "method"
+        ],
+        "title": "CorrelationMatrixView",
+        "type": "object"
+      },
       "DataQualityRow": {
         "properties": {
           "available": {
@@ -1273,6 +1482,29 @@
         "title": "DataQualityRow",
         "type": "object"
       },
+      "DefinitionView": {
+        "properties": {
+          "definition": {
+            "title": "Definition",
+            "type": "string"
+          },
+          "formula": {
+            "title": "Formula",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          }
+        },
+        "required": [
+          "label",
+          "definition",
+          "formula"
+        ],
+        "title": "DefinitionView",
+        "type": "object"
+      },
       "DivergenceDimensionView": {
         "properties": {
           "dimension": {
@@ -1297,6 +1529,68 @@
           "observed"
         ],
         "title": "DivergenceDimensionView",
+        "type": "object"
+      },
+      "DrawdownPeriodView": {
+        "properties": {
+          "decline_days": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "depth_pct": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "length_days": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "peak_at": {
+            "format": "date-time",
+            "title": "Peak At",
+            "type": "string"
+          },
+          "peak_equity": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "rank": {
+            "title": "Rank",
+            "type": "integer"
+          },
+          "recovered_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Recovered At"
+          },
+          "recovery_days": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "trough_at": {
+            "format": "date-time",
+            "title": "Trough At",
+            "type": "string"
+          },
+          "trough_equity": {
+            "$ref": "#/components/schemas/Figure"
+          }
+        },
+        "required": [
+          "rank",
+          "peak_at",
+          "trough_at",
+          "recovered_at",
+          "depth_pct",
+          "peak_equity",
+          "trough_equity",
+          "decline_days",
+          "recovery_days",
+          "length_days"
+        ],
+        "title": "DrawdownPeriodView",
         "type": "object"
       },
       "Drawing": {
@@ -1676,6 +1970,54 @@
         "title": "Envelope[CommandSummaryView]",
         "type": "object"
       },
+      "Envelope_ComparisonView_": {
+        "properties": {
+          "caveats": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/Caveat"
+            },
+            "title": "Caveats",
+            "type": "array"
+          },
+          "data": {
+            "$ref": "#/components/schemas/ComparisonView"
+          },
+          "source": {
+            "$ref": "#/components/schemas/SourceNote"
+          }
+        },
+        "required": [
+          "data",
+          "source"
+        ],
+        "title": "Envelope[ComparisonView]",
+        "type": "object"
+      },
+      "Envelope_CorrelationMatrixView_": {
+        "properties": {
+          "caveats": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/Caveat"
+            },
+            "title": "Caveats",
+            "type": "array"
+          },
+          "data": {
+            "$ref": "#/components/schemas/CorrelationMatrixView"
+          },
+          "source": {
+            "$ref": "#/components/schemas/SourceNote"
+          }
+        },
+        "required": [
+          "data",
+          "source"
+        ],
+        "title": "Envelope[CorrelationMatrixView]",
+        "type": "object"
+      },
       "Envelope_DrawingSetView_": {
         "properties": {
           "caveats": {
@@ -1746,6 +2088,30 @@
           "source"
         ],
         "title": "Envelope[IncidentView]",
+        "type": "object"
+      },
+      "Envelope_JobQueueView_": {
+        "properties": {
+          "caveats": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/Caveat"
+            },
+            "title": "Caveats",
+            "type": "array"
+          },
+          "data": {
+            "$ref": "#/components/schemas/JobQueueView"
+          },
+          "source": {
+            "$ref": "#/components/schemas/SourceNote"
+          }
+        },
+        "required": [
+          "data",
+          "source"
+        ],
+        "title": "Envelope[JobQueueView]",
         "type": "object"
       },
       "Envelope_KillSwitchDisarmPreflightView_": {
@@ -1844,6 +2210,30 @@
         "title": "Envelope[LimitBoardView]",
         "type": "object"
       },
+      "Envelope_MonteCarloView_": {
+        "properties": {
+          "caveats": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/Caveat"
+            },
+            "title": "Caveats",
+            "type": "array"
+          },
+          "data": {
+            "$ref": "#/components/schemas/MonteCarloView"
+          },
+          "source": {
+            "$ref": "#/components/schemas/SourceNote"
+          }
+        },
+        "required": [
+          "data",
+          "source"
+        ],
+        "title": "Envelope[MonteCarloView]",
+        "type": "object"
+      },
       "Envelope_OverlayView_": {
         "properties": {
           "caveats": {
@@ -1890,6 +2280,30 @@
           "source"
         ],
         "title": "Envelope[ParameterLabView]",
+        "type": "object"
+      },
+      "Envelope_ParameterSurfaceView_": {
+        "properties": {
+          "caveats": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/Caveat"
+            },
+            "title": "Caveats",
+            "type": "array"
+          },
+          "data": {
+            "$ref": "#/components/schemas/ParameterSurfaceView"
+          },
+          "source": {
+            "$ref": "#/components/schemas/SourceNote"
+          }
+        },
+        "required": [
+          "data",
+          "source"
+        ],
+        "title": "Envelope[ParameterSurfaceView]",
         "type": "object"
       },
       "Envelope_PortfolioView_": {
@@ -2012,6 +2426,30 @@
         "title": "Envelope[SettingsView]",
         "type": "object"
       },
+      "Envelope_StrategyOverviewView_": {
+        "properties": {
+          "caveats": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/Caveat"
+            },
+            "title": "Caveats",
+            "type": "array"
+          },
+          "data": {
+            "$ref": "#/components/schemas/StrategyOverviewView"
+          },
+          "source": {
+            "$ref": "#/components/schemas/SourceNote"
+          }
+        },
+        "required": [
+          "data",
+          "source"
+        ],
+        "title": "Envelope[StrategyOverviewView]",
+        "type": "object"
+      },
       "Envelope_StrategyStatusView_": {
         "properties": {
           "caveats": {
@@ -2058,6 +2496,54 @@
           "source"
         ],
         "title": "Envelope[StrategyView]",
+        "type": "object"
+      },
+      "Envelope_TearsheetView_": {
+        "properties": {
+          "caveats": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/Caveat"
+            },
+            "title": "Caveats",
+            "type": "array"
+          },
+          "data": {
+            "$ref": "#/components/schemas/TearsheetView"
+          },
+          "source": {
+            "$ref": "#/components/schemas/SourceNote"
+          }
+        },
+        "required": [
+          "data",
+          "source"
+        ],
+        "title": "Envelope[TearsheetView]",
+        "type": "object"
+      },
+      "Envelope_WalkForwardView_": {
+        "properties": {
+          "caveats": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/Caveat"
+            },
+            "title": "Caveats",
+            "type": "array"
+          },
+          "data": {
+            "$ref": "#/components/schemas/WalkForwardView"
+          },
+          "source": {
+            "$ref": "#/components/schemas/SourceNote"
+          }
+        },
+        "required": [
+          "data",
+          "source"
+        ],
+        "title": "Envelope[WalkForwardView]",
         "type": "object"
       },
       "Envelope_dict_": {
@@ -2171,6 +2657,198 @@
           "source"
         ],
         "title": "EventOverlay",
+        "type": "object"
+      },
+      "ExcursionTable": {
+        "description": "Per-trade result and excursions, as labelled COLUMNS (one entry per trade).\n\nColumnar, like :class:`Series`: the provenance and the units are declared\nonce for the table rather than repeated on thousands of cells. ``None`` in\na column is an absent value (no stop, no excursion key), never zero.",
+        "properties": {
+          "bars_held": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "title": "Bars Held",
+            "type": "array"
+          },
+          "direction": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Direction",
+            "type": "array"
+          },
+          "entry_time": {
+            "items": {
+              "anyOf": [
+                {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "title": "Entry Time",
+            "type": "array"
+          },
+          "exit_reason": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Exit Reason",
+            "type": "array"
+          },
+          "exit_time": {
+            "items": {
+              "anyOf": [
+                {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "title": "Exit Time",
+            "type": "array"
+          },
+          "instrument": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Instrument",
+            "type": "array"
+          },
+          "mae": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "title": "Mae",
+            "type": "array"
+          },
+          "mae_r": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "title": "Mae R",
+            "type": "array"
+          },
+          "mfe": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "title": "Mfe",
+            "type": "array"
+          },
+          "mfe_r": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "title": "Mfe R",
+            "type": "array"
+          },
+          "net_pnl": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "title": "Net Pnl",
+            "type": "array"
+          },
+          "pnl_unit": {
+            "title": "Pnl Unit",
+            "type": "string"
+          },
+          "provenance": {
+            "$ref": "#/components/schemas/Provenance"
+          },
+          "r_multiple": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "title": "R Multiple",
+            "type": "array"
+          },
+          "r_unit": {
+            "title": "R Unit",
+            "type": "string"
+          },
+          "trade_id": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Trade Id",
+            "type": "array"
+          }
+        },
+        "required": [
+          "provenance",
+          "pnl_unit",
+          "r_unit",
+          "trade_id",
+          "instrument",
+          "direction",
+          "entry_time",
+          "exit_time",
+          "exit_reason",
+          "bars_held",
+          "net_pnl",
+          "r_multiple",
+          "mae",
+          "mfe",
+          "mae_r",
+          "mfe_r"
+        ],
+        "title": "ExcursionTable",
         "type": "object"
       },
       "ExecutionMode": {
@@ -2727,6 +3405,259 @@
         "title": "FleetRowView",
         "type": "object"
       },
+      "FoldView": {
+        "properties": {
+          "efficiency": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "fixed_param_oos_rate": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "fold": {
+            "title": "Fold",
+            "type": "integer"
+          },
+          "is_net_profit": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "is_rate": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "oos_net_profit": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "oos_rate": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "oos_sharpe": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "oos_trades": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "selected_params": {
+            "title": "Selected Params",
+            "type": "object"
+          },
+          "test_end": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Test End"
+          },
+          "test_start": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Test Start"
+          },
+          "train_end": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Train End"
+          },
+          "train_start": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Train Start"
+          }
+        },
+        "required": [
+          "fold",
+          "train_start",
+          "train_end",
+          "test_start",
+          "test_end",
+          "is_rate",
+          "oos_rate",
+          "is_net_profit",
+          "oos_net_profit",
+          "oos_trades",
+          "oos_sharpe",
+          "efficiency",
+          "fixed_param_oos_rate",
+          "selected_params"
+        ],
+        "title": "FoldView",
+        "type": "object"
+      },
+      "GateCheckView": {
+        "description": "One deterministic gate the worker or the ladder evaluated.",
+        "properties": {
+          "comparison": {
+            "title": "Comparison",
+            "type": "string"
+          },
+          "detail": {
+            "title": "Detail",
+            "type": "string"
+          },
+          "metric": {
+            "title": "Metric",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "passed": {
+            "title": "Passed",
+            "type": "boolean"
+          },
+          "rung": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rung"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "threshold": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Threshold"
+          },
+          "value": {
+            "$ref": "#/components/schemas/Figure"
+          }
+        },
+        "required": [
+          "name",
+          "metric",
+          "status",
+          "passed",
+          "value",
+          "threshold",
+          "comparison",
+          "rung",
+          "detail"
+        ],
+        "title": "GateCheckView",
+        "type": "object"
+      },
+      "GateReportView": {
+        "properties": {
+          "backtest_id": {
+            "title": "Backtest Id",
+            "type": "string"
+          },
+          "caveats": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Caveats",
+            "type": "array"
+          },
+          "checks": {
+            "items": {
+              "$ref": "#/components/schemas/GateCheckView"
+            },
+            "title": "Checks",
+            "type": "array"
+          },
+          "created_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At"
+          },
+          "deflated_sharpe": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "gate_set_fingerprint": {
+            "title": "Gate Set Fingerprint",
+            "type": "string"
+          },
+          "gate_set_version": {
+            "title": "Gate Set Version",
+            "type": "string"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "psr": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "report_id": {
+            "title": "Report Id",
+            "type": "string"
+          },
+          "trial_count": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "trial_count_known": {
+            "title": "Trial Count Known",
+            "type": "boolean"
+          },
+          "verdict": {
+            "title": "Verdict",
+            "type": "string"
+          }
+        },
+        "required": [
+          "report_id",
+          "backtest_id",
+          "created_at",
+          "verdict",
+          "kind",
+          "gate_set_version",
+          "gate_set_fingerprint",
+          "checks",
+          "caveats",
+          "psr",
+          "deflated_sharpe",
+          "trial_count",
+          "trial_count_known"
+        ],
+        "title": "GateReportView",
+        "type": "object"
+      },
       "HTTPValidationError": {
         "properties": {
           "detail": {
@@ -2990,6 +3921,57 @@
         "title": "HealthReport",
         "type": "object"
       },
+      "HistogramView": {
+        "properties": {
+          "basis": {
+            "title": "Basis",
+            "type": "string"
+          },
+          "counts": {
+            "items": {
+              "type": "integer"
+            },
+            "title": "Counts",
+            "type": "array"
+          },
+          "edges": {
+            "items": {
+              "type": "number"
+            },
+            "title": "Edges",
+            "type": "array"
+          },
+          "mean": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "median": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "n": {
+            "title": "N",
+            "type": "integer"
+          },
+          "provenance": {
+            "$ref": "#/components/schemas/Provenance"
+          },
+          "unit": {
+            "title": "Unit",
+            "type": "string"
+          }
+        },
+        "required": [
+          "basis",
+          "provenance",
+          "unit",
+          "edges",
+          "counts",
+          "n",
+          "mean",
+          "median"
+        ],
+        "title": "HistogramView",
+        "type": "object"
+      },
       "HypothesisView": {
         "properties": {
           "family": {
@@ -3176,6 +4158,43 @@
         "title": "IncidentView",
         "type": "object"
       },
+      "InstrumentBreakdownView": {
+        "properties": {
+          "expectancy": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "expectancy_r": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "instrument": {
+            "title": "Instrument",
+            "type": "string"
+          },
+          "net_pnl": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "profit_factor": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "trades": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "win_rate_pct": {
+            "$ref": "#/components/schemas/Figure"
+          }
+        },
+        "required": [
+          "instrument",
+          "trades",
+          "net_pnl",
+          "win_rate_pct",
+          "profit_factor",
+          "expectancy",
+          "expectancy_r"
+        ],
+        "title": "InstrumentBreakdownView",
+        "type": "object"
+      },
       "InstrumentView": {
         "properties": {
           "annual_financing_bps": {
@@ -3255,6 +4274,161 @@
           "annual_financing_bps"
         ],
         "title": "InstrumentView",
+        "type": "object"
+      },
+      "JobQueueView": {
+        "properties": {
+          "counts": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "Counts",
+            "type": "object"
+          },
+          "eta_method": {
+            "title": "Eta Method",
+            "type": "string"
+          },
+          "job_ledger": {
+            "title": "Job Ledger",
+            "type": "string"
+          },
+          "jobs": {
+            "items": {
+              "$ref": "#/components/schemas/JobView"
+            },
+            "title": "Jobs",
+            "type": "array"
+          },
+          "shards": {
+            "items": {
+              "$ref": "#/components/schemas/ShardView"
+            },
+            "title": "Shards",
+            "type": "array"
+          },
+          "shards_root": {
+            "title": "Shards Root",
+            "type": "string"
+          }
+        },
+        "required": [
+          "counts",
+          "jobs",
+          "shards",
+          "job_ledger",
+          "shards_root",
+          "eta_method"
+        ],
+        "title": "JobQueueView",
+        "type": "object"
+      },
+      "JobView": {
+        "properties": {
+          "attempts": {
+            "title": "Attempts",
+            "type": "integer"
+          },
+          "elapsed_seconds": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "error": {
+            "title": "Error",
+            "type": "string"
+          },
+          "eta_seconds": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "instrument": {
+            "title": "Instrument",
+            "type": "string"
+          },
+          "job_id": {
+            "title": "Job Id",
+            "type": "string"
+          },
+          "job_type": {
+            "title": "Job Type",
+            "type": "string"
+          },
+          "max_attempts": {
+            "title": "Max Attempts",
+            "type": "integer"
+          },
+          "next_attempt_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Attempt At"
+          },
+          "outputs": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "title": "Outputs",
+            "type": "object"
+          },
+          "queue": {
+            "title": "Queue",
+            "type": "string"
+          },
+          "started_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Started At"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "strategy_id": {
+            "title": "Strategy Id",
+            "type": "string"
+          },
+          "submitted_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Submitted At"
+          }
+        },
+        "required": [
+          "job_id",
+          "job_type",
+          "queue",
+          "status",
+          "submitted_at",
+          "started_at",
+          "next_attempt_at",
+          "attempts",
+          "max_attempts",
+          "error",
+          "strategy_id",
+          "instrument",
+          "elapsed_seconds",
+          "eta_seconds",
+          "outputs"
+        ],
+        "title": "JobView",
         "type": "object"
       },
       "KillSwitchDisarmPreflightView": {
@@ -3433,6 +4607,91 @@
         "title": "KillSwitchView",
         "type": "object"
       },
+      "LadderEntryView": {
+        "properties": {
+          "binding_constraint": {
+            "title": "Binding Constraint",
+            "type": "string"
+          },
+          "created_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At"
+          },
+          "dataset_version_id": {
+            "title": "Dataset Version Id",
+            "type": "string"
+          },
+          "experiment_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Experiment Id"
+          },
+          "gate_set_version": {
+            "title": "Gate Set Version",
+            "type": "string"
+          },
+          "has_walk_forward": {
+            "title": "Has Walk Forward",
+            "type": "boolean"
+          },
+          "report_version": {
+            "title": "Report Version",
+            "type": "string"
+          },
+          "rungs": {
+            "items": {
+              "$ref": "#/components/schemas/RungView"
+            },
+            "title": "Rungs",
+            "type": "array"
+          },
+          "source": {
+            "title": "Source",
+            "type": "string"
+          },
+          "strategy_content_hash": {
+            "title": "Strategy Content Hash",
+            "type": "string"
+          },
+          "trial_count": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "verdict": {
+            "title": "Verdict",
+            "type": "string"
+          }
+        },
+        "required": [
+          "source",
+          "experiment_id",
+          "created_at",
+          "verdict",
+          "gate_set_version",
+          "report_version",
+          "dataset_version_id",
+          "strategy_content_hash",
+          "binding_constraint",
+          "trial_count",
+          "rungs",
+          "has_walk_forward"
+        ],
+        "title": "LadderEntryView",
+        "type": "object"
+      },
       "LastSignalView": {
         "properties": {
           "at": {
@@ -3555,6 +4814,34 @@
           "source"
         ],
         "title": "LevelOverlay",
+        "type": "object"
+      },
+      "LifecycleBrief": {
+        "properties": {
+          "content_hash": {
+            "title": "Content Hash",
+            "type": "string"
+          },
+          "degraded": {
+            "title": "Degraded",
+            "type": "boolean"
+          },
+          "link": {
+            "title": "Link",
+            "type": "string"
+          },
+          "state": {
+            "title": "State",
+            "type": "string"
+          }
+        },
+        "required": [
+          "content_hash",
+          "state",
+          "degraded",
+          "link"
+        ],
+        "title": "LifecycleBrief",
         "type": "object"
       },
       "LifecycleEvaluationView": {
@@ -3967,6 +5254,148 @@
           "detail"
         ],
         "title": "MarketSessionView",
+        "type": "object"
+      },
+      "MonteCarloView": {
+        "properties": {
+          "account_ccy": {
+            "title": "Account Ccy",
+            "type": "string"
+          },
+          "basis": {
+            "title": "Basis",
+            "type": "string"
+          },
+          "block_length": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "drawdown_percentiles": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/Figure"
+            },
+            "title": "Drawdown Percentiles",
+            "type": "object"
+          },
+          "fan": {
+            "additionalProperties": {
+              "items": {
+                "type": "number"
+              },
+              "type": "array"
+            },
+            "title": "Fan",
+            "type": "object"
+          },
+          "fan_steps": {
+            "items": {
+              "type": "integer"
+            },
+            "title": "Fan Steps",
+            "type": "array"
+          },
+          "final_equity_percentiles": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/Figure"
+            },
+            "title": "Final Equity Percentiles",
+            "type": "object"
+          },
+          "initial_equity": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "method": {
+            "title": "Method",
+            "type": "string"
+          },
+          "n_paths": {
+            "title": "N Paths",
+            "type": "integer"
+          },
+          "n_trades": {
+            "title": "N Trades",
+            "type": "integer"
+          },
+          "notes": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Notes",
+            "type": "array"
+          },
+          "provenance": {
+            "$ref": "#/components/schemas/Provenance"
+          },
+          "realised_final_equity": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "realised_max_drawdown_pct": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "risk_fraction": {
+            "title": "Risk Fraction",
+            "type": "number"
+          },
+          "ruin_fraction": {
+            "title": "Ruin Fraction",
+            "type": "number"
+          },
+          "ruin_probability": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "run_id": {
+            "title": "Run Id",
+            "type": "string"
+          },
+          "seed": {
+            "title": "Seed",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "run_id",
+          "basis",
+          "seed",
+          "n_paths",
+          "n_trades",
+          "block_length",
+          "risk_fraction",
+          "initial_equity",
+          "ruin_fraction",
+          "ruin_probability",
+          "provenance",
+          "fan_steps",
+          "fan",
+          "final_equity_percentiles",
+          "drawdown_percentiles",
+          "realised_max_drawdown_pct",
+          "realised_final_equity",
+          "account_ccy",
+          "method",
+          "notes"
+        ],
+        "title": "MonteCarloView",
+        "type": "object"
+      },
+      "MonthlyCellView": {
+        "properties": {
+          "month": {
+            "title": "Month",
+            "type": "integer"
+          },
+          "return_pct": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "year": {
+            "title": "Year",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "year",
+          "month",
+          "return_pct"
+        ],
+        "title": "MonthlyCellView",
         "type": "object"
       },
       "OpenPositionView": {
@@ -4793,6 +6222,49 @@
         "title": "Page[RegimeView]",
         "type": "object"
       },
+      "Page_RunSummaryView_": {
+        "properties": {
+          "caveats": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/Caveat"
+            },
+            "title": "Caveats",
+            "type": "array"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/RunSummaryView"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "limit": {
+            "default": 100,
+            "title": "Limit",
+            "type": "integer"
+          },
+          "offset": {
+            "default": 0,
+            "title": "Offset",
+            "type": "integer"
+          },
+          "source": {
+            "$ref": "#/components/schemas/SourceNote"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "total",
+          "source"
+        ],
+        "title": "Page[RunSummaryView]",
+        "type": "object"
+      },
       "Page_SearchHit_": {
         "properties": {
           "caveats": {
@@ -5249,6 +6721,163 @@
         "title": "ParameterRow",
         "type": "object"
       },
+      "ParameterSurfaceView": {
+        "properties": {
+          "cells": {
+            "items": {
+              "$ref": "#/components/schemas/SurfaceCellView"
+            },
+            "title": "Cells",
+            "type": "array"
+          },
+          "fixed": {
+            "title": "Fixed",
+            "type": "object"
+          },
+          "gate_set_version": {
+            "title": "Gate Set Version",
+            "type": "string"
+          },
+          "metric": {
+            "title": "Metric",
+            "type": "string"
+          },
+          "metrics_available": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Metrics Available",
+            "type": "array"
+          },
+          "notes": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Notes",
+            "type": "array"
+          },
+          "parameters": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Parameters",
+            "type": "array"
+          },
+          "plateau_definition": {
+            "title": "Plateau Definition",
+            "type": "string"
+          },
+          "plateau_gates": {
+            "items": {
+              "$ref": "#/components/schemas/PlateauGateView"
+            },
+            "title": "Plateau Gates",
+            "type": "array"
+          },
+          "radius": {
+            "title": "Radius",
+            "type": "integer"
+          },
+          "runs_considered": {
+            "title": "Runs Considered",
+            "type": "integer"
+          },
+          "runs_other_params": {
+            "title": "Runs Other Params",
+            "type": "integer"
+          },
+          "runs_unknown_params": {
+            "title": "Runs Unknown Params",
+            "type": "integer"
+          },
+          "runs_used": {
+            "title": "Runs Used",
+            "type": "integer"
+          },
+          "strategy_id": {
+            "title": "Strategy Id",
+            "type": "string"
+          },
+          "x": {
+            "title": "X",
+            "type": "string"
+          },
+          "x_values": {
+            "items": {
+              "type": "number"
+            },
+            "title": "X Values",
+            "type": "array"
+          },
+          "y": {
+            "title": "Y",
+            "type": "string"
+          },
+          "y_values": {
+            "items": {
+              "type": "number"
+            },
+            "title": "Y Values",
+            "type": "array"
+          }
+        },
+        "required": [
+          "strategy_id",
+          "parameters",
+          "x",
+          "y",
+          "metric",
+          "metrics_available",
+          "fixed",
+          "x_values",
+          "y_values",
+          "cells",
+          "radius",
+          "plateau_gates",
+          "gate_set_version",
+          "runs_considered",
+          "runs_used",
+          "runs_other_params",
+          "runs_unknown_params",
+          "plateau_definition",
+          "notes"
+        ],
+        "title": "ParameterSurfaceView",
+        "type": "object"
+      },
+      "PlateauGateView": {
+        "properties": {
+          "comparison": {
+            "title": "Comparison",
+            "type": "string"
+          },
+          "metric": {
+            "title": "Metric",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "rationale": {
+            "title": "Rationale",
+            "type": "string"
+          },
+          "threshold": {
+            "title": "Threshold",
+            "type": "number"
+          }
+        },
+        "required": [
+          "name",
+          "metric",
+          "comparison",
+          "threshold",
+          "rationale"
+        ],
+        "title": "PlateauGateView",
+        "type": "object"
+      },
       "PortfolioView": {
         "properties": {
           "balance": {
@@ -5509,6 +7138,181 @@
         ],
         "title": "Provenance",
         "type": "string"
+      },
+      "ProvenanceBlock": {
+        "description": "Everything needed to reproduce, or to distrust, a stored result.",
+        "properties": {
+          "account_ccy": {
+            "title": "Account Ccy",
+            "type": "string"
+          },
+          "calendar_note": {
+            "title": "Calendar Note",
+            "type": "string"
+          },
+          "calendar_version": {
+            "title": "Calendar Version",
+            "type": "string"
+          },
+          "commission_model": {
+            "title": "Commission Model",
+            "type": "string"
+          },
+          "cost_profile": {
+            "title": "Cost Profile",
+            "type": "string"
+          },
+          "data_fingerprint": {
+            "title": "Data Fingerprint",
+            "type": "object"
+          },
+          "dataset_version_ids": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Dataset Version Ids",
+            "type": "array"
+          },
+          "engine_current": {
+            "title": "Engine Current",
+            "type": "boolean"
+          },
+          "engine_version": {
+            "title": "Engine Version",
+            "type": "string"
+          },
+          "exit_policy": {
+            "title": "Exit Policy",
+            "type": "object"
+          },
+          "financing_model": {
+            "title": "Financing Model",
+            "type": "string"
+          },
+          "gate_set_fingerprint": {
+            "title": "Gate Set Fingerprint",
+            "type": "string"
+          },
+          "gate_set_version": {
+            "title": "Gate Set Version",
+            "type": "string"
+          },
+          "initial_balance": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Initial Balance"
+          },
+          "instruments": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Instruments",
+            "type": "array"
+          },
+          "intrabar_policy": {
+            "title": "Intrabar Policy",
+            "type": "string"
+          },
+          "job_id": {
+            "title": "Job Id",
+            "type": "string"
+          },
+          "ledger_sha256": {
+            "title": "Ledger Sha256",
+            "type": "string"
+          },
+          "parameters": {
+            "title": "Parameters",
+            "type": "object"
+          },
+          "parameters_source": {
+            "title": "Parameters Source",
+            "type": "string"
+          },
+          "run_created_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Run Created At"
+          },
+          "run_id": {
+            "title": "Run Id",
+            "type": "string"
+          },
+          "sizing": {
+            "title": "Sizing",
+            "type": "object"
+          },
+          "slippage_model": {
+            "title": "Slippage Model",
+            "type": "string"
+          },
+          "spread_model": {
+            "title": "Spread Model",
+            "type": "string"
+          },
+          "strategy_hash": {
+            "title": "Strategy Hash",
+            "type": "string"
+          },
+          "strategy_id": {
+            "title": "Strategy Id",
+            "type": "string"
+          },
+          "tearsheet_version": {
+            "title": "Tearsheet Version",
+            "type": "string"
+          },
+          "timeframe": {
+            "title": "Timeframe",
+            "type": "string"
+          }
+        },
+        "required": [
+          "run_id",
+          "strategy_id",
+          "strategy_hash",
+          "parameters",
+          "parameters_source",
+          "dataset_version_ids",
+          "data_fingerprint",
+          "timeframe",
+          "instruments",
+          "account_ccy",
+          "initial_balance",
+          "cost_profile",
+          "spread_model",
+          "slippage_model",
+          "commission_model",
+          "financing_model",
+          "sizing",
+          "exit_policy",
+          "intrabar_policy",
+          "calendar_version",
+          "calendar_note",
+          "gate_set_version",
+          "gate_set_fingerprint",
+          "engine_version",
+          "engine_current",
+          "ledger_sha256",
+          "job_id",
+          "run_created_at",
+          "tearsheet_version"
+        ],
+        "title": "ProvenanceBlock",
+        "type": "object"
       },
       "RegimeOverlay": {
         "properties": {
@@ -5827,6 +7631,67 @@
         "title": "RuleEvaluationView",
         "type": "object"
       },
+      "RunSummaryView": {
+        "properties": {
+          "max_drawdown_pct": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "profit_factor": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "run": {
+            "$ref": "#/components/schemas/BacktestRunView"
+          },
+          "sharpe": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "tearsheet": {
+            "title": "Tearsheet",
+            "type": "string"
+          },
+          "total_return_pct": {
+            "$ref": "#/components/schemas/Figure"
+          }
+        },
+        "required": [
+          "run",
+          "total_return_pct",
+          "sharpe",
+          "max_drawdown_pct",
+          "profit_factor",
+          "tearsheet"
+        ],
+        "title": "RunSummaryView",
+        "type": "object"
+      },
+      "RungView": {
+        "properties": {
+          "index": {
+            "title": "Index",
+            "type": "integer"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "outcome": {
+            "title": "Outcome",
+            "type": "string"
+          },
+          "reason": {
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "index",
+          "name",
+          "outcome",
+          "reason"
+        ],
+        "title": "RungView",
+        "type": "object"
+      },
       "SearchHit": {
         "properties": {
           "detail": {
@@ -6138,6 +8003,90 @@
         "title": "SettingsView",
         "type": "object"
       },
+      "ShardView": {
+        "properties": {
+          "age_seconds": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "done": {
+            "title": "Done",
+            "type": "integer"
+          },
+          "error": {
+            "title": "Error",
+            "type": "string"
+          },
+          "eta_seconds": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "partial": {
+            "title": "Partial",
+            "type": "boolean"
+          },
+          "path": {
+            "title": "Path",
+            "type": "string"
+          },
+          "progress": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "seconds_per_unit": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "stage": {
+            "title": "Stage",
+            "type": "string"
+          },
+          "study": {
+            "title": "Study",
+            "type": "string"
+          },
+          "total": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Total"
+          },
+          "unit": {
+            "title": "Unit",
+            "type": "string"
+          },
+          "updated_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Updated At"
+          }
+        },
+        "required": [
+          "study",
+          "stage",
+          "path",
+          "unit",
+          "done",
+          "total",
+          "partial",
+          "progress",
+          "seconds_per_unit",
+          "eta_seconds",
+          "updated_at",
+          "age_seconds",
+          "error"
+        ],
+        "title": "ShardView",
+        "type": "object"
+      },
       "SignalOverlay": {
         "properties": {
           "dataset_version_id": {
@@ -6253,6 +8202,158 @@
           "detail"
         ],
         "title": "SourceNote",
+        "type": "object"
+      },
+      "StatView": {
+        "description": "A headline figure, its definition, and the gate on the same metric (if any).",
+        "properties": {
+          "check": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/GateCheckView"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "definition": {
+            "title": "Definition",
+            "type": "string"
+          },
+          "figure": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "formula": {
+            "title": "Formula",
+            "type": "string"
+          },
+          "key": {
+            "title": "Key",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "source": {
+            "title": "Source",
+            "type": "string"
+          }
+        },
+        "required": [
+          "key",
+          "label",
+          "figure",
+          "definition",
+          "formula",
+          "source"
+        ],
+        "title": "StatView",
+        "type": "object"
+      },
+      "StrategyOverviewView": {
+        "properties": {
+          "content_hash": {
+            "title": "Content Hash",
+            "type": "string"
+          },
+          "family": {
+            "title": "Family",
+            "type": "string"
+          },
+          "gate_reports": {
+            "items": {
+              "$ref": "#/components/schemas/GateReportView"
+            },
+            "title": "Gate Reports",
+            "type": "array"
+          },
+          "hypothesis": {
+            "title": "Hypothesis",
+            "type": "string"
+          },
+          "ladder_history": {
+            "items": {
+              "$ref": "#/components/schemas/LadderEntryView"
+            },
+            "title": "Ladder History",
+            "type": "array"
+          },
+          "lifecycle": {
+            "items": {
+              "$ref": "#/components/schemas/LifecycleBrief"
+            },
+            "title": "Lifecycle",
+            "type": "array"
+          },
+          "lifecycle_note": {
+            "title": "Lifecycle Note",
+            "type": "string"
+          },
+          "links": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "title": "Links",
+            "type": "object"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "parameters": {
+            "title": "Parameters",
+            "type": "object"
+          },
+          "runs": {
+            "items": {
+              "$ref": "#/components/schemas/RunSummaryView"
+            },
+            "title": "Runs",
+            "type": "array"
+          },
+          "runs_total": {
+            "title": "Runs Total",
+            "type": "integer"
+          },
+          "strategy_id": {
+            "title": "Strategy Id",
+            "type": "string"
+          },
+          "timeframes": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Timeframes",
+            "type": "array"
+          },
+          "universe": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Universe",
+            "type": "array"
+          }
+        },
+        "required": [
+          "strategy_id",
+          "name",
+          "family",
+          "hypothesis",
+          "content_hash",
+          "timeframes",
+          "universe",
+          "parameters",
+          "runs",
+          "runs_total",
+          "gate_reports",
+          "ladder_history",
+          "lifecycle",
+          "lifecycle_note",
+          "links"
+        ],
+        "title": "StrategyOverviewView",
         "type": "object"
       },
       "StrategyStatusView": {
@@ -6427,6 +8528,220 @@
           "notes"
         ],
         "title": "StrategyView",
+        "type": "object"
+      },
+      "SurfaceCellView": {
+        "properties": {
+          "isolated_peak": {
+            "title": "Isolated Peak",
+            "type": "boolean"
+          },
+          "n_runs": {
+            "title": "N Runs",
+            "type": "integer"
+          },
+          "neighbourhood_median_ratio": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "neighbourhood_min": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "on_plateau": {
+            "title": "On Plateau",
+            "type": "boolean"
+          },
+          "plateau_checks": {
+            "additionalProperties": {
+              "type": "boolean"
+            },
+            "title": "Plateau Checks",
+            "type": "object"
+          },
+          "point_plateau_ratio": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "run_ids": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Run Ids",
+            "type": "array"
+          },
+          "score": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "x": {
+            "title": "X",
+            "type": "number"
+          },
+          "y": {
+            "title": "Y",
+            "type": "number"
+          }
+        },
+        "required": [
+          "x",
+          "y",
+          "score",
+          "n_runs",
+          "run_ids",
+          "point_plateau_ratio",
+          "neighbourhood_median_ratio",
+          "neighbourhood_min",
+          "on_plateau",
+          "isolated_peak",
+          "plateau_checks"
+        ],
+        "title": "SurfaceCellView",
+        "type": "object"
+      },
+      "TearsheetView": {
+        "properties": {
+          "account_ccy": {
+            "title": "Account Ccy",
+            "type": "string"
+          },
+          "benchmark": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Series"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "benchmark_kind": {
+            "title": "Benchmark Kind",
+            "type": "string"
+          },
+          "benchmark_note": {
+            "title": "Benchmark Note",
+            "type": "string"
+          },
+          "by_instrument": {
+            "items": {
+              "$ref": "#/components/schemas/InstrumentBreakdownView"
+            },
+            "title": "By Instrument",
+            "type": "array"
+          },
+          "chart_links": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "title": "Chart Links",
+            "type": "object"
+          },
+          "definitions": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/DefinitionView"
+            },
+            "title": "Definitions",
+            "type": "object"
+          },
+          "drawdowns": {
+            "items": {
+              "$ref": "#/components/schemas/DrawdownPeriodView"
+            },
+            "title": "Drawdowns",
+            "type": "array"
+          },
+          "equity": {
+            "$ref": "#/components/schemas/Series"
+          },
+          "excursions": {
+            "$ref": "#/components/schemas/ExcursionTable"
+          },
+          "excursions_note": {
+            "title": "Excursions Note",
+            "type": "string"
+          },
+          "gate_report": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/GateReportView"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "monthly": {
+            "items": {
+              "$ref": "#/components/schemas/MonthlyCellView"
+            },
+            "title": "Monthly",
+            "type": "array"
+          },
+          "pooled": {
+            "title": "Pooled",
+            "type": "boolean"
+          },
+          "provenance": {
+            "$ref": "#/components/schemas/ProvenanceBlock"
+          },
+          "rolling_sharpe": {
+            "$ref": "#/components/schemas/Series"
+          },
+          "rolling_window_days": {
+            "title": "Rolling Window Days",
+            "type": "integer"
+          },
+          "run": {
+            "$ref": "#/components/schemas/BacktestRunView"
+          },
+          "stats": {
+            "items": {
+              "$ref": "#/components/schemas/StatView"
+            },
+            "title": "Stats",
+            "type": "array"
+          },
+          "strategy_link": {
+            "title": "Strategy Link",
+            "type": "string"
+          },
+          "trade_histogram": {
+            "$ref": "#/components/schemas/HistogramView"
+          },
+          "underwater": {
+            "$ref": "#/components/schemas/Series"
+          },
+          "yearly": {
+            "items": {
+              "$ref": "#/components/schemas/YearReturnView"
+            },
+            "title": "Yearly",
+            "type": "array"
+          }
+        },
+        "required": [
+          "run",
+          "account_ccy",
+          "stats",
+          "equity",
+          "benchmark",
+          "benchmark_kind",
+          "benchmark_note",
+          "underwater",
+          "drawdowns",
+          "monthly",
+          "yearly",
+          "trade_histogram",
+          "excursions",
+          "excursions_note",
+          "rolling_sharpe",
+          "rolling_window_days",
+          "by_instrument",
+          "pooled",
+          "gate_report",
+          "provenance",
+          "definitions",
+          "chart_links",
+          "strategy_link"
+        ],
+        "title": "TearsheetView",
         "type": "object"
       },
       "TelemetryRow": {
@@ -6698,6 +9013,132 @@
         "title": "ValidationSummary",
         "type": "object"
       },
+      "WalkForwardView": {
+        "properties": {
+          "available": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Available",
+            "type": "array"
+          },
+          "definitions": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/DefinitionView"
+            },
+            "title": "Definitions",
+            "type": "object"
+          },
+          "fold_runs": {
+            "items": {
+              "$ref": "#/components/schemas/BacktestRunView"
+            },
+            "title": "Fold Runs",
+            "type": "array"
+          },
+          "folds": {
+            "items": {
+              "$ref": "#/components/schemas/FoldView"
+            },
+            "title": "Folds",
+            "type": "array"
+          },
+          "gate_set_version": {
+            "title": "Gate Set Version",
+            "type": "string"
+          },
+          "gates": {
+            "items": {
+              "$ref": "#/components/schemas/GateCheckView"
+            },
+            "title": "Gates",
+            "type": "array"
+          },
+          "mean_is_rate": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "mean_oos_rate": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "n_folds": {
+            "title": "N Folds",
+            "type": "integer"
+          },
+          "oos_profitable_fraction": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "oos_rate_cv": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "oos_rate_sd": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "outcome": {
+            "title": "Outcome",
+            "type": "string"
+          },
+          "parameter_repeats": {
+            "title": "Parameter Repeats",
+            "type": "integer"
+          },
+          "parameter_stability_across_folds": {
+            "title": "Parameter Stability Across Folds"
+          },
+          "rate_unit": {
+            "title": "Rate Unit",
+            "type": "string"
+          },
+          "reason": {
+            "title": "Reason",
+            "type": "string"
+          },
+          "scheme": {
+            "title": "Scheme",
+            "type": "string"
+          },
+          "source": {
+            "title": "Source",
+            "type": "string"
+          },
+          "source_ref": {
+            "title": "Source Ref",
+            "type": "string"
+          },
+          "strategy_id": {
+            "title": "Strategy Id",
+            "type": "string"
+          },
+          "walk_forward_efficiency": {
+            "$ref": "#/components/schemas/Figure"
+          }
+        },
+        "required": [
+          "strategy_id",
+          "source",
+          "source_ref",
+          "scheme",
+          "outcome",
+          "reason",
+          "folds",
+          "n_folds",
+          "walk_forward_efficiency",
+          "oos_profitable_fraction",
+          "mean_is_rate",
+          "mean_oos_rate",
+          "oos_rate_sd",
+          "oos_rate_cv",
+          "parameter_repeats",
+          "parameter_stability_across_folds",
+          "gates",
+          "gate_set_version",
+          "rate_unit",
+          "fold_runs",
+          "available",
+          "definitions"
+        ],
+        "title": "WalkForwardView",
+        "type": "object"
+      },
       "WorkerRow": {
         "properties": {
           "detail": {
@@ -6724,6 +9165,23 @@
           "detail"
         ],
         "title": "WorkerRow",
+        "type": "object"
+      },
+      "YearReturnView": {
+        "properties": {
+          "return_pct": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "year": {
+            "title": "Year",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "year",
+          "return_pct"
+        ],
+        "title": "YearReturnView",
         "type": "object"
       }
     },
@@ -7807,6 +10265,125 @@
         "x-fiboki-auth": "public"
       }
     },
+    "/api/research/compare": {
+      "get": {
+        "operationId": "compare_api_research_compare_get",
+        "parameters": [
+          {
+            "description": "Comma-separated run ids, 2 to 6.",
+            "in": "query",
+            "name": "runs",
+            "required": true,
+            "schema": {
+              "description": "Comma-separated run ids, 2 to 6.",
+              "title": "Runs",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_ComparisonView_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [],
+        "summary": "Compare",
+        "tags": [
+          "research"
+        ],
+        "x-fiboki-auth": "public"
+      }
+    },
+    "/api/research/correlations": {
+      "get": {
+        "operationId": "correlations_api_research_correlations_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "timeframe",
+            "required": false,
+            "schema": {
+              "default": "D1",
+              "title": "Timeframe",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "window",
+            "required": false,
+            "schema": {
+              "default": 100,
+              "title": "Window",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Comma-separated; default every instrument with data.",
+            "in": "query",
+            "name": "instruments",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Comma-separated; default every instrument with data.",
+              "title": "Instruments"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_CorrelationMatrixView_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [],
+        "summary": "Correlations",
+        "tags": [
+          "research"
+        ],
+        "x-fiboki-auth": "public"
+      }
+    },
     "/api/research/datasets": {
       "get": {
         "operationId": "datasets_api_research_datasets_get",
@@ -7947,6 +10524,53 @@
         "x-fiboki-auth": "public"
       }
     },
+    "/api/research/jobs": {
+      "get": {
+        "operationId": "jobs_api_research_jobs_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 200,
+              "maximum": 1000,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_JobQueueView_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [],
+        "summary": "Jobs",
+        "tags": [
+          "research"
+        ],
+        "x-fiboki-auth": "public"
+      }
+    },
     "/api/research/parameter-lab/{strategy_id}": {
       "get": {
         "operationId": "parameter_lab_api_research_parameter_lab__strategy_id__get",
@@ -7985,6 +10609,309 @@
         },
         "security": [],
         "summary": "Parameter Lab",
+        "tags": [
+          "research"
+        ],
+        "x-fiboki-auth": "public"
+      }
+    },
+    "/api/research/parameter-lab/{strategy_id}/surface": {
+      "get": {
+        "operationId": "parameter_surface_api_research_parameter_lab__strategy_id__surface_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "strategy_id",
+            "required": true,
+            "schema": {
+              "title": "Strategy Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "x",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X"
+            }
+          },
+          {
+            "in": "query",
+            "name": "y",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Y"
+            }
+          },
+          {
+            "in": "query",
+            "name": "metric",
+            "required": false,
+            "schema": {
+              "default": "sharpe",
+              "title": "Metric",
+              "type": "string"
+            }
+          },
+          {
+            "description": "JSON object of the other parameters' values.",
+            "in": "query",
+            "name": "fixed",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "JSON object of the other parameters' values.",
+              "title": "Fixed"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_ParameterSurfaceView_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [],
+        "summary": "Parameter Surface",
+        "tags": [
+          "research"
+        ],
+        "x-fiboki-auth": "public"
+      }
+    },
+    "/api/research/runs": {
+      "get": {
+        "description": "Every stored backtest run (any symbol), newest first. Read-only.",
+        "operationId": "runs_api_research_runs_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "strategy_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Strategy Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 100,
+              "maximum": 500,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Page_RunSummaryView_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [],
+        "summary": "Runs",
+        "tags": [
+          "research"
+        ],
+        "x-fiboki-auth": "public"
+      }
+    },
+    "/api/research/runs/{run_id}/monte-carlo": {
+      "get": {
+        "operationId": "monte_carlo_api_research_runs__run_id__monte_carlo_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "run_id",
+            "required": true,
+            "schema": {
+              "title": "Run Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "paths",
+            "required": false,
+            "schema": {
+              "default": 1000,
+              "maximum": 5000,
+              "minimum": 100,
+              "title": "Paths",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "seed",
+            "required": false,
+            "schema": {
+              "default": 20261018,
+              "maximum": 4294967295,
+              "minimum": 0,
+              "title": "Seed",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "ruin_fraction",
+            "required": false,
+            "schema": {
+              "default": 0.5,
+              "exclusiveMaximum": 1.0,
+              "exclusiveMinimum": 0.0,
+              "title": "Ruin Fraction",
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_MonteCarloView_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [],
+        "summary": "Monte Carlo",
+        "tags": [
+          "research"
+        ],
+        "x-fiboki-auth": "public"
+      }
+    },
+    "/api/research/runs/{run_id}/tearsheet": {
+      "get": {
+        "operationId": "tearsheet_api_research_runs__run_id__tearsheet_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "run_id",
+            "required": true,
+            "schema": {
+              "title": "Run Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_TearsheetView_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [],
+        "summary": "Tearsheet",
         "tags": [
           "research"
         ],
@@ -8052,6 +10979,110 @@
         },
         "security": [],
         "summary": "Strategy Detail",
+        "tags": [
+          "research"
+        ],
+        "x-fiboki-auth": "public"
+      }
+    },
+    "/api/research/strategies/{strategy_id}/overview": {
+      "get": {
+        "operationId": "strategy_overview_api_research_strategies__strategy_id__overview_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "strategy_id",
+            "required": true,
+            "schema": {
+              "title": "Strategy Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_StrategyOverviewView_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [],
+        "summary": "Strategy Overview",
+        "tags": [
+          "research"
+        ],
+        "x-fiboki-auth": "public"
+      }
+    },
+    "/api/research/strategies/{strategy_id}/walk-forward": {
+      "get": {
+        "operationId": "walk_forward_api_research_strategies__strategy_id__walk_forward_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "strategy_id",
+            "required": true,
+            "schema": {
+              "title": "Strategy Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "source",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Source"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_WalkForwardView_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [],
+        "summary": "Walk Forward",
         "tags": [
           "research"
         ],
