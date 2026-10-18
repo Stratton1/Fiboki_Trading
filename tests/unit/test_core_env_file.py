@@ -82,3 +82,10 @@ def test_python_and_shell_readers_agree(tmp_path: Path) -> None:
     assert shell == EXPECTED
     for key in parse_env_file(SAMPLE).malformed:
         assert key in run.stderr
+
+
+def test_fiboki_env_file_overrides_the_home_relative_default(tmp_path: Path) -> None:
+    """A server keeps the secrets file at /etc/fiboki/env, outside FIBOKI_HOME."""
+    explicit = tmp_path / "etc" / "env"
+    assert env_file_path({"FIBOKI_ENV_FILE": str(explicit), "FIBOKI_HOME": "/x"}) == explicit
+    assert env_file_path({"FIBOKI_ENV_FILE": "  ", "FIBOKI_HOME": "/x"}) == Path("/x/env")
