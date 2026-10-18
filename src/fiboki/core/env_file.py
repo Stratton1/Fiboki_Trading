@@ -61,7 +61,12 @@ def parse_env_file(text: str, *, path: Path | None = None) -> EnvFile:
 
 
 def env_file_path(env: Mapping[str, str]) -> Path:
-    """``$FIBOKI_HOME/env`` (``~/.fiboki/env``), expanded against ``env``'s ``HOME``."""
+    """The operator env file: ``$FIBOKI_ENV_FILE`` when set (a server keeps it at
+    ``/etc/fiboki/env``), else ``$FIBOKI_HOME/env`` (``~/.fiboki/env``), expanded
+    against ``env``'s ``HOME``. ``scripts/fiboki-service.sh`` resolves it the same way."""
+    explicit = str(env.get("FIBOKI_ENV_FILE", "") or "").strip()
+    if explicit:
+        return Path(explicit).expanduser()
     home = str(env.get("FIBOKI_HOME", "") or "").strip() or "~/.fiboki"
     if home == "~" or home.startswith("~/"):
         base = str(env.get("HOME", "") or "").strip()

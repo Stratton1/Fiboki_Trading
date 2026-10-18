@@ -1,0 +1,12 @@
+# Fiboki V2: run fiboki-heartbeat.service every five minutes. TEMPLATE (no placeholders).
+[Unit]
+Description=Fiboki external heartbeat timer
+
+[Timer]
+OnBootSec=3min
+OnUnitActiveSec=5min
+AccuracySec=30s
+Unit=fiboki-heartbeat.service
+
+[Install]
+WantedBy=timers.target

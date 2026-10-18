@@ -73,6 +73,20 @@ spaces restarts after exit 75 (below). Runbook: `docs/v2/OPERATIONS.md` §13.6.
 
 ## Linux server
 
+The full runbook is `docs/v2/SERVER.md`. In short:
+
+```bash
+sudo scripts/server-install.sh --dry-run     # read what it will do
+sudo scripts/server-install.sh               # user, deps, venv, web build, units, ufw, timers
+fiboki-ctl fiboki doctor                     # the server's environment, as the service user
+```
+
+`deploy/systemd/` holds a template per service (`fiboki-api`, `-worker`, `-web`, `-news`, `-quotes`,
+`-paper`, `-paper-crypto`, `-llama`), `fiboki.slice` (the memory cap for the group), and the
+`fiboki-backup` and `fiboki-heartbeat` service/timer pairs. They are templates (`__FIBOKI_ROOT__`
+and friends): never copy one by hand, `scripts/server-install.sh` substitutes and installs them
+(`--render-units DIR` writes them to a directory for review). The older single unit still works:
+
 ```bash
 sudo cp deploy/systemd/fiboki-research-worker.service /etc/systemd/system/
 sudo systemctl daemon-reload && sudo systemctl enable --now fiboki-research-worker

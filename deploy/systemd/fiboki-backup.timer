@@ -1,0 +1,13 @@
+# Fiboki V2: run fiboki-backup.service nightly. TEMPLATE (no placeholders); copied unchanged.
+[Unit]
+Description=Fiboki nightly backup timer
+
+[Timer]
+OnCalendar=*-*-* 03:30:00
+RandomizedDelaySec=20min
+# A box that was off at 03:30 backs up when it comes back.
+Persistent=true
+Unit=fiboki-backup.service
+
+[Install]
+WantedBy=timers.target

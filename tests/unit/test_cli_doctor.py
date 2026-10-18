@@ -452,7 +452,86 @@ def test_launchd_state_per_service(repo: Path) -> None:
     })
     assert "com.fiboki.research-worker" in _one(_run(both, "launchd"), "launchd").fix
     linux = FakeHost(repo, system="Linux")
-    assert _one(_run(linux, "launchd"), "launchd").status == DoctorStatus.WARN
+    assert _run(linux, "launchd") == [], "Linux is reported by the systemd check, not launchd"
+    other = FakeHost(repo, system="Windows")
+    assert _one(_run(other, "launchd"), "launchd").status == DoctorStatus.WARN
+
+
+def _unit(state: str = "running", active: str = "active", exit_status: str = "0",
+          result: str = "success") -> tuple[int, str]:
+    return 0, (f"LoadState=loaded\nActiveState={active}\nSubState={state}\n"
+               f"ExecMainStatus={exit_status}\nResult={result}\n")
+
+
+class SystemdHost(FakeHost):
+    """systemctl exists; a unit it has not been told about is `not-found`, as in real life."""
+
+    def run(self, argv, timeout: float = 10.0):  # type: ignore[override]
+        key = tuple(argv)
+        if key[:2] == ("systemctl", "show") and key not in self.commands:
+            return 0, "LoadState=not-found\nActiveState=inactive\nSubState=dead\n"
+        return super().run(argv, timeout)
+
+
+def test_systemd_state_per_unit_on_linux(repo: Path) -> None:
+    core = ("api", "worker", "web", "news")
+    cmds = {("systemctl", "show", f"fiboki-{n}.service",
+             "--property=LoadState,ActiveState,SubState,ExecMainStatus,Result"): _unit()
+            for n in core}
+    ok = _one(_run(SystemdHost(repo, system="Linux", machine="x86_64", commands=cmds), "systemd"),
+              "systemd")
+    assert ok.status == DoctorStatus.OK and "worker: running" in ok.detail
+    assert "paper: not installed (optional)" in ok.detail
+
+    del cmds[("systemctl", "show", "fiboki-news.service",
+              "--property=LoadState,ActiveState,SubState,ExecMainStatus,Result")]
+    warn = _one(_run(SystemdHost(repo, system="Linux", commands=cmds), "systemd"), "systemd")
+    assert warn.status == DoctorStatus.WARN and "news: not installed" in warn.detail
+    assert "server-install.sh" in warn.fix
+
+    cmds[("systemctl", "show", "fiboki-api.service",
+          "--property=LoadState,ActiveState,SubState,ExecMainStatus,Result")] = _unit(
+        "failed", "failed", "1", "exit-code")
+    failed = _one(_run(SystemdHost(repo, system="Linux", commands=cmds), "systemd"), "systemd")
+    assert failed.status == DoctorStatus.FAIL and "api: failed (exit-code)" in failed.detail
+
+    # The macOS host reports no systemd row, and a Linux host without systemctl says so.
+    assert _run(FakeHost(repo), "systemd") == []
+    nosystemd = _one(_run(FakeHost(repo, system="Linux"), "systemd"), "systemd")
+    assert nosystemd.status == DoctorStatus.WARN and "systemctl not found" in nosystemd.detail
+
+
+def test_linux_hints_name_systemd_and_the_server_installer(repo: Path) -> None:
+    host = FakeHost(repo, system="Linux", machine="x86_64", python_version=(3, 13, 0))
+    assert "server-install.sh" in _one(_run(host, "python"), "python").fix
+    assert cli._service_hint(host, "worker") == "sudo systemctl restart fiboki-worker"
+    assert "launchctl" in cli._service_hint(FakeHost(repo), "worker")
+    (repo / "apps" / "web" / "node_modules" / "@next" / "swc-darwin-arm64").rename(
+        repo / "apps" / "web" / "node_modules" / "@next" / "swc-linux-x64-gnu")
+    assert _one(_run(host, "web node_modules"), "web node_modules").status == DoctorStatus.OK
+    heartbeat = _one(_run(host, "worker heartbeat"), "worker heartbeat")
+    assert "systemctl" in heartbeat.fix and "launchctl" not in heartbeat.fix
+
+
+def test_ports_fall_back_to_ss_when_lsof_is_missing(repo: Path) -> None:
+    class NoLsof(FakeHost):
+        def run(self, argv, timeout: float = 10.0):  # type: ignore[override]
+            if argv[0] == "lsof":
+                return 127, ""
+            if tuple(argv[:3]) == ("ss", "-H", "-ltnp"):
+                if argv[3] == "sport = :8000":
+                    return 0, 'LISTEN 0 2048 127.0.0.1:8000 0.0.0.0:* users:(("python",pid=4242,fd=7))\n'
+                if argv[3] == "sport = :3000":
+                    return 0, "LISTEN 0 511 127.0.0.1:3000 0.0.0.0:*\n"
+                return 0, ""
+            if argv[0] == "ps":
+                return 0, f"{repo}/.venv/bin/python -m uvicorn fiboki.api.app:asgi_factory\n"
+            return super().run(argv, timeout)
+
+    checks = _run(NoLsof(repo, system="Linux"), "ports")
+    assert "owned by Fiboki: pid 4242" in _one(checks, "port 8000 (api)").detail
+    assert _one(checks, "port 3000 (web)").status == DoctorStatus.WARN
+    assert _one(checks, "port 8080 (llama-server)").detail == "free"
 
 
 def test_launchd_lists_the_optional_paper_service(repo: Path) -> None:

@@ -572,6 +572,12 @@ Stated so this document is not read as describing a running system.
 
 ## 13. Desktop runbooks
 
+> **Running on a Linux server instead of the Mac?** See `SERVER.md`: systemd units for every
+> service below, a nightly backup timer, an external heartbeat, Tailscale access, and
+> `scripts/server-migrate.sh` to move the running state across with a rollback. The runbooks in
+> this section are written for launchd; the commands differ (`systemctl`, `journalctl`,
+> `fiboki-ctl`) but the semantics (leases, exit 75, snapshots, the paper-only wrapper) do not.
+
 Added 2026-09-29 for the Mac desktop deployment (`DEPLOYMENT.md` §2). What was run to back each
 statement is in `BUILD_LOG.md` under the same date; anything marked *not exercised* was not.
 
@@ -659,7 +665,10 @@ scripts/llama-server.sh --print          # which tier, model file and command; s
 ```
 
 The script never downloads. If the model file is missing it prints the `hf download` and `curl`
-commands for the exact file, and where to read its published SHA-256. Download, then compare
+commands for the exact file, and where to read its published SHA-256. Since 18 October 2026 the
+tiers are 8, 16 and 32 GB (Qwen3.5-4B, Qwen3.5-9B, Qwen3.6-27B, Q4_K_M), each pinned to a commit
+and a SHA-256 that the script prints with the download (`--verify` re-checks it; `SERVER.md` §10
+has the table); `--tier 64` and `--tier 128` still select the earlier Qwen3-32B files. Download, then compare
 `shasum -a 256 <file>` with the SHA-256 on the file's Hugging Face page: it is the same digest
 Fiboki records for every model call, so this check ties the audit trail to the published weights.
 Then `launchctl kickstart gui/$(id -u)/uk.fiboki.llama` (or run the script in a terminal). To

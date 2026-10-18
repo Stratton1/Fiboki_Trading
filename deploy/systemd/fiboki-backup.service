@@ -1,0 +1,56 @@
+# Fiboki V2 systemd unit: nightly backup (scripts/server-backup.sh).
+#
+# TEMPLATE: scripts/server-install.sh substitutes its double-underscore placeholders and writes
+# /etc/systemd/system/fiboki-backup.service. Triggered by fiboki-backup.timer.
+#
+# * scripts/server-backup.sh runs scripts/backup.sh (SQLite online backup, SHA-256 manifest,
+#   env file EXCLUDED), prunes old archives, then copies to the OFF-BOX target if you configured
+#   one (FIBOKI_BACKUP_RCLONE_REMOTE or FIBOKI_BACKUP_RESTIC_REPOSITORY in the env file).
+#   With neither set it says so every night: a backup on the same disk is not a backup.
+
+[Unit]
+Description=Fiboki nightly backup
+Documentation=file://__FIBOKI_ROOT__/docs/v2/SERVER.md
+After=network-online.target
+
+[Service]
+Type=oneshot
+User=__FIBOKI_USER__
+Group=__FIBOKI_GROUP__
+WorkingDirectory=__FIBOKI_ROOT__
+Environment=HOME=__FIBOKI_LIB__
+Environment=FIBOKI_HOME=__FIBOKI_LIB__/.fiboki
+Environment=FIBOKI_STATE_DIR=__FIBOKI_LIB__/var
+Environment=FIBOKI_ENV_FILE=__FIBOKI_ENV_FILE__
+Environment=FIBOKI_BACKUP_DIR=__FIBOKI_BACKUP_DIR__
+Environment=PYTHONDONTWRITEBYTECODE=1
+ExecStart=/bin/bash __FIBOKI_ROOT__/scripts/fiboki-service.sh run __FIBOKI_ROOT__/scripts/server-backup.sh
+TimeoutStartSec=4h
+Nice=10
+IOSchedulingClass=idle
+CPUWeight=20
+MemoryMax=1G
+Slice=fiboki.slice
+
+NoNewPrivileges=true
+PrivateTmp=true
+PrivateDevices=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=__FIBOKI_LIB__ __FIBOKI_BACKUP_DIR__
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectKernelLogs=true
+ProtectControlGroups=true
+ProtectClock=true
+ProtectHostname=true
+RestrictSUIDSGID=true
+RestrictRealtime=true
+RestrictNamespaces=true
+LockPersonality=true
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6 AF_NETLINK
+SystemCallArchitectures=native
+UMask=0077
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=fiboki-backup

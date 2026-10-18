@@ -15,6 +15,7 @@ import re
 import shutil
 import sqlite3
 import subprocess
+import sys
 import tarfile
 import threading
 import time
@@ -80,37 +81,124 @@ def _llama(args: list[str], bin_dir: Path) -> subprocess.CompletedProcess[str]:
                 env={"PATH": f"{bin_dir}:/usr/bin:/bin", "HOME": str(bin_dir.parent)})
 
 
+PINNED_TIERS = {
+    # tier: (repo, file, commit, sha256, alias)
+    "8": ("unsloth/Qwen3.5-4B-GGUF", "Qwen3.5-4B-Q4_K_M.gguf",
+          "e87f176479d0855a907a41277aca2f8ee7a09523",
+          "00fe7986ff5f6b463e62455821146049db6f9313603938a70800d1fb69ef11a4", "qwen3.5-4b-q4_k_m"),
+    "16": ("unsloth/Qwen3.5-9B-GGUF", "Qwen3.5-9B-Q4_K_M.gguf",
+           "3885219b6810b007914f3a7950a8d1b469d598a5",
+           "03b74727a860a56338e042c4420bb3f04b2fec5734175f4cb9fa853daf52b7e8", "qwen3.5-9b-q4_k_m"),
+    "32": ("unsloth/Qwen3.6-27B-GGUF", "Qwen3.6-27B-Q4_K_M.gguf",
+           "82d411acf4a06cfb8d9b073a5211bf410bfc29bf",
+           "5ed60d0af4650a854b1755bd392f9aef4872643dc25a254bc68043fa638392a0", "qwen3.6-27b-q4_k_m"),
+}
+
+
 def test_llama_server_prints_the_pinned_command_for_a_tier(tmp_path: Path, stub_bin: Path) -> None:
     _stub_llama(stub_bin, "version: 6700 (build 6700, commit abc1234)")
     models = tmp_path / "Models"
-    model = models / "Qwen3-32B-GGUF" / "Qwen3-32B-Q5_K_M.gguf"
+    model = models / "Qwen3.5-9B-GGUF" / "Qwen3.5-9B-Q4_K_M.gguf"
     model.parent.mkdir(parents=True)
     model.write_bytes(b"GGUF")
-    proc = _llama(["--print", "--ram-gb", "64", "--models-dir", str(models)], stub_bin)
+    proc = _llama(["--print", "--ram-gb", "16", "--models-dir", str(models)], stub_bin)
     assert proc.returncode == 0, proc.stderr
     out = proc.stdout
-    assert "b6700" in out and "qwen3-32b-q5_k_m" in out
+    assert "b6700" in out and "qwen3.5-9b-q4_k_m" in out
     command = out.split("command    :", 1)[1]
     for piece in (f"-m {model}", "--ctx-size 16384", "-np 1", "-fa on", "--host 127.0.0.1",
-                  "--port 8080", "--reasoning-budget 0", "--alias qwen3-32b-q5_k_m"):
+                  "--port 8080", "--reasoning-budget 0", "--alias qwen3.5-9b-q4_k_m"):
         assert piece in command, piece
 
 
-@pytest.mark.parametrize(("ram", "repo", "file"), [
-    ("32", "Qwen/Qwen3-14B-GGUF", "Qwen3-14B-Q5_K_M.gguf"),
-    ("64", "Qwen/Qwen3-32B-GGUF", "Qwen3-32B-Q5_K_M.gguf"),
-    ("192", "Qwen/Qwen3-32B-GGUF", "Qwen3-32B-Q8_0.gguf"),
+@pytest.mark.parametrize(("ram", "tier"), [
+    ("7", "8"), ("8", "8"), ("13", "8"),          # an 8 GB VPS reports about 7.7
+    ("14", "16"), ("16", "16"), ("27", "16"),     # a 16 GB VPS reports about 15.6, rounded to 16
+    ("28", "32"), ("32", "32"), ("64", "32"), ("192", "32"),
 ])
-def test_a_missing_model_prints_the_download_and_never_fetches(
-    tmp_path: Path, stub_bin: Path, ram: str, repo: str, file: str
+def test_the_tier_follows_the_ram_with_room_for_what_the_kernel_reserves(
+    tmp_path: Path, stub_bin: Path, ram: str, tier: str
+) -> None:
+    _stub_llama(stub_bin, "version: 6700 (build 6700, commit abc1234)")
+    proc = _llama(["--ram-gb", ram, "--models-dir", str(tmp_path / "Models")], stub_bin)
+    assert proc.returncode == 1
+    assert f"tier-{tier} model" in proc.stderr
+
+
+def test_below_the_smallest_tier_is_refused(tmp_path: Path, stub_bin: Path) -> None:
+    _stub_llama(stub_bin, "version: 6700 (build 6700, commit abc1234)")
+    proc = _llama(["--ram-gb", "4"], stub_bin)
+    assert proc.returncode == 2 and "below the 8 GB tier" in proc.stderr
+
+
+@pytest.mark.parametrize("tier", sorted(PINNED_TIERS))
+def test_a_missing_pinned_model_prints_the_pinned_download_and_never_fetches(
+    tmp_path: Path, stub_bin: Path, tier: str
+) -> None:
+    repo, file, commit, sha, _ = PINNED_TIERS[tier]
+    _stub_llama(stub_bin, "version: 6700 (build 6700, commit abc1234)")
+    models = tmp_path / "Models"
+    proc = _llama(["--tier", tier, "--models-dir", str(models)], stub_bin)
+    assert proc.returncode == 1
+    err = proc.stderr
+    assert f"hf download {repo} {file} --revision {commit}" in err
+    assert f"https://huggingface.co/{repo}/resolve/{commit}/{file}" in err
+    assert f'echo "{sha}  {file}"' in err and "sha256sum -c -" in err
+    assert "resolve/main" not in err, "a pinned tier must never point at a moving branch"
+    assert not models.exists(), "the script must not create or download anything"
+
+
+def test_the_smallest_tier_checks_the_pinned_size_and_verifies_the_hash(
+    tmp_path: Path, stub_bin: Path
+) -> None:
+    _stub_llama(stub_bin, "version: 6700 (build 6700, commit abc1234)")
+    model = tmp_path / "Models" / "Qwen3.5-4B-GGUF" / "Qwen3.5-4B-Q4_K_M.gguf"
+    model.parent.mkdir(parents=True)
+    model.write_bytes(b"GGUF")
+    wrong_size = _llama(["--print", "--tier", "8", "--models-dir", str(tmp_path / "Models")], stub_bin)
+    assert wrong_size.returncode == 1 and "2740937888" in wrong_size.stderr
+    # --verify on a tier whose size is not pinned (9B) reaches the hash and rejects a wrong file.
+    nine = tmp_path / "Models" / "Qwen3.5-9B-GGUF" / "Qwen3.5-9B-Q4_K_M.gguf"
+    nine.parent.mkdir(parents=True)
+    nine.write_bytes(b"GGUF")
+    bad = _llama(["--print", "--tier", "16", "--verify", "--models-dir", str(tmp_path / "Models")], stub_bin)
+    assert bad.returncode == 1 and "does not match the pinned 03b74727" in bad.stderr
+    ok = _llama(["--print", "--tier", "16", "--models-dir", str(tmp_path / "Models")], stub_bin)
+    assert ok.returncode == 0, "without --verify the (large) hash is not computed at every start"
+
+
+@pytest.mark.parametrize(("tier", "repo", "file"), [
+    ("64", "Qwen/Qwen3-32B-GGUF", "Qwen3-32B-Q5_K_M.gguf"),
+    ("128", "Qwen/Qwen3-32B-GGUF", "Qwen3-32B-Q8_0.gguf"),
+])
+def test_the_earlier_mac_tiers_still_work_when_asked_for(
+    tmp_path: Path, stub_bin: Path, tier: str, repo: str, file: str
 ) -> None:
     _stub_llama(stub_bin, "version: 6700 (build 6700, commit abc1234)")
     models = tmp_path / "Models"
-    proc = _llama(["--ram-gb", ram, "--models-dir", str(models)], stub_bin)
+    proc = _llama(["--tier", tier, "--models-dir", str(models)], stub_bin)
     assert proc.returncode == 1
     assert f"hf download {repo} {file}" in proc.stderr
     assert f"https://huggingface.co/{repo}/resolve/main/{file}" in proc.stderr
-    assert not models.exists(), "the script must not create or download anything"
+    assert not models.exists()
+
+
+def test_llama_threads_and_the_linux_binary_search(tmp_path: Path, stub_bin: Path) -> None:
+    model = tmp_path / "m.gguf"
+    model.write_bytes(b"GGUF")
+    (tmp_path / "bin2").mkdir()
+    # No llama-server on PATH at all: a Linux server gets build/unpack instructions, not "brew".
+    no_bin = subprocess.run(
+        ["bash", str(SCRIPTS / "llama-server.sh"), "--print", "--model", str(model)],
+        env={"PATH": "/usr/bin:/bin", "HOME": str(tmp_path)}, capture_output=True, text=True)
+    if sys.platform != "darwin":
+        assert no_bin.returncode == 1 and "server-install.sh --build-llama" in no_bin.stderr
+    _stub_llama(stub_bin, "version: 6700 (build 6700, commit abc1234)")
+    threaded = subprocess.run(
+        ["bash", str(SCRIPTS / "llama-server.sh"), "--print", "--model", str(model)],
+        env={"PATH": f"{stub_bin}:/usr/bin:/bin", "HOME": str(tmp_path), "LLAMA_THREADS": "6"},
+        capture_output=True, text=True)
+    assert threaded.returncode == 0 and " -t 6" in threaded.stdout
 
 
 def test_an_old_build_is_refused_and_the_old_version_format_is_read(

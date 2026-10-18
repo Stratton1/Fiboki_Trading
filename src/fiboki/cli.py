@@ -35,6 +35,7 @@ from __future__ import annotations
 import json
 import os
 import platform
+import re
 import sys
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
@@ -2688,6 +2689,17 @@ DOCTOR_LAUNCHD_LABELS: tuple[str, ...] = tuple(
 #: Installed only on request (not in the installer's default list): reported,
 #: but "not loaded" is not a warning. Loaded and not running still is.
 DOCTOR_LAUNCHD_OPTIONAL: frozenset[str] = frozenset({"uk.fiboki.paper"})
+#: The systemd units scripts/server-install.sh installs (deploy/systemd/), the
+#: Linux counterpart of the launchd labels above.
+DOCTOR_SYSTEMD_UNITS: tuple[str, ...] = tuple(
+    f"fiboki-{name}.service"
+    for name in ("api", "worker", "web", "news", "quotes", "llama", "paper", "paper-crypto")
+)
+#: Opt-in units: reported, but "not installed" or "inactive" is not a warning
+#: (they need credentials, a model or a decision). Failed still is.
+DOCTOR_SYSTEMD_OPTIONAL: frozenset[str] = frozenset(
+    f"fiboki-{name}.service" for name in ("quotes", "llama", "paper", "paper-crypto")
+)
 #: Ports the desktop services bind: API, web, llama-server.
 DOCTOR_PORTS: dict[int, str] = {8000: "api", 3000: "web", 8080: "llama-server"}
 #: Pins the charter calls out by name: a drift in any of these is a FAIL.
@@ -2809,6 +2821,18 @@ class DoctorHost:
         return datetime.now(tz=UTC)
 
 
+def _service_hint(host: DoctorHost, name: str) -> str:
+    """The command that (re)starts one Fiboki service on this platform."""
+    if host.system == "Linux":
+        return f"sudo systemctl restart fiboki-{name}"
+    return f"launchctl kickstart -k gui/$(id -u)/uk.fiboki.{name}"
+
+
+def _install_hint(host: DoctorHost) -> str:
+    """The script that provisions this platform."""
+    return "scripts/server-install.sh" if host.system == "Linux" else "scripts/desktop-install.sh"
+
+
 def _doctor_guard(name: str, fn: Callable[[DoctorHost], list[DoctorCheck]], host: DoctorHost
                   ) -> list[DoctorCheck]:
     """A check that crashes is a FAIL with its exception, never a missing row."""
@@ -2862,8 +2886,10 @@ def _check_python(host: DoctorHost) -> list[DoctorCheck]:
     out.append(DoctorCheck(
         "python", DoctorStatus.OK if ok else DoctorStatus.FAIL,
         f"{major}.{minor}.{micro} at {host.executable}",
-        "" if ok else "pyproject requires >=3.11,<3.13. Run scripts/desktop-install.sh, which "
-        "builds .venv from Homebrew python@3.11.",
+        "" if ok else "pyproject requires >=3.11,<3.13. "
+        + ("Run scripts/server-install.sh, which builds .venv from a 3.11 interpreter."
+           if host.system == "Linux" else
+           "Run scripts/desktop-install.sh, which builds .venv from Homebrew python@3.11."),
     ))
     pins = _read_pins(host.repo)
     drift, missing = [], []
@@ -2882,7 +2908,7 @@ def _check_python(host: DoctorHost) -> list[DoctorCheck]:
     out.append(DoctorCheck(
         "pins", DoctorStatus.FAIL if bad else DoctorStatus.OK, detail,
         "" if not bad else ".venv/bin/pip install -e '.[dev]' -c deploy/constraints.txt "
-        "(scripts/desktop-install.sh does this). A drifted numerical pin changes stored results.",
+        f"({_install_hint(host)} does this). A drifted numerical pin changes stored results.",
         {"pins": pins, "installed": {n: host.dist_version(n) for n in pins}},
     ))
     return out
@@ -2893,7 +2919,7 @@ def _check_venv(host: DoctorHost) -> list[DoctorCheck]:
     cfg = venv / "pyvenv.cfg"
     if not (venv / "bin" / "python").exists() or not cfg.exists():
         return [DoctorCheck(".venv", DoctorStatus.FAIL, f"{venv} missing or incomplete",
-                            "scripts/desktop-install.sh (a .venv is rebuilt, never copied).")]
+                            f"{_install_hint(host)} (a .venv is rebuilt, never copied).")]
     values: dict[str, str] = {}
     for line in cfg.read_text(encoding="utf-8").splitlines():
         key, sep, value = line.partition("=")
@@ -2910,7 +2936,7 @@ def _check_venv(host: DoctorHost) -> list[DoctorCheck]:
     detail = f"python {version}, base {home}" + ("" if running_in else "; doctor is NOT running from it")
     if problems:
         return [DoctorCheck(".venv", DoctorStatus.FAIL, "; ".join(problems),
-                            f"mv {venv} {venv}.broken && scripts/desktop-install.sh")]
+                            f"mv {venv} {venv}.broken && {_install_hint(host)}")]
     if not running_in:
         return [DoctorCheck(".venv", DoctorStatus.WARN, detail,
                             f"Run the doctor as {venv}/bin/fiboki doctor so pins are read from the venv.")]
@@ -2929,7 +2955,9 @@ def _check_node(host: DoctorHost) -> list[DoctorCheck]:
     rc_npm, npm_out = host.run(["npm", "--version"])
     if rc_node != 0 or rc_npm != 0:
         return [DoctorCheck("node/npm", DoctorStatus.FAIL,
-                            f"node rc={rc_node} npm rc={rc_npm}", "brew install node")]
+                            f"node rc={rc_node} npm rc={rc_npm}",
+                            "install Node.js LTS (scripts/server-install.sh does)"
+                            if host.system == "Linux" else "brew install node")]
     node_v = _parse_semver(node_out)
     required = None
     next_pkg = host.repo / "apps" / "web" / "node_modules" / "next" / "package.json"
@@ -2941,7 +2969,9 @@ def _check_node(host: DoctorHost) -> list[DoctorCheck]:
         floor = _parse_semver(required)
         if floor is not None and required.strip().startswith(">=") and node_v < floor:
             return [DoctorCheck("node/npm", DoctorStatus.FAIL,
-                                f"{detail}; next requires node {required}", "brew upgrade node")]
+                                f"{detail}; next requires node {required}",
+                                "upgrade Node.js LTS (scripts/server-install.sh --upgrade-node)"
+                                if host.system == "Linux" else "brew upgrade node")]
         detail += f" (next requires {required})"
     return [DoctorCheck("node/npm", DoctorStatus.OK, detail)]
 
@@ -3183,7 +3213,7 @@ def _check_heartbeat(host: DoctorHost) -> list[DoctorCheck]:
     if not path.exists():
         return [DoctorCheck("worker heartbeat", DoctorStatus.FAIL,
                             f"{path} ({source}) does not exist: no worker has ever beaten",
-                            "Start the research worker (launchctl kickstart gui/$(id -u)/uk.fiboki.worker).")]
+                            f"Start the research worker ({_service_hint(host, 'worker')}).")]
     from fiboki.workers.base import WorkerStore
 
     store = WorkerStore.sqlite_at(path, create=False)
@@ -3193,14 +3223,17 @@ def _check_heartbeat(host: DoctorHost) -> list[DoctorCheck]:
         store.close()
     if not views:
         return [DoctorCheck("worker heartbeat", DoctorStatus.FAIL, "no heartbeat row: age unknown, not 0",
-                            "Start the research worker.")]
+                            f"Start the research worker ({_service_hint(host, 'worker')}).")]
     freshest = min(views, key=lambda v: v.age_seconds)
     status = DoctorStatus.OK if freshest.age_seconds <= stale_after else DoctorStatus.FAIL
     return [DoctorCheck(
         "worker heartbeat", status,
         f"{freshest.worker_id} beat {freshest.age_seconds:.0f}s ago (stale after {stale_after:.0f}s)",
-        "" if status == DoctorStatus.OK else "Check `launchctl print gui/$(id -u)/uk.fiboki.worker` "
-        "and var/logs/worker.log; exit 75 means another holder has the lease.",
+        "" if status == DoctorStatus.OK else (
+            "Check `systemctl status fiboki-worker` and `journalctl -u fiboki-worker -n 50`"
+            if host.system == "Linux" else
+            "Check `launchctl print gui/$(id -u)/uk.fiboki.worker` and var/logs/worker.log"
+        ) + "; exit 75 means another holder has the lease.",
         {v.worker_id: round(v.age_seconds, 1) for v in views},
     )]
 
@@ -3209,7 +3242,8 @@ def _check_news(host: DoctorHost) -> list[DoctorCheck]:
     path, _ = _doctor_paths(host)["news_store"]
     if not path.exists():
         return [DoctorCheck("news store", DoctorStatus.WARN, f"{path} does not exist",
-                            "Optional. Load uk.fiboki.news or run `fiboki news record --once`.")]
+                            "Optional. Start the news service ("
+                            + _service_hint(host, "news") + ") or run `fiboki news record --once`.")]
     from datetime import UTC, datetime
 
     with _sqlite_ro(path) as conn:
@@ -3225,7 +3259,7 @@ def _check_news(host: DoctorHost) -> list[DoctorCheck]:
     status = DoctorStatus.OK if age <= 900 else DoctorStatus.WARN
     return [DoctorCheck("news store", status, f"last poll {last.isoformat()} ({age:.0f}s ago)",
                         "" if status == DoctorStatus.OK else "The recorder has stopped: "
-                        "launchctl kickstart -k gui/$(id -u)/uk.fiboki.news",
+                        + _service_hint(host, "news"),
                         {"last_poll": last.isoformat(), "age_seconds": round(age, 1)})]
 
 
@@ -3324,7 +3358,7 @@ def _local_model_report(host: DoctorHost, *, hash_weights: bool) -> DoctorCheck:
         return DoctorCheck(
             "local model", DoctorStatus.FAIL if wanted else DoctorStatus.WARN,
             "no local model server answered: " + "; ".join(unreachable),
-            "scripts/llama-server.sh, or launchctl kickstart gui/$(id -u)/uk.fiboki.llama" + optional,
+            f"scripts/llama-server.sh, or {_service_hint(host, 'llama')}" + optional,
         )
     finally:
         close = getattr(client, "close", None)
@@ -3355,8 +3389,16 @@ def _check_disk(host: DoctorHost) -> list[DoctorCheck]:
 def _port_owner(host: DoctorHost, port: int) -> tuple[int, str] | None:
     rc, out = host.run(["lsof", "-nP", f"-iTCP:{port}", "-sTCP:LISTEN", "-Fp"])
     if rc == 127:
-        raise FileNotFoundError("lsof")
-    pids = [int(line[1:]) for line in out.splitlines() if line.startswith("p") and line[1:].isdigit()]
+        # A minimal Linux server has no lsof; iproute2's ss is always there.
+        rc, out = host.run(["ss", "-H", "-ltnp", f"sport = :{port}"])
+        if rc == 127:
+            raise FileNotFoundError("lsof")
+        pids = [int(m) for m in re.findall(r"pid=(\d+)", out)]
+        if not pids and out.strip():
+            # Listening, but the owner is another user's (ss hides it without root).
+            return 0, "owner not visible to this user"
+    else:
+        pids = [int(line[1:]) for line in out.splitlines() if line.startswith("p") and line[1:].isdigit()]
     if not pids:
         return None
     _, command = host.run(["ps", "-o", "command=", "-p", str(pids[0])])
@@ -3382,6 +3424,9 @@ def _check_ports(host: DoctorHost) -> list[DoctorCheck]:
             continue
         if owner is None:
             out.append(DoctorCheck(name, DoctorStatus.OK, "free"))
+        elif owner[0] == 0:
+            out.append(DoctorCheck(name, DoctorStatus.WARN, "in use; the owner is not visible to this user",
+                                   "Run the doctor as the service user (or root) to see which process."))
         elif _is_fiboki_process(host, owner[1]):
             out.append(DoctorCheck(name, DoctorStatus.OK, f"owned by Fiboki: pid {owner[0]} {owner[1][:120]}"))
         else:
@@ -3391,6 +3436,8 @@ def _check_ports(host: DoctorHost) -> list[DoctorCheck]:
 
 
 def _check_launchd(host: DoctorHost) -> list[DoctorCheck]:
+    if host.system == "Linux":
+        return []  # _check_systemd reports the Linux services
     if host.system != "Darwin":
         return [DoctorCheck("launchd", DoctorStatus.WARN, f"not macOS ({host.system}); services not checked")]
     states: dict[str, str] = {}
@@ -3427,6 +3474,49 @@ def _check_launchd(host: DoctorHost) -> list[DoctorCheck]:
     return [DoctorCheck("launchd", status, detail, fix, {**states, "com.fiboki.research-worker": legacy})]
 
 
+def _check_systemd(host: DoctorHost) -> list[DoctorCheck]:
+    """The Linux counterpart of :func:`_check_launchd` (units from deploy/systemd/)."""
+    if host.system != "Linux":
+        return []
+    props = "LoadState,ActiveState,SubState,ExecMainStatus,Result"
+    states: dict[str, str] = {}
+    for unit in DOCTOR_SYSTEMD_UNITS:
+        rc, out = host.run(["systemctl", "show", unit, f"--property={props}"])
+        if rc == 127:
+            return [DoctorCheck("systemd", DoctorStatus.WARN,
+                                "systemctl not found (a container, or not a systemd host); "
+                                "services not checked")]
+        values = dict(line.split("=", 1) for line in out.splitlines() if "=" in line)
+        if rc != 0 or values.get("LoadState", "not-found") == "not-found":
+            states[unit] = "not installed"
+            continue
+        state = values.get("SubState") or values.get("ActiveState") or "loaded"
+        if values.get("ActiveState") == "failed":
+            state = f"failed ({values.get('Result', '?')})"
+        elif state != "running" and values.get("ExecMainStatus", "0") not in ("", "0"):
+            state += f", last exit {values['ExecMainStatus']}"
+        states[unit] = state
+    missing = [u for u, st in states.items() if st == "not installed" and u not in DOCTOR_SYSTEMD_OPTIONAL]
+    not_running = [u for u, st in states.items()
+                   if st != "not installed" and not st.startswith("running")
+                   and not (u in DOCTOR_SYSTEMD_OPTIONAL and st in ("dead", "exited"))]
+    status = DoctorStatus.OK
+    fix = ""
+    if any(st.startswith("failed") for st in states.values()):
+        status, fix = DoctorStatus.FAIL, (
+            "systemctl --failed; journalctl -u <unit> -n 50. Exit 75 means another holder has the "
+            "lease or reconciliation needs an operator (deploy/README.md).")
+    elif missing or not_running:
+        status, fix = DoctorStatus.WARN, (
+            "sudo scripts/server-install.sh (installs and starts the units; see docs/v2/SERVER.md)")
+    detail = "; ".join(
+        f"{unit.removeprefix('fiboki-').removesuffix('.service')}: {st}"
+        + (" (optional)" if unit in DOCTOR_SYSTEMD_OPTIONAL and st == "not installed" else "")
+        for unit, st in states.items()
+    )
+    return [DoctorCheck("systemd", status, detail, fix, dict(states))]
+
+
 DOCTOR_CHECKS: tuple[tuple[str, Callable[[DoctorHost], list[DoctorCheck]]], ...] = (
     ("python", _check_python),
     (".venv", _check_venv),
@@ -3445,6 +3535,7 @@ DOCTOR_CHECKS: tuple[tuple[str, Callable[[DoctorHost], list[DoctorCheck]]], ...]
     ("disk free", _check_disk),
     ("ports", _check_ports),
     ("launchd", _check_launchd),
+    ("systemd", _check_systemd),
 )
 
 

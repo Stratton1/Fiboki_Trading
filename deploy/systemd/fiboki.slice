@@ -1,0 +1,16 @@
+# Fiboki V2: the cgroup every Fiboki service runs in. It exists so that, whatever the
+# sum of the per-service MemoryMax values, the group as a whole can never take the
+# 16 GB machine: sshd, tailscaled, journald and the page cache keep the rest.
+# Budget (per-service caps, all inside this one):
+#   paper, paper-crypto 1 GB each (OOMScoreAdjust -500: killed last)
+#   quotes, news        384 MB each
+#   api 1.5 GB, web 1 GB
+#   worker 5 GB (Nice 10, OOMScoreAdjust +300), llama 8 GB (OOMScoreAdjust +500: killed first)
+# TEMPLATE: copied unchanged to /etc/systemd/system/fiboki.slice by scripts/server-install.sh.
+[Unit]
+Description=Fiboki V2 services (memory-capped group)
+
+[Slice]
+MemoryHigh=13G
+MemoryMax=14G
+TasksMax=4096
