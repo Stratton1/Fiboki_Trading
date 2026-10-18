@@ -10,10 +10,16 @@ import { Tooltip } from "../ui/Tooltip";
 import { useNavDrawer } from "./NavDrawer";
 import { SECTIONS, sectionFor } from "./sections";
 
+/** The function key of the section at `index` (F5 is the browser's reload). */
+export function fkeyOf(index: number): string | null {
+  return index === 4 ? null : `F${index + 1}`;
+}
+
 /**
- * The navigation rail: 56px of section icons, expanding to 232px with every
- * page listed under its section. Under 1024px it becomes a drawer showing the
- * expanded list.
+ * The navigation rail: 48px of section icons, each with its function key
+ * (the old second row of F-keys merged into it), expanding to 232px with
+ * every page listed under its section. Under 1024px it becomes a drawer
+ * showing the expanded list.
  *
  * Nine sections map onto today's routes (sections.ts); every URL still works.
  * Inside a section the page header's view tabs reach the other pages, so the
@@ -49,13 +55,14 @@ export function Rail() {
         aria-label="Primary"
       >
         <div className="rail__icons" data-testid="rail-icons">
-          {SECTIONS.map((section) => {
+          {SECTIONS.map((section, index) => {
             const Icon = section.icon;
             const first = section.links[0];
             if (!first) return null;
             const isActive = section === active;
+            const fkey = fkeyOf(index);
             return (
-              <Tooltip key={section.id} label={section.title} side="right">
+              <Tooltip key={section.id} label={fkey ? `${section.title} (${fkey})` : section.title} side="right">
                 <Link
                   href={first.href}
                   className="rail__icon"
@@ -64,7 +71,10 @@ export function Rail() {
                   data-testid={`rail-${section.id}`}
                   aria-current={pathname === first.href ? "page" : isActive ? "true" : undefined}
                 >
-                  <Icon size={18} aria-hidden="true" strokeWidth={1.75} />
+                  <Icon size={16} aria-hidden="true" strokeWidth={1.75} />
+                  <span className="rail__fkey" aria-hidden="true" data-testid={`fkey-${section.id}`}>
+                    {fkey ?? section.mnemonic}
+                  </span>
                 </Link>
               </Tooltip>
             );
@@ -72,14 +82,16 @@ export function Rail() {
         </div>
 
         <div className="rail__tree">
-          {SECTIONS.map((section) => {
+          {SECTIONS.map((section, index) => {
             const Icon = section.icon;
+            const fkey = fkeyOf(index);
             return (
               <div key={section.id} data-section={section.id}>
                 <div className="rail__section">
                   <div className="rail__section-title">
                     <Icon size={14} aria-hidden="true" />
                     {section.title}
+                    {fkey ? <span className="rail__section-key">{fkey}</span> : null}
                   </div>
                 </div>
                 {section.links.map((link) => (

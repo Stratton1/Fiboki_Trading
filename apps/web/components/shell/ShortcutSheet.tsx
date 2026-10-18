@@ -3,6 +3,7 @@
 import { Dialog as Base } from "@base-ui/react/dialog";
 import { Button } from "../ui/Button";
 import { DialogContent, DialogDescription, DialogTitle } from "../ui/Dialog";
+import Link from "next/link";
 import { Kbd } from "../ui/Kbd";
 import { SECTIONS } from "./sections";
 
@@ -14,12 +15,12 @@ export const SHORTCUTS: readonly { keys: string[]; label: string; what: string }
   {
     keys: ["/"],
     label: "Slash",
-    what: "Focus the command line: a mnemonic (RSK, LAB, EXPO), a name, or an instrument symbol, then Enter. ? opens this sheet, KILL opens the kill-switch dialog, an empty Enter opens the palette.",
+    what: "Focus the command line: a code (RSK, FLT, LAB), a symbol (EURUSD), or a symbol and a function (EURUSD H4, EURUSD BT), then Enter. ↑ recalls the last 50 commands. FUNC lists every function, KILL opens the kill-switch dialog, an empty Enter opens the palette.",
   },
   {
     keys: ["F1", "…", "F9"],
     label: "F1 to F9",
-    what: "Go to a section from the function-key row (F5 stays the browser's reload; use its key on screen). Arrows, Home and End move along the row.",
+    what: "Go to a section: F1 Command, F2 Fleet, F3 Lifecycle, F4 Lab, F6 Risk, F7 Data, F8 System, F9 Journal. F5 stays the browser's reload. The rail shows each section's key.",
   },
   {
     keys: ["⇧", "K"],
@@ -72,7 +73,8 @@ export default function ShortcutSheet({
           the platform; the chart&apos;s drawing shortcuts edit only your own annotations, and undo
           restores them.
         </DialogDescription>
-        <table className="shortcut-table mt-3">
+        <div className="shortcut-scroll" tabIndex={0} role="region" aria-label="Shortcut list, scrolls">
+        <table className="shortcut-table">
           <caption className="sr-only">Shortcuts</caption>
           <thead>
             <tr>
@@ -118,7 +120,11 @@ export default function ShortcutSheet({
             ))}
           </tbody>
         </table>
+        </div>
         <div className="dialog__actions">
+          <Link href="/system/functions" className="mr-auto" onClick={() => onOpenChange(false)}>
+            Every function (FUNC)
+          </Link>
           <Button onClick={() => onOpenChange(false)} data-testid="shortcut-sheet-close">
             Close
           </Button>
