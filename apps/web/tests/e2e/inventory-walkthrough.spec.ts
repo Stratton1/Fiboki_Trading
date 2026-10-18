@@ -5,6 +5,8 @@ import {
   API,
   attentionItem,
   attentionPage,
+  backtestRuns,
+  backtestTrades,
   chartBars,
   chartOverlays,
   exposurePage,
@@ -297,6 +299,38 @@ async function mockEverything(page: Page, unexpected: string[]) {
   await page.route(
     (url) => url.pathname.startsWith("/api/markets/overlays/"),
     (route: Route) => route.fulfill({ json: chartOverlays() }),
+  );
+  await page.route(
+    (url) => url.pathname.startsWith("/api/markets/backtests/"),
+    (route: Route) => {
+      const parts = new URL(route.request().url()).pathname.split("/");
+      return route.fulfill({
+        json: parts[6] === "trades" ? backtestTrades(decodeURIComponent(parts[5] ?? "")) : backtestRuns(),
+      });
+    },
+  );
+  await page.route(
+    (url) => url.pathname.startsWith("/api/markets/drawings/"),
+    (route: Route) =>
+      route.request().method() === "GET"
+        ? route.fulfill({
+            json: {
+              data: {
+                symbol: "EURUSD",
+                owner: "joe",
+                version: 0,
+                updated_at: null,
+                updated_by: "",
+                drawings: [],
+                can_edit: true,
+                others: [],
+                max_drawings: 500,
+              },
+              source: source("live", "Operator drawings."),
+              caveats: [],
+            },
+          })
+        : route.fallback(),
   );
 
   // Trading

@@ -78,6 +78,9 @@ class FibokiPaths:
     experiment_db_from_env: bool
     news_store: Path
     events_store: Path
+    #: Operator chart drawings (annotations, never strategy input), per
+    #: operator and symbol, written by the API (``api/drawings.py``).
+    drawings_db: Path
     #: Worker lease + heartbeat database (``WorkerStore``).
     heartbeat_db: Path
     #: The API's heartbeat file/database (``FIBOKI_WORKER_HEARTBEAT``).
@@ -150,6 +153,7 @@ def resolve_paths(env: Mapping[str, str], *, cwd: str | Path | None = None) -> F
         experiment_db_from_env=experiment_env is not None,
         news_store=state_dir / "news" / "headlines.sqlite",
         events_store=state_dir / "events" / "annotations.sqlite",
+        drawings_db=state_dir / "chart" / "drawings.sqlite",
         heartbeat_db=opt("FIBOKI_STATE_DB") or home / "state.db",
         worker_heartbeat=opt("FIBOKI_WORKER_HEARTBEAT") or state_dir / "worker.heartbeat",
         paper_root=opt("FIBOKI_PAPER_ROOT") or state_dir / "paper",

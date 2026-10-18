@@ -538,6 +538,8 @@ export interface SignalOverlay {
   reason: string;
   signal_id: string;
   session_id: string;
+  /** Which paper session, in words (its wiring version when it has one). */
+  session_label: string;
   timeframe: string;
   requested_price: Figure;
   provenance: Provenance;
@@ -554,6 +556,7 @@ export interface FillOverlay {
   trade_id: string;
   strategy_id: string;
   session_id: string;
+  session_label: string;
   exit_reason: string | null;
   net_pnl: Figure | null;
   provenance: Provenance;
@@ -567,9 +570,12 @@ export interface LevelOverlay {
   price: Figure;
   /** Serialised by alias: the Python field is `from_`. */
   from: string;
+  /** null: an open position's level (it stands now); else the closed trade's exit time. */
   to: string | null;
   position_id: string;
   strategy_id: string;
+  session_id: string;
+  session_label: string;
   provenance: Provenance;
   dataset_version_id: string | null;
   source: OverlaySource;
@@ -665,6 +671,81 @@ export interface OverlayView {
   /** Per section: available, and why not when it is not. */
   sections: Record<string, SectionStatus>;
 }
+
+// ------------------------------------------------- chart: backtest trades
+
+/**
+ * GET /api/markets/backtests/{symbol} (Page): one stored backtest or
+ * walk-forward-fold run that traded the symbol (routers/chart.py).
+ */
+export interface BacktestRunRow {
+  run_id: string;
+  strategy_id: string;
+  kind: string;
+  label: string;
+  created_at: string | null;
+  timeframe: string;
+  instruments: string[];
+  dataset_version_ids: string[];
+  engine_version: string;
+  /** False: an older engine generation; not comparable with a current run. */
+  engine_current: boolean;
+  superseded: boolean;
+  /** pass | fail | inconclusive | not_evaluated (the latest report filed against this run). */
+  gate_verdict: string;
+  gate_report_id: string | null;
+  trade_count: Figure;
+  trades_on_symbol: Figure;
+  trades_with_stops: Figure;
+  provenance: Provenance;
+}
+
+/** One backtest trade with the stop and targets the ENGINE recorded. */
+export interface BacktestTradeRow {
+  trade_id: string;
+  strategy_id: string;
+  direction: "long" | "short";
+  size: Figure;
+  entry_time: string;
+  exit_time: string;
+  entry_price: Figure;
+  exit_price: Figure;
+  exit_reason: string;
+  net_pnl: Figure;
+  gross_pnl: Figure;
+  costs: Figure;
+  bars_held: Figure;
+  stop_loss: Figure;
+  final_stop: Figure;
+  take_profit: Figure;
+  take_profit_targets: Figure[];
+  stop_moved_by: string | null;
+  provenance: Provenance;
+}
+
+/** GET /api/markets/backtests/{symbol}/{run_id}/trades (Envelope). */
+export interface BacktestTradesView {
+  symbol: string;
+  timeframe: string | null;
+  window_from: string | null;
+  window_to: string | null;
+  run: BacktestRunRow;
+  trades: BacktestTradeRow[];
+  total_on_symbol: Figure;
+  outside_window: Figure;
+  stops_detail: string;
+  account_ccy: string | null;
+}
+
+// --------------------------------------------------------- chart: drawings
+
+/** An operator annotation: geometry in (UTC time, price), never strategy input. */
+export type Drawing = Schemas["Drawing"];
+export type DrawingKind = Drawing["kind"];
+export type DrawingPoint = Schemas["DrawingPoint"];
+/** GET/PUT/DELETE /api/markets/drawings/{symbol} (Envelope). */
+export type DrawingSetView = Schemas["DrawingSetView"];
+export type DrawingSetWrite = Schemas["DrawingSetWrite"];
 
 // ----------------------------------------------------------- intelligence
 

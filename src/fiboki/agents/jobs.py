@@ -204,6 +204,14 @@ def _trade_payload(trade: Trade) -> dict[str, Any]:
         "max_favourable_excursion": trade.max_favourable_excursion,
         "provenance": trade.provenance.value,
         "fx_rate_used": trade.fx_rate_used,
+        # Protection as the engine placed and managed it, so the chart can draw
+        # each trade's stop and targets (GET /api/markets/backtests/...). Not
+        # part of the ledger hash; a record filed before these keys existed
+        # simply lacks them, and the API says so per trade.
+        "initial_stop": trade.initial_stop,
+        "final_stop": trade.final_stop,
+        "take_profit_targets": list(trade.take_profit_targets),
+        "stop_moved_by": trade.stop_moved_by,
     }
 
 

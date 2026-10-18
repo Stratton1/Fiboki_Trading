@@ -403,6 +403,8 @@ class SignalOverlay(BaseModel):
     reason: str
     signal_id: str
     session_id: str
+    #: Which paper session, in words (its wiring version when it has one).
+    session_label: str = ""
     timeframe: str
     requested_price: Figure
     provenance: Provenance
@@ -421,6 +423,7 @@ class FillOverlay(BaseModel):
     trade_id: str
     strategy_id: str
     session_id: str
+    session_label: str = ""
     exit_reason: str | None = None
     net_pnl: Figure | None = None
     provenance: Provenance
@@ -435,9 +438,13 @@ class LevelOverlay(BaseModel):
     role: str = Field(pattern="^(entry|stop|target)$")
     price: Figure
     from_: datetime = Field(alias="from")
+    #: ``None`` for an open position's level (it stands now); the exit time for
+    #: a closed trade's recorded stop or target (it stood for the trade's life).
     to: datetime | None
     position_id: str
     strategy_id: str
+    session_id: str = ""
+    session_label: str = ""
     provenance: Provenance
     dataset_version_id: str | None
     source: OverlaySource
@@ -938,18 +945,29 @@ def overlays(
     else:
         from fiboki.api.provenance import figure as make_figure
 
-        sessions = [s for s in journal.sessions if s.instrument.upper() == symbol.upper()]
+        want = symbol.upper()
+        # Every paper session that trades this symbol: a replay session names
+        # one instrument; a forward session (FX or the 24/7 crypto one) names
+        # several, comma-separated, and its rows say which each one is.
+        sessions = [s for s in journal.sessions if want in _session_instruments(s)]
         for session in sessions:
             summary = platform.session_summary(session.session_id) or {}
             dataset_id = summary.get("dataset_version_id")
             charged = platform.session_charged_costs(session.session_id)
+            label = str(summary.get("wiring_version") or session.session_id)
             src = OverlaySource(
                 kind="paper_journal",
                 detail=f"session {session.session_id} ({session.timeframe}), "
-                f"replayed dataset {dataset_id}",
+                + (
+                    f"replayed dataset {dataset_id}"
+                    if dataset_id
+                    else f"forward session {label}, live feed (no replayed dataset)"
+                ),
             )
             p = session.provenance
             for trade in session.trades:
+                if trade.instrument.upper() != want:
+                    continue
                 buy_first = getattr(trade.direction, "value", trade.direction) == "long"
                 if _in(trade.entry_time, win_lo, win_hi):
                     fills.append(
@@ -961,6 +979,7 @@ def overlays(
                             trade_id=trade.trade_id,
                             strategy_id=trade.strategy_id,
                             session_id=session.session_id,
+                            session_label=label,
                             provenance=p,
                             dataset_version_id=dataset_id,
                             source=src,
@@ -976,6 +995,7 @@ def overlays(
                             trade_id=trade.trade_id,
                             strategy_id=trade.strategy_id,
                             session_id=session.session_id,
+                            session_label=label,
                             exit_reason=getattr(trade.exit_reason, "value", trade.exit_reason),
                             net_pnl=make_figure(
                                 trade.net_pnl,
@@ -991,7 +1011,36 @@ def overlays(
                             source=src,
                         )
                     )
+                # The stop and target the paper book recorded for this closed
+                # trade, standing from its entry to its exit, when the session
+                # wrote them (paper_forward since 2026-10-18).
+                overlaps = (win_hi is None or trade.entry_time <= win_hi) and (
+                    win_lo is None or trade.exit_time >= win_lo
+                )
+                for role, price in (
+                    ("stop", trade.initial_stop),
+                    ("target", trade.take_profit),
+                ):
+                    if price is None or not overlaps:
+                        continue
+                    levels.append(
+                        LevelOverlay(
+                            role=role,
+                            price=Figure(value=price, provenance=p, as_of=trade.as_of),
+                            from_=trade.entry_time,
+                            to=trade.exit_time,
+                            position_id=trade.trade_id,
+                            strategy_id=trade.strategy_id,
+                            session_id=session.session_id,
+                            session_label=label,
+                            provenance=p,
+                            dataset_version_id=dataset_id,
+                            source=src,
+                        )
+                    )
             for pos in session.positions:
+                if pos.instrument.upper() != want:
+                    continue
                 if win_hi is not None and pos.entry_time > win_hi:
                     continue
                 buy = getattr(pos.direction, "value", pos.direction) == "long"
@@ -1005,6 +1054,7 @@ def overlays(
                             trade_id=pos.position_id,
                             strategy_id=pos.strategy_id,
                             session_id=session.session_id,
+                            session_label=label,
                             provenance=p,
                             dataset_version_id=dataset_id,
                             source=src,
@@ -1025,6 +1075,8 @@ def overlays(
                             to=None,
                             position_id=pos.position_id,
                             strategy_id=pos.strategy_id,
+                            session_id=session.session_id,
+                            session_label=label,
                             provenance=p,
                             dataset_version_id=dataset_id,
                             source=src,
@@ -1033,9 +1085,11 @@ def overlays(
             candidates = [
                 (t.entry_time, t.size, getattr(t.direction, "value", t.direction))
                 for t in session.trades
+                if t.instrument.upper() == want
             ] + [
                 (q.entry_time, q.size, getattr(q.direction, "value", q.direction))
                 for q in session.positions
+                if q.instrument.upper() == want
             ]
             for row in platform.session_telemetry(session.session_id):
                 decided = _utc(_parse_iso(row.get("decided_at")))
@@ -1068,6 +1122,7 @@ def overlays(
                         else f"{extra.get('request_kind', 'open')} accepted by the gateway",
                         signal_id=str(row.get("signal_id") or ""),
                         session_id=session.session_id,
+                        session_label=label,
                         timeframe=session.timeframe,
                         requested_price=Figure(value=float(requested), provenance=p)
                         if isinstance(requested, int | float)
@@ -1078,13 +1133,18 @@ def overlays(
                     )
                 )
         count = len(sessions)
+        names = ", ".join(sorted({str(
+            (platform.session_summary(s.session_id) or {}).get("wiring_version")
+            or s.session_id) for s in sessions})) or "none"
         sections["fills"] = SectionStatus(
             available=True,
-            detail=f"{len(fills)} fill(s) from {count} paper session(s) on {symbol}.",
+            detail=f"{len(fills)} fill(s) from {count} paper session(s) on {symbol} "
+            f"({names}).",
         )
         sections["levels"] = SectionStatus(
             available=True,
-            detail="Entry, stop and target of positions open at the end of each session.",
+            detail="Entry, stop and target of positions open at the end of each session, "
+            "and the stop and target each closed trade recorded (sessions that write them).",
         )
         sections["signals"] = SectionStatus(
             available=True,
@@ -1093,8 +1153,9 @@ def overlays(
         )
     sections["backtest_fills"] = SectionStatus(
         available=False,
-        detail="The research ledger records experiment metrics, not per-trade fills, so "
-        "no backtest trade can be drawn.",
+        detail="Backtest trades are not part of this payload: they are read per run, "
+        "from GET /api/markets/backtests/{symbol} and "
+        "/api/markets/backtests/{symbol}/{run_id}/trades.",
     )
     sections["stop_moves"] = SectionStatus(
         available=False,
@@ -1216,6 +1277,14 @@ def overlays(
         ),
         caveats=tuple(caveats),
     )
+
+
+def _session_instruments(session: Any) -> set[str]:
+    """Every instrument a paper session names or has a row for, upper-case."""
+    named = {s.strip().upper() for s in str(session.instrument or "").split(",") if s.strip()}
+    named |= {str(t.instrument).upper() for t in session.trades}
+    named |= {str(q.instrument).upper() for q in session.positions}
+    return named
 
 
 def _parse_iso(value: Any) -> datetime | None:

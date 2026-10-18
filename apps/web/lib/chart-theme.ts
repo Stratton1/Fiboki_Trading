@@ -51,6 +51,10 @@ export interface ChartTheme {
   regimeTint: Record<RegimeLabel, string>;
   /** The same hue, near-opaque, for the 3 px ribbon under the price pane. */
   regimeRibbon: Record<RegimeLabel, string>;
+  /** Operator drawings (annotations): the accent, and another operator's, muted. */
+  drawing: string;
+  drawingFill: string;
+  drawingOther: string;
   fontUi: string;
   fontCode: string;
 }
@@ -162,6 +166,9 @@ export function readChartTheme(root: HTMLElement = document.documentElement): Ch
     neutral: colour("--fg-subtle"),
     regimeTint,
     regimeRibbon,
+    drawing: colour("--chart-drawing"),
+    drawingFill: colour("--chart-drawing", 0.1),
+    drawingOther: colour("--chart-drawing-other"),
     fontUi: token(style, "--font-ui") || "system-ui, sans-serif",
     fontCode: token(style, "--font-code") || "ui-monospace, monospace",
   };

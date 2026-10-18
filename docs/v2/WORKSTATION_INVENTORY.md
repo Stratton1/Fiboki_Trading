@@ -429,7 +429,8 @@ Table: short id, full id, description. **Controls:** none.
 
 #### `/markets/<symbol>` Chart workstation (e.g. `/markets/EURUSD`)
 
-**Reads:** `GET /api/markets/bars/{symbol}?timeframe=&limit=500` and `GET /api/markets/overlays/{symbol}?timeframe=&limit=500`, each every 60 s; `GET /api/markets/instruments` for pip size (`app/markets/[symbol]/ChartWorkstation.tsx`).
+**Reads:** `GET /api/markets/bars/{symbol}?timeframe=&limit=500` and `GET /api/markets/overlays/{symbol}?timeframe=&limit=500`, each every 60 s; `GET /api/markets/instruments` for pip size and trading hours (`app/markets/[symbol]/ChartWorkstation.tsx`). The tools (`components/charts/ChartWorkbench.tsx`, loaded with the chart engine, in no route's first-load JavaScript) read `GET /api/markets/backtests/{symbol}?timeframe=` (stored runs), `GET /api/markets/backtests/{symbol}/{run_id}/trades?timeframe=&from=&to=` (the run's trades in the bar window) and `GET /api/markets/drawings/{symbol}` (the operator's drawings, others' read-only).
+**Writes:** `PUT /api/markets/drawings/{symbol}` (whole set, `base_version`) and `DELETE /api/markets/drawings/{symbol}?base_version=` (clear). Operator role, CSRF and allow-listed Origin; audited (`chart.drawings.put` / `.delete`, allowed or refused); a stale version is a 409 and nothing is overwritten. Drawings are annotations, never strategy input (`tests/unit/test_drawings_never_reach_a_decision.py`).
 **Question:** What is this market doing, and what did our strategies do on it?
 
 | Control | Does | Mutates |
@@ -444,10 +445,18 @@ Table: short id, full id, description. **Controls:** none.
 | "N sections not available · received, not drawn · outside the bar window" | Disclosure: which overlay sections the API marked unavailable and why; events and headlines received but not drawn. | No |
 | Chart (arrows, Shift, Home, End, Escape; pointer) | Moves the crosshair; the readout below shows OHLC, volume and series values. | No |
 | Retry (overlays error) | Re-reads overlays. | No |
+| **Paper / Backtest / Both** | Which trades are drawn and listed (paper hides the journal's fills too). | No |
+| **Backtest run** (select) | Stored runs for the symbol and timeframe: strategy, date, gate verdict filed against the run (`not evaluated` when none), trade count, "stale engine". Picking one reads its trades and sets `?run=`. Chips: BT provenance, run id, dataset version, gate, "stale engine", "no stops recorded". | No |
+| **Trades (n)** | Shows or hides the trades table (right; below the chart under 1200 px and on a phone). | No |
+| Trades table row (click, ↑ ↓ j k Home End, Enter) | Brings the trade into view on the chart, highlights its bars, selects the row. Columns: source and side, entry UTC, entry, exit, net P&L (API's, signed), SL, TP, exit reason. | No |
+| Trade on the chart (hover, click) | Tooltip with the API's figures (side, entry and exit with times, size, exit reason, net P&L, stop and how it moved, targets, run or session); a click selects its row. | No |
+| Drawing rail: select (Alt S), trend (Alt T), ray (Alt R), horizontal (Alt H), vertical (Alt V), rectangle (Alt B), Fibonacci (Alt F), text note (Alt N), measure (Alt M), lock (Alt Shift L), hide all (Alt Shift H) | Draw on the price pane; select, drag a body or a handle to move; Escape cancels. Measure reads price, percent, bars and time (live region), never saved. Disabled for a viewer (reason in the title), except select and measure. | Drawings: yes (operator's own annotations) |
+| Drawing edit bar (plot top-left): undo (Ctrl Z), redo (Ctrl Shift Z, Ctrl Y), delete (Del), scope (all TF / this TF only), ext (Fibonacci 1.272 and 1.618), clear | Edits the operator's set; each edit is a new version, saved serially; the save state ("n drawings · saved vN", "saving…", conflict, error with retry) is shown beside them. | Drawings: yes |
 
 **View states:** loading ("reading bars…"), **absent** ("No market data is mounted", when the API says `market_data_not_mounted`), empty ("No bars for …"), error, stale (badge in the header), overlays loading/error shown separately under the legend, dataset mismatch badge when overlays came from another dataset version.
 **Provenance:** "Bars SOURCE <kind>", "Journal <chip>" derived from signals, fills and levels; dataset version chip, cut in the middle so the timeframe survives (`dsv_eurusd_h1_…abcdef`), focusable, showing the whole id on hover and on keyboard focus (F-8); the mismatch badge shows the whole id.
-**Verified by:** `chart-workstation.spec.ts` (every test, including "the id is cut in the middle, keeping the timeframe, and shown whole on hover and on focus"); walk (all six data tabs, Sources, Key and six Columns popovers opened and closed).
+Trades grammar: paper FILLED in the paper ink, backtest HOLLOW in the simulated ink, ▲ long / ▼ short at entry, ■ at exit, backtest connectors dashed and coloured by the sign of the API's net P&L; SL dashed and TP dotted as segments over the trade's own bars, labelled BT or PAPER; a stop the engine moved ends in a one-bar tick at the exit labelled with the rule (the engine records which rule and where, not when). Drawings in the accent, another operator's dotted and muted with the owner's name.
+**Verified by:** `chart-workstation.spec.ts` (every test, including "the id is cut in the middle, keeping the timeframe, and shown whole on hover and on focus"); `chart-trades-drawings.spec.ts` (run picker, markers and SL/TP segment counts, stale run with no stops, source toggle, row click scrolls and highlights, hover tooltip, each drawing tool, text note, measure not saved, move/delete/undo/redo versions, persistence across reload and timeframe, 409 conflict, keyboard shortcuts, viewer cannot draw, BTCGBP 24/7 with the crypto session's trade, phone stacking, performance with 2,000 bars and 400 trades); `chart-model-trades.spec.ts` (placement, segment spans, geometry); backend `tests/api/test_chart_backtests_and_drawings.py`, `tests/api/test_overlays_paper_sessions.py`, `tests/unit/test_engine_trade_protection.py`; walk (all six data tabs, Sources, Key and six Columns popovers opened and closed).
 
 #### `/markets/regimes` Regimes
 
@@ -679,19 +688,19 @@ the three lifecycle routes gained one on 2026-09-30): `GET /api/system/kill-swit
 | C1 | Symbol and timeframe switcher | **Partial**: H1/H4/D1 fixed list, symbol via palette; no `1`–`6` keys; no backend list of available timeframes |
 | C2 | Multi-timeframe sync, link groups | Not built |
 | C3 | Crosshair sync to analytics | Not built |
-| C4 | Signal, fill and trade overlays | Built (markers, filled/hollow, P&L-coloured connector) |
-| C5 | Stops, targets, entry; stop history | **Partial**: price lines built; stop-move history is unavailable from the backend and says so |
+| C4 | Signal, fill and trade overlays | Built (markers, filled/hollow, P&L-coloured connector); backtest runs from the research ledger by run, every paper session (FX and crypto, labelled by session), trades table synced both ways |
+| C5 | Stops, targets, entry; stop history | **Partial**: open positions as price lines; each closed trade's SL/TP as segments over its life, as the engine recorded them (backtest; paper forward sessions since 2026-10-18); the final stop when moved; stop-move history (when it moved) is not recorded by the engine and is not drawn |
 | C6 | Regime bands | Built (tint, ribbon, UNKNOWN hatched) |
 | C7 | Session shading | Not built |
 | C8 | Event and headline markers | Not built: events are **received and counted** ("received, not drawn") |
 | C9 | Replay (time machine) | Not built; backend `as_of` not built |
 | C10 | "Why did this trade happen" inspector | Not built |
-| C11 | Drawings, server-side and audited | Not built; `/api/markets/drawings` not built |
+| C11 | Drawings, server-side and audited | Built: nine tools, keyboard shortcuts, undo/redo, lock, hide, timeframe scope; `GET/PUT/DELETE /api/markets/drawings/{symbol}`, versioned, audited, per operator and symbol; viewers read |
 | C12 | Forming bar | Not built: the API sends no forming flag (stated in `PriceChart.tsx`) |
 | C13 | Gaps and missing data | **Partial**: series gaps are whitespace; missing candles are not marked |
 | C14 | Data provenance header | **Partial**: dataset version, source kind, as-of; no price basis |
 | C15 | Keyboard and screen reader | **Partial**: arrow-key crosshair, readout, View data; no Enter on a marker |
-| C16 | Performance (5,000 bars, 500 markers, INP < 200 ms) | **Not tested** (no perf spec) |
+| C16 | Performance (5,000 bars, 500 markers, INP < 200 ms) | **Partial**: `chart-trades-drawings.spec.ts` "performance" pans and zooms 2,000 bars with 400 backtest trades: median frame 16.7 ms, p95 16.8 ms, CLS 0.016 (2026-10-18, shared CI box); 5,000 bars and INP not measured |
 | C17 | PNG snapshot for the Journal | Not built |
 | C18 | Compare | Not built |
 
@@ -733,7 +742,7 @@ backend).
 - **Audit log:** a day timeline of actions with refusals marked, above the grid. Data exists in the 200 rows returned; label it "last 200 entries". S.
 - **Research Memory:** rediscovery rate over time. **Backend ask:** history. M.
 - **Broker Health:** the five mode-guard controls as a checklist diagram ending in ALLOWED/REFUSED. Data exists. S.
-- **Chart workstation:** session shading (C7, needs the backend session calendar, M); stop-move step series once the paper journal records stop history (backend, M).
+- **Chart workstation:** session shading (C7, needs the backend session calendar, M); stop-move step series once the engine and the paper journal record WHEN a stop moved (backend, M; today only the rule and the final level are recorded).
 
 ### 6.3 Usability frictions seen in the screenshots
 

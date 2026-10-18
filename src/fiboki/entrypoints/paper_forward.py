@@ -623,6 +623,10 @@ class ForwardJournal:
             "exit_price", "entry_time", "exit_time", "exit_reason", "gross_pnl",
             "spread_cost", "commission", "slippage_cost", "financing_cost", "net_pnl",
             "account_ccy", "provenance",
+            # Protection as placed and at the close (core.contracts.Trade). Rows
+            # journalled before these existed leave the cells empty, which the
+            # API reads as "not recorded", never as "no stop".
+            "initial_stop", "final_stop", "take_profit",
         )
         position_fields = (
             "position_id", "strategy_id", "instrument", "direction", "size", "entry_price",
@@ -645,7 +649,11 @@ class ForwardJournal:
                     "take_profit": managed.active_target(),
                 }
             )
-        self._atomic(self.session_dir / "trades.csv", _csv(trade_fields, trades))
+        trade_csv_rows = [
+            {**row, "take_profit": _first_or_none(row.get("take_profit_targets"))}
+            for row in trades
+        ]
+        self._atomic(self.session_dir / "trades.csv", _csv(trade_fields, trade_csv_rows))
         self._atomic(self.session_dir / "positions.csv", _csv(position_fields, positions))
         # summary.json LAST: the reader keys a session on it.
         self._atomic(
@@ -665,6 +673,14 @@ class ForwardJournal:
         except BaseException:
             Path(tmp).unlink(missing_ok=True)
             raise
+
+
+def _first_or_none(targets: Any) -> float | None:
+    """The first planned take-profit of a journalled trade row, or ``None``."""
+    if isinstance(targets, list | tuple) and targets:
+        first = targets[0]
+        return float(first) if isinstance(first, int | float) else None
+    return None
 
 
 def _csv(fields: Sequence[str], rows: Sequence[Mapping[str, Any]]) -> str:

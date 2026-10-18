@@ -136,6 +136,9 @@ class PrincipalView(BaseModel):
     #: advance whether a button will work.
     can_arm_kill_switch: bool
     can_promote: bool
+    #: Chart drawings are operator annotations: operator and admin may write
+    #: them (``routers/chart.py``, ``require_operator``); a viewer reads.
+    can_draw: bool = False
 
 
 def _directory() -> dict[str, tuple[str, str]]:
@@ -166,6 +169,7 @@ def _view(principal: Principal) -> PrincipalView:
         expires_at=datetime.fromtimestamp(principal.expires_at, tz=UTC),
         can_arm_kill_switch=principal.is_admin,
         can_promote=principal.is_admin,
+        can_draw=principal.role.satisfies(Role.OPERATOR),
     )
 
 

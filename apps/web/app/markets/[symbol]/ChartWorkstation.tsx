@@ -2,14 +2,14 @@
 
 import { BarChart3, ExternalLink, Layers, Table2 } from "lucide-react";
 import Link from "next/link";
-import { parseAsStringLiteral, useQueryState } from "nuqs";
+import { parseAsString, parseAsStringLiteral, useQueryState } from "nuqs";
 import { lazy, Suspense, useEffect, useId, useMemo, useState } from "react";
 import { AsyncBoundary } from "@/components/AsyncBoundary";
 import { CaveatList } from "@/components/CaveatList";
 import { CrosshairReadout, type ReadoutSource } from "@/components/charts/CrosshairReadout";
 import { LAYER_SECTIONS, OverlayLegend, type LayerKey } from "@/components/charts/OverlayLegend";
 import { preloadGrid } from "@/components/grid";
-import { LazyPriceChart, preloadPriceChart } from "@/components/LazyChart";
+import { preloadPriceChart } from "@/components/LazyChart";
 import { ProvenanceLabelChip } from "@/components/ProvenanceChip";
 import { Button } from "@/components/ui/Button";
 import { Popover } from "@/components/ui/Popover";
@@ -49,10 +49,19 @@ const loadDataPanel = () => import("@/components/charts/ChartDataPanel");
 const loadSplitPane = () => import("@/components/ui/SplitPane");
 const ChartDataPanel = lazy(() => loadDataPanel().then((m) => ({ default: m.ChartDataPanel })));
 const SplitPane = lazy(() => loadSplitPane().then((m) => ({ default: m.SplitPane })));
+/**
+ * The trade overlay, run picker, drawing tools and trades table load with the
+ * chart engine, after first paint: none of it is in this route's first-load
+ * JavaScript (`npm run size`), and none of it reaches any other route.
+ */
+const loadWorkbench = () => import("@/components/charts/ChartWorkbench");
+const ChartWorkbench = lazy(loadWorkbench);
 
 const TIMEFRAMES = ["H1", "H4", "D1"] as const;
 type Timeframe = (typeof TIMEFRAMES)[number];
 const tfParser = parseAsStringLiteral(TIMEFRAMES).withDefault("H1").withOptions({ history: "replace" });
+/** The backtest run drawn over the candles (`?run=`), shareable as a link. */
+const runParser = parseAsString.withOptions({ history: "replace" });
 
 /** Bars per request: the API's own default window (routers/markets.py, limit=500). */
 const BAR_LIMIT = 500;
@@ -64,7 +73,11 @@ const ALL_LAYERS: Layers = { regimes: true, signals: true, fills: true, levels: 
 
 export function ChartWorkstation({ symbol }: { symbol: string }) {
   return (
-    <UrlState fallback={<Workstation symbol={symbol} tf="H1" onTf={() => undefined} />}>
+    <UrlState
+      fallback={
+        <Workstation symbol={symbol} tf="H1" onTf={() => undefined} run={null} onRun={() => undefined} />
+      }
+    >
       <WorkstationFromUrl symbol={symbol} />
     </UrlState>
   );
@@ -72,7 +85,16 @@ export function ChartWorkstation({ symbol }: { symbol: string }) {
 
 function WorkstationFromUrl({ symbol }: { symbol: string }) {
   const [tf, setTf] = useQueryState("tf", tfParser);
-  return <Workstation symbol={symbol} tf={tf} onTf={(next) => void setTf(next)} />;
+  const [run, setRun] = useQueryState("run", runParser);
+  return (
+    <Workstation
+      symbol={symbol}
+      tf={tf}
+      onTf={(next) => void setTf(next)}
+      run={run}
+      onRun={(next) => void setRun(next)}
+    />
+  );
 }
 
 /** Decimals for a non-price pane: the widest a value needs, by lib/format.ts's undeclared-precision rule. */
@@ -95,10 +117,14 @@ function Workstation({
   symbol,
   tf,
   onTf,
+  run,
+  onRun,
 }: {
   symbol: string;
   tf: Timeframe;
   onTf: (tf: Timeframe) => void;
+  run: string | null;
+  onRun: (run: string | null) => void;
 }) {
   const enc = encodeURIComponent(symbol);
   const barsPath = `/api/markets/bars/${enc}?timeframe=${tf}&limit=${BAR_LIMIT}`;
@@ -113,8 +139,9 @@ function Workstation({
   const [toggled, setToggled] = useState<ReadonlyMap<string, boolean>>(new Map());
 
   useEffect(() => {
-    // Fetch the chart engine while the bars are still on their way.
+    // Fetch the chart engine and its tools while the bars are still on their way.
     void preloadPriceChart();
+    void loadWorkbench();
   }, []);
   useEffect(() => {
     if (!dataOpen) return;
@@ -123,10 +150,9 @@ function Workstation({
     void loadSplitPane();
   }, [dataOpen]);
 
-  const pip =
-    instruments.status === "success"
-      ? instruments.data.items.find((row) => row.symbol === symbol)?.pip_size.value
-      : undefined;
+  const instrument =
+    instruments.status === "success" ? instruments.data.items.find((row) => row.symbol === symbol) : undefined;
+  const pip = instrument?.pip_size.value;
 
   const barsEnv = bars.status === "success" ? bars.data : null;
   const overlayEnv = overlays.status === "success" ? overlays.data : null;
@@ -240,7 +266,14 @@ function Workstation({
                 overlays={overlays}
                 overlaysPath={overlaysPath}
                 pipSize={pip}
+                hours={
+                  instrument
+                    ? `${instrument.trading_hours}${instrument.shortable ? "" : " · long only"}`
+                    : null
+                }
                 dataOpen={dataOpen}
+                run={run}
+                onRun={onRun}
                 layers={layers}
                 setLayers={setLayers}
                 toggled={toggled}
@@ -418,7 +451,10 @@ function ChartArea({
   overlays,
   overlaysPath,
   pipSize,
+  hours,
   dataOpen,
+  run,
+  onRun,
   layers,
   setLayers,
   toggled,
@@ -431,7 +467,11 @@ function ChartArea({
   overlays: ApiHandle<Envelope<OverlayView>>;
   overlaysPath: string;
   pipSize: number | null | undefined;
+  /** The instrument's trading hours as the registry states them ("24/7" for spot crypto). */
+  hours: string | null;
   dataOpen: boolean;
+  run: string | null;
+  onRun: (run: string | null) => void;
   layers: Layers;
   setLayers: (update: (layers: Layers) => Layers) => void;
   toggled: ReadonlyMap<string, boolean>;
@@ -489,26 +529,35 @@ function ChartArea({
     regimes: layerCount("regimes", model.regimes.length),
   };
 
+  const chartProps = {
+    model,
+    hidden,
+    layers,
+    priceDecimals: decimals,
+    paneDecimals,
+    label: `${symbol} ${tf} price chart, ${n.toLocaleString("en-GB")} bars. Arrow keys move the cursor bar by bar, Shift moves ten, Home and End jump, Escape releases.`,
+    describedBy: readoutId,
+    cursor: keyboard,
+    onCursor: (index: number | null, from: "pointer" | "keyboard") => {
+      if (from === "keyboard") {
+        setCursor(index);
+        return;
+      }
+      if (index !== null) setCursor(null);
+      setHover(index);
+    },
+  };
   const chart = (
     <div className="cw__chart">
-      <LazyPriceChart
-        model={model}
-        hidden={hidden}
-        layers={layers}
-        priceDecimals={decimals}
-        paneDecimals={paneDecimals}
-        label={`${symbol} ${tf} price chart, ${n.toLocaleString("en-GB")} bars. Arrow keys move the cursor bar by bar, Shift moves ten, Home and End jump, Escape releases.`}
-        describedBy={readoutId}
-        cursor={keyboard}
-        onCursor={(index, from) => {
-          if (from === "keyboard") {
-            setCursor(index);
-            return;
-          }
-          if (index !== null) setCursor(null);
-          setHover(index);
-        }}
-      />
+      <Suspense
+        fallback={
+          <div className="price-chart price-chart--pending" data-testid="price-chart-pending" role="status">
+            Loading the price chart engine to draw {n.toLocaleString("en-GB")} bars…
+          </div>
+        }
+      >
+        <ChartWorkbench symbol={symbol} tf={tf} hours={hours} chart={chartProps} run={run} onRun={onRun} />
+      </Suspense>
     </div>
   );
 

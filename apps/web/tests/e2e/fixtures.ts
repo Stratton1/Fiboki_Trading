@@ -381,6 +381,7 @@ export function principal(overrides: Record<string, unknown> = {}) {
     expires_at: "2026-09-29T12:00:00Z",
     can_arm_kill_switch: true,
     can_promote: true,
+    can_draw: true,
     ...overrides,
   };
 }
@@ -849,7 +850,264 @@ export async function mockChart(
     const body = options.overlays ? options.overlays(url) : chartOverlays();
     return route.fulfill({ status: options.overlaysStatus ?? 200, json: body });
   });
+  await page.route(
+    (url) => url.pathname.startsWith("/api/markets/backtests/"),
+    (route: Route) => {
+      const url = new URL(route.request().url());
+      requests.push(url);
+      const parts = url.pathname.split("/");
+      // /api/markets/backtests/{symbol}[/{run}/trades]
+      if (parts.length >= 7 && parts[6] === "trades") {
+        const run = decodeURIComponent(parts[5] ?? "");
+        return route.fulfill({ json: backtestTrades(run) });
+      }
+      return route.fulfill({ json: backtestRuns() });
+    },
+  );
+  await mockDrawings(page);
   return requests;
+}
+
+// ------------------------------------------------- backtest trades overlay
+
+/** One BacktestRunView (routers/chart.py). */
+export function backtestRun(overrides: Record<string, unknown> = {}) {
+  const count = (v: number) => figure(v, "backtest", "count");
+  return {
+    run_id: "bt_0001",
+    strategy_id: "donchian_breakout_atr",
+    kind: "backtest",
+    label: "",
+    created_at: "2026-10-12T09:30:00Z",
+    timeframe: "H1",
+    instruments: ["EURUSD"],
+    dataset_version_ids: ["dsv_eurusd_h1_0007abcdef"],
+    engine_version: "engine_v3_realism",
+    engine_current: true,
+    superseded: false,
+    gate_verdict: "fail",
+    gate_report_id: "val_01",
+    trade_count: count(3),
+    trades_on_symbol: count(3),
+    trades_with_stops: count(3),
+    provenance: "backtest",
+    ...overrides,
+  };
+}
+
+/** GET /api/markets/backtests/{symbol}: a current run and a stale one with no stops. */
+export function backtestRuns() {
+  return {
+    items: [
+      backtestRun(),
+      backtestRun({
+        run_id: "bt_old",
+        strategy_id: "ichimoku_kumo_trend",
+        created_at: "2026-09-01T09:30:00Z",
+        engine_version: "engine_v1",
+        engine_current: false,
+        superseded: true,
+        gate_verdict: "not_evaluated",
+        gate_report_id: null,
+        trades_with_stops: figure(0, "backtest", "count"),
+        trade_count: figure(1, "backtest", "count"),
+        trades_on_symbol: figure(1, "backtest", "count"),
+      }),
+    ],
+    total: 2,
+    offset: 0,
+    limit: 200,
+    source: source("live", "Research ledger (append-only), read-only."),
+    caveats: [],
+  };
+}
+
+function btTrade(
+  id: string,
+  direction: "long" | "short",
+  entry: number,
+  exit: number,
+  prices: { entry: number; exit: number; stop: number | null; final?: number; targets: number[] },
+  pnl: number,
+  moved: string | null = null,
+) {
+  const p = (v: number | null, why = "not recorded") =>
+    v === null
+      ? figure(null, "backtest", "", {
+          caveats: [{ code: "value_unavailable", severity: "warning", message: why, affects: "", direction: "unknown" }],
+        })
+      : figure(v, "backtest");
+  return {
+    trade_id: id,
+    strategy_id: "donchian_breakout_atr",
+    direction,
+    size: figure(0.5, "backtest", "lots"),
+    entry_time: barTime(entry),
+    exit_time: barTime(exit),
+    entry_price: p(prices.entry),
+    exit_price: p(prices.exit),
+    exit_reason: pnl > 0 ? "take_profit" : "stop_loss",
+    net_pnl: figure(pnl, "backtest", "GBP"),
+    gross_pnl: figure(pnl + 1.5, "backtest", "GBP"),
+    costs: figure(1.5, "backtest", "GBP"),
+    bars_held: figure(exit - entry, "backtest", "bars"),
+    stop_loss: p(prices.stop, "Run bt_old was filed before the engine recorded per-trade stops."),
+    final_stop: p(prices.final ?? prices.stop, "not recorded"),
+    take_profit: p(prices.targets[0] ?? null, "The engine planned no take-profit."),
+    take_profit_targets: prices.targets.map((t) => figure(t, "backtest")),
+    stop_moved_by: moved,
+    provenance: "backtest",
+  };
+}
+
+/** GET /api/markets/backtests/{symbol}/{run}/trades for the 120-bar fixture window. */
+export function backtestTrades(run: string) {
+  const bar = (i: number) => chartBar(i);
+  const trades =
+    run === "bt_old"
+      ? [btTrade("old_1", "long", 70, 75, { entry: bar(70).o, exit: bar(75).c, stop: null, targets: [] }, 4.0)]
+      : [
+          btTrade(
+            "bt_t1",
+            "long",
+            30,
+            40,
+            { entry: bar(30).o, exit: bar(40).c, stop: px(bar(30).o - 0.0012), targets: [px(bar(30).o + 0.0025)] },
+            25.5,
+          ),
+          btTrade(
+            "bt_t2",
+            "short",
+            60,
+            66,
+            { entry: bar(60).o, exit: bar(66).c, stop: px(bar(60).o + 0.0009), targets: [px(bar(60).o - 0.002)] },
+            -12.0,
+          ),
+          btTrade(
+            "bt_t3",
+            "long",
+            90,
+            110,
+            {
+              entry: bar(90).o,
+              exit: bar(110).c,
+              stop: px(bar(90).o - 0.0015),
+              final: bar(90).o,
+              targets: [px(bar(90).o + 0.002), px(bar(90).o + 0.004)],
+            },
+            41.25,
+            "breakeven",
+          ),
+        ];
+  const runRow = run === "bt_old" ? backtestRuns().items[1] : backtestRun();
+  return {
+    data: {
+      symbol: "EURUSD",
+      timeframe: "H1",
+      window_from: barTime(0),
+      window_to: barTime(119),
+      run: runRow,
+      trades,
+      total_on_symbol: figure(trades.length, "backtest", "count"),
+      outside_window: figure(0, "backtest", "count"),
+      stops_detail:
+        run === "bt_old"
+          ? "Run bt_old was filed before the engine recorded per-trade stops and targets (2026-10-18); re-run it to see them. Nothing is estimated."
+          : "Stops and targets as the engine placed them (initial) and held them at the close (final).",
+      account_ccy: "GBP",
+    },
+    source: source(
+      "live",
+      `Research ledger backtest ${run} (donchian_breakout_atr, engine engine_v3_realism), dataset dsv_eurusd_h1_0007abcdef; read-only.`,
+    ),
+    caveats: [],
+  };
+}
+
+// --------------------------------------------------------------- drawings
+
+export interface DrawingStoreMock {
+  version: number;
+  drawings: unknown[];
+  others: unknown[];
+  writes: { method: string; body: unknown }[];
+  canEdit: boolean;
+}
+
+/**
+ * A stateful GET/PUT/DELETE /api/markets/drawings/{symbol}, one set per
+ * symbol, held in the test process so it survives a page reload. Versioned
+ * like the API: a write on a stale base version is a 409.
+ */
+export async function mockDrawings(
+  page: Page,
+  options: { canEdit?: boolean; initial?: unknown[]; others?: unknown[] } = {},
+): Promise<Map<string, DrawingStoreMock>> {
+  const sets = new Map<string, DrawingStoreMock>();
+  const get = (symbol: string) => {
+    let set = sets.get(symbol);
+    if (!set) {
+      set = {
+        version: options.initial ? 1 : 0,
+        drawings: options.initial ?? [],
+        others: options.others ?? [],
+        writes: [],
+        canEdit: options.canEdit ?? true,
+      };
+      sets.set(symbol, set);
+    }
+    return set;
+  };
+  const view = (symbol: string, set: DrawingStoreMock) => ({
+    data: {
+      symbol,
+      owner: "joe",
+      version: set.version,
+      updated_at: set.version ? "2026-10-18T10:00:00Z" : null,
+      updated_by: set.version ? "joe" : "",
+      drawings: set.drawings,
+      can_edit: set.canEdit,
+      others: set.others,
+      max_drawings: 500,
+    },
+    source: source("live", "Operator drawings: annotations placed by hand, never read by a strategy."),
+    caveats: [],
+  });
+  await page.route(
+    (url) => url.pathname.startsWith("/api/markets/drawings/"),
+    async (route: Route) => {
+      const request = route.request();
+      const url = new URL(request.url());
+      const symbol = decodeURIComponent(url.pathname.split("/").pop() ?? "");
+      const set = get(symbol);
+      const method = request.method();
+      if (method === "GET") return route.fulfill({ json: view(symbol, set) });
+      if (!set.canEdit) {
+        return route.fulfill({
+          status: 403,
+          json: { code: "insufficient_role", detail: "This action requires the operator role.", correlation_id: "cid-d", context: {} },
+        });
+      }
+      const body = method === "PUT" ? (request.postDataJSON() as { base_version: number; drawings: unknown[] }) : null;
+      const base = body ? body.base_version : Number(url.searchParams.get("base_version"));
+      set.writes.push({ method, body });
+      if (base !== set.version) {
+        return route.fulfill({
+          status: 409,
+          json: {
+            code: "drawings_conflict",
+            detail: "Your drawings changed elsewhere.",
+            correlation_id: "cid-c",
+            context: { current_version: set.version, base_version: base },
+          },
+        });
+      }
+      set.version += 1;
+      set.drawings = body ? body.drawings : [];
+      return route.fulfill({ json: view(symbol, set) });
+    },
+  );
+  return sets;
 }
 
 // --------------------------------------------------- risk & exposure v2
