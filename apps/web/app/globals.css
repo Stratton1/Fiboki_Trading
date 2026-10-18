@@ -4501,10 +4501,16 @@
     color: var(--accent);
     padding: 0 8px;
   }
-  /* A panel showing last-known-good data is dimmed in place. */
+  /* A panel showing last-known-good data is marked in place: a hatched
+     wash and a warning edge. Not opacity, which would take its text below
+     AA contrast exactly when an operator most needs to read it. */
   [data-testid="state-success"][data-stale="true"] {
-    opacity: 0.62;
-    filter: saturate(0.6);
+    background-image: repeating-linear-gradient(
+      135deg,
+      var(--warn-bg) 0 6px,
+      transparent 6px 12px
+    );
+    box-shadow: inset 3px 0 0 var(--warn);
   }
 
   /* ----------------------------------------------------------- dense tables */
@@ -4513,7 +4519,7 @@
   }
   table.dense tbody td,
   table.dense tbody th {
-    height: 22px;
+    height: 24px;
     padding: 0 6px;
     border-bottom: 1px solid var(--border-subtle);
     white-space: nowrap;
@@ -4526,9 +4532,8 @@
   table.dense td.wrap {
     white-space: normal;
   }
-  tr.is-selected,
-  tr[aria-selected="true"] {
-    background: var(--bg-raised);
+  table.dense tr.is-selected,
+  table.dense tr[aria-selected="true"] {
     box-shadow: inset 3px 0 0 var(--accent);
   }
   .card__link {
@@ -4569,19 +4574,23 @@
   .money__cell--wide {
     grid-column: 1 / -1;
   }
-  .money__cell > .money__link,
-  .money__cell:not(:has(> .money__link)) {
+  .money__body {
     display: flex;
     flex-direction: column;
     gap: 0;
     padding: 3px 8px;
     min-width: 0;
     flex: 1 1 auto;
-    color: inherit;
+  }
+  .money__link {
     text-decoration: none;
+    align-self: flex-start;
+    display: inline-flex;
+    align-items: center;
+    min-height: 24px;
   }
   .money__link:hover {
-    background: var(--bg-raised);
+    text-decoration: underline;
   }
   .money__label {
     font-size: 11px;
@@ -4916,7 +4925,11 @@
     outline: 2px solid var(--accent);
   }
   .board__table tr[data-stale="true"] {
-    opacity: 0.62;
+    background-image: repeating-linear-gradient(
+      135deg,
+      var(--warn-bg) 0 6px,
+      transparent 6px 12px
+    );
   }
   .board__stale {
     margin-left: 6px;
@@ -5091,5 +5104,67 @@
   .bot-signal__reason {
     max-width: 140px;
     white-space: nowrap;
+  }
+}
+
+/* WAVE 1A OPERATOR CORE (continued): 24 px targets in dense rows (WCAG 2.5.8). */
+@layer components {
+  table.dense tbody a,
+  .money__value .figure__est,
+  .money__value .figure__flag,
+  table.dense .figure__est,
+  table.dense .figure__flag,
+  .money__sub .caveat-trigger {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 24px;
+    min-width: 24px;
+  }
+  .command__closest a,
+  .attr__total a,
+  .grid__stack .mono a,
+  .dialog__actions a,
+  .journal-scope a,
+  [data-testid="journal-scope"] a {
+    text-decoration: underline;
+  }
+}
+
+/* WAVE 1A OPERATOR CORE (continued): maximise and restore a Command panel. */
+@layer components {
+  .cmd-panel__title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .cmd-panel__max {
+    margin-left: auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 24px;
+    min-height: 20px;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: inherit;
+    cursor: pointer;
+  }
+  .cmd-panel[data-maximised] {
+    position: fixed;
+    inset: calc(var(--banner-h) + var(--topbar-h) + 30px) 8px calc(var(--statusbar-h) + 8px)
+      calc(var(--rail-w) + 8px);
+    z-index: 85;
+    margin: 0;
+    box-shadow: var(--elevation-3);
+  }
+  .cmd-panel[data-maximised] .cmd-panel__body {
+    height: auto;
+  }
+  @media (max-width: 1023px) {
+    .cmd-panel[data-maximised] {
+      inset: calc(var(--banner-h) + 8px) 4px calc(var(--statusbar-h) + 4px) 4px;
+    }
   }
 }
