@@ -1,6 +1,7 @@
 "use client";
 
 import { parseAsString, useQueryState } from "nuqs";
+import { lazy, Suspense } from "react";
 import { UrlState } from "@/components/UrlState";
 import { useApi } from "@/lib/query";
 import { AsyncBoundary } from "@/components/AsyncBoundary";
@@ -13,6 +14,7 @@ import {
   Tile,
 } from "@/components/primitives";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { ResearchNav } from "@/components/research/ResearchNav";
 import type { Envelope, Page, ParameterLabView, StrategyRow } from "@/lib/types";
 
 /**
@@ -31,6 +33,13 @@ import type { Envelope, Page, ParameterLabView, StrategyRow } from "@/lib/types"
  * forever (report G, trust defect).
  */
 const strategyParser = parseAsString.withOptions({ history: "replace" });
+
+/**
+ * The 2D parameter surface (feature 23) is its own chunk, loaded only when a
+ * strategy with two or more numeric parameters is shown.
+ */
+const ParameterSurface = lazy(() => import("@/components/research/ParameterSurface"));
+const NUMERIC = new Set(["int", "float"]);
 
 export default function ParameterLabPage() {
   return (
@@ -62,6 +71,7 @@ function ParameterLab({
 
   return (
     <>
+      <ResearchNav />
       <PageHead
         title="Parameter Lab"
         intro="Declared parameter domains, and the size of the search they imply. Searching more is not finding more."
@@ -171,6 +181,11 @@ function ParameterLab({
                 </TableWrap>
               )}
             </Card>
+            {envelope.data.parameters.filter((p) => NUMERIC.has(p.kind)).length >= 2 ? (
+              <Suspense fallback={<div className="state state--loading">Loading the parameter surface…</div>}>
+                <ParameterSurface key={envelope.data.strategy_id} strategyId={envelope.data.strategy_id} />
+              </Suspense>
+            ) : null}
           </>
         )}
       </AsyncBoundary>

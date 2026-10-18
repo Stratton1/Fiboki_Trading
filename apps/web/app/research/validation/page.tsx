@@ -1,10 +1,12 @@
 "use client";
 
+import Link from "next/link";
 import { ListPage, type Column } from "@/components/ListPage";
 import { FigureValue } from "@/components/FigureValue";
 import { ToneBadge } from "@/components/primitives";
 import { RungMeter } from "@/components/research/RungMeter";
 import { verdictTone } from "@/lib/tones";
+import { researchHref } from "@/lib/research";
 import type { ValidationRow } from "@/lib/types";
 
 /**
@@ -15,7 +17,7 @@ import type { ValidationRow } from "@/lib/types";
  */
 export default function ValidationPage() {
   const columns: Column<ValidationRow>[] = [
-    { key: "strategy", header: "Strategy", cell: (row) => <span className="mono">{row.strategy_id}</span> },
+    { key: "strategy", header: "Strategy", cell: (row) => <Link className="mono" href={researchHref.strategy(row.strategy_id)}>{row.strategy_id}</Link> },
     {
       key: "verdict",
       header: "Verdict",
