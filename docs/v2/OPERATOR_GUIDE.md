@@ -192,6 +192,40 @@ in the drawing history. A drawing is an annotation: no strategy, risk check or b
 (an AST test enforces that). Viewers see drawings, including other operators' (dotted, with the
 owner's name), and cannot draw; measuring is allowed.
 
+### 8.2 Research analytics (`/research/runs`, `/research/runs/<run_id>`, `/research/strategies/<id>`)
+
+Every figure on these screens is computed by the API (`src/fiboki/research/tearsheet.py`, served by
+`api/routers/research_analytics.py`) from what is already stored: the research ledger's backtest
+records, the job ledger (`<state>/jobs.sqlite`), the ladder reports and the bar store. Nothing is
+re-run and the browser computes nothing; every metric label opens its definition and formula.
+
+- **Runs** lists every stored run (any symbol). Tick two to six and *Compare*.
+- **Tearsheet** (`/research/runs/<run_id>`): key statistics with the deterministic gate check beside
+  the number it judged (✓ PASS / ✕ FAIL / ◐ NOT EVALUATED); PSR and the deflated Sharpe come from the
+  gate report filed against the run, with the experiment ledger's trial count N; with no report the
+  deflated Sharpe says "no data" and why. Equity against flat cash (or buy-and-hold when the bars are
+  mounted), underwater with the five deepest drawdowns shaded, rolling 63-day Sharpe (one cursor
+  across the three: hover, or focus a chart and use ← → Home End), monthly returns, the R histogram,
+  MAE/MFE per trade (the engine's own excursions, recorded at the ledger boundary; a run filed
+  without them says so), per-instrument breakdown, a seeded Monte Carlo of the trade sequence with
+  drawdown percentiles, and the provenance block (strategy hash, parameters and where they came
+  from, datasets, cost profile, spread and slippage models, sizing, exit policy, calendar pin, gate
+  set, engine version, ledger hash). *Chart* opens `/markets/<symbol>?run=<run_id>`.
+- **Strategy** (`/research/strategies/<id>`): document, parameters, lifecycle state, ladder history
+  (every report file and experiment-ledger report), stored runs and gate reports, with links.
+- **Walk-forward** (`?strategy=`): the ladder's rung-2 folds as filed, IS and OOS windows on one axis,
+  rates side by side, fold efficiency, OOS dispersion and the rung-2 gates.
+- **Parameter Lab** adds the surface: any two numeric parameters, a metric, the others held fixed.
+  Cells are stored runs (parameters read back from the job that produced them; a run whose job is
+  not in the job ledger is counted as unplaceable, never guessed). A green outline marks a cell that
+  passes every rung-4 plateau gate of the production set as if it were the selected point; ▲ marks
+  an isolated peak; hatched cells were not run.
+- **Job queue**: running, queued, failed and dead-letter jobs with an ETA (the median of the type's
+  past durations, marked est), outputs linked; and the study shards under
+  `research/reports/*/shards` (E-4, K6) with progress and an ETA from the shard's own timings.
+- **Correlations**: the universe's trailing-window log-return correlation (H1/H4/D1; 20 to 500
+  bars), on common bars only, with what was excluded and why.
+
 ## 9. Operations on the Mac
 
 Two checkouts: development under `~/Documents/...` (edit, test, campaigns), runtime at
