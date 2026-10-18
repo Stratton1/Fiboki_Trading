@@ -180,6 +180,310 @@
         "title": "AuditIntegrityView",
         "type": "object"
       },
+      "BacktestRunView": {
+        "description": "One stored backtest (or walk-forward fold) run, as the ledger holds it.",
+        "properties": {
+          "created_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At"
+          },
+          "dataset_version_ids": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Dataset Version Ids",
+            "type": "array"
+          },
+          "engine_current": {
+            "title": "Engine Current",
+            "type": "boolean"
+          },
+          "engine_version": {
+            "title": "Engine Version",
+            "type": "string"
+          },
+          "gate_report_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Gate Report Id"
+          },
+          "gate_verdict": {
+            "title": "Gate Verdict",
+            "type": "string"
+          },
+          "instruments": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Instruments",
+            "type": "array"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "provenance": {
+            "$ref": "#/components/schemas/Provenance"
+          },
+          "run_id": {
+            "title": "Run Id",
+            "type": "string"
+          },
+          "strategy_id": {
+            "title": "Strategy Id",
+            "type": "string"
+          },
+          "superseded": {
+            "title": "Superseded",
+            "type": "boolean"
+          },
+          "timeframe": {
+            "title": "Timeframe",
+            "type": "string"
+          },
+          "trade_count": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "trades_on_symbol": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "trades_with_stops": {
+            "$ref": "#/components/schemas/Figure"
+          }
+        },
+        "required": [
+          "run_id",
+          "strategy_id",
+          "kind",
+          "label",
+          "created_at",
+          "timeframe",
+          "instruments",
+          "dataset_version_ids",
+          "engine_version",
+          "engine_current",
+          "superseded",
+          "gate_verdict",
+          "gate_report_id",
+          "trade_count",
+          "trades_on_symbol",
+          "trades_with_stops",
+          "provenance"
+        ],
+        "title": "BacktestRunView",
+        "type": "object"
+      },
+      "BacktestTradeView": {
+        "properties": {
+          "bars_held": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "costs": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "direction": {
+            "pattern": "^(long|short)$",
+            "title": "Direction",
+            "type": "string"
+          },
+          "entry_price": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "entry_time": {
+            "format": "date-time",
+            "title": "Entry Time",
+            "type": "string"
+          },
+          "exit_price": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "exit_reason": {
+            "title": "Exit Reason",
+            "type": "string"
+          },
+          "exit_time": {
+            "format": "date-time",
+            "title": "Exit Time",
+            "type": "string"
+          },
+          "final_stop": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "gross_pnl": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "net_pnl": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "provenance": {
+            "$ref": "#/components/schemas/Provenance"
+          },
+          "size": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "stop_loss": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "stop_moved_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Stop Moved By"
+          },
+          "strategy_id": {
+            "title": "Strategy Id",
+            "type": "string"
+          },
+          "take_profit": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "take_profit_targets": {
+            "items": {
+              "$ref": "#/components/schemas/Figure"
+            },
+            "title": "Take Profit Targets",
+            "type": "array"
+          },
+          "trade_id": {
+            "title": "Trade Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "trade_id",
+          "strategy_id",
+          "direction",
+          "size",
+          "entry_time",
+          "exit_time",
+          "entry_price",
+          "exit_price",
+          "exit_reason",
+          "net_pnl",
+          "gross_pnl",
+          "costs",
+          "bars_held",
+          "stop_loss",
+          "final_stop",
+          "take_profit",
+          "take_profit_targets",
+          "stop_moved_by",
+          "provenance"
+        ],
+        "title": "BacktestTradeView",
+        "type": "object"
+      },
+      "BacktestTradesView": {
+        "properties": {
+          "account_ccy": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Account Ccy"
+          },
+          "outside_window": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "run": {
+            "$ref": "#/components/schemas/BacktestRunView"
+          },
+          "stops_detail": {
+            "title": "Stops Detail",
+            "type": "string"
+          },
+          "symbol": {
+            "title": "Symbol",
+            "type": "string"
+          },
+          "timeframe": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Timeframe"
+          },
+          "total_on_symbol": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "trades": {
+            "items": {
+              "$ref": "#/components/schemas/BacktestTradeView"
+            },
+            "title": "Trades",
+            "type": "array"
+          },
+          "window_from": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Window From"
+          },
+          "window_to": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Window To"
+          }
+        },
+        "required": [
+          "symbol",
+          "timeframe",
+          "window_from",
+          "window_to",
+          "run",
+          "trades",
+          "total_on_symbol",
+          "outside_window",
+          "stops_detail",
+          "account_ccy"
+        ],
+        "title": "BacktestTradesView",
+        "type": "object"
+      },
       "BrokerHealthView": {
         "properties": {
           "configured": {
@@ -412,6 +716,191 @@
         "title": "DivergenceDimensionView",
         "type": "object"
       },
+      "Drawing": {
+        "additionalProperties": false,
+        "description": "One operator annotation. Geometry and a label, nothing executable.",
+        "properties": {
+          "fib_extensions": {
+            "default": false,
+            "title": "Fib Extensions",
+            "type": "boolean"
+          },
+          "hidden": {
+            "default": false,
+            "title": "Hidden",
+            "type": "boolean"
+          },
+          "id": {
+            "pattern": "^[A-Za-z0-9_-]{1,64}$",
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "trend",
+              "ray",
+              "hline",
+              "vline",
+              "rect",
+              "fib",
+              "text"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "locked": {
+            "default": false,
+            "title": "Locked",
+            "type": "boolean"
+          },
+          "points": {
+            "items": {
+              "$ref": "#/components/schemas/DrawingPoint"
+            },
+            "maxItems": 2,
+            "minItems": 1,
+            "title": "Points",
+            "type": "array"
+          },
+          "text": {
+            "default": "",
+            "maxLength": 280,
+            "title": "Text",
+            "type": "string"
+          },
+          "timeframe": {
+            "anyOf": [
+              {
+                "pattern": "^(M1|M5|M15|M30|H1|H4|D1)$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Timeframe"
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "points"
+        ],
+        "title": "Drawing",
+        "type": "object"
+      },
+      "DrawingPoint": {
+        "additionalProperties": false,
+        "description": "One anchor: a UTC instant and a price. Finite, timezone-aware.",
+        "properties": {
+          "price": {
+            "title": "Price",
+            "type": "number"
+          },
+          "t": {
+            "format": "date-time",
+            "title": "T",
+            "type": "string"
+          }
+        },
+        "required": [
+          "t",
+          "price"
+        ],
+        "title": "DrawingPoint",
+        "type": "object"
+      },
+      "DrawingSetView": {
+        "properties": {
+          "can_edit": {
+            "title": "Can Edit",
+            "type": "boolean"
+          },
+          "drawings": {
+            "items": {
+              "$ref": "#/components/schemas/Drawing"
+            },
+            "title": "Drawings",
+            "type": "array"
+          },
+          "max_drawings": {
+            "title": "Max Drawings",
+            "type": "integer"
+          },
+          "others": {
+            "items": {
+              "$ref": "#/components/schemas/OtherDrawingSet"
+            },
+            "title": "Others",
+            "type": "array"
+          },
+          "owner": {
+            "title": "Owner",
+            "type": "string"
+          },
+          "symbol": {
+            "title": "Symbol",
+            "type": "string"
+          },
+          "updated_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Updated At"
+          },
+          "updated_by": {
+            "title": "Updated By",
+            "type": "string"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "symbol",
+          "owner",
+          "version",
+          "updated_at",
+          "updated_by",
+          "drawings",
+          "can_edit",
+          "others",
+          "max_drawings"
+        ],
+        "title": "DrawingSetView",
+        "type": "object"
+      },
+      "DrawingSetWrite": {
+        "additionalProperties": false,
+        "properties": {
+          "base_version": {
+            "minimum": 0.0,
+            "title": "Base Version",
+            "type": "integer"
+          },
+          "drawings": {
+            "items": {
+              "$ref": "#/components/schemas/Drawing"
+            },
+            "maxItems": 500,
+            "title": "Drawings",
+            "type": "array"
+          }
+        },
+        "required": [
+          "base_version",
+          "drawings"
+        ],
+        "title": "DrawingSetWrite",
+        "type": "object"
+      },
       "Envelope_AuditIntegrityView_": {
         "properties": {
           "caveats": {
@@ -436,6 +925,30 @@
         "title": "Envelope[AuditIntegrityView]",
         "type": "object"
       },
+      "Envelope_BacktestTradesView_": {
+        "properties": {
+          "caveats": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/Caveat"
+            },
+            "title": "Caveats",
+            "type": "array"
+          },
+          "data": {
+            "$ref": "#/components/schemas/BacktestTradesView"
+          },
+          "source": {
+            "$ref": "#/components/schemas/SourceNote"
+          }
+        },
+        "required": [
+          "data",
+          "source"
+        ],
+        "title": "Envelope[BacktestTradesView]",
+        "type": "object"
+      },
       "Envelope_BrokerHealthView_": {
         "properties": {
           "caveats": {
@@ -458,6 +971,30 @@
           "source"
         ],
         "title": "Envelope[BrokerHealthView]",
+        "type": "object"
+      },
+      "Envelope_DrawingSetView_": {
+        "properties": {
+          "caveats": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/Caveat"
+            },
+            "title": "Caveats",
+            "type": "array"
+          },
+          "data": {
+            "$ref": "#/components/schemas/DrawingSetView"
+          },
+          "source": {
+            "$ref": "#/components/schemas/SourceNote"
+          }
+        },
+        "required": [
+          "data",
+          "source"
+        ],
+        "title": "Envelope[DrawingSetView]",
         "type": "object"
       },
       "Envelope_ExecutionModeBanner_": {
@@ -1234,6 +1771,11 @@
             "title": "Session Id",
             "type": "string"
           },
+          "session_label": {
+            "default": "",
+            "title": "Session Label",
+            "type": "string"
+          },
           "side": {
             "pattern": "^(buy|sell)$",
             "title": "Side",
@@ -1986,6 +2528,16 @@
             "title": "Role",
             "type": "string"
           },
+          "session_id": {
+            "default": "",
+            "title": "Session Id",
+            "type": "string"
+          },
+          "session_label": {
+            "default": "",
+            "title": "Session Label",
+            "type": "string"
+          },
           "source": {
             "$ref": "#/components/schemas/OverlaySource"
           },
@@ -2120,6 +2672,46 @@
           "password"
         ],
         "title": "LoginRequest",
+        "type": "object"
+      },
+      "OtherDrawingSet": {
+        "description": "Another operator's drawings on this symbol: shown, never editable here.",
+        "properties": {
+          "drawings": {
+            "items": {
+              "$ref": "#/components/schemas/Drawing"
+            },
+            "title": "Drawings",
+            "type": "array"
+          },
+          "owner": {
+            "title": "Owner",
+            "type": "string"
+          },
+          "updated_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Updated At"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "owner",
+          "version",
+          "updated_at",
+          "drawings"
+        ],
+        "title": "OtherDrawingSet",
         "type": "object"
       },
       "OverlaySource": {
@@ -2387,6 +2979,49 @@
           "source"
         ],
         "title": "Page[AuditEntryView]",
+        "type": "object"
+      },
+      "Page_BacktestRunView_": {
+        "properties": {
+          "caveats": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/Caveat"
+            },
+            "title": "Caveats",
+            "type": "array"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/BacktestRunView"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "limit": {
+            "default": 100,
+            "title": "Limit",
+            "type": "integer"
+          },
+          "offset": {
+            "default": 0,
+            "title": "Offset",
+            "type": "integer"
+          },
+          "source": {
+            "$ref": "#/components/schemas/SourceNote"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "total",
+          "source"
+        ],
+        "title": "Page[BacktestRunView]",
         "type": "object"
       },
       "Page_CandidateView_": {
@@ -3305,6 +3940,11 @@
             "title": "Can Arm Kill Switch",
             "type": "boolean"
           },
+          "can_draw": {
+            "default": false,
+            "title": "Can Draw",
+            "type": "boolean"
+          },
           "can_promote": {
             "title": "Can Promote",
             "type": "boolean"
@@ -4067,6 +4707,11 @@
           },
           "session_id": {
             "title": "Session Id",
+            "type": "string"
+          },
+          "session_label": {
+            "default": "",
+            "title": "Session Label",
             "type": "string"
           },
           "side": {
@@ -4963,6 +5608,199 @@
         "x-fiboki-auth": "public"
       }
     },
+    "/api/markets/backtests/{symbol}": {
+      "get": {
+        "description": "Stored runs that traded ``symbol``, newest first. Read-only.",
+        "operationId": "backtest_runs_api_markets_backtests__symbol__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "symbol",
+            "required": true,
+            "schema": {
+              "title": "Symbol",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "timeframe",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Timeframe"
+            }
+          },
+          {
+            "in": "query",
+            "name": "strategy_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Strategy Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 200,
+              "maximum": 1000,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Page_BacktestRunView_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [],
+        "summary": "Backtest Runs",
+        "tags": [
+          "markets"
+        ],
+        "x-fiboki-auth": "public"
+      }
+    },
+    "/api/markets/backtests/{symbol}/{run_id}/trades": {
+      "get": {
+        "description": "One run's trades on ``symbol`` whose life overlaps ``[from, to]``.\n\n``from``/``to`` are the chart's first and last bar; omitted, every trade on\nthe symbol is served (up to :data:`MAX_TRADES`, the latest kept).",
+        "operationId": "backtest_trades_api_markets_backtests__symbol___run_id__trades_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "symbol",
+            "required": true,
+            "schema": {
+              "title": "Symbol",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "run_id",
+            "required": true,
+            "schema": {
+              "title": "Run Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "from",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "From"
+            }
+          },
+          {
+            "in": "query",
+            "name": "to",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "To"
+            }
+          },
+          {
+            "in": "query",
+            "name": "timeframe",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Timeframe"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_BacktestTradesView_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [],
+        "summary": "Backtest Trades",
+        "tags": [
+          "markets"
+        ],
+        "x-fiboki-auth": "public"
+      }
+    },
     "/api/markets/bars/{symbol}": {
       "get": {
         "operationId": "bars_api_markets_bars__symbol__get",
@@ -5097,6 +5935,170 @@
           "markets"
         ],
         "x-fiboki-auth": "public"
+      }
+    },
+    "/api/markets/drawings/{symbol}": {
+      "delete": {
+        "description": "Clear the operator's set (a new, empty version; the history keeps the old).",
+        "operationId": "delete_drawings_api_markets_drawings__symbol__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "symbol",
+            "required": true,
+            "schema": {
+              "title": "Symbol",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "base_version",
+            "required": true,
+            "schema": {
+              "minimum": 0,
+              "title": "Base Version",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_DrawingSetView_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "csrfHeader": [],
+            "sessionCookie": []
+          }
+        ],
+        "summary": "Delete Drawings",
+        "tags": [
+          "markets"
+        ],
+        "x-fiboki-auth": "operator"
+      },
+      "get": {
+        "operationId": "get_drawings_api_markets_drawings__symbol__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "symbol",
+            "required": true,
+            "schema": {
+              "title": "Symbol",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_DrawingSetView_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "summary": "Get Drawings",
+        "tags": [
+          "markets"
+        ],
+        "x-fiboki-auth": "session"
+      },
+      "put": {
+        "description": "Replace the operator's whole set for this symbol. Audited; versioned.",
+        "operationId": "put_drawings_api_markets_drawings__symbol__put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "symbol",
+            "required": true,
+            "schema": {
+              "title": "Symbol",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DrawingSetWrite"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_DrawingSetView_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "csrfHeader": [],
+            "sessionCookie": []
+          }
+        ],
+        "summary": "Put Drawings",
+        "tags": [
+          "markets"
+        ],
+        "x-fiboki-auth": "operator"
       }
     },
     "/api/markets/instruments": {

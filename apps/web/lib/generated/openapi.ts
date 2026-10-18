@@ -198,6 +198,49 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/markets/backtests/{symbol}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Backtest Runs
+         * @description Stored runs that traded ``symbol``, newest first. Read-only.
+         */
+        get: operations["backtest_runs_api_markets_backtests__symbol__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/markets/backtests/{symbol}/{run_id}/trades": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Backtest Trades
+         * @description One run's trades on ``symbol`` whose life overlaps ``[from, to]``.
+         *
+         *     ``from``/``to`` are the chart's first and last bar; omitted, every trade on
+         *     the symbol is served (up to :data:`MAX_TRADES`, the latest kept).
+         */
+        get: operations["backtest_trades_api_markets_backtests__symbol___run_id__trades_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/markets/bars/{symbol}": {
         parameters: {
             query?: never;
@@ -244,6 +287,31 @@ export interface paths {
         put?: never;
         post?: never;
         delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/markets/drawings/{symbol}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Drawings */
+        get: operations["get_drawings_api_markets_drawings__symbol__get"];
+        /**
+         * Put Drawings
+         * @description Replace the operator's whole set for this symbol. Audited; versioned.
+         */
+        put: operations["put_drawings_api_markets_drawings__symbol__put"];
+        post?: never;
+        /**
+         * Delete Drawings
+         * @description Clear the operator's set (a new, empty version; the history keeps the old).
+         */
+        delete: operations["delete_drawings_api_markets_drawings__symbol__delete"];
         options?: never;
         head?: never;
         patch?: never;
@@ -1142,6 +1210,98 @@ export interface components {
             /** Intact */
             intact: boolean;
         };
+        /**
+         * BacktestRunView
+         * @description One stored backtest (or walk-forward fold) run, as the ledger holds it.
+         */
+        BacktestRunView: {
+            /** Created At */
+            created_at: string | null;
+            /** Dataset Version Ids */
+            dataset_version_ids: string[];
+            /** Engine Current */
+            engine_current: boolean;
+            /** Engine Version */
+            engine_version: string;
+            /** Gate Report Id */
+            gate_report_id: string | null;
+            /** Gate Verdict */
+            gate_verdict: string;
+            /** Instruments */
+            instruments: string[];
+            /** Kind */
+            kind: string;
+            /** Label */
+            label: string;
+            provenance: components["schemas"]["Provenance"];
+            /** Run Id */
+            run_id: string;
+            /** Strategy Id */
+            strategy_id: string;
+            /** Superseded */
+            superseded: boolean;
+            /** Timeframe */
+            timeframe: string;
+            trade_count: components["schemas"]["Figure"];
+            trades_on_symbol: components["schemas"]["Figure"];
+            trades_with_stops: components["schemas"]["Figure"];
+        };
+        /** BacktestTradesView */
+        BacktestTradesView: {
+            /** Account Ccy */
+            account_ccy: string | null;
+            outside_window: components["schemas"]["Figure"];
+            run: components["schemas"]["BacktestRunView"];
+            /** Stops Detail */
+            stops_detail: string;
+            /** Symbol */
+            symbol: string;
+            /** Timeframe */
+            timeframe: string | null;
+            total_on_symbol: components["schemas"]["Figure"];
+            /** Trades */
+            trades: components["schemas"]["BacktestTradeView"][];
+            /** Window From */
+            window_from: string | null;
+            /** Window To */
+            window_to: string | null;
+        };
+        /** BacktestTradeView */
+        BacktestTradeView: {
+            bars_held: components["schemas"]["Figure"];
+            costs: components["schemas"]["Figure"];
+            /** Direction */
+            direction: string;
+            entry_price: components["schemas"]["Figure"];
+            /**
+             * Entry Time
+             * Format: date-time
+             */
+            entry_time: string;
+            exit_price: components["schemas"]["Figure"];
+            /** Exit Reason */
+            exit_reason: string;
+            /**
+             * Exit Time
+             * Format: date-time
+             */
+            exit_time: string;
+            final_stop: components["schemas"]["Figure"];
+            gross_pnl: components["schemas"]["Figure"];
+            net_pnl: components["schemas"]["Figure"];
+            provenance: components["schemas"]["Provenance"];
+            size: components["schemas"]["Figure"];
+            stop_loss: components["schemas"]["Figure"];
+            /** Stop Moved By */
+            stop_moved_by: string | null;
+            /** Strategy Id */
+            strategy_id: string;
+            take_profit: components["schemas"]["Figure"];
+            /** Take Profit Targets */
+            take_profit_targets: components["schemas"]["Figure"][];
+            /** Trade Id */
+            trade_id: string;
+        };
         /** BrokerHealthView */
         BrokerHealthView: {
             /** Configured */
@@ -1242,6 +1402,84 @@ export interface components {
             expected: components["schemas"]["Figure"];
             observed: components["schemas"]["Figure"];
         };
+        /**
+         * Drawing
+         * @description One operator annotation. Geometry and a label, nothing executable.
+         */
+        Drawing: {
+            /**
+             * Fib Extensions
+             * @default false
+             */
+            fib_extensions: boolean;
+            /**
+             * Hidden
+             * @default false
+             */
+            hidden: boolean;
+            /** Id */
+            id: string;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "trend" | "ray" | "hline" | "vline" | "rect" | "fib" | "text";
+            /**
+             * Locked
+             * @default false
+             */
+            locked: boolean;
+            /** Points */
+            points: components["schemas"]["DrawingPoint"][];
+            /**
+             * Text
+             * @default
+             */
+            text: string;
+            /** Timeframe */
+            timeframe?: string | null;
+        };
+        /**
+         * DrawingPoint
+         * @description One anchor: a UTC instant and a price. Finite, timezone-aware.
+         */
+        DrawingPoint: {
+            /** Price */
+            price: number;
+            /**
+             * T
+             * Format: date-time
+             */
+            t: string;
+        };
+        /** DrawingSetView */
+        DrawingSetView: {
+            /** Can Edit */
+            can_edit: boolean;
+            /** Drawings */
+            drawings: components["schemas"]["Drawing"][];
+            /** Max Drawings */
+            max_drawings: number;
+            /** Others */
+            others: components["schemas"]["OtherDrawingSet"][];
+            /** Owner */
+            owner: string;
+            /** Symbol */
+            symbol: string;
+            /** Updated At */
+            updated_at: string | null;
+            /** Updated By */
+            updated_by: string;
+            /** Version */
+            version: number;
+        };
+        /** DrawingSetWrite */
+        DrawingSetWrite: {
+            /** Base Version */
+            base_version: number;
+            /** Drawings */
+            drawings: components["schemas"]["Drawing"][];
+        };
         /** Envelope[AuditIntegrityView] */
         Envelope_AuditIntegrityView_: {
             /**
@@ -1250,6 +1488,16 @@ export interface components {
              */
             caveats: components["schemas"]["Caveat"][];
             data: components["schemas"]["AuditIntegrityView"];
+            source: components["schemas"]["SourceNote"];
+        };
+        /** Envelope[BacktestTradesView] */
+        Envelope_BacktestTradesView_: {
+            /**
+             * Caveats
+             * @default []
+             */
+            caveats: components["schemas"]["Caveat"][];
+            data: components["schemas"]["BacktestTradesView"];
             source: components["schemas"]["SourceNote"];
         };
         /** Envelope[BrokerHealthView] */
@@ -1271,6 +1519,16 @@ export interface components {
             caveats: components["schemas"]["Caveat"][];
             /** Data */
             data: Record<string, never>;
+            source: components["schemas"]["SourceNote"];
+        };
+        /** Envelope[DrawingSetView] */
+        Envelope_DrawingSetView_: {
+            /**
+             * Caveats
+             * @default []
+             */
+            caveats: components["schemas"]["Caveat"][];
+            data: components["schemas"]["DrawingSetView"];
             source: components["schemas"]["SourceNote"];
         };
         /** Envelope[ExecutionModeBanner] */
@@ -1575,6 +1833,11 @@ export interface components {
             role: string;
             /** Session Id */
             session_id: string;
+            /**
+             * Session Label
+             * @default
+             */
+            session_label: string;
             /** Side */
             side: string;
             source: components["schemas"]["OverlaySource"];
@@ -1849,6 +2112,16 @@ export interface components {
             provenance: components["schemas"]["Provenance"];
             /** Role */
             role: string;
+            /**
+             * Session Id
+             * @default
+             */
+            session_id: string;
+            /**
+             * Session Label
+             * @default
+             */
+            session_label: string;
             source: components["schemas"]["OverlaySource"];
             /** Strategy Id */
             strategy_id: string;
@@ -1892,6 +2165,20 @@ export interface components {
             password: string;
             /** Username */
             username: string;
+        };
+        /**
+         * OtherDrawingSet
+         * @description Another operator's drawings on this symbol: shown, never editable here.
+         */
+        OtherDrawingSet: {
+            /** Drawings */
+            drawings: components["schemas"]["Drawing"][];
+            /** Owner */
+            owner: string;
+            /** Updated At */
+            updated_at: string | null;
+            /** Version */
+            version: number;
         };
         /** OverlaySource */
         OverlaySource: {
@@ -1989,6 +2276,29 @@ export interface components {
             caveats: components["schemas"]["Caveat"][];
             /** Items */
             items: components["schemas"]["AuditEntryView"][];
+            /**
+             * Limit
+             * @default 100
+             */
+            limit: number;
+            /**
+             * Offset
+             * @default 0
+             */
+            offset: number;
+            source: components["schemas"]["SourceNote"];
+            /** Total */
+            total: number;
+        };
+        /** Page[BacktestRunView] */
+        Page_BacktestRunView_: {
+            /**
+             * Caveats
+             * @default []
+             */
+            caveats: components["schemas"]["Caveat"][];
+            /** Items */
+            items: components["schemas"]["BacktestRunView"][];
             /**
              * Limit
              * @default 100
@@ -2459,6 +2769,11 @@ export interface components {
         PrincipalView: {
             /** Can Arm Kill Switch */
             can_arm_kill_switch: boolean;
+            /**
+             * Can Draw
+             * @default false
+             */
+            can_draw: boolean;
             /** Can Promote */
             can_promote: boolean;
             /** Display Name */
@@ -2753,6 +3068,11 @@ export interface components {
             requested_price: components["schemas"]["Figure"];
             /** Session Id */
             session_id: string;
+            /**
+             * Session Label
+             * @default
+             */
+            session_label: string;
             /** Side */
             side: string;
             /** Signal Id */
@@ -3223,6 +3543,77 @@ export interface operations {
             };
         };
     };
+    backtest_runs_api_markets_backtests__symbol__get: {
+        parameters: {
+            query?: {
+                limit?: number;
+                strategy_id?: string | null;
+                timeframe?: string | null;
+            };
+            header?: never;
+            path: {
+                symbol: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Page_BacktestRunView_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    backtest_trades_api_markets_backtests__symbol___run_id__trades_get: {
+        parameters: {
+            query?: {
+                from?: string | null;
+                timeframe?: string | null;
+                to?: string | null;
+            };
+            header?: never;
+            path: {
+                run_id: string;
+                symbol: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_BacktestTradesView_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     bars_api_markets_bars__symbol__get: {
         parameters: {
             query?: {
@@ -3295,6 +3686,105 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Page_DataQualityRow_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_drawings_api_markets_drawings__symbol__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                symbol: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_DrawingSetView_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    put_drawings_api_markets_drawings__symbol__put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                symbol: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DrawingSetWrite"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_DrawingSetView_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_drawings_api_markets_drawings__symbol__delete: {
+        parameters: {
+            query: {
+                base_version: number;
+            };
+            header?: never;
+            path: {
+                symbol: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_DrawingSetView_"];
                 };
             };
             /** @description Validation Error */

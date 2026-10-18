@@ -1,0 +1,531 @@
+/*
+ * The chart workbench (components/charts/ChartWorkbench.tsx): trades source,
+ * backtest run picker, drawing rail, note editor, trade tooltip and trades
+ * table. Imported by that lazily loaded module, so this sheet ships with the
+ * chart route's tools and with no other route. Tokens only (globals.css).
+ * Terminal chrome: hairlines, mono figures, colour only for P&L sign,
+ * provenance ink and the drawing accent.
+ */
+.price-chart-wrap {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+.price-chart-wrap:not([data-tool="select"]) .price-chart {
+  cursor: crosshair;
+  touch-action: none;
+}
+.cw-bench {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: auto minmax(0, 1fr);
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+}
+.cw-bench__bar {
+  /* One line, whatever arrives when: the plot below never moves because a
+     chip landed. A long row scrolls sideways inside itself. */
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 6px 10px;
+  height: 34px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: thin;
+  white-space: nowrap;
+  padding: 4px 8px;
+  border-bottom: 1px solid var(--border-subtle);
+  background: var(--bg-surface);
+  font-size: 11.5px;
+}
+.cw-bench__bar > * {
+  flex: none;
+}
+.cw-bench__counts {
+  color: var(--fg-subtle);
+  font-family: var(--font-code);
+  font-size: 11px;
+  margin-left: auto;
+}
+.cw-bench__toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 22px;
+  padding: 0 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  background: transparent;
+  color: var(--fg-muted);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.cw-bench__toggle[aria-pressed="true"] {
+  border-color: var(--border-strong);
+  background: var(--bg-raised);
+  color: var(--fg);
+}
+.cw-bench__main {
+  display: grid;
+  grid-template-columns: 36px minmax(0, 1fr) minmax(360px, 32%);
+  grid-template-areas: "rail plot trades";
+  min-height: 0;
+}
+.cw-bench[data-panel="closed"] .cw-bench__main {
+  grid-template-columns: 36px minmax(0, 1fr);
+  grid-template-areas: "rail plot";
+}
+.cw-bench__plot {
+  grid-area: plot;
+  position: relative;
+  min-width: 0;
+  min-height: 0;
+}
+.cw-dbar {
+  position: absolute;
+  left: 6px;
+  top: 6px;
+  z-index: 3;
+  display: inline-flex;
+  align-items: center;
+  gap: 1px;
+  max-width: calc(100% - 90px);
+  padding: 1px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--r-sm);
+  background: color-mix(in oklab, var(--chart-bg) 88%, transparent);
+}
+.cw-dbar__btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 4px;
+  border: 1px solid transparent;
+  border-radius: var(--r-xs);
+  background: transparent;
+  color: var(--fg-muted);
+}
+.cw-dbar__btn:hover {
+  background: var(--bg-raised);
+  color: var(--fg);
+}
+.cw-dbar__btn:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: -1px;
+}
+.cw-dbar__btn[aria-pressed="true"] {
+  border-color: var(--chart-drawing);
+  color: var(--fg);
+}
+.cw-dbar__btn[aria-disabled="true"] {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.cw-dbar__btn--text {
+  font-family: var(--font-code);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+.cw-dbar__status {
+  overflow: hidden;
+  padding: 0 6px;
+  color: var(--fg-subtle);
+  font-family: var(--font-code);
+  font-size: 10.5px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.cw-dbar__status[data-status="conflict"],
+.cw-dbar__status[data-status="error"],
+.cw-dbar__status[data-status="unavailable"] {
+  color: var(--warn);
+}
+.cw-seg {
+  display: inline-flex;
+  gap: 1px;
+  margin: 0;
+  padding: 1px;
+  border: 1px solid var(--border-control);
+  border-radius: var(--r-sm);
+  background: var(--bg-sunken);
+}
+.cw-seg__item {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  height: 20px;
+  padding: 0 8px;
+  border-radius: var(--r-xs);
+  color: var(--fg-muted);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+.cw-seg__item input {
+  position: absolute;
+  opacity: 0;
+  width: 1px;
+  height: 1px;
+}
+.cw-seg__item[data-checked="true"] {
+  background: var(--bg-raised);
+  color: var(--fg);
+}
+.cw-seg__item:has(input:focus-visible) {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 1px;
+}
+.cw-run {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+.cw-run__label {
+  color: var(--fg-subtle);
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.cw-run__select {
+  width: 36ch;
+  max-width: 52vw;
+  height: 22px;
+  padding: 0 6px;
+  border: 1px solid var(--border-control);
+  border-radius: var(--r-sm);
+  background: var(--bg-sunken);
+  color: var(--fg);
+  font-family: var(--font-code);
+  font-size: 11px;
+  text-overflow: ellipsis;
+}
+.cw-run__select:disabled {
+  color: var(--fg-subtle);
+}
+.cw-run__prov {
+  display: inline-flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 4px;
+}
+.cw__chip[data-gate="pass"] {
+  border-color: var(--ok);
+  color: var(--ok);
+}
+.cw__chip[data-gate="fail"] {
+  border-color: var(--critical);
+  color: var(--critical);
+}
+.cw__chip--error {
+  border-color: var(--critical);
+  color: var(--critical);
+}
+
+.cw-rail {
+  grid-area: rail;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 4px 0;
+  border-right: 1px solid var(--border-subtle);
+  background: var(--bg-surface);
+  overflow-y: auto;
+  scrollbar-width: none;
+}
+.cw-rail__btn {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: 1px solid transparent;
+  border-radius: var(--r-sm);
+  background: transparent;
+  color: var(--fg-muted);
+}
+.cw-rail__btn:hover {
+  background: var(--bg-raised);
+  color: var(--fg);
+}
+.cw-rail__btn:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: -1px;
+}
+.cw-rail__btn[aria-pressed="true"] {
+  border-color: var(--chart-drawing);
+  background: var(--accent-bg);
+  color: var(--fg);
+}
+.cw-rail__btn[aria-disabled="true"] {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.cw-rail__btn--text {
+  font-family: var(--font-code);
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+.cw-rail__sep {
+  flex: none;
+  width: 18px;
+  height: 1px;
+  margin: 3px 0;
+  background: var(--border-subtle);
+}
+
+.cw-note {
+  position: absolute;
+  left: var(--note-x);
+  top: var(--note-y);
+  z-index: 4;
+  transform: translate(0, -100%);
+}
+.cw-note input {
+  width: 240px;
+  height: 24px;
+  padding: 0 6px;
+  border: 1px solid var(--chart-drawing);
+  border-radius: var(--r-sm);
+  background: var(--bg-overlay);
+  color: var(--fg);
+  font-size: 12px;
+}
+
+.trade-tip {
+  position: absolute;
+  left: var(--tt-x, 0);
+  top: var(--tt-y, 0);
+  z-index: 5;
+  min-width: 220px;
+  max-width: min(320px, calc(100% - 8px));
+  padding: 6px 8px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--r-md);
+  background: var(--bg-overlay);
+  box-shadow: var(--elevation-3);
+  font-size: 11.5px;
+  pointer-events: none;
+}
+.trade-tip__head {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 4px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+.trade-tip__prov {
+  font-size: 10px;
+}
+.trade-tip__id {
+  margin-left: auto;
+  font-family: var(--font-code);
+  font-size: 10px;
+  font-weight: 400;
+}
+.trade-tip__grid {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 1px 10px;
+  margin: 0;
+}
+.trade-tip__grid dt {
+  color: var(--fg-subtle);
+}
+.trade-tip__grid dd {
+  margin: 0;
+  font-family: var(--font-code);
+}
+.trade-tip__grid dd.pos,
+.cw-trades__table td.pos {
+  color: var(--pnl-up);
+}
+.trade-tip__grid dd.neg,
+.cw-trades__table td.neg {
+  color: var(--pnl-down);
+}
+.trade-tip__foot {
+  margin: 4px 0 0;
+  font-size: 10.5px;
+}
+
+.cw-trades {
+  grid-area: trades;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  border-left: 1px solid var(--border-subtle);
+  background: var(--bg-surface);
+}
+.cw-trades__scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+}
+.cw-trades__table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 10.5px;
+  white-space: nowrap;
+}
+.cw-trades__table th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  padding: 4px 4px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-surface);
+  color: var(--fg-subtle);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-align: left;
+  text-transform: uppercase;
+}
+.cw-trades__table td {
+  padding: 3px 4px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+.cw-trades__table .r {
+  text-align: right;
+}
+.cw-trades__table td.num,
+.cw-trades__table td .num {
+  font-family: var(--font-code);
+  font-variant-numeric: tabular-nums;
+}
+.cw-trades__table tbody tr {
+  cursor: pointer;
+}
+.cw-trades__table tbody tr:hover {
+  background: var(--bg-raised);
+}
+.cw-trades__table tbody tr[aria-selected="true"] {
+  background: var(--accent-bg);
+  box-shadow: inset 2px 0 0 var(--chart-drawing);
+}
+.cw-trades__table tbody tr:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: -2px;
+}
+.cw-trades__side[data-direction="short"] {
+  color: var(--fg-muted);
+}
+.cw-trades__src {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+.cw-trades__src[data-source="backtest"] {
+  padding: 0 3px;
+  border: 1px dashed currentColor;
+  border-radius: var(--r-xs);
+}
+.cw-trades__src[data-source="paper"] {
+  padding: 0 3px;
+  border-radius: var(--r-xs);
+  background: var(--ink);
+  color: var(--prov-paper-on);
+}
+.cw-trades__empty,
+.cw-trades__note {
+  margin: 0;
+  padding: 6px 8px;
+  font-size: 11px;
+}
+.cw-trades__note {
+  border-top: 1px solid var(--border-subtle);
+}
+
+@media (max-width: 1199px) {
+  .cw-bench__main,
+  .cw-bench[data-panel="open"] .cw-bench__main {
+    grid-template-columns: 36px minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr) minmax(0, 34%);
+    grid-template-areas: "rail plot" "trades trades";
+  }
+  .cw-trades {
+    border-left: 0;
+    border-top: 1px solid var(--border-subtle);
+  }
+}
+@media (max-width: 639px) {
+  /* Phone: tools, then the candles, then the trade controls and the table,
+     so the chart is on screen without scrolling past the controls. */
+  .cw-bench,
+  .cw-bench[data-panel="open"],
+  .cw-bench[data-panel="closed"] {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto 52vh auto auto;
+    grid-template-areas: "rail" "plot" "bar" "trades";
+  }
+  .cw-bench__main {
+    display: contents;
+  }
+  .cw-bench__bar {
+    grid-area: bar;
+    flex-wrap: wrap;
+    height: auto;
+    overflow: visible;
+    gap: 6px;
+    white-space: normal;
+    border-top: 1px solid var(--border-subtle);
+  }
+  .cw-bench__counts {
+    margin-left: 0;
+  }
+  .cw-run {
+    flex: 1 1 100%;
+  }
+  .cw-run__select {
+    flex: 1 1 auto;
+    width: auto;
+    max-width: none;
+    min-width: 0;
+  }
+  .cw-run__prov {
+    flex: 1 1 100%;
+    flex-wrap: wrap;
+  }
+  .cw-rail {
+    flex-direction: row;
+    justify-content: flex-start;
+    padding: 2px 4px;
+    border-right: 0;
+    border-bottom: 1px solid var(--border-subtle);
+    overflow-x: auto;
+    overflow-y: hidden;
+  }
+  .cw-rail__btn {
+    width: 34px;
+    height: 34px;
+  }
+  .cw-rail__sep {
+    width: 1px;
+    height: 18px;
+    margin: 0 3px;
+  }
+  .cw-trades {
+    max-height: 40vh;
+    border-top: 1px solid var(--border-subtle);
+  }
+}

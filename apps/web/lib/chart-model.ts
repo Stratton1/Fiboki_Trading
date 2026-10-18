@@ -1,6 +1,8 @@
 import { parseUtc, roundedSign } from "./format";
 import { SERIES_ROLES, type SeriesRole } from "./chart-theme";
 import type {
+  BacktestTradeRow,
+  BacktestTradesView,
   Bar,
   FillOverlay,
   LevelOverlay,
@@ -347,4 +349,184 @@ export function visiblePanes(model: ChartModel, hidden: ReadonlySet<string>): Mo
 /** Which groups start hidden: state and ratio columns (they open extra panes). */
 export function defaultHidden(model: ChartModel): Set<string> {
   return new Set(model.groups.filter((g) => !g.defaultVisible).map((g) => g.id));
+}
+
+// ------------------------------------------------------------ trades
+
+/**
+ * One trade's protection, drawn as a short horizontal segment that spans the
+ * trade's life on the bar axis: the initial stop and every planned target
+ * from the entry bar to the exit bar, as the platform recorded them. A stop
+ * the engine moved (breakeven or a trail) is NOT drawn as a path: the engine
+ * records which rule moved it and where it ended, not when, so the final stop
+ * is a one-bar tick at the exit (`final_stop`), never a line across time the
+ * platform cannot vouch for.
+ */
+export interface TradeSegment {
+  role: "stop" | "final_stop" | "target";
+  price: number;
+  /** First and last bar index the segment covers, inclusive. */
+  from: number;
+  to: number;
+  /** Leg number for a target (1-based), when there are several. */
+  leg: number | null;
+}
+
+/** Where a trade sits on this chart's bars, with what the API said about it. */
+export interface PlacedTrade {
+  /** Unique across sources: `bt|<run>|<trade>` or `paper|<session>|<trade>`. */
+  key: string;
+  source: "backtest" | "paper";
+  tradeId: string;
+  direction: "long" | "short" | null;
+  provenance: Provenance;
+  entryIndex: number;
+  exitIndex: number;
+  /** False when the entry (or exit) is outside the bar window and was clamped to its edge. */
+  entryInWindow: boolean;
+  exitInWindow: boolean;
+  entryPrice: number | null;
+  exitPrice: number | null;
+  pnlSign: -1 | 0 | 1 | null;
+  segments: TradeSegment[];
+  /** The backtest row as the API sent it (tooltip, table). */
+  row: BacktestTradeRow | null;
+  /** A paper trade's two fills as the journal sent them (tooltip, table). */
+  fills: { entry: FillOverlay; exit: FillOverlay } | null;
+  /** Paper: the session label; backtest: the run id. */
+  origin: string;
+}
+
+export interface PlacedTrades {
+  trades: PlacedTrade[];
+  /** Trades the API sent that lie entirely outside this chart's bars. */
+  unplaced: number;
+}
+
+/**
+ * The bar span of a trade on this chart: the bar open at entry to the bar
+ * open at exit, clamped to the window. Null when the trade is entirely
+ * outside it (exited before the first bar, or entered after the last).
+ */
+export function tradeSpan(
+  times: readonly number[],
+  entryIso: string,
+  exitIso: string,
+): { from: number; to: number; entryIn: boolean; exitIn: boolean } | null {
+  const n = times.length;
+  if (n === 0) return null;
+  const first = times[0] as number;
+  const last = times[n - 1] as number;
+  const entry = toSeconds(entryIso);
+  const exit = toSeconds(exitIso);
+  if (!Number.isFinite(entry) || !Number.isFinite(exit) || exit < first || entry > last) return null;
+  const entryIn = entry >= first;
+  const exitIn = exit <= last;
+  const from = entryIn ? Math.max(0, barIndexAtOrBefore(times, entry)) : 0;
+  const to = exitIn ? Math.max(from, barIndexAtOrBefore(times, exit)) : n - 1;
+  return { from, to, entryIn, exitIn };
+}
+
+/** SL/TP segments for one backtest trade, from the figures the API sent. */
+export function backtestSegments(row: BacktestTradeRow, from: number, to: number): TradeSegment[] {
+  const out: TradeSegment[] = [];
+  const stop = row.stop_loss.value;
+  if (stop !== null) out.push({ role: "stop", price: stop, from, to, leg: null });
+  const finalStop = row.final_stop.value;
+  if (finalStop !== null && stop !== null && finalStop !== stop) {
+    out.push({ role: "final_stop", price: finalStop, from: to, to, leg: null });
+  }
+  const targets = row.take_profit_targets
+    .map((t) => t.value)
+    .filter((v): v is number => v !== null);
+  targets.forEach((price, i) =>
+    out.push({ role: "target", price, from, to, leg: targets.length > 1 ? i + 1 : null }),
+  );
+  return out;
+}
+
+/** Place a backtest run's trades on the bars. Every number is the API's. */
+export function placeBacktestTrades(
+  times: readonly number[],
+  view: BacktestTradesView | null,
+): PlacedTrades {
+  if (!view) return { trades: [], unplaced: 0 };
+  const trades: PlacedTrade[] = [];
+  let unplaced = 0;
+  for (const row of view.trades) {
+    const span = tradeSpan(times, row.entry_time, row.exit_time);
+    if (span === null) {
+      unplaced += 1;
+      continue;
+    }
+    const pnl = row.net_pnl;
+    trades.push({
+      key: `bt|${view.run.run_id}|${row.trade_id}`,
+      source: "backtest",
+      tradeId: row.trade_id,
+      direction: row.direction,
+      provenance: row.provenance,
+      entryIndex: span.from,
+      exitIndex: span.to,
+      entryInWindow: span.entryIn,
+      exitInWindow: span.exitIn,
+      entryPrice: row.entry_price.value,
+      exitPrice: row.exit_price.value,
+      pnlSign: pnl.value === null ? null : roundedSign(pnl.value, pnl.unit),
+      segments: backtestSegments(row, span.from, span.to),
+      row,
+      fills: null,
+      origin: view.run.run_id,
+    });
+  }
+  return { trades, unplaced };
+}
+
+/**
+ * The paper journal's closed trades, from the connectors the model already
+ * joined, with each trade's recorded stop and target (the API's levels with a
+ * `to`, keyed by trade id) as segments over its life.
+ */
+export function placePaperTrades(model: ChartModel): PlacedTrade[] {
+  const closedLevels = new Map<string, LevelOverlay[]>();
+  for (const level of model.levels) {
+    if (level.to === null) continue;
+    const key = `${level.session_id}|${level.position_id}`;
+    const list = closedLevels.get(key);
+    if (list) list.push(level);
+    else closedLevels.set(key, [level]);
+  }
+  return model.connectors.map((c) => {
+    const from = c.entry.index;
+    const to = Math.max(from, c.exit.index);
+    const segments: TradeSegment[] = [];
+    for (const level of closedLevels.get(`${c.exit.item.session_id}|${c.tradeId}`) ?? []) {
+      if (level.price.value === null) continue;
+      segments.push({
+        role: level.role === "target" ? "target" : "stop",
+        price: level.price.value,
+        from,
+        to,
+        leg: null,
+      });
+    }
+    return {
+      key: `paper|${c.exit.item.session_id}|${c.tradeId}`,
+      source: "paper" as const,
+      tradeId: c.tradeId,
+      direction: c.entry.item.side === "buy" ? "long" : "short",
+      provenance: c.provenance,
+      entryIndex: from,
+      exitIndex: to,
+      entryInWindow: true,
+      exitInWindow: true,
+      entryPrice: c.entry.item.price.value,
+      exitPrice: c.exit.item.price.value,
+      pnlSign: c.pnlSign,
+      segments,
+      row: null,
+      fills: { entry: c.entry.item, exit: c.exit.item },
+      origin: c.exit.item.session_label || c.exit.item.session_id,
+    };
+  });
 }

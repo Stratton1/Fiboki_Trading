@@ -12,16 +12,31 @@ import {
   type IPriceLine,
   type ISeriesApi,
   type LineWidth,
+  type Logical,
   type MouseEventParams,
   type Time,
   type UTCTimestamp,
 } from "lightweight-charts";
 import { useEffect, useRef, useState, type KeyboardEvent } from "react";
-import { visiblePanes, type ChartModel, type LineStyleName } from "@/lib/chart-model";
+import {
+  visiblePanes,
+  type ChartModel,
+  type LineStyleName,
+  type PlacedTrade,
+} from "@/lib/chart-model";
 import { readChartTheme, type ChartTheme } from "@/lib/chart-theme";
+import { distToSegment } from "@/lib/drawing-geometry";
 import { PROVENANCE_EXECUTED } from "@/lib/format";
+import type { Drawing } from "@/lib/types";
+import {
+  DrawingController,
+  DrawingPrimitive,
+  type DrawingControls,
+} from "./drawing-primitive";
 import { formatBarTime } from "./time";
 import { OverlayPrimitive, type OverlayLayers } from "./overlay-primitive";
+import { TradePrimitive } from "./trade-primitive";
+import { TradeTooltip } from "./TradeTooltip";
 
 /**
  * THE price chart: TradingView Lightweight Charts (Apache-2.0, plan D-F5).
@@ -62,6 +77,37 @@ export interface PriceChartProps {
   /** The bar the keyboard cursor is on, or null (follow the pointer). */
   cursor: number | null;
   onCursor: (index: number | null, source: "pointer" | "keyboard") => void;
+  /** Paper and backtest trades placed on the bars (lib/chart-model.ts). */
+  trades?: readonly PlacedTrade[];
+  tradeLayers?: { backtest: boolean; paper: boolean };
+  selectedTrade?: string | null;
+  /** A request to bring a trade into view; `nonce` repeats a request for the same trade. */
+  focusTrade?: { key: string; nonce: number } | null;
+  onTradeClick?: (key: string) => void;
+  /** Operator drawings; absent until the drawing layer has loaded. */
+  drawings?: ChartDrawings | null;
+}
+
+/** What the chart needs to draw and edit the operator's drawings. */
+export interface ChartDrawings {
+  /** In scope for this timeframe. */
+  visible: readonly Drawing[];
+  /** The whole set, every timeframe (what a commit replaces). */
+  all: readonly Drawing[];
+  others: readonly { owner: string; drawing: Drawing }[];
+  selectedId: string | null;
+  hiddenAll: boolean;
+  controls: DrawingControls;
+  onCommit: (next: Drawing[], selectId: string | null) => void;
+  onSelect: (id: string | null) => void;
+  onRequestText: (
+    at: { t: string; price: number },
+    screen: { x: number; y: number },
+    editId: string | null,
+  ) => void;
+  onToolDone: () => void;
+  /** A finished measurement, as words (for a live region), or null when cleared. */
+  onMeasure: (text: string | null) => void;
 }
 
 const LIBRARY_LINE_STYLE: Record<LineStyleName, LineStyle> = {
@@ -132,8 +178,24 @@ export default function PriceChart({
   describedBy,
   cursor,
   onCursor,
+  trades = [],
+  tradeLayers = { backtest: true, paper: true },
+  selectedTrade = null,
+  focusTrade = null,
+  onTradeClick,
+  drawings = null,
 }: PriceChartProps) {
   const box = useRef<HTMLDivElement>(null);
+  const tradeRef = useRef<TradePrimitive | null>(null);
+  const drawingRef = useRef<DrawingPrimitive | null>(null);
+  const controllerRef = useRef<DrawingController | null>(null);
+  const [hover, setHover] = useState<{ key: string; x: number; y: number } | null>(null);
+  const tradesRef = useRef(trades);
+  const layersRef = useRef(tradeLayers);
+  const onTradeClickRef = useRef(onTradeClick);
+  const drawingsRef = useRef(drawings);
+  const selectedRef = useRef(selectedTrade);
+  const writeSelectedRef = useRef<() => void>(() => undefined);
   const chartRef = useRef<IChartApi | null>(null);
   const candleRef = useRef<ISeriesApi<"Candlestick"> | null>(null);
   const primitiveRef = useRef<OverlayPrimitive | null>(null);
@@ -149,6 +211,27 @@ export default function PriceChart({
   useEffect(() => {
     onCursorRef.current = onCursor;
     modelRef.current = model;
+    tradesRef.current = trades;
+    layersRef.current = tradeLayers;
+    onTradeClickRef.current = onTradeClick;
+    drawingsRef.current = drawings;
+    selectedRef.current = selectedTrade;
+    writeSelectedRef.current = () => {
+      const el = box.current;
+      const chart = chartRef.current;
+      const candles = candleRef.current;
+      if (!el || !chart || !candles) return;
+      const trade = tradesRef.current.find((t) => t.key === selectedRef.current);
+      const point = (index: number, price: number | null) => {
+        if (price === null) return "";
+        const x = chart.timeScale().logicalToCoordinate(index as Logical);
+        const y = candles.priceToCoordinate(price);
+        return x === null || y === null ? "" : `${Math.round(x)},${Math.round(y)}`;
+      };
+      el.dataset.selectedTrade = trade ? trade.key : "";
+      el.dataset.selectedEntry = trade ? point(trade.entryIndex, trade.entryPrice) : "";
+      el.dataset.selectedExit = trade ? point(trade.exitIndex, trade.exitPrice) : "";
+    };
   });
 
   // ---- mount: the chart, the candle series, the overlay layer, observers.
@@ -183,9 +266,41 @@ export default function PriceChart({
       layers: { regimes: true, signals: true, fills: true },
     });
     candles.attachPrimitive(primitive);
+    const tradeLayer = new TradePrimitive({
+      trades: [],
+      theme: initial,
+      backtest: true,
+      paper: true,
+      selected: null,
+      hovered: null,
+    });
+    candles.attachPrimitive(tradeLayer);
+    const drawingLayer = new DrawingPrimitive({
+      drawings: [],
+      others: [],
+      times: modelRef.current.times,
+      theme: initial,
+      selectedId: null,
+      hiddenAll: false,
+      priceDecimals: null,
+    });
+    candles.attachPrimitive(drawingLayer);
+    const controller = new DrawingController(el, chart, candles, drawingLayer, {
+      controls: () =>
+        drawingsRef.current?.controls ?? { tool: "select", canEdit: false, lockedAll: true, scope: null },
+      commit: (next, id) => drawingsRef.current?.onCommit(next, id),
+      select: (id) => drawingsRef.current?.onSelect(id),
+      requestText: (at, screen, editId) => drawingsRef.current?.onRequestText(at, screen, editId),
+      toolDone: () => drawingsRef.current?.onToolDone(),
+      measured: (text) => drawingsRef.current?.onMeasure(text),
+      allDrawings: () => [...(drawingsRef.current?.all ?? [])],
+    });
     chartRef.current = chart;
     candleRef.current = candles;
     primitiveRef.current = primitive;
+    tradeRef.current = tradeLayer;
+    drawingRef.current = drawingLayer;
+    controllerRef.current = controller;
 
     const resize = new ResizeObserver((entries) => {
       const rect = entries[0]?.contentRect;
@@ -200,20 +315,80 @@ export default function PriceChart({
       attributeFilter: ["data-theme", "data-pnl"],
     });
 
+    // The trade under the pointer: nearest entry or exit marker, or connector,
+    // within a few pixels. Positions are the chart's own conversions.
+    const tradeAt = (x: number, y: number): string | null => {
+      const ts = chart.timeScale();
+      let best: { key: string; d: number } | null = null;
+      for (const trade of tradesRef.current) {
+        const shown = trade.source === "backtest" ? layersRef.current.backtest : layersRef.current.paper;
+        if (!shown || trade.entryPrice === null || trade.exitPrice === null) continue;
+        const x1 = ts.logicalToCoordinate(trade.entryIndex as Logical);
+        const x2 = ts.logicalToCoordinate(trade.exitIndex as Logical);
+        const y1 = candles.priceToCoordinate(trade.entryPrice);
+        const y2 = candles.priceToCoordinate(trade.exitPrice);
+        if (x1 === null || x2 === null || y1 === null || y2 === null) continue;
+        if (x < Math.min(x1, x2) - 10 || x > Math.max(x1, x2) + 10) continue;
+        const d = Math.min(
+          Math.hypot(x - x1, y - y1),
+          Math.hypot(x - x2, y - y2),
+          distToSegment({ x, y }, { x: x1, y: y1 }, { x: x2, y: y2 }) + 2,
+        );
+        if (d <= 8 && (best === null || d < best.d)) best = { key: trade.key, d };
+      }
+      return best ? best.key : null;
+    };
+
     const onMove = (param: MouseEventParams<Time>) => {
       // Programmatic moves (the keyboard cursor) carry no source event.
       if (param.sourceEvent === undefined) return;
       if (param.point === undefined || param.logical === undefined) {
         onCursorRef.current(null, "pointer");
+        setHover(null);
         return;
       }
       const index = Math.round(param.logical);
       const count = modelRef.current.times.length;
       onCursorRef.current(index >= 0 && index < count ? index : null, "pointer");
+      const key = tradeAt(param.point.x, param.point.y);
+      setHover((prev) => {
+        if (key === null) return prev === null ? prev : null;
+        const point = param.point as { x: number; y: number };
+        if (prev && prev.key === key && Math.abs(prev.x - point.x) < 24 && Math.abs(prev.y - point.y) < 24) {
+          return prev;
+        }
+        return { key, x: point.x, y: point.y };
+      });
     };
     chart.subscribeCrosshairMove(onMove);
 
+    // What the chart shows, as DOM (tests and assistive tech read these; the
+    // canvas cannot be read): the visible bar range, and where the selected
+    // trade's entry and exit markers are.
+    const writeRange = () => {
+      const range = chart.timeScale().getVisibleLogicalRange();
+      el.dataset.rangeFrom = range ? range.from.toFixed(2) : "";
+      el.dataset.rangeTo = range ? range.to.toFixed(2) : "";
+      writeSelectedRef.current();
+    };
+    chart.timeScale().subscribeVisibleLogicalRangeChange(writeRange);
+
+    const onClick = (param: MouseEventParams<Time>) => {
+      if (!param.point) return;
+      const key = tradeAt(param.point.x, param.point.y);
+      if (key) onTradeClickRef.current?.(key);
+    };
+    chart.subscribeClick(onClick);
+
     return () => {
+      chart.timeScale().unsubscribeVisibleLogicalRangeChange(writeRange);
+      chart.unsubscribeClick(onClick);
+      controller.dispose();
+      candles.detachPrimitive(tradeLayer);
+      candles.detachPrimitive(drawingLayer);
+      tradeRef.current = null;
+      drawingRef.current = null;
+      controllerRef.current = null;
       chart.unsubscribeCrosshairMove(onMove);
       resize.disconnect();
       retheme.disconnect();
@@ -318,6 +493,9 @@ export default function PriceChart({
     if (!layers.levels) return;
     for (const level of model.levels) {
       if (level.price.value === null) continue;
+      // A closed trade's recorded stop or target stood for that trade's life:
+      // it is a segment on the trade layer, never a line across the chart.
+      if (level.to !== null) continue;
       linesRef.current.push(
         candles.createPriceLine({
           price: level.price.value,
@@ -340,6 +518,65 @@ export default function PriceChart({
       layers: { regimes: layers.regimes, signals: layers.signals, fills: layers.fills },
     });
   }, [model, theme, layers.regimes, layers.signals, layers.fills]);
+
+  // ---- the trade layer follows the trades, toggles, selection and hover.
+  const hovered = hover?.key ?? null;
+  useEffect(() => {
+    if (!theme) return;
+    tradeRef.current?.update({
+      trades,
+      theme,
+      backtest: tradeLayers.backtest,
+      paper: tradeLayers.paper,
+      selected: selectedTrade,
+      hovered,
+    });
+    writeSelectedRef.current();
+  }, [trades, theme, tradeLayers.backtest, tradeLayers.paper, selectedTrade, hovered]);
+
+  // ---- bring a trade into view when the table asks.
+  useEffect(() => {
+    const chart = chartRef.current;
+    if (!chart || !focusTrade) return;
+    const trade = tradesRef.current.find((t) => t.key === focusTrade.key);
+    if (!trade) return;
+    const ts = chart.timeScale();
+    const range = ts.getVisibleLogicalRange();
+    const span = trade.exitIndex - trade.entryIndex;
+    const current = range ? range.to - range.from : 80;
+    const width = Math.max(Math.min(current, 160), span * 1.6 + 12);
+    const mid = (trade.entryIndex + trade.exitIndex) / 2;
+    // Centre the trade, but never scroll past the data into empty space.
+    const last = modelRef.current.times.length - 1;
+    let from = mid - width / 2;
+    let to = mid + width / 2;
+    if (to > last + 4) {
+      from -= to - (last + 4);
+      to = last + 4;
+    }
+    if (from < -4) {
+      to += -4 - from;
+      from = -4;
+    }
+    ts.setVisibleLogicalRange({ from, to });
+    requestAnimationFrame(() => writeSelectedRef.current());
+  }, [focusTrade]);
+
+  // ---- the drawing layer follows the operator's set and the view toggles.
+  const drawingTimes = model.times;
+  useEffect(() => {
+    if (!theme) return;
+    drawingRef.current?.update({
+      drawings: drawings?.visible ?? [],
+      others: drawings?.others ?? [],
+      times: drawingTimes,
+      theme,
+      selectedId: drawings?.selectedId ?? null,
+      hiddenAll: drawings?.hiddenAll ?? false,
+      priceDecimals,
+    });
+    controllerRef.current?.sync();
+  }, [drawings, drawingTimes, theme, priceDecimals]);
 
   // ---- keyboard cursor: the crosshair follows it; the readout reads it.
   useEffect(() => {
@@ -387,19 +624,30 @@ export default function PriceChart({
     onCursor(next, "keyboard");
   };
 
+  const tool = drawings?.controls.tool ?? "select";
+  const hoveredTrade = hover ? trades.find((t) => t.key === hover.key) ?? null : null;
   return (
-    <div
-      ref={box}
-      className="price-chart"
-      data-testid="price-chart"
-      data-ready={theme !== null}
-      role="group"
-      tabIndex={0}
-      aria-label={label}
-      aria-describedby={describedBy}
-      aria-roledescription="price chart"
-      onKeyDown={onKeyDown}
-      onPointerLeave={() => onCursor(null, "pointer")}
-    />
+    <div className="price-chart-wrap" data-tool={tool}>
+      <div
+        ref={box}
+        className="price-chart"
+        data-testid="price-chart"
+        data-ready={theme !== null}
+        data-tool={tool}
+        role="group"
+        tabIndex={0}
+        aria-label={label}
+        aria-describedby={describedBy}
+        aria-roledescription="price chart"
+        onKeyDown={onKeyDown}
+        onPointerLeave={() => {
+          onCursor(null, "pointer");
+          setHover(null);
+        }}
+      />
+      {hoveredTrade && hover ? (
+        <TradeTooltip trade={hoveredTrade} x={hover.x} y={hover.y} priceDecimals={priceDecimals} />
+      ) : null}
+    </div>
   );
 }
