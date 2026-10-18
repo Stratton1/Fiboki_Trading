@@ -93,7 +93,11 @@ function Compare({ ids, onIds }: { ids: string[]; onIds: (ids: string[]) => void
         <div className="state state--empty" data-testid="compare-needs-runs">
           <div className="state__title">Choose at least two runs</div>
           <div className="state__body">
-            Add runs above, or tick them on <Link href="/research/runs">Runs</Link>. Nothing is compared until two are
+            Add runs above, or tick them on{" "}
+            <Link href="/research/runs" className="rs-inline-link">
+              Runs
+            </Link>
+            . Nothing is compared until two are
             chosen.
           </div>
         </div>

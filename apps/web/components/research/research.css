@@ -642,3 +642,8 @@
   overflow-wrap: anywhere;
   max-width: 100%;
 }
+/* A link inside running text is underlined, not told apart by colour alone. */
+.rs-inline-link {
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
