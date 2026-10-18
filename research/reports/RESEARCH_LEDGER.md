@@ -650,6 +650,28 @@ admissible (every one refuses a run the filing never allowed), reads the replica
 800-replicate file decides when it exists), and corrects the memory claim to an estimate with a
 runbook check. No hypothesis, threshold, candidate, trial count, grid, seed or replicate count moved.
 
+## E-4 P0 (H4) read: ADMITTED (2026-10-18, MacBook, 400 replicates, 8.5 h wall)
+
+File: `research/reports/e4_pooled/e4_p0_H4.r400.json` on the runtime checkout (13 MB, not committed;
+sha256 `6580e573fe3189d34f697e73b01aff68b0532656ad90d54e01aeac780d5f3bb3`; carried by the migration kit).
+Filed rule (`pooled_universe_e4.json`, P0): size <= 0.05 and effective z-variance <= 1.25, with the
+amendment-1 replicate rule only if size lies within 2 Monte Carlo SE of 0.05. `p0_admits` returns
+"P0 admits".
+
+- **Size** (sr = 0, per candidate): 1 of 400 promoted, 0.0025 (MC SE 0.0025). Far below 0.05, so the
+  replicate rule does not apply; the r400 file decides.
+- **z calibration** at sr = 0: effective-count variance 0.949 (passes <= 1.25); the naive raw count
+  gives 1.306, which would fail. The design-effect correction is doing the work it was filed for.
+- **DEFF** across replicates: median 1.21 (p10 1.11, p90 1.96); effective pooled trades median 2,318
+  (p10 844, p90 4,325).
+- **Power** (pooled, production gate set v2.1.0-calibrated): sr 0.03: 1.0%; 0.05: 6.25%; **0.08:
+  25.25%** (MC SE 2.2%); 0.12: 48.75%. Single-series E-1/E-2 power at 0.08 was 0/400 under every set.
+- **Caveat recorded, not a rule change:** with 172 candidates the family-wise union bound on a false
+  promotion is 0.35; the main stage's deflation (true N 21,968) is what controls the family, as filed.
+
+Next under the filing: P0 for D1 (started 2026-10-18 10:03 UTC, 3 shards), then the main stage on the
+admitted timeframes. No candidate result exists yet.
+
 ## K6 drafted, `campaign_k6_generated_100k` (DRAFT 2026-10-10, not filed; no compute on evidence data)
 
 **Why it exists.** The operator asked for "100,000 more" strategies. Tested one by one that would be
