@@ -123,7 +123,7 @@ function Row({
       </th>
       {compact ? null : (
         <td>
-          <Link href={route.strategy(row.strategy_id)} data-testid="fleet-strategy-link" className="mono">
+          <Link prefetch={false} href={route.strategy(row.strategy_id)} data-testid="fleet-strategy-link" className="mono">
             {row.strategy_id}
           </Link>
         </td>

@@ -91,7 +91,7 @@ export default function PortfolioPage() {
                           </Link>
                         </td>
                         <td>
-                          <Link href={route.strategy(row.strategy_id)}>{row.strategy_id}</Link>
+                          <Link prefetch={false} href={route.strategy(row.strategy_id)}>{row.strategy_id}</Link>
                         </td>
                         <td>{row.direction.toUpperCase()}</td>
                         <td>

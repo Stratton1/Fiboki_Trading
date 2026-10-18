@@ -12,7 +12,9 @@
  *   incident    /system/incidents/<id>                incident timeline
  *
  * The research routes are built by the research work stream; the paths are
- * the contract between the two. The API builds the same links from the same
+ * the contract between the two. Links to them pass `prefetch={false}` until
+ * those pages land on this branch, so a prefetch does not log a 404. The
+ * API builds the same links from the same
  * table (src/fiboki/api/links.py), and tests on both sides check theirs
  * against the pages that exist.
  */

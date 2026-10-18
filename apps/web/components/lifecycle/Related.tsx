@@ -29,7 +29,7 @@ export function LifecycleRelated({ strategyId }: { strategyId: string }) {
         Related
       </h2>
       <p className="entity-links" data-testid="lifecycle-related-links">
-        <Link href={route.strategy(strategyId)} data-testid="lifecycle-tearsheet-link">
+        <Link prefetch={false} href={route.strategy(strategyId)} data-testid="lifecycle-tearsheet-link">
           Tearsheet, equity and runs
         </Link>
         <Link href={route.journal({ strategy: strategyId })} data-testid="lifecycle-journal-link">

@@ -131,7 +131,7 @@ function ExecutionView({
       header: "Strategy",
       value: (row) => row.strategy_id,
       cell: (row) => (
-        <Link href={route.strategy(row.strategy_id)} data-testid="journal-strategy-link">
+        <Link prefetch={false} href={route.strategy(row.strategy_id)} data-testid="journal-strategy-link">
           {row.strategy_id}
         </Link>
       ),
@@ -200,7 +200,7 @@ function ExecutionView({
             <span className="muted" data-testid="journal-scope">
               {strategy ? (
                 <>
-                  strategy <Link href={route.strategy(strategy)}>{strategy}</Link>{" "}
+                  strategy <Link prefetch={false} href={route.strategy(strategy)}>{strategy}</Link>{" "}
                 </>
               ) : null}
               {instrument ? (

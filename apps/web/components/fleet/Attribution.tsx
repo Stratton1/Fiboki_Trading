@@ -50,7 +50,7 @@ function Table({ title, rows, testId, chip }: { title: string; rows: Attribution
             {rows.map((row) => (
               <tr key={row.key} data-testid="attr-row" data-key={row.key}>
                 <th scope="row">
-                  <Link href={row.chart ?? row.link} className="mono" data-testid="attr-link">
+                  <Link prefetch={false} href={row.chart ?? row.link} className="mono" data-testid="attr-link">
                     {row.label}
                   </Link>
                 </th>

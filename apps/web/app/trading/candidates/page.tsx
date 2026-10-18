@@ -169,17 +169,30 @@ export default function CandidatesPage() {
           <Link href={route.candidate(row.content_hash)} data-testid="candidate-lifecycle-link">
             <strong>{row.name}</strong>
           </Link>
-          <span className="mono muted">
-            {row.strategy_id} · <Link href={route.strategy(row.strategy_id)} data-testid="candidate-tearsheet-link">runs</Link>
-            {" · "}
-            <Link href={route.journal({ strategy: row.strategy_id })}>trades</Link>
-          </span>
+          <span className="mono muted">{row.strategy_id}</span>
         </span>
       ),
-      width: 240,
+      width: 220,
       pin: true,
     },
     { id: "family", header: "Family", value: (row) => row.family, width: 96 },
+    {
+      id: "open",
+      header: "Open",
+      value: (row) => row.strategy_id,
+      // Cross-links (programme P0 3): its runs and tearsheet, its trades.
+      cell: (row) => (
+        <span className="row gap-2">
+          <Link prefetch={false} href={route.strategy(row.strategy_id)} data-testid="candidate-tearsheet-link">
+            runs
+          </Link>
+          <Link href={route.journal({ strategy: row.strategy_id })} data-testid="candidate-trades-link">
+            trades
+          </Link>
+        </span>
+      ),
+      width: 110,
+    },
     { id: "trades", header: "Trades", figure: (row) => row.trades, chip: true },
     { id: "win_rate", header: "Win rate", figure: (row) => row.win_rate, chip: true },
     {
@@ -276,8 +289,11 @@ export default function CandidatesPage() {
                         <Link href={route.candidate(row.content_hash)}>
                           <strong>{row.name}</strong>
                         </Link>
-                        <span className="mono muted">
-                          {row.strategy_id} · <Link href={route.strategy(row.strategy_id)}>runs</Link>
+                        <span>
+                          <span className="mono muted">{row.strategy_id}</span>{" "}
+                          <Link prefetch={false} href={route.strategy(row.strategy_id)}>
+                            runs
+                          </Link>
                         </span>
                       </span>
                       <span className="row gap-1">

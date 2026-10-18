@@ -285,7 +285,7 @@ function DocumentHeader({
         </div>
       </dl>
       <p className="entity-links">
-        <Link href={route.strategy(doc.strategy_id)} data-testid="lifecycle-doc-tearsheet">
+        <Link prefetch={false} href={route.strategy(doc.strategy_id)} data-testid="lifecycle-doc-tearsheet">
           Tearsheet
         </Link>
         <Link href="/research/strategies">Strategies list</Link>
