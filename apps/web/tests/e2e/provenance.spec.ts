@@ -71,7 +71,8 @@ test.describe("provenance chips", () => {
     await page.goto("/trading/candidates");
     await expect(page.getByTestId("state-success")).toBeVisible();
 
-    const rows = page.getByTestId("candidate-row");
+    // A grid row on a desktop, a card on a phone (the same figures).
+    const rows = page.locator('[data-testid="candidate-row"], [data-testid="candidate-card"]');
     await expect(rows).toHaveCount(candidatesPage().items.length);
 
     const firstRow = rows.first();
@@ -86,8 +87,10 @@ test.describe("provenance chips", () => {
   test("a chip never renders without a number beside it", async ({ page }) => {
     await page.goto("/trading/candidates");
     await expect(page.getByTestId("state-success")).toBeVisible();
-    // The grid is loaded on first use (Wave 3): wait for its rows.
-    await expect(page.getByTestId("candidate-row")).toHaveCount(candidatesPage().items.length);
+    // The grid is loaded on first use (Wave 3): wait for its rows (cards on a phone).
+    await expect(page.locator('[data-testid="candidate-row"], [data-testid="candidate-card"]')).toHaveCount(
+      candidatesPage().items.length,
+    );
     const figures = page.getByTestId("figure");
     const total = await figures.count();
     expect(total).toBeGreaterThan(0);
