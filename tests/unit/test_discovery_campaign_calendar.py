@@ -82,11 +82,14 @@ def _run(spec: CampaignSpec, **kwargs: Any):
 
 
 def test_run_cell_passes_the_official_calendar_by_default(captured) -> None:
+    # DELIBERATE (calendar 1.1.0, 2026-10-18): the default is the PINNED research calendar
+    # (1.0.0), not the newest, so a refresh for paper trading cannot change a campaign's inputs.
     outcome = _run(_spec())
     assert outcome.error.startswith("RuntimeError: spy")
     calendar = captured["calendar"]
     assert calendar is not None
-    assert len(calendar.all_events()) == len(load_official_calendar().all_events())
+    assert len(calendar.all_events()) == len(load_official_calendar(version="1.0.0").all_events())
+    assert len(calendar.all_events()) < len(load_official_calendar().all_events())
     assert captured["allow_empty_calendar"] is False
 
 

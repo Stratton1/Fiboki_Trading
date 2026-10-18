@@ -1390,7 +1390,7 @@ class RealStudy:
         gate_set: GateSet = GATE_SET_V2, ladder_mode: str = "measuring",
     ) -> RealStudy:
         from fiboki.core.enums import Timeframe
-        from fiboki.marketstate.calendar import load_official_calendar
+        from fiboki.marketstate.calendar import load_research_calendar
 
         tf = Timeframe(args.timeframe)
         instruments = args.instruments or (STARTER_INSTRUMENTS if args.starter else K5_UNIVERSE)
@@ -1406,7 +1406,7 @@ class RealStudy:
         documents = load_documents(args.documents)
         study = cls(
             process=process, series=series, skipped=skipped, source_meta=meta,
-            documents=documents, calendar=load_official_calendar(), config=config,
+            documents=documents, calendar=load_research_calendar(), config=config,
             base_seed=args.seed, sweep_axes=campaign_sweep_axes(), grid_shape=campaign_grid_shape(),
             calibration_paths=int(args.calibration_paths), gate_set=gate_set,
             ladder_mode=ladder_mode,

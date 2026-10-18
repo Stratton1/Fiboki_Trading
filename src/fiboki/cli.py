@@ -2057,18 +2057,20 @@ def calendar_status(
     start: str | None = typer.Option(None, "--start", help="ISO UTC start of a run to check coverage for."),
     end: str | None = typer.Option(None, "--end", help="ISO UTC end of a run to check coverage for."),
     fixture: Path | None = typer.Option(None, "--fixture", help="Alternative events file (default: the official fixture)."),
+    version: str | None = typer.Option(None, "--version", help="Official calendar version (default: the newest; research pins 1.0.0)."),
     as_json: bool = typer.Option(False, "--json"),
 ) -> None:
     """What the official calendar actually knows. Exit 1 if it cannot cover --start..--end."""
     from fiboki.marketstate.calendar import (
         CalendarError,
+        latest_official_calendar_version,
         load_official_calendar,
         official_calendar_manifest,
     )
 
     try:
-        calendar = load_official_calendar(fixture)
-        manifest = official_calendar_manifest(fixture)
+        calendar = load_official_calendar(fixture, version=version)
+        manifest = official_calendar_manifest(fixture, version=version)
     except CalendarError as exc:
         _fail(str(exc))
     cov = calendar.coverage()
@@ -2090,6 +2092,8 @@ def calendar_status(
             k: {**v, "first": str(v["first"]), "last": str(v["last"])} for k, v in per_source.items()
         },
         "retrieved_at": manifest.get("retrieved_at"),
+        "calendar_version": None if fixture is not None else (version or latest_official_calendar_version()),
+        "family_ends": (manifest.get("coverage") or {}).get("family_ends"),
         "sources_skipped": manifest.get("sources_skipped", {}),
         "requested": None if covered is None else {"start": start, "end": end, "covered": covered},
     }
@@ -2103,6 +2107,8 @@ def calendar_status(
         )
         console.print(f"currencies  {', '.join(cov.currencies)}")
         console.print(f"retrieved   {manifest.get('retrieved_at')}")
+        if payload["calendar_version"]:
+            console.print(f"version     {payload['calendar_version']}")
         table = Table("source", "ccy", "n", "first", "last")
         for key, row in sorted(per_source.items()):
             table.add_row(key, row["currency"], str(row["n"]), str(row["first"]), str(row["last"]))
@@ -2130,6 +2136,7 @@ def calendar_check(
     minutes_after: int = typer.Option(30, "--after", help="Blackout minutes after an event."),
     min_impact: str = typer.Option("high", "--min-impact"),
     fixture: Path | None = typer.Option(None, "--fixture"),
+    version: str | None = typer.Option(None, "--version", help="Official calendar version (default: the newest)."),
     as_json: bool = typer.Option(False, "--json"),
 ) -> None:
     """Is INSTANT in an event blackout for CCY, and why.
@@ -2151,7 +2158,7 @@ def calendar_check(
     except Exception as exc:  # unregistered instrument
         _fail(f"{ccy!r} is neither a currency code nor a registered instrument: {exc}", EXIT_MISUSE)
     try:
-        calendar = load_official_calendar(fixture)
+        calendar = load_official_calendar(fixture, version=version)
         events = calendar.events_near_currencies(
             currencies, ts, minutes_before=minutes_before, minutes_after=minutes_after,
             min_impact=min_impact,

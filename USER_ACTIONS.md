@@ -2,6 +2,8 @@
 
 **Generated:** 19 September 2026, at the end of the V2 build programme. **Updated 29 September 2026** after the agentic-integration wave (see `docs/v2/AGENTIC_INTEGRATION_PLAN.md` §3 and `docs/v2/BUILD_LOG.md`).
 
+**Status line (18 October 2026, calendar):** the official economic calendar is now version 1.1.0, declared to 2027-12-03 (it was due to lapse on 2026-12-04, which would have stopped both paper sessions around 20 November). Both paper sessions load the newest version when they next start, so restart them after merging (P3). Research, campaigns and the filed E-4 run stay pinned to 1.0.0 and see no change. Next refresh reminder: 1 June 2027.
+
 **Status line (17 October 2026):** Deployed at 754b156 (dev, runtime and GitHub `main`): web, API, worker, news and quotes restarted. The crypto paper session (`uk.fiboki.paper-crypto`, BTC and ETH H4) is running and the Coinbase backfill ran. E-4 P0 (H4) started on the MacBook. The FX paper service was NOT restarted: it holds an open GBPUSD long (opened 16 October), and the process still running predates the state snapshot, so a restart would abandon it; restart it once that position closes. The week, measured: the Mac slept much of the time (quote recorder coverage from 85 to 2,237 of 2,880 daily polls), four entries on 14 October were blocked because the Mac woke late (stale prices), and since the Friday close a blocked trailing-stop amendment raises a CRITICAL every 15 minutes until Sunday's open (expected; the amendment retries then).
 
 **Status line (12 October 2026):** Built, merged and tested (5,803 backend tests and 279 browser tests pass), waiting to be deployed to the MacBook, which was offline: (1) open paper positions now survive a restart (crash-safe state snapshot, missed bars caught up in order); (2) E-4, the pooled experiment, is filed and ready to run (P0 first); (3) K6, 100,000 new strategy documents with a 5 to 7 times faster engine, built with its filing in DRAFT until E-4's P0 is read; (4) crypto spot, paper only; (5) the terminal-style workstation. Yours: keep the Mac on charge with the lid open; approve the local model download (Qwen3.5-4B, 2.7 GB, pinned GGUF; research in the 12 October report).
@@ -157,11 +159,11 @@ spreads: EURUSD 0.9 pips, GBPUSD 1.5, USDJPY 1.7, XAUUSD 0.49, US500 0.5, UK100 
 **What it is, plainly.** Strategies are blocked from opening trades in a window around
 high-impact scheduled events (central-bank decisions, US payrolls and CPI, UK CPI and GDP). That
 block only works for events the platform knows about. Today it knows the official dates for USD,
-EUR, GBP and JPY from January 2024 to 4 December 2026. Outside that (2005 to 2023 in every
+EUR, GBP and JPY from January 2024 to 3 December 2027 (calendar 1.1.0, extended on 18 October 2026 from 4 December 2026). Outside that (2005 to 2023 in every
 backtest, and AUD, CAD, CHF and NZD at any date) a backtest trades straight through events a live
 operator would avoid, which flatters some strategies and hurts others. Two jobs remain: extend the
 list backwards and to the other four currencies from the publishers' own archives, and refresh it
-before 4 December 2026. The source shortlist in `docs/v2/research/DATA_SOURCES_2026-10.md` (BLS,
+before 3 December 2027 (reminder: 1 June 2027). The source shortlist in `docs/v2/research/DATA_SOURCES_2026-10.md` (BLS,
 BEA, ONS, Bank of Canada, RBNZ, RBA and others) names the official calendars to use. This is
 collation work I can do; it needs no account.
 
@@ -169,8 +171,8 @@ Since 2026-09-28 `src/fiboki/marketstate/fixtures/scheduled_events_official.json
 
 What remains yours:
 
-1. **Before 2024 and other currencies.** The fixture is declared complete from 2024-01-01 to 2026-12-04 and for USD, EUR, GBP and JPY only. Outside that, blackout queries still answer "not in blackout", so a backtest over 2005-2023, or on AUD, CAD, CHF or NZD pairs, trades straight through FOMC and NFP. Extend it from official sources (central bank and statistics-office archives) in the same shape; commercial aggregators such as ForexFactory and Investing.com forbid automated extraction.
-2. **Refresh before the declared end.** Future dates are schedules and can move (the Fed marks each date tentative until the preceding meeting; the 2025 US appropriations lapse cancelled a month of NFP and CPI). Rebuild the file before 2026-12-04 and whenever a publisher revises its calendar.
+1. **Before 2024 and other currencies.** The fixture is declared complete from 2024-01-01 to 2027-12-03 (1.1.0) and for USD, EUR, GBP and JPY only. Outside that, blackout queries still answer "not in blackout", so a backtest over 2005-2023, or on AUD, CAD, CHF or NZD pairs, trades straight through FOMC and NFP. Extend it from official sources (central bank and statistics-office archives) in the same shape; commercial aggregators such as ForexFactory and Investing.com forbid automated extraction.
+2. **Refresh before the declared end.** Future dates are schedules and can move (the Fed marks each date tentative until the preceding meeting; the 2025 US appropriations lapse cancelled a month of NFP and CPI). **Done for now (18 October 2026):** calendar 1.1.0 is a new immutable version (1.0.0 untouched; research and E-4 stay pinned to it); the procedure and next-refresh reminder (1 June 2027) are in `docs/v2/OPERATIONS.md` 7.1. Rebuild again before 2027-12-03, and whenever a publisher revises its calendar.
 3. **Wired in (2026-09-29).** `build_replay_session` and `discovery.campaign.run_cell` now load the official calendar by default and pass it to the risk gateway's `event_blackout` check and to validation; the evaluator cache key includes the calendar hash. A replay test proves an entry on the 2024-03-08 NFP bar is blocked. Consequence: every earlier ladder or campaign result for the five seed strategies ran with blackouts silently unenforced and is superseded by the next run. On H4 bars the 15-minute window (measured from bar open) rarely fires; that is a known limitation to revisit.
 4. **Impact choice.** Every fixture event is `high`, including UK labour and monthly GDP, which the recurring taxonomy rates `medium`. Lower them if you disagree.
 

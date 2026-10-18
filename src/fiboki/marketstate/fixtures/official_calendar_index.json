@@ -1,0 +1,24 @@
+{
+ "schema": 1,
+ "rule": "A calendar version is immutable once listed. A refresh adds a NEW file and a new entry here with its lineage; it never edits an existing file. load_official_calendar refuses a listed file whose events no longer hash to events_sha256. Default (version=None) is the newest entry (paper, API, CLI); research and backtests that must not drift pin PINNED_RESEARCH_CALENDAR_VERSION.",
+ "versions": {
+  "1.0.0": {
+   "file": "scheduled_events_official.json",
+   "parent": null,
+   "file_sha256": "1063b1c171ddc16316cc6b981a0ae64ef417b38f0abcf2841f8ec33c75b84fa4",
+   "events_sha256": "d7a0cec51f3c824b737edb1ddf39d2dbc077555ff59a6e45742c09598a2189ea",
+   "n_events": 339,
+   "retrieved_at": "2026-09-28",
+   "declared_end": "2026-12-04T13:30:00+00:00"
+  },
+  "1.1.0": {
+   "file": "scheduled_events_official_v1_1_0.json",
+   "parent": "1.0.0",
+   "file_sha256": "ce87924cd55ebbed2c26172fdd1163fd08ccd99e8c5b303a3caac6e45dc0b38d",
+   "events_sha256": "d4a8896b63ffb744ce37d9501a65704f8a60fca0a8eb726bc3af14c3adea92e0",
+   "n_events": 378,
+   "retrieved_at": "2026-10-18",
+   "declared_end": "2027-12-03T13:30:00+00:00"
+  }
+ }
+}

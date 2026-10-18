@@ -119,7 +119,7 @@ from fiboki.marketstate.calendar import (
     EconomicCalendar,
     InMemoryEconomicCalendar,
     instrument_currencies,
-    load_official_calendar,
+    load_research_calendar,
 )
 from fiboki.research.experiment import (
     ActorKind,
@@ -497,7 +497,7 @@ def calendar_plan(
     if mode != "official":
         raise ValueError(f"--calendar {mode!r}: expected 'official' or 'none'")
 
-    cal = calendar if calendar is not None else load_official_calendar()
+    cal = calendar if calendar is not None else load_research_calendar()
     cov = cal.coverage()
     if not cov.is_populated:
         return CalendarPlan(

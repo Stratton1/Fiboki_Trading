@@ -70,7 +70,7 @@ from fiboki.discovery.hypothesis import Hypothesis, HypothesisLedger
 from fiboki.discovery.mutation import MutationEngine, MutationProposal, mutation_lineage
 from fiboki.discovery.novelty import NoveltyIndex, NoveltyVerdict
 from fiboki.discovery.report import CampaignReport, CellResult, SkippedCell, deflation_threshold
-from fiboki.marketstate.calendar import EconomicCalendar, load_official_calendar
+from fiboki.marketstate.calendar import EconomicCalendar, load_research_calendar
 from fiboki.research.experiment import ActorKind, ExperimentDraft, ExperimentLedger, Outcome
 from fiboki.strategy.dsl import StrategyDocument, strategy_key_version
 from fiboki.validation.evaluation import ParameterGrid
@@ -220,7 +220,7 @@ class CampaignSpec:
     """Run cells whose bars or currencies the economic calendar does not cover.
 
     Off by default: every cell runs against the official calendar
-    (:func:`~fiboki.marketstate.calendar.load_official_calendar`) and a cell it
+    (:func:`~fiboki.marketstate.calendar.load_research_calendar`) and a cell it
     cannot vouch for is REFUSED rather than validated as if no scheduled
     release ever happened. On, the calendar is still applied wherever it has
     events; only the coverage refusal is lifted. Serialised, so a report says
@@ -544,7 +544,7 @@ def run_cell(
     ``run_validation`` logs loudly for any document that declares a blackout.
     """
     try:
-        source = calendar if calendar is not None else load_official_calendar()
+        source = calendar if calendar is not None else load_research_calendar()
         if not source.all_events():
             source = None
         run = run_validation(
@@ -663,7 +663,7 @@ class CampaignRunner:
 
     def _calendar(self) -> EconomicCalendar:
         if self.calendar is None:
-            self.calendar = load_official_calendar()
+            self.calendar = load_research_calendar()
         return self.calendar
 
     # ----------------------------------------------------------------- plan

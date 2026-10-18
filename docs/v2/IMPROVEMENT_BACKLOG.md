@@ -27,7 +27,7 @@ Legend: **Done** (commit on `v2/integration`), **Next** (next wave), **Later**, 
 | B-37 (P2-16) | Token in repr; unsalted sha256 passwords; shared default password | **Done**: repr=False, scrypt with legacy verify + rotation warning, doctor flags legacy hashes. **Decide**: rotate Joe's and Tom's passwords (USER_ACTIONS) |
 | B-20 (P1-7) | Holdout re-spent via data refresh and reparameterisation | **Partly done**: append-only triggers + outcomes table. Calendar-span segments and per-family look budget: **Next** |
 | B-21/22/23 (§3) | Gate thresholds uncalibrated | **Next**: E-1 pre-registration drafted (`research/preregistration/gate_calibration_e1.json`) and `scripts/gate_power_study.py`; run it before any threshold changes; publish `v2.1.0-calibrated` |
-| B-28 (P1-12) | Calendar coverage cliff 2026-12-04; four currencies | **Next**: refresh job + doctor warning (doctor warns now); backfill 2010–2023; add RBA/BoC/SNB/RBNZ, US retail sales/PCE/ISM/GDP |
+| B-28 (P1-12) | Calendar coverage cliff (2026-12-04 fixed 2026-10-18: now 2027-12-03, versioned); four currencies | **Next**: next refresh by 2027-06-01; per-family start dates, then + doctor warning (doctor warns now); backfill 2010–2023; add RBA/BoC/SNB/RBNZ, US retail sales/PCE/ISM/GDP |
 | B-29 | DSL `session_window` tz-aware, decision-time semantics (schema bump) | **Later** (holdout key-version handling first) |
 | B-30/31/32 | Measured hour-of-week spread from the recorder; financing from rate history; validate against OANDA profile | **Later** (needs 4 weeks of recorded quotes) |
 | B-36 | Catalogue paths relative to data root | **Next** (before the desktop move) |

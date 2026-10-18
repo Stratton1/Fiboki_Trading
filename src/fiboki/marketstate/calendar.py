@@ -44,6 +44,7 @@ have to be.
 from __future__ import annotations
 
 import csv
+import hashlib
 import json
 from abc import ABC, abstractmethod
 from collections.abc import Iterable, Sequence
@@ -63,7 +64,17 @@ CALENDAR_VERSION = "1.0.0"
 FIXTURE_DIR = Path(__file__).parent / "fixtures"
 RECURRING_EVENTS_FIXTURE = FIXTURE_DIR / "recurring_economic_events.json"
 
+#: The 1.0.0 file. IMMUTABLE: later versions are new files (see the index).
 OFFICIAL_EVENTS_FIXTURE = FIXTURE_DIR / "scheduled_events_official.json"
+
+#: Registry of official calendar versions: file, parent (lineage), file and
+#: events hashes, declared end. A version is never edited in place.
+OFFICIAL_CALENDAR_INDEX = FIXTURE_DIR / "official_calendar_index.json"
+
+#: The version research and backtests pin to (E-4, K5/K6, gate studies). It is
+#: the calendar they were filed and fingerprinted with; a refresh must not
+#: change their inputs. Move it only by a reviewed decision that re-runs them.
+PINNED_RESEARCH_CALENDAR_VERSION = "1.0.0"
 
 #: Verbatim text for the USER_ACTIONS document. Do not soften it.
 USER_ACTION_NOTE = (
@@ -823,13 +834,53 @@ def load_events_csv(path: str | Path) -> tuple[EconomicEvent, ...]:
         return tuple(EconomicEvent.from_dict(dict(row)) for row in reader)
 
 
-def official_calendar_manifest(path: str | Path | None = None) -> dict[str, Any]:
+def calendar_events_sha256(calendar: EconomicCalendar) -> str:
+    """Content hash of a calendar's events (canonical JSON).
+
+    Identical to the ``events_sha256`` of ``validation.engine_evaluator.
+    blackout_fingerprint``, which is what backtest cache keys and study
+    checkpoints record; two calendars with the same events share it.
+    """
+    rows = [e.to_dict() for e in calendar.all_events()]
+    return hashlib.sha256(json.dumps(rows, sort_keys=True, default=str).encode("utf-8")).hexdigest()
+
+
+def official_calendar_index() -> dict[str, Any]:
+    if not OFFICIAL_CALENDAR_INDEX.exists():
+        raise CalendarError(f"official calendar index not found: {OFFICIAL_CALENDAR_INDEX}")
+    return json.loads(OFFICIAL_CALENDAR_INDEX.read_text(encoding="utf-8"))
+
+
+def _version_key(v: str) -> tuple[int, ...]:
+    return tuple(int(x) for x in v.split("."))
+
+
+def latest_official_calendar_version() -> str:
+    """The newest listed version: what paper sessions, the API and the CLI use."""
+    return max(official_calendar_index()["versions"], key=_version_key)
+
+
+def official_calendar_path(version: str | None = None) -> Path:
+    """The fixture file of a listed version (``None`` = the newest)."""
+    index = official_calendar_index()
+    v = version if version is not None else latest_official_calendar_version()
+    if v not in index["versions"]:
+        raise CalendarError(
+            f"unknown official calendar version {v!r}; listed: {sorted(index['versions'], key=_version_key)}"
+        )
+    return FIXTURE_DIR / index["versions"][v]["file"]
+
+
+def official_calendar_manifest(
+    path: str | Path | None = None, *, version: str | None = None
+) -> dict[str, Any]:
     """The official fixture's header: sources used and skipped, coverage, counts.
 
     Everything in the file except the ``events`` list. The CLI prints it; tests
-    check the per-source counts in it against the events themselves.
+    check the per-source counts in it against the events themselves. With
+    neither ``path`` nor ``version`` it is the newest listed version.
     """
-    p = Path(path) if path is not None else OFFICIAL_EVENTS_FIXTURE
+    p = Path(path) if path is not None else official_calendar_path(version)
     if not p.exists():
         raise CalendarError(f"official event fixture not found: {p}")
     raw = json.loads(p.read_text(encoding="utf-8"))
@@ -838,23 +889,67 @@ def official_calendar_manifest(path: str | Path | None = None) -> dict[str, Any]
     return {k: v for k, v in raw.items() if k != "events"}
 
 
-def load_official_calendar(path: str | Path | None = None) -> InMemoryEconomicCalendar:
+def load_official_calendar(
+    path: str | Path | None = None, *, version: str | None = None
+) -> InMemoryEconomicCalendar:
     """The committed official scheduled-events calendar, with its declared span.
 
-    Reads :data:`OFFICIAL_EVENTS_FIXTURE` (or ``path``). No network: the file
-    was fetched from the publishers' own pages and committed; see its header
-    for every URL, the time convention per source and what was left out.
+    ``path`` loads that file as it is (no index checks). Otherwise ``version``
+    picks a listed version, and ``None`` means the NEWEST: use that for paper
+    sessions and operator views. Anything that must reproduce (backtests,
+    pre-registered studies) passes ``version=PINNED_RESEARCH_CALENDAR_VERSION``
+    or calls :func:`load_research_calendar`.
+
+    No network: the file was fetched from the publishers' own pages and
+    committed; see its header for every URL, the time convention per source and
+    what was left out. A listed version whose events no longer hash to the
+    index, or whose declared end is not the earliest family end, is refused:
+    versions are immutable.
     """
-    p = Path(path) if path is not None else OFFICIAL_EVENTS_FIXTURE
+    if path is not None:
+        p = Path(path)
+        checked = False
+    else:
+        p = official_calendar_path(version)
+        checked = True
     manifest = official_calendar_manifest(p)
     cov = manifest.get("coverage") or {}
     start = cov.get("declared_start")
     end = cov.get("declared_end")
-    return InMemoryEconomicCalendar(
+    calendar = InMemoryEconomicCalendar(
         load_events_json(p),
         declared_start=None if not start else pd.Timestamp(start),
         declared_end=None if not end else pd.Timestamp(end),
     )
+    if checked:
+        v = version if version is not None else latest_official_calendar_version()
+        entry = official_calendar_index()["versions"][v]
+        got = calendar_events_sha256(calendar)
+        if got != entry["events_sha256"]:
+            raise CalendarError(
+                f"official calendar {v} no longer matches its index entry (events hash {got[:12]} "
+                f"vs {entry['events_sha256'][:12]}). Versions are immutable: add a new version "
+                "with lineage instead of editing this one."
+            )
+        family_ends = cov.get("family_ends")
+        if family_ends:
+            earliest = min(pd.Timestamp(x) for x in family_ends.values())
+            if end is None or pd.Timestamp(end) != earliest:
+                raise CalendarError(
+                    f"official calendar {v}: declared_end {end} is not the earliest family end "
+                    f"{earliest}"
+                )
+    return calendar
+
+
+def load_research_calendar() -> InMemoryEconomicCalendar:
+    """The calendar research, backtests and pre-registered studies run against.
+
+    Pinned to :data:`PINNED_RESEARCH_CALENDAR_VERSION`, so refreshing the
+    calendar for paper trading cannot change a study's inputs or its recorded
+    ``events_sha256``.
+    """
+    return load_official_calendar(version=PINNED_RESEARCH_CALENDAR_VERSION)
 
 
 def load_recurring_event_types(

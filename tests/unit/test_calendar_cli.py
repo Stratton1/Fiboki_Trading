@@ -41,7 +41,11 @@ def test_status_reports_per_source_counts() -> None:
     for key, meta in manifest["sources_used"].items():
         assert payload["per_source"][key]["n"] == meta["n_events"]
     assert payload["coverage"]["declared_start"].startswith("2024-01-01")
-    assert payload["retrieved_at"] == "2026-09-28"
+    # DELIBERATE (2026-10-18): the CLI reports the newest official calendar, version 1.1.0, read
+    # on 2026-10-18 (it was 2026-09-28 for 1.0.0).
+    assert payload["retrieved_at"] == "2026-10-18"
+    assert payload["calendar_version"] == "1.1.0"
+    assert payload["coverage"]["declared_end"].startswith("2027-12-03")
 
 
 def test_status_renders_for_humans() -> None:

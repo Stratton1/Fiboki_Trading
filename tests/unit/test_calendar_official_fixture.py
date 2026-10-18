@@ -6,6 +6,13 @@ ONS). These tests do not re-fetch anything; they check that the committed file
 is internally consistent, that every UTC time re-derives from the publisher's
 local clock, that the counts are plausible for the schedule each publisher
 runs, and that a blackout query now actually fires around a known release.
+
+DELIBERATE CHANGE (2026-10-18, calendar version 1.1.0): this file pins the
+IMMUTABLE 1.0.0 fixture. ``load_official_calendar()`` with no argument now means
+"the newest version" (1.1.0), so the ``official`` fixture below asks for
+``version="1.0.0"`` explicitly: these assertions describe that file, not the
+newest. Version 1.1.0 and the versioning rules are tested in
+``test_calendar_versions.py``.
 """
 from __future__ import annotations
 
@@ -66,7 +73,7 @@ def ts(s: str) -> pd.Timestamp:
 
 @pytest.fixture(scope="module")
 def official() -> InMemoryEconomicCalendar:
-    return load_official_calendar()
+    return load_official_calendar(version="1.0.0")
 
 
 # =====================================================================
@@ -183,7 +190,7 @@ def test_ons_monthly_series_are_monthly() -> None:
 
 
 def test_manifest_counts_match_the_events() -> None:
-    manifest = official_calendar_manifest()
+    manifest = official_calendar_manifest(version="1.0.0")
     by_source = Counter(e["source"] for e in EVENTS)
     assert set(manifest["sources_used"]) == set(by_source)
     for key, meta in manifest["sources_used"].items():

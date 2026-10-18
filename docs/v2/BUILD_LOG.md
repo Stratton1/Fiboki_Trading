@@ -1446,3 +1446,15 @@ is why V1 stays served. Decision needed (USER_ACTIONS C2): point the project at
 `legacy/v1/frontend`, disconnect it, or plan a V2 deployment (which needs a hosted API).
 
 Full suite after all of the above: 4,868 passed, 24 skipped (13:49).
+
+## 2026-10-18: official calendar 1.1.0 (versioned)
+
+Coverage was due to lapse 2026-12-04 (BLS had no 2027 schedule when 1.0.0 was built). BLS has now
+published 2027 (bls.gov/schedule/2027, calendars last modified 2026-10-09) and the ONS API lists UK
+CPI to January 2028 as confirmed. New immutable version 1.1.0 (`scheduled_events_official_v1_1_0.json`,
+378 events, 39 added, every 1.0.0 event unchanged), indexed with lineage and hashes in
+`official_calendar_index.json`, declared to 2027-12-03 13:30Z (earliest family end: BLS NFP).
+`load_official_calendar()` defaults to the newest; `load_research_calendar()` is pinned to 1.0.0 and is
+used by campaigns, K6, E-1 and E-4 so their recorded `events_sha256`
+(d7a0cec5...) is unchanged. A re-read of every other family found no date that had moved. AUD, CAD, CHF,
+NZD not added (single global declared start). Procedure: `docs/v2/OPERATIONS.md` 7.1.
