@@ -1,9 +1,11 @@
 import { expect, test, type Page, type Route } from "@playwright/test";
 import {
   API,
+  exposureRow,
   figure,
   healthReport,
   killSwitchView,
+  limitBoard,
   mockShell,
   modeBanner,
   riskState,
@@ -56,6 +58,8 @@ test.describe("W-03: the worker entry is toned by the platform's verdict", () =>
       route.fulfill({
         json: healthReport({
           worker_heartbeat_age_seconds: 12,
+          worker_state: "stale",
+          worker_stale_at: null,
           checks: [
             { name: "worker_heartbeat", status: "down", detail: "stale", critical: true, latency_ms: null },
           ],
@@ -83,15 +87,28 @@ test.describe("W-03: the worker entry is toned by the platform's verdict", () =>
     await expect(page.getByTestId("status-worker")).toHaveAttribute("data-tone", "ok");
   });
 
-  test("a heartbeat three hours old is never green, with or without a verdict", async ({ page }) => {
+  test("a heartbeat three hours old is critical when the platform says stale; no verdict is unknown, never green", async ({
+    page,
+  }) => {
     await mockShell(page);
-    await page.route(`${API}/api/health`, (route: Route) =>
-      route.fulfill({ json: healthReport({ worker_heartbeat_age_seconds: 3 * 3600 }) }),
-    );
+    let verdict: string | undefined = "stale";
+    await page.route(`${API}/api/health`, (route: Route) => {
+      const report = healthReport({ worker_heartbeat_age_seconds: 3 * 3600, worker_stale_at: null }) as Record<
+        string,
+        unknown
+      >;
+      if (verdict === undefined) delete report.worker_state;
+      else report.worker_state = verdict;
+      return route.fulfill({ json: report });
+    });
     await page.goto("/");
     const worker = page.getByTestId("status-worker");
     await expect(worker).toHaveAttribute("data-tone", "critical");
     await expect(worker).toContainText("3h ago");
+    // An older API with no verdict: the workstation does not judge the age.
+    verdict = undefined;
+    await page.reload();
+    await expect(worker).toHaveAttribute("data-tone", "unknown");
   });
 });
 
@@ -276,25 +293,12 @@ test.describe("W-07: the banner and the panel agree after an arm, without the st
 test.describe("W-10: charts draw in tokens, never loss red for LIVE", () => {
   test("a LIVE exposure bar is magenta (the mode colour), not the loss colour", async ({ page }) => {
     await mockShell(page);
-    await page.route(`${API}/api/trading/exposure`, (route: Route) =>
+    await page.route(`${API}/api/trading/limits`, (route: Route) =>
       route.fulfill({
-        json: {
-          items: [
-            {
-              key: "EURUSD",
-              label: "EURUSD",
-              exposure_pct: figure(4, "broker_live", "pct"),
-              limit_pct: figure(10, "broker_live", "pct"),
-              utilisation_pct: figure(40, "broker_live", "pct"),
-              breached: false,
-            },
-          ],
-          total: 1,
-          offset: 0,
-          limit: 100,
-          source: source("live"),
-          caveats: [],
-        },
+        json: limitBoard({
+          exposure: [exposureRow("instrument:EURUSD", 4, 10, 40, { provenance: "broker_live" })],
+          risk: { daily_loss_pct: figure(null, "paper", "pct"), drawdown_pct: figure(null, "paper", "pct") },
+        }),
       }),
     );
     await page.goto("/trading/exposure");

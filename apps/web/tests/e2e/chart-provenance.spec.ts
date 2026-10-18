@@ -1,5 +1,5 @@
 import { expect, test, type Route } from "@playwright/test";
-import { API, figure, mockApi, source, tradesPage } from "./fixtures";
+import { API, exposureRow, figure, limitBoard, mockApi, source, tradesPage } from "./fixtures";
 
 /**
  * A chart's provenance chip is derived from the data it draws.
@@ -89,24 +89,16 @@ test.describe("chart provenance is derived from the data", () => {
   });
 
   test("exposure is labelled from its rows, not from the first row", async ({ page }) => {
-    const row = (key: string, provenance: string) => ({
-      key,
-      label: key.split(":")[1],
-      exposure_pct: figure(12.5, provenance, "pct"),
-      limit_pct: figure(25, provenance, "pct"),
-      utilisation_pct: figure(50, provenance, "pct"),
-      breached: false,
-    });
-    await page.route(`${API}/api/trading/exposure`, (route: Route) =>
+    // The exposure family draws GET /api/trading/limits' exposure rows; its
+    // chip counts the value and limit figures of every row it drew.
+    await page.route(`${API}/api/trading/limits`, (route: Route) =>
       route.fulfill({
-        json: {
-          items: [row("instrument:EURUSD", "broker_demo"), row("instrument:GBPUSD", "paper")],
-          total: 2,
-          offset: 0,
-          limit: 100,
-          source: source("live"),
-          caveats: [],
-        },
+        json: limitBoard({
+          exposure: [
+            exposureRow("instrument:EURUSD", 12.5, 25, 50, { provenance: "broker_demo" }),
+            exposureRow("instrument:GBPUSD", 12.5, 25, 50, { provenance: "paper" }),
+          ],
+        }),
       }),
     );
     await page.goto("/trading/exposure");

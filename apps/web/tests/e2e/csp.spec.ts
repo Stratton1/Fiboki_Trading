@@ -1,5 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 import { API, mockShell } from "./fixtures";
+import { mockEverything } from "./mock-everything";
 import { allRoutes } from "./routes";
 
 /**
@@ -41,15 +42,18 @@ test("the policy header is strict where it can be", async ({ request }) => {
   expect(response.headers()["x-frame-options"]).toBe("DENY");
 });
 
-test("no route triggers a violation", async ({ page }) => {
-  await recordViolations(page);
-  await mockShell(page);
-  for (const route of allRoutes()) {
+// One test per route (programme item 17): the sweep used to visit every
+// route in ONE test and ran into its 30 s timeout as routes were added.
+for (const route of allRoutes()) {
+  test(`no violation on ${route}`, async ({ page }) => {
+    await recordViolations(page);
+    await mockEverything(page, []);
     await page.goto(route);
     await expect(page.getByTestId("mode-banner")).not.toHaveAttribute("data-mode", "loading");
+    await page.getByTestId("state-loading").first().waitFor({ state: "detached", timeout: 5_000 }).catch(() => undefined);
     expect(await violations(page), `CSP violations on ${route}`).toEqual([]);
-  }
-});
+  });
+}
 
 test("dialogs, popovers, tooltips and the split pane trigger none", async ({ page }) => {
   await recordViolations(page);

@@ -1,6 +1,7 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Page } from "@playwright/test";
 import { API, liveBanner, mockShell, modeBanner } from "./fixtures";
+import { mockEverything } from "./mock-everything";
 import { allRoutes } from "./routes";
 
 /**
@@ -8,17 +9,35 @@ import { allRoutes } from "./routes";
  * violations on every route, in the dark and the light theme, including the
  * open states of the shell's dialogs and popovers.
  *
- * Routes whose API is not mocked render their explicit error state, which is
- * itself a screen an operator must be able to read.
+ * Every route is audited FILLED: the shared happy-path mocks
+ * (mock-everything.ts) answer every read, so axe sees the tables, chips,
+ * bars and dialogs an operator actually reads, not an error state (programme
+ * item 17). Error states are audited separately in error-states.spec.ts.
  */
 
 const ROUTES = allRoutes();
 const THEMES = ["dark", "light"] as const;
 
 async function audit(page: Page, label: string) {
+  // A target that happens to sit under the sticky status bar at the current
+  // scroll position is reported "partially obscured" (target-size). That is a
+  // property of where the page is scrolled, not of the page, so the audit
+  // runs with a viewport as tall as the page: every target is on screen and
+  // nothing sits under the bar. The width, and so the layout, is unchanged.
+  // Not while a popup is open: resizing would reposition it over the page.
+  const size = page.viewportSize();
+  const height = await page.evaluate(() =>
+    document.querySelector('[role="dialog"], [role="alertdialog"], [role="menu"], [data-side][data-open]')
+      ? 0
+      : document.documentElement.scrollHeight,
+  );
+  if (size && height > size.height) {
+    await page.setViewportSize({ width: size.width, height: Math.min(height + 40, 6000) });
+  }
   const results = await new AxeBuilder({ page })
     .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"])
     .analyze();
+  if (size) await page.setViewportSize(size);
   const blocking = results.violations
     .filter((v) => v.impact === "serious" || v.impact === "critical")
     .map((v) => ({
@@ -52,7 +71,7 @@ for (const theme of THEMES) {
 
     for (const route of ROUTES) {
       test(`${route}`, async ({ page }) => {
-        await mockShell(page);
+        await mockEverything(page, []);
         await page.goto(route);
         await settle(page);
         await expect(page.locator("html")).toHaveAttribute("data-theme", theme);

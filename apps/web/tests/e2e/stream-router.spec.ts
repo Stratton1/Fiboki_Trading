@@ -324,7 +324,7 @@ test.describe("freshness (report E §6.4)", () => {
     refreshMs: undefined,
     refreshFailing: false,
     workerDependent: true,
-    workerAgeS: 10,
+    workerState: "ok",
   };
 
   test("live, lagging and stale by stream confirmation age", () => {
@@ -333,13 +333,14 @@ test.describe("freshness (report E §6.4)", () => {
     expect(computeFreshness({ ...base, confirmedAt: 100_000 - 16_000 })).toBe("stale");
   });
 
-  test("a worker heartbeat at the stale threshold or none makes worker data stale, however live the stream", () => {
-    expect(computeFreshness({ ...base, workerAgeS: 120 })).toBe("stale");
-    expect(computeFreshness({ ...base, workerAgeS: 95, workerStaleAfterS: 90 })).toBe("stale");
-    expect(computeFreshness({ ...base, workerAgeS: 95 })).toBe("live");
-    expect(computeFreshness({ ...base, workerAgeS: null })).toBe("stale");
-    expect(computeFreshness({ ...base, workerAgeS: undefined })).toBe("live");
-    expect(computeFreshness({ ...base, workerAgeS: 500, workerDependent: false })).toBe("live");
+  test("the platform's worker verdict, not an age, makes worker data stale, however live the stream", () => {
+    expect(computeFreshness({ ...base, workerState: "stale" })).toBe("stale");
+    expect(computeFreshness({ ...base, workerState: "absent" })).toBe("stale");
+    expect(computeFreshness({ ...base, workerState: "down" })).toBe("stale");
+    expect(computeFreshness({ ...base, workerState: "ok" })).toBe("live");
+    // No verdict (an older API): the workstation does not invent one.
+    expect(computeFreshness({ ...base, workerState: null })).toBe("live");
+    expect(computeFreshness({ ...base, workerState: "stale", workerDependent: false })).toBe("live");
   });
 
   test("REST-read data is fresh, lagging or stale by its poll interval", () => {

@@ -1,5 +1,5 @@
 import { expect, test, type Page, type Route } from "@playwright/test";
-import { API, healthReport, mockApi, modeBanner } from "./fixtures";
+import { API, boardRow, boardView, figure, healthReport, mockApi, modeBanner } from "./fixtures";
 
 /**
  * Polling must not blank the view.
@@ -134,63 +134,61 @@ test.describe("refresh keeps the last good data", () => {
     await expect(page.getByTestId("mode-banner-killswitch")).toBeVisible();
   });
 
-  test("the health panel keeps its numbers across a poll tick", async ({ page }) => {
+  test("the System board keeps its numbers across a poll tick", async ({ page }) => {
     await page.clock.install();
     await mockApi(page);
+    await page.route(`${API}/api/health`, (route: Route) => route.fulfill({ json: healthReport() }));
 
     let calls = 0;
     let releaseSecond: (() => void) | null = null;
     const secondGate = new Promise<void>((resolve) => {
       releaseSecond = resolve;
     });
-    await page.route(`${API}/api/health`, async (route: Route) => {
+    const second = boardView([
+      boardRow({ id: "worker:w1", group: "worker", name: "w1", age: figure(4, "paper", "s") }),
+    ]);
+    await page.route(`${API}/api/system/board`, async (route: Route) => {
       calls += 1;
-      if (calls === 1) return route.fulfill({ json: healthReport() });
+      if (calls === 1) {
+        return route.fulfill({
+          json: boardView([boardRow({ id: "worker:w1", group: "worker", name: "w1", age: figure(12, "paper", "s") })]),
+        });
+      }
       if (calls === 2) {
         await secondGate;
-        return route.fulfill({ json: healthReport({ worker_heartbeat_age_seconds: 4 }) });
+        return route.fulfill({ json: second });
       }
       return route.fulfill(unavailable);
     });
 
-    await page.goto("/");
-    const panel = page.getByTestId("health-panel");
-    await expect(panel).toBeVisible();
-    await expect(page.getByTestId("health-heartbeat")).toHaveText("12s ago");
-    await expect(panel).toContainText("deadbeef");
+    await page.goto("/system");
+    const age = page.locator('[data-testid="board-row"][data-id="worker:w1"] [data-testid="board-age"]');
+    await expect(age).toHaveText("12s");
 
     // Poll tick with the refresh held in flight: numbers stay, no skeleton.
-    await page.clock.fastForward(20_500);
+    await page.clock.fastForward(10_500);
     await expect.poll(() => calls).toBe(2);
-    await expect(panel).toBeVisible();
-    await expect(page.getByTestId("health-heartbeat")).toHaveText("12s ago");
-    await expect(page.getByText("Loading platform health")).toHaveCount(0);
-    await expect(page.getByText("Could not load platform health")).toHaveCount(0);
+    await expect(age).toHaveText("12s");
+    await expect(page.getByText("Loading the system board")).toHaveCount(0);
 
     // The refresh lands: the new numbers replace the old, still no skeleton.
     releaseSecond?.();
-    await expect(page.getByTestId("health-heartbeat")).toHaveText("4s ago");
+    await expect(age).toHaveText("4s");
 
-    // The next refresh fails: numbers kept, STALE badge beside them.
-    await page.clock.fastForward(20_500);
+    // The next refresh fails: numbers kept, STALE beside them, the page says so.
+    await page.clock.fastForward(10_500);
     await expect.poll(() => calls).toBeGreaterThanOrEqual(3);
-    const stale = page
-      .locator('[data-testid="state-success"]')
-      .filter({ has: page.getByTestId("health-panel") })
-      .getByTestId("state-stale");
-    await expect(stale).toBeVisible();
-    await expect(stale).toContainText("STALE");
-    await expect(stale).toContainText("retrying");
-    await expect(page.getByTestId("health-heartbeat")).toHaveText("4s ago");
-    await expect(page.getByText("Could not load platform health")).toHaveCount(0);
-    await expect(page.getByText("Loading platform health")).toHaveCount(0);
+    await expect(page.getByTestId("state-stale").first()).toContainText("STALE");
+    await expect(age).toHaveText("4s");
+    await expect(page.getByTestId("page-stale-banner")).toBeVisible();
+    await expect(page.getByText("Could not load the system board")).toHaveCount(0);
   });
 
   test("a first-load failure is still an error, not a stale success", async ({ page }) => {
     await mockApi(page);
-    await page.route(`${API}/api/health`, (route: Route) => route.fulfill(unavailable));
-    await page.goto("/");
-    await expect(page.getByText("Could not load platform health")).toBeVisible();
-    await expect(page.getByTestId("health-panel")).toHaveCount(0);
+    await page.route(`${API}/api/system/board`, (route: Route) => route.fulfill(unavailable));
+    await page.goto("/system");
+    await expect(page.getByText("Could not load the system board")).toBeVisible();
+    await expect(page.getByTestId("board-summary")).toHaveCount(0);
   });
 });

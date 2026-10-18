@@ -351,15 +351,14 @@ test.describe("tooltips", () => {
     await expect(page.getByTestId("mode-banner")).toHaveAttribute("data-mode", "paper");
     await page.keyboard.press("Tab"); // skip link
     await page.keyboard.press("Tab"); // command line
-    await page.keyboard.press("Tab"); // the function-key row (one tab stop)
-    await page.keyboard.press("Tab"); // first rail icon
+    await page.keyboard.press("Tab"); // first rail icon (the F-key row is merged into the rail)
     await expect(page.getByTestId("rail-command")).toBeFocused();
     // A closing tooltip lingers for its exit transition; read the open one.
     const tooltip = page.locator('[data-testid="tooltip"][data-open]');
     await expect(tooltip).toBeVisible();
-    await expect(tooltip).toHaveText("Command");
+    await expect(tooltip).toHaveText("Command (F1)");
     await page.keyboard.press("Tab");
-    await expect(tooltip).toHaveText("Fleet & Positions");
+    await expect(tooltip).toHaveText("Fleet & Positions (F2)");
     await page.keyboard.press("Escape");
     await expect(tooltip).toHaveCount(0);
   });
@@ -390,7 +389,8 @@ test.describe("g chords", () => {
     ["l", "/trading/candidates"],
     ["x", "/trading/risk"],
     ["j", "/trading/execution"],
-    ["s", "/system/services"],
+    ["s", "/system"],
+    ["f", "/trading/fleet"],
     ["c", "/"],
   ] as const) {
     test(`g then ${key} goes to ${path}`, async ({ page }) => {
@@ -436,11 +436,11 @@ test.describe("command palette", () => {
     });
   }
 
-  test("open by id: a trade id selects that row on the trades screen", async ({ page }) => {
+  test("a trade id that exists opens and selects that row on the trades screen", async ({ page }) => {
     await page.goto("/");
     await page.keyboard.press("ControlOrMeta+KeyK");
     await page.getByTestId("palette-input").fill("trd_0003");
-    await page.getByTestId("palette-open-trade").click();
+    await page.locator('[data-testid="palette-hit"][data-kind="trade"][data-id="trd_0003"]').click();
     await expect(page).toHaveURL(/\/trading\/execution\?row=trd_0003$/);
     await expect(page.locator('[data-row-id="trd_0003"]')).toHaveAttribute("aria-selected", "true");
   });

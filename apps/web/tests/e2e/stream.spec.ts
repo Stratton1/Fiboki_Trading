@@ -100,7 +100,9 @@ test.describe("stream", () => {
     await expect(status).toHaveAttribute("data-active", "false");
 
     // Time is now moved only by the test.
-    await page.clock.pauseAt(await page.evaluate(() => Date.now() + 100));
+    // A full second ahead: on a loaded machine the round trip to evaluate
+    // Date.now() and back can exceed 100 ms, and pauseAt cannot go back.
+    await page.clock.pauseAt(await page.evaluate(() => Date.now() + 1_000));
     stream.down = 503;
     await expect(state).toHaveAttribute("data-failures", "1");
 

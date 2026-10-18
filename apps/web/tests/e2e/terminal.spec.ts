@@ -2,8 +2,9 @@ import { expect, test, type Page } from "@playwright/test";
 import { mockShell } from "./fixtures";
 
 /**
- * The terminal chrome: the command line (mnemonics, symbols, `/` to focus),
- * the F1-F9 section keys, and the inverted mode cell. All of it navigates or
+ * The terminal chrome: the command line (codes, symbols, `/` to focus), the
+ * F1-F9 section keys (in the rail), the session clocks and the inverted mode
+ * cell. All of it navigates or
  * opens a dialog; none of it changes anything on the platform.
  */
 
@@ -19,40 +20,24 @@ async function goReady(page: Page, path = "/") {
   await expect(page.getByTestId("command-line")).toHaveAttribute("data-ready", "true");
 }
 
-test.describe("function keys", () => {
-  test("nine keys, one per section, the current section marked", async ({ page }) => {
+test.describe("function keys (merged into the rail)", () => {
+  test("one top line: no second row of keys, and the rail carries every section's key", async ({ page }) => {
     await goReady(page);
-    const keys = page.getByTestId("function-keys").getByRole("link");
-    await expect(keys).toHaveCount(9);
-    await expect(page.getByTestId("fkey-command")).toHaveAttribute("aria-current", "true");
-    await expect(page.getByTestId("fkey-risk")).not.toHaveAttribute("aria-current", "true");
-    await expect(page.getByTestId("fkey-risk")).toContainText("F6");
-    await expect(page.getByTestId("fkey-risk")).toContainText("RSK");
+    await expect(page.getByTestId("function-keys")).toHaveCount(0);
+    const top = await page.getByTestId("topbar").boundingBox();
+    expect(top?.height ?? 99).toBeLessThanOrEqual(30);
+    await expect(page.getByTestId("fkey-command")).toHaveText("F1");
+    await expect(page.getByTestId("fkey-fleet")).toHaveText("F2");
+    await expect(page.getByTestId("fkey-risk")).toHaveText("F6");
+    // F5 is the browser's reload: Market Intelligence shows its mnemonic.
+    await expect(page.getByTestId("fkey-markets")).toHaveText("MKT");
+    await expect(page.getByTestId("rail-command")).toHaveAttribute("data-active", "true");
   });
 
-  test("clicking a key goes to that section's first view", async ({ page }) => {
+  test("F2 opens the fleet, F6 Risk; F5 is left to the browser", async ({ page }) => {
     await goReady(page);
-    await page.getByTestId("fkey-research").click();
-    await expect(page).toHaveURL(/\/research$/);
-  });
-
-  test("the row is one tab stop; arrows, Home and End move between keys", async ({ page }) => {
-    await goReady(page);
-    const keys = page.getByTestId("function-keys").getByRole("link");
-    await expect(page.getByTestId("fkey-command")).toHaveAttribute("tabindex", "0");
-    await expect(page.getByTestId("fkey-fleet")).toHaveAttribute("tabindex", "-1");
-    await page.getByTestId("fkey-command").focus();
-    await page.keyboard.press("ArrowRight");
-    await expect(page.getByTestId("fkey-fleet")).toBeFocused();
-    await page.keyboard.press("End");
-    await expect(page.getByTestId("fkey-journal")).toBeFocused();
-    await page.keyboard.press("ArrowRight");
-    await expect(page.getByTestId("fkey-command")).toBeFocused();
-    await expect(keys).toHaveCount(9);
-  });
-
-  test("F6 goes to Risk; F5 is left to the browser", async ({ page }) => {
-    await goReady(page);
+    await page.keyboard.press("F2");
+    await expect(page).toHaveURL(/\/trading\/fleet$/);
     await page.keyboard.press("F6");
     await expect(page).toHaveURL(/\/trading\/risk$/);
     await page.keyboard.press("F4");
@@ -66,6 +51,13 @@ test.describe("function keys", () => {
         }),
     );
     expect(prevented).toBe(false);
+  });
+
+  test("the market session clocks come from the API", async ({ page }) => {
+    await goReady(page);
+    await expect(page.getByTestId("session-london")).toHaveAttribute("data-open", "true");
+    await expect(page.getByTestId("session-tokyo")).toHaveAttribute("data-open", "false");
+    await expect(page.getByTestId("session-london")).toContainText("LDN");
   });
 });
 
@@ -92,6 +84,10 @@ test.describe("command line", () => {
     const input = page.getByTestId("command-line-input");
     await input.fill("r");
     const options = page.getByTestId("command-line-list").getByRole("option");
+    await expect(options.first()).toBeVisible();
+    // Nothing is chosen until the operator chooses.
+    await expect(options.first()).toHaveAttribute("aria-selected", "false");
+    await input.press("ArrowDown");
     await expect(options.first()).toHaveAttribute("aria-selected", "true");
     await input.press("ArrowDown");
     await expect(options.nth(1)).toHaveAttribute("aria-selected", "true");
