@@ -274,7 +274,10 @@ export default function CandidatesPage() {
                 Promotion is disabled. {allowed.reason}
               </p>
             ) : null}
-            {!mutationsAllowed ? (
+            {/* Not while the mode is still being read: a note that appears for
+                a moment and goes moves every card below it. Promote stays
+                disabled meanwhile all the same. */}
+            {!mutationsAllowed && executionMode !== "loading" ? (
               <p className="muted" data-testid="promote-mode-blocked" role="note">
                 Promotion is disabled: the execution mode is unknown or the workstation is
                 disconnected, so nothing can be promoted until the platform answers.

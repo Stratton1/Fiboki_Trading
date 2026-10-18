@@ -31,6 +31,7 @@ export default function PortfolioPage() {
         intro="Balance and equity count only trades executed in the current mode. Trades from other provenances are on the Execution page and are excluded here on purpose."
       />
 
+      <div className="portfolio-book">
       <AsyncBoundary state={portfolio} label="the portfolio" onRetry={portfolio.reload}>
         {(envelope) => (
           <>
@@ -49,6 +50,7 @@ export default function PortfolioPage() {
           </>
         )}
       </AsyncBoundary>
+      </div>
 
       <Card title="Open positions">
         <AsyncBoundary

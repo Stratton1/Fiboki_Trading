@@ -1,6 +1,12 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
+
+// The first measurement is taken before paint, so an SVG never paints once at
+// the fallback width (with `height: auto` that drew it far too tall for a
+// frame and moved everything below it). useLayoutEffect does not run on the
+// server; useEffect stands in there.
+const useBeforePaint = typeof window === "undefined" ? useEffect : useLayoutEffect;
 
 /**
  * The rendered width of a box, kept current with a ResizeObserver, so an
@@ -10,7 +16,7 @@ import { useEffect, useRef, useState } from "react";
 export function useWidth(fallback = 720) {
   const ref = useRef<HTMLDivElement>(null);
   const [width, setWidth] = useState(fallback);
-  useEffect(() => {
+  useBeforePaint(() => {
     const el = ref.current;
     if (!el) return;
     const measure = () => {

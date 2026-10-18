@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect } from "react";
+import { useEffect, type ReactNode } from "react";
 import { formatTimestamp, formatUtcTime } from "@/lib/format";
 import { singleProvenanceOf } from "@/lib/provenance";
 import { useApi } from "@/lib/query";
@@ -105,14 +105,22 @@ function Group({ title, rows, id, focused }: { title: string; rows: BoardRow[]; 
   );
 }
 
-function Board({ envelope, focus }: { envelope: Envelope<BoardView>; focus: BoardFocus }) {
+function Board({
+  envelope,
+  focus,
+  scroll,
+}: {
+  envelope: Envelope<BoardView>;
+  focus: BoardFocus;
+  scroll: boolean;
+}) {
   const board = envelope.data;
   const provenance = singleProvenanceOf(board.rows.map((r) => r.age.provenance));
   useEffect(() => {
-    if (!focus) return;
+    if (!focus || !scroll) return;
     const group = GROUPS.find((g) => g.focus === focus);
     if (group) document.getElementById(`board-${group.id}`)?.scrollIntoView({ block: "start" });
-  }, [focus]);
+  }, [focus, scroll]);
   return (
     <>
       <div className="board__summary" data-testid="board-summary" data-status={board.status}>
@@ -153,7 +161,7 @@ function Board({ envelope, focus }: { envelope: Envelope<BoardView>; focus: Boar
   );
 }
 
-export function SystemBoard({ focus = null }: { focus?: BoardFocus }) {
+export function SystemBoard({ focus = null, before }: { focus?: BoardFocus; before?: ReactNode }) {
   const state = useApi<Envelope<BoardView>>(BOARD_PATH, { refreshMs: BOARD_REFRESH_MS });
   return (
     <div className="board" data-testid="system-board" data-focus={focus ?? undefined}>
@@ -161,8 +169,10 @@ export function SystemBoard({ focus = null }: { focus?: BoardFocus }) {
         title="System"
         intro="Every service, worker, paper bot, data store, broker and health check, and the incident load, read once and aged by one API clock. STALE is the platform's verdict, not this browser's. The old Services, Workers, Broker and Data Health pages open this board at their group."
       />
+      {before}
       <AsyncBoundary state={state} label="the system board" onRetry={state.reload}>
-        {(envelope) => <Board envelope={envelope} focus={focus} />}
+        {/* A page that leads with its own panel (before) is not scrolled away from it. */}
+        {(envelope) => <Board envelope={envelope} focus={focus} scroll={before === undefined} />}
       </AsyncBoundary>
     </div>
   );

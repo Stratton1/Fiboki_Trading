@@ -38,7 +38,7 @@ export function LifecycleRelated({ strategyId }: { strategyId: string }) {
         <Link href={route.fleet()}>Fleet</Link>
       </p>
       <div className="related-grid">
-        <div>
+        <div className="reserve-xs">
           <h3 className="attr__title">Paper bots</h3>
           <AsyncBoundary state={fleet} label="the fleet" onRetry={fleet.reload}>
             {(page) => {
@@ -67,7 +67,7 @@ export function LifecycleRelated({ strategyId }: { strategyId: string }) {
             }}
           </AsyncBoundary>
         </div>
-        <div>
+        <div className="reserve-xs">
           <h3 className="attr__title">Latest trades</h3>
           <AsyncBoundary
             state={trades}

@@ -1,6 +1,5 @@
 "use client";
 
-import { useEffect, useRef } from "react";
 import { useApi } from "@/lib/query";
 import { familyRows } from "@/lib/limits-core";
 import type { Envelope, LimitBoardView, RiskStateView } from "@/lib/types";
@@ -36,19 +35,63 @@ const LIMITS_REFRESH_MS = 10_000;
  */
 export function RiskExposureScreen({ focus }: { focus: "risk" | "exposure" }) {
   const risk = useApi<Envelope<RiskStateView>>(RISK_PATH);
-  const limits = useApi<Envelope<LimitBoardView>>(LIMITS_PATH, { refreshMs: LIMITS_REFRESH_MS });
+  const limits = useApi<Envelope<LimitBoardView>>(LIMITS_PATH, {
+    refreshMs: LIMITS_REFRESH_MS,
+  });
 
-  // The exposure route opens at the matrix, once, when the board above it has
-  // its first answer (before that, its height is still changing).
-  const scrolled = useRef(false);
-  const settled = limits.status !== "loading" && risk.status !== "loading";
-  useEffect(() => {
-    if (focus !== "exposure" || scrolled.current || !settled) return;
-    scrolled.current = true;
-    document.getElementById("exposure")?.scrollIntoView({ block: "start" });
-  }, [focus, settled]);
+  const drawdown =
+    risk.status === "success" ? risk.data.data.drawdown_pct : null;
 
-  const drawdown = risk.status === "success" ? risk.data.data.drawdown_pct : null;
+  const exposureSection = (
+    <section
+      className="card rx__exposure"
+      id="exposure"
+      aria-labelledby="rx-exposure"
+    >
+      <h2 id="rx-exposure" className="card__title">
+        Exposure by instrument, currency and strategy
+      </h2>
+      <AsyncBoundary
+        state={limits}
+        label="exposure"
+        onRetry={limits.reload}
+        isEmpty={(envelope) =>
+          !envelope.data.families.some(
+            (f) => f.id === "exposure" && f.rows.length > 0,
+          )
+        }
+        emptyTitle="No exposure"
+        emptyBody="The platform answered with no exposure buckets: nothing is open. That is a real, empty answer."
+      >
+        {(envelope) => (
+          <>
+            <SourceBadge
+              source={envelope.data.sources.exposure ?? envelope.source}
+            />
+            <ExposureMatrix
+              rows={familyRows(
+                envelope.data,
+                envelope.data.families.find((f) => f.id === "exposure")?.rows ??
+                  [],
+              )}
+            />
+          </>
+        )}
+      </AsyncBoundary>
+      <div
+        className="rx__absent"
+        data-testid="correlated-risk"
+        data-state="absent"
+      >
+        <span className="rx__absent-title">Correlated open risk</span>
+        <ViewStateTag state="absent">NOT REPORTED</ViewStateTag>
+        <span className="muted">
+          The gateway checks correlated exposure for each order, but the API
+          exposes no correlated-open-risk figure, so none is shown here.
+        </span>
+      </div>
+    </section>
+  );
 
   return (
     <div className="rx" data-testid="risk-exposure" data-focus={focus}>
@@ -59,22 +102,33 @@ export function RiskExposureScreen({ focus }: { focus: "risk" | "exposure" }) {
         title="Risk & Exposure"
         intro="How close the book is to every limit the platform reports, against the limit set in force. Limits the platform enforces but does not report are listed as such, never drawn as zero."
       />
+      {/* /trading/exposure opens AT the matrix: it comes first there, rather
+          than being scrolled to after the board above it has loaded (which
+          moved it on screen as the board settled). */}
+      {focus === "exposure" ? exposureSection : null}
       <div className="rx__grid">
         <div className="rx__main">
           <LimitBoard limits={limits} />
         </div>
-        <aside className="rx__side" aria-label="Kill switch, gateway and throttle">
+        <aside
+          className="rx__side"
+          aria-label="Kill switch, gateway and throttle"
+        >
           <section className="card" aria-labelledby="rx-kill-switch">
             <h2 id="rx-kill-switch" className="card__title">
               Kill switch
             </h2>
             <KillSwitchPanel />
           </section>
-          <section className="card" aria-labelledby="rx-gateway">
+          <section className="card rx__gateway" aria-labelledby="rx-gateway">
             <h2 id="rx-gateway" className="card__title">
               Gateway
             </h2>
-            <AsyncBoundary state={risk} label="risk state" onRetry={risk.reload}>
+            <AsyncBoundary
+              state={risk}
+              label="risk state"
+              onRetry={risk.reload}
+            >
               {(envelope) => <Gateway envelope={envelope} />}
             </AsyncBoundary>
           </section>
@@ -83,40 +137,10 @@ export function RiskExposureScreen({ focus }: { focus: "risk" | "exposure" }) {
           </section>
         </aside>
       </div>
+      {focus === "risk" ? exposureSection : null}
+      {/* After the matrix, so its loading never moves the exposure the
+          /trading/exposure route opens at. */}
       <LazyKillSwitchTimeline />
-      <section className="card rx__exposure" id="exposure" aria-labelledby="rx-exposure">
-        <h2 id="rx-exposure" className="card__title">
-          Exposure by instrument, currency and strategy
-        </h2>
-        <AsyncBoundary
-          state={limits}
-          label="exposure"
-          onRetry={limits.reload}
-          isEmpty={(envelope) => !envelope.data.families.some((f) => f.id === "exposure" && f.rows.length > 0)}
-          emptyTitle="No exposure"
-          emptyBody="The platform answered with no exposure buckets: nothing is open. That is a real, empty answer."
-        >
-          {(envelope) => (
-            <>
-              <SourceBadge source={envelope.data.sources.exposure ?? envelope.source} />
-              <ExposureMatrix
-                rows={familyRows(
-                  envelope.data,
-                  envelope.data.families.find((f) => f.id === "exposure")?.rows ?? [],
-                )}
-              />
-            </>
-          )}
-        </AsyncBoundary>
-        <div className="rx__absent" data-testid="correlated-risk" data-state="absent">
-          <span className="rx__absent-title">Correlated open risk</span>
-          <ViewStateTag state="absent">NOT REPORTED</ViewStateTag>
-          <span className="muted">
-            The gateway checks correlated exposure for each order, but the API exposes no correlated-open-risk figure,
-            so none is shown here.
-          </span>
-        </div>
-      </section>
     </div>
   );
 }
@@ -127,16 +151,28 @@ function Gateway({ envelope }: { envelope: Envelope<RiskStateView> }) {
     <div data-testid="gateway-panel">
       <SourceBadge source={envelope.source} />
       <CaveatList caveats={envelope.caveats} />
-      <p className="rx__gate" data-testid="gateway-new-risk" data-permitted={view.new_risk_permitted}>
+      <p
+        className="rx__gate"
+        data-testid="gateway-new-risk"
+        data-permitted={view.new_risk_permitted}
+      >
         New risk{" "}
-        <span className={`badge badge--${view.new_risk_permitted ? "ok" : "down"}`}>
+        <span
+          className={`badge badge--${view.new_risk_permitted ? "ok" : "down"}`}
+        >
           {view.new_risk_permitted ? "PERMITTED" : "BLOCKED"}
         </span>{" "}
         <span className="mono muted">{view.new_risk_reason}</span>
       </p>
-      <p className="rx__gate" data-testid="gateway-closing" data-permitted={view.closing_permitted}>
+      <p
+        className="rx__gate"
+        data-testid="gateway-closing"
+        data-permitted={view.closing_permitted}
+      >
         Closing{" "}
-        <span className={`badge badge--${view.closing_permitted ? "ok" : "down"}`}>
+        <span
+          className={`badge badge--${view.closing_permitted ? "ok" : "down"}`}
+        >
           {view.closing_permitted ? "PERMITTED" : "BLOCKED"}
         </span>
       </p>
@@ -144,8 +180,14 @@ function Gateway({ envelope }: { envelope: Envelope<RiskStateView> }) {
         Limit set <span className="mono">{view.limits_version}</span>
       </p>
       {view.breaches.length > 0 ? (
-        <div className="state state--error" data-testid="gateway-breaches" role="alert">
-          <div className="state__title">Limit breaches, as the API lists them</div>
+        <div
+          className="state state--error"
+          data-testid="gateway-breaches"
+          role="alert"
+        >
+          <div className="state__title">
+            Limit breaches, as the API lists them
+          </div>
           <ul>
             {view.breaches.map((breach) => (
               <li key={breach}>{breach}</li>

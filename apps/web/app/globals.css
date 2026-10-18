@@ -5168,3 +5168,137 @@
     }
   }
 }
+
+/* WAVE 1A OPERATOR CORE (continued): layout stability (programme P1 7).
+   Loading states reserve their final size so nothing below moves when data
+   arrives; the phone chrome never re-wraps when a status word changes. */
+@layer components {
+  @media (max-width: 639.98px) {
+    /* Status items that change text keep a fixed footprint. */
+    .status-bar [data-testid="status-stream"],
+    .status-bar [data-testid="status-worker"] {
+      min-width: 19ch;
+    }
+    .status-bar [data-testid="status-api"] {
+      min-width: 10ch;
+    }
+    .status-bar [data-testid="status-as-of"] {
+      min-width: 24ch;
+    }
+    /* The page header is one line that scrolls sideways, so a page's action
+       arriving in it never pushes the page down. */
+    .page-header {
+      flex-wrap: nowrap;
+      overflow-x: auto;
+      scrollbar-width: none;
+    }
+    .page-header__tabs {
+      flex-wrap: nowrap;
+    }
+    .page-header__actions {
+      flex: 0 0 auto;
+    }
+  }
+  /* The money strip keeps its height and its meta line in every state;
+     on a phone its loading box is the success strip's five rows. */
+  .money[data-state="loading"],
+  .money[data-state="error"] {
+    min-height: 68px;
+    margin-bottom: 23px;
+  }
+  @media (max-width: 639.98px) {
+    .money[data-state="loading"],
+    .money[data-state="error"] {
+      min-height: 330px;
+    }
+    /* The status bar is a fixed grid on a phone: an item's text changing
+       never re-wraps the bar. */
+    .status-bar {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+    .status-bar__item {
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .status-bar [data-testid="status-as-of"] {
+      grid-column: span 2;
+    }
+    .status-bar [data-testid="status-stream"],
+    .status-bar [data-testid="status-worker"],
+    .status-bar [data-testid="status-api"],
+    .status-bar [data-testid="status-as-of"] {
+      min-width: 0;
+    }
+  }
+
+  /* Risk & Exposure: the board and the matrix arrive in one read. */
+  .limit-board > [data-testid="state-loading"] {
+    min-height: 100vh;
+  }
+  .rx__exposure > [data-testid="state-loading"] {
+    min-height: 360px;
+  }
+  /* Desktop: the matrix is shorter, and the gateway card (beside the board)
+     is its loaded height while it loads. */
+  @media (min-width: 640px) {
+    .rx__exposure > [data-testid="state-loading"] {
+      min-height: 302px;
+    }
+    .rx__gateway:has(> [data-testid="state-loading"]) {
+      min-height: 382px;
+    }
+  }
+  /* The kill-switch timeline's placeholder is the card's height. */
+  .ks-pending {
+    min-height: 256px;
+  }
+  /* Portfolio: tiles plus the equity curve. */
+  .portfolio-book > [data-testid="state-loading"] {
+    min-height: 330px;
+  }
+  .portfolio-book [data-testid="chart-pending"] {
+    min-height: 268px;
+  }
+  /* System board and the lifecycle entity's panels. */
+  .board > [data-testid="state-loading"] {
+    min-height: 100vh;
+  }
+  /* Measured final heights (1440 / 390) of the lifecycle entity's panels,
+     the related lists and the broker guard. */
+  .reserve-doc > [data-testid="state-loading"] {
+    min-height: 240px;
+  }
+  .reserve-val > [data-testid="state-loading"] {
+    min-height: 150px;
+  }
+  .reserve-state > [data-testid="state-loading"] {
+    min-height: 200px;
+  }
+  .reserve-xs > [data-testid="state-loading"] {
+    min-height: 90px;
+  }
+  .reserve-guard > [data-testid="state-loading"] {
+    min-height: 240px;
+  }
+  /* Phone heights: after the defaults above, so they win. */
+  @media (max-width: 639.98px) {
+    .portfolio-book > [data-testid="state-loading"] {
+      min-height: 520px;
+    }
+    .reserve-doc > [data-testid="state-loading"] {
+      min-height: 730px;
+    }
+    .reserve-val > [data-testid="state-loading"] {
+      min-height: 460px;
+    }
+    .reserve-state > [data-testid="state-loading"] {
+      min-height: 590px;
+    }
+    .reserve-guard > [data-testid="state-loading"] {
+      min-height: 400px;
+    }
+  }
+}
