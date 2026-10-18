@@ -145,6 +145,53 @@ frame (paper cyan, live magenta "REAL MONEY"), provenance chips (hollow simulate
 executed), live SSE stream, ⌘K palette, g-chords, ⇧K opens the kill switch and never arms.
 Gates in CI: typecheck, lint, byte budgets, contrast, axe, 490 Playwright tests.
 
+### 8.1 The chart workstation (`/markets/<symbol>`)
+
+Candles from `GET /api/markets/bars/{symbol}`; signals, paper fills, levels, regimes and indicator
+series from `GET /api/markets/overlays/{symbol}`. The browser computes nothing a strategy, a gate
+or the risk engine would compute; it places the API's numbers on the bars. Crypto symbols
+(`BTCGBP`, `ETHGBP`, …) open the same way: the bar axis is one slot per bar, so 24/7 bars have no
+gaps and an FX weekend takes no room; the trading-hours chip says "24/7 · long only".
+
+**Trades on the chart.** The bar under the timeframe has three things:
+
+- *Paper / Backtest / Both* chooses which trades are drawn and listed.
+- *Backtest run* lists the stored runs for this symbol and timeframe
+  (`GET /api/markets/backtests/{symbol}`): strategy, date, the gate verdict filed against that run
+  (`not evaluated` when none was), trade count, and "stale engine" when the run predates the current
+  engine (not comparable with a new run). Picking one reads its trades for the chart's window
+  (`GET /api/markets/backtests/{symbol}/{run_id}/trades`) and puts `?run=` in the URL, so the view
+  can be shared. Chips beside it: BT provenance, the run id, the dataset version, the gate verdict.
+- Paper trades come from every paper session that traded the symbol, replay or forward, FX or
+  crypto, each labelled with its session (`paper_forward_crypto_v1`, …).
+
+Grammar: paper markers are FILLED in the paper ink, backtest markers HOLLOW in the simulated ink
+(▲ long, ▼ short at entry, ■ at exit), backtest connectors dashed; the connector is green or red by
+the sign of the platform's net P&L, the only green and red on the chart. Each trade's stop
+(dashed, `SL`) and targets (dotted, `TP1`, `TP2`) are short segments spanning that trade's bars,
+labelled BT or PAPER. They are the levels the ENGINE recorded (`core.contracts.Trade`, stamped at
+the ledger boundary since 2026-10-18); when a breakeven or trail moved the stop, the final stop is a
+one-bar tick at the exit labelled with the rule, because the engine records which rule moved it
+and where, not when. A run filed before 2026-10-18 has no stops: it says "no stops recorded" and
+draws none; re-run it to see them. Hover a trade for its figures; the trades table on the right
+(below the chart on a phone) lists the same figures; click a row, or move with ↑ ↓ and press
+Enter, to bring that trade into view and highlight it.
+
+**Drawings.** The rail on the left: select and move (Alt S, Esc), trend line (Alt T), ray (Alt R),
+horizontal level (Alt H), vertical line (Alt V), rectangle zone (Alt B), Fibonacci retracement
+(Alt F: 0, 0.236, 0.382, 0.5, 0.618, 0.786, 1, with optional 1.272 and 1.618 extensions), text note
+(Alt N, Enter places it, double-click edits), measure (Alt M: price, percent, bars and time;
+display only, never saved), lock (Alt Shift L: the selected drawing, or all), hide all
+(Alt Shift H). The bar at the plot's top-left has undo (Ctrl Z), redo (Ctrl Shift Z), delete (Del),
+the timeframe scope for new drawings (every timeframe, or this one only), Fibonacci extensions,
+clear, and the save state. Drawings are anchored in time and price, so they stay put through zoom,
+scroll and a timeframe change. They are saved per operator and symbol in
+`<FIBOKI_STATE_DIR>/chart/drawings.sqlite` with a version: an edit made in another window is never
+overwritten (this window says so and shows the newer set), every write is in the audit trail and
+in the drawing history. A drawing is an annotation: no strategy, risk check or backtest reads it
+(an AST test enforces that). Viewers see drawings, including other operators' (dotted, with the
+owner's name), and cannot draw; measuring is allowed.
+
 ## 9. Operations on the Mac
 
 Two checkouts: development under `~/Documents/...` (edit, test, campaigns), runtime at
@@ -156,7 +203,8 @@ the Keychain. `scripts/oanda-backfill.sh` refreshes the data store.
 
 ## 10. What is not built
 
-Live execution (by design). Agent Desk screen. Phone kill-switch view. Chart replay, drawings,
-calendar markers on the chart. Per-family holdout budgets. Measured spreads (needs four weeks
+Live execution (by design). Agent Desk screen. Phone kill-switch view. Chart replay and
+calendar markers on the chart; a stop-move history (the engine records the final stop, not when it
+moved). Per-family holdout budgets. Measured spreads (needs four weeks
 of the quote recorder). Pre-2024 calendar. E-1 and E-2 are complete; `v2.1.0-calibrated` is published and awaits the operator's switch. Nothing has traded
 forward yet. No strategy has an edge demonstrated by this pipeline.
