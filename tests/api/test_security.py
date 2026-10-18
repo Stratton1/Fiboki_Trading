@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from fastapi.routing import APIRoute
 
-from fiboki.api.security import CSRF_COOKIE, CSRF_HEADER, require_admin
+from fiboki.api.security import CSRF_COOKIE, CSRF_HEADER, require_admin, require_operator
 from tests.api.conftest import ADMIN_PW, ORIGIN, csrf_headers, login
 
 MUTATING = {"POST", "PUT", "PATCH", "DELETE"}
@@ -18,7 +18,16 @@ MUTATING = {"POST", "PUT", "PATCH", "DELETE"}
 NON_ADMIN_MUTATING = {
     "/api/auth/login": "issues a session; gating it on a session is circular",
     "/api/auth/logout": "must always be reachable, whatever your role",
+    # Chart drawings are the operator's own annotations (never read by a
+    # strategy, the risk engine or a backtest: tests/unit/
+    # test_drawings_never_reach_a_decision.py), so an operator may write them.
+    # They are still behind require_operator (role, CSRF, allow-listed Origin)
+    # and audited; OPERATOR_GATED_MUTATING below asserts it.
+    "/api/markets/drawings/{symbol}": "operator annotations: require_operator, asserted below",
 }
+
+#: The non-admin mutating routes that must still be operator-gated.
+OPERATOR_GATED_MUTATING = {"/api/markets/drawings/{symbol}"}
 
 
 def _routes(app):
@@ -55,6 +64,17 @@ def test_every_mutating_route_requires_admin(client):
     assert not missing, (
         "These mutating routes are not behind require_admin: " + ", ".join(missing)
     )
+
+
+def test_operator_gated_mutating_routes_require_the_operator_role(client):
+    routes = [
+        r for r in _routes(client.app)
+        if (set(r.methods) & MUTATING) and r.path in OPERATOR_GATED_MUTATING
+    ]
+    assert {r.path for r in routes} == OPERATOR_GATED_MUTATING
+    for route in routes:
+        calls = {sub.call for sub in _all_dependencies(route.dependant)}
+        assert require_operator in calls or require_admin in calls, route.path
 
 
 def test_no_route_accepts_a_credential_in_the_url(client):

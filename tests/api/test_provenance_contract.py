@@ -41,6 +41,14 @@ ALLOWED_BARE_NUMERIC = {
     ("SettingsView", "allowed_origin_count"),
     ("KillSwitchView", "open_positions"),
     ("ServiceRow", "latency_ms"),
+    # Operator drawings (routers/chart.py): an anchor is a point an operator
+    # placed by hand, an annotation and not a measured or computed figure; the
+    # versions are the set's optimistic-concurrency counters; the maximum is a
+    # configured limit.
+    ("DrawingPoint", "price"),
+    ("DrawingSetView", "version"),
+    ("DrawingSetView", "max_drawings"),
+    ("OtherDrawingSet", "version"),
 }
 
 
