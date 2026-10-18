@@ -1,0 +1,142 @@
+{
+ "caveats": [],
+ "data": {
+  "content_hash": "8483154d0f1754b8841296b67e4b6152b8f095153b839e65b46f4d8c071d9031",
+  "family": "breakout",
+  "gate_reports": [],
+  "hypothesis": "ECONOMIC STORY. A breakout of the prior 20-bar range is the classic time-series momentum expression. The economic mechanism most often advanced is slow information diffusion plus flow effects from risk management and option hedging: positions are added as price extends, so a range break is followed by further movement in the same direction more often than a coin flip. Moskowitz, Ooi and Pedersen (2012) document 12-month time-series momentum across asset classes; Hurst, Ooi and Pedersen (2017) extend it back to 1880. The 100-bar EMA filter restricts entries to the side of the longer trend, which is a crude proxy for the same effect at a slower frequency, and the ATR stop makes risk stationary across instruments and volatility regimes.\n\nEVIDENCE AGAINST, STATED PLAINLY. The channel-breakout family is exactly the family that fails multiple-testing correction on FX: Coakley, Marzano and Nankervis (2016) find that technical trading rules on currencies do not survive Step-SPA once the full universe of rules considered is priced in. Managed-futures trend returns have also decayed materially since 2009 (widely documented in practitioner replication work), so historical Sharpe from long samples is likely an overestimate of forward performance. And crucially, the '20-bar high' is computed from the PRIOR window (donchian_upper_prior) -- a channel that includes the current bar's own high can never be broken by that bar, which is the kind of detail that turns a flat strategy into a spectacular backtest and nothing else.",
+  "ladder_history": [
+   {
+    "binding_constraint": "walk_forward_efficiency: observed 38.86, required gte 50, short by 11.14",
+    "created_at": "2026-09-19T07:56:31.871515Z",
+    "dataset_version_id": "ds_3c1473cbf51e5a641ef41cbf",
+    "experiment_id": null,
+    "gate_set_version": "v2.0.0-audit",
+    "has_walk_forward": true,
+    "report_version": "2.0.0",
+    "rungs": [
+     {
+      "index": 0,
+      "name": "SANITY",
+      "outcome": "pass",
+      "reason": ""
+     },
+     {
+      "index": 1,
+      "name": "IN_SAMPLE_SCREEN",
+      "outcome": "pass",
+      "reason": ""
+     },
+     {
+      "index": 2,
+      "name": "WALK_FORWARD",
+      "outcome": "fail",
+      "reason": "promotion gate not met -- walk_forward_efficiency: 38.86 vs required >= 50 -> fail"
+     },
+     {
+      "index": 3,
+      "name": "PURGED_CV",
+      "outcome": "not_reached",
+      "reason": ""
+     },
+     {
+      "index": 4,
+      "name": "ROBUSTNESS",
+      "outcome": "not_reached",
+      "reason": ""
+     },
+     {
+      "index": 5,
+      "name": "DEFLATION",
+      "outcome": "not_reached",
+      "reason": ""
+     },
+     {
+      "index": 6,
+      "name": "HOLDOUT",
+      "outcome": "not_reached",
+      "reason": ""
+     }
+    ],
+    "source": "report_file",
+    "strategy_content_hash": "66d6a844b96bf0c5b4fe164e537bced361290f6e093a7a128e694bf0ab3b52b9",
+    "trial_count": {
+     "as_of": null,
+     "caveats": [],
+     "estimated": false,
+     "provenance": "out_of_sample",
+     "sample_size": null,
+     "unit": "count",
+     "value": 0.0
+    },
+    "verdict": "reject"
+   }
+  ],
+  "lifecycle": [],
+  "lifecycle_note": "The lifecycle store holds no entry for this strategy: it has never been registered for paper.",
+  "links": {
+   "chart": "/markets/EURUSD",
+   "lifecycle": "/lifecycle/8483154d0f17",
+   "parameter_lab": "/research/parameter-lab?strategy=donchian_breakout_atr",
+   "validation": "/research/validation",
+   "walk_forward": "/research/walk-forward?strategy=donchian_breakout_atr"
+  },
+  "name": "Donchian Breakout with ATR Stop",
+  "parameters": {
+   "channel_period": {
+    "default": 20,
+    "kind": "int",
+    "max": 60.0,
+    "min": 10.0,
+    "step": 5.0
+   },
+   "stop_atr_multiple": {
+    "default": 2.0,
+    "kind": "float",
+    "max": 4.0,
+    "min": 1.0,
+    "step": 0.5
+   },
+   "trail_atr_multiple": {
+    "default": 3.0,
+    "kind": "float",
+    "max": 6.0,
+    "min": 1.5,
+    "step": 0.5
+   },
+   "trend_ema": {
+    "default": 100,
+    "kind": "int",
+    "max": 200.0,
+    "min": 50.0,
+    "step": 25.0
+   }
+  },
+  "runs": [],
+  "runs_total": 0,
+  "strategy_id": "donchian_breakout_atr",
+  "timeframes": [
+   "H4",
+   "D1"
+  ],
+  "universe": [
+   "EURUSD",
+   "GBPUSD",
+   "USDJPY",
+   "AUDUSD",
+   "USDCAD",
+   "USDCHF",
+   "NZDUSD",
+   "EURJPY",
+   "GBPJPY",
+   "XAUUSD",
+   "US500",
+   "DE40"
+  ]
+ },
+ "source": {
+  "as_of": "2026-10-18T12:00:00Z",
+  "detail": "Strategy registry, research ledger, ladder reports and the lifecycle store.",
+  "kind": "mixed"
+ }
+}

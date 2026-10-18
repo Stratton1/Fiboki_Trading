@@ -1,0 +1,483 @@
+{
+ "caveats": [],
+ "data": {
+  "available": [
+   "/var/fiboki/reports/donchian_breakout_atr.json"
+  ],
+  "definitions": {
+   "efficiency": {
+    "definition": "One fold's OOS rate over its IS rate.",
+    "formula": "OOS rate_k / IS rate_k",
+    "label": "Fold efficiency"
+   },
+   "oos_rate_cv": {
+    "definition": "Standard deviation of the OOS rate across folds over the absolute mean: the larger, the less stable.",
+    "formula": "sd(OOS rate) / |mean(OOS rate)|",
+    "label": "OOS dispersion"
+   },
+   "walk_forward_efficiency": {
+    "definition": "Mean out-of-sample profit rate as a percentage of the mean in-sample profit rate of the SAME selected parameters (the ladder's rung-2 metric).",
+    "formula": "mean(OOS rate) / mean(IS rate) x 100",
+    "label": "Walk-forward efficiency"
+   }
+  },
+  "fold_runs": [],
+  "folds": [
+   {
+    "efficiency": {
+     "as_of": null,
+     "caveats": [],
+     "estimated": false,
+     "provenance": "walkforward",
+     "sample_size": null,
+     "unit": "ratio",
+     "value": 0.7574153201375398
+    },
+    "fixed_param_oos_rate": {
+     "as_of": null,
+     "caveats": [],
+     "estimated": false,
+     "provenance": "walkforward",
+     "sample_size": null,
+     "unit": "rate",
+     "value": 1.2918954074915494
+    },
+    "fold": 0,
+    "is_net_profit": {
+     "as_of": null,
+     "caveats": [],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "USD",
+     "value": 840.792746612876
+    },
+    "is_rate": {
+     "as_of": null,
+     "caveats": [],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "rate",
+     "value": 0.8565533278452282
+    },
+    "oos_net_profit": {
+     "as_of": null,
+     "caveats": [],
+     "estimated": false,
+     "provenance": "walkforward",
+     "sample_size": null,
+     "unit": "USD",
+     "value": 636.8293073451129
+    },
+    "oos_rate": {
+     "as_of": null,
+     "caveats": [],
+     "estimated": false,
+     "provenance": "walkforward",
+     "sample_size": null,
+     "unit": "rate",
+     "value": 0.6487666130247686
+    },
+    "oos_sharpe": {
+     "as_of": null,
+     "caveats": [],
+     "estimated": false,
+     "provenance": "walkforward",
+     "sample_size": null,
+     "unit": "ratio",
+     "value": 0.008432246139556109
+    },
+    "oos_trades": {
+     "as_of": null,
+     "caveats": [],
+     "estimated": false,
+     "provenance": "walkforward",
+     "sample_size": null,
+     "unit": "count",
+     "value": 85.0
+    },
+    "selected_params": {
+     "channel_period": 10,
+     "stop_atr_multiple": 4.0,
+     "trail_atr_multiple": 6.0,
+     "trend_ema": 200
+    },
+    "test_end": "2014-07-31T01:48:00Z",
+    "test_start": "2011-11-22T11:24:00Z",
+    "train_end": "2011-11-22T11:24:00Z",
+    "train_start": "2009-03-15T21:00:00Z"
+   },
+   {
+    "efficiency": {
+     "as_of": null,
+     "caveats": [],
+     "estimated": false,
+     "provenance": "walkforward",
+     "sample_size": null,
+     "unit": "ratio",
+     "value": 0.30757265933772626
+    },
+    "fixed_param_oos_rate": {
+     "as_of": null,
+     "caveats": [],
+     "estimated": false,
+     "provenance": "walkforward",
+     "sample_size": null,
+     "unit": "rate",
+     "value": 0.2606580133192079
+    },
+    "fold": 1,
+    "is_net_profit": {
+     "as_of": null,
+     "caveats": [],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "USD",
+     "value": 1589.993018167435
+    },
+    "is_rate": {
+     "as_of": null,
+     "caveats": [],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "rate",
+     "value": 0.8098986441358165
+    },
+    "oos_net_profit": {
+     "as_of": null,
+     "caveats": [],
+     "estimated": false,
+     "provenance": "walkforward",
+     "sample_size": null,
+     "unit": "USD",
+     "value": 244.51919046308785
+    },
+    "oos_rate": {
+     "as_of": null,
+     "caveats": [],
+     "estimated": false,
+     "provenance": "walkforward",
+     "sample_size": null,
+     "unit": "rate",
+     "value": 0.2491026797708719
+    },
+    "oos_sharpe": {
+     "as_of": null,
+     "caveats": [],
+     "estimated": false,
+     "provenance": "walkforward",
+     "sample_size": null,
+     "unit": "ratio",
+     "value": 0.0035635980340909357
+    },
+    "oos_trades": {
+     "as_of": null,
+     "caveats": [],
+     "estimated": false,
+     "provenance": "walkforward",
+     "sample_size": null,
+     "unit": "count",
+     "value": 81.0
+    },
+    "selected_params": {
+     "channel_period": 10,
+     "stop_atr_multiple": 4.0,
+     "trail_atr_multiple": 6.0,
+     "trend_ema": 200
+    },
+    "test_end": "2017-04-07T16:12:00Z",
+    "test_start": "2014-07-31T01:48:00Z",
+    "train_end": "2014-07-31T01:48:00Z",
+    "train_start": "2009-03-15T21:00:00Z"
+   },
+   {
+    "efficiency": {
+     "as_of": null,
+     "caveats": [],
+     "estimated": false,
+     "provenance": "walkforward",
+     "sample_size": null,
+     "unit": "ratio",
+     "value": -0.9768529679715066
+    },
+    "fixed_param_oos_rate": {
+     "as_of": null,
+     "caveats": [],
+     "estimated": false,
+     "provenance": "walkforward",
+     "sample_size": null,
+     "unit": "rate",
+     "value": -0.39279492548049744
+    },
+    "fold": 2,
+    "is_net_profit": {
+     "as_of": null,
+     "caveats": [],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "USD",
+     "value": 1929.8951579726056
+    },
+    "is_rate": {
+     "as_of": null,
+     "caveats": [],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "rate",
+     "value": 0.6553569539434275
+    },
+    "oos_net_profit": {
+     "as_of": null,
+     "caveats": [],
+     "estimated": false,
+     "provenance": "walkforward",
+     "sample_size": null,
+     "unit": "USD",
+     "value": -628.4079376464597
+    },
+    "oos_rate": {
+     "as_of": null,
+     "caveats": [],
+     "estimated": false,
+     "provenance": "walkforward",
+     "sample_size": null,
+     "unit": "rate",
+     "value": -0.6401873855404031
+    },
+    "oos_sharpe": {
+     "as_of": null,
+     "caveats": [],
+     "estimated": false,
+     "provenance": "walkforward",
+     "sample_size": null,
+     "unit": "ratio",
+     "value": -0.008650755810906725
+    },
+    "oos_trades": {
+     "as_of": null,
+     "caveats": [],
+     "estimated": false,
+     "provenance": "walkforward",
+     "sample_size": null,
+     "unit": "count",
+     "value": 88.0
+    },
+    "selected_params": {
+     "channel_period": 10,
+     "stop_atr_multiple": 4.0,
+     "trail_atr_multiple": 6.0,
+     "trend_ema": 200
+    },
+    "test_end": "2019-12-15T06:36:00Z",
+    "test_start": "2017-04-07T16:12:00Z",
+    "train_end": "2017-04-07T16:12:00Z",
+    "train_start": "2009-03-15T21:00:00Z"
+   },
+   {
+    "efficiency": {
+     "as_of": null,
+     "caveats": [],
+     "estimated": false,
+     "provenance": "walkforward",
+     "sample_size": null,
+     "unit": "ratio",
+     "value": 2.6122075736775883
+    },
+    "fixed_param_oos_rate": {
+     "as_of": null,
+     "caveats": [],
+     "estimated": false,
+     "provenance": "walkforward",
+     "sample_size": null,
+     "unit": "rate",
+     "value": 0.030385344614667163
+    },
+    "fold": 3,
+    "is_net_profit": {
+     "as_of": null,
+     "caveats": [],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "USD",
+     "value": 1138.3505440280626
+    },
+    "is_rate": {
+     "as_of": null,
+     "caveats": [],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "rate",
+     "value": 0.28992220457112433
+    },
+    "oos_net_profit": {
+     "as_of": null,
+     "caveats": [],
+     "estimated": false,
+     "provenance": "walkforward",
+     "sample_size": null,
+     "unit": "USD",
+     "value": 743.401978152527
+    },
+    "oos_rate": {
+     "as_of": null,
+     "caveats": [],
+     "estimated": false,
+     "provenance": "walkforward",
+     "sample_size": null,
+     "unit": "rate",
+     "value": 0.7573369785579941
+    },
+    "oos_sharpe": {
+     "as_of": null,
+     "caveats": [],
+     "estimated": false,
+     "provenance": "walkforward",
+     "sample_size": null,
+     "unit": "ratio",
+     "value": 0.009470349105637946
+    },
+    "oos_trades": {
+     "as_of": null,
+     "caveats": [],
+     "estimated": false,
+     "provenance": "walkforward",
+     "sample_size": null,
+     "unit": "count",
+     "value": 86.0
+    },
+    "selected_params": {
+     "channel_period": 10,
+     "stop_atr_multiple": 4.0,
+     "trail_atr_multiple": 6.0,
+     "trend_ema": 200
+    },
+    "test_end": "2022-08-22T21:00:00Z",
+    "test_start": "2019-12-15T06:36:00Z",
+    "train_end": "2019-12-15T06:36:00Z",
+    "train_start": "2009-03-15T21:00:00Z"
+   }
+  ],
+  "gate_set_version": "v2.0.0-audit",
+  "gates": [
+   {
+    "comparison": "gte",
+    "detail": "walk_forward_efficiency: 38.86 vs required >= 50 -> fail",
+    "metric": "walk_forward_efficiency",
+    "name": "walk_forward_efficiency",
+    "passed": false,
+    "rung": 2,
+    "status": "fail",
+    "threshold": 50.0,
+    "value": {
+     "as_of": null,
+     "caveats": [],
+     "estimated": false,
+     "provenance": "walkforward",
+     "sample_size": null,
+     "unit": "",
+     "value": 38.863835329811444
+    }
+   },
+   {
+    "comparison": "gte",
+    "detail": "oos_window_hit_rate: 0.75 vs required >= 0.6 -> pass",
+    "metric": "oos_profitable_fraction",
+    "name": "oos_window_hit_rate",
+    "passed": true,
+    "rung": 2,
+    "status": "pass",
+    "threshold": 0.6,
+    "value": {
+     "as_of": null,
+     "caveats": [],
+     "estimated": false,
+     "provenance": "walkforward",
+     "sample_size": null,
+     "unit": "",
+     "value": 0.75
+    }
+   }
+  ],
+  "mean_is_rate": {
+   "as_of": null,
+   "caveats": [],
+   "estimated": false,
+   "provenance": "walkforward",
+   "sample_size": null,
+   "unit": "ratio",
+   "value": 0.6529327826238991
+  },
+  "mean_oos_rate": {
+   "as_of": null,
+   "caveats": [],
+   "estimated": false,
+   "provenance": "walkforward",
+   "sample_size": null,
+   "unit": "ratio",
+   "value": 0.25375472145330785
+  },
+  "n_folds": 4,
+  "oos_profitable_fraction": {
+   "as_of": null,
+   "caveats": [],
+   "estimated": false,
+   "provenance": "walkforward",
+   "sample_size": null,
+   "unit": "ratio",
+   "value": 0.75
+  },
+  "oos_rate_cv": {
+   "as_of": null,
+   "caveats": [],
+   "estimated": false,
+   "provenance": "walkforward",
+   "sample_size": null,
+   "unit": "ratio",
+   "value": 2.5014943338704843
+  },
+  "oos_rate_sd": {
+   "as_of": null,
+   "caveats": [],
+   "estimated": false,
+   "provenance": "walkforward",
+   "sample_size": null,
+   "unit": "ratio",
+   "value": 0.6347659979083327
+  },
+  "outcome": "fail",
+  "parameter_repeats": 3,
+  "parameter_stability_across_folds": {
+   "modal_share": 1.0,
+   "n_distinct_selections": 1,
+   "n_folds": 4,
+   "note": "n_distinct_selections equal to n_folds means every fold chose differently: the surface has no stable optimum and the selection step is fitting noise."
+  },
+  "rate_unit": "profit rate (net profit per unit of capital per year, as the ladder measures it)",
+  "reason": "promotion gate not met -- walk_forward_efficiency: 38.86 vs required >= 50 -> fail",
+  "scheme": "anchored",
+  "source": "report_file",
+  "source_ref": "/var/fiboki/reports/donchian_breakout_atr.json",
+  "strategy_id": "donchian_breakout_atr",
+  "walk_forward_efficiency": {
+   "as_of": null,
+   "caveats": [],
+   "estimated": false,
+   "provenance": "walkforward",
+   "sample_size": null,
+   "unit": "pct",
+   "value": 38.863835329811444
+  }
+ },
+ "source": {
+  "as_of": "2026-10-18T12:00:00Z",
+  "detail": "Validation ladder report (report_file: /var/fiboki/reports/donchian_breakout_atr.json), rung 2 WALK_FORWARD, as filed.",
+  "kind": "live"
+ }
+}

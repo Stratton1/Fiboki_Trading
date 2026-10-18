@@ -1,0 +1,197 @@
+{
+ "caveats": [],
+ "items": [
+  {
+   "available": true,
+   "binding_constraint": "walk_forward_efficiency: observed 38.86, required gte 50, short by 11.14",
+   "dataset_version_id": "ds_3c1473cbf51e5a641ef41cbf",
+   "detail": "donchian_breakout_atr [66d6a844b96b] on ds_3c1473cbf51e5a641ef41cbf: REJECT -- binding constraint: walk_forward_efficiency: observed 38.86, required gte 50, short by 11.14",
+   "gate_set_version": "v2.0.0-audit",
+   "provenance_labels": {
+    "n_trades": "backtest",
+    "oos_profitable_fraction": "walkforward",
+    "walk_forward_efficiency": "walkforward"
+   },
+   "report_version": "2.0.0",
+   "rungs_passed": {
+    "as_of": null,
+    "caveats": [],
+    "estimated": false,
+    "provenance": "holdout",
+    "sample_size": null,
+    "unit": "count",
+    "value": 2.0
+   },
+   "rungs_total": {
+    "as_of": null,
+    "caveats": [],
+    "estimated": false,
+    "provenance": "holdout",
+    "sample_size": null,
+    "unit": "count",
+    "value": 7.0
+   },
+   "strategy_id": "donchian_breakout_atr",
+   "verdict": "reject"
+  },
+  {
+   "available": true,
+   "binding_constraint": "min_trades: observed 231, required gte 400, short by 169",
+   "dataset_version_id": "ds_3c1473cbf51e5a641ef41cbf",
+   "detail": "fib_golden_pocket_pullback [158d914a08b3] on ds_3c1473cbf51e5a641ef41cbf: REJECT -- binding constraint: min_trades: observed 231, required gte 400, short by 169",
+   "gate_set_version": "v2.0.0-audit",
+   "provenance_labels": {
+    "n_trades": "backtest"
+   },
+   "report_version": "2.0.0",
+   "rungs_passed": {
+    "as_of": null,
+    "caveats": [],
+    "estimated": false,
+    "provenance": "holdout",
+    "sample_size": null,
+    "unit": "count",
+    "value": 0.0
+   },
+   "rungs_total": {
+    "as_of": null,
+    "caveats": [],
+    "estimated": false,
+    "provenance": "holdout",
+    "sample_size": null,
+    "unit": "count",
+    "value": 7.0
+   },
+   "strategy_id": "fib_golden_pocket_pullback",
+   "verdict": "reject"
+  },
+  {
+   "available": true,
+   "binding_constraint": "min_trades: observed 49, required gte 400, short by 351",
+   "dataset_version_id": "ds_3c1473cbf51e5a641ef41cbf",
+   "detail": "ichimoku_kumo_trend [22fd6a9510e4] on ds_3c1473cbf51e5a641ef41cbf: REJECT -- binding constraint: min_trades: observed 49, required gte 400, short by 351",
+   "gate_set_version": "v2.0.0-audit",
+   "provenance_labels": {
+    "n_trades": "backtest"
+   },
+   "report_version": "2.0.0",
+   "rungs_passed": {
+    "as_of": null,
+    "caveats": [],
+    "estimated": false,
+    "provenance": "holdout",
+    "sample_size": null,
+    "unit": "count",
+    "value": 0.0
+   },
+   "rungs_total": {
+    "as_of": null,
+    "caveats": [],
+    "estimated": false,
+    "provenance": "holdout",
+    "sample_size": null,
+    "unit": "count",
+    "value": 7.0
+   },
+   "strategy_id": "ichimoku_kumo_trend",
+   "verdict": "reject"
+  },
+  {
+   "available": true,
+   "binding_constraint": "min_trades: observed 41, required gte 400, short by 359",
+   "dataset_version_id": "ds_3c1473cbf51e5a641ef41cbf",
+   "detail": "macd_ema_trend_hybrid [bed09990a354] on ds_3c1473cbf51e5a641ef41cbf: REJECT -- binding constraint: min_trades: observed 41, required gte 400, short by 359",
+   "gate_set_version": "v2.0.0-audit",
+   "provenance_labels": {
+    "n_trades": "backtest"
+   },
+   "report_version": "2.0.0",
+   "rungs_passed": {
+    "as_of": null,
+    "caveats": [],
+    "estimated": false,
+    "provenance": "holdout",
+    "sample_size": null,
+    "unit": "count",
+    "value": 0.0
+   },
+   "rungs_total": {
+    "as_of": null,
+    "caveats": [],
+    "estimated": false,
+    "provenance": "holdout",
+    "sample_size": null,
+    "unit": "count",
+    "value": 7.0
+   },
+   "strategy_id": "macd_ema_trend_hybrid",
+   "verdict": "reject"
+  },
+  {
+   "available": false,
+   "binding_constraint": "",
+   "dataset_version_id": "",
+   "detail": "No validation report exists for this strategy. It has not been through the ladder; this is not a pass.",
+   "gate_set_version": "",
+   "provenance_labels": {},
+   "report_version": "",
+   "rungs_passed": {
+    "as_of": null,
+    "caveats": [],
+    "estimated": false,
+    "provenance": "holdout",
+    "sample_size": null,
+    "unit": "count",
+    "value": null
+   },
+   "rungs_total": {
+    "as_of": null,
+    "caveats": [],
+    "estimated": false,
+    "provenance": "holdout",
+    "sample_size": null,
+    "unit": "count",
+    "value": null
+   },
+   "strategy_id": "rsi_band_mean_reversion",
+   "verdict": "not_validated"
+  },
+  {
+   "available": false,
+   "binding_constraint": "",
+   "dataset_version_id": "",
+   "detail": "No validation report exists for this strategy. It has not been through the ladder; this is not a pass.",
+   "gate_set_version": "",
+   "provenance_labels": {},
+   "report_version": "",
+   "rungs_passed": {
+    "as_of": null,
+    "caveats": [],
+    "estimated": false,
+    "provenance": "holdout",
+    "sample_size": null,
+    "unit": "count",
+    "value": null
+   },
+   "rungs_total": {
+    "as_of": null,
+    "caveats": [],
+    "estimated": false,
+    "provenance": "holdout",
+    "sample_size": null,
+    "unit": "count",
+    "value": null
+   },
+   "strategy_id": "tsmom_dual_horizon",
+   "verdict": "not_validated"
+  }
+ ],
+ "limit": 100,
+ "offset": 0,
+ "source": {
+  "as_of": "2026-10-18T12:00:00Z",
+  "detail": "research/reports, one file per strategy.",
+  "kind": "mixed"
+ },
+ "total": 6
+}

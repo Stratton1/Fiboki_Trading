@@ -12,6 +12,10 @@ export const SAMPLE_PARAMS: Readonly<Record<string, string>> = {
   id: "inc-1",
   // /lifecycle/[hash]: the content hash the fixtures' strategy-review item links to.
   hash: "abc123def456",
+  // /research/runs/[run_id]: the run the research fixtures serve (research-fixtures.ts).
+  run_id: "bt_0001",
+  // /research/strategies/[strategy_id]: a registered strategy id.
+  strategy_id: "donchian_breakout_atr",
 };
 
 /** `/markets/[symbol]` → `/markets/EURUSD`. */
