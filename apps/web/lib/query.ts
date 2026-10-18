@@ -7,6 +7,7 @@ import { payloadAsOf, registerAsOf, unregisterAsOf } from "./as-of";
 import { clockNow, subscribeClock } from "./clock";
 import { computeFreshness, type Freshness } from "./freshness";
 import { EMPTY_TOPIC, liveStore, useLive, type LiveState } from "./live-store";
+import { registerFreshness, unregisterFreshness } from "./stale-views";
 import { samePathname, topicForPath } from "./stream/topics";
 
 export type { Freshness } from "./freshness";
@@ -121,15 +122,10 @@ export function workerAgeNow(state: LiveState, now: number): number | null | und
   return source.ageS + Math.max(0, now - source.receivedAt) / 1_000;
 }
 
-/** The platform's worker stale threshold, when the live stream has supplied it. */
-export function workerStaleAfter(state: LiveState): number | null {
-  return state.connection.state === "live" && state.heartbeat ? state.heartbeat.workerStaleAfterS : null;
-}
-
 /**
  * The platform's own verdict on the worker: the stream heartbeat's
  * `worker_state` when connected, else the REST health report's
- * `worker_heartbeat` check status. Null when neither has said.
+ * `worker_state`. Null when neither has said.
  */
 export function workerStateNow(state: LiveState): string | null {
   if (state.connection.state === "live" && state.heartbeat) return state.heartbeat.workerState;
@@ -218,8 +214,6 @@ export function useApi<T>(
       refreshMs: refetchInterval,
       refreshFailing,
       workerDependent: spec ? spec.workerDependent : false,
-      workerAgeS: workerAgeNow(state, now),
-      workerStaleAfterS: workerStaleAfter(state),
       workerState: workerStateNow(state),
       maxAgeMs,
     });
@@ -258,6 +252,12 @@ export function useApi<T>(
     else registerAsOf(viewId, path, platformAsOf);
   }, [viewId, path, platformAsOf]);
   useEffect(() => () => unregisterAsOf(viewId), [viewId]);
+  // The page-level stale banner counts this view while it shows old data.
+  useEffect(() => {
+    if (path === null || !hasData) unregisterFreshness(viewId);
+    else registerFreshness(viewId, path, freshness);
+  }, [viewId, path, hasData, freshness]);
+  useEffect(() => () => unregisterFreshness(viewId), [viewId]);
 
   let state: ViewState<T>;
   if (path === null) {

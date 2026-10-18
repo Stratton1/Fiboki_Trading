@@ -2,19 +2,20 @@
 
 import Link from "next/link";
 import { formatNumber } from "@/lib/format";
-import { CRITICAL_AT_PCT, WARN_AT_PCT, barLength, type LimitRow, type LimitState } from "@/lib/limits-core";
+import { barLength, type LimitState } from "@/lib/limits-core";
+import type { BandsView, LimitRowView } from "@/lib/types";
 import { FigureValue } from "../FigureValue";
 import { ProvenanceChip } from "../ProvenanceChip";
 
 /**
- * One limit row and its pieces (the bar, the state word, the † note), split
- * out of LimitBoard so Command can draw the same rows without the whole board
- * in the Overview's first load. The board and Command both render these, so
- * the two screens cannot draw one limit two ways.
+ * One limit row and its pieces (the bar, the state word), shared by the limit
+ * board and Command, so the two screens cannot draw one limit two ways.
  *
- * An OK bar takes the provenance ink of its figure (LIVE magenta, never loss
- * red); NEAR and CRITICAL take the health tokens; BREACHED fills the track in
- * the critical token. Every state also has a glyph and a word.
+ * Everything on the row is the API's (GET /api/trading/limits): utilisation,
+ * headroom, the band, the breach and the band ticks. An OK bar takes the
+ * provenance ink of its figure (LIVE magenta, never loss red); NEAR and
+ * CRITICAL take the health tokens; BREACHED fills the track in the critical
+ * token. Every state also has a glyph and a word.
  */
 
 const STATE_META: Record<LimitState, { glyph: string; word: string }> = {
@@ -24,7 +25,6 @@ const STATE_META: Record<LimitState, { glyph: string; word: string }> = {
   breached: { glyph: "✕", word: "BREACHED" },
   absent: { glyph: "⊘", word: "NOT REPORTED" },
 };
-
 
 export function LimitStateTag({ state }: { state: LimitState }) {
   const meta = STATE_META[state];
@@ -40,24 +40,27 @@ export function pct(value: number, decimals = 1): string {
   return formatNumber(value, "pct", { decimals });
 }
 
-/** Headroom in percentage points; a negative headroom is "over by". */
-function headroomText(row: LimitRow): string {
-  if (row.headroom === null) return "not known";
-  if (row.headroom < 0) return `over by ${formatNumber(-row.headroom, "pct", { bare: true })} pp`;
-  return `${formatNumber(row.headroom, "pct", { bare: true })} pp`;
+/** Headroom in percentage points; on a breached row the API's headroom is how far over. */
+function headroomText(row: LimitRowView): string {
+  const value = row.headroom.value;
+  if (value === null) return "not known";
+  const amount = formatNumber(Math.abs(value), "pct", { bare: true });
+  return row.breached ? `over by ${amount} pp` : `${amount} pp`;
 }
 
-function Bar({ row }: { row: LimitRow }) {
+function Bar({ row, bands }: { row: LimitRowView; bands: BandsView | null }) {
   const length = barLength(row);
-  const ink = row.state === "ok" ? row.provenance : null;
+  const ink = row.band === "ok" ? (row.value?.provenance ?? null) : null;
   const fillClass =
-    row.state === "breached"
+    row.band === "breached"
       ? "chart__bar chart__bar--breach"
-      : row.state === "critical"
+      : row.band === "critical"
         ? "chart__bar limit-bar__fill limit-bar__fill--critical"
-        : row.state === "warn"
+        : row.band === "warn"
           ? "chart__bar limit-bar__fill limit-bar__fill--warn"
           : "chart__bar chart-ink limit-bar__fill";
+  const warn = bands?.warn_at.value ?? null;
+  const critical = bands?.critical_at.value ?? null;
   return (
     <svg
       className="limit-bar"
@@ -69,38 +72,39 @@ function Bar({ row }: { row: LimitRow }) {
     >
       <rect className="limit-bar__track" x="0" y="0" width="100" height="12" />
       <rect className={fillClass} data-ink={ink ?? undefined} x="0" y="0" width={length} height="12" />
-      <line className="limit-bar__tick" x1={WARN_AT_PCT} x2={WARN_AT_PCT} y1="0" y2="12" />
-      <line className="limit-bar__tick" x1={CRITICAL_AT_PCT} x2={CRITICAL_AT_PCT} y1="0" y2="12" />
+      {warn !== null ? <line className="limit-bar__tick" x1={warn} x2={warn} y1="0" y2="12" /> : null}
+      {critical !== null ? <line className="limit-bar__tick" x1={critical} x2={critical} y1="0" y2="12" /> : null}
       <line className="limit-bar__limit" x1="99.6" x2="99.6" y1="0" y2="12" />
     </svg>
   );
 }
 
-/**
- * One limit row: label, utilisation, state, the bar and its numbers. Also
- * rendered on Command (app/page.tsx) for daily loss and drawdown, so the two
- * screens can never draw the same limit differently.
- */
+/** One limit row: label, utilisation, state, the bar and its numbers. */
 export function LimitRowItem({
   row,
+  bands,
   signed,
   showChip = false,
+  compact = false,
 }: {
-  row: LimitRow;
+  row: LimitRowView;
+  bands: BandsView | null;
   signed: boolean;
   /** A chip on the row itself, where no family heading carries one (Command). */
   showChip?: boolean;
+  /** One line: label, used, state, bar (Command). */
+  compact?: boolean;
 }) {
-  const util = row.utilisation;
+  const util = row.utilisation_pct.value;
   return (
     <li
-      className="limit-row"
+      className={compact ? "limit-row limit-row--compact" : "limit-row"}
       data-testid="limit-row"
       data-key={row.key}
       data-family={row.family}
-      data-state={row.state}
+      data-state={row.band}
       data-utilisation={util === null ? undefined : util.toFixed(1)}
-      data-derived={row.utilisationFrom === "derived" || undefined}
+      title={row.formula ?? undefined}
     >
       <div className="limit-row__head">
         <span className="limit-row__label">
@@ -110,35 +114,31 @@ export function LimitRowItem({
         {util !== null ? (
           <span className="limit-row__used num" data-testid="limit-used">
             {pct(util)}
-            {row.utilisationFrom === "derived" ? (
-              <sup className="limit-row__dagger" aria-label="computed here, see the note below the board">
-                †
-              </sup>
-            ) : null}
             <span className="limit-row__used-word"> used</span>
           </span>
         ) : null}
-        <LimitStateTag state={row.state} />
-        {showChip && row.provenance ? <ProvenanceChip provenance={row.provenance} /> : null}
+        <LimitStateTag state={row.band} />
+        {showChip && row.value ? <ProvenanceChip provenance={row.value.provenance} /> : null}
+        {compact && util !== null ? <Bar row={row} bands={bands} /> : null}
       </div>
-      {row.state === "absent" && util === null ? (
+      {row.band === "absent" || (row.breached && util === null) ? (
         <p className="limit-row__absent" data-testid="limit-absent">
           {row.value && row.value.value !== null ? (
             <>
               <FigureValue figure={row.value} showChip={false} />{" "}
             </>
           ) : null}
-          {row.absentReason}
-          {row.seeAlso ? (
+          {row.absent_reason}
+          {row.see_also ? (
             <>
               {" "}
-              <Link href={row.seeAlso.href}>Open {row.seeAlso.label}</Link>
+              <Link href={row.see_also}>Open</Link>
             </>
           ) : null}
         </p>
-      ) : (
+      ) : compact ? null : (
         <>
-          <Bar row={row} />
+          <Bar row={row} bands={bands} />
           <dl className="limit-row__nums">
             <div>
               <dt>{signed ? "day P&L" : "now"}</dt>
@@ -165,13 +165,12 @@ export function LimitRowItem({
   );
 }
 
-/** The dagger's explanation, shared by every screen that draws a derived utilisation. */
-export function DerivedNote({ exposure = true }: { exposure?: boolean }) {
+/** Where the numbers on a limit bar come from, said once under a board. */
+export function DerivedNote() {
   return (
     <p className="limit-board__note" data-testid="limit-derived-note">
-      † Computed in the workstation from the two API figures shown beside it, by the rule the API applies when it
-      lists a breach: daily loss used = the day&apos;s loss ÷ the limit, headroom = day P&amp;L + limit; drawdown used =
-      drawdown ÷ limit, headroom = limit − drawdown.{exposure ? " Exposure utilisation is the API's own." : ""}
+      Utilisation, headroom, band and breach are the API&apos;s (GET /api/trading/limits); the attention queue
+      lists the same rows. Hover a row for its formula.
     </p>
   );
 }

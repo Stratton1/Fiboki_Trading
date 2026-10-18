@@ -10,7 +10,7 @@ import { useClock } from "@/lib/clock";
 import { isStale, workerStatus } from "@/lib/freshness";
 import { formatAge, formatTimestamp, formatUtcTime } from "@/lib/format";
 import { useLive, type ConnectionInfo, type HeartbeatInfo } from "@/lib/live-store";
-import { workerAgeNow, workerStaleAfter, workerStateNow } from "@/lib/query";
+import { workerAgeNow, workerStateNow } from "@/lib/query";
 import { HEARTBEAT_OVERDUE_MS } from "@/lib/stream/router";
 import { StatusBadge } from "../primitives";
 import type { Tone } from "../ui/StatusPill";
@@ -119,13 +119,11 @@ export function StatusBar() {
   }
 
   const workerAge = useLive((s) => workerAgeNow(s, now));
-  const staleAfter = useLive(workerStaleAfter);
   const workerState = useLive(workerStateNow);
   const streamLive = connection.state === "live" && heartbeat !== null;
   const worker = workerStatus({
     ageS: workerAge,
     state: workerState,
-    staleAfterS: staleAfter,
     // Over REST, the verdict is only as current as the health report.
     reportStale: !streamLive && health.status === "success" && isStale(health.freshness),
   });
