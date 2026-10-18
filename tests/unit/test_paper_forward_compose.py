@@ -126,7 +126,9 @@ def test_a_quote_currency_other_than_the_account_is_refused(tmp_path: Path) -> N
 def test_a_calendar_that_ends_too_soon_is_refused(tmp_path: Path) -> None:
     from fiboki.workers.base import WorkerStore
 
-    near_the_end = pd.Timestamp("2026-11-25T10:00:00Z")  # official calendar ends 2026-12-04
+    # Official calendar 1.1.0 (2026-10-18) is declared to 2027-12-03 (1.0.0 ended 2026-12-04, which
+    # is why this date was 2026-11-25). Update this date together with the next calendar version.
+    near_the_end = pd.Timestamp("2027-11-25T10:00:00Z")
     with WorkerStore.sqlite_at(tmp_path / "s.db") as store, pytest.raises(
         WiringError, match="cannot vouch"
     ):

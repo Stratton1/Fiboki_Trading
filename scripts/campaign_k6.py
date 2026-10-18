@@ -753,9 +753,9 @@ def cmd_stage(args: argparse.Namespace) -> int:
     out = ShardFile(args.out, header, resume=args.resume)
     try:
         docs = _stage_documents(cells, indices, instruments)
-        from fiboki.marketstate.calendar import load_official_calendar
+        from fiboki.marketstate.calendar import load_research_calendar
 
-        make = default_evaluator_factory(load_official_calendar())
+        make = default_evaluator_factory(load_research_calendar())
         state = run_stage(args.stage, documents=docs, series=series, make=make, out=out,
                           declared_true_n=declared["declared_true_n"],
                           max_rss_mb=args.max_rss_mb, reports_dir=args.reports_dir,

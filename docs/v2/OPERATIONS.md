@@ -431,6 +431,48 @@ where it has events; `run_paper_session.py --no-calendar` (or an explicitly empt
 the flag) runs with no event source. `summary.json`'s `economic_calendar.session` says what the
 gateway was actually given.
 
+### 7.1 Official calendar versions and the refresh
+
+`src/fiboki/marketstate/fixtures/official_calendar_index.json` lists every official calendar
+version: its file, parent (lineage), file hash, events hash and declared end. A listed file is
+**immutable**: `load_official_calendar()` refuses one whose events no longer hash to the index,
+and refuses one whose `declared_end` is not the earliest per-family end. A refresh is a NEW file
+and a new index entry, never an edit.
+
+| Who | Loader | Version |
+|---|---|---|
+| Paper forward (FX and crypto), replay sessions, API, CLI, doctor | `load_official_calendar()` | the newest listed |
+| Campaigns (K-series), `run_discovery_campaign`, E-1/E-4 studies (`pooled_universe_study`, `gate_power_study`), `campaign_k6` | `load_research_calendar()` | `PINNED_RESEARCH_CALENDAR_VERSION`, 1.0.0 |
+
+Why: study checkpoints and shard merges record the calendar's `events_sha256`
+(`blackout_fingerprint`) and refuse a mismatch, and evaluation cache keys include it. A
+pre-registered run such as E-4 must see the calendar it was filed with, so research never
+resolves "newest". Move the pin only as a reviewed decision that re-runs what it affects.
+`fiboki calendar status --version 1.0.0` shows the pinned one.
+
+History: 1.0.0 (read 2026-09-28, 339 events, declared to 2026-12-04); 1.1.0 (read 2026-10-18,
+378 events, strictly additive, declared to 2027-12-03: BLS NFP and CPI for 2027, UK CPI to
+January 2028, UK monthly GDP to February 2028, FOMC 2028-01-26).
+
+**How to refresh (next due: reminder 2027-06-01; hard limit, coverage ends 2027-12-03 13:30Z):**
+
+1. Re-read every publisher (FOMC, ECB, BoE, BoJ, BLS, ONS API; list in the file header) and
+   record the read date. Also reconcile every date already in the file that is still in the
+   future: dates move (Fed dates are tentative until the preceding meeting).
+2. Copy `scripts/build_official_calendar_v1_1_0.py` to `..._vX_Y_Z.py`, set the parent and new
+   version, replace the additions table, run it. It writes the new file and index entry with
+   lineage, hashes and per-family `family_ends`; `declared_end` is the earliest of them.
+3. Do NOT move `PINNED_RESEARCH_CALENDAR_VERSION`. Update `tests/unit/test_calendar_versions.py`
+   (expected family ends, counts) and the date in
+   `test_paper_forward_compose.py::test_a_calendar_that_ends_too_soon_is_refused`.
+4. Restart the paper services (they load the calendar at start). `fiboki doctor` warns when
+   coverage is under 30 days.
+5. Refresh earlier if a publisher releases 2028 dates (BoE, BoJ, BLS) or reschedules.
+
+Not covered: AUD, CAD, CHF, NZD (the declared span has one global start, 2024-01-01; a family
+that only reaches back to 2026 would read as "no events" for 2024 to 2025, so per-family start
+dates come first), and anything before 2024-01-01.
+
 ## 8. Broker operations
 
 ```bash
@@ -794,7 +836,7 @@ scripts/fiboki-service.sh paper          # foreground; Ctrl-C stops it cleanly
 `--check` validates the wiring and prints its sha256 without touching the network. The first
 start refuses (exit 1, reason printed) if a token is missing, the strategy document on disk no
 longer hashes to the wired `content_hash`, or the official economic calendar does not cover the
-next 14 days (it is declared to 2026-12-04; refresh it before then).
+next 14 days (the newest calendar, 1.1.0, is declared to 2027-12-03; see 7.1 for the refresh).
 
 **Supervised:**
 
@@ -920,8 +962,9 @@ trades, attempts, intents, state snapshot, as for FX) and
 Restarts restore from the snapshot exactly as the FX session does.
 
 **Known limits.** The economic calendar is still required (GBP releases blackout entries) and is
-declared to 2026-12-04: both paper services refuse to start once it covers fewer than 14 days
-ahead, so refresh it before 2026-11-20. Coinbase candles have no completeness flag: the feed
+declared to 2027-12-03 (calendar 1.1.0): both paper services refuse to start once it covers
+fewer than 14 days ahead, so a refresh is due well before 2027-11-19 (reminder date 2027-06-01;
+see 7.1). Coinbase candles have no completeness flag: the feed
 polls 20 seconds after each boundary and the provider drops any candle whose period has not
 ended by the clock. The quote used by `abnormal_spread` is the ticker's top of book stamped at
 receipt (the ticker's own time is the last trade's). Exchange maintenance windows are not

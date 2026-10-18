@@ -623,7 +623,7 @@ class P0Study:
     @classmethod
     def build(cls, args: argparse.Namespace, config: LadderConfig) -> P0Study:
         from fiboki.core.enums import Timeframe
-        from fiboki.marketstate.calendar import load_official_calendar
+        from fiboki.marketstate.calendar import load_research_calendar
 
         tf = Timeframe(args.timeframe)
         instruments = args.instruments or (gps.STARTER_INSTRUMENTS if args.starter else gps.K5_UNIVERSE)
@@ -632,7 +632,7 @@ class P0Study:
             starter=args.starter, data_root=args.data_root, instruments=instruments,
             timeframe=tf, bars_from=bars_from,
         )
-        calendar = load_official_calendar()
+        calendar = load_research_calendar()
         sources: list[PooledSource] = []
         for doc in gps.load_documents(args.documents):
             if tf not in doc.timeframes:
@@ -1174,7 +1174,7 @@ def cmd_p0(args: argparse.Namespace) -> int:
 
 
 def cmd_main(args: argparse.Namespace) -> int:
-    from fiboki.marketstate.calendar import load_official_calendar
+    from fiboki.marketstate.calendar import load_research_calendar
 
     if not (args.starter or args.data_root is not None):
         raise SystemExit("main reads real bars: pass --data-root (evidence) or --starter (harness check)")
@@ -1213,7 +1213,7 @@ def cmd_main(args: argparse.Namespace) -> int:
                     None if args.starter else gps.K5_BARS_FROM),
                 "data_root": str(args.data_root) if args.data_root else "starter"},
     )
-    stage = MainStage(plan, plan_meta, args, load_official_calendar())
+    stage = MainStage(plan, plan_meta, args, load_research_calendar())
     rows = _resume(args.out, header, "index") if args.resume else []
     done = {int(r["index"]) for r in rows}
     last = time.monotonic()
@@ -1324,7 +1324,7 @@ def p0_admits(p0_doc: Mapping[str, Any], timeframe: str, filing: Mapping[str, An
 
 
 def cmd_holdout(args: argparse.Namespace) -> int:
-    from fiboki.marketstate.calendar import load_official_calendar
+    from fiboki.marketstate.calendar import load_research_calendar
 
     filing = json.loads((ROOT / PREREGISTRATION).read_text(encoding="utf-8"))
     if not str(filing.get("status", "")).startswith("FILED"):
@@ -1351,7 +1351,7 @@ def cmd_holdout(args: argparse.Namespace) -> int:
     planned = plan[int(chosen["index"])]
     if planned.key != chosen["key"]:
         raise SystemExit("the plan no longer matches the main-stage file")
-    stage = MainStage(plan, plan_meta, args, load_official_calendar())
+    stage = MainStage(plan, plan_meta, args, load_research_calendar())
     built = stage.build_candidate(planned)
     if isinstance(built, str):
         raise SystemExit(built)
