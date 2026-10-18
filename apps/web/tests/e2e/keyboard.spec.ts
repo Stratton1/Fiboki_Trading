@@ -349,6 +349,9 @@ test.describe("tooltips", () => {
   test("open on keyboard focus", async ({ page }) => {
     await page.goto("/trading/risk");
     await expect(page.getByTestId("mode-banner")).toHaveAttribute("data-mode", "paper");
+    // The command line loads after first paint; until it has, the tab order
+    // goes from the skip link straight to the rail.
+    await expect(page.getByTestId("command-line")).toHaveAttribute("data-ready", "true");
     await page.keyboard.press("Tab"); // skip link
     await page.keyboard.press("Tab"); // command line
     await page.keyboard.press("Tab"); // first rail icon (the F-key row is merged into the rail)
