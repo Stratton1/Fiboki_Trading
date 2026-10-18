@@ -1,0 +1,456 @@
+/*
+ * Research analytics charts (components/charts/analytics/*). Imported by those
+ * modules only, so this sheet ships with the research routes and with no
+ * other. Tokens only (app/globals.css); terminal chrome: hairlines, mono
+ * figures, P&L colour only for P&L sign, the CVD-aware series palette for
+ * categorical lines, the blue/orange diverging ramp for heat.
+ */
+.ax {
+  margin: 0;
+  min-width: 0;
+}
+.ax__head {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  min-height: 20px;
+  margin-bottom: 2px;
+}
+.ax__title {
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--fg-muted);
+}
+.ax__unit {
+  font-size: 11px;
+  color: var(--fg-subtle);
+}
+.ax__meta {
+  margin-left: auto;
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+}
+.ax__readout {
+  min-height: 18px;
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  color: var(--fg-muted);
+  font-variant-numeric: tabular-nums slashed-zero;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.ax__readout-row {
+  display: inline-flex;
+  gap: 14px;
+}
+.ax__readout-time {
+  color: var(--fg-subtle);
+}
+.ax__readout-item b {
+  font-weight: 600;
+  color: var(--fg-data);
+}
+.ax__readout-item::before {
+  content: "";
+  display: inline-block;
+  width: 8px;
+  height: 2px;
+  margin-right: 4px;
+  vertical-align: middle;
+  background: var(--ax-ink, var(--fg-muted));
+}
+.ax__readout-hint {
+  color: var(--fg-subtle);
+}
+.ax__plot {
+  width: 100%;
+  min-width: 0;
+}
+.ax__svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  touch-action: pan-y;
+}
+.ax__svg:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 1px;
+}
+.ax__grid {
+  stroke: var(--border-subtle);
+  stroke-width: 1;
+}
+.ax__axis {
+  stroke: var(--border-strong);
+}
+.ax__zero {
+  stroke: var(--fg-subtle);
+  stroke-dasharray: 2 3;
+}
+.ax__baseline {
+  stroke: var(--fg-subtle);
+  stroke-dasharray: 5 4;
+}
+.ax__cursor {
+  stroke: var(--chart-crosshair);
+  stroke-width: 1;
+}
+.ax__guide {
+  stroke: var(--border);
+  stroke-dasharray: 1 3;
+}
+.ax__tick {
+  fill: var(--fg-subtle);
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  font-variant-numeric: tabular-nums slashed-zero;
+}
+.ax__label {
+  fill: var(--fg-muted);
+  font-size: 10.5px;
+}
+.ax__band {
+  fill: var(--pnl-down-bg);
+}
+
+/* Series inks: --ax-ink drives the line, the readout key and the legend. */
+[data-ink] {
+  --ax-ink: var(--fg-muted);
+}
+[data-ink="equity"] {
+  --ax-ink: var(--fg);
+}
+[data-ink="benchmark"] {
+  --ax-ink: var(--fg-subtle);
+}
+[data-ink="loss"] {
+  --ax-ink: var(--pnl-down);
+}
+[data-ink="gain"],
+[data-ink="win"] {
+  --ax-ink: var(--pnl-up);
+}
+[data-ink="s1"] { --ax-ink: var(--series-1); }
+[data-ink="s2"] { --ax-ink: var(--series-2); }
+[data-ink="s3"] { --ax-ink: var(--series-3); }
+[data-ink="s4"] { --ax-ink: var(--series-4); }
+[data-ink="s5"] { --ax-ink: var(--series-5); }
+[data-ink="s6"] { --ax-ink: var(--series-6); }
+[data-ink="is"] { --ax-ink: var(--fg-subtle); }
+[data-ink="oos"] { --ax-ink: var(--series-1); }
+
+.ax__line {
+  fill: none;
+  stroke: var(--ax-ink);
+  stroke-width: 1.5;
+  stroke-linejoin: round;
+}
+.ax__line[data-dashed] {
+  stroke-dasharray: 5 4;
+  stroke-width: 1.2;
+}
+.ax__area {
+  fill: var(--ax-ink);
+  fill-opacity: 0.18;
+}
+.ax__dot {
+  fill: var(--ax-ink);
+  stroke: var(--bg-surface);
+  stroke-width: 1.5;
+}
+.ax__fan[data-band="outer"] {
+  fill: var(--series-1);
+  fill-opacity: 0.14;
+}
+.ax__fan[data-band="inner"] {
+  fill: var(--series-1);
+  fill-opacity: 0.3;
+}
+.ax__bin {
+  fill: var(--fg-subtle);
+  fill-opacity: 0.75;
+  cursor: default;
+}
+.ax__bin[data-side="up"] {
+  fill: var(--pnl-up);
+}
+.ax__bin[data-side="down"] {
+  fill: var(--pnl-down);
+}
+.ax__bin[data-active],
+.ax__bin:focus-visible {
+  fill-opacity: 1;
+  outline: none;
+  stroke: var(--focus-ring);
+  stroke-width: 1.5;
+}
+.ax__rule {
+  stroke: var(--fg);
+  stroke-width: 1;
+}
+.ax__rule--alt {
+  stroke-dasharray: 3 2;
+}
+.ax__pt {
+  stroke: var(--bg-surface);
+  stroke-width: 0.8;
+  fill-opacity: 0.85;
+}
+.ax__pt[data-outcome="win"] {
+  fill: var(--pnl-up);
+}
+.ax__pt[data-outcome="loss"] {
+  fill: var(--pnl-down);
+}
+.ax__pt[data-outcome="flat"] {
+  fill: var(--fg-subtle);
+}
+.ax__pt[data-active],
+.ax__pt:focus-visible {
+  outline: none;
+  stroke: var(--focus-ring);
+  stroke-width: 2;
+  fill-opacity: 1;
+}
+
+/* Legend and notes */
+.ax__legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  margin-top: 4px;
+  font-size: 11.5px;
+  color: var(--fg-muted);
+}
+.ax__key {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+.ax__key-line {
+  stroke: var(--ax-ink);
+  stroke-width: 2;
+}
+.ax__key-line[data-dashed] {
+  stroke-dasharray: 4 3;
+}
+.ax__key--band::before {
+  content: "";
+  display: inline-block;
+  width: 14px;
+  height: 9px;
+  background: var(--pnl-down-bg);
+  border: 1px solid var(--border-subtle);
+}
+.ax__key--band[data-ink="fan-outer"]::before {
+  background: color-mix(in oklch, var(--series-1) 18%, var(--bg-surface));
+}
+.ax__key--band[data-ink="fan-inner"]::before {
+  background: color-mix(in oklch, var(--series-1) 38%, var(--bg-surface));
+}
+.ax__note {
+  margin-top: 4px;
+  font-size: 11.5px;
+  color: var(--fg-subtle);
+  max-width: 110ch;
+}
+.ax__empty {
+  display: grid;
+  place-items: center;
+  min-height: 120px;
+  border: 1px dashed var(--border-subtle);
+  color: var(--fg-subtle);
+  font-size: 12px;
+  padding: 12px;
+  text-align: center;
+}
+.ax__data {
+  margin-top: 4px;
+  font-size: 11.5px;
+}
+.ax__data summary {
+  cursor: pointer;
+  color: var(--accent);
+  width: fit-content;
+}
+.ax__data-table {
+  max-height: 300px;
+  overflow: auto;
+  margin-top: 4px;
+}
+.ax__table {
+  width: auto;
+  min-width: 260px;
+  font-size: 11.5px;
+}
+.ax__table caption {
+  text-align: left;
+  color: var(--fg-subtle);
+  padding: 2px 0;
+}
+
+/* Grid heatmap (HTML table, every cell printed). Its own ramp: 11% to 55%
+   of the diverging hue over the surface, so the printed value keeps AA
+   contrast on every step in both themes. */
+.ax__heat-scroll {
+  overflow-x: auto;
+  max-width: 100%;
+}
+.ax__heat-scroll:focus-visible {
+  outline: 2px solid var(--focus-ring);
+}
+.ax__heat {
+  border-collapse: separate;
+  border-spacing: 1px;
+  width: auto;
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  font-variant-numeric: tabular-nums slashed-zero;
+}
+.ax__heat th,
+.ax__heat td {
+  padding: 0;
+  height: 22px;
+  border: 0;
+}
+.ax__heat thead th {
+  position: static;
+  background: var(--bg-surface);
+  color: var(--fg-muted);
+  border-bottom: 0;
+  text-transform: none;
+  letter-spacing: 0;
+  font-size: 11px;
+  padding: 0 2px;
+}
+.ax__heat-corner,
+.ax__heat-row {
+  text-align: left;
+  padding: 0 8px 0 0;
+  color: var(--fg-muted);
+  font-weight: 600;
+  white-space: nowrap;
+  position: sticky;
+  left: 0;
+  background: var(--bg-surface);
+  z-index: 1;
+}
+.ax__heat-col {
+  color: var(--fg-muted);
+  font-weight: 600;
+  text-align: center;
+  min-width: 48px;
+  padding: 0 2px;
+  white-space: nowrap;
+}
+.ax__heat[data-rotate] .ax__heat-col {
+  height: 64px;
+  vertical-align: bottom;
+  min-width: 34px;
+}
+.ax__heat[data-rotate] .ax__heat-col span {
+  display: inline-block;
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+  padding-bottom: 4px;
+}
+.ax__heat-extra {
+  padding: 0 0 0 10px;
+  color: var(--fg-data);
+  text-align: right;
+  white-space: nowrap;
+}
+.ax__heat-cell {
+  min-width: 48px;
+  text-align: center;
+  color: var(--fg-data);
+  background: var(--bg-raised);
+  position: relative;
+}
+.ax__heat[data-dense] .ax__heat-cell {
+  min-width: 34px;
+  font-size: 10.5px;
+}
+.ax__heat-cell[data-empty] {
+  background: repeating-linear-gradient(
+    135deg,
+    var(--border-subtle) 0 1px,
+    var(--bg-sunken) 1px 5px
+  );
+  color: var(--fg-subtle);
+}
+.ax__heat-btn,
+.ax__heat-static {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  width: 100%;
+  height: 100%;
+  padding: 0 4px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: default;
+}
+.ax__heat-btn {
+  cursor: pointer;
+}
+.ax__heat-btn:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: -2px;
+}
+.ax__heat-glyph {
+  font-size: 8px;
+  color: var(--warn);
+}
+.ax__heat-cell[data-marks~="plateau"] {
+  box-shadow: inset 0 0 0 2px var(--ok);
+}
+.ax__heat-cell[data-marks~="selected"] {
+  box-shadow: inset 0 0 0 2px var(--accent);
+}
+.ax__heat-cell[data-marks~="plateau"][data-marks~="selected"] {
+  box-shadow: inset 0 0 0 2px var(--ok), inset 0 0 0 4px var(--accent);
+}
+.ax__heat-cell[data-marks~="diagonal"] .ax__heat-text {
+  font-style: italic;
+}
+.ax__heat-legend {
+  display: inline-flex;
+  align-items: center;
+  gap: 1px;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  color: var(--fg-subtle);
+}
+.ax__heat-legend > span:first-child {
+  margin-right: 4px;
+}
+.ax__heat-legend > span:last-child {
+  margin-left: 4px;
+}
+.ax__heat-legend .heat-legend__swatch {
+  width: 14px;
+  height: 10px;
+}
+.ax__heat-cell.heat-swatch,
+.ax__heat-legend .heat-swatch {
+  background: var(--bg-raised);
+}
+.ax__heat-cell.heat-swatch[data-bin="-5"], .ax__heat-legend .heat-swatch[data-bin="-5"] { background: color-mix(in oklch, var(--div-neg) 55%, var(--bg-surface)); }
+.ax__heat-cell.heat-swatch[data-bin="-4"], .ax__heat-legend .heat-swatch[data-bin="-4"] { background: color-mix(in oklch, var(--div-neg) 44%, var(--bg-surface)); }
+.ax__heat-cell.heat-swatch[data-bin="-3"], .ax__heat-legend .heat-swatch[data-bin="-3"] { background: color-mix(in oklch, var(--div-neg) 33%, var(--bg-surface)); }
+.ax__heat-cell.heat-swatch[data-bin="-2"], .ax__heat-legend .heat-swatch[data-bin="-2"] { background: color-mix(in oklch, var(--div-neg) 22%, var(--bg-surface)); }
+.ax__heat-cell.heat-swatch[data-bin="-1"], .ax__heat-legend .heat-swatch[data-bin="-1"] { background: color-mix(in oklch, var(--div-neg) 11%, var(--bg-surface)); }
+.ax__heat-cell.heat-swatch[data-bin="0"], .ax__heat-legend .heat-swatch[data-bin="0"] { background: var(--bg-raised); }
+.ax__heat-cell.heat-swatch[data-bin="1"], .ax__heat-legend .heat-swatch[data-bin="1"] { background: color-mix(in oklch, var(--div-pos) 11%, var(--bg-surface)); }
+.ax__heat-cell.heat-swatch[data-bin="2"], .ax__heat-legend .heat-swatch[data-bin="2"] { background: color-mix(in oklch, var(--div-pos) 22%, var(--bg-surface)); }
+.ax__heat-cell.heat-swatch[data-bin="3"], .ax__heat-legend .heat-swatch[data-bin="3"] { background: color-mix(in oklch, var(--div-pos) 33%, var(--bg-surface)); }
+.ax__heat-cell.heat-swatch[data-bin="4"], .ax__heat-legend .heat-swatch[data-bin="4"] { background: color-mix(in oklch, var(--div-pos) 44%, var(--bg-surface)); }
+.ax__heat-cell.heat-swatch[data-bin="5"], .ax__heat-legend .heat-swatch[data-bin="5"] { background: color-mix(in oklch, var(--div-pos) 55%, var(--bg-surface)); }
