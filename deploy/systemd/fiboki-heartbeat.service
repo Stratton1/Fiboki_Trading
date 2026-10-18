@@ -1,0 +1,55 @@
+# Fiboki V2 systemd unit: the external heartbeat (scripts/server-heartbeat.sh).
+#
+# TEMPLATE: scripts/server-install.sh substitutes its double-underscore placeholders and writes
+# /etc/systemd/system/fiboki-heartbeat.service. Triggered by fiboki-heartbeat.timer (every 5 min).
+#
+# * Checks `fiboki doctor`, every worker heartbeat (`fiboki worker status`), the quote recorder's
+#   freshness and the enabled Fiboki units, then PUSHES: Telegram (FIBOKI_TELEGRAM_BOT_TOKEN and
+#   FIBOKI_TELEGRAM_CHAT_ID, the channel fiboki.obs.alerts already uses), ntfy (FIBOKI_NTFY_URL),
+#   and/or pings a dead-man switch (FIBOKI_HEALTHCHECK_URL, e.g. healthchecks.io) so that a box
+#   that is down, or a timer that stopped, is noticed by something OFF the box.
+# * Deliberately NOT in fiboki.slice and not memory-capped with the others: it must still run
+#   when that group is starved.
+
+[Unit]
+Description=Fiboki external heartbeat
+Documentation=file://__FIBOKI_ROOT__/docs/v2/SERVER.md
+After=network-online.target
+
+[Service]
+Type=oneshot
+User=__FIBOKI_USER__
+Group=__FIBOKI_GROUP__
+WorkingDirectory=__FIBOKI_ROOT__
+Environment=HOME=__FIBOKI_LIB__
+Environment=FIBOKI_HOME=__FIBOKI_LIB__/.fiboki
+Environment=FIBOKI_STATE_DIR=__FIBOKI_LIB__/var
+Environment=FIBOKI_ENV_FILE=__FIBOKI_ENV_FILE__
+Environment=PYTHONDONTWRITEBYTECODE=1
+ExecStart=/bin/bash __FIBOKI_ROOT__/scripts/fiboki-service.sh run __FIBOKI_ROOT__/scripts/server-heartbeat.sh
+TimeoutStartSec=120
+Nice=5
+MemoryMax=768M
+
+NoNewPrivileges=true
+PrivateTmp=true
+PrivateDevices=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=__FIBOKI_LIB__
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectKernelLogs=true
+ProtectControlGroups=true
+ProtectClock=true
+ProtectHostname=true
+RestrictSUIDSGID=true
+RestrictRealtime=true
+RestrictNamespaces=true
+LockPersonality=true
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6 AF_NETLINK
+SystemCallArchitectures=native
+UMask=0077
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=fiboki-heartbeat

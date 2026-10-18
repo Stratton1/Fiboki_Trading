@@ -178,13 +178,24 @@ services are loaded (same ports; the launcher already refuses). Do not point a L
 
 ## 3. Linux server
 
+**The supported route is `docs/v2/SERVER.md`** (added 18 October 2026): `scripts/server-install.sh`
+bootstraps a fresh Debian 12 or Ubuntu 24.04 VPS (an unprivileged `fiboki` user, `/opt/fiboki`,
+`/etc/fiboki/env` for secrets, one hardened systemd unit per service with a per-service
+`MemoryMax` inside a 14 GB `fiboki.slice`, ufw, unattended upgrades, a nightly backup timer and an
+external heartbeat), `scripts/server-migrate.sh` moves the running state from the Mac with a
+rollback, and Tailscale can expose the web app on the tailnet only. Units are in `deploy/systemd/`;
+the web app and API bind `127.0.0.1`, and no public port is opened.
+
+The single-unit file below is the older, worker-only route and is no longer installed by the
+scripts (`fiboki-worker.service` supersedes it and `Conflicts=` with it):
+
 ```bash
 sudo cp deploy/systemd/fiboki-research-worker.service /etc/systemd/system/
 sudo systemctl daemon-reload && sudo systemctl enable --now fiboki-research-worker
 journalctl -u fiboki-research-worker -f | jq .
 ```
 
-The unit declares exit 75 as a **successful** exit status, so systemd stops rather than
+Every unit declares exit 75 as a **successful** exit status, so systemd stops rather than
 restart-looping against a held lease.
 
 ## 4. Containers, optional

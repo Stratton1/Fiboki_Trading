@@ -1,0 +1,88 @@
+# Fiboki V2 systemd unit: Fiboki PAPER trading forward, spot crypto 24/7 (Coinbase public prices, paper fills).
+#
+# TEMPLATE. Do not copy by hand: scripts/server-install.sh substitutes
+# __FIBOKI_ROOT__, __FIBOKI_USER__, __FIBOKI_GROUP__, __FIBOKI_LIB__ and
+# __FIBOKI_ENV_FILE__ and writes /etc/systemd/system/fiboki-paper-crypto.service.
+#
+# * Runs scripts/fiboki-service.sh paper-crypto, which reads the env file, forces
+#   FIBOKI_EXECUTION_MODE=paper and unsets every live control. No live control and
+#   no credential is set anywhere in this file; secrets live in __FIBOKI_ENV_FILE__
+#   (mode 600, owned by the service user, never in the repository).
+# * OPT-IN. No credential at all (Coinbase public data). Same exit-75 meaning as fiboki-paper. Crypto bars close
+#   every four hours, weekends included; that is what the server is for.
+# * Memory: MemoryMax=1G (small budget); the whole group is also capped by fiboki.slice.
+
+[Unit]
+Description=Fiboki PAPER trading forward, spot crypto 24/7 (Coinbase public prices, paper fills)
+Documentation=file://__FIBOKI_ROOT__/docs/v2/SERVER.md
+After=network-online.target
+Wants=network-online.target
+# Do not thrash on a poisoned state: five starts in ten minutes, then stay failed
+# (and the heartbeat timer tells you).
+StartLimitIntervalSec=600
+StartLimitBurst=5
+
+[Service]
+Type=simple
+User=__FIBOKI_USER__
+Group=__FIBOKI_GROUP__
+Slice=fiboki.slice
+WorkingDirectory=__FIBOKI_ROOT__
+
+Environment=FIBOKI_EXECUTION_MODE=paper
+Environment=HOME=__FIBOKI_LIB__
+Environment=FIBOKI_HOME=__FIBOKI_LIB__/.fiboki
+Environment=FIBOKI_STATE_DIR=__FIBOKI_LIB__/var
+Environment=FIBOKI_ENV_FILE=__FIBOKI_ENV_FILE__
+Environment=PYTHONDONTWRITEBYTECODE=1
+Environment=PYTHONUNBUFFERED=1
+
+ExecStart=/bin/bash __FIBOKI_ROOT__/scripts/fiboki-service.sh paper-crypto
+
+# Graceful shutdown: SIGTERM, then SIGKILL after TimeoutStopSec. Keep it above
+# WorkerConfig.shutdown_grace_seconds (30 s) or systemd kills a worker that is
+# shutting down correctly (deploy/README.md, Shutdown timing).
+KillSignal=SIGTERM
+KillMode=mixed
+TimeoutStopSec=45
+
+Restart=on-failure
+RestartSec=15
+# Exit 75 is a held lease or an operator-only divergence: restarting is pointless.
+SuccessExitStatus=75
+
+Nice=0
+OOMScoreAdjust=-500
+MemoryHigh=768M
+MemoryMax=1G
+TasksMax=512
+LimitNOFILE=8192
+
+# Hardening. The service sees the system read-only; its only writable place is
+# the state directory (datastore, ledgers, journals, logs, quotes, leases).
+NoNewPrivileges=true
+PrivateTmp=true
+PrivateDevices=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=__FIBOKI_LIB__
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectKernelLogs=true
+ProtectControlGroups=true
+ProtectClock=true
+ProtectHostname=true
+RestrictSUIDSGID=true
+RestrictRealtime=true
+RestrictNamespaces=true
+LockPersonality=true
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6 AF_NETLINK
+SystemCallArchitectures=native
+UMask=0077
+
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=fiboki-paper-crypto
+
+[Install]
+WantedBy=multi-user.target

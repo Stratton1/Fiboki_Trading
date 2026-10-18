@@ -3,9 +3,15 @@
 # (deploy/launchd/uk.fiboki.<service>.plist); you can too, to debug one.
 #
 #   scripts/fiboki-service.sh api|worker|web|news|quotes|llama|paper|paper-crypto
+#   scripts/fiboki-service.sh run COMMAND [ARGS...]   # COMMAND under the same environment
+#
+# On a Linux server systemd calls this too (deploy/systemd/fiboki-<service>.service,
+# installed by scripts/server-install.sh); `run` is how the operator gets that
+# environment in a shell: sudo -u fiboki scripts/fiboki-service.sh run fiboki doctor
 #
 # Environment, in order of precedence:
-#   1. ~/.fiboki/env (operator-owned, chmod 600, never in the repository):
+#   1. The env file: $FIBOKI_ENV_FILE if set (a server uses /etc/fiboki/env), else
+#      ~/.fiboki/env (operator-owned, chmod 600, never in the repository):
 #      secrets such as FIBOKI_SESSION_SECRET and FIBOKI_OPERATORS, and the
 #      agent settings (FIBOKI_AGENT_*). scripts/desktop-install.sh creates it.
 #   2. The desktop defaults below, the same paths scripts/dev-up.sh uses, so
@@ -37,6 +43,7 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 
 ENV_FILE="${FIBOKI_HOME:-$HOME/.fiboki}/env"
+if [ -n "${FIBOKI_ENV_FILE:-}" ]; then ENV_FILE="$FIBOKI_ENV_FILE"; fi
 if [ -f "$ENV_FILE" ]; then
   # Read KEY=VALUE lines WITHOUT shell expansion: operator password hashes are
   # scrypt strings full of `$`, and sourcing the file would expand them into
@@ -90,6 +97,12 @@ case "$SERVICE" in
     fi
     export NEXT_PUBLIC_FIBOKI_API=""
     export FIBOKI_API_PROXY_TARGET="http://127.0.0.1:8000"
+    # Next binds every interface by default. A Linux server must not: it is
+    # reached through `tailscale serve` or an SSH tunnel, never a public port.
+    # NEXT_BIND_HOST overrides; macOS keeps Next's default (the desktop app).
+    WEB_HOST="${NEXT_BIND_HOST:-}"
+    if [ -z "$WEB_HOST" ] && [ "$(uname -s)" = "Linux" ]; then WEB_HOST="127.0.0.1"; fi
+    if [ -n "$WEB_HOST" ]; then exec npm run start -- -H "$WEB_HOST"; fi
     exec npm run start
     ;;
   news)
@@ -124,8 +137,14 @@ case "$SERVICE" in
     exec "$ROOT/.venv/bin/fiboki" paper forward \
       --wiring "$ROOT/src/fiboki/entrypoints/wiring/paper_forward_crypto_v1.json"
     ;;
+  run)
+    shift
+    [ $# -gt 0 ] || { echo "usage: $0 run COMMAND [ARGS...]" >&2; exit 2; }
+    export PATH="$ROOT/.venv/bin:$PATH"
+    exec "$@"
+    ;;
   *)
-    echo "usage: $0 api|worker|web|news|quotes|llama|paper|paper-crypto" >&2
+    echo "usage: $0 api|worker|web|news|quotes|llama|paper|paper-crypto|run" >&2
     exit 2
     ;;
 esac

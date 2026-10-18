@@ -581,6 +581,12 @@ the KV cache at a 16,384-token context plus the rest of Fiboki, and a native con
 that length. **No benchmark was run and none is quoted.** Measure the model with
 `smoke_test_provider` and the offline eval harness before trusting it.
 
+> **Superseded 18 October 2026 for the script's choice.** `scripts/llama-server.sh` now selects from
+> the research table (8 GB Qwen3.5-4B, 16 GB Qwen3.5-9B, 32 GB and up Qwen3.6-27B, all Q4_K_M, each
+> pinned to a Hugging Face commit and a SHA-256, printed with the download); see `docs/v2/SERVER.md`
+> section 10. The rows below still work when asked for with `--tier 64` or `--tier 128` (Qwen3-32B);
+> `--tier 32` now means Qwen3.6-27B, not Qwen3-14B.
+
 | Mac memory | File (quantisation) | File size | Source |
 |---|---|---|---|
 | 32 GB | `Qwen3-14B-Q5_K_M.gguf` | 10.51 GB | [Qwen/Qwen3-14B-GGUF](https://huggingface.co/Qwen/Qwen3-14B-GGUF) |
@@ -610,6 +616,38 @@ Where each fact comes from:
 macOS caps how much unified memory the GPU may wire, below the physical total; if llama-server
 fails to allocate, drop one tier (`LLAMA_SERVER_ARGS=--tier 32` on a 64 GB machine) rather than
 raising the limit.
+
+### M4. Cloud server: run Fiboki 24/7 without the Mac (added 18 October 2026)
+
+Built and tested with stubs, **not yet run on a real server** (`docs/v2/SERVER.md`, section 12). The
+runbook is `docs/v2/SERVER.md`; these are exactly the things only you can do:
+
+1. **Order the server.** netcup VPS 2000 G12 (8 shared vCPU, 16 GB, 512 GB NVMe), image Debian 12
+   or Ubuntu 24.04. Roughly 15 to 20 EUR a month (an estimate; check the price when you order).
+2. **Add your SSH public key** (netcup control panel, or `ssh-copy-id`), create your admin user
+   with sudo, and disable root and password login over SSH. The installer leaves `sshd_config` to you.
+3. **Run the installer** on the server: clone the repository to `/opt/fiboki` (or copy the Mac's
+   checkout; a private repository needs a read-only deploy key), then
+   `sudo /opt/fiboki/scripts/server-install.sh --dry-run`, read it, then
+   `sudo /opt/fiboki/scripts/server-install.sh --no-start`.
+4. **Put the secrets in `/etc/fiboki/env`** (`sudo -e /etc/fiboki/env`, mode 600, owned by
+   `fiboki`): `FIBOKI_OPERATORS` (copy the line from the Mac's `~/.fiboki/env`),
+   `FIBOKI_OANDA_PRACTICE_TOKEN` and `FIBOKI_OANDA_PRACTICE_ACCOUNT_ID`, `FIBOKI_TELEGRAM_*` or
+   `FIBOKI_NTFY_URL`, and `FIBOKI_HEALTHCHECK_URL`. Keep a copy in your password manager: backups
+   never contain it.
+5. **Tailscale account** (free): enable MagicDNS and HTTPS certificates in its admin console,
+   invite Tom, then `sudo /opt/fiboki/scripts/server-install.sh --tailscale --no-start` and
+   `sudo tailscale up`. No public port is opened; do not use Funnel.
+6. **healthchecks.io account** (free): one check, period 5 minutes, grace 10; its ping URL is
+   `FIBOKI_HEALTHCHECK_URL`. It is the only alert that still works when the server itself is down.
+7. **Choose an off-box backup target** (Backblaze B2 with rclone, or SFTP with restic) and put it
+   in the env file (`FIBOKI_BACKUP_RCLONE_REMOTE` or `FIBOKI_BACKUP_RESTIC_REPOSITORY`); practise one restore.
+8. **Migrate from the Mac** when you are ready: `scripts/server-migrate.sh --host you@server preflight`, then
+   `prepare`, then `cutover`; `rollback` undoes it. **The FX paper session will be refused** while the
+   Mac process holds the open GBPUSD long and has no state snapshot; either wait for it to close,
+   or move everything else first (`--services api,worker,web,news,paper-crypto,quotes`).
+9. **Decide the local model** for the server (16 GB tier: Qwen3.5-9B Q4_K_M, pinned;
+   `scripts/llama-server.sh --print` shows the download and the SHA-256 check); the script never downloads it.
 
 ## OPTIONAL
 
