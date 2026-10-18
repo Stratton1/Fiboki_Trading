@@ -406,3 +406,21 @@ def test_market_sessions_follow_local_time_and_the_fx_week():
     assert fx_week_open(sunday_open)
     for s in market_sessions(saturday):
         assert s.next_change_at > saturday
+
+
+def test_clock_is_the_api_s_and_lists_the_sessions(client):
+    body = client.get("/api/system/clock").json()
+    assert [s["key"] for s in body["data"]["sessions"]] == ["sydney", "tokyo", "london", "new_york"]
+    stamp = datetime.fromisoformat(body["data"]["server_time"].replace("Z", "+00:00"))
+    assert abs((datetime.now(tz=UTC) - stamp).total_seconds()) < 60
+
+
+def test_the_route_table_names_the_workstation_s_pages():
+    """links.ROUTE_PATTERNS is every page on disk, plus the two research entity routes."""
+    app = Path(__file__).resolve().parents[2] / "apps" / "web" / "app"
+    pages = set()
+    for page in app.rglob("page.tsx"):
+        rel = page.parent.relative_to(app).as_posix()
+        pages.add("/" if rel == "." else f"/{rel}")
+    contract = {"/research/runs/[run_id]", "/research/strategies/[id]"}
+    assert set(links.ROUTE_PATTERNS) == pages | contract
