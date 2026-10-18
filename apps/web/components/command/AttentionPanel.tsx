@@ -9,10 +9,12 @@ import { useClock } from "@/lib/clock";
 import { awaitEcho } from "@/lib/echo";
 import { formatTimestamp, parseUtc } from "@/lib/format";
 import { useApi } from "@/lib/query";
-import type { AttentionItem, Page } from "@/lib/types";
+import { singleProvenanceOf } from "@/lib/provenance";
+import type { AttentionItem, Page, Provenance } from "@/lib/types";
 import { AsyncBoundary } from "../AsyncBoundary";
 import { FigureValue } from "../FigureValue";
 import { ProvenanceChip } from "../ProvenanceChip";
+import { partitionCaveats } from "../CaveatList";
 import { CaveatList, SourceBadge } from "../primitives";
 import { AcknowledgeIncident } from "../incidents/AcknowledgeIncident";
 import { useOperator } from "../shell/platform";
@@ -26,10 +28,12 @@ import { SeverityBadge } from "./SeverityBadge";
  * This panel renders the items in the order received; it never sorts, filters
  * or re-weights them. The position shown is the item's place in that order.
  *
- * Each row: a severity glyph and word, the title (a link to the item's deep
- * link), the reason, its age from the item's `as_of`, the provenance of the
- * deployment state it was derived from (the item's only provenance, carried by
- * its score), the score, and the actions the API supports for it. The API
+ * Each row is ONE line (programme P0 1): a severity glyph and word, the
+ * title (a link to the item's deep link), the reason (truncated; the full text
+ * is the row's title and is read out), its age from the item's `as_of`, the
+ * score, and the actions the API supports for it. The provenance of the
+ * deployment state the items were derived from is shown once in the panel
+ * head when every item shares it (programme item 15), else on each row. The API
  * supports one: acknowledging an INCIDENT (POST /api/system/incidents/{id}/ack),
  * through the shared AcknowledgeIncident control, so the friction here is the
  * Incidents table's exactly: the confirm dialog states the execution mode,
@@ -105,12 +109,14 @@ function Row({
   now,
   unconfirmed,
   onUnconfirmed,
+  showChip,
 }: {
   item: AttentionItem;
   position: number;
   now: number;
   unconfirmed: boolean;
   onUnconfirmed: () => void;
+  showChip: boolean;
 }) {
   const client = useQueryClient();
   const href = inAppLink(item.deep_link);
@@ -118,73 +124,72 @@ function Row({
   const glyph = SEVERITY_GLYPH[item.severity] ?? "?";
   return (
     <li
-      className="triage"
+      className="triage triage--line"
       data-testid="attention-item"
       data-item-id={item.id}
       data-position={position}
       data-severity={item.severity}
       data-category={item.category}
+      data-provenance={item.score.provenance}
       data-ack={unconfirmed ? "unconfirmed" : undefined}
     >
       <span className="triage__glyph" data-severity={item.severity} aria-hidden="true">
         {glyph}
       </span>
-      <div className="triage__body">
-        <div className="triage__line">
-          <span className="mono muted triage__pos" aria-label={`position ${position}`}>
-            #{position}
-          </span>
-          <SeverityBadge severity={item.severity} />
-          {href ? (
-            <Link
-              href={href}
-              className="triage__title"
-              data-attention-focus=""
-              data-testid={`attention-link-${item.id}`}
-            >
-              {item.title}
-              <ArrowRight size={13} aria-hidden="true" className="triage__arrow" />
-            </Link>
-          ) : (
-            <span
-              className="triage__title"
-              tabIndex={0}
-              data-attention-focus=""
-              data-testid={`attention-nolink-${item.id}`}
-            >
-              {item.title}
-            </span>
-          )}
-        </div>
-        <p className="triage__reason" title={item.reason}>
-          {item.reason}
-        </p>
-        <div className="triage__meta">
-          <span className="num" data-testid="attention-age" title={item.as_of ? formatTimestamp(item.as_of) : undefined}>
-            {ageText(item.as_of, now)}
-          </span>
+      <span className="mono muted triage__pos" aria-label={`position ${position}`}>
+        {position}
+      </span>
+      <SeverityBadge severity={item.severity} />
+      {href ? (
+        <Link
+          href={href}
+          className="triage__title"
+          data-attention-focus=""
+          data-testid={`attention-link-${item.id}`}
+          title={item.reason}
+        >
+          {item.title}
+          <ArrowRight size={12} aria-hidden="true" className="triage__arrow" />
+        </Link>
+      ) : (
+        <span
+          className="triage__title"
+          tabIndex={0}
+          data-attention-focus=""
+          data-testid={`attention-nolink-${item.id}`}
+          title={`${item.reason} (no in-app link was supplied for this item)`}
+        >
+          {item.title}
+        </span>
+      )}
+      <span className="triage__reason" title={item.reason}>
+        {item.reason}
+      </span>
+      <span className="triage__meta">
+        <span className="num" data-testid="attention-age" title={item.as_of ? formatTimestamp(item.as_of) : undefined}>
+          {ageText(item.as_of, now)}
+        </span>
+        {showChip ? (
           <span className="triage__chip" data-testid="attention-mode">
-            <span className="muted">from</span>
             <ProvenanceChip provenance={item.score.provenance} />
           </span>
-          <span className="muted">
-            {item.category.replace(/_/g, " ")} · score <FigureValue figure={item.score} showChip={false} />
+        ) : null}
+        <span className="muted triage__score" title={item.category.replace(/_/g, " ")}>
+          <FigureValue figure={item.score} showChip={false} />
+        </span>
+        {unconfirmed ? (
+          <span className="badge badge--neutral" data-testid="attention-ack-confirming">
+            confirming…
           </span>
-          {href ? null : <span className="muted">No in-app link was supplied for this item.</span>}
-          {unconfirmed ? (
-            <span className="badge badge--neutral" data-testid="attention-ack-confirming">
-              acknowledged · confirming…
-            </span>
-          ) : null}
-        </div>
-      </div>
-      <div className="triage__actions">
+        ) : null}
+      </span>
+      <span className="triage__actions">
         {incidentId && !unconfirmed ? (
           <AcknowledgeIncident
             incidentId={incidentId}
             title={item.title}
             testId={`attention-ack-${item.id}`}
-            label="Acknowledge…"
+            label="Ack…"
             // The echo: the platform's queue stops listing this incident.
             echo={() =>
               awaitEcho<Page<AttentionItem>>(
@@ -196,7 +201,7 @@ function Row({
             onUnconfirmed={onUnconfirmed}
           />
         ) : null}
-      </div>
+      </span>
     </li>
   );
 }
@@ -227,10 +232,21 @@ export function AttentionPanel() {
       emptyBody="The platform's attention queue is empty: no kill switch armed, no breach, no open incident, no stale worker, no failing health check and no strategy awaiting review. That is the server's answer, not an absence of one."
     >
       {(page) => {
-        const loud = page.caveats.filter((caveat) => caveat.severity === "warning" || caveat.severity === "critical");
-        const quiet = page.caveats.filter((caveat) => caveat.severity !== "warning" && caveat.severity !== "critical");
+        const { loud, quiet } = partitionCaveats(page.caveats);
+        const shared: Provenance | null = singleProvenanceOf(page.items.map((item) => item.score.provenance));
         return (
         <>
+          <div className="triage-head">
+            <span className="muted" data-testid="attention-count">
+              {page.items.length} of {page.total}, in the platform&apos;s order
+            </span>
+            {shared ? (
+              <span className="triage__chip" data-testid="attention-mode-shared">
+                <span className="muted">derived from</span>
+                <ProvenanceChip provenance={shared} />
+              </span>
+            ) : null}
+          </div>
           <CaveatList caveats={loud} />
           {!allowed.allowed ? (
             <p className="muted" data-testid="attention-role-blocked" role="note">
@@ -246,12 +262,10 @@ export function AttentionPanel() {
                 now={now}
                 unconfirmed={unconfirmed.has(item.id)}
                 onUnconfirmed={() => setUnconfirmed((previous) => new Set([...previous, item.id]))}
+                showChip={shared === null}
               />
             ))}
           </ol>
-          <p className="muted mt-2">
-            {page.items.length} of {page.total}, in the platform&apos;s order.
-          </p>
           <details className="triage-foot">
             <summary>Where this list came from</summary>
             <SourceBadge source={page.source} />

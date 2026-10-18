@@ -1,9 +1,11 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import { ApiError, apiFetch } from "@/lib/api";
 import { capability } from "@/lib/auth";
 import { PHONE_QUERY, useMediaQuery } from "@/lib/media";
+import { route } from "@/lib/routes";
 import { useApi } from "@/lib/query";
 import { AsyncBoundary } from "@/components/AsyncBoundary";
 import { useExecutionMode, useOperator } from "@/components/shell/platform";
@@ -164,11 +166,17 @@ export default function CandidatesPage() {
       value: (row) => `${row.name} ${row.strategy_id}`,
       cell: (row) => (
         <span className="grid__stack">
-          <strong>{row.name}</strong>
-          <span className="mono muted">{row.strategy_id}</span>
+          <Link href={route.candidate(row.content_hash)} data-testid="candidate-lifecycle-link">
+            <strong>{row.name}</strong>
+          </Link>
+          <span className="mono muted">
+            {row.strategy_id} · <Link href={route.strategy(row.strategy_id)} data-testid="candidate-tearsheet-link">runs</Link>
+            {" · "}
+            <Link href={route.journal({ strategy: row.strategy_id })}>trades</Link>
+          </span>
         </span>
       ),
-      width: 220,
+      width: 240,
       pin: true,
     },
     { id: "family", header: "Family", value: (row) => row.family, width: 96 },
@@ -265,8 +273,12 @@ export default function CandidatesPage() {
                   <li key={row.strategy_id} className="cand-card" data-testid="candidate-card" data-row-id={row.strategy_id}>
                     <div className="cand-card__head">
                       <span className="grid__stack">
-                        <strong>{row.name}</strong>
-                        <span className="mono muted">{row.strategy_id}</span>
+                        <Link href={route.candidate(row.content_hash)}>
+                          <strong>{row.name}</strong>
+                        </Link>
+                        <span className="mono muted">
+                          {row.strategy_id} · <Link href={route.strategy(row.strategy_id)}>runs</Link>
+                        </span>
                       </span>
                       <span className="row gap-1">
                         <span

@@ -1,6 +1,7 @@
 "use client";
 
-import { parseAsStringLiteral, useQueryState } from "nuqs";
+import Link from "next/link";
+import { parseAsString, parseAsStringLiteral, useQueryState } from "nuqs";
 import { useMemo } from "react";
 import { GridPage } from "@/components/GridPage";
 import { UrlState } from "@/components/UrlState";
@@ -11,6 +12,7 @@ import { useApi } from "@/lib/query";
 import { PROVENANCES, type InstrumentRow, type Page, type Provenance, type TradeRow } from "@/lib/types";
 import { formatTimestamp, priceDecimals } from "@/lib/format";
 import { deriveProvenance } from "@/lib/provenance";
+import { route } from "@/lib/routes";
 
 /**
  * TRADING · Execution (the Journal's trade list).
@@ -39,25 +41,51 @@ const TRADES_REFRESH_MS = 30_000;
 
 export default function ExecutionPage() {
   return (
-    <UrlState fallback={<ExecutionView filter="all" onFilter={() => undefined} />}>
+    <UrlState fallback={<ExecutionView filter="all" onFilter={() => undefined} strategy={null} instrument={null} onClear={() => undefined} />}>
       <ExecutionFromUrl />
     </UrlState>
   );
 }
 
+const textParser = parseAsString.withOptions({ history: "replace" });
+
 function ExecutionFromUrl() {
   const [filter, setFilter] = useQueryState("provenance", filterParser);
-  return <ExecutionView filter={filter} onFilter={(next) => void setFilter(next)} />;
+  // Cross-links land here filtered: a bot's or a strategy's journal
+  // (`?strategy=`), an instrument's trades (`?instrument=`, `EURUSD TRD`).
+  const [strategy, setStrategy] = useQueryState("strategy", textParser);
+  const [instrument, setInstrument] = useQueryState("instrument", textParser);
+  return (
+    <ExecutionView
+      filter={filter}
+      onFilter={(next) => void setFilter(next)}
+      strategy={strategy}
+      instrument={instrument}
+      onClear={() => {
+        void setStrategy(null);
+        void setInstrument(null);
+      }}
+    />
+  );
 }
 
 function ExecutionView({
   filter,
   onFilter,
+  strategy,
+  instrument,
+  onClear,
 }: {
   filter: Provenance | "all";
   onFilter: (next: Provenance | "all") => void;
+  strategy: string | null;
+  instrument: string | null;
+  onClear: () => void;
 }) {
-  const query = filter === "all" ? "" : `&provenance=${filter}`;
+  const query =
+    (filter === "all" ? "" : `&provenance=${filter}`) +
+    (strategy ? `&strategy_id=${encodeURIComponent(strategy)}` : "") +
+    (instrument ? `&instrument=${encodeURIComponent(instrument)}` : "");
   const instruments = useApi<Page<InstrumentRow>>("/api/markets/instruments");
   const pips = useMemo(() => {
     const map = new Map<string, number | null>();
@@ -86,8 +114,29 @@ function ExecutionView({
       value: (row) => row.exit_time,
       cell: (row) => formatTimestamp(row.exit_time),
     },
-    { id: "instrument", header: "Instrument", value: (row) => row.instrument, width: 100 },
-    { id: "strategy", header: "Strategy", value: (row) => row.strategy_id, width: 180 },
+    {
+      id: "instrument",
+      header: "Instrument",
+      value: (row) => row.instrument,
+      // The chart at this trade: the chart workstation reads `trade` to select it.
+      cell: (row) => (
+        <Link href={route.instrument(row.instrument, { trade: row.trade_id })} data-testid="journal-chart-link">
+          {row.instrument}
+        </Link>
+      ),
+      width: 100,
+    },
+    {
+      id: "strategy",
+      header: "Strategy",
+      value: (row) => row.strategy_id,
+      cell: (row) => (
+        <Link href={route.strategy(row.strategy_id)} data-testid="journal-strategy-link">
+          {row.strategy_id}
+        </Link>
+      ),
+      width: 180,
+    },
     { id: "direction", header: "Side", value: (row) => row.direction.toUpperCase(), width: 72 },
     { id: "size", header: "Size", figure: (row) => row.size },
     {
@@ -147,6 +196,23 @@ function ExecutionView({
               </option>
             ))}
           </select>
+          {strategy || instrument ? (
+            <span className="muted" data-testid="journal-scope">
+              {strategy ? (
+                <>
+                  strategy <Link href={route.strategy(strategy)}>{strategy}</Link>{" "}
+                </>
+              ) : null}
+              {instrument ? (
+                <>
+                  instrument <Link href={route.instrument(instrument)}>{instrument}</Link>{" "}
+                </>
+              ) : null}
+              <button type="button" className="linklike" onClick={onClear} data-testid="journal-scope-clear">
+                show all
+              </button>
+            </span>
+          ) : null}
         </div>
       }
     >

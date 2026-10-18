@@ -27,3 +27,17 @@ export function CaveatList({ caveats }: { caveats: Caveat[] }) {
     </div>
   );
 }
+
+/**
+ * Caveats split into those an operator must see now (warning, critical) and
+ * the rest, in their given order. A loop rather than two filters, so a panel
+ * that must not filter its ITEMS (the attention queue) need not filter at all.
+ */
+export function partitionCaveats(caveats: readonly Caveat[]): { loud: Caveat[]; quiet: Caveat[] } {
+  const loud: Caveat[] = [];
+  const quiet: Caveat[] = [];
+  for (const caveat of caveats) {
+    (caveat.severity === "warning" || caveat.severity === "critical" ? loud : quiet).push(caveat);
+  }
+  return { loud, quiet };
+}
