@@ -672,6 +672,15 @@ amendment-1 replicate rule only if size lies within 2 Monte Carlo SE of 0.05. `p
 Next under the filing: P0 for D1 (started 2026-10-18 10:03 UTC, 3 shards), then the main stage on the
 admitted timeframes. No candidate result exists yet.
 
+### E-4 P0 (D1) read: ADMITTED (2026-10-18, MacBook, 400 replicates)
+
+File `research/reports/e4_pooled/e4_p0_D1.r400.json` on the runtime checkout (not committed; sha256
+`bcf68f806fa01c8cea24ebb84ac7febe6f3effb5f5a9a43ade022451b70fe748`). `p0_admits`: "P0 admits".
+Size at sr = 0: 0 of 400 (0.000); effective z-variance 0.991 (passes <= 1.25). Power: sr 0.03 0%,
+0.05 1.5%, **0.08 6.75%** (MC SE 1.25%), 0.12 23.25%. D1 is admitted but much weaker than H4
+(fewer trades per candidate), as the filing anticipated. Both timeframes are now admitted; the main
+stage may start under the filing.
+
 ## K6 drafted, `campaign_k6_generated_100k` (DRAFT 2026-10-10, not filed; no compute on evidence data)
 
 **Why it exists.** The operator asked for "100,000 more" strategies. Tested one by one that would be

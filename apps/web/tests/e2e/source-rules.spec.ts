@@ -273,10 +273,7 @@ test.describe("source rules", () => {
     const ROUTE_PATTERNS = [...block.matchAll(/"([^"]+)"/g)].map((m) => m[1] as string);
     expect(ROUTE_PATTERNS.length).toBeGreaterThan(20);
     const onDisk = new Set(routePatterns());
-    // The research work stream builds these two; the path is the contract.
-    const contract = new Set(["/research/runs/[run_id]", "/research/strategies/[id]"]);
     for (const pattern of ROUTE_PATTERNS) {
-      if (contract.has(pattern)) continue;
       expect(onDisk.has(pattern), `lib/routes.ts names ${pattern}, which is not a page`).toBe(true);
     }
     for (const pattern of onDisk) {

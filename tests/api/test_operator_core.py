@@ -416,11 +416,10 @@ def test_clock_is_the_api_s_and_lists_the_sessions(client):
 
 
 def test_the_route_table_names_the_workstation_s_pages():
-    """links.ROUTE_PATTERNS is every page on disk, plus the two research entity routes."""
+    """links.ROUTE_PATTERNS is every page on disk (the research entity routes exist since wave/research)."""
     app = Path(__file__).resolve().parents[2] / "apps" / "web" / "app"
     pages = set()
     for page in app.rglob("page.tsx"):
         rel = page.parent.relative_to(app).as_posix()
         pages.add("/" if rel == "." else f"/{rel}")
-    contract = {"/research/runs/[run_id]", "/research/strategies/[id]"}
-    assert set(links.ROUTE_PATTERNS) == pages | contract
+    assert set(links.ROUTE_PATTERNS) == pages
