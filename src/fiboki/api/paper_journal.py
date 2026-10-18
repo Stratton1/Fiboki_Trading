@@ -96,6 +96,12 @@ class JournalTrade:
     size_unit: str = "units"
     as_of: datetime | None = None
     cost_breakdown: dict[str, float] = field(default_factory=dict)
+    #: Protection as the paper book placed it and as it stood at the close,
+    #: when the session wrote the columns (``paper_forward`` since 2026-10-18).
+    #: ``None``: not recorded, which is not "no stop".
+    initial_stop: float | None = None
+    final_stop: float | None = None
+    take_profit: float | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -505,6 +511,9 @@ class PaperJournalReader:
                         account_ccy=account_ccy,
                         session_id=session_id,
                         cost_breakdown=breakdown,
+                        initial_stop=_float(row.get("initial_stop")),
+                        final_stop=_float(row.get("final_stop")),
+                        take_profit=_float(row.get("take_profit")),
                     )
                 )
             except JournalFormatError as exc:

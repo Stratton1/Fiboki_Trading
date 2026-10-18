@@ -496,6 +496,24 @@ class Trade:
     provenance: Provenance = Provenance.BACKTEST
     fx_rate_used: float = 1.0
     trade_id: str = field(default_factory=lambda: _uid("trd"))
+    # -- protection as the engine placed and managed it (2026-10-18) -------
+    #: Recorded at the ledger-writing boundary (``backtest/position.py``
+    #: ``_finalise``) so a chart can draw a trade's stop and targets as the
+    #: engine held them. Deliberately NOT in ``BacktestResult.LEDGER_COLUMNS``
+    #: or ``ledger_text``: adding them there would move every stored
+    #: ``ledger_sha256`` while changing no result. ``None`` / empty means the
+    #: producer did not record it (a trade built before this field existed, or
+    #: by a path that has no stop), never "no stop".
+    #: The protective stop at entry (the denominator of R).
+    initial_stop: float | None = None
+    #: The protective stop when the position closed (moved by breakeven or a
+    #: trail when ``stop_moved_by`` says so; otherwise equal to the initial).
+    final_stop: float | None = None
+    #: Every take-profit level planned at entry, in leg order.
+    take_profit_targets: tuple[float, ...] = ()
+    #: ``"breakeven"``, ``"trailing"`` or ``""`` (never moved). The engine does
+    #: not record WHEN it moved, so no stop-move history can be drawn honestly.
+    stop_moved_by: str = ""
 
     @property
     def total_costs(self) -> float:

@@ -1203,6 +1203,15 @@ class PositionBook:
             max_favourable_excursion=op.position.max_favourable_excursion * unit_to_account,
             provenance=cfg.provenance,
             fx_rate_used=fx_rate,
+            # Protection as placed and as it stood at the close. Read-only
+            # copies of state the exits above already used; nothing here
+            # feeds back into a fill, a size or the ledger hash.
+            initial_stop=float(op.initial_stop),
+            final_stop=(
+                None if op.position.stop_loss is None else float(op.position.stop_loss)
+            ),
+            take_profit_targets=tuple(float(leg.price) for leg in op.legs),
+            stop_moved_by=op.stop_moved_by,
         )
 
     def _costs_to_account(
