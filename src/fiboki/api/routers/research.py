@@ -369,12 +369,19 @@ def parameter_lab(strategy_id: str, platform: PlatformDep) -> Envelope[Parameter
     rows: list[ParameterRow] = []
     combinations = 1.0
     for name, spec in sorted(params.items()):
-        low = _param_value(spec, "minimum")
-        high = _param_value(spec, "maximum")
+        # ``strategy.dsl.ParameterSpec`` names its bounds ``min_value`` and
+        # ``max_value``. Reading ``minimum``/``maximum`` (as this did until
+        # 2026-10-18) found nothing, so every domain showed "no data" and the
+        # search space read 1 however many knobs a document declared.
+        low = _param_value(spec, "min_value")
+        high = _param_value(spec, "max_value")
         step = _param_value(spec, "step") or 1.0
         current = _param_value(spec, "default")
-        if low is not None and high is not None and step:
-            combinations *= max(1.0, (high - low) / step + 1.0)
+        try:
+            size = float(len(spec.domain()))
+        except Exception:
+            size = (high - low) / step + 1.0 if (low is not None and high is not None and step) else 1.0
+        combinations *= max(1.0, size)
         rows.append(
             ParameterRow(
                 name=name,
