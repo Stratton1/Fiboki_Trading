@@ -2,18 +2,20 @@
 
 import { useApi } from "@/lib/query";
 import { AsyncBoundary } from "@/components/AsyncBoundary";
-import { Card, PageHead, SourceBadge, TableWrap } from "@/components/primitives";
+import { Card, SourceBadge, TableWrap } from "@/components/primitives";
+import { SystemBoard } from "@/components/system/SystemBoard";
 import type { BrokerHealthView, Envelope } from "@/lib/types";
 
-/** SYSTEM · Broker Health: the mode guard's verdict, control by control. */
+/**
+ * SYSTEM · Broker Health: the System board opened at the broker, and below it
+ * the mode guard's verdict control by control.
+ */
 export default function BrokerHealthPage() {
   const state = useApi<Envelope<BrokerHealthView>>("/api/system/broker-health");
   return (
     <>
-      <PageHead
-        title="Broker Health"
-        intro="What the mode guard says about this deployment's venue. In paper mode a venue that is not reachable is the correct answer, not a fault."
-      />
+      <SystemBoard focus="broker" />
+      <h2 className="section-title">Mode guard, control by control</h2>
       <AsyncBoundary state={state} label="broker health" onRetry={state.reload}>
         {(envelope) => (
           <>

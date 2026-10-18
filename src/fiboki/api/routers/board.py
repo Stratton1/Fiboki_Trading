@@ -26,6 +26,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from fiboki.api import links
 from fiboki.api.deps import PlatformDep, SettingsDep
 from fiboki.api.health import build_health
+from fiboki.api.market_sessions import MarketSessionView, market_sessions
 from fiboki.api.models import Envelope, SourceNote
 from fiboki.api.provenance import Caveat, Figure
 
@@ -467,5 +468,29 @@ def alerts(
                 affects="rules",
                 direction="unknown",
             ),
+        ),
+    )
+
+
+class ClockView(BaseModel):
+    """The API's clock and the market sessions, for the shell's session clocks."""
+
+    model_config = ConfigDict(frozen=True)
+
+    server_time: datetime
+    sessions: list[MarketSessionView]
+
+
+@router.get("/clock", response_model=Envelope[ClockView])
+def clock() -> Envelope[ClockView]:
+    """Cheap enough for every page: the server time and which sessions are open."""
+    stamp = datetime.now(tz=UTC)
+    return Envelope(
+        data=ClockView(server_time=stamp, sessions=market_sessions(stamp)),
+        source=SourceNote(
+            kind="live",
+            detail="API clock; conventional FX session hours in each city's local time, "
+            "public holidays not modelled.",
+            as_of=stamp,
         ),
     )
