@@ -894,8 +894,6 @@ STAT_GATES: dict[str, tuple[str, ...]] = {
     "n_trades": ("n_trades", "n_trades_over_min_trl"),
     "deflated_sharpe": ("deflated_sharpe_ratio",),
     "max_drawdown_pct": ("max_drawdown_pct_abs", "max_drawdown_pct"),
-    "net_profit": ("net_profit_at_2x_spread",),
-    "psr": ("psr",),
 }
 
 
@@ -1567,9 +1565,9 @@ def walk_forward(strategy_id: str, platform: PlatformDep, settings: SettingsDep,
         n_folds=stab.n_folds,
         walk_forward_efficiency=_fig(m.get("walk_forward_efficiency"), p, "pct"),
         oos_profitable_fraction=_fig(m.get("oos_profitable_fraction", stab.oos_profitable_fraction), p, "ratio"),
-        mean_is_rate=_fig(m.get("mean_is_rate", stab.mean_is_rate), p, "rate"),
-        mean_oos_rate=_fig(m.get("mean_oos_rate", stab.mean_oos_rate), p, "rate"),
-        oos_rate_sd=_fig(stab.oos_rate_sd, p, "rate", reason="Needs two or more folds."),
+        mean_is_rate=_fig(m.get("mean_is_rate", stab.mean_is_rate), p, "ratio"),
+        mean_oos_rate=_fig(m.get("mean_oos_rate", stab.mean_oos_rate), p, "ratio"),
+        oos_rate_sd=_fig(stab.oos_rate_sd, p, "ratio", reason="Needs two or more folds."),
         oos_rate_cv=_fig(stab.oos_rate_cv, p, "ratio", reason="Undefined when the mean OOS rate is zero."),
         parameter_repeats=stab.parameter_repeats,
         parameter_stability_across_folds=m.get("parameter_stability_across_folds"),
@@ -1879,7 +1877,7 @@ def _shard_view(path: Path, study: str, root: Path, mtime: datetime, age: float)
             per_unit = (wall / done) if (wall and done) else None
     except (OSError, ValueError, KeyError, TypeError) as exc:
         error = f"unreadable ({type(exc).__name__})"
-    remaining = (total - done) if (total is not None) else None
+    remaining = max(0, total - done) if (total is not None) else None
     eta = (remaining * per_unit) if (per_unit is not None and remaining is not None and partial) else None
     return ShardView(
         study=study, stage=stage, path=rel, unit=unit, done=done, total=total, partial=partial,
