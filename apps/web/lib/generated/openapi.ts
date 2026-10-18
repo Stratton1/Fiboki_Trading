@@ -376,6 +376,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/research/compare": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Compare */
+        get: operations["compare_api_research_compare_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/research/correlations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Correlations */
+        get: operations["correlations_api_research_correlations_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/research/datasets": {
         parameters: {
             query?: never;
@@ -432,6 +466,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/research/jobs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Jobs */
+        get: operations["jobs_api_research_jobs_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/research/parameter-lab/{strategy_id}": {
         parameters: {
             query?: never;
@@ -441,6 +492,77 @@ export interface paths {
         };
         /** Parameter Lab */
         get: operations["parameter_lab_api_research_parameter_lab__strategy_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/research/parameter-lab/{strategy_id}/surface": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Parameter Surface */
+        get: operations["parameter_surface_api_research_parameter_lab__strategy_id__surface_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/research/runs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Runs
+         * @description Every stored backtest run (any symbol), newest first. Read-only.
+         */
+        get: operations["runs_api_research_runs_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/research/runs/{run_id}/monte-carlo": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Monte Carlo */
+        get: operations["monte_carlo_api_research_runs__run_id__monte_carlo_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/research/runs/{run_id}/tearsheet": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Tearsheet */
+        get: operations["tearsheet_api_research_runs__run_id__tearsheet_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -475,6 +597,40 @@ export interface paths {
         };
         /** Strategy Detail */
         get: operations["strategy_detail_api_research_strategies__strategy_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/research/strategies/{strategy_id}/overview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Strategy Overview */
+        get: operations["strategy_overview_api_research_strategies__strategy_id__overview_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/research/strategies/{strategy_id}/walk-forward": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Walk Forward */
+        get: operations["walk_forward_api_research_strategies__strategy_id__walk_forward_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1379,6 +1535,70 @@ export interface components {
              */
             severity: string;
         };
+        /** ComparedRunView */
+        ComparedRunView: {
+            /** Daily Returns */
+            daily_returns: number;
+            rebased: components["schemas"]["Series"];
+            run: components["schemas"]["BacktestRunView"];
+            /** Stats */
+            stats: components["schemas"]["StatView"][];
+        };
+        /** ComparisonView */
+        ComparisonView: {
+            /** Correlations */
+            correlations: components["schemas"]["CorrelationCellView"][];
+            /** Definitions */
+            definitions: {
+                [key: string]: components["schemas"]["DefinitionView"];
+            };
+            /** Min Common Days */
+            min_common_days: number;
+            /** Runs */
+            runs: components["schemas"]["ComparedRunView"][];
+        };
+        /** CorrelationCellView */
+        CorrelationCellView: {
+            /** A */
+            a: string;
+            /** B */
+            b: string;
+            /** N Common */
+            n_common: number;
+            rho: components["schemas"]["Figure"];
+        };
+        /** CorrelationMatrixView */
+        CorrelationMatrixView: {
+            /** Bars Used */
+            bars_used: number;
+            /** Dataset Version Ids */
+            dataset_version_ids: {
+                [key: string]: string;
+            };
+            /** Excluded */
+            excluded: {
+                [key: string]: string;
+            };
+            /** First Common */
+            first_common: string | null;
+            /** Instruments */
+            instruments: string[];
+            /** Last Common */
+            last_common: string | null;
+            /** Matrix */
+            matrix: (number | null)[][];
+            /** Method */
+            method: string;
+            provenance: components["schemas"]["Provenance"];
+            /** Timeframe */
+            timeframe: string;
+            /** Timeframes */
+            timeframes: string[];
+            /** Window */
+            window: number;
+            /** Windows */
+            windows: number[];
+        };
         /** DataQualityRow */
         DataQualityRow: {
             /** Available */
@@ -1393,6 +1613,15 @@ export interface components {
             quality: string;
             stale_runs: components["schemas"]["Figure"];
         };
+        /** DefinitionView */
+        DefinitionView: {
+            /** Definition */
+            definition: string;
+            /** Formula */
+            formula: string;
+            /** Label */
+            label: string;
+        };
         /** DivergenceDimensionView */
         DivergenceDimensionView: {
             /** Dimension */
@@ -1401,6 +1630,29 @@ export interface components {
             diverged: boolean;
             expected: components["schemas"]["Figure"];
             observed: components["schemas"]["Figure"];
+        };
+        /** DrawdownPeriodView */
+        DrawdownPeriodView: {
+            decline_days: components["schemas"]["Figure"];
+            depth_pct: components["schemas"]["Figure"];
+            length_days: components["schemas"]["Figure"];
+            /**
+             * Peak At
+             * Format: date-time
+             */
+            peak_at: string;
+            peak_equity: components["schemas"]["Figure"];
+            /** Rank */
+            rank: number;
+            /** Recovered At */
+            recovered_at: string | null;
+            recovery_days: components["schemas"]["Figure"];
+            /**
+             * Trough At
+             * Format: date-time
+             */
+            trough_at: string;
+            trough_equity: components["schemas"]["Figure"];
         };
         /**
          * Drawing
@@ -1510,6 +1762,26 @@ export interface components {
             data: components["schemas"]["BrokerHealthView"];
             source: components["schemas"]["SourceNote"];
         };
+        /** Envelope[ComparisonView] */
+        Envelope_ComparisonView_: {
+            /**
+             * Caveats
+             * @default []
+             */
+            caveats: components["schemas"]["Caveat"][];
+            data: components["schemas"]["ComparisonView"];
+            source: components["schemas"]["SourceNote"];
+        };
+        /** Envelope[CorrelationMatrixView] */
+        Envelope_CorrelationMatrixView_: {
+            /**
+             * Caveats
+             * @default []
+             */
+            caveats: components["schemas"]["Caveat"][];
+            data: components["schemas"]["CorrelationMatrixView"];
+            source: components["schemas"]["SourceNote"];
+        };
         /** Envelope[dict] */
         Envelope_dict_: {
             /**
@@ -1551,6 +1823,16 @@ export interface components {
             data: components["schemas"]["IncidentView"];
             source: components["schemas"]["SourceNote"];
         };
+        /** Envelope[JobQueueView] */
+        Envelope_JobQueueView_: {
+            /**
+             * Caveats
+             * @default []
+             */
+            caveats: components["schemas"]["Caveat"][];
+            data: components["schemas"]["JobQueueView"];
+            source: components["schemas"]["SourceNote"];
+        };
         /** Envelope[KillSwitchDisarmPreflightView] */
         Envelope_KillSwitchDisarmPreflightView_: {
             /**
@@ -1581,6 +1863,16 @@ export interface components {
             data: components["schemas"]["LifecycleEvaluationView"];
             source: components["schemas"]["SourceNote"];
         };
+        /** Envelope[MonteCarloView] */
+        Envelope_MonteCarloView_: {
+            /**
+             * Caveats
+             * @default []
+             */
+            caveats: components["schemas"]["Caveat"][];
+            data: components["schemas"]["MonteCarloView"];
+            source: components["schemas"]["SourceNote"];
+        };
         /** Envelope[OverlayView] */
         Envelope_OverlayView_: {
             /**
@@ -1599,6 +1891,16 @@ export interface components {
              */
             caveats: components["schemas"]["Caveat"][];
             data: components["schemas"]["ParameterLabView"];
+            source: components["schemas"]["SourceNote"];
+        };
+        /** Envelope[ParameterSurfaceView] */
+        Envelope_ParameterSurfaceView_: {
+            /**
+             * Caveats
+             * @default []
+             */
+            caveats: components["schemas"]["Caveat"][];
+            data: components["schemas"]["ParameterSurfaceView"];
             source: components["schemas"]["SourceNote"];
         };
         /** Envelope[PortfolioView] */
@@ -1651,6 +1953,16 @@ export interface components {
             data: components["schemas"]["SettingsView"];
             source: components["schemas"]["SourceNote"];
         };
+        /** Envelope[StrategyOverviewView] */
+        Envelope_StrategyOverviewView_: {
+            /**
+             * Caveats
+             * @default []
+             */
+            caveats: components["schemas"]["Caveat"][];
+            data: components["schemas"]["StrategyOverviewView"];
+            source: components["schemas"]["SourceNote"];
+        };
         /** Envelope[StrategyStatusView] */
         Envelope_StrategyStatusView_: {
             /**
@@ -1669,6 +1981,26 @@ export interface components {
              */
             caveats: components["schemas"]["Caveat"][];
             data: components["schemas"]["StrategyView"];
+            source: components["schemas"]["SourceNote"];
+        };
+        /** Envelope[TearsheetView] */
+        Envelope_TearsheetView_: {
+            /**
+             * Caveats
+             * @default []
+             */
+            caveats: components["schemas"]["Caveat"][];
+            data: components["schemas"]["TearsheetView"];
+            source: components["schemas"]["SourceNote"];
+        };
+        /** Envelope[WalkForwardView] */
+        Envelope_WalkForwardView_: {
+            /**
+             * Caveats
+             * @default []
+             */
+            caveats: components["schemas"]["Caveat"][];
+            data: components["schemas"]["WalkForwardView"];
             source: components["schemas"]["SourceNote"];
         };
         /** EventOverlay */
@@ -1701,6 +2033,47 @@ export interface components {
             time_known: boolean;
             /** Window End */
             window_end: string | null;
+        };
+        /**
+         * ExcursionTable
+         * @description Per-trade result and excursions, as labelled COLUMNS (one entry per trade).
+         *
+         *     Columnar, like :class:`Series`: the provenance and the units are declared
+         *     once for the table rather than repeated on thousands of cells. ``None`` in
+         *     a column is an absent value (no stop, no excursion key), never zero.
+         */
+        ExcursionTable: {
+            /** Bars Held */
+            bars_held: (number | null)[];
+            /** Direction */
+            direction: string[];
+            /** Entry Time */
+            entry_time: (string | null)[];
+            /** Exit Reason */
+            exit_reason: string[];
+            /** Exit Time */
+            exit_time: (string | null)[];
+            /** Instrument */
+            instrument: string[];
+            /** Mae */
+            mae: (number | null)[];
+            /** Mae R */
+            mae_r: (number | null)[];
+            /** Mfe */
+            mfe: (number | null)[];
+            /** Mfe R */
+            mfe_r: (number | null)[];
+            /** Net Pnl */
+            net_pnl: (number | null)[];
+            /** Pnl Unit */
+            pnl_unit: string;
+            provenance: components["schemas"]["Provenance"];
+            /** R Multiple */
+            r_multiple: (number | null)[];
+            /** R Unit */
+            r_unit: string;
+            /** Trade Id */
+            trade_id: string[];
         };
         /**
          * ExecutionMode
@@ -1851,6 +2224,78 @@ export interface components {
             /** Trade Id */
             trade_id: string;
         };
+        /** FoldView */
+        FoldView: {
+            efficiency: components["schemas"]["Figure"];
+            fixed_param_oos_rate: components["schemas"]["Figure"];
+            /** Fold */
+            fold: number;
+            is_net_profit: components["schemas"]["Figure"];
+            is_rate: components["schemas"]["Figure"];
+            oos_net_profit: components["schemas"]["Figure"];
+            oos_rate: components["schemas"]["Figure"];
+            oos_sharpe: components["schemas"]["Figure"];
+            oos_trades: components["schemas"]["Figure"];
+            /** Selected Params */
+            selected_params: Record<string, never>;
+            /** Test End */
+            test_end: string | null;
+            /** Test Start */
+            test_start: string | null;
+            /** Train End */
+            train_end: string | null;
+            /** Train Start */
+            train_start: string | null;
+        };
+        /**
+         * GateCheckView
+         * @description One deterministic gate the worker or the ladder evaluated.
+         */
+        GateCheckView: {
+            /** Comparison */
+            comparison: string;
+            /** Detail */
+            detail: string;
+            /** Metric */
+            metric: string;
+            /** Name */
+            name: string;
+            /** Passed */
+            passed: boolean;
+            /** Rung */
+            rung: number | null;
+            /** Status */
+            status: string;
+            /** Threshold */
+            threshold: number | null;
+            value: components["schemas"]["Figure"];
+        };
+        /** GateReportView */
+        GateReportView: {
+            /** Backtest Id */
+            backtest_id: string;
+            /** Caveats */
+            caveats: string[];
+            /** Checks */
+            checks: components["schemas"]["GateCheckView"][];
+            /** Created At */
+            created_at: string | null;
+            deflated_sharpe: components["schemas"]["Figure"];
+            /** Gate Set Fingerprint */
+            gate_set_fingerprint: string;
+            /** Gate Set Version */
+            gate_set_version: string;
+            /** Kind */
+            kind: string;
+            psr: components["schemas"]["Figure"];
+            /** Report Id */
+            report_id: string;
+            trial_count: components["schemas"]["Figure"];
+            /** Trial Count Known */
+            trial_count_known: boolean;
+            /** Verdict */
+            verdict: string;
+        };
         /** HeadlineOverlay */
         HeadlineOverlay: {
             /** Currency */
@@ -1924,6 +2369,22 @@ export interface components {
             uptime_seconds: number;
             /** Worker Heartbeat Age Seconds */
             worker_heartbeat_age_seconds: number | null;
+        };
+        /** HistogramView */
+        HistogramView: {
+            /** Basis */
+            basis: string;
+            /** Counts */
+            counts: number[];
+            /** Edges */
+            edges: number[];
+            mean: components["schemas"]["Figure"];
+            median: components["schemas"]["Figure"];
+            /** N */
+            n: number;
+            provenance: components["schemas"]["Provenance"];
+            /** Unit */
+            unit: string;
         };
         /** HTTPValidationError */
         HTTPValidationError: {
@@ -2000,6 +2461,17 @@ export interface components {
             /** Title */
             title: string;
         };
+        /** InstrumentBreakdownView */
+        InstrumentBreakdownView: {
+            expectancy: components["schemas"]["Figure"];
+            expectancy_r: components["schemas"]["Figure"];
+            /** Instrument */
+            instrument: string;
+            net_pnl: components["schemas"]["Figure"];
+            profit_factor: components["schemas"]["Figure"];
+            trades: components["schemas"]["Figure"];
+            win_rate_pct: components["schemas"]["Figure"];
+        };
         /** InstrumentView */
         InstrumentView: {
             annual_financing_bps: components["schemas"]["Figure"];
@@ -2030,6 +2502,56 @@ export interface components {
              * @default oanda
              */
             venue: string;
+        };
+        /** JobQueueView */
+        JobQueueView: {
+            /** Counts */
+            counts: {
+                [key: string]: number;
+            };
+            /** Eta Method */
+            eta_method: string;
+            /** Job Ledger */
+            job_ledger: string;
+            /** Jobs */
+            jobs: components["schemas"]["JobView"][];
+            /** Shards */
+            shards: components["schemas"]["ShardView"][];
+            /** Shards Root */
+            shards_root: string;
+        };
+        /** JobView */
+        JobView: {
+            /** Attempts */
+            attempts: number;
+            elapsed_seconds: components["schemas"]["Figure"];
+            /** Error */
+            error: string;
+            eta_seconds: components["schemas"]["Figure"];
+            /** Instrument */
+            instrument: string;
+            /** Job Id */
+            job_id: string;
+            /** Job Type */
+            job_type: string;
+            /** Max Attempts */
+            max_attempts: number;
+            /** Next Attempt At */
+            next_attempt_at: string | null;
+            /** Outputs */
+            outputs: {
+                [key: string]: string;
+            };
+            /** Queue */
+            queue: string;
+            /** Started At */
+            started_at: string | null;
+            /** Status */
+            status: string;
+            /** Strategy Id */
+            strategy_id: string;
+            /** Submitted At */
+            submitted_at: string | null;
         };
         /**
          * KillSwitchDisarmPreflightView
@@ -2092,6 +2614,32 @@ export interface components {
             /** Since */
             since: string | null;
         };
+        /** LadderEntryView */
+        LadderEntryView: {
+            /** Binding Constraint */
+            binding_constraint: string;
+            /** Created At */
+            created_at: string | null;
+            /** Dataset Version Id */
+            dataset_version_id: string;
+            /** Experiment Id */
+            experiment_id: string | null;
+            /** Gate Set Version */
+            gate_set_version: string;
+            /** Has Walk Forward */
+            has_walk_forward: boolean;
+            /** Report Version */
+            report_version: string;
+            /** Rungs */
+            rungs: components["schemas"]["RungView"][];
+            /** Source */
+            source: string;
+            /** Strategy Content Hash */
+            strategy_content_hash: string;
+            trial_count: components["schemas"]["Figure"];
+            /** Verdict */
+            verdict: string;
+        };
         /** LevelOverlay */
         LevelOverlay: {
             /** Dataset Version Id */
@@ -2127,6 +2675,17 @@ export interface components {
             strategy_id: string;
             /** To */
             to: string | null;
+        };
+        /** LifecycleBrief */
+        LifecycleBrief: {
+            /** Content Hash */
+            content_hash: string;
+            /** Degraded */
+            degraded: boolean;
+            /** Link */
+            link: string;
+            /** State */
+            state: string;
         };
         /**
          * LifecycleEvaluationView
@@ -2165,6 +2724,57 @@ export interface components {
             password: string;
             /** Username */
             username: string;
+        };
+        /** MonteCarloView */
+        MonteCarloView: {
+            /** Account Ccy */
+            account_ccy: string;
+            /** Basis */
+            basis: string;
+            block_length: components["schemas"]["Figure"];
+            /** Drawdown Percentiles */
+            drawdown_percentiles: {
+                [key: string]: components["schemas"]["Figure"];
+            };
+            /** Fan */
+            fan: {
+                [key: string]: number[];
+            };
+            /** Fan Steps */
+            fan_steps: number[];
+            /** Final Equity Percentiles */
+            final_equity_percentiles: {
+                [key: string]: components["schemas"]["Figure"];
+            };
+            initial_equity: components["schemas"]["Figure"];
+            /** Method */
+            method: string;
+            /** N Paths */
+            n_paths: number;
+            /** N Trades */
+            n_trades: number;
+            /** Notes */
+            notes: string[];
+            provenance: components["schemas"]["Provenance"];
+            realised_final_equity: components["schemas"]["Figure"];
+            realised_max_drawdown_pct: components["schemas"]["Figure"];
+            /** Risk Fraction */
+            risk_fraction: number;
+            /** Ruin Fraction */
+            ruin_fraction: number;
+            ruin_probability: components["schemas"]["Figure"];
+            /** Run Id */
+            run_id: string;
+            /** Seed */
+            seed: number;
+        };
+        /** MonthlyCellView */
+        MonthlyCellView: {
+            /** Month */
+            month: number;
+            return_pct: components["schemas"]["Figure"];
+            /** Year */
+            year: number;
         };
         /**
          * OtherDrawingSet
@@ -2543,6 +3153,29 @@ export interface components {
             /** Total */
             total: number;
         };
+        /** Page[RunSummaryView] */
+        Page_RunSummaryView_: {
+            /**
+             * Caveats
+             * @default []
+             */
+            caveats: components["schemas"]["Caveat"][];
+            /** Items */
+            items: components["schemas"]["RunSummaryView"][];
+            /**
+             * Limit
+             * @default 100
+             */
+            limit: number;
+            /**
+             * Offset
+             * @default 0
+             */
+            offset: number;
+            source: components["schemas"]["SourceNote"];
+            /** Total */
+            total: number;
+        };
         /** Page[ServiceRow] */
         Page_ServiceRow_: {
             /**
@@ -2727,6 +3360,60 @@ export interface components {
             name: string;
             step: components["schemas"]["Figure"];
         };
+        /** ParameterSurfaceView */
+        ParameterSurfaceView: {
+            /** Cells */
+            cells: components["schemas"]["SurfaceCellView"][];
+            /** Fixed */
+            fixed: Record<string, never>;
+            /** Gate Set Version */
+            gate_set_version: string;
+            /** Metric */
+            metric: string;
+            /** Metrics Available */
+            metrics_available: string[];
+            /** Notes */
+            notes: string[];
+            /** Parameters */
+            parameters: string[];
+            /** Plateau Definition */
+            plateau_definition: string;
+            /** Plateau Gates */
+            plateau_gates: components["schemas"]["PlateauGateView"][];
+            /** Radius */
+            radius: number;
+            /** Runs Considered */
+            runs_considered: number;
+            /** Runs Other Params */
+            runs_other_params: number;
+            /** Runs Unknown Params */
+            runs_unknown_params: number;
+            /** Runs Used */
+            runs_used: number;
+            /** Strategy Id */
+            strategy_id: string;
+            /** X */
+            x: string;
+            /** X Values */
+            x_values: number[];
+            /** Y */
+            y: string;
+            /** Y Values */
+            y_values: number[];
+        };
+        /** PlateauGateView */
+        PlateauGateView: {
+            /** Comparison */
+            comparison: string;
+            /** Metric */
+            metric: string;
+            /** Name */
+            name: string;
+            /** Rationale */
+            rationale: string;
+            /** Threshold */
+            threshold: number;
+        };
         /** PortfolioView */
         PortfolioView: {
             balance: components["schemas"]["Figure"];
@@ -2833,6 +3520,70 @@ export interface components {
          * @enum {string}
          */
         Provenance: "backtest" | "walkforward" | "out_of_sample" | "holdout" | "paper" | "shadow" | "broker_demo" | "broker_live";
+        /**
+         * ProvenanceBlock
+         * @description Everything needed to reproduce, or to distrust, a stored result.
+         */
+        ProvenanceBlock: {
+            /** Account Ccy */
+            account_ccy: string;
+            /** Calendar Note */
+            calendar_note: string;
+            /** Calendar Version */
+            calendar_version: string;
+            /** Commission Model */
+            commission_model: string;
+            /** Cost Profile */
+            cost_profile: string;
+            /** Data Fingerprint */
+            data_fingerprint: Record<string, never>;
+            /** Dataset Version Ids */
+            dataset_version_ids: string[];
+            /** Engine Current */
+            engine_current: boolean;
+            /** Engine Version */
+            engine_version: string;
+            /** Exit Policy */
+            exit_policy: Record<string, never>;
+            /** Financing Model */
+            financing_model: string;
+            /** Gate Set Fingerprint */
+            gate_set_fingerprint: string;
+            /** Gate Set Version */
+            gate_set_version: string;
+            /** Initial Balance */
+            initial_balance: number | null;
+            /** Instruments */
+            instruments: string[];
+            /** Intrabar Policy */
+            intrabar_policy: string;
+            /** Job Id */
+            job_id: string;
+            /** Ledger Sha256 */
+            ledger_sha256: string;
+            /** Parameters */
+            parameters: Record<string, never>;
+            /** Parameters Source */
+            parameters_source: string;
+            /** Run Created At */
+            run_created_at: string | null;
+            /** Run Id */
+            run_id: string;
+            /** Sizing */
+            sizing: Record<string, never>;
+            /** Slippage Model */
+            slippage_model: string;
+            /** Spread Model */
+            spread_model: string;
+            /** Strategy Hash */
+            strategy_hash: string;
+            /** Strategy Id */
+            strategy_id: string;
+            /** Tearsheet Version */
+            tearsheet_version: string;
+            /** Timeframe */
+            timeframe: string;
+        };
         /** RegimeOverlay */
         RegimeOverlay: {
             /** Axes */
@@ -2939,6 +3690,27 @@ export interface components {
             registration_id: string;
             statistic: components["schemas"]["Figure"];
             threshold: components["schemas"]["Figure"];
+        };
+        /** RungView */
+        RungView: {
+            /** Index */
+            index: number;
+            /** Name */
+            name: string;
+            /** Outcome */
+            outcome: string;
+            /** Reason */
+            reason: string;
+        };
+        /** RunSummaryView */
+        RunSummaryView: {
+            max_drawdown_pct: components["schemas"]["Figure"];
+            profit_factor: components["schemas"]["Figure"];
+            run: components["schemas"]["BacktestRunView"];
+            sharpe: components["schemas"]["Figure"];
+            /** Tearsheet */
+            tearsheet: string;
+            total_return_pct: components["schemas"]["Figure"];
         };
         /** SectionStatus */
         SectionStatus: {
@@ -3051,6 +3823,31 @@ export interface components {
             /** Session Ttl Seconds */
             session_ttl_seconds: number;
         };
+        /** ShardView */
+        ShardView: {
+            age_seconds: components["schemas"]["Figure"];
+            /** Done */
+            done: number;
+            /** Error */
+            error: string;
+            eta_seconds: components["schemas"]["Figure"];
+            /** Partial */
+            partial: boolean;
+            /** Path */
+            path: string;
+            progress: components["schemas"]["Figure"];
+            seconds_per_unit: components["schemas"]["Figure"];
+            /** Stage */
+            stage: string;
+            /** Study */
+            study: string;
+            /** Total */
+            total: number | null;
+            /** Unit */
+            unit: string;
+            /** Updated At */
+            updated_at: string | null;
+        };
         /** SignalOverlay */
         SignalOverlay: {
             /** Dataset Version Id */
@@ -3099,6 +3896,59 @@ export interface components {
             detail: string;
             /** Kind */
             kind: string;
+        };
+        /**
+         * StatView
+         * @description A headline figure, its definition, and the gate on the same metric (if any).
+         */
+        StatView: {
+            check?: components["schemas"]["GateCheckView"] | null;
+            /** Definition */
+            definition: string;
+            figure: components["schemas"]["Figure"];
+            /** Formula */
+            formula: string;
+            /** Key */
+            key: string;
+            /** Label */
+            label: string;
+            /** Source */
+            source: string;
+        };
+        /** StrategyOverviewView */
+        StrategyOverviewView: {
+            /** Content Hash */
+            content_hash: string;
+            /** Family */
+            family: string;
+            /** Gate Reports */
+            gate_reports: components["schemas"]["GateReportView"][];
+            /** Hypothesis */
+            hypothesis: string;
+            /** Ladder History */
+            ladder_history: components["schemas"]["LadderEntryView"][];
+            /** Lifecycle */
+            lifecycle: components["schemas"]["LifecycleBrief"][];
+            /** Lifecycle Note */
+            lifecycle_note: string;
+            /** Links */
+            links: {
+                [key: string]: string;
+            };
+            /** Name */
+            name: string;
+            /** Parameters */
+            parameters: Record<string, never>;
+            /** Runs */
+            runs: components["schemas"]["RunSummaryView"][];
+            /** Runs Total */
+            runs_total: number;
+            /** Strategy Id */
+            strategy_id: string;
+            /** Timeframes */
+            timeframes: string[];
+            /** Universe */
+            universe: string[];
         };
         /**
          * StrategyStatusView
@@ -3160,6 +4010,73 @@ export interface components {
             timeframes: string[];
             /** Universe */
             universe: string[];
+        };
+        /** SurfaceCellView */
+        SurfaceCellView: {
+            /** Isolated Peak */
+            isolated_peak: boolean;
+            /** N Runs */
+            n_runs: number;
+            neighbourhood_median_ratio: components["schemas"]["Figure"];
+            neighbourhood_min: components["schemas"]["Figure"];
+            /** On Plateau */
+            on_plateau: boolean;
+            /** Plateau Checks */
+            plateau_checks: {
+                [key: string]: boolean;
+            };
+            point_plateau_ratio: components["schemas"]["Figure"];
+            /** Run Ids */
+            run_ids: string[];
+            score: components["schemas"]["Figure"];
+            /** X */
+            x: number;
+            /** Y */
+            y: number;
+        };
+        /** TearsheetView */
+        TearsheetView: {
+            /** Account Ccy */
+            account_ccy: string;
+            benchmark: components["schemas"]["Series"] | null;
+            /** Benchmark Kind */
+            benchmark_kind: string;
+            /** Benchmark Note */
+            benchmark_note: string;
+            /** By Instrument */
+            by_instrument: components["schemas"]["InstrumentBreakdownView"][];
+            /** Chart Links */
+            chart_links: {
+                [key: string]: string;
+            };
+            /** Definitions */
+            definitions: {
+                [key: string]: components["schemas"]["DefinitionView"];
+            };
+            /** Drawdowns */
+            drawdowns: components["schemas"]["DrawdownPeriodView"][];
+            equity: components["schemas"]["Series"];
+            excursions: components["schemas"]["ExcursionTable"];
+            /** Excursions Note */
+            excursions_note: string;
+            gate_report: components["schemas"]["GateReportView"] | null;
+            /** Monthly */
+            monthly: components["schemas"]["MonthlyCellView"][];
+            /** Pooled */
+            pooled: boolean;
+            provenance: components["schemas"]["ProvenanceBlock"];
+            rolling_sharpe: components["schemas"]["Series"];
+            /** Rolling Window Days */
+            rolling_window_days: number;
+            run: components["schemas"]["BacktestRunView"];
+            /** Stats */
+            stats: components["schemas"]["StatView"][];
+            /** Strategy Link */
+            strategy_link: string;
+            trade_histogram: components["schemas"]["HistogramView"];
+            underwater: components["schemas"]["Series"];
+            /** Yearly */
+            yearly: components["schemas"]["YearReturnView"][];
         };
         /** TelemetryRow */
         TelemetryRow: {
@@ -3269,6 +4186,49 @@ export interface components {
             /** Verdict */
             verdict: string;
         };
+        /** WalkForwardView */
+        WalkForwardView: {
+            /** Available */
+            available: string[];
+            /** Definitions */
+            definitions: {
+                [key: string]: components["schemas"]["DefinitionView"];
+            };
+            /** Fold Runs */
+            fold_runs: components["schemas"]["BacktestRunView"][];
+            /** Folds */
+            folds: components["schemas"]["FoldView"][];
+            /** Gate Set Version */
+            gate_set_version: string;
+            /** Gates */
+            gates: components["schemas"]["GateCheckView"][];
+            mean_is_rate: components["schemas"]["Figure"];
+            mean_oos_rate: components["schemas"]["Figure"];
+            /** N Folds */
+            n_folds: number;
+            oos_profitable_fraction: components["schemas"]["Figure"];
+            oos_rate_cv: components["schemas"]["Figure"];
+            oos_rate_sd: components["schemas"]["Figure"];
+            /** Outcome */
+            outcome: string;
+            /** Parameter Repeats */
+            parameter_repeats: number;
+            /** Parameter Stability Across Folds */
+            parameter_stability_across_folds: unknown;
+            /** Rate Unit */
+            rate_unit: string;
+            /** Reason */
+            reason: string;
+            /** Scheme */
+            scheme: string;
+            /** Source */
+            source: string;
+            /** Source Ref */
+            source_ref: string;
+            /** Strategy Id */
+            strategy_id: string;
+            walk_forward_efficiency: components["schemas"]["Figure"];
+        };
         /** WorkerRow */
         WorkerRow: {
             /** Detail */
@@ -3278,6 +4238,12 @@ export interface components {
             name: string;
             /** State */
             state: string;
+        };
+        /** YearReturnView */
+        YearReturnView: {
+            return_pct: components["schemas"]["Figure"];
+            /** Year */
+            year: number;
         };
     };
     responses: never;
@@ -3888,6 +4854,72 @@ export interface operations {
             };
         };
     };
+    compare_api_research_compare_get: {
+        parameters: {
+            query: {
+                /** @description Comma-separated run ids, 2 to 6. */
+                runs: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_ComparisonView_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    correlations_api_research_correlations_get: {
+        parameters: {
+            query?: {
+                /** @description Comma-separated; default every instrument with data. */
+                instruments?: string | null;
+                timeframe?: string;
+                window?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_CorrelationMatrixView_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     datasets_api_research_datasets_get: {
         parameters: {
             query?: never;
@@ -3992,6 +5024,37 @@ export interface operations {
             };
         };
     };
+    jobs_api_research_jobs_get: {
+        parameters: {
+            query?: {
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_JobQueueView_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     parameter_lab_api_research_parameter_lab__strategy_id__get: {
         parameters: {
             query?: never;
@@ -4010,6 +5073,142 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Envelope_ParameterLabView_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    parameter_surface_api_research_parameter_lab__strategy_id__surface_get: {
+        parameters: {
+            query?: {
+                /** @description JSON object of the other parameters' values. */
+                fixed?: string | null;
+                metric?: string;
+                x?: string | null;
+                y?: string | null;
+            };
+            header?: never;
+            path: {
+                strategy_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_ParameterSurfaceView_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    runs_api_research_runs_get: {
+        parameters: {
+            query?: {
+                limit?: number;
+                offset?: number;
+                strategy_id?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Page_RunSummaryView_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    monte_carlo_api_research_runs__run_id__monte_carlo_get: {
+        parameters: {
+            query?: {
+                paths?: number;
+                ruin_fraction?: number;
+                seed?: number;
+            };
+            header?: never;
+            path: {
+                run_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_MonteCarloView_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    tearsheet_api_research_runs__run_id__tearsheet_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                run_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_TearsheetView_"];
                 };
             };
             /** @description Validation Error */
@@ -4061,6 +5260,70 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Envelope_StrategyView_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    strategy_overview_api_research_strategies__strategy_id__overview_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                strategy_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_StrategyOverviewView_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    walk_forward_api_research_strategies__strategy_id__walk_forward_get: {
+        parameters: {
+            query?: {
+                source?: string | null;
+            };
+            header?: never;
+            path: {
+                strategy_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_WalkForwardView_"];
                 };
             };
             /** @description Validation Error */
