@@ -32,6 +32,165 @@
         "title": "AgentRoleView",
         "type": "object"
       },
+      "AlertHistoryRow": {
+        "properties": {
+          "at": {
+            "format": "date-time",
+            "title": "At",
+            "type": "string"
+          },
+          "event": {
+            "title": "Event",
+            "type": "string"
+          },
+          "link": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Link"
+          },
+          "message": {
+            "title": "Message",
+            "type": "string"
+          },
+          "severity": {
+            "title": "Severity",
+            "type": "string"
+          },
+          "source": {
+            "title": "Source",
+            "type": "string"
+          }
+        },
+        "required": [
+          "at",
+          "event",
+          "severity",
+          "message",
+          "source",
+          "link"
+        ],
+        "title": "AlertHistoryRow",
+        "type": "object"
+      },
+      "AlertRuleView": {
+        "properties": {
+          "category": {
+            "pattern": "^(operational|trade)$",
+            "title": "Category",
+            "type": "string"
+          },
+          "condition": {
+            "title": "Condition",
+            "type": "string"
+          },
+          "event": {
+            "title": "Event",
+            "type": "string"
+          },
+          "fired": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "last_fired_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Fired At"
+          },
+          "open_incident": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Open Incident"
+          },
+          "severity": {
+            "title": "Severity",
+            "type": "string"
+          },
+          "state": {
+            "pattern": "^(firing|quiet|never_fired)$",
+            "title": "State",
+            "type": "string"
+          }
+        },
+        "required": [
+          "event",
+          "severity",
+          "category",
+          "condition",
+          "state",
+          "last_fired_at",
+          "fired",
+          "open_incident"
+        ],
+        "title": "AlertRuleView",
+        "type": "object"
+      },
+      "AlertsView": {
+        "properties": {
+          "channels": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Channels",
+            "type": "array"
+          },
+          "history": {
+            "items": {
+              "$ref": "#/components/schemas/AlertHistoryRow"
+            },
+            "title": "History",
+            "type": "array"
+          },
+          "history_total": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "log_configured": {
+            "title": "Log Configured",
+            "type": "boolean"
+          },
+          "rules": {
+            "items": {
+              "$ref": "#/components/schemas/AlertRuleView"
+            },
+            "title": "Rules",
+            "type": "array"
+          },
+          "thresholds": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/Figure"
+            },
+            "title": "Thresholds",
+            "type": "object"
+          }
+        },
+        "required": [
+          "log_configured",
+          "channels",
+          "rules",
+          "history",
+          "history_total",
+          "thresholds"
+        ],
+        "title": "AlertsView",
+        "type": "object"
+      },
       "AttentionItem": {
         "description": "One thing an operator should look at, with where to go to act on it.",
         "properties": {
@@ -87,6 +246,122 @@
           "score"
         ],
         "title": "AttentionItem",
+        "type": "object"
+      },
+      "AttributionRow": {
+        "properties": {
+          "chart": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Chart"
+          },
+          "costs": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "day_pnl": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "gross_pnl": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "key": {
+            "title": "Key",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "link": {
+            "title": "Link",
+            "type": "string"
+          },
+          "net_pnl": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "share_of_abs_pct": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "trades": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "unrealised_pnl": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "win_rate": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "wins": {
+            "$ref": "#/components/schemas/Figure"
+          }
+        },
+        "required": [
+          "key",
+          "label",
+          "trades",
+          "wins",
+          "win_rate",
+          "gross_pnl",
+          "costs",
+          "net_pnl",
+          "day_pnl",
+          "unrealised_pnl",
+          "share_of_abs_pct",
+          "link",
+          "chart"
+        ],
+        "title": "AttributionRow",
+        "type": "object"
+      },
+      "AttributionView": {
+        "properties": {
+          "by_instrument": {
+            "items": {
+              "$ref": "#/components/schemas/AttributionRow"
+            },
+            "title": "By Instrument",
+            "type": "array"
+          },
+          "by_strategy": {
+            "items": {
+              "$ref": "#/components/schemas/AttributionRow"
+            },
+            "title": "By Strategy",
+            "type": "array"
+          },
+          "currency": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Currency"
+          },
+          "provenance": {
+            "title": "Provenance",
+            "type": "string"
+          },
+          "total_net_pnl": {
+            "$ref": "#/components/schemas/Figure"
+          }
+        },
+        "required": [
+          "provenance",
+          "currency",
+          "by_strategy",
+          "by_instrument",
+          "total_net_pnl"
+        ],
+        "title": "AttributionView",
         "type": "object"
       },
       "AuditEntryView": {
@@ -484,6 +759,161 @@
         "title": "BacktestTradesView",
         "type": "object"
       },
+      "BandsView": {
+        "properties": {
+          "critical_at": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "detail": {
+            "title": "Detail",
+            "type": "string"
+          },
+          "warn_at": {
+            "$ref": "#/components/schemas/Figure"
+          }
+        },
+        "required": [
+          "warn_at",
+          "critical_at",
+          "detail"
+        ],
+        "title": "BandsView",
+        "type": "object"
+      },
+      "BoardRow": {
+        "properties": {
+          "age": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "deep_link": {
+            "title": "Deep Link",
+            "type": "string"
+          },
+          "detail": {
+            "title": "Detail",
+            "type": "string"
+          },
+          "group": {
+            "pattern": "^(service|data|worker|bot|broker|check|alerts)$",
+            "title": "Group",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "stale": {
+            "title": "Stale",
+            "type": "boolean"
+          },
+          "stale_after": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "status": {
+            "pattern": "^(ok|degraded|down|absent)$",
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "group",
+          "name",
+          "status",
+          "detail",
+          "age",
+          "stale",
+          "stale_after",
+          "deep_link"
+        ],
+        "title": "BoardRow",
+        "type": "object"
+      },
+      "BoardView": {
+        "properties": {
+          "advisory": {
+            "title": "Advisory",
+            "type": "string"
+          },
+          "counts": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/Figure"
+            },
+            "title": "Counts",
+            "type": "object"
+          },
+          "rows": {
+            "items": {
+              "$ref": "#/components/schemas/BoardRow"
+            },
+            "title": "Rows",
+            "type": "array"
+          },
+          "server_time": {
+            "format": "date-time",
+            "title": "Server Time",
+            "type": "string"
+          },
+          "stale": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "status": {
+            "pattern": "^(ok|degraded|down)$",
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "server_time",
+          "status",
+          "rows",
+          "counts",
+          "stale",
+          "advisory"
+        ],
+        "title": "BoardView",
+        "type": "object"
+      },
+      "BotCounts": {
+        "properties": {
+          "failed": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "finished": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "halted": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "idle": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "running": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "stale": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "total": {
+            "$ref": "#/components/schemas/Figure"
+          }
+        },
+        "required": [
+          "total",
+          "running",
+          "idle",
+          "stale",
+          "halted",
+          "finished",
+          "failed"
+        ],
+        "title": "BotCounts",
+        "type": "object"
+      },
       "BrokerHealthView": {
         "properties": {
           "configured": {
@@ -648,6 +1078,159 @@
           "message"
         ],
         "title": "Caveat",
+        "type": "object"
+      },
+      "ClockView": {
+        "description": "The API's clock and the market sessions, for the shell's session clocks.",
+        "properties": {
+          "server_time": {
+            "format": "date-time",
+            "title": "Server Time",
+            "type": "string"
+          },
+          "sessions": {
+            "items": {
+              "$ref": "#/components/schemas/MarketSessionView"
+            },
+            "title": "Sessions",
+            "type": "array"
+          }
+        },
+        "required": [
+          "server_time",
+          "sessions"
+        ],
+        "title": "ClockView",
+        "type": "object"
+      },
+      "CommandSummaryView": {
+        "description": "The money strip: the book, the fleet and the research load, all decided here.",
+        "properties": {
+          "balance": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "bots": {
+            "$ref": "#/components/schemas/BotCounts"
+          },
+          "currency": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Currency"
+          },
+          "day_pnl": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "day_pnl_pct": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "equity": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "kill_switch_active": {
+            "title": "Kill Switch Active",
+            "type": "boolean"
+          },
+          "kill_switch_mode": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Kill Switch Mode"
+          },
+          "links": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "title": "Links",
+            "type": "object"
+          },
+          "new_risk_permitted": {
+            "title": "New Risk Permitted",
+            "type": "boolean"
+          },
+          "open_positions": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "pnl_day": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pnl Day"
+          },
+          "pnl_week_start": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pnl Week Start"
+          },
+          "provenance": {
+            "title": "Provenance",
+            "type": "string"
+          },
+          "research_in_flight": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "server_time": {
+            "format": "date-time",
+            "title": "Server Time",
+            "type": "string"
+          },
+          "sessions": {
+            "items": {
+              "$ref": "#/components/schemas/MarketSessionView"
+            },
+            "title": "Sessions",
+            "type": "array"
+          },
+          "unrealised_pnl": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "week_pnl": {
+            "$ref": "#/components/schemas/Figure"
+          }
+        },
+        "required": [
+          "provenance",
+          "currency",
+          "equity",
+          "balance",
+          "unrealised_pnl",
+          "day_pnl",
+          "day_pnl_pct",
+          "week_pnl",
+          "open_positions",
+          "bots",
+          "research_in_flight",
+          "kill_switch_active",
+          "kill_switch_mode",
+          "new_risk_permitted",
+          "pnl_day",
+          "pnl_week_start",
+          "server_time",
+          "sessions",
+          "links"
+        ],
+        "title": "CommandSummaryView",
         "type": "object"
       },
       "DataQualityRow": {
@@ -901,6 +1484,54 @@
         "title": "DrawingSetWrite",
         "type": "object"
       },
+      "Envelope_AlertsView_": {
+        "properties": {
+          "caveats": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/Caveat"
+            },
+            "title": "Caveats",
+            "type": "array"
+          },
+          "data": {
+            "$ref": "#/components/schemas/AlertsView"
+          },
+          "source": {
+            "$ref": "#/components/schemas/SourceNote"
+          }
+        },
+        "required": [
+          "data",
+          "source"
+        ],
+        "title": "Envelope[AlertsView]",
+        "type": "object"
+      },
+      "Envelope_AttributionView_": {
+        "properties": {
+          "caveats": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/Caveat"
+            },
+            "title": "Caveats",
+            "type": "array"
+          },
+          "data": {
+            "$ref": "#/components/schemas/AttributionView"
+          },
+          "source": {
+            "$ref": "#/components/schemas/SourceNote"
+          }
+        },
+        "required": [
+          "data",
+          "source"
+        ],
+        "title": "Envelope[AttributionView]",
+        "type": "object"
+      },
       "Envelope_AuditIntegrityView_": {
         "properties": {
           "caveats": {
@@ -949,6 +1580,30 @@
         "title": "Envelope[BacktestTradesView]",
         "type": "object"
       },
+      "Envelope_BoardView_": {
+        "properties": {
+          "caveats": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/Caveat"
+            },
+            "title": "Caveats",
+            "type": "array"
+          },
+          "data": {
+            "$ref": "#/components/schemas/BoardView"
+          },
+          "source": {
+            "$ref": "#/components/schemas/SourceNote"
+          }
+        },
+        "required": [
+          "data",
+          "source"
+        ],
+        "title": "Envelope[BoardView]",
+        "type": "object"
+      },
       "Envelope_BrokerHealthView_": {
         "properties": {
           "caveats": {
@@ -971,6 +1626,54 @@
           "source"
         ],
         "title": "Envelope[BrokerHealthView]",
+        "type": "object"
+      },
+      "Envelope_ClockView_": {
+        "properties": {
+          "caveats": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/Caveat"
+            },
+            "title": "Caveats",
+            "type": "array"
+          },
+          "data": {
+            "$ref": "#/components/schemas/ClockView"
+          },
+          "source": {
+            "$ref": "#/components/schemas/SourceNote"
+          }
+        },
+        "required": [
+          "data",
+          "source"
+        ],
+        "title": "Envelope[ClockView]",
+        "type": "object"
+      },
+      "Envelope_CommandSummaryView_": {
+        "properties": {
+          "caveats": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/Caveat"
+            },
+            "title": "Caveats",
+            "type": "array"
+          },
+          "data": {
+            "$ref": "#/components/schemas/CommandSummaryView"
+          },
+          "source": {
+            "$ref": "#/components/schemas/SourceNote"
+          }
+        },
+        "required": [
+          "data",
+          "source"
+        ],
+        "title": "Envelope[CommandSummaryView]",
         "type": "object"
       },
       "Envelope_DrawingSetView_": {
@@ -1115,6 +1818,30 @@
           "source"
         ],
         "title": "Envelope[LifecycleEvaluationView]",
+        "type": "object"
+      },
+      "Envelope_LimitBoardView_": {
+        "properties": {
+          "caveats": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/Caveat"
+            },
+            "title": "Caveats",
+            "type": "array"
+          },
+          "data": {
+            "$ref": "#/components/schemas/LimitBoardView"
+          },
+          "source": {
+            "$ref": "#/components/schemas/SourceNote"
+          }
+        },
+        "required": [
+          "data",
+          "source"
+        ],
+        "title": "Envelope[LimitBoardView]",
         "type": "object"
       },
       "Envelope_OverlayView_": {
@@ -1813,6 +2540,193 @@
         "title": "FillOverlay",
         "type": "object"
       },
+      "FleetRowView": {
+        "properties": {
+          "as_of": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "As Of"
+          },
+          "asset_class": {
+            "title": "Asset Class",
+            "type": "string"
+          },
+          "closed_trades": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "content_hash": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Content Hash"
+          },
+          "day_pnl": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "equity": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "health": {
+            "pattern": "^(ok|warn|critical)$",
+            "title": "Health",
+            "type": "string"
+          },
+          "health_reason": {
+            "title": "Health Reason",
+            "type": "string"
+          },
+          "instruments": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Instruments",
+            "type": "array"
+          },
+          "kind": {
+            "pattern": "^(forward|replay)$",
+            "title": "Kind",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "last_signal": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/LastSignalView"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "last_signal_absent": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Signal Absent"
+          },
+          "lifecycle": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lifecycle"
+          },
+          "links": {
+            "$ref": "#/components/schemas/LinkSet"
+          },
+          "open_positions": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "positions": {
+            "items": {
+              "$ref": "#/components/schemas/OpenPositionView"
+            },
+            "title": "Positions",
+            "type": "array"
+          },
+          "provenance": {
+            "title": "Provenance",
+            "type": "string"
+          },
+          "realised_pnl": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "session_id": {
+            "title": "Session Id",
+            "type": "string"
+          },
+          "state": {
+            "pattern": "^(running|idle|stale|halted|finished|failed)$",
+            "title": "State",
+            "type": "string"
+          },
+          "state_reason": {
+            "title": "State Reason",
+            "type": "string"
+          },
+          "strategy_id": {
+            "title": "Strategy Id",
+            "type": "string"
+          },
+          "summary_age": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "timeframe": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Timeframe"
+          },
+          "unrealised_pnl": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "written_at": {
+            "format": "date-time",
+            "title": "Written At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "session_id",
+          "label",
+          "strategy_id",
+          "instruments",
+          "timeframe",
+          "asset_class",
+          "kind",
+          "provenance",
+          "state",
+          "state_reason",
+          "health",
+          "health_reason",
+          "last_signal",
+          "last_signal_absent",
+          "open_positions",
+          "positions",
+          "unrealised_pnl",
+          "day_pnl",
+          "realised_pnl",
+          "closed_trades",
+          "equity",
+          "summary_age",
+          "as_of",
+          "written_at",
+          "lifecycle",
+          "content_hash",
+          "links"
+        ],
+        "title": "FleetRowView",
+        "type": "object"
+      },
       "HTTPValidationError": {
         "properties": {
           "detail": {
@@ -2030,6 +2944,35 @@
               }
             ],
             "title": "Worker Heartbeat Age Seconds"
+          },
+          "worker_stale_after_seconds": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Worker Stale After Seconds"
+          },
+          "worker_stale_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Worker Stale At"
+          },
+          "worker_state": {
+            "default": "absent",
+            "pattern": "^(ok|stale|absent)$",
+            "title": "Worker State",
+            "type": "string"
           }
         },
         "required": [
@@ -2490,6 +3433,48 @@
         "title": "KillSwitchView",
         "type": "object"
       },
+      "LastSignalView": {
+        "properties": {
+          "at": {
+            "format": "date-time",
+            "title": "At",
+            "type": "string"
+          },
+          "instrument": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Instrument"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "outcome": {
+            "pattern": "^(accepted|blocked)$",
+            "title": "Outcome",
+            "type": "string"
+          },
+          "reason": {
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "at",
+          "outcome",
+          "kind",
+          "reason",
+          "instrument"
+        ],
+        "title": "LastSignalView",
+        "type": "object"
+      },
       "LevelOverlay": {
         "properties": {
           "dataset_version_id": {
@@ -2652,6 +3637,272 @@
         "title": "LifecycleEvaluationView",
         "type": "object"
       },
+      "LimitBoardView": {
+        "properties": {
+          "bands": {
+            "$ref": "#/components/schemas/BandsView"
+          },
+          "closest_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Closest Key"
+          },
+          "families": {
+            "items": {
+              "$ref": "#/components/schemas/LimitFamilyView"
+            },
+            "title": "Families",
+            "type": "array"
+          },
+          "limits_version": {
+            "title": "Limits Version",
+            "type": "string"
+          },
+          "rows": {
+            "items": {
+              "$ref": "#/components/schemas/LimitRowView"
+            },
+            "title": "Rows",
+            "type": "array"
+          },
+          "sources": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/SourceNote"
+            },
+            "title": "Sources",
+            "type": "object"
+          }
+        },
+        "required": [
+          "limits_version",
+          "rows",
+          "families",
+          "closest_key",
+          "bands",
+          "sources"
+        ],
+        "title": "LimitBoardView",
+        "type": "object"
+      },
+      "LimitFamilyView": {
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "rows": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Rows",
+            "type": "array"
+          },
+          "source": {
+            "title": "Source",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "worst_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Worst Key"
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "rows",
+          "worst_key",
+          "source"
+        ],
+        "title": "LimitFamilyView",
+        "type": "object"
+      },
+      "LimitRowView": {
+        "description": "One limit. Every decision on it was made by the server.",
+        "properties": {
+          "absent_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Absent Reason"
+          },
+          "band": {
+            "pattern": "^(ok|warn|critical|breached|absent)$",
+            "title": "Band",
+            "type": "string"
+          },
+          "breached": {
+            "title": "Breached",
+            "type": "boolean"
+          },
+          "deep_link": {
+            "title": "Deep Link",
+            "type": "string"
+          },
+          "family": {
+            "title": "Family",
+            "type": "string"
+          },
+          "formula": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Formula"
+          },
+          "headroom": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "heat": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Heat"
+          },
+          "key": {
+            "title": "Key",
+            "type": "string"
+          },
+          "kind": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Kind"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "limit": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Figure"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "see_also": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "See Also"
+          },
+          "utilisation_pct": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Figure"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "key",
+          "family",
+          "label",
+          "utilisation_pct",
+          "headroom",
+          "band",
+          "breached",
+          "deep_link"
+        ],
+        "title": "LimitRowView",
+        "type": "object"
+      },
+      "LinkSet": {
+        "properties": {
+          "chart": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Chart"
+          },
+          "journal": {
+            "title": "Journal",
+            "type": "string"
+          },
+          "lifecycle": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lifecycle"
+          },
+          "session": {
+            "title": "Session",
+            "type": "string"
+          },
+          "strategy": {
+            "title": "Strategy",
+            "type": "string"
+          }
+        },
+        "required": [
+          "strategy",
+          "chart",
+          "journal",
+          "lifecycle",
+          "session"
+        ],
+        "title": "LinkSet",
+        "type": "object"
+      },
       "LoginRequest": {
         "properties": {
           "password": {
@@ -2672,6 +3923,94 @@
           "password"
         ],
         "title": "LoginRequest",
+        "type": "object"
+      },
+      "MarketSessionView": {
+        "properties": {
+          "detail": {
+            "title": "Detail",
+            "type": "string"
+          },
+          "key": {
+            "title": "Key",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "local_time": {
+            "title": "Local Time",
+            "type": "string"
+          },
+          "next_change_at": {
+            "format": "date-time",
+            "title": "Next Change At",
+            "type": "string"
+          },
+          "open": {
+            "title": "Open",
+            "type": "boolean"
+          },
+          "timezone": {
+            "title": "Timezone",
+            "type": "string"
+          }
+        },
+        "required": [
+          "key",
+          "label",
+          "timezone",
+          "local_time",
+          "open",
+          "next_change_at",
+          "detail"
+        ],
+        "title": "MarketSessionView",
+        "type": "object"
+      },
+      "OpenPositionView": {
+        "properties": {
+          "chart": {
+            "title": "Chart",
+            "type": "string"
+          },
+          "direction": {
+            "title": "Direction",
+            "type": "string"
+          },
+          "entry_price": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "instrument": {
+            "title": "Instrument",
+            "type": "string"
+          },
+          "mark_price": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "position_id": {
+            "title": "Position Id",
+            "type": "string"
+          },
+          "size": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "unrealised_pnl": {
+            "$ref": "#/components/schemas/Figure"
+          }
+        },
+        "required": [
+          "position_id",
+          "instrument",
+          "direction",
+          "size",
+          "entry_price",
+          "mark_price",
+          "unrealised_pnl",
+          "chart"
+        ],
+        "title": "OpenPositionView",
         "type": "object"
       },
       "OtherDrawingSet": {
@@ -3196,6 +4535,49 @@
         "title": "Page[ExposureRow]",
         "type": "object"
       },
+      "Page_FleetRowView_": {
+        "properties": {
+          "caveats": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/Caveat"
+            },
+            "title": "Caveats",
+            "type": "array"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/FleetRowView"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "limit": {
+            "default": 100,
+            "title": "Limit",
+            "type": "integer"
+          },
+          "offset": {
+            "default": 0,
+            "title": "Offset",
+            "type": "integer"
+          },
+          "source": {
+            "$ref": "#/components/schemas/SourceNote"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "total",
+          "source"
+        ],
+        "title": "Page[FleetRowView]",
+        "type": "object"
+      },
       "Page_HypothesisView_": {
         "properties": {
           "caveats": {
@@ -3409,6 +4791,49 @@
           "source"
         ],
         "title": "Page[RegimeView]",
+        "type": "object"
+      },
+      "Page_SearchHit_": {
+        "properties": {
+          "caveats": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/Caveat"
+            },
+            "title": "Caveats",
+            "type": "array"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/SearchHit"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "limit": {
+            "default": 100,
+            "title": "Limit",
+            "type": "integer"
+          },
+          "offset": {
+            "default": 0,
+            "title": "Offset",
+            "type": "integer"
+          },
+          "source": {
+            "$ref": "#/components/schemas/SourceNote"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "total",
+          "source"
+        ],
+        "title": "Page[SearchHit]",
         "type": "object"
       },
       "Page_ServiceRow_": {
@@ -4402,6 +5827,47 @@
         "title": "RuleEvaluationView",
         "type": "object"
       },
+      "SearchHit": {
+        "properties": {
+          "detail": {
+            "title": "Detail",
+            "type": "string"
+          },
+          "href": {
+            "title": "Href",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "pattern": "^(instrument|strategy|session|candidate|run|trade|incident)$",
+            "title": "Kind",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "tier": {
+            "maximum": 3.0,
+            "minimum": 0.0,
+            "title": "Tier",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "kind",
+          "id",
+          "label",
+          "detail",
+          "href",
+          "tier"
+        ],
+        "title": "SearchHit",
+        "type": "object"
+      },
       "SectionStatus": {
         "properties": {
           "available": {
@@ -5391,6 +6857,30 @@
         },
         "security": [],
         "summary": "Attention",
+        "tags": [
+          "command"
+        ],
+        "x-fiboki-auth": "public"
+      }
+    },
+    "/api/command/summary": {
+      "get": {
+        "description": "Equity, day and week P&L, positions, bots and research load. Server-computed.",
+        "operationId": "summary_api_command_summary_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_CommandSummaryView_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [],
+        "summary": "Summary",
         "tags": [
           "command"
         ],
@@ -6592,6 +8082,65 @@
         "x-fiboki-auth": "public"
       }
     },
+    "/api/search": {
+      "get": {
+        "description": "Entities matching ``q``, best first. Only entities that exist.",
+        "operationId": "search_api_search_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "q",
+            "required": true,
+            "schema": {
+              "maxLength": 64,
+              "minLength": 1,
+              "title": "Q",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 20,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Page_SearchHit_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [],
+        "summary": "Search",
+        "tags": [
+          "search"
+        ],
+        "x-fiboki-auth": "public"
+      }
+    },
     "/api/stream": {
       "get": {
         "description": "The workstation's live feed. Snapshot, then deltas, then heartbeats.",
@@ -6668,6 +8217,78 @@
         "x-fiboki-auth": "session"
       }
     },
+    "/api/system/alerts": {
+      "get": {
+        "description": "Alert rules with state and last fired, plus the alert history.",
+        "operationId": "alerts_api_system_alerts_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 200,
+              "maximum": 2000,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_AlertsView_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [],
+        "summary": "Alerts",
+        "tags": [
+          "system"
+        ],
+        "x-fiboki-auth": "public"
+      }
+    },
+    "/api/system/board": {
+      "get": {
+        "description": "Every service, worker, bot, broker, check and the incident load, one clock.",
+        "operationId": "board_api_system_board_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_BoardView_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [],
+        "summary": "Board",
+        "tags": [
+          "system"
+        ],
+        "x-fiboki-auth": "public"
+      }
+    },
     "/api/system/broker-health": {
       "get": {
         "operationId": "broker_health_api_system_broker_health_get",
@@ -6685,6 +8306,30 @@
         },
         "security": [],
         "summary": "Broker Health",
+        "tags": [
+          "system"
+        ],
+        "x-fiboki-auth": "public"
+      }
+    },
+    "/api/system/clock": {
+      "get": {
+        "description": "Cheap enough for every page: the server time and which sessions are open.",
+        "operationId": "clock_api_system_clock_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_ClockView_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [],
+        "summary": "Clock",
         "tags": [
           "system"
         ],
@@ -7315,6 +8960,30 @@
         "x-fiboki-auth": "public"
       }
     },
+    "/api/trading/attribution": {
+      "get": {
+        "description": "Net P&L of the executing mode, attributed by strategy and by instrument.",
+        "operationId": "attribution_api_trading_attribution_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_AttributionView_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [],
+        "summary": "Attribution",
+        "tags": [
+          "trading"
+        ],
+        "x-fiboki-auth": "public"
+      }
+    },
     "/api/trading/candidates": {
       "get": {
         "description": "The ONE surface that answers 'what should I promote?'.",
@@ -7514,6 +9183,30 @@
         "x-fiboki-auth": "public"
       }
     },
+    "/api/trading/fleet": {
+      "get": {
+        "description": "Every paper bot, worst state first. The order IS the ranking.",
+        "operationId": "fleet_api_trading_fleet_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Page_FleetRowView_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [],
+        "summary": "Fleet",
+        "tags": [
+          "trading"
+        ],
+        "x-fiboki-auth": "public"
+      }
+    },
     "/api/trading/lifecycle/strategies": {
       "get": {
         "description": "Every strategy the lifecycle store knows about, newest state first.",
@@ -7673,6 +9366,30 @@
         "tags": [
           "trading",
           "lifecycle"
+        ],
+        "x-fiboki-auth": "public"
+      }
+    },
+    "/api/trading/limits": {
+      "get": {
+        "description": "Every limit with its utilisation, headroom and band, ordered most used first.\n\nThe workstation draws these bars and decides nothing about them; the\nattention queue lists the same rows (``api/limit_board.py``).",
+        "operationId": "limits_api_trading_limits_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_LimitBoardView_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [],
+        "summary": "Limits",
+        "tags": [
+          "trading"
         ],
         "x-fiboki-auth": "public"
       }

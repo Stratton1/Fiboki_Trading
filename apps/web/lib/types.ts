@@ -110,6 +110,12 @@ export interface HealthReport {
   migration_revision: string | null;
   execution_mode: string;
   worker_heartbeat_age_seconds: number | null;
+  /** The platform's verdict on the worker; the workstation never judges an age. */
+  worker_state: "ok" | "stale" | "absent";
+  /** The threshold that verdict used (configuration). */
+  worker_stale_after_seconds: number | null;
+  /** When an `ok` verdict expires without a newer beat (null unless ok). */
+  worker_stale_at: string | null;
   uptime_seconds: number;
   python_version: string;
   checks: HealthCheck[];
@@ -824,4 +830,246 @@ export interface IncidentRow {
   deep_link: string;
   as_of: string;
   timeline: IncidentTimelineEntry[];
+}
+
+
+// ------------------------------------------------- operator core (Wave 1A)
+// Hand-written mirrors of the API's operator-core models (their Figures are
+// the local, authoritative Figure); lib/api-contract.ts checks each one's
+// field names against the generated schema.
+
+export type LimitBand = "ok" | "warn" | "critical" | "breached" | "absent";
+
+export interface LimitRowView {
+  key: string;
+  family: string;
+  label: string;
+  kind: string | null;
+  value: Figure | null;
+  limit: Figure | null;
+  utilisation_pct: Figure;
+  headroom: Figure;
+  band: LimitBand;
+  breached: boolean;
+  formula: string | null;
+  absent_reason: string | null;
+  see_also: string | null;
+  deep_link: string;
+  heat: number | null;
+}
+
+export interface LimitFamilyView {
+  id: string;
+  title: string;
+  rows: string[];
+  worst_key: string | null;
+  source: string;
+}
+
+export interface BandsView {
+  warn_at: Figure;
+  critical_at: Figure;
+  detail: string;
+}
+
+export interface LimitBoardView {
+  limits_version: string;
+  rows: LimitRowView[];
+  families: LimitFamilyView[];
+  closest_key: string | null;
+  bands: BandsView;
+  sources: Record<string, SourceNote>;
+}
+
+export interface MarketSessionView {
+  key: string;
+  label: string;
+  timezone: string;
+  local_time: string;
+  open: boolean;
+  next_change_at: string;
+  detail: string;
+}
+
+export interface BotCounts {
+  total: Figure;
+  running: Figure;
+  idle: Figure;
+  stale: Figure;
+  halted: Figure;
+  finished: Figure;
+  failed: Figure;
+}
+
+export interface CommandSummaryView {
+  provenance: Provenance;
+  currency: string | null;
+  equity: Figure;
+  balance: Figure;
+  unrealised_pnl: Figure;
+  day_pnl: Figure;
+  day_pnl_pct: Figure;
+  week_pnl: Figure;
+  open_positions: Figure;
+  bots: BotCounts;
+  research_in_flight: Figure;
+  kill_switch_active: boolean;
+  kill_switch_mode: string | null;
+  new_risk_permitted: boolean;
+  pnl_day: string | null;
+  pnl_week_start: string | null;
+  server_time: string;
+  sessions: MarketSessionView[];
+  links: Record<string, string>;
+}
+
+export type BotState = "running" | "idle" | "stale" | "halted" | "finished" | "failed";
+
+export interface FleetLinkSet {
+  strategy: string;
+  chart: string | null;
+  journal: string;
+  lifecycle: string | null;
+  session: string;
+}
+
+export interface LastSignalView {
+  at: string;
+  outcome: "accepted" | "blocked";
+  kind: string;
+  reason: string;
+  instrument: string | null;
+}
+
+export interface OpenPositionView {
+  position_id: string;
+  instrument: string;
+  direction: string;
+  size: Figure;
+  entry_price: Figure;
+  mark_price: Figure;
+  unrealised_pnl: Figure;
+  chart: string;
+}
+
+export interface FleetRowView {
+  session_id: string;
+  label: string;
+  strategy_id: string;
+  instruments: string[];
+  timeframe: string | null;
+  asset_class: string;
+  kind: "forward" | "replay";
+  provenance: Provenance;
+  state: BotState;
+  state_reason: string;
+  health: "ok" | "warn" | "critical";
+  health_reason: string;
+  last_signal: LastSignalView | null;
+  last_signal_absent: string | null;
+  open_positions: Figure;
+  positions: OpenPositionView[];
+  unrealised_pnl: Figure;
+  day_pnl: Figure;
+  realised_pnl: Figure;
+  closed_trades: Figure;
+  equity: Figure;
+  summary_age: Figure;
+  as_of: string | null;
+  written_at: string;
+  lifecycle: string | null;
+  content_hash: string | null;
+  links: FleetLinkSet;
+}
+
+export interface AttributionRow {
+  key: string;
+  label: string;
+  trades: Figure;
+  wins: Figure;
+  win_rate: Figure;
+  gross_pnl: Figure;
+  costs: Figure;
+  net_pnl: Figure;
+  day_pnl: Figure;
+  unrealised_pnl: Figure;
+  share_of_abs_pct: Figure;
+  link: string;
+  chart: string | null;
+}
+
+export interface AttributionView {
+  provenance: Provenance;
+  currency: string | null;
+  by_strategy: AttributionRow[];
+  by_instrument: AttributionRow[];
+  total_net_pnl: Figure;
+}
+
+export type BoardStatus = "ok" | "degraded" | "down" | "absent";
+
+export interface BoardRow {
+  id: string;
+  group: "service" | "data" | "worker" | "bot" | "broker" | "check" | "alerts";
+  name: string;
+  status: BoardStatus;
+  detail: string;
+  age: Figure;
+  stale: boolean;
+  stale_after: Figure;
+  deep_link: string;
+}
+
+export interface BoardView {
+  server_time: string;
+  status: "ok" | "degraded" | "down";
+  rows: BoardRow[];
+  counts: Record<string, Figure>;
+  stale: Figure;
+  advisory: string;
+}
+
+export interface AlertRuleView {
+  event: string;
+  severity: string;
+  category: "operational" | "trade";
+  condition: string;
+  state: "firing" | "quiet" | "never_fired";
+  last_fired_at: string | null;
+  fired: Figure;
+  open_incident: string | null;
+}
+
+export interface AlertHistoryRow {
+  at: string;
+  event: string;
+  severity: string;
+  message: string;
+  source: string;
+  link: string | null;
+}
+
+export interface AlertsView {
+  log_configured: boolean;
+  channels: string[];
+  rules: AlertRuleView[];
+  history: AlertHistoryRow[];
+  history_total: Figure;
+  thresholds: Record<string, Figure>;
+}
+
+export type SearchKind = "instrument" | "strategy" | "session" | "candidate" | "run" | "trade" | "incident";
+
+export interface SearchHit {
+  kind: SearchKind;
+  id: string;
+  label: string;
+  detail: string;
+  href: string;
+  tier: number;
+}
+
+export interface ClockView {
+  server_time: string;
+  sessions: MarketSessionView[];
 }

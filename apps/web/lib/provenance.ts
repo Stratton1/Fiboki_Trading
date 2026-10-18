@@ -47,3 +47,14 @@ export function deriveProvenance(
 export function singleProvenance(provenance: Provenance): ProvenanceLabel {
   return { kind: "single", provenance, count: 1 };
 }
+
+/**
+ * The one provenance every value shares, or null when they differ or there
+ * are none: the test for showing a provenance chip ONCE per column or panel
+ * instead of on every row (terminal programme item 15). Mixed values keep a
+ * chip each.
+ */
+export function singleProvenanceOf(provenances: readonly Provenance[]): Provenance | null {
+  const label = deriveProvenance(provenances);
+  return label.kind === "single" ? label.provenance : null;
+}
