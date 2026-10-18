@@ -1,6 +1,8 @@
 "use client";
 
+import Link from "next/link";
 import { useApi } from "@/lib/query";
+import { route } from "@/lib/routes";
 import { AsyncBoundary } from "@/components/AsyncBoundary";
 import { LazyLineChart } from "@/components/LazyChart";
 import { FigureValue } from "@/components/FigureValue";
@@ -29,6 +31,7 @@ export default function PortfolioPage() {
         intro="Balance and equity count only trades executed in the current mode. Trades from other provenances are on the Execution page and are excluded here on purpose."
       />
 
+      <div className="portfolio-book">
       <AsyncBoundary state={portfolio} label="the portfolio" onRetry={portfolio.reload}>
         {(envelope) => (
           <>
@@ -47,6 +50,7 @@ export default function PortfolioPage() {
           </>
         )}
       </AsyncBoundary>
+      </div>
 
       <Card title="Open positions">
         <AsyncBoundary
@@ -83,8 +87,14 @@ export default function PortfolioPage() {
                         <td>
                           <ProvenanceChip provenance={row.provenance} />
                         </td>
-                        <td>{row.instrument}</td>
-                        <td>{row.strategy_id}</td>
+                        <td>
+                          <Link href={route.instrument(row.instrument)} className="mono">
+                            {row.instrument}
+                          </Link>
+                        </td>
+                        <td>
+                          <Link prefetch={false} href={route.strategy(row.strategy_id)}>{row.strategy_id}</Link>
+                        </td>
                         <td>{row.direction.toUpperCase()}</td>
                         <td>
                           <FigureValue figure={row.size} showChip={false} />

@@ -2,9 +2,8 @@
 
 import { useState } from "react";
 import { formatNumber } from "@/lib/format";
-import { exposureKind, exposureRows, utilisationBin, type LimitRow } from "@/lib/limits";
 import { deriveProvenance } from "@/lib/provenance";
-import type { ExposureRow } from "@/lib/types";
+import type { LimitRowView, Provenance } from "@/lib/types";
 import { FigureValue } from "../FigureValue";
 import { ProvenanceLabelChip } from "../ProvenanceChip";
 import { LimitStateTag } from "./LimitBoard";
@@ -12,7 +11,9 @@ import { LimitStateTag } from "./LimitBoard";
 /**
  * Exposure as a matrix of heat cells: one row per bucket kind the API
  * reports (instrument, currency, strategy), one cell per bucket, in the API's
- * order, shaded by how much of that bucket's limit is used.
+ * order, shaded by the API's heat step (GET /api/trading/limits `heat`, 20%
+ * of the limit per step) and outlined by the API's band. Nothing is binned or
+ * compared here.
  *
  * Owned SVG, no chart library. The shade is a single-hue lightness ramp in
  * five 20% steps (tokens `--heat-util-1..5`), so it reads under any colour
@@ -39,34 +40,37 @@ const LABEL_W = 92;
 
 const BAND_GLYPH: Record<string, string> = { warn: " ◐", critical: " ◆", breached: " ✕" };
 
-function kindsOf(items: readonly ExposureRow[]): string[] {
+function kindsOf(items: readonly LimitRowView[]): string[] {
   const seen: string[] = [];
   for (const row of items) {
-    const kind = exposureKind(row);
+    const kind = row.kind ?? "bucket";
     if (!seen.includes(kind)) seen.push(kind);
   }
   const known = KIND_ORDER.filter((k) => seen.includes(k));
   return [...known, ...seen.filter((k) => !KIND_ORDER.includes(k))];
 }
 
-function usedText(row: LimitRow): string {
-  return row.utilisation === null ? "no data" : formatNumber(row.utilisation, "pct", { decimals: 1 });
+function usedText(row: LimitRowView): string {
+  const used = row.utilisation_pct.value;
+  return used === null ? "no data" : formatNumber(used, "pct", { decimals: 1 });
 }
 
 function short(label: string): string {
   return label.length > 12 ? `${label.slice(0, 11)}…` : label;
 }
 
-export function ExposureMatrix({ items }: { items: readonly ExposureRow[] }) {
-  const rows = exposureRows(items);
-  const kinds = kindsOf(items);
-  const byKind = kinds.map((kind) => ({ kind, cells: rows.filter((r) => r.kind === kind) }));
+/** Every exposure row of the limit board, in the API's order (most used first). */
+export function ExposureMatrix({ rows }: { rows: readonly LimitRowView[] }) {
+  const kinds = kindsOf(rows);
+  const byKind = kinds.map((kind) => ({ kind, cells: rows.filter((r) => (r.kind ?? "bucket") === kind) }));
   const cols = Math.max(1, ...byKind.map((k) => k.cells.length));
   const width = LABEL_W + cols * (CELL_W + GAP);
   const height = byKind.length * (CELL_H + GAP);
   // Cells start GAP/2 in, so a band outline (3px outside a cell) is never clipped.
   const inset = GAP / 2;
-  const label = deriveProvenance(items.flatMap((r) => [r.exposure_pct.provenance, r.limit_pct.provenance]));
+  const label = deriveProvenance(
+    rows.flatMap((r) => [r.value?.provenance, r.limit?.provenance]).filter((p): p is Provenance => p !== undefined),
+  );
 
   return (
     <div className="xmatrix" data-testid="exposure-matrix">
@@ -100,13 +104,13 @@ export function ExposureMatrix({ items }: { items: readonly ExposureRow[] }) {
                 </text>
                 {cells.map((row, c) => {
                   const x = LABEL_W + inset + c * (CELL_W + GAP);
-                  const bin = row.utilisation === null ? "none" : String(utilisationBin(row.utilisation));
+                  const bin = row.heat === null ? "none" : String(row.heat);
                   return (
                     <g
                       key={row.key}
                       data-testid="exposure-cell"
                       data-key={row.key.slice("exposure:".length)}
-                      data-state={row.state}
+                      data-state={row.band}
                       data-used={usedText(row)}
                     >
                       <rect
@@ -117,9 +121,9 @@ export function ExposureMatrix({ items }: { items: readonly ExposureRow[] }) {
                         rx={3}
                         className="xheat"
                         data-bin={bin}
-                        data-state={row.state}
+                        data-state={row.band}
                       />
-                      {BAND_GLYPH[row.state] ? (
+                      {BAND_GLYPH[row.band] ? (
                         // The band outline sits OUTSIDE the cell, on the
                         // surface, so its contrast never depends on the shade.
                         <rect
@@ -129,7 +133,7 @@ export function ExposureMatrix({ items }: { items: readonly ExposureRow[] }) {
                           height={CELL_H + 6}
                           rx={5}
                           className="xheat__band"
-                          data-state={row.state}
+                          data-state={row.band}
                         />
                       ) : null}
                       <text x={x + 8} y={y + 20} className="xheat__label">
@@ -137,7 +141,7 @@ export function ExposureMatrix({ items }: { items: readonly ExposureRow[] }) {
                       </text>
                       <text x={x + 8} y={y + 40} className="xheat__value">
                         {usedText(row)}
-                        {BAND_GLYPH[row.state] ?? ""}
+                        {BAND_GLYPH[row.band] ?? ""}
                       </text>
                     </g>
                   );
@@ -162,7 +166,7 @@ export function ExposureMatrix({ items }: { items: readonly ExposureRow[] }) {
 }
 
 /** "View data": a native disclosure, built only when opened. */
-function ExposureTable({ rows }: { rows: readonly LimitRow[] }) {
+function ExposureTable({ rows }: { rows: readonly LimitRowView[] }) {
   const [open, setOpen] = useState(false);
   return (
     <details
@@ -205,7 +209,7 @@ function ExposureTable({ rows }: { rows: readonly LimitRow[] }) {
                   <td>{row.limit ? <FigureValue figure={row.limit} showChip={false} /> : "—"}</td>
                   <td className="num">{usedText(row)}</td>
                   <td>
-                    <LimitStateTag state={row.state} />
+                    <LimitStateTag state={row.band} />
                   </td>
                 </tr>
               ))}

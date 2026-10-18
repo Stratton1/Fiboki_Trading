@@ -6,6 +6,13 @@ import { Stat } from "./Stat";
 
 export { CaveatList } from "./CaveatList";
 
+/**
+ * The page's title, one compact line (terminal programme P1 8): the h1 and a
+ * `?` disclosure that opens the page's explanation in place. The explanation
+ * used to be a paragraph above every page, pushing content down by two to
+ * four lines; it is one keypress or click away instead, and still a real
+ * element (no tooltip-only information).
+ */
 export function PageHead({
   title,
   intro,
@@ -18,7 +25,12 @@ export function PageHead({
   return (
     <header className="page-head">
       <h1>{title}</h1>
-      <p>{intro}</p>
+      <details className="page-head__help" data-testid="page-help">
+        <summary aria-label={`About ${title}`} title={`About ${title}`}>
+          ?
+        </summary>
+        <p>{intro}</p>
+      </details>
       {children}
     </header>
   );

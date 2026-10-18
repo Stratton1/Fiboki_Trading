@@ -17,7 +17,16 @@ export function DataGrid<T>(props: DataGridProps<T>) {
   return (
     <Suspense
       fallback={
-        <div className="grid grid--pending" data-testid="grid-pending" role="status">
+        <div
+          className="grid grid--pending"
+          data-testid="grid-pending"
+          role="status"
+          // The grid's own height for this many rows (toolbar, header, rows,
+          // capped where the grid scrolls), so nothing below moves when the
+          // grid replaces this placeholder. Set through the CSSOM on the
+          // client, which CSP does not restrict.
+          style={{ minHeight: Math.min(props.rows.length * 24 + 120, 480) }}
+        >
           Preparing the {props.label} grid ({props.rows.length.toLocaleString("en-GB")} rows)…
         </div>
       }

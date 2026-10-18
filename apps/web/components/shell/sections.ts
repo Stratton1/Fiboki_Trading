@@ -26,7 +26,8 @@ export interface Section {
   chord: string;
   /** The function-key label of the section (the command line's codes for each view are in CommandLine.tsx). */
   mnemonic: string;
-  links: { href: string; label: string }[];
+  /** Each view: its route, tab label, command-line code and one-line description. */
+  links: { href: string; label: string; code: string; description: string }[];
   /**
    * Entity routes that belong to the section without being one of its views
    * (`/lifecycle/<hash>`, `/system/incidents/<id>`): the header and rail
@@ -44,9 +45,8 @@ export const SECTIONS: Section[] = [
     question: "Is anything wrong, and what needs me now?",
     icon: House,
     links: [
-      { href: "/", label: "Overview" },
-      { href: "/market-pulse", label: "Market Pulse" },
-      { href: "/alerts", label: "Alerts" },
+      { href: "/", label: "Overview", code: "CMD", description: "Money strip, attention queue, fleet and loss limits." },
+      { href: "/market-pulse", label: "Market Pulse", code: "PULSE", description: "Spreads and activity across the universe." },
     ],
   },
   {
@@ -56,7 +56,10 @@ export const SECTIONS: Section[] = [
     title: "Fleet & Positions",
     question: "What is every bot doing and what is open?",
     icon: Crosshair,
-    links: [{ href: "/trading/portfolio", label: "Portfolio" }],
+    links: [
+      { href: "/trading/fleet", label: "Fleet", code: "FLT", description: "Every paper bot: state, last decision, positions, P&L; attribution." },
+      { href: "/trading/portfolio", label: "Portfolio", code: "PORT", description: "The paper book: balance, equity curve and open positions." },
+    ],
   },
   {
     id: "lifecycle",
@@ -65,7 +68,9 @@ export const SECTIONS: Section[] = [
     title: "Strategy Lifecycle",
     question: "What should be promoted, demoted or retired?",
     icon: ArrowUpDown,
-    links: [{ href: "/trading/candidates", label: "Candidates" }],
+    links: [
+      { href: "/trading/candidates", label: "Candidates", code: "LIF", description: "Strategies proposed for promotion, with their evidence." },
+    ],
     entityPrefixes: ["/lifecycle"],
   },
   {
@@ -76,13 +81,13 @@ export const SECTIONS: Section[] = [
     question: "What have we tried and what does the evidence say?",
     icon: FlaskConical,
     links: [
-      { href: "/research", label: "Lab" },
-      { href: "/research/hypotheses", label: "Hypotheses" },
-      { href: "/research/experiments", label: "Experiments" },
-      { href: "/research/strategies", label: "Strategies" },
-      { href: "/research/parameter-lab", label: "Parameter Lab" },
-      { href: "/research/validation", label: "Validation" },
-      { href: "/research/datasets", label: "Datasets" },
+      { href: "/research", label: "Lab", code: "LAB", description: "Research overview." },
+      { href: "/research/hypotheses", label: "Hypotheses", code: "HYP", description: "Hypotheses and the evidence against them." },
+      { href: "/research/experiments", label: "Experiments", code: "XPR", description: "Experiments run and queued." },
+      { href: "/research/strategies", label: "Strategies", code: "STR", description: "Strategy documents and their runs." },
+      { href: "/research/parameter-lab", label: "Parameter Lab", code: "PARAM", description: "Parameter spaces per strategy." },
+      { href: "/research/validation", label: "Validation", code: "VAL", description: "Validation ladder reports, pass and fail." },
+      { href: "/research/datasets", label: "Datasets", code: "DSET", description: "Dataset versions and lineage." },
     ],
   },
   {
@@ -93,12 +98,12 @@ export const SECTIONS: Section[] = [
     question: "What is the market doing, and what did the agents conclude?",
     icon: Radar,
     links: [
-      { href: "/markets", label: "Explorer" },
-      { href: "/markets/regimes", label: "Regimes" },
-      { href: "/markets/correlations", label: "Correlations" },
-      { href: "/intelligence/agents", label: "Agents" },
-      { href: "/intelligence/runs", label: "Agent runs" },
-      { href: "/intelligence/research-memory", label: "Research Memory" },
+      { href: "/markets", label: "Explorer", code: "MKT", description: "The instrument universe." },
+      { href: "/markets/regimes", label: "Regimes", code: "REGM", description: "Market regime per instrument." },
+      { href: "/markets/correlations", label: "Correlations", code: "CORR", description: "Correlation matrix." },
+      { href: "/intelligence/agents", label: "Agents", code: "AGT", description: "Agent roles and capabilities." },
+      { href: "/intelligence/runs", label: "Agent runs", code: "RUNS", description: "Agent run history." },
+      { href: "/intelligence/research-memory", label: "Research Memory", code: "MEM", description: "What was tried and how it died." },
     ],
   },
   {
@@ -109,8 +114,8 @@ export const SECTIONS: Section[] = [
     question: "How close are we to any limit?",
     icon: ShieldAlert,
     links: [
-      { href: "/trading/risk", label: "Risk" },
-      { href: "/trading/exposure", label: "Exposure" },
+      { href: "/trading/risk", label: "Risk", code: "RSK", description: "Limit board, kill switch and gateway." },
+      { href: "/trading/exposure", label: "Exposure", code: "EXPO", description: "Exposure matrix by instrument, currency and strategy." },
     ],
   },
   {
@@ -121,8 +126,8 @@ export const SECTIONS: Section[] = [
     question: "Can we trust the inputs?",
     icon: Database,
     links: [
-      { href: "/markets/data-quality", label: "Market data" },
-      { href: "/system/data-health", label: "Data Health" },
+      { href: "/markets/data-quality", label: "Market data", code: "DQ", description: "Dataset quality per instrument." },
+      { href: "/system/data-health", label: "Data Health", code: "DH", description: "Data stores on the System board." },
     ],
   },
   {
@@ -133,14 +138,16 @@ export const SECTIONS: Section[] = [
     question: "Is every process up, and what happened?",
     icon: Server,
     links: [
-      { href: "/system/services", label: "Services" },
-      { href: "/system/workers", label: "Workers" },
-      { href: "/system/broker-health", label: "Broker Health" },
-      { href: "/system/logs", label: "Audit log" },
-      { href: "/system/settings", label: "Settings" },
-      { href: "/system/legend", label: "Legend" },
+      { href: "/system", label: "Board", code: "SYS", description: "Every service, worker, bot, broker and check, one clock." },
+      { href: "/alerts", label: "Alerts", code: "ALRT", description: "Alert rules, their state, last fired and history." },
+      { href: "/system/logs", label: "Audit log", code: "LOG", description: "The hash-chained operator audit trail." },
+      { href: "/system/settings", label: "Settings", code: "SET", description: "Process configuration." },
+      { href: "/system/legend", label: "Legend", code: "LEG", description: "Colour, chip and glyph legend." },
+      { href: "/system/functions", label: "Functions", code: "FUNC", description: "Every command-line function and key." },
     ],
-    entityPrefixes: ["/system/incidents"],
+    // The old system pages are views of the board (`/system/services` opens it
+    // at services); they keep their URLs but are not tabs.
+    entityPrefixes: ["/system/incidents", "/system/services", "/system/workers", "/system/broker-health"],
   },
   {
     id: "journal",
@@ -149,7 +156,9 @@ export const SECTIONS: Section[] = [
     title: "Journal",
     question: "What did we trade, why, and what did we learn?",
     icon: NotebookPen,
-    links: [{ href: "/trading/execution", label: "Trades" }],
+    links: [
+      { href: "/trading/execution", label: "Trades", code: "JRN", description: "Every closed trade, from every source." },
+    ],
   },
 ];
 

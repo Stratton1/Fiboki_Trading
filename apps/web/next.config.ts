@@ -87,17 +87,14 @@ const config: NextConfig = {
     return [{ source: "/api/:path*", destination: `${target}/api/:path*` }];
   },
   /**
-   * The plan's section URLs (plan §4), which the backend's attention queue
-   * already links to (routers/command.py), mapped to where those sections
-   * live today (components/shell/sections.ts). Temporary (307): Wave 4 moves
-   * the screens to these URLs and these entries go. Entity links such as
-   * /lifecycle/<hash> and /system/incidents/<id> have no screen yet and are
-   * deliberately NOT redirected to a list that would lose the entity.
+   * Old section URLs (plan §4) kept for bookmarks. The API no longer emits
+   * them: its deep links come from one route table (src/fiboki/api/links.py)
+   * and name real pages. `/system` is a page again (the System board), so it
+   * is no longer redirected.
    */
   async redirects() {
     return [
       { source: "/risk", destination: "/trading/risk", permanent: false },
-      { source: "/system", destination: "/system/services", permanent: false },
       { source: "/journal", destination: "/trading/execution", permanent: false },
     ];
   },

@@ -6,10 +6,11 @@ import { API, exposurePage, exposureRow, figure, mockRisk, riskState, source } f
  * Risk & Exposure v2 (Wave 4a): one screen at /trading/risk and
  * /trading/exposure answering "how close are we to any limit?".
  *
- * The limit board draws the API's numbers and nothing else: exposure
- * utilisation is the API's own; daily-loss and drawdown utilisation are
- * derived from the value and limit the API sends, by the rule the API uses to
- * list a breach. A limit the API does not report is NOT REPORTED, never a bar.
+ * The limit board draws the API's numbers and nothing else: utilisation,
+ * headroom, band, breach and order all come from GET /api/trading/limits
+ * (the fixture mirrors api/limit_board.py, whose rule is pinned in
+ * tests/api). A limit the API does not report is NOT REPORTED, listed once in
+ * a collapsed list, never a bar.
  */
 
 const row = (page: Page, key: string) => page.locator(`[data-testid="limit-row"][data-key="${key}"]`);
@@ -44,7 +45,6 @@ test.describe("limit board", () => {
     // Daily loss: 1.64 of 2.00 used, headroom = day P&L + limit = 0.36 pp.
     const daily = row(page, "risk:daily_loss");
     await expect(daily).toHaveAttribute("data-utilisation", "82.0");
-    await expect(daily).toHaveAttribute("data-derived", "true");
     await expect(daily).toHaveAttribute("data-state", "warn");
     await expect(daily.getByTestId("limit-value")).toContainText("−1.64%");
     await expect(daily.getByTestId("limit-headroom")).toHaveText("0.36 pp");
@@ -72,15 +72,13 @@ test.describe("limit board", () => {
     await page.goto("/trading/risk");
     const families = page.locator('[data-testid="limit-board"] [data-family]:is(section, figure)');
     await expect(families.first()).toHaveAttribute("data-family", "exposure");
+    // Families with nothing measured are not drawn; they are listed once below.
     expect(await families.evaluateAll((els) => els.map((el) => el.getAttribute("data-family")))).toEqual([
       "exposure",
       "loss",
       "drawdown",
-      "account",
-      "margin",
-      "correlation",
-      "data_quality",
     ]);
+    await expect(page.getByTestId("limit-not-reported")).toContainText("Open risk against the account limit");
     const exposure = page.locator('[data-testid="limit-row"][data-family="exposure"]');
     expect(await exposure.evaluateAll((els) => els.map((el) => el.getAttribute("data-utilisation")))).toEqual([
       "94.0",
@@ -127,25 +125,19 @@ test.describe("limit board", () => {
     }
   });
 
-  test("a failed source is an error in its family and the headline says it is incomplete", async ({ page }) => {
+  test("a failed limit board is an error with its code, never an empty board", async ({ page }) => {
     await mockRisk(page, { risk: RISK });
-    await page.route(`${API}/api/trading/exposure`, (route: Route) =>
+    await page.route(`${API}/api/trading/limits`, (route: Route) =>
       route.fulfill({
         status: 503,
         json: { code: "journal_unreadable", detail: "The journal could not be read.", correlation_id: "cid-x", context: {} },
       }),
     );
     await page.goto("/trading/risk");
-    const error = page.locator('[data-family="exposure"]').getByTestId("limit-family-error");
+    const error = page.getByTestId("limit-board").getByTestId("state-error");
     await expect(error).toContainText("journal_unreadable");
     await expect(error).toContainText("cid-x");
-    // Unknown goes first, above the measured families.
-    await expect(page.locator('[data-testid="limit-board"] [data-family]:is(section, figure)').first()).toHaveAttribute(
-      "data-family",
-      "exposure",
-    );
-    await expect(page.getByTestId("limit-hero-incomplete")).toContainText("/api/trading/exposure");
-    await expect(page.getByTestId("limit-hero-label")).toContainText("Daily loss");
+    await expect(page.getByTestId("limit-hero")).toHaveCount(0);
   });
 
   test("an empty exposure answer is EMPTY, not a failure", async ({ page }) => {
@@ -289,6 +281,9 @@ test.describe("kill switch and positions", () => {
 });
 
 test.describe("accessibility", () => {
+  // axe over a full board, matrix and drawer takes several seconds; on a
+  // shared two-CPU runner it ran into the 30 s default.
+  test.describe.configure({ timeout: 90_000 });
   test.beforeEach(({}, testInfo) => {
     test.skip(testInfo.project.name !== "desktop", "one sweep, on the desktop project");
   });

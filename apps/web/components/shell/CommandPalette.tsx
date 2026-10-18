@@ -4,23 +4,28 @@ import { Dialog as Base } from "@base-ui/react/dialog";
 import { Command } from "cmdk";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { pushHistory } from "@/lib/history";
+import type { Hit } from "@/lib/search";
 import { DialogContent, DialogTitle } from "../ui/Dialog";
 import { Kbd } from "../ui/Kbd";
 import { openCommand } from "./commands";
-import { SECTIONS } from "./sections";
+import { SCREEN_FUNCTIONS } from "./functions";
+import { useOperator } from "./platform";
+import { KIND_LABEL, useSuggestions } from "./suggest";
 
 /**
  * The command palette (⌘K), on cmdk inside the owned Base UI dialog (focus
  * trap, inert background, focus returned on close). Loaded on first ⌘K.
  *
- * Three groups, and nothing in any of them changes the platform:
- *  - Go to: every view, by section, with its `g` chord;
- *  - Open by id: what you typed, as a trade, strategy, instrument, audit
- *    entry or parameter space; the target screen selects that row (the
- *    platform decides whether it exists, the palette does not guess);
- *    "Open chart: SYMBOL" opens that instrument's chart workstation;
- *  - Actions: each OPENS a dialog. "Halt trading…" opens the kill-switch
- *    dialog exactly as ⇧K does; the arm still needs a choice and a reason.
+ * It searches what EXISTS: screens and functions from the registry, the
+ * platform's instruments, and strategies, bots, lifecycle entities, runs and
+ * trades from GET /api/search, ranked once, exact match first (lib/search.ts),
+ * so "EURUSD" puts the instrument EURUSD first, never a screen. cmdk's own
+ * fuzzy filter is off: the order on screen is that ranking. Typed text that
+ * matches nothing offers nothing; the palette never invents an entity.
+ *
+ * Actions OPEN a dialog only. "Halt trading…" opens the kill-switch dialog
+ * exactly as ⇧K does; the arm still needs a choice and a reason.
  */
 export default function CommandPalette({
   open,
@@ -30,16 +35,19 @@ export default function CommandPalette({
   onOpenChange: (open: boolean) => void;
 }) {
   const router = useRouter();
+  const operator = useOperator();
   const [search, setSearch] = useState("");
   const [wasOpen, setWasOpen] = useState(open);
   if (wasOpen !== open) {
     setWasOpen(open);
     if (open) setSearch("");
   }
+  const { hits, pending } = useSuggestions(search, open, 14);
 
-  const go = (href: string) => {
+  const go = (hit: Hit) => {
+    pushHistory(operator?.user_id, hit.id);
     onOpenChange(false);
-    router.push(href);
+    router.push(hit.href);
   };
   const run = (command: "kill-switch" | "shortcuts") => {
     onOpenChange(false);
@@ -47,61 +55,76 @@ export default function CommandPalette({
     setTimeout(() => openCommand(command), 0);
   };
 
-  const id = search.trim();
-  const byId: { key: string; label: string; href: string }[] =
-    id.length === 0
-      ? []
-      : [
-          {
-            key: "trade",
-            label: `Open trade ${id}`,
-            href: `/trading/execution?row=${encodeURIComponent(id)}`,
-          },
-          {
-            key: "strategy",
-            label: `Open strategy ${id}`,
-            href: `/trading/candidates?row=${encodeURIComponent(id)}`,
-          },
-          {
-            key: "instrument",
-            label: `Open instrument ${id.toUpperCase()}`,
-            href: `/markets?row=${encodeURIComponent(id.toUpperCase())}`,
-          },
-          {
-            key: "chart",
-            label: `Open chart: ${id.toUpperCase()}`,
-            href: `/markets/${encodeURIComponent(id.toUpperCase())}`,
-          },
-          {
-            key: "parameters",
-            label: `Open the parameter space of ${id}`,
-            href: `/research/parameter-lab?strategy=${encodeURIComponent(id)}`,
-          },
-          ...(/^\d+$/.test(id)
-            ? [
-                {
-                  key: "audit",
-                  label: `Open audit entry #${id}`,
-                  href: `/system/logs?row=${encodeURIComponent(id)}`,
-                },
-              ]
-            : []),
-        ];
+  const typing = search.trim() !== "";
 
   return (
     <Base.Root open={open} onOpenChange={(next) => onOpenChange(next)}>
       <DialogContent testId="command-palette" size="md" className="palette">
         <DialogTitle className="sr-only">Command palette</DialogTitle>
-        <Command label="Command palette" loop className="palette__root">
+        <Command label="Command palette" loop shouldFilter={false} className="palette__root">
           <Command.Input
             value={search}
             onValueChange={setSearch}
-            placeholder="Go to a screen, open an id, or run an action…"
+            placeholder="Instrument, strategy, bot, run, trade, screen or code…"
             className="palette__input"
             data-testid="palette-input"
           />
           <Command.List className="palette__list" data-testid="palette-list">
-            <Command.Empty className="palette__empty">Nothing matches.</Command.Empty>
+            {typing && hits.length === 0 && !pending ? (
+              <p className="palette__empty" data-testid="palette-empty">
+                Nothing matches &ldquo;{search.trim()}&rdquo;. Codes are listed under FUNC.
+              </p>
+            ) : null}
+            {typing && hits.length > 0 ? (
+              <Command.Group heading="Best matches" className="palette__group">
+                {hits.map((hit, index) => (
+                  <Command.Item
+                    key={`${hit.kind}:${hit.id}`}
+                    value={`${index}:${hit.kind}:${hit.id}`}
+                    onSelect={() => go(hit)}
+                    className="palette__item"
+                    data-testid="palette-hit"
+                    data-kind={hit.kind}
+                    data-id={hit.id}
+                    data-tier={hit.tier}
+                  >
+                    <span className="palette__kind">{KIND_LABEL[hit.kind]}</span>
+                    <span className="palette__label">
+                      <span className="mono">{hit.id}</span>
+                      {hit.label !== hit.id ? <span> {hit.label}</span> : null}
+                    </span>
+                    <span className="palette__hint palette__detail">{hit.detail}</span>
+                  </Command.Item>
+                ))}
+              </Command.Group>
+            ) : null}
+            {typing ? null : (
+              <Command.Group heading="Screens" className="palette__group">
+                {SCREEN_FUNCTIONS.map((fn) => (
+                  <Command.Item
+                    key={fn.href}
+                    value={`go ${fn.code}`}
+                    onSelect={() =>
+                      go({ kind: "screen", id: fn.code, label: fn.label, detail: fn.description, href: fn.href, tier: 0 })
+                    }
+                    className="palette__item"
+                    data-testid={`palette-go-${fn.href}`}
+                  >
+                    <span className="palette__kind">{fn.code}</span>
+                    <span className="palette__label">
+                      {fn.label} <span className="muted">· {fn.section}</span>
+                    </span>
+                    {fn.keys.length > 0 ? (
+                      <span className="palette__hint">
+                        {fn.keys.map((key) => (
+                          <Kbd key={key}>{key}</Kbd>
+                        ))}
+                      </span>
+                    ) : null}
+                  </Command.Item>
+                ))}
+              </Command.Group>
+            )}
             <Command.Group heading="Actions (each opens a dialog)" className="palette__group">
               <Command.Item
                 value="halt trading kill switch pause flatten"
@@ -127,43 +150,6 @@ export default function CommandPalette({
                 </span>
               </Command.Item>
             </Command.Group>
-            {SECTIONS.map((section) => (
-              <Command.Group key={section.id} heading={section.title} className="palette__group">
-                {section.links.map((link, index) => (
-                  <Command.Item
-                    key={link.href}
-                    value={`go ${section.title} ${link.label} ${link.href}`}
-                    onSelect={() => go(link.href)}
-                    className="palette__item"
-                    data-testid={`palette-go-${link.href}`}
-                  >
-                    <span>{link.label}</span>
-                    {index === 0 ? (
-                      <span className="palette__hint">
-                        <Kbd>g</Kbd>
-                        <Kbd>{section.chord}</Kbd>
-                      </span>
-                    ) : null}
-                  </Command.Item>
-                ))}
-              </Command.Group>
-            ))}
-            {byId.length > 0 ? (
-              <Command.Group heading="Open by id" className="palette__group" forceMount>
-                {byId.map((item) => (
-                  <Command.Item
-                    key={item.key}
-                    value={`open ${item.key} ${id}`}
-                    forceMount
-                    onSelect={() => go(item.href)}
-                    className="palette__item"
-                    data-testid={`palette-open-${item.key}`}
-                  >
-                    {item.label}
-                  </Command.Item>
-                ))}
-              </Command.Group>
-            ) : null}
           </Command.List>
         </Command>
       </DialogContent>

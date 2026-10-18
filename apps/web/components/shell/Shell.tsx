@@ -13,6 +13,7 @@ import { InspectorProvider } from "./Inspector";
 import { ModeFrame, ModeHead } from "./Mode";
 import { NavDrawerProvider } from "./NavDrawer";
 import { PageHeader, PageHeaderProvider } from "./PageHeader";
+import { PageStaleBanner } from "./PageStaleBanner";
 import { PlatformProvider } from "./platform";
 import { QueryProvider } from "./QueryProvider";
 import { Rail } from "./Rail";
@@ -68,6 +69,7 @@ export function Shell({ children }: { children: ReactNode }) {
                       <Rail />
                       <div className="shell__main">
                         <PageHeader />
+                        <PageStaleBanner />
                         <main id="main" className="content" tabIndex={-1}>
                           {children}
                         </main>

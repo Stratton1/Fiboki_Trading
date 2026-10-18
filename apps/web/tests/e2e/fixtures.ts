@@ -235,6 +235,9 @@ export function healthReport(overrides: Record<string, unknown> = {}) {
     migration_revision: "0007",
     execution_mode: "paper",
     worker_heartbeat_age_seconds: 12,
+    worker_state: "ok",
+    worker_stale_after_seconds: 120,
+    worker_stale_at: "2026-09-19T12:01:48Z",
     uptime_seconds: 3600,
     python_version: "3.11.9",
     checks: [
@@ -558,6 +561,7 @@ export async function mockShell(
   options: { operator?: boolean | "unauthenticated" | Record<string, unknown> } = {},
 ) {
   await mockApi(page);
+  await mockOperatorCore(page);
   await page.route(`${API}/api/health`, (route: Route) => route.fulfill({ json: healthReport() }));
   await page.route(`${API}/api/command/attention`, (route: Route) =>
     route.fulfill({ json: attentionPage() }),
@@ -1188,5 +1192,500 @@ export async function mockRisk(
   );
   await page.route(`${API}/api/trading/positions`, (route: Route) =>
     route.fulfill({ json: positionsPage() }),
+  );
+  await page.route(`${API}/api/trading/limits`, (route: Route) =>
+    route.fulfill({ json: limitBoard({ risk: options.risk, exposure: options.exposure }) }),
+  );
+}
+
+// ------------------------------------------- operator core (Wave 1A)
+
+/** One LimitRowView (api/limit_board.py): every decision already made. */
+export function limitRow(
+  key: string,
+  family: string,
+  label: string,
+  options: {
+    value?: number | null;
+    limit?: number | null;
+    utilisation?: number | null;
+    headroom?: number | null;
+    band?: string;
+    breached?: boolean;
+    kind?: string | null;
+    absent_reason?: string | null;
+    provenance?: string;
+    heat?: number | null;
+  } = {},
+) {
+  const p = options.provenance ?? "paper";
+  const util = options.utilisation ?? null;
+  return {
+    key,
+    family,
+    label,
+    kind: options.kind ?? null,
+    value: options.value === undefined ? null : figure(options.value, p, "pct"),
+    limit: options.limit === undefined || options.limit === null ? null : figure(options.limit, p, "pct"),
+    utilisation_pct: figure(util, p, "pct"),
+    headroom: figure(options.headroom ?? null, p, "pct"),
+    band: options.band ?? (util === null ? "absent" : "ok"),
+    breached: options.breached ?? false,
+    formula: util === null ? null : "used = value ÷ limit",
+    absent_reason: options.absent_reason ?? (util === null ? "Not reported by the API." : null),
+    see_also: null,
+    deep_link: family === "exposure" ? "/trading/exposure" : "/trading/risk",
+    heat: options.heat === undefined ? (util === null ? null : Math.min(5, Math.ceil(util / 20))) : options.heat,
+  };
+}
+
+/** The test-side band rule, for building fixtures (the API's rule, pinned in tests/api). */
+export function bandOf(util: number | null, breached: boolean) {
+  if (breached) return "breached";
+  if (util === null) return "absent";
+  if (util >= 90) return "critical";
+  if (util >= 70) return "warn";
+  return "ok";
+}
+
+/** GET /api/trading/limits for given risk and exposure answers, ordered as the API orders. */
+export function limitBoard(
+  options: { risk?: Record<string, unknown>; exposure?: Record<string, unknown>[] } = {},
+) {
+  type Fig = { value: number | null };
+  const risk = riskState(options.risk) as unknown as {
+    limits_version: string;
+    daily_loss_pct: Fig;
+    max_daily_loss_pct: Fig;
+    drawdown_pct: Fig;
+    max_drawdown_limit_pct: Fig;
+  };
+  const rows: ReturnType<typeof limitRow>[] = [
+    limitRow("none:account_risk", "account", "Open risk against the account limit"),
+    limitRow("none:correlated_exposure", "correlation", "Correlated exposure"),
+    limitRow("none:data_quality", "data_quality", "Data-quality tolerances"),
+  ];
+  const daily = risk.daily_loss_pct.value;
+  const dailyLimit = risk.max_daily_loss_pct.value;
+  const reasonOf = (fig: Fig & { caveats?: { code: string; message: string }[] }) =>
+    fig.caveats?.find((c) => c.code === "value_unavailable")?.message ?? "The API returned no value for this figure.";
+  if (daily === null || dailyLimit === null) {
+    rows.push(
+      limitRow("risk:daily_loss", "loss", "Daily loss", { value: daily, absent_reason: reasonOf(risk.daily_loss_pct) }),
+    );
+  } else {
+    const util = (Math.max(0, -daily) / dailyLimit) * 100;
+    const breached = daily < -dailyLimit;
+    rows.push(
+      limitRow("risk:daily_loss", "loss", "Daily loss", {
+        value: daily,
+        limit: dailyLimit,
+        utilisation: Number(util.toFixed(2)),
+        headroom: daily + dailyLimit,
+        band: bandOf(util, breached),
+        breached,
+      }),
+    );
+  }
+  rows.push(limitRow("risk:weekly_loss", "loss", "Weekly loss"));
+  const dd = risk.drawdown_pct.value;
+  const ddLimit = risk.max_drawdown_limit_pct.value;
+  if (dd === null || ddLimit === null) {
+    rows.push(limitRow("risk:drawdown", "drawdown", "Total drawdown", { value: dd, absent_reason: reasonOf(risk.drawdown_pct) }));
+  } else {
+    const util = (dd / ddLimit) * 100;
+    const breached = dd > ddLimit;
+    rows.push(
+      limitRow("risk:drawdown", "drawdown", "Total drawdown", {
+        value: dd,
+        limit: ddLimit,
+        utilisation: Number(util.toFixed(2)),
+        headroom: ddLimit - dd,
+        band: bandOf(util, breached),
+        breached,
+      }),
+    );
+  }
+  rows.push(limitRow("risk:margin", "margin", "Margin utilisation", { value: null }));
+  const exposure = (exposurePage(options.exposure).items as Record<string, any>[]).map((row) => {
+    const util = row.utilisation_pct.value as number | null;
+    const kind = String(row.key).split(":")[0];
+    return limitRow(`exposure:${row.key}`, "exposure", row.label, {
+      kind,
+      value: row.exposure_pct.value,
+      limit: row.limit_pct.value,
+      utilisation: util,
+      headroom: util === null || row.exposure_pct.value === null ? null : row.limit_pct.value - row.exposure_pct.value,
+      band: bandOf(util, Boolean(row.breached)),
+      breached: Boolean(row.breached),
+      provenance: row.exposure_pct.provenance,
+    });
+  });
+  rows.push(...exposure);
+  const urgency = (r: ReturnType<typeof limitRow>) =>
+    r.utilisation_pct.value === null
+      ? r.breached
+        ? 1e9
+        : -Infinity
+      : r.breached
+        ? 1e9 + r.utilisation_pct.value
+        : r.utilisation_pct.value;
+  const ordered = [...rows].sort((a, b) => {
+    const ua = urgency(a);
+    const ub = urgency(b);
+    if (ua === ub) return 0;
+    if (ua === -Infinity) return 1;
+    if (ub === -Infinity) return -1;
+    return ub - ua;
+  });
+  const order = ["account", "loss", "drawdown", "margin", "correlation", "exposure", "data_quality"];
+  const titles: Record<string, string> = {
+    account: "Account",
+    loss: "Daily / weekly loss",
+    drawdown: "Drawdown",
+    margin: "Margin",
+    correlation: "Correlation",
+    exposure: "Exposure",
+    data_quality: "Data quality",
+  };
+  const families = order
+    .map((id, index) => {
+      const members = ordered.filter((r) => r.family === id);
+      const worst = members[0] && members[0].band !== "absent" ? members[0] : null;
+      return { index, view: { id, title: titles[id], rows: members.map((r) => r.key), worst_key: worst?.key ?? null, source: "none" }, u: worst ? urgency(worst) : -Infinity };
+    })
+    .filter((f) => f.view.rows.length > 0 || f.view.id === "exposure")
+    .sort((a, b) => (a.u === b.u ? a.index - b.index : a.u === -Infinity ? 1 : b.u === -Infinity ? -1 : b.u - a.u))
+    .map((f) => f.view);
+  const measured = ordered.filter((r) => r.band !== "absent");
+  return {
+    data: {
+      limits_version: risk.limits_version,
+      rows: ordered,
+      families,
+      closest_key: measured[0]?.key ?? null,
+      bands: {
+        warn_at: figure(70, "paper", "pct"),
+        critical_at: figure(90, "paper", "pct"),
+        detail: "Platform display bands.",
+      },
+      sources: { risk: source("live"), exposure: source("live") },
+    },
+    source: source("live", "Limit set limits_v1_paper."),
+    caveats: [],
+  };
+}
+
+export function marketSessions(open: string[] = ["london", "new_york"]) {
+  return [
+    ["sydney", "Sydney", "Australia/Sydney", "01:02"],
+    ["tokyo", "Tokyo", "Asia/Tokyo", "23:02"],
+    ["london", "London", "Europe/London", "15:02"],
+    ["new_york", "New York", "America/New_York", "10:02"],
+  ].map(([key, label, timezone, local]) => ({
+    key,
+    label,
+    timezone,
+    local_time: local,
+    open: open.includes(key as string),
+    next_change_at: "2026-10-19T16:00:00Z",
+    detail: "Conventional hours; public holidays are not modelled.",
+  }));
+}
+
+export function clockView() {
+  return { data: { server_time: "2026-10-18T14:02:31Z", sessions: marketSessions() }, source: source("live"), caveats: [] };
+}
+
+/** GET /api/command/summary. */
+export function commandSummary(overrides: Record<string, unknown> = {}) {
+  const n = (v: number | null) => figure(v, "paper", "count");
+  return {
+    data: {
+      provenance: "paper",
+      currency: "GBP",
+      equity: figure(25_412.5, "paper", "GBP"),
+      balance: figure(25_370, "paper", "GBP"),
+      unrealised_pnl: figure(42.5, "paper", "GBP", { estimated: true }),
+      day_pnl: figure(-105.25, "paper", "GBP"),
+      day_pnl_pct: figure(-0.42, "paper", "pct"),
+      week_pnl: figure(310.75, "paper", "GBP"),
+      open_positions: n(2),
+      bots: { total: n(3), running: n(2), idle: n(0), stale: n(1), halted: n(0), finished: n(0), failed: n(0) },
+      research_in_flight: figure(null, "paper", "count", {
+        caveats: [{ code: "value_unavailable", severity: "warning", message: "No research orchestrator is attached.", affects: "", direction: "unknown" }],
+      }),
+      kill_switch_active: false,
+      kill_switch_mode: null,
+      new_risk_permitted: true,
+      pnl_day: "2026-10-16",
+      pnl_week_start: "2026-10-12",
+      server_time: "2026-10-18T14:02:31Z",
+      sessions: marketSessions(),
+      links: {
+        equity: "/trading/portfolio",
+        positions: "/trading/fleet",
+        bots: "/trading/fleet",
+        day_pnl: "/trading/execution",
+        research: "/research",
+        risk: "/trading/risk",
+      },
+      ...overrides,
+    },
+    source: source("live", "Portfolio, risk state, paper sessions and the kill-switch journal."),
+    caveats: [{ code: "day_is_last_bar", severity: "info", message: "Day P&L counts by the account's last bar.", affects: "day_pnl", direction: "unknown" }],
+  };
+}
+
+/** One FleetRowView (routers/fleet.py). */
+export function fleetRow(overrides: Record<string, unknown> = {}) {
+  const id = (overrides.session_id as string) ?? "forward-paper_forward_v1";
+  const strategy = (overrides.strategy_id as string) ?? "donchian_breakout_atr";
+  return {
+    session_id: id,
+    label: id.replace(/^forward-/, ""),
+    strategy_id: strategy,
+    instruments: ["EURUSD"],
+    timeframe: "H1",
+    asset_class: "fx",
+    kind: "forward",
+    provenance: "paper",
+    state: "running",
+    state_reason: "Summary written 120s ago; expected at least every 3600s bar.",
+    health: "ok",
+    health_reason: "No warnings on this session.",
+    last_signal: {
+      at: "2026-10-18T13:00:20Z",
+      outcome: "blocked",
+      kind: "open",
+      reason: "total_drawdown",
+      instrument: "EURUSD",
+    },
+    last_signal_absent: null,
+    open_positions: figure(1, "paper", "count"),
+    positions: [],
+    unrealised_pnl: figure(-6.87, "paper", "USD", { estimated: true }),
+    day_pnl: figure(0, "paper", "USD"),
+    realised_pnl: figure(-120.4, "paper", "USD"),
+    closed_trades: figure(4, "paper", "count"),
+    equity: figure(99_993.13, "paper", "USD", { estimated: true }),
+    summary_age: figure(120, "paper", "s"),
+    as_of: "2026-10-18T13:00:00Z",
+    written_at: "2026-10-18T14:00:31Z",
+    lifecycle: "paper",
+    content_hash: "abc123def456",
+    links: {
+      strategy: `/research/strategies/${strategy}`,
+      chart: "/markets/EURUSD?tf=H1",
+      journal: `/trading/execution?strategy=${strategy}`,
+      lifecycle: "/lifecycle/abc123def456",
+      session: `/trading/fleet?session=${id}`,
+    },
+    ...overrides,
+  };
+}
+
+export function fleetPage(items?: Record<string, unknown>[]) {
+  const list = items ?? [
+    fleetRow({
+      session_id: "forward-paper_forward_v1_eurgbp",
+      label: "paper_forward_v1_eurgbp",
+      instruments: ["EURGBP"],
+      state: "stale",
+      state_reason: "Summary last written 9000s ago, past 7500s while its market is open.",
+      health: "critical",
+      health_reason: "Summary last written 9000s ago.",
+      last_signal: null,
+      last_signal_absent: "No gateway decision was recorded.",
+      summary_age: figure(9000, "paper", "s"),
+    }),
+    fleetRow(),
+    fleetRow({
+      session_id: "forward-paper_forward_crypto_v1",
+      label: "paper_forward_crypto_v1",
+      strategy_id: "donchian_breakout_atr__ccore1",
+      instruments: ["BTCGBP", "ETHGBP"],
+      timeframe: "H4",
+      asset_class: "crypto",
+      unrealised_pnl: figure(12.4, "paper", "GBP", { estimated: true }),
+      day_pnl: figure(-3.2, "paper", "GBP"),
+      realised_pnl: figure(88.1, "paper", "GBP"),
+      content_hash: null,
+      links: {
+        strategy: "/research/strategies/donchian_breakout_atr__ccore1",
+        chart: "/markets/BTCGBP?tf=H4",
+        journal: "/trading/execution?strategy=donchian_breakout_atr__ccore1",
+        lifecycle: null,
+        session: "/trading/fleet?session=forward-paper_forward_crypto_v1",
+      },
+    }),
+  ];
+  return {
+    items: list,
+    total: list.length,
+    offset: 0,
+    limit: list.length,
+    source: source("live", "3 paper session(s)."),
+    caveats: [],
+  };
+}
+
+export function attributionView() {
+  const row = (key: string, net: number, share: number, link: string, chart: string | null) => ({
+    key,
+    label: key,
+    trades: figure(4, "paper", "count"),
+    wins: figure(2, "paper", "count"),
+    win_rate: figure(50, "paper", "pct"),
+    gross_pnl: figure(net + 10, "paper", "GBP"),
+    costs: figure(10, "paper", "GBP"),
+    net_pnl: figure(net, "paper", "GBP"),
+    day_pnl: figure(0, "paper", "GBP"),
+    unrealised_pnl: figure(0, "paper", "GBP"),
+    share_of_abs_pct: figure(share, "paper", "pct"),
+    link,
+    chart,
+  });
+  return {
+    data: {
+      provenance: "paper",
+      currency: "GBP",
+      by_strategy: [
+        row("donchian_breakout_atr", -120.4, 57.7, "/research/strategies/donchian_breakout_atr", null),
+        row("donchian_breakout_atr__ccore1", 88.1, 42.3, "/research/strategies/donchian_breakout_atr__ccore1", null),
+      ],
+      by_instrument: [
+        row("EURUSD", -120.4, 57.7, "/trading/execution?instrument=EURUSD", "/markets/EURUSD"),
+        row("BTCGBP", 88.1, 42.3, "/trading/execution?instrument=BTCGBP", "/markets/BTCGBP"),
+      ],
+      total_net_pnl: figure(-32.3, "paper", "GBP"),
+    },
+    source: source("live", "Closed paper trades and open paper positions only."),
+    caveats: [],
+  };
+}
+
+export function boardRow(overrides: Record<string, unknown> = {}) {
+  return {
+    id: "service:database",
+    group: "service",
+    name: "database",
+    status: "ok",
+    detail: "[live] reachable",
+    age: figure(0, "paper", "s"),
+    stale: false,
+    stale_after: figure(null, "paper", "s"),
+    deep_link: "/system",
+    ...overrides,
+  };
+}
+
+export function boardView(rows?: Record<string, unknown>[]) {
+  const list = rows ?? [
+    boardRow({ id: "worker:live@mac:1", group: "worker", name: "live@mac:1", status: "ok", age: figure(12, "paper", "s"), stale_after: figure(120, "paper", "s"), detail: "live: status idle" }),
+    boardRow({ id: "bot:forward-paper_forward_v1_eurgbp", group: "bot", name: "paper_forward_v1_eurgbp", status: "down", stale: true, age: figure(9000, "paper", "s"), detail: "STALE: summary last written 9000s ago.", deep_link: "/trading/fleet?session=forward-paper_forward_v1_eurgbp" }),
+    boardRow({ id: "bot:forward-paper_forward_v1", group: "bot", name: "paper_forward_v1", status: "ok", age: figure(120, "paper", "s"), detail: "RUNNING", deep_link: "/trading/fleet?session=forward-paper_forward_v1" }),
+    boardRow(),
+    boardRow({ id: "service:market_data_store", group: "data", name: "market_data_store", detail: "[live] 60 instruments", deep_link: "/markets/data-quality" }),
+    boardRow({ id: "broker:venue", group: "broker", name: "broker venue", detail: "No venue configured: correct in paper." }),
+    boardRow({ id: "alerts:incidents", group: "alerts", name: "open incidents", status: "degraded", detail: "1 open incident(s) not acknowledged.", deep_link: "/alerts" }),
+    boardRow({ id: "check:audit_chain", group: "check", name: "audit_chain", detail: "12 entries, hash chain verified" }),
+  ];
+  const count = (s: string) => figure(list.filter((r) => r.status === s).length, "paper", "count");
+  return {
+    data: {
+      server_time: "2026-10-18T14:02:31Z",
+      status: "down",
+      rows: list,
+      counts: { ok: count("ok"), degraded: count("degraded"), down: count("down"), absent: count("absent") },
+      stale: figure(list.filter((r) => r.stale).length, "paper", "count"),
+      advisory: "Not every component is healthy and current.",
+    },
+    source: source("live", "One API clock."),
+    caveats: [],
+  };
+}
+
+export function alertsView() {
+  const rule = (event: string, severity: string, state: string, fired: number, last: string | null, extra: Record<string, unknown> = {}) => ({
+    event,
+    severity,
+    category: "operational",
+    condition: `Raised when ${event.replace(/_/g, " ")}.`,
+    state,
+    last_fired_at: last,
+    fired: figure(fired, "paper", "count"),
+    open_incident: null,
+    ...extra,
+  });
+  return {
+    data: {
+      log_configured: true,
+      channels: ["console", "file"],
+      rules: [
+        rule("heartbeat_stale", "error", "firing", 3, "2026-10-18T13:55:00Z", { open_incident: "/system/incidents/inc-1" }),
+        rule("data_stale", "warning", "quiet", 1, "2026-10-17T09:00:00Z"),
+        rule("worker_down", "critical", "never_fired", 0, null),
+        rule("position_opened", "info", "never_fired", 0, null, { category: "trade" }),
+      ],
+      history: [
+        { at: "2026-10-18T13:55:00Z", event: "heartbeat_stale", severity: "error", message: "worker live@mac:1 heartbeat is 130s old", source: "live@mac:1", link: "/system/incidents/inc-1" },
+        { at: "2026-10-17T09:00:00Z", event: "data_stale", severity: "warning", message: "EURUSD H1 late", source: "feed", link: null },
+      ],
+      history_total: figure(4, "paper", "count"),
+      thresholds: { worker_stale_after: figure(120, "paper", "s") },
+    },
+    source: source("live", "Alert taxonomy and the alert log."),
+    caveats: [],
+  };
+}
+
+/** GET /api/search: a tiny entity index answering like routers/search.py. */
+export function searchAnswer(q: string) {
+  const index = [
+    { kind: "instrument", id: "EURUSD", label: "EURUSD", detail: "fx_major · EUR/USD · oanda", href: "/markets/EURUSD" },
+    { kind: "instrument", id: "EURGBP", label: "EURGBP", detail: "fx_cross · EUR/GBP · oanda", href: "/markets/EURGBP" },
+    { kind: "strategy", id: "ichimoku_kumo_trend", label: "Ichimoku kumo trend", detail: "strategy", href: "/research/strategies/ichimoku_kumo_trend" },
+    { kind: "strategy", id: "donchian_breakout_atr", label: "Donchian breakout", detail: "strategy", href: "/research/strategies/donchian_breakout_atr" },
+    { kind: "session", id: "forward-paper_forward_v1", label: "paper_forward_v1", detail: "paper bot", href: "/trading/fleet?session=forward-paper_forward_v1" },
+    { kind: "run", id: "bt_0001", label: "bt_0001", detail: "backtest · ichimoku_kumo_trend H1", href: "/research/runs/bt_0001" },
+    ...["trd_0001", "trd_0002", "trd_0003", "trd_0004"].map((id) => ({
+      kind: "trade",
+      id,
+      label: id,
+      detail: "EURUSD",
+      href: `/trading/execution?row=${id}`,
+    })),
+  ];
+  const query = q.trim().toLowerCase();
+  const tier = (h: { id: string; label: string }) => {
+    const i = h.id.toLowerCase();
+    const l = h.label.toLowerCase();
+    if (query === i || query === l) return 0;
+    if (i.startsWith(query) || l.startsWith(query)) return 1;
+    if ([...l.split(/[\s_\-/.:]+/), ...i.split(/[\s_\-/.:]+/)].some((w) => w && w.startsWith(query))) return 2;
+    if (i.includes(query) || l.includes(query)) return 3;
+    return null;
+  };
+  const kinds = ["instrument", "strategy", "session", "candidate", "run", "trade", "incident"];
+  const items = index
+    .map((h) => ({ ...h, tier: tier(h) }))
+    .filter((h): h is typeof h & { tier: number } => h.tier !== null)
+    .sort((a, b) => a.tier - b.tier || kinds.indexOf(a.kind) - kinds.indexOf(b.kind) || a.id.localeCompare(b.id));
+  return { items, total: items.length, offset: 0, limit: 20, source: source("live"), caveats: [] };
+}
+
+/** Every operator-core read, answered. Called from mockShell. */
+export async function mockOperatorCore(page: Page) {
+  await page.route(`${API}/api/system/clock`, (route: Route) => route.fulfill({ json: clockView() }));
+  await page.route(`${API}/api/command/summary`, (route: Route) => route.fulfill({ json: commandSummary() }));
+  await page.route(`${API}/api/trading/fleet`, (route: Route) => route.fulfill({ json: fleetPage() }));
+  await page.route(`${API}/api/trading/attribution`, (route: Route) => route.fulfill({ json: attributionView() }));
+  await page.route(`${API}/api/trading/limits`, (route: Route) => route.fulfill({ json: limitBoard() }));
+  await page.route(`${API}/api/system/board`, (route: Route) => route.fulfill({ json: boardView() }));
+  await page.route(`${API}/api/system/alerts*`, (route: Route) => route.fulfill({ json: alertsView() }));
+  await page.route(
+    (url) => url.pathname === "/api/search",
+    (route: Route) => route.fulfill({ json: searchAnswer(new URL(route.request().url()).searchParams.get("q") ?? "") }),
   );
 }

@@ -1,9 +1,11 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import { ApiError, apiFetch } from "@/lib/api";
 import { capability } from "@/lib/auth";
 import { PHONE_QUERY, useMediaQuery } from "@/lib/media";
+import { route } from "@/lib/routes";
 import { useApi } from "@/lib/query";
 import { AsyncBoundary } from "@/components/AsyncBoundary";
 import { useExecutionMode, useOperator } from "@/components/shell/platform";
@@ -164,7 +166,9 @@ export default function CandidatesPage() {
       value: (row) => `${row.name} ${row.strategy_id}`,
       cell: (row) => (
         <span className="grid__stack">
-          <strong>{row.name}</strong>
+          <Link href={route.candidate(row.content_hash)} data-testid="candidate-lifecycle-link">
+            <strong>{row.name}</strong>
+          </Link>
           <span className="mono muted">{row.strategy_id}</span>
         </span>
       ),
@@ -172,6 +176,23 @@ export default function CandidatesPage() {
       pin: true,
     },
     { id: "family", header: "Family", value: (row) => row.family, width: 96 },
+    {
+      id: "open",
+      header: "Open",
+      value: (row) => row.strategy_id,
+      // Cross-links (programme P0 3): its runs and tearsheet, its trades.
+      cell: (row) => (
+        <span className="row gap-2">
+          <Link prefetch={false} href={route.strategy(row.strategy_id)} data-testid="candidate-tearsheet-link">
+            runs
+          </Link>
+          <Link href={route.journal({ strategy: row.strategy_id })} data-testid="candidate-trades-link">
+            trades
+          </Link>
+        </span>
+      ),
+      width: 110,
+    },
     { id: "trades", header: "Trades", figure: (row) => row.trades, chip: true },
     { id: "win_rate", header: "Win rate", figure: (row) => row.win_rate, chip: true },
     {
@@ -253,7 +274,10 @@ export default function CandidatesPage() {
                 Promotion is disabled. {allowed.reason}
               </p>
             ) : null}
-            {!mutationsAllowed ? (
+            {/* Not while the mode is still being read: a note that appears for
+                a moment and goes moves every card below it. Promote stays
+                disabled meanwhile all the same. */}
+            {!mutationsAllowed && executionMode !== "loading" ? (
               <p className="muted" data-testid="promote-mode-blocked" role="note">
                 Promotion is disabled: the execution mode is unknown or the workstation is
                 disconnected, so nothing can be promoted until the platform answers.
@@ -265,8 +289,15 @@ export default function CandidatesPage() {
                   <li key={row.strategy_id} className="cand-card" data-testid="candidate-card" data-row-id={row.strategy_id}>
                     <div className="cand-card__head">
                       <span className="grid__stack">
-                        <strong>{row.name}</strong>
-                        <span className="mono muted">{row.strategy_id}</span>
+                        <Link href={route.candidate(row.content_hash)}>
+                          <strong>{row.name}</strong>
+                        </Link>
+                        <span>
+                          <span className="mono muted">{row.strategy_id}</span>{" "}
+                          <Link prefetch={false} href={route.strategy(row.strategy_id)}>
+                            runs
+                          </Link>
+                        </span>
                       </span>
                       <span className="row gap-1">
                         <span

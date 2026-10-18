@@ -2,6 +2,8 @@
 
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
+import { LifecycleRelated } from "@/components/lifecycle/Related";
+import { route } from "@/lib/routes";
 import { AsyncBoundary } from "@/components/AsyncBoundary";
 import { FigureValue } from "@/components/FigureValue";
 import { CaveatList, PageHead, SourceBadge, ToneBadge } from "@/components/primitives";
@@ -114,7 +116,7 @@ export function LifecycleEntity({ hash }: { hash: string }) {
         </p>
       </PageHead>
 
-      <section className="card" aria-labelledby="lifecycle-doc">
+      <section className="card reserve-doc" aria-labelledby="lifecycle-doc">
         <h2 id="lifecycle-doc" className="card__title">
           Strategy document
         </h2>
@@ -148,7 +150,7 @@ export function LifecycleEntity({ hash }: { hash: string }) {
         </AsyncBoundary>
       </section>
 
-      <section className="card" aria-labelledby="lifecycle-validation">
+      <section className="card reserve-val" aria-labelledby="lifecycle-validation">
         <h2 id="lifecycle-validation" className="card__title">
           Latest validation report
         </h2>
@@ -174,7 +176,7 @@ export function LifecycleEntity({ hash }: { hash: string }) {
         </AsyncBoundary>
       </section>
 
-      <section className="card" aria-labelledby="lifecycle-state">
+      <section className="card reserve-state" aria-labelledby="lifecycle-state">
         <h2 id="lifecycle-state" className="card__title">
           Lifecycle
         </h2>
@@ -197,6 +199,8 @@ export function LifecycleEntity({ hash }: { hash: string }) {
           </span>
         </p>
       </section>
+
+      {strategyId ? <LifecycleRelated strategyId={strategyId} /> : null}
     </>
   );
 }
@@ -281,6 +285,9 @@ function DocumentHeader({
         </div>
       </dl>
       <p className="entity-links">
+        <Link prefetch={false} href={route.strategy(doc.strategy_id)} data-testid="lifecycle-doc-tearsheet">
+          Tearsheet
+        </Link>
         <Link href="/research/strategies">Strategies list</Link>
         <Link href={`/research/parameter-lab?strategy=${encodeURIComponent(doc.strategy_id)}`}>Parameter Lab</Link>
       </p>

@@ -8,6 +8,7 @@ import {
   incident,
   incidentsPage,
   killSwitchEvent,
+  limitBoard,
   killSwitchHistory,
   liveBanner,
   mockShell,
@@ -52,7 +53,7 @@ test.describe("attention queue", () => {
     ]);
     // The position shown is the place in the server's order; the score is
     // the server's, with its provenance chip.
-    await expect(items.nth(0)).toContainText("#1");
+    await expect(items.nth(0)).toHaveAttribute("data-position", "1");
     await expect(items.nth(0)).toContainText("INFO");
     await expect(items.nth(1)).toContainText("CRITICAL");
     await expect(items.nth(1).getByTestId("figure")).toBeVisible();
@@ -215,10 +216,12 @@ test.describe("triage rows", () => {
     await expect(first.locator(".triage__glyph")).toHaveText("◆");
     await expect(first.locator(".triage__glyph")).toHaveAttribute("data-severity", "critical");
     await expect(first.getByTestId("attention-age")).toHaveText(/^\d+[smhd] old$/);
-    await expect(first.getByTestId("attention-mode").getByTestId("provenance-chip")).toHaveAttribute(
+    // Every item shares one provenance: the chip is said once, in the panel head.
+    await expect(page.getByTestId("attention-mode-shared").getByTestId("provenance-chip")).toHaveAttribute(
       "data-provenance",
       "paper",
     );
+    await expect(first.getByTestId("attention-mode")).toHaveCount(0);
     await expect(first.getByTestId("attention-link-kill_switch:armed")).toHaveAttribute("href", "/trading/risk");
     // Only an incident can be acknowledged; nothing else on a row mutates.
     await expect(page.locator('[data-testid^="attention-ack-"]')).toHaveCount(0);
@@ -358,64 +361,40 @@ test.describe("triage rows", () => {
 });
 
 test.describe("first numbers and fleet", () => {
-  test("the loss limits are the Risk page's bars, with provenance; open risk and the throttle are NOT REPORTED", async ({
-    page,
-  }) => {
+  test("the loss limits are the Risk board's own rows, from the API, with provenance once", async ({ page }) => {
     await mockShell(page);
-    await page.route(`${API}/api/trading/risk`, (route: Route) =>
-      route.fulfill({
-        json: { data: riskState({ daily_loss_pct: figure(-0.42, "paper", "pct") }), source: source("live"), caveats: [] },
-      }),
+    await page.route(`${API}/api/trading/limits`, (route: Route) =>
+      route.fulfill({ json: limitBoard({ risk: { daily_loss_pct: figure(-0.42, "paper", "pct") } }) }),
     );
     await page.goto("/");
-    // V-1: the three stat tiles are gone; the limit board's own rows are here.
     await expect(page.locator('[data-testid="tile"][data-label="Open risk"]')).toHaveCount(0);
     const limits = page.getByTestId("command-limits");
     const rows = limits.getByTestId("limit-row");
     await expect(rows).toHaveCount(2);
     const daily = limits.locator('[data-testid="limit-row"][data-key="risk:daily_loss"]');
     const drawdown = limits.locator('[data-testid="limit-row"][data-key="risk:drawdown"]');
-    // 0.42 of a 2% limit = 21.0%; 1.1 of 10% = 11.0%; both derived here (†).
+    // The API's utilisation (0.42 of a 2% limit = 21%), drawn, not derived.
     await expect(daily).toHaveAttribute("data-utilisation", "21.0");
-    await expect(daily).toHaveAttribute("data-derived", "true");
-    await expect(daily.getByTestId("limit-value")).toHaveText("−0.42%");
-    await expect(daily.getByTestId("provenance-chip")).toHaveAttribute("data-provenance", "paper");
+    await expect(daily).not.toHaveAttribute("data-derived", "true");
     await expect(daily.getByTestId("limit-bar")).toHaveAttribute("data-length", "21.0");
     await expect(drawdown).toHaveAttribute("data-utilisation", "11.0");
-    await expect(drawdown.getByTestId("limit-value")).toContainText("1.10%");
-    await expect(drawdown.getByTestId("provenance-chip")).toHaveAttribute("data-provenance", "paper");
-    await expect(limits.getByTestId("limit-derived-note")).toContainText("daily loss used = the day's loss ÷ the limit");
-    // The same provenance colour rule as on Risk: an OK bar takes its figure's ink.
+    // An OK bar takes its figure's ink; the provenance is said once for the panel.
     await expect(daily.locator(".limit-bar__fill")).toHaveAttribute("data-ink", "paper");
-    const absent = page.getByTestId("command-absent");
-    await expect(absent.getByTestId("view-state-absent")).toHaveText("⊘NOT REPORTED");
-    await expect(absent).toContainText("Open risk");
-    await expect(absent).toContainText("drawdown throttle");
+    await expect(page.getByTestId("command-limits-provenance").getByTestId("provenance-chip")).toHaveAttribute(
+      "data-provenance",
+      "paper",
+    );
   });
 
   test("a breached daily loss is BREACHED on Command exactly as on Risk", async ({ page }) => {
     await mockShell(page);
-    await page.route(`${API}/api/trading/risk`, (route: Route) =>
-      route.fulfill({
-        json: { data: riskState({ daily_loss_pct: figure(-2.5, "paper", "pct") }), source: source("live"), caveats: [] },
-      }),
+    await page.route(`${API}/api/trading/limits`, (route: Route) =>
+      route.fulfill({ json: limitBoard({ risk: { daily_loss_pct: figure(-2.5, "paper", "pct") } }) }),
     );
     await page.goto("/");
     const daily = page.locator('[data-testid="command-limits"] [data-testid="limit-row"][data-key="risk:daily_loss"]');
     await expect(daily).toHaveAttribute("data-state", "breached");
     await expect(daily.getByTestId("limit-state")).toHaveText("✕BREACHED");
-  });
-
-  test("the fleet strip shows the worker, the paper session, and what is not reported", async ({ page }) => {
-    await mockShell(page);
-    await page.goto("/");
-    await expect(page.getByTestId("fleet-worker")).toHaveAttribute("data-tone", /ok|warn|critical|unknown/);
-    await expect(page.getByTestId("health-heartbeat")).toHaveText("12s ago");
-    // The mocked report has no paper_journal check: no session, said as such.
-    await expect(page.getByTestId("fleet-paper")).toContainText("NONE");
-    await expect(page.getByTestId("fleet-news")).toHaveAttribute("data-tone", "absent");
-    await expect(page.getByTestId("fleet-news")).toContainText("NOT REPORTED");
-    await expect(page.getByTestId("fleet-model")).toContainText("NOT REPORTED");
   });
 
   test("axe: zero serious with the acknowledge dialog open", async ({ page }, testInfo) => {

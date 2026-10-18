@@ -200,7 +200,10 @@ test.describe("mode unknown", () => {
 
   test("disables promotion, even for an eligible candidate", async ({ page }) => {
     await page.goto("/trading/candidates");
-    await expect(page.getByTestId("candidate-row")).toHaveCount(candidatesPage().items.length);
+    // A grid row on a desktop, a card on a phone.
+    await expect(page.locator('[data-testid="candidate-row"], [data-testid="candidate-card"]')).toHaveCount(
+      candidatesPage().items.length,
+    );
     await expect(page.getByTestId("promote-ichimoku_kumo_trend")).toBeDisabled();
   });
 });

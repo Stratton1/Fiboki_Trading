@@ -1,6 +1,7 @@
 import { readFileSync, readdirSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { expect, test } from "@playwright/test";
+import { routePatterns } from "./routes";
 
 /**
  * Source-level rules, greppped.
@@ -238,6 +239,49 @@ test.describe("source rules", () => {
     // fails here; lib/api-contract.ts then fails typecheck on any drifted field.
     const { generate, OUTPUT } = await import("../../scripts/gen-api.mjs");
     expect(readFileSync(OUTPUT, "utf8"), "run `npm run gen:api`").toBe(await generate());
+  });
+
+  test("lib/ decides no limit band, breach, utilisation or worker staleness", async () => {
+    // Terminal programme P0 4: utilisation, headroom, bands, breaches and the
+    // worker's staleness are the API's (GET /api/trading/limits, /api/health
+    // worker_state). A comparison against a limit, a band, a breach or a
+    // stale threshold anywhere under lib/ is the frontend deciding one again,
+    // and the attention queue and the bars could disagree.
+    const banned = /(utilisation|util|breach|limit|warn_?at|critical_?at|threshold|stale_?after|band)[A-Za-z_.]*(\.value)?\)?\s[<>]=?\s|\s[<>]=?\s[A-Za-z_.(]*(utilisation|breach|limit|warn_?at|critical_?at|threshold|stale_?after|band)/i;
+    const invented = /\b(WARN_AT_PCT|CRITICAL_AT_PCT|WORKER_STALE_AFTER_S|workerIsStale|bandOf|utilisationBin)\b/;
+    const offenders: string[] = [];
+    for (const file of sources(join(ROOT, "lib"))) {
+      if (file.includes(join("lib", "generated"))) continue;
+      const text = stripComments(readFileSync(file, "utf8"));
+      text.split("\n").forEach((line, index) => {
+        if (banned.test(line) || invented.test(line)) offenders.push(`${file.replace(ROOT, "")}:${index + 1}: ${line.trim()}`);
+      });
+    }
+    for (const file of sources(join(ROOT, "components"))) {
+      const text = stripComments(readFileSync(file, "utf8"));
+      text.split("\n").forEach((line, index) => {
+        if (invented.test(line)) offenders.push(`${file.replace(ROOT, "")}:${index + 1}: ${line.trim()}`);
+      });
+    }
+    expect(offenders, "limit and staleness decisions belong to the API").toEqual([]);
+  });
+
+  test("entity routes are built by lib/routes.ts and name pages that exist", async () => {
+    // Read from source: lib/ is the app's module graph, not the test's.
+    const text = readFileSync(join(ROOT, "lib", "routes.ts"), "utf8");
+    const block = /export const ROUTE_PATTERNS = \[([\s\S]*?)\] as const;/.exec(text)?.[1] ?? "";
+    const ROUTE_PATTERNS = [...block.matchAll(/"([^"]+)"/g)].map((m) => m[1] as string);
+    expect(ROUTE_PATTERNS.length).toBeGreaterThan(20);
+    const onDisk = new Set(routePatterns());
+    // The research work stream builds these two; the path is the contract.
+    const contract = new Set(["/research/runs/[run_id]", "/research/strategies/[id]"]);
+    for (const pattern of ROUTE_PATTERNS) {
+      if (contract.has(pattern)) continue;
+      expect(onDisk.has(pattern), `lib/routes.ts names ${pattern}, which is not a page`).toBe(true);
+    }
+    for (const pattern of onDisk) {
+      expect(ROUTE_PATTERNS.includes(pattern), `page ${pattern} missing from lib/routes.ts`).toBe(true);
+    }
   });
 
   test("the attention queue is rendered in the server's order", async () => {

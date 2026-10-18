@@ -67,12 +67,10 @@ export function PlatformProvider({ children }: { children: ReactNode }) {
   const me = useApi<PrincipalView>(signingIn ? null : ME_PATH);
 
   // The worker heartbeat from REST, for freshness while the stream is down.
-  // The platform's own verdict rides along: the `worker_heartbeat` check.
+  // The platform's own verdict rides along (`worker_state`); the workstation
+  // never judges the age itself.
   const workerAge = health.status === "success" ? health.data.worker_heartbeat_age_seconds : undefined;
-  const workerState =
-    health.status === "success"
-      ? (health.data.checks.find((check) => check.name === "worker_heartbeat")?.status ?? null)
-      : null;
+  const workerState = health.status === "success" ? (health.data.worker_state ?? null) : null;
   const healthAsOf = health.status === "success" ? health.asOf : null;
   useEffect(() => {
     if (workerAge === undefined || healthAsOf === null) return;

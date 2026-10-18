@@ -1,64 +1,38 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect, useId, useMemo, useRef, useState, type KeyboardEvent } from "react";
+import { useEffect, useId, useRef, useState, type KeyboardEvent } from "react";
+import { pushHistory, readHistory } from "@/lib/history";
+import type { Hit } from "@/lib/search";
 import { openCommand } from "./commands";
+import { INSTRUMENT_FUNCTIONS } from "./functions";
+import { SessionClocks } from "./SessionClocks";
+import { KIND_LABEL, useSuggestions } from "./suggest";
+import { useOperator } from "./platform";
 import { SECTIONS } from "./sections";
 
 /**
- * The command line's engine: matching, the listbox and what Enter does, and
- * the bar's global keys. Split from TopBar and loaded right after hydration,
- * which keeps the shell's first-load JavaScript inside its budget.
+ * The command line's engine: the grammar, suggestions, history and what Enter
+ * does. Split from TopBar and loaded right after hydration, which keeps the
+ * shell's first-load JavaScript inside its budget.
+ *
+ * Grammar (components/shell/functions.ts):
+ *   RSK, FLT, LAB …          a screen code
+ *   FUNC, HELP               the function directory
+ *   KILL                     opens the kill-switch dialog (never arms)
+ *   EURUSD                   the instrument's chart
+ *   EURUSD H4 | BT | NEWS …  an instrument function
+ *
+ * Suggestions merge the registry with real entities (the platform's
+ * instrument list, matched here, and GET /api/search for strategies, bots,
+ * runs, trades), exact match first. Enter on text that is neither a code nor a
+ * known symbol opens a suggestion only when it is exact, the only one, or one
+ * the operator highlighted; otherwise the line says so and stays put. Unknown
+ * text never navigates blindly.
+ *
+ * History: ↑ and ↓ on an empty or recalled line walk the last 50 commands,
+ * kept per operator in this browser.
  */
-
-interface Entry {
-  code: string;
-  label: string;
-  section: string;
-  href: string;
-}
-
-/** The command-line code of every view. */
-const CODES: Record<string, string> = {
-  "/": "CMD",
-  "/market-pulse": "PULSE",
-  "/alerts": "ALRT",
-  "/trading/portfolio": "FLT",
-  "/trading/candidates": "LIF",
-  "/research": "LAB",
-  "/research/hypotheses": "HYP",
-  "/research/experiments": "XPR",
-  "/research/strategies": "STR",
-  "/research/parameter-lab": "PARAM",
-  "/research/validation": "VAL",
-  "/research/datasets": "DSET",
-  "/markets": "MKT",
-  "/markets/regimes": "REGM",
-  "/markets/correlations": "CORR",
-  "/intelligence/agents": "AGT",
-  "/intelligence/runs": "RUNS",
-  "/intelligence/research-memory": "MEM",
-  "/trading/risk": "RSK",
-  "/trading/exposure": "EXPO",
-  "/markets/data-quality": "DQ",
-  "/system/data-health": "DH",
-  "/system/services": "SYS",
-  "/system/workers": "WRK",
-  "/system/broker-health": "BRK",
-  "/system/logs": "LOG",
-  "/system/settings": "SET",
-  "/system/legend": "LEG",
-  "/trading/execution": "JRN",
-};
-
-const ENTRIES: Entry[] = SECTIONS.flatMap((section) =>
-  section.links.map((link) => ({
-    code: CODES[link.href] ?? link.label.toUpperCase(),
-    label: link.label,
-    section: section.title,
-    href: link.href,
-  })),
-);
 
 /** True while a dialog is open (one in its exit transition is closing, not open). */
 function dialogOpen(): boolean {
@@ -69,90 +43,140 @@ function dialogOpen(): boolean {
   );
 }
 
-const SYMBOL = /^[A-Za-z0-9._/-]{2,16}$/;
-
-function matchEntries(query: string): Entry[] {
-  const q = query.trim().toLowerCase();
-  if (q === "") return [];
-  const score = (entry: Entry): number => {
-    const code = entry.code.toLowerCase();
-    if (code === q) return 0;
-    if (code.startsWith(q)) return 1;
-    if (entry.label.toLowerCase().startsWith(q)) return 2;
-    if (`${entry.section} ${entry.label}`.toLowerCase().includes(q)) return 3;
-    return 9;
-  };
-  return ENTRIES.map((entry) => ({ entry, rank: score(entry) }))
-    .filter((x) => x.rank < 9)
-    .sort((a, b) => a.rank - b.rank)
-    .slice(0, 6)
-    .map((x) => x.entry);
-}
-
 function CommandLine() {
   const router = useRouter();
+  const operator = useOperator();
   const input = useRef<HTMLInputElement>(null);
   const listId = useId();
   const [text, setText] = useState("");
   const [open, setOpen] = useState(false);
+  const [used, setUsed] = useState(false);
   const [active, setActive] = useState(0);
-  const matches = useMemo(() => matchEntries(text), [text]);
-  const showList = open && matches.length > 0;
-  const current = Math.min(active, Math.max(0, matches.length - 1));
+  const [chosen, setChosen] = useState(false);
+  const [message, setMessage] = useState<string | null>(null);
+  const [recall, setRecall] = useState<number | null>(null);
+  const { parsed, hits, pending } = useSuggestions(text, used);
+  // Enter pressed while the instrument list or the search was still in
+  // flight: run again once they have answered, never on half the facts.
+  const queued = useRef(false);
+  const showList = open && hits.length > 0;
+  const current = Math.min(active, Math.max(0, hits.length - 1));
 
   const reset = () => {
     setText("");
     setOpen(false);
     setActive(0);
+    setChosen(false);
+    setRecall(null);
   };
 
-  const run = (entry: Entry | null) => {
-    const raw = text.trim();
-    if (entry) {
-      reset();
-      input.current?.blur();
-      router.push(entry.href);
-      return;
-    }
-    const word = raw.toUpperCase();
-    if (word === "") {
-      openCommand("palette");
-      return;
-    }
-    if (word === "?" || word === "HELP") {
-      reset();
-      openCommand("shortcuts");
-      return;
-    }
-    if (word === "KILL" || word === "HALT") {
-      reset();
-      openCommand("kill-switch");
-      return;
-    }
-    if (SYMBOL.test(raw)) {
-      reset();
-      input.current?.blur();
-      router.push(`/markets/${encodeURIComponent(word)}`);
-      return;
-    }
-    // Nothing recognised: hand the text to the full palette's search.
-    openCommand("palette");
+  const go = (href: string, command: string) => {
+    pushHistory(operator?.user_id, command);
+    reset();
+    setMessage(null);
+    input.current?.blur();
+    router.push(href);
   };
+
+  const pick = (hit: Hit) => go(hit.href, hit.kind === "function" || hit.kind === "screen" ? hit.id : hit.id);
+
+  const run = () => {
+    const raw = text.trim();
+    switch (parsed.kind) {
+      case "empty":
+        openCommand("palette");
+        return;
+      case "command":
+        pushHistory(operator?.user_id, "KILL");
+        reset();
+        openCommand("kill-switch");
+        return;
+      case "alias":
+        go(parsed.href, parsed.code);
+        return;
+      case "screen":
+        go(parsed.fn.href, parsed.fn.code);
+        return;
+      case "instrument":
+        if (parsed.fn === null) {
+          setMessage(
+            `${parsed.rest.toUpperCase()} is not a function for ${parsed.symbol}. Try ${INSTRUMENT_FUNCTIONS.map((f) => f.code).join(", ")}.`,
+          );
+          return;
+        }
+        go(parsed.fn.href(parsed.symbol), parsed.rest === "" ? parsed.symbol : `${parsed.symbol} ${parsed.fn.code}`);
+        return;
+      case "text": {
+        if (pending) {
+          queued.current = true;
+          return;
+        }
+        const top = hits[current];
+        if (top && (chosen || top.tier === 0 || hits.length === 1)) {
+          pick(top);
+          return;
+        }
+        setOpen(true);
+        setMessage(
+          hits.length === 0
+            ? `Nothing matches "${raw}". Type a code (FUNC lists them) or a symbol the platform lists.`
+            : `No exact match for "${raw}": choose one with ↓, or press Enter on it.`,
+        );
+      }
+    }
+  };
+
+  const runLatest = useRef(() => {});
+  useEffect(() => {
+    runLatest.current = run;
+  });
+  useEffect(() => {
+    if (!queued.current || pending) return;
+    queued.current = false;
+    runLatest.current();
+  }, [pending]);
 
   const onKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
-    if (event.key === "ArrowDown" && matches.length > 0) {
+    if (event.key === "ArrowDown" && showList) {
       event.preventDefault();
-      setOpen(true);
-      setActive((current + 1) % matches.length);
-    } else if (event.key === "ArrowUp" && matches.length > 0) {
+      // The first ↓ chooses the top suggestion; each later one the next.
+      setActive(chosen ? (current + 1) % hits.length : 0);
+      setChosen(true);
+      return;
+    }
+    if (event.key === "ArrowUp" && showList && chosen) {
       event.preventDefault();
-      setActive((current - 1 + matches.length) % matches.length);
-    } else if (event.key === "Enter") {
+      setActive((current - 1 + hits.length) % hits.length);
+      return;
+    }
+    if ((event.key === "ArrowUp" || event.key === "ArrowDown") && (text === "" || recall !== null)) {
+      const history = readHistory(operator?.user_id);
+      if (history.length === 0) return;
       event.preventDefault();
-      // An exact mnemonic wins over the highlighted suggestion's ranking.
-      const exact = matches.find((m) => m.code.toLowerCase() === text.trim().toLowerCase());
-      run(exact ?? (showList ? (matches[current] ?? null) : (matches[0] ?? null)));
-    } else if (event.key === "Escape") {
+      const at = recall ?? history.length;
+      const next = event.key === "ArrowUp" ? Math.max(0, at - 1) : at + 1;
+      if (next >= history.length) {
+        setRecall(null);
+        setText("");
+        return;
+      }
+      setRecall(next);
+      setText(history[next] ?? "");
+      setOpen(false);
+      return;
+    }
+    if (event.key === "Enter") {
+      event.preventDefault();
+      if (showList && chosen) {
+        const hit = hits[current];
+        if (hit) pick(hit);
+        return;
+      }
+      run();
+      return;
+    }
+    if (event.key === "Escape") {
+      setMessage(null);
       if (text !== "" || open) {
         event.preventDefault();
         reset();
@@ -174,7 +198,7 @@ function CommandLine() {
         type="text"
         className="cmdline__input"
         data-testid="command-line-input"
-        placeholder="Mnemonic or symbol: RSK, LAB, EURUSD  ( / to focus, ? help )"
+        placeholder="Code or symbol: RSK, FLT, EURUSD H4, EURUSD BT  ( / focus, ↑ history, FUNC list )"
         autoComplete="off"
         autoCapitalize="characters"
         spellCheck={false}
@@ -182,15 +206,26 @@ function CommandLine() {
         aria-expanded={showList}
         aria-controls={listId}
         aria-autocomplete="list"
-        aria-activedescendant={showList ? `${listId}-${current}` : undefined}
+        aria-describedby={message ? `${listId}-msg` : undefined}
+        aria-activedescendant={showList && chosen ? `${listId}-${current}` : undefined}
         value={text}
         onChange={(event) => {
           setText(event.target.value);
           setOpen(true);
           setActive(0);
+          setChosen(false);
+          setRecall(null);
+          setMessage(null);
+          queued.current = false;
         }}
-        onFocus={() => setOpen(true)}
-        onBlur={() => setOpen(false)}
+        onFocus={() => {
+          setUsed(true);
+          setOpen(true);
+        }}
+        onBlur={() => {
+          setOpen(false);
+          setMessage(null);
+        }}
         onKeyDown={onKeyDown}
       />
       <button
@@ -200,37 +235,50 @@ function CommandLine() {
         tabIndex={-1}
         // mousedown, not click: the input's blur would close the list first.
         onMouseDown={(event) => event.preventDefault()}
-        onClick={() => run(showList ? (matches[current] ?? null) : (matches[0] ?? null))}
+        onClick={() => {
+          if (showList && chosen && hits[current]) pick(hits[current]);
+          else run();
+        }}
       >
         GO
       </button>
       <ul
         id={listId}
         role="listbox"
-        aria-label="Matching screens"
+        aria-label="Suggestions"
         className="cmdline__list"
         hidden={!showList}
         data-testid="command-line-list"
       >
-        {matches.map((entry, index) => (
+        {hits.map((hit, index) => (
           <li
-            key={entry.href}
+            key={`${hit.kind}:${hit.id}`}
             id={`${listId}-${index}`}
             role="option"
-            aria-selected={index === current}
+            aria-selected={chosen && index === current}
             className="cmdline__option"
-            data-active={index === current}
+            data-active={chosen && index === current}
+            data-kind={hit.kind}
+            data-tier={hit.tier}
+            data-testid="command-line-option"
             onMouseDown={(event) => {
               event.preventDefault();
-              run(entry);
+              pick(hit);
             }}
           >
-            <span className="cmdline__code">{entry.code}</span>
-            <span className="cmdline__label">{entry.label}</span>
-            <span className="cmdline__section">{entry.section}</span>
+            <span className="cmdline__code">{hit.id}</span>
+            <span className="cmdline__label">{hit.label === hit.id ? "" : hit.label}</span>
+            <span className="cmdline__section">
+              <span className="cmdline__kind">{KIND_LABEL[hit.kind]}</span> {hit.detail}
+            </span>
           </li>
         ))}
       </ul>
+      {message ? (
+        <p id={`${listId}-msg`} className="cmdline__msg" role="status" data-testid="command-line-message">
+          {message}
+        </p>
+      ) : null}
     </div>
   );
 }
@@ -258,9 +306,8 @@ function useBannerHeight() {
 /**
  * The bar's global keys, installed once the engine has loaded:
  *  - `/` focuses the command line from anywhere that is not a field;
- *  - F1 to F9 go to a section (F5 is left to the browser's reload);
- *  - arrows, Home and End move along the function-key row, which is one tab
- *    stop so nine more do not sit between the skip link and the page.
+ *  - F1 to F9 go to a section (F5 is left to the browser's reload); the rail
+ *    shows each section's key.
  */
 function TopBarKeys() {
   const router = useRouter();
@@ -269,26 +316,6 @@ function TopBarKeys() {
     const onKey = (event: globalThis.KeyboardEvent) => {
       if (event.defaultPrevented || event.metaKey || event.ctrlKey || event.altKey) return;
       const target = event.target;
-      const row = target instanceof HTMLElement ? target.closest(".fkeys") : null;
-      if (row) {
-        const links = Array.from(row.querySelectorAll<HTMLAnchorElement>("a.fkey"));
-        const at = links.indexOf(target as HTMLAnchorElement);
-        const next =
-          event.key === "ArrowRight"
-            ? (at + 1) % links.length
-            : event.key === "ArrowLeft"
-              ? (at - 1 + links.length) % links.length
-              : event.key === "Home"
-                ? 0
-                : event.key === "End"
-                  ? links.length - 1
-                  : -1;
-        if (at >= 0 && next >= 0) {
-          event.preventDefault();
-          links[next]?.focus();
-          return;
-        }
-      }
       if (dialogOpen()) return;
       if (event.key === "/") {
         if (
@@ -317,11 +344,12 @@ function TopBarKeys() {
   return null;
 }
 
-/** What TopBar loads after hydration: the command line and the bar's keys. */
+/** What TopBar loads after hydration: the command line, the clocks and the bar's keys. */
 export default function TopBarEngine() {
   return (
     <>
       <CommandLine />
+      <SessionClocks />
       <TopBarKeys />
     </>
   );

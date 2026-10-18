@@ -161,7 +161,7 @@ for (const size of SHELL_WIDTHS) {
       expect(rowHeight).toBe(size.density === "comfortable" ? "34px" : "24px");
     });
 
-    test(size.drawer ? "the rail is a closed drawer" : "the rail is a 56px icon column", async ({
+    test(size.drawer ? "the rail is a closed drawer" : "the rail is a 48px icon column (with the F-keys)", async ({
       page,
     }) => {
       await page.goto("/trading/risk");
@@ -173,13 +173,13 @@ for (const size of SHELL_WIDTHS) {
         expect(box.x + box.width).toBeLessThanOrEqual(1);
       } else {
         await expect(page.getByTestId("nav-toggle")).toBeHidden();
-        expect(Math.round(box.width)).toBe(56);
+        expect(Math.round(box.width)).toBe(48);
         await expect(page.getByTestId("rail-risk")).toHaveAttribute("data-active", "true");
         await page.getByTestId("rail-toggle").click();
         await expect.poll(async () => Math.round((await nav.boundingBox())?.width ?? -1)).toBe(232);
         await expect(nav.getByRole("link", { name: "Exposure" })).toBeVisible();
         await page.getByTestId("rail-toggle").click();
-        await expect.poll(async () => Math.round((await nav.boundingBox())?.width ?? -1)).toBe(56);
+        await expect.poll(async () => Math.round((await nav.boundingBox())?.width ?? -1)).toBe(48);
       }
     });
 

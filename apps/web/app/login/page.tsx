@@ -64,6 +64,10 @@ export default function LoginPage() {
         title="Sign in"
         intro="Sign in with your operator account. The mode banner above shows where orders would go on this platform."
       />
+      {/* No shell chrome here, so the explanation is shown, not folded away. */}
+      <p className="muted">
+        Sign in with your operator account. The mode banner above shows where orders would go on this platform.
+      </p>
       <form method="post" onSubmit={onSubmit} noValidate data-testid="login-form">
         <label htmlFor="login-username">Username</label>
         <input

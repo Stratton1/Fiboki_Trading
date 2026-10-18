@@ -76,6 +76,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/command/summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Summary
+         * @description Equity, day and week P&L, positions, bots and research load. Server-computed.
+         */
+        get: operations["summary_api_command_summary_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/health": {
         parameters: {
             query?: never;
@@ -506,6 +526,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/search": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Search
+         * @description Entities matching ``q``, best first. Only entities that exist.
+         */
+        get: operations["search_api_search_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/stream": {
         parameters: {
             query?: never;
@@ -526,6 +566,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/system/alerts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Alerts
+         * @description Alert rules with state and last fired, plus the alert history.
+         */
+        get: operations["alerts_api_system_alerts_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/system/board": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Board
+         * @description Every service, worker, bot, broker, check and the incident load, one clock.
+         */
+        get: operations["board_api_system_board_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/system/broker-health": {
         parameters: {
             query?: never;
@@ -535,6 +615,26 @@ export interface paths {
         };
         /** Broker Health */
         get: operations["broker_health_api_system_broker_health_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/system/clock": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Clock
+         * @description Cheap enough for every page: the server time and which sessions are open.
+         */
+        get: operations["clock_api_system_clock_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -859,6 +959,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/trading/attribution": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Attribution
+         * @description Net P&L of the executing mode, attributed by strategy and by instrument.
+         */
+        get: operations["attribution_api_trading_attribution_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/trading/candidates": {
         parameters: {
             query?: never;
@@ -956,6 +1076,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/trading/fleet": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Fleet
+         * @description Every paper bot, worst state first. The order IS the ranking.
+         */
+        get: operations["fleet_api_trading_fleet_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/trading/lifecycle/strategies": {
         parameters: {
             query?: never;
@@ -1009,6 +1149,29 @@ export interface paths {
          *     the coercion this API exists to prevent.
          */
         get: operations["last_evaluation_api_trading_lifecycle_strategies__content_hash__evaluation_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/trading/limits": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Limits
+         * @description Every limit with its utilisation, headroom and band, ordered most used first.
+         *
+         *     The workstation draws these bars and decides nothing about them; the
+         *     attention queue lists the same rows (``api/limit_board.py``).
+         */
+        get: operations["limits_api_trading_limits_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1151,6 +1314,58 @@ export interface components {
             /** Role */
             role: string;
         };
+        /** AlertHistoryRow */
+        AlertHistoryRow: {
+            /**
+             * At
+             * Format: date-time
+             */
+            at: string;
+            /** Event */
+            event: string;
+            /** Link */
+            link: string | null;
+            /** Message */
+            message: string;
+            /** Severity */
+            severity: string;
+            /** Source */
+            source: string;
+        };
+        /** AlertRuleView */
+        AlertRuleView: {
+            /** Category */
+            category: string;
+            /** Condition */
+            condition: string;
+            /** Event */
+            event: string;
+            fired: components["schemas"]["Figure"];
+            /** Last Fired At */
+            last_fired_at: string | null;
+            /** Open Incident */
+            open_incident: string | null;
+            /** Severity */
+            severity: string;
+            /** State */
+            state: string;
+        };
+        /** AlertsView */
+        AlertsView: {
+            /** Channels */
+            channels: string[];
+            /** History */
+            history: components["schemas"]["AlertHistoryRow"][];
+            history_total: components["schemas"]["Figure"];
+            /** Log Configured */
+            log_configured: boolean;
+            /** Rules */
+            rules: components["schemas"]["AlertRuleView"][];
+            /** Thresholds */
+            thresholds: {
+                [key: string]: components["schemas"]["Figure"];
+            };
+        };
         /**
          * AttentionItem
          * @description One thing an operator should look at, with where to go to act on it.
@@ -1171,6 +1386,38 @@ export interface components {
             severity: string;
             /** Title */
             title: string;
+        };
+        /** AttributionRow */
+        AttributionRow: {
+            /** Chart */
+            chart: string | null;
+            costs: components["schemas"]["Figure"];
+            day_pnl: components["schemas"]["Figure"];
+            gross_pnl: components["schemas"]["Figure"];
+            /** Key */
+            key: string;
+            /** Label */
+            label: string;
+            /** Link */
+            link: string;
+            net_pnl: components["schemas"]["Figure"];
+            share_of_abs_pct: components["schemas"]["Figure"];
+            trades: components["schemas"]["Figure"];
+            unrealised_pnl: components["schemas"]["Figure"];
+            win_rate: components["schemas"]["Figure"];
+            wins: components["schemas"]["Figure"];
+        };
+        /** AttributionView */
+        AttributionView: {
+            /** By Instrument */
+            by_instrument: components["schemas"]["AttributionRow"][];
+            /** By Strategy */
+            by_strategy: components["schemas"]["AttributionRow"][];
+            /** Currency */
+            currency: string | null;
+            /** Provenance */
+            provenance: string;
+            total_net_pnl: components["schemas"]["Figure"];
         };
         /** AuditEntryView */
         AuditEntryView: {
@@ -1302,6 +1549,61 @@ export interface components {
             /** Trade Id */
             trade_id: string;
         };
+        /** BandsView */
+        BandsView: {
+            critical_at: components["schemas"]["Figure"];
+            /** Detail */
+            detail: string;
+            warn_at: components["schemas"]["Figure"];
+        };
+        /** BoardRow */
+        BoardRow: {
+            age: components["schemas"]["Figure"];
+            /** Deep Link */
+            deep_link: string;
+            /** Detail */
+            detail: string;
+            /** Group */
+            group: string;
+            /** Id */
+            id: string;
+            /** Name */
+            name: string;
+            /** Stale */
+            stale: boolean;
+            stale_after: components["schemas"]["Figure"];
+            /** Status */
+            status: string;
+        };
+        /** BoardView */
+        BoardView: {
+            /** Advisory */
+            advisory: string;
+            /** Counts */
+            counts: {
+                [key: string]: components["schemas"]["Figure"];
+            };
+            /** Rows */
+            rows: components["schemas"]["BoardRow"][];
+            /**
+             * Server Time
+             * Format: date-time
+             */
+            server_time: string;
+            stale: components["schemas"]["Figure"];
+            /** Status */
+            status: string;
+        };
+        /** BotCounts */
+        BotCounts: {
+            failed: components["schemas"]["Figure"];
+            finished: components["schemas"]["Figure"];
+            halted: components["schemas"]["Figure"];
+            idle: components["schemas"]["Figure"];
+            running: components["schemas"]["Figure"];
+            stale: components["schemas"]["Figure"];
+            total: components["schemas"]["Figure"];
+        };
         /** BrokerHealthView */
         BrokerHealthView: {
             /** Configured */
@@ -1378,6 +1680,59 @@ export interface components {
              * @default info
              */
             severity: string;
+        };
+        /**
+         * ClockView
+         * @description The API's clock and the market sessions, for the shell's session clocks.
+         */
+        ClockView: {
+            /**
+             * Server Time
+             * Format: date-time
+             */
+            server_time: string;
+            /** Sessions */
+            sessions: components["schemas"]["MarketSessionView"][];
+        };
+        /**
+         * CommandSummaryView
+         * @description The money strip: the book, the fleet and the research load, all decided here.
+         */
+        CommandSummaryView: {
+            balance: components["schemas"]["Figure"];
+            bots: components["schemas"]["BotCounts"];
+            /** Currency */
+            currency: string | null;
+            day_pnl: components["schemas"]["Figure"];
+            day_pnl_pct: components["schemas"]["Figure"];
+            equity: components["schemas"]["Figure"];
+            /** Kill Switch Active */
+            kill_switch_active: boolean;
+            /** Kill Switch Mode */
+            kill_switch_mode: string | null;
+            /** Links */
+            links: {
+                [key: string]: string;
+            };
+            /** New Risk Permitted */
+            new_risk_permitted: boolean;
+            open_positions: components["schemas"]["Figure"];
+            /** Pnl Day */
+            pnl_day: string | null;
+            /** Pnl Week Start */
+            pnl_week_start: string | null;
+            /** Provenance */
+            provenance: string;
+            research_in_flight: components["schemas"]["Figure"];
+            /**
+             * Server Time
+             * Format: date-time
+             */
+            server_time: string;
+            /** Sessions */
+            sessions: components["schemas"]["MarketSessionView"][];
+            unrealised_pnl: components["schemas"]["Figure"];
+            week_pnl: components["schemas"]["Figure"];
         };
         /** DataQualityRow */
         DataQualityRow: {
@@ -1480,6 +1835,26 @@ export interface components {
             /** Drawings */
             drawings: components["schemas"]["Drawing"][];
         };
+        /** Envelope[AlertsView] */
+        Envelope_AlertsView_: {
+            /**
+             * Caveats
+             * @default []
+             */
+            caveats: components["schemas"]["Caveat"][];
+            data: components["schemas"]["AlertsView"];
+            source: components["schemas"]["SourceNote"];
+        };
+        /** Envelope[AttributionView] */
+        Envelope_AttributionView_: {
+            /**
+             * Caveats
+             * @default []
+             */
+            caveats: components["schemas"]["Caveat"][];
+            data: components["schemas"]["AttributionView"];
+            source: components["schemas"]["SourceNote"];
+        };
         /** Envelope[AuditIntegrityView] */
         Envelope_AuditIntegrityView_: {
             /**
@@ -1500,6 +1875,16 @@ export interface components {
             data: components["schemas"]["BacktestTradesView"];
             source: components["schemas"]["SourceNote"];
         };
+        /** Envelope[BoardView] */
+        Envelope_BoardView_: {
+            /**
+             * Caveats
+             * @default []
+             */
+            caveats: components["schemas"]["Caveat"][];
+            data: components["schemas"]["BoardView"];
+            source: components["schemas"]["SourceNote"];
+        };
         /** Envelope[BrokerHealthView] */
         Envelope_BrokerHealthView_: {
             /**
@@ -1508,6 +1893,26 @@ export interface components {
              */
             caveats: components["schemas"]["Caveat"][];
             data: components["schemas"]["BrokerHealthView"];
+            source: components["schemas"]["SourceNote"];
+        };
+        /** Envelope[ClockView] */
+        Envelope_ClockView_: {
+            /**
+             * Caveats
+             * @default []
+             */
+            caveats: components["schemas"]["Caveat"][];
+            data: components["schemas"]["ClockView"];
+            source: components["schemas"]["SourceNote"];
+        };
+        /** Envelope[CommandSummaryView] */
+        Envelope_CommandSummaryView_: {
+            /**
+             * Caveats
+             * @default []
+             */
+            caveats: components["schemas"]["Caveat"][];
+            data: components["schemas"]["CommandSummaryView"];
             source: components["schemas"]["SourceNote"];
         };
         /** Envelope[dict] */
@@ -1579,6 +1984,16 @@ export interface components {
              */
             caveats: components["schemas"]["Caveat"][];
             data: components["schemas"]["LifecycleEvaluationView"];
+            source: components["schemas"]["SourceNote"];
+        };
+        /** Envelope[LimitBoardView] */
+        Envelope_LimitBoardView_: {
+            /**
+             * Caveats
+             * @default []
+             */
+            caveats: components["schemas"]["Caveat"][];
+            data: components["schemas"]["LimitBoardView"];
             source: components["schemas"]["SourceNote"];
         };
         /** Envelope[OverlayView] */
@@ -1851,6 +2266,57 @@ export interface components {
             /** Trade Id */
             trade_id: string;
         };
+        /** FleetRowView */
+        FleetRowView: {
+            /** As Of */
+            as_of: string | null;
+            /** Asset Class */
+            asset_class: string;
+            closed_trades: components["schemas"]["Figure"];
+            /** Content Hash */
+            content_hash: string | null;
+            day_pnl: components["schemas"]["Figure"];
+            equity: components["schemas"]["Figure"];
+            /** Health */
+            health: string;
+            /** Health Reason */
+            health_reason: string;
+            /** Instruments */
+            instruments: string[];
+            /** Kind */
+            kind: string;
+            /** Label */
+            label: string;
+            last_signal: components["schemas"]["LastSignalView"] | null;
+            /** Last Signal Absent */
+            last_signal_absent: string | null;
+            /** Lifecycle */
+            lifecycle: string | null;
+            links: components["schemas"]["LinkSet"];
+            open_positions: components["schemas"]["Figure"];
+            /** Positions */
+            positions: components["schemas"]["OpenPositionView"][];
+            /** Provenance */
+            provenance: string;
+            realised_pnl: components["schemas"]["Figure"];
+            /** Session Id */
+            session_id: string;
+            /** State */
+            state: string;
+            /** State Reason */
+            state_reason: string;
+            /** Strategy Id */
+            strategy_id: string;
+            summary_age: components["schemas"]["Figure"];
+            /** Timeframe */
+            timeframe: string | null;
+            unrealised_pnl: components["schemas"]["Figure"];
+            /**
+             * Written At
+             * Format: date-time
+             */
+            written_at: string;
+        };
         /** HeadlineOverlay */
         HeadlineOverlay: {
             /** Currency */
@@ -1924,6 +2390,15 @@ export interface components {
             uptime_seconds: number;
             /** Worker Heartbeat Age Seconds */
             worker_heartbeat_age_seconds: number | null;
+            /** Worker Stale After Seconds */
+            worker_stale_after_seconds?: number | null;
+            /** Worker Stale At */
+            worker_stale_at?: string | null;
+            /**
+             * Worker State
+             * @default absent
+             */
+            worker_state: string;
         };
         /** HTTPValidationError */
         HTTPValidationError: {
@@ -2092,6 +2567,22 @@ export interface components {
             /** Since */
             since: string | null;
         };
+        /** LastSignalView */
+        LastSignalView: {
+            /**
+             * At
+             * Format: date-time
+             */
+            at: string;
+            /** Instrument */
+            instrument: string | null;
+            /** Kind */
+            kind: string;
+            /** Outcome */
+            outcome: string;
+            /** Reason */
+            reason: string;
+        };
         /** LevelOverlay */
         LevelOverlay: {
             /** Dataset Version Id */
@@ -2159,12 +2650,121 @@ export interface components {
             /** Summary */
             summary: string;
         };
+        /** LimitBoardView */
+        LimitBoardView: {
+            bands: components["schemas"]["BandsView"];
+            /** Closest Key */
+            closest_key: string | null;
+            /** Families */
+            families: components["schemas"]["LimitFamilyView"][];
+            /** Limits Version */
+            limits_version: string;
+            /** Rows */
+            rows: components["schemas"]["LimitRowView"][];
+            /** Sources */
+            sources: {
+                [key: string]: components["schemas"]["SourceNote"];
+            };
+        };
+        /** LimitFamilyView */
+        LimitFamilyView: {
+            /** Id */
+            id: string;
+            /** Rows */
+            rows: string[];
+            /** Source */
+            source: string;
+            /** Title */
+            title: string;
+            /** Worst Key */
+            worst_key: string | null;
+        };
+        /**
+         * LimitRowView
+         * @description One limit. Every decision on it was made by the server.
+         */
+        LimitRowView: {
+            /** Absent Reason */
+            absent_reason?: string | null;
+            /** Band */
+            band: string;
+            /** Breached */
+            breached: boolean;
+            /** Deep Link */
+            deep_link: string;
+            /** Family */
+            family: string;
+            /** Formula */
+            formula?: string | null;
+            headroom: components["schemas"]["Figure"];
+            /** Heat */
+            heat?: number | null;
+            /** Key */
+            key: string;
+            /** Kind */
+            kind?: string | null;
+            /** Label */
+            label: string;
+            limit?: components["schemas"]["Figure"] | null;
+            /** See Also */
+            see_also?: string | null;
+            utilisation_pct: components["schemas"]["Figure"];
+            value?: components["schemas"]["Figure"] | null;
+        };
+        /** LinkSet */
+        LinkSet: {
+            /** Chart */
+            chart: string | null;
+            /** Journal */
+            journal: string;
+            /** Lifecycle */
+            lifecycle: string | null;
+            /** Session */
+            session: string;
+            /** Strategy */
+            strategy: string;
+        };
         /** LoginRequest */
         LoginRequest: {
             /** Password */
             password: string;
             /** Username */
             username: string;
+        };
+        /** MarketSessionView */
+        MarketSessionView: {
+            /** Detail */
+            detail: string;
+            /** Key */
+            key: string;
+            /** Label */
+            label: string;
+            /** Local Time */
+            local_time: string;
+            /**
+             * Next Change At
+             * Format: date-time
+             */
+            next_change_at: string;
+            /** Open */
+            open: boolean;
+            /** Timezone */
+            timezone: string;
+        };
+        /** OpenPositionView */
+        OpenPositionView: {
+            /** Chart */
+            chart: string;
+            /** Direction */
+            direction: string;
+            entry_price: components["schemas"]["Figure"];
+            /** Instrument */
+            instrument: string;
+            mark_price: components["schemas"]["Figure"];
+            /** Position Id */
+            position_id: string;
+            size: components["schemas"]["Figure"];
+            unrealised_pnl: components["schemas"]["Figure"];
         };
         /**
          * OtherDrawingSet
@@ -2428,6 +3028,29 @@ export interface components {
             /** Total */
             total: number;
         };
+        /** Page[FleetRowView] */
+        Page_FleetRowView_: {
+            /**
+             * Caveats
+             * @default []
+             */
+            caveats: components["schemas"]["Caveat"][];
+            /** Items */
+            items: components["schemas"]["FleetRowView"][];
+            /**
+             * Limit
+             * @default 100
+             */
+            limit: number;
+            /**
+             * Offset
+             * @default 0
+             */
+            offset: number;
+            source: components["schemas"]["SourceNote"];
+            /** Total */
+            total: number;
+        };
         /** Page[HypothesisView] */
         Page_HypothesisView_: {
             /**
@@ -2529,6 +3152,29 @@ export interface components {
             caveats: components["schemas"]["Caveat"][];
             /** Items */
             items: components["schemas"]["RegimeView"][];
+            /**
+             * Limit
+             * @default 100
+             */
+            limit: number;
+            /**
+             * Offset
+             * @default 0
+             */
+            offset: number;
+            source: components["schemas"]["SourceNote"];
+            /** Total */
+            total: number;
+        };
+        /** Page[SearchHit] */
+        Page_SearchHit_: {
+            /**
+             * Caveats
+             * @default []
+             */
+            caveats: components["schemas"]["Caveat"][];
+            /** Items */
+            items: components["schemas"]["SearchHit"][];
             /**
              * Limit
              * @default 100
@@ -2939,6 +3585,21 @@ export interface components {
             registration_id: string;
             statistic: components["schemas"]["Figure"];
             threshold: components["schemas"]["Figure"];
+        };
+        /** SearchHit */
+        SearchHit: {
+            /** Detail */
+            detail: string;
+            /** Href */
+            href: string;
+            /** Id */
+            id: string;
+            /** Kind */
+            kind: string;
+            /** Label */
+            label: string;
+            /** Tier */
+            tier: number;
         };
         /** SectionStatus */
         SectionStatus: {
@@ -3375,6 +4036,26 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Page_AttentionItem_"];
+                };
+            };
+        };
+    };
+    summary_api_command_summary_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_CommandSummaryView_"];
                 };
             };
         };
@@ -4094,6 +4775,38 @@ export interface operations {
             };
         };
     };
+    search_api_search_get: {
+        parameters: {
+            query: {
+                limit?: number;
+                q: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Page_SearchHit_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     stream_api_stream_get: {
         parameters: {
             query?: {
@@ -4142,6 +4855,57 @@ export interface operations {
             };
         };
     };
+    alerts_api_system_alerts_get: {
+        parameters: {
+            query?: {
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_AlertsView_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    board_api_system_board_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_BoardView_"];
+                };
+            };
+        };
+    };
     broker_health_api_system_broker_health_get: {
         parameters: {
             query?: never;
@@ -4158,6 +4922,26 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Envelope_BrokerHealthView_"];
+                };
+            };
+        };
+    };
+    clock_api_system_clock_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_ClockView_"];
                 };
             };
         };
@@ -4593,6 +5377,26 @@ export interface operations {
             };
         };
     };
+    attribution_api_trading_attribution_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_AttributionView_"];
+                };
+            };
+        };
+    };
     candidates_api_trading_candidates_get: {
         parameters: {
             query?: never;
@@ -4730,6 +5534,26 @@ export interface operations {
             };
         };
     };
+    fleet_api_trading_fleet_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Page_FleetRowView_"];
+                };
+            };
+        };
+    };
     strategies_api_trading_lifecycle_strategies_get: {
         parameters: {
             query?: {
@@ -4822,6 +5646,26 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    limits_api_trading_limits_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_LimitBoardView_"];
                 };
             };
         };

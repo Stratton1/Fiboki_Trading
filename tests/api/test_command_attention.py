@@ -41,6 +41,7 @@ def test_the_weights_are_pinned():
     assert CATEGORY_WEIGHT == {
         "kill_switch": 90,
         "limit_breach": 80,
+        "limit_near": 75,
         "incident": 70,
         "stale_worker": 60,
         "health": 50,
@@ -133,7 +134,7 @@ def test_an_armed_flatten_goes_to_the_top(admin_client, monkeypatch):
     items = admin_client.get("/api/command/attention").json()["items"]
     assert items[0]["id"] == "kill_switch:armed"
     assert items[0]["severity"] == "critical"
-    assert items[0]["deep_link"] == "/risk"
+    assert items[0]["deep_link"] == "/trading/risk"
     # The arm also opened an incident, ranked just below the switch itself.
     incident = next(i for i in items if i["category"] == "incident")
     assert items.index(incident) == 1
@@ -169,8 +170,8 @@ def test_journal_exposure_breaches_are_critical(tmp_path, api_env):
         items = c.get("/api/command/attention").json()["items"]
     assert [r["key"] for r in breached] == ["instrument:XAUUSD"]
     ids = {i["id"] for i in items if i["category"] == "limit_breach"}
-    assert ids == {"limit_breach:instrument:XAUUSD"}
-    assert items[0]["id"] == "limit_breach:instrument:XAUUSD"
+    assert ids == {"limit:exposure:instrument:XAUUSD"}
+    assert items[0]["id"] == "limit:exposure:instrument:XAUUSD"
     assert all(
         i["severity"] == "critical" for i in items if i["category"] == "limit_breach"
     )

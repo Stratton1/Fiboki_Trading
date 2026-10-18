@@ -65,7 +65,7 @@ export function LazyKillSwitchTimeline() {
   return (
     <Suspense
       fallback={
-        <section className="card" aria-busy="true">
+        <section className="card ks-pending" aria-busy="true">
           <p className="muted" data-testid="chart-pending" role="status">
             Loading the kill-switch timeline…
           </p>

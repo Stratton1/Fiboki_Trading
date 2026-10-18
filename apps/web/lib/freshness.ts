@@ -5,10 +5,12 @@
  *   fresh         current, but read by REST (the stream is not feeding this view)
  *   lagging       older than 1.5x its cadence
  *   stale         older than 3x its cadence, the last re-read failed, the
- *                 view is worker-produced and the worker heartbeat is >= 120 s
- *                 (or the worker has never beaten, or the platform says the
- *                 worker is not alive), or the view neither polls nor streams
- *                 and is older than its maximum age (default 5 minutes)
+ *                 view is worker-produced and the PLATFORM says the worker is
+ *                 not alive (stale, absent, down), or the view neither polls
+ *                 nor streams and is older than its maximum age (default 5
+ *                 minutes). The cadence factors are about this tab's copy of
+ *                 the data; whether the platform's worker is alive is the
+ *                 platform's verdict, never a threshold applied here.
  *   disconnected  the stream has given up (five failures) AND REST is failing
  *
  * A stale or disconnected view keeps its last good data on screen. Nothing in
@@ -17,12 +19,6 @@
 
 export type Freshness = "live" | "fresh" | "lagging" | "stale" | "disconnected";
 
-/**
- * The worker heartbeat stale threshold when the platform has not said one:
- * the stream heartbeat carries the backend's own (`worker_stale_after_s`),
- * and that wins.
- */
-export const WORKER_STALE_AFTER_S = 120;
 export const LAGGING_FACTOR = 1.5;
 export const STALE_FACTOR = 3;
 
@@ -45,13 +41,10 @@ export interface FreshnessInput {
   /** Whether a dead worker makes this view stale. */
   workerDependent: boolean;
   /**
-   * The worker heartbeat age now, in seconds: undefined when unknown (no
-   * report received), null when the platform says the worker never beat.
+   * The platform's own verdict on the worker (`ok`, `stale`, `absent`, or a
+   * health-check status), from the stream heartbeat or GET /api/health.
+   * The workstation never derives one from an age: the platform decides.
    */
-  workerAgeS: number | null | undefined;
-  /** The platform's stale threshold in seconds (null/undefined: the default). */
-  workerStaleAfterS?: number | null;
-  /** The platform's own worker verdict (`ok`, `stale`, `absent`, or a health status). */
   workerState?: string | null;
   /**
    * The maximum age of a view that neither polls nor is fed by the stream,
@@ -68,15 +61,6 @@ function level(ageMs: number, cadenceMs: number): "ok" | "lagging" | "stale" {
   if (ageMs > STALE_FACTOR * cadenceMs) return "stale";
   if (ageMs > LAGGING_FACTOR * cadenceMs) return "lagging";
   return "ok";
-}
-
-export function workerIsStale(
-  ageS: number | null | undefined,
-  staleAfterS: number | null | undefined = WORKER_STALE_AFTER_S,
-): boolean {
-  if (ageS === undefined) return false;
-  const threshold = typeof staleAfterS === "number" ? staleAfterS : WORKER_STALE_AFTER_S;
-  return ageS === null || ageS >= threshold;
 }
 
 /**
@@ -100,31 +84,34 @@ export interface WorkerStatus {
 
 /**
  * The status bar's worker entry (report G W-03). The TONE is the platform's
- * verdict, not a client threshold:
+ * verdict and nothing else: GET /api/health `worker_state` or the stream
+ * heartbeat's `worker_state`. The age beside it counts up from the last
+ * report for display only; no threshold is applied to it here.
  *
- *  - the platform says `stale`/`absent`/`down`: critical, whatever the age;
- *  - the platform says `ok`, but the age has since counted past the
- *    threshold the platform itself supplied: critical (a report that was
- *    true a while ago cannot vouch for now);
- *  - the platform says `ok` over REST and the report itself is stale:
- *    warn, "unconfirmed", never green;
- *  - no verdict at all (an older API): judged against the platform's
- *    threshold if supplied, else the documented default, and the detail
- *    says so.
+ *  - `stale` / `absent` / `down` / `degraded`: critical;
+ *  - `ok` from a report that is itself out of date (the health read is
+ *    failing or stale, and the stream is not live): warn, "unconfirmed",
+ *    never green, because an old "alive" cannot vouch for now;
+ *  - `ok`: ok;
+ *  - no verdict at all: unknown, said in words.
  */
 export function workerStatus(input: {
   ageS: number | null | undefined;
   state: string | null | undefined;
-  staleAfterS: number | null | undefined;
   /** The report carrying the verdict is itself stale (REST health). */
   reportStale: boolean;
 }): WorkerStatus {
   const { ageS, state } = input;
   const age = ageS === null ? "never" : ageS === undefined ? "unknown" : formatAgeShort(ageS);
-  if (ageS === undefined && (state === null || state === undefined)) {
-    return { tone: "unknown", text: "unknown", detail: "No worker report has been received.", stale: false };
+  if (state === null || state === undefined) {
+    return {
+      tone: "unknown",
+      text: ageS === undefined ? "unknown" : age,
+      detail: "The platform has not stated the worker's condition.",
+      stale: false,
+    };
   }
-  if (ageS === null || state === "absent") {
+  if (state === "absent" || ageS === null) {
     return {
       tone: "critical",
       text: "never",
@@ -140,36 +127,15 @@ export function workerStatus(input: {
       stale: true,
     };
   }
-  const threshold = typeof input.staleAfterS === "number" ? input.staleAfterS : null;
-  if (typeof ageS === "number" && threshold !== null && ageS >= threshold) {
+  if (input.reportStale) {
     return {
-      tone: "critical",
-      text: `${age} · stale`,
-      detail: `The heartbeat has aged past the platform's ${Math.round(threshold)} s threshold since the last report.`,
-      stale: true,
+      tone: "warn",
+      text: `${age} · unconfirmed`,
+      detail: "The platform last said the worker was alive, but that report is itself out of date.",
+      stale: false,
     };
   }
-  if (state === "ok") {
-    if (input.reportStale) {
-      return {
-        tone: "warn",
-        text: `${age} · unconfirmed`,
-        detail: "The platform last said the worker was alive, but that report is itself stale.",
-        stale: false,
-      };
-    }
-    return { tone: "ok", text: age, detail: `The platform judges the worker alive; last heartbeat ${age}.`, stale: false };
-  }
-  // No verdict supplied: the documented default threshold, said out loud.
-  const dead = workerIsStale(ageS, threshold);
-  return {
-    tone: dead ? "critical" : "ok",
-    text: dead ? `${age} · stale` : age,
-    detail: `The platform did not state the worker's condition; judged against a ${Math.round(
-      threshold ?? WORKER_STALE_AFTER_S,
-    )} s threshold.`,
-    stale: dead,
-  };
+  return { tone: "ok", text: age, detail: `The platform judges the worker alive; last heartbeat ${age}.`, stale: false };
 }
 
 function formatAgeShort(seconds: number): string {
@@ -183,10 +149,8 @@ export function computeFreshness(input: FreshnessInput): Freshness {
     input.connection === "live" && input.streamFed && input.confirmedAt !== null;
 
   if (input.connection === "disconnected" && input.refreshFailing) return "disconnected";
-  if (
-    input.workerDependent &&
-    (workerIsStale(input.workerAgeS, input.workerStaleAfterS) || workerStateIsBad(input.workerState))
-  ) {
+  // The platform's verdict, never a client threshold on an age.
+  if (input.workerDependent && (input.workerState === "absent" || workerStateIsBad(input.workerState))) {
     return "stale";
   }
   // A stream-fed view is only re-read by REST when its stream data is suspect

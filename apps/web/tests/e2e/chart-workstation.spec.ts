@@ -398,6 +398,8 @@ test.describe("chart workstation", () => {
   for (const theme of ["dark", "light"] as const) {
     test(`axe: zero serious violations with the chart drawn (${theme})`, async ({ page }, testInfo) => {
       test.skip(testInfo.project.name !== "desktop", "one axe sweep, on the desktop project");
+      // Three axe passes over a drawn chart: allow for a loaded runner.
+      test.setTimeout(90_000);
       await page.emulateMedia({ colorScheme: theme });
       await mockChart(page);
       await page.goto(EURUSD);
@@ -436,8 +438,9 @@ test.describe("chart workstation", () => {
     await expect(page.getByTestId("mode-banner")).not.toHaveAttribute("data-mode", "loading");
     await page.keyboard.press("ControlOrMeta+KeyK");
     await page.getByTestId("palette-input").fill("gbpusd");
-    await expect(page.getByTestId("palette-open-chart")).toHaveText("Open chart: GBPUSD");
-    await page.getByTestId("palette-open-chart").click();
+    const hit = page.locator('[data-testid="palette-hit"][data-kind="instrument"][data-id="GBPUSD"]');
+    await expect(hit).toHaveAttribute("data-tier", "0");
+    await hit.click();
     await expect(page).toHaveURL(/\/markets\/GBPUSD$/);
     await expect(page.getByTestId("chart-workstation")).toHaveAttribute("data-symbol", "GBPUSD");
   });
