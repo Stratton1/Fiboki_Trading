@@ -2243,8 +2243,8 @@ def _quotes_dir(state_dir: Path | None) -> Path:
     from fiboki.core.paths import resolve_paths
 
     if state_dir is not None:
-        return state_dir / "quotes"
-    return resolve_paths(os.environ, cwd=Path.cwd()).state_dir / "quotes"
+        return resolve_paths({"FIBOKI_STATE_DIR": str(state_dir)}).quotes_dir
+    return resolve_paths(os.environ, cwd=Path.cwd()).quotes_dir
 
 
 @quotes_app.command("record")

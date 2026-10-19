@@ -81,6 +81,15 @@ class FibokiPaths:
     #: Operator chart drawings (annotations, never strategy input), per
     #: operator and symbol, written by the API (``api/drawings.py``).
     drawings_db: Path
+    #: Operator workspace documents (layouts, watchlists, column sets), per
+    #: operator, versioned with an append-only revision trail
+    #: (``api/workspace_store.py``). Display state, never strategy input.
+    workspace_db: Path
+    #: Price and level alert rules, their evaluation state and the
+    #: notification history (``obs/price_alerts.py``).
+    price_alerts_db: Path
+    #: The executable-price recorder's append-only log (``fiboki quotes record``).
+    quotes_dir: Path
     #: Worker lease + heartbeat database (``WorkerStore``).
     heartbeat_db: Path
     #: The API's heartbeat file/database (``FIBOKI_WORKER_HEARTBEAT``).
@@ -154,6 +163,9 @@ def resolve_paths(env: Mapping[str, str], *, cwd: str | Path | None = None) -> F
         news_store=state_dir / "news" / "headlines.sqlite",
         events_store=state_dir / "events" / "annotations.sqlite",
         drawings_db=state_dir / "chart" / "drawings.sqlite",
+        workspace_db=state_dir / "workspace" / "workspace.sqlite",
+        price_alerts_db=state_dir / "alerts" / "price_alerts.sqlite",
+        quotes_dir=state_dir / "quotes",
         heartbeat_db=opt("FIBOKI_STATE_DB") or home / "state.db",
         worker_heartbeat=opt("FIBOKI_WORKER_HEARTBEAT") or state_dir / "worker.heartbeat",
         paper_root=opt("FIBOKI_PAPER_ROOT") or state_dir / "paper",

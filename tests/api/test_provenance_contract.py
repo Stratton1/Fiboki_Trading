@@ -101,6 +101,14 @@ ALLOWED_BARE_NUMERIC = {
     ("JobView", "max_attempts"),  # job configuration
     ("ShardView", "done"),  # rows written by the shard
     ("ShardView", "total"),  # rows the shard declares
+    # Workspace (routers/workspace.py): optimistic-concurrency counters and
+    # counts of panels in a layout. Display state, not measurements.
+    ("LayoutSummary", "version"),
+    ("LayoutSummary", "panel_count"),
+    ("LayoutView", "version"),
+    ("LayoutRevisionView", "version"),
+    ("LayoutRevisionView", "panel_count"),
+    ("ColumnSetsView", "version"),
 }
 
 

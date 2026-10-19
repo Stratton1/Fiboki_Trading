@@ -40,6 +40,7 @@ from fiboki.api.routers import search as search_router
 from fiboki.api.routers import stream as stream_router
 from fiboki.api.routers import system as system_router
 from fiboki.api.routers import trading as trading_router
+from fiboki.api.routers import workspace as workspace_router
 from fiboki.api.security import (
     CSRF_HEADER,
     LoginRateLimiter,
@@ -180,6 +181,7 @@ def create_app(settings: Settings | None = None, *, configure_logs: bool = True)
         command_router,
         search_router,
         stream_router,
+        workspace_router,
     ):
         app.include_router(module.router)
 
