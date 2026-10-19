@@ -146,7 +146,7 @@ function BotControlDialog({
             ? `Now ${data.state.toUpperCase()}: ${data.meaning}`
             : null;
 
-  async function confirm(choice: string, reason: string) {
+  async function recordControl(choice: string, reason: string) {
     setBusy(true);
     setError(null);
     try {
@@ -187,7 +187,7 @@ function BotControlDialog({
       errorMessage={error ?? (view.status === "error" ? `Could not read the control state: ${view.error.message}` : null)}
       notice={notice}
       onCancel={onClose}
-      onConfirm={confirm}
+      onConfirm={recordControl}
     />
   );
 }

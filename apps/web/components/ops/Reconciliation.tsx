@@ -149,7 +149,7 @@ function RequestReconciliation({ sessionId, path }: { sessionId: string; path: s
     : operator !== null && operator.role === "viewer"
       ? "Blocked: operator role required."
       : null;
-  async function confirm(_choice: string, reason: string) {
+  async function queueReconciliation(_choice: string, reason: string) {
     setBusy(true);
     setError(null);
     try {
@@ -196,7 +196,7 @@ function RequestReconciliation({ sessionId, path }: { sessionId: string; path: s
         busy={busy}
         errorMessage={error}
         onCancel={() => setOpen(false)}
-        onConfirm={confirm}
+        onConfirm={queueReconciliation}
       />
     </span>
   );

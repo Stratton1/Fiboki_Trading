@@ -87,3 +87,65 @@ Not applicable while paper-only: live order ticket, DOM ladder, Level 2.
   alerts from levels, chart defects from P1 #9).
 - Wave 3 Independent audit and critique, then retask fixes; repeat until the rubric is >= 8 in
   every area or the remaining gaps are named and justified.
+
+## Wave 3O: Operator, paper-bot control, journal and audit (19 October 2026)
+
+PAPER only. Every state, verdict, weight and probability is computed in the backend
+(`src/fiboki/ops/`, routes in `src/fiboki/api/routers/ops.py`); the workstation renders.
+
+Built (each end to end: backend, tests, typed client from the generated OpenAPI, UI):
+
+1. **Per-bot pause / resume / drain** (`ops/controls.py`). A durable control ledger
+   (`<state_dir>/paper_controls.jsonl`, `core.paths.bot_controls`) replayed by the paper runtime every
+   cycle (`ForwardControls`, `ControlledEvaluator` in `entrypoints/paper_forward.py`): pause suppresses
+   new entries (journalled as `entries_suppressed_by_control`) and keeps managing open positions; drain
+   records `drain_complete` once the book is flat (bot `stopped`); resume. Operator, required reason
+   (8-500 chars) and UTC time on every record; admin-only like the kill switch; audited in the API trail
+   (allowed, refused, failed). Survives a restart (the ledger is the authority; the snapshot carries a
+   copy for information). Fleet column, bot page `/trading/sessions/[session_id]`, command line
+   `PAUSE|RESUME|DRAIN <bot>` (opens the dialog; never acts alone).
+2. **Hash-chained paper audit log** (`ops/audit_chain.py`): every order intent, fill, open, close,
+   amend/close instruction, control and risk-gateway decision, `prev_hash` + `hash` = sha256 over
+   canonical JSON, in `<ledger_dir>/audit_chain.jsonl`. `GET /api/trading/audit-chain` verifies from
+   genesis and names the first broken row; System-board panel and bot page.
+3. **Backtest-versus-paper reconciliation** (`ops/reconcile.py`, runner `entrypoints/ops_jobs.py`):
+   the same bound document, wiring and closed bars through the engine, compared trade for trade
+   with a reason per divergence. A job: the API records the request; `fiboki ops jobs` runs it.
+4. **Paper maturity report**, advisory (`ops/maturity.py`, `maturity_advisory_v1`): trades, days live,
+   drawdown against the stored backtest's bootstrap band at the same trade count, realised versus
+   expected cost per unit, reconciliation, audit chain. Not-evaluated blocks. Enables nothing.
+5. **Self-correlation of candidates** with the paper fleet (backtest and paper bases), flag above 0.7.
+6. **Risk of ruin and position size** under `/trading/risk`: `size_trade` itself for sizes, the
+   bootstrap's `resample_with_compounding` for ruin, seeded.
+7. **Advisory portfolio weights** on `/trading/allocation`: equal-risk, inverse-vol, min-correlation,
+   equal-weight reference, with portfolio stats. Display only.
+8. **Structured journal** on `/trading/execution`: note, tags, grade A-C, mistakes, screenshot link,
+   intervention reason; SQLite store with every version kept and stale writes refused (409);
+   server-side filters (`/api/trading/journal/trades`); keyboard editor (Enter on a row, 1/2/3/0,
+   Ctrl+Enter, Esc).
+9. **Weekend alert noise**: an amend/close refused with `market_closed` is one INFO
+   `instruction_deferred` per position (was repeated CRITICAL `reconciliation_divergence`); a refusal
+   once the market is open escalates as before; success clears the deferral.
+
+Not built / known limits:
+
+- The ops job runner has no launchd service; until `fiboki ops jobs --loop` runs (a user action), a
+  requested reconciliation stays `queued`, and the screen says so.
+- Reconciliation needs validated stored bars covering the session (`DataStore.read_latest`); a window the
+  store does not cover is `not_evaluated`. The paper feed's sliding indicator window and the engine's
+  whole-frame indicators can differ for recursive indicators; slippage draws differ BY CONSTRUCTION
+  (`rng_for(seed, bar_index, …)` with bar indices counted from different origins) and are reported as
+  `slippage_draw`. On the synthetic session every trade matches on entry, exit, prices and size.
+- A divergence after the first one is labelled `cascade`; read `first_divergence_at` first.
+- The paper audit chain is tamper-evident, not tamper-proof (a writer can rebuild it from the edited
+  row on); control actions enter it when the runtime applies them, so a stopped process records them
+  on its next start. The chain starts with this wave; older sessions show `absent`.
+- Daily returns for correlation and weights are the closed-trade balance curve (no mark-to-market),
+  on calendar days, zero on days without an exit.
+- The risk calculator's user-typed R list is labelled `backtest` provenance with a
+  `user_supplied_distribution` warning caveat (no provenance value exists for an operator hypothesis).
+- Market-closed deferrals are kept in memory: a restart mid-weekend notifies once more. The amend path
+  shares the close path's helper but is covered by tests only through the close path.
+- `scripts/first-load.mjs` does not URL-decode `src` paths, so the byte-budget checks in
+  `source-rules.spec.ts` fail on `/lifecycle/[hash]` (pre-existing); measured with decoded paths, every
+  route is within budget (`/` 177.3 of 180 KiB; ops pages 181-191 of 230 KiB).
