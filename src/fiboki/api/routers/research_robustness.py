@@ -677,7 +677,9 @@ class OptimisationProfileView(BaseModel):
 
 @router.get("/strategies/{strategy_id}/optimisation-profile", response_model=Envelope[OptimisationProfileView])
 def optimisation_profile(strategy_id: str, platform: PlatformDep, settings: SettingsDep,
-                         objective: str = Query("net_profit")) -> Envelope[OptimisationProfileView]:
+                         objective: str = Query("net_profit"),
+                         instrument: str | None = Query(None, max_length=32),
+                         timeframe: str | None = Query(None, max_length=8)) -> Envelope[OptimisationProfileView]:
     doc = platform.strategy(strategy_id)
     if doc is None:
         raise ApiError(status.HTTP_404_NOT_FOUND, "unknown_strategy", "No such strategy.")
@@ -687,7 +689,9 @@ def optimisation_profile(strategy_id: str, platform: PlatformDep, settings: Sett
     names = sorted(n for n, s in (getattr(doc, "parameters", {}) or {}).items()
                    if getattr(s, "kind", "") in ("int", "float"))
     records = _strategy_records(settings, strategy_id, 500) if _ledger_path(settings) is not None else []
-    records = [(r, rec) for r, rec in records if r.kind != "walkforward_fold"]
+    records = [(r, rec) for r, rec in records if r.kind != "walkforward_fold"
+               and (instrument is None or instrument.upper() in {i.upper() for i in r.instruments})
+               and (timeframe is None or r.timeframe == timeframe)]
     payloads = _job_payloads(settings, {str(rec.get("job_id") or "") for _, rec in records if rec.get("job_id")})
     seen: dict[str, tuple[BacktestRunView, dict[str, Any], dict[str, Any]]] = {}
     unknown = 0
@@ -697,7 +701,10 @@ def optimisation_profile(strategy_id: str, platform: PlatformDep, settings: Sett
             unknown += 1
             continue
         params, _ = _run_parameters(platform, strategy_id, payload)
-        key = json.dumps({n: params.get(n) for n in names}, sort_keys=True, default=str)
+        # One point per parameter set AND market: the same parameters on another
+        # instrument or timeframe is another point, never silently dropped.
+        key = json.dumps({"params": {n: params.get(n) for n in names},
+                          "market": [sorted(run.instruments), run.timeframe]}, sort_keys=True, default=str)
         seen.setdefault(key, (run, rec, {n: params.get(n) for n in names}))
     unit = rl.OBJECTIVES[objective].unit
     points: list[GridPointView] = []
@@ -713,7 +720,7 @@ def optimisation_profile(strategy_id: str, platform: PlatformDep, settings: Sett
         points.append(GridPointView(run_id=run.run_id, params=params,
                                     objective=_fig(value, run.provenance, unit, sample=n, reason="Undefined."),
                                     trades=_count(n)))
-    prof = rl.optimisation_profile(triples)
+    prof = rl.optimisation_profile(triples, neutral=rl.OBJECTIVES[objective].neutral)
     # Best objective first, undefined last, run id as the tie-break: the order is the API's.
     points.sort(key=lambda g: (g.objective.value is None, -(g.objective.value or 0.0), g.run_id))
 
@@ -728,9 +735,11 @@ def optimisation_profile(strategy_id: str, platform: PlatformDep, settings: Sett
         median_over_peak=f("median_over_peak", "ratio", "Undefined: the peak is not positive."),
         peak_params=dict(prof.get("peak_params") or {}),
         method=("System Parameter Permutation (Walton 2014): every distinct parameter set with a stored run (the "
-                "latest run of each), its objective on the research slice (holdout excluded). The MEDIAN is the "
-                "expected performance of the system; the peak is what the search maximised. Runs whose job is "
-                "not in the job ledger cannot be placed and are counted."),
+                "latest run of each, per market), its objective on the research slice (holdout excluded). The "
+                "MEDIAN is the expected performance of the system; the peak is what the search maximised. "
+                "'Profitable' means above the objective's neutral value (profit factor above 1, the rest above "
+                "0). Without an instrument / timeframe filter the grid pools every market the strategy was run "
+                "on. Runs whose job is not in the job ledger cannot be placed and are counted."),
     )
     return Envelope(data=view, source=_note("live" if points else "mixed",
                                             "Stored runs in the research ledger, parameters from the job ledger."),

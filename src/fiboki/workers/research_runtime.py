@@ -132,8 +132,6 @@ from typing import Any
 from fiboki.agents.audit import JsonlAuditLedger
 from fiboki.agents.capabilities import CapabilityResolver
 from fiboki.agents.jobs import HANDLERS, register_research_handlers
-from fiboki.research.robustness.store import RobustnessStore
-from fiboki.research.robustness.store import store_path as robustness_store_path
 from fiboki.agents.orchestrator import Orchestrator, submitter_for
 from fiboki.agents.providers import EchoProvider, LLMProvider, ModelRouter
 from fiboki.agents.tools import (
@@ -163,6 +161,8 @@ from fiboki.obs.alerts import Alert, AlertEvent
 from fiboki.obs.logging import get_logger
 from fiboki.research.artefacts import ResearchStore
 from fiboki.research.experiment import ExperimentLedger
+from fiboki.research.robustness.store import RobustnessStore
+from fiboki.research.robustness.store import store_path as robustness_store_path
 from fiboki.strategy.registry import StrategyRegistry
 
 __all__ = [

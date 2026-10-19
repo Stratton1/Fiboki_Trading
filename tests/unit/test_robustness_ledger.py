@@ -223,6 +223,10 @@ def test_optimisation_profile_is_median_not_peak():
     assert out["profitable_share"] == pytest.approx(0.75)
     assert out["median_over_peak"] == pytest.approx(0.15)
     assert out["peak_params"] == {"a": 3}
+    # Profit factor breaks even at 1, not 0: a PF of 0.8 is not "profitable".
+    pf = rl.optimisation_profile([({"a": i}, v, 100) for i, v in enumerate([0.8, 0.9, 1.2, 1.5])],
+                                 neutral=rl.OBJECTIVES["profit_factor"].neutral)
+    assert pf["profitable_share"] == pytest.approx(0.5)
     empty = rl.optimisation_profile([({"a": 1}, None, 0)])
     assert empty["peak"] is None and empty["profitable_share"] is None
 

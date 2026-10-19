@@ -98,6 +98,20 @@ def test_every_rerun_diagnostic_is_deterministic(frame, kind):
     assert a == b
 
 
+@pytest.mark.parametrize("kind", ["warmup", "random", "noise"])
+def test_the_answer_does_not_depend_on_the_index_unit(frame, kind):
+    """Stored bars are ``datetime64[us]``; the same bars as nanoseconds must give the
+    same diagnostic (a raw ``asi8`` read would differ by a factor of 1000)."""
+    assert str(frame.index.dtype).startswith("datetime64[us")
+    ns = frame.copy()
+    ns.index = ns.index.as_unit("ns")
+    a = run_diagnostic(kind, _binding(frame), SMALL[kind], template=_doc(),
+                       bars=InMemoryBarSource({("EURUSD", "H4"): frame, **gbp_fx_frames()}))
+    b = run_diagnostic(kind, _binding(ns), SMALL[kind], template=_doc(),
+                       bars=InMemoryBarSource({("EURUSD", "H4"): ns, **gbp_fx_frames()}))
+    assert a["output"] == b["output"]
+
+
 @pytest.mark.parametrize("kind", ["execution", "perturbation", "random", "noise"])
 def test_a_different_seed_draws_differently(frame, kind):
     bars = InMemoryBarSource({("EURUSD", "H4"): frame, **gbp_fx_frames()})

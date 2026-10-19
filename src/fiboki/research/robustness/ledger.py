@@ -421,8 +421,13 @@ def objectives(trades: Sequence[Mapping[str, Any]], equity: pd.Series, initial: 
 # ======================================================= 8. optimisation profile
 
 
-def optimisation_profile(points: Sequence[tuple[dict[str, Any], float | None, int]]) -> dict[str, Any]:
+def optimisation_profile(points: Sequence[tuple[dict[str, Any], float | None, int]], *,
+                         neutral: float = 0.0) -> dict[str, Any]:
     """Median-versus-peak over a grid: ``points`` are ``(params, objective, n_trades)``.
+
+    ``neutral`` is the objective's break-even value (:class:`ObjectiveSpec`):
+    a point is PROFITABLE when its objective is above it (profit factor above 1,
+    every other objective above 0).
 
     System Parameter Permutation (Walton 2014) reads the MEDIAN of the grid as
     the expected performance of the system, because the peak is the quantity the
@@ -444,7 +449,7 @@ def optimisation_profile(points: Sequence[tuple[dict[str, Any], float | None, in
         "peak": peak, "median": median,
         "p25": float(np.quantile(values, 0.25)), "p75": float(np.quantile(values, 0.75)),
         "mean": float(values.mean()), "min": float(values.min()),
-        "profitable_share": float((values > 0).mean()),
+        "profitable_share": float((values > float(neutral)).mean()),
         "median_over_peak": (median / peak) if peak > 0 else None,
         "peak_params": dict(defined[peak_i][0]),
         "peak_trades": int(defined[peak_i][2]),

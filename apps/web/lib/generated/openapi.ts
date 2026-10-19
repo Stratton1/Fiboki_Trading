@@ -6994,7 +6994,9 @@ export interface operations {
     optimisation_profile_api_research_strategies__strategy_id__optimisation_profile_get: {
         parameters: {
             query?: {
+                instrument?: string | null;
                 objective?: string;
+                timeframe?: string | null;
             };
             header?: never;
             path: {
