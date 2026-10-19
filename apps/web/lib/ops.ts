@@ -72,3 +72,12 @@ export const RECON_TONE: Record<string, "ok" | "degraded" | "unknown"> = {
   diverged: "degraded",
   not_evaluated: "unknown",
 };
+
+export type MaturityView = Local<S["MaturityView"]>;
+export type MaturityItemView = Local<S["MaturityItemView"]>;
+export const sessionMaturityPath = (sessionId: string) =>
+  `/api/trading/sessions/${encodeURIComponent(sessionId)}/maturity`;
+
+/** Badge tone and label per checklist status (the status is the API's). */
+export const CHECK_TONE: Record<string, "ok" | "down" | "unknown"> = { pass: "ok", fail: "down", not_evaluated: "unknown" };
+export const CHECK_LABEL: Record<string, string> = { pass: "PASS", fail: "FAIL", not_evaluated: "NOT EVALUATED" };

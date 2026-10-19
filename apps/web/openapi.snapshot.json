@@ -1964,6 +1964,56 @@
         "title": "DivergenceView",
         "type": "object"
       },
+      "DrawdownBandView": {
+        "properties": {
+          "horizon_trades": {
+            "title": "Horizon Trades",
+            "type": "integer"
+          },
+          "n_paths": {
+            "title": "N Paths",
+            "type": "integer"
+          },
+          "p5": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "p50": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "p95": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "risk_fraction": {
+            "title": "Risk Fraction",
+            "type": "number"
+          },
+          "seed": {
+            "title": "Seed",
+            "type": "integer"
+          },
+          "source": {
+            "title": "Source",
+            "type": "string"
+          },
+          "source_trades": {
+            "title": "Source Trades",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "horizon_trades",
+          "source_trades",
+          "n_paths",
+          "seed",
+          "risk_fraction",
+          "p5",
+          "p50",
+          "p95",
+          "source"
+        ],
+        "title": "DrawdownBandView",
+        "type": "object"
+      },
       "DrawdownPeriodView": {
         "properties": {
           "decline_days": {
@@ -2689,6 +2739,30 @@
           "source"
         ],
         "title": "Envelope[LimitBoardView]",
+        "type": "object"
+      },
+      "Envelope_MaturityView_": {
+        "properties": {
+          "caveats": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/Caveat"
+            },
+            "title": "Caveats",
+            "type": "array"
+          },
+          "data": {
+            "$ref": "#/components/schemas/MaturityView"
+          },
+          "source": {
+            "$ref": "#/components/schemas/SourceNote"
+          }
+        },
+        "required": [
+          "data",
+          "source"
+        ],
+        "title": "Envelope[MaturityView]",
         "type": "object"
       },
       "Envelope_MonteCarloView_": {
@@ -5781,6 +5855,108 @@
           "detail"
         ],
         "title": "MarketSessionView",
+        "type": "object"
+      },
+      "MaturityItemView": {
+        "properties": {
+          "detail": {
+            "title": "Detail",
+            "type": "string"
+          },
+          "key": {
+            "title": "Key",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "status": {
+            "pattern": "^(pass|fail|not_evaluated)$",
+            "title": "Status",
+            "type": "string"
+          },
+          "threshold": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "value": {
+            "$ref": "#/components/schemas/Figure"
+          }
+        },
+        "required": [
+          "key",
+          "label",
+          "status",
+          "value",
+          "threshold",
+          "detail"
+        ],
+        "title": "MaturityItemView",
+        "type": "object"
+      },
+      "MaturityView": {
+        "properties": {
+          "band": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DrawdownBandView"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "criteria_version": {
+            "title": "Criteria Version",
+            "type": "string"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/MaturityItemView"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "note": {
+            "title": "Note",
+            "type": "string"
+          },
+          "notes": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Notes",
+            "type": "array"
+          },
+          "paper_max_drawdown_pct": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "ready": {
+            "title": "Ready",
+            "type": "boolean"
+          },
+          "session_id": {
+            "title": "Session Id",
+            "type": "string"
+          },
+          "verdict": {
+            "pattern": "^(ready_to_consider|not_ready|not_evaluated)$",
+            "title": "Verdict",
+            "type": "string"
+          }
+        },
+        "required": [
+          "session_id",
+          "criteria_version",
+          "ready",
+          "verdict",
+          "items",
+          "band",
+          "paper_max_drawdown_pct",
+          "note",
+          "notes"
+        ],
+        "title": "MaturityView",
         "type": "object"
       },
       "MonteCarloView": {
@@ -13592,6 +13768,51 @@
           "ops"
         ],
         "x-fiboki-auth": "admin"
+      }
+    },
+    "/api/trading/sessions/{session_id}/maturity": {
+      "get": {
+        "description": "The advisory 'ready to consider for IG demo' checklist. It enables nothing.",
+        "operationId": "session_maturity_api_trading_sessions__session_id__maturity_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "session_id",
+            "required": true,
+            "schema": {
+              "title": "Session Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_MaturityView_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [],
+        "summary": "Session Maturity",
+        "tags": [
+          "ops"
+        ],
+        "x-fiboki-auth": "public"
       }
     },
     "/api/trading/sessions/{session_id}/reconciliation": {

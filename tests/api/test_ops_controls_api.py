@@ -115,3 +115,17 @@ def test_the_audit_chain_endpoints_verify_and_report_a_broken_row(tmp_path, api_
         assert item["status"] == "broken" and item["first_broken_seq"] == 1
         assert "BROKEN" in broken["source"]["detail"]
         assert c.get("/api/trading/sessions/nope/audit-chain").status_code == 404
+
+
+def test_maturity_is_advisory_and_not_evaluated_without_evidence(tmp_path, api_env):
+    with _app(tmp_path, api_env) as c:
+        body = c.get("/api/trading/sessions/forward-paper_forward_v1/maturity").json()
+        data = body["data"]
+        assert data["ready"] is False and data["verdict"] in ("not_evaluated", "not_ready")
+        assert data["criteria_version"] == "maturity_advisory_v1"
+        assert "enables nothing" in data["note"]
+        statuses = {i["key"]: i["status"] for i in data["items"]}
+        assert statuses["reconciliation_clean"] == "not_evaluated"
+        assert statuses["audit_chain_intact"] == "not_evaluated"
+        assert statuses["min_trades"] == "fail"
+        assert c.get("/api/trading/sessions/nope/maturity").status_code == 404

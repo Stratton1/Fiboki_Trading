@@ -1490,6 +1490,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/trading/sessions/{session_id}/maturity": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Session Maturity
+         * @description The advisory 'ready to consider for IG demo' checklist. It enables nothing.
+         */
+        get: operations["session_maturity_api_trading_sessions__session_id__maturity_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/trading/sessions/{session_id}/reconciliation": {
         parameters: {
             query?: never;
@@ -2222,6 +2242,24 @@ export interface components {
             /** Reason */
             reason: string;
         };
+        /** DrawdownBandView */
+        DrawdownBandView: {
+            /** Horizon Trades */
+            horizon_trades: number;
+            /** N Paths */
+            n_paths: number;
+            p5: components["schemas"]["Figure"];
+            p50: components["schemas"]["Figure"];
+            p95: components["schemas"]["Figure"];
+            /** Risk Fraction */
+            risk_fraction: number;
+            /** Seed */
+            seed: number;
+            /** Source */
+            source: string;
+            /** Source Trades */
+            source_trades: number;
+        };
         /** DrawdownPeriodView */
         DrawdownPeriodView: {
             decline_days: components["schemas"]["Figure"];
@@ -2532,6 +2570,16 @@ export interface components {
              */
             caveats: components["schemas"]["Caveat"][];
             data: components["schemas"]["LimitBoardView"];
+            source: components["schemas"]["SourceNote"];
+        };
+        /** Envelope[MaturityView] */
+        Envelope_MaturityView_: {
+            /**
+             * Caveats
+             * @default []
+             */
+            caveats: components["schemas"]["Caveat"][];
+            data: components["schemas"]["MaturityView"];
             source: components["schemas"]["SourceNote"];
         };
         /** Envelope[MonteCarloView] */
@@ -3579,6 +3627,38 @@ export interface components {
             open: boolean;
             /** Timezone */
             timezone: string;
+        };
+        /** MaturityItemView */
+        MaturityItemView: {
+            /** Detail */
+            detail: string;
+            /** Key */
+            key: string;
+            /** Label */
+            label: string;
+            /** Status */
+            status: string;
+            threshold: components["schemas"]["Figure"];
+            value: components["schemas"]["Figure"];
+        };
+        /** MaturityView */
+        MaturityView: {
+            band: components["schemas"]["DrawdownBandView"] | null;
+            /** Criteria Version */
+            criteria_version: string;
+            /** Items */
+            items: components["schemas"]["MaturityItemView"][];
+            /** Note */
+            note: string;
+            /** Notes */
+            notes: string[];
+            paper_max_drawdown_pct: components["schemas"]["Figure"];
+            /** Ready */
+            ready: boolean;
+            /** Session Id */
+            session_id: string;
+            /** Verdict */
+            verdict: string;
         };
         /** MonteCarloView */
         MonteCarloView: {
@@ -7532,6 +7612,37 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Envelope_BotControlView_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    session_maturity_api_trading_sessions__session_id__maturity_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                session_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_MaturityView_"];
                 };
             };
             /** @description Validation Error */

@@ -1562,6 +1562,10 @@ class ForwardFeed:
                 "risk_inputs_live": self.builder.risk_inputs_live(),
                 "spread_source": "oanda_practice_pricing",
                 "ledger_dir": self.wiring.ledger_dir,
+                # For the advisory maturity report (ops/maturity.py): the rule
+                # the backtest's drawdown band is re-sized to.
+                "risk_fraction": self.wiring.risk_fraction,
+                "sizing_policy_id": self.wiring.sizing_policy_id,
                 **(
                     {}
                     if self.controls is None

@@ -681,3 +681,122 @@ def request_reconciliation(
         source_ip=request.client.host if request.client else "", detail={"job_id": job.job_id},
     )
     return session_reconciliation(session_id, platform, settings)
+
+
+# ===================================================================== maturity
+
+
+class MaturityItemView(BaseModel):
+    model_config = ConfigDict(frozen=True)
+
+    key: str
+    label: str
+    status: str = Field(pattern="^(pass|fail|not_evaluated)$")
+    value: Figure
+    threshold: Figure
+    detail: str
+
+
+class DrawdownBandView(BaseModel):
+    model_config = ConfigDict(frozen=True)
+
+    horizon_trades: int
+    source_trades: int
+    n_paths: int
+    seed: int
+    risk_fraction: float
+    p5: Figure
+    p50: Figure
+    p95: Figure
+    source: str
+
+
+class MaturityView(BaseModel):
+    model_config = ConfigDict(frozen=True)
+
+    session_id: str
+    criteria_version: str
+    #: True only when every item passes. ADVISORY: nothing reads it.
+    ready: bool
+    verdict: str = Field(pattern="^(ready_to_consider|not_ready|not_evaluated)$")
+    items: list[MaturityItemView]
+    band: DrawdownBandView | None
+    paper_max_drawdown_pct: Figure
+    note: str
+    notes: list[str]
+
+
+@router.get("/sessions/{session_id}/maturity", response_model=Envelope[MaturityView])
+def session_maturity(
+    session_id: str, platform: PlatformDep, settings: SettingsDep
+) -> Envelope[MaturityView]:
+    """The advisory 'ready to consider for IG demo' checklist. It enables nothing."""
+    from fiboki.api.ops_sources import reference_backtest, session_span
+    from fiboki.ops.maturity import maturity_report
+
+    session = _forward_sessions(platform).get(session_id)
+    if session is None:
+        raise ApiError(status.HTTP_404_NOT_FOUND, "unknown_session", f"No forward paper session {session_id!r}.")
+    summary = platform.session_summary(session_id) or {}
+    ledger = ledger_dir_for(platform, settings, session_id)
+    first, last = session_span(ledger)
+    days = None if first is None or last is None else (last - first).total_seconds() / 86_400.0
+    ref = reference_backtest(settings, session.strategy_id)
+    paper = [
+        {"instrument": t.instrument, "size": t.size, "net_pnl": t.net_pnl, "costs": t.costs,
+         "exit_time": t.exit_time.isoformat()}
+        for t in session.trades
+    ]
+    body = OpsJobQueue(settings.paths.ops_dir).latest_result(session_id)
+    chain = _chain_for(platform, settings, session_id)
+    report = maturity_report(
+        paper_trades=paper,
+        initial_balance=session.initial_balance,
+        risk_fraction=summary.get("risk_fraction"),
+        days_live=days,
+        backtest_r_multiples=ref.r_multiples or None,
+        backtest_trades=ref.trades or None,
+        backtest_label=ref.label if ref.available else (ref.reason or ref.label),
+        reconciliation=(body or {}).get("report"),
+        latest_paper_trade_at=max((p["exit_time"] for p in paper), default=None),
+        chain=None if chain is None else _verify_cached(chain).as_dict(),
+    )
+    p = Provenance.PAPER
+    unit_of = {"count": "count", "days": "days", "pct": "pct", "ratio": "ratio"}
+
+    def fig(v: float | None, unit: str, prov: Provenance = p, reason: str = "") -> Figure:
+        return Figure(value=v, provenance=prov, unit=unit) if v is not None else Figure.missing(prov, unit=unit, reason=reason)
+
+    items = [
+        MaturityItemView(
+            key=i.key, label=i.label, status=i.status,
+            value=fig(i.value, unit_of.get(i.unit, i.unit), reason=i.detail),
+            threshold=fig(i.threshold, unit_of.get(i.unit, i.unit), Provenance.BACKTEST if i.key == "drawdown_in_band" else p,
+                          reason="No threshold for this item."),
+            detail=i.detail,
+        )
+        for i in report.items
+    ]
+    band = None
+    if report.band is not None:
+        b = report.band
+        band = DrawdownBandView(
+            horizon_trades=b.horizon_trades, source_trades=b.source_trades, n_paths=b.n_paths, seed=b.seed,
+            risk_fraction=b.risk_fraction,
+            p5=Figure(value=round(b.p5, 3), provenance=Provenance.BACKTEST, unit="pct", estimated=True),
+            p50=Figure(value=round(b.p50, 3), provenance=Provenance.BACKTEST, unit="pct", estimated=True),
+            p95=Figure(value=round(b.p95, 3), provenance=Provenance.BACKTEST, unit="pct", estimated=True),
+            source=ref.label,
+        )
+    view = MaturityView(
+        session_id=session_id, criteria_version=report.criteria.version, ready=report.ready,
+        verdict=report.verdict, items=items, band=band,
+        paper_max_drawdown_pct=fig(None if report.paper_max_drawdown_pct is None else round(report.paper_max_drawdown_pct, 3),
+                                   "pct", reason="The session's initial balance is not known."),
+        note=report.note, notes=list(report.notes),
+    )
+    return Envelope(
+        data=view,
+        source=_note("live", f"Paper session {session_id}; reference {ref.label}; criteria "
+                     f"{report.criteria.version} (advisory)."),
+    )

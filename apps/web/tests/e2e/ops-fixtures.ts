@@ -90,6 +90,9 @@ export async function mockOps(page: Page) {
   await page.route(`${API}/api/trading/sessions/*/audit-chain*`, (route: Route) =>
     route.fulfill({ json: env(chainTail()) }),
   );
+  await page.route(`${API}/api/trading/sessions/*/maturity`, (route: Route) =>
+    route.fulfill({ json: env(maturityView()) }),
+  );
   await page.route(`${API}/api/trading/sessions/*/reconciliation`, (route: Route) =>
     route.request().method() === "GET" ? route.fulfill({ json: env(reconciliationView()) }) : route.fallback(),
   );
@@ -175,6 +178,40 @@ export function reconciliationView(overrides: Record<string, unknown> = {}) {
       generated_at: "2026-10-19T08:01:00Z",
       job_id: "ops_0123456789ab",
     },
+    ...overrides,
+  };
+}
+
+export function maturityView(overrides: Record<string, unknown> = {}) {
+  const item = (key: string, label: string, status: string, value: number | null, threshold: number | null, unit: string, detail: string) => ({
+    key, label, status,
+    value: value === null ? { ...figure(null, "paper", unit), caveats: [] } : figure(value, "paper", unit),
+    threshold: threshold === null ? figure(null, "paper", unit) : figure(threshold, key === "drawdown_in_band" ? "backtest" : "paper", unit),
+    detail,
+  });
+  return {
+    session_id: OPS_SESSION,
+    criteria_version: "maturity_advisory_v1",
+    ready: false,
+    verdict: "not_ready",
+    items: [
+      item("min_trades", "Paper closed trades", "fail", 12, 30, "count", "12 closed paper trade(s); the advisory floor is 30."),
+      item("min_days", "Days live", "fail", 7.2, 28, "days", "7.2 day(s) from the session's first bar to its last; the advisory floor is 28."),
+      item("drawdown_in_band", "Drawdown vs backtest band", "pass", 1.8, 4.1, "pct", "Paper max drawdown 1.80% over 12 trade(s)."),
+      item("costs_as_expected", "Realised vs expected costs", "pass", 1.04, 1.25, "ratio", "Paper paid 1.04x the backtest's cost per unit traded."),
+      item("reconciliation_clean", "Reconciliation", "pass", 0, 0, "count", "diverged: 3 divergence(s), 3 attributed, 0 unexplained."),
+      item("audit_chain_intact", "Audit chain", "pass", 1284, null, "count", "1284 row(s) verify from genesis"),
+    ],
+    band: {
+      horizon_trades: 12, source_trades: 140, n_paths: 2000, seed: 20261019, risk_fraction: 0.005,
+      p5: figure(0.9, "backtest", "pct", { estimated: true }),
+      p50: figure(2.1, "backtest", "pct", { estimated: true }),
+      p95: figure(4.1, "backtest", "pct", { estimated: true }),
+      source: "backtest bt_0001",
+    },
+    paper_max_drawdown_pct: figure(1.8, "paper", "pct"),
+    note: "Advisory only. This report enables nothing: no lifecycle state, execution mode, limit or flag reads it.",
+    notes: [],
     ...overrides,
   };
 }
