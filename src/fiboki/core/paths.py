@@ -72,6 +72,9 @@ class FibokiPaths:
     #: HTTP API audit trail.
     api_audit: Path
     holdout_db: Path
+    #: Advisory robustness diagnostics: results and progress, written by the
+    #: research worker's ``robustness`` job, read by the API read-only.
+    robustness_db: Path
     experiment_db: Path
     #: ``True`` when ``FIBOKI_EXPERIMENT_DB`` was set. The API reports an
     #: unprovisioned ledger rather than silently opening the default one.
@@ -149,6 +152,7 @@ def resolve_paths(env: Mapping[str, str], *, cwd: str | Path | None = None) -> F
         audit_ledger=state_dir / "agents" / "audit.jsonl",
         api_audit=state_dir / "api_audit.jsonl",
         holdout_db=state_dir / "holdout.sqlite",
+        robustness_db=state_dir / "research" / "robustness.sqlite",
         experiment_db=experiment_env or state_dir / "experiments.sqlite",
         experiment_db_from_env=experiment_env is not None,
         news_store=state_dir / "news" / "headlines.sqlite",

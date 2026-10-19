@@ -132,6 +132,8 @@ from typing import Any
 from fiboki.agents.audit import JsonlAuditLedger
 from fiboki.agents.capabilities import CapabilityResolver
 from fiboki.agents.jobs import HANDLERS, register_research_handlers
+from fiboki.research.robustness.store import RobustnessStore
+from fiboki.research.robustness.store import store_path as robustness_store_path
 from fiboki.agents.orchestrator import Orchestrator, submitter_for
 from fiboki.agents.providers import EchoProvider, LLMProvider, ModelRouter
 from fiboki.agents.tools import (
@@ -971,6 +973,9 @@ def compose_research_runtime(
             # The trial count for deflation: without the ledger the validation
             # handler's DSR is NOT_EVALUATED (and blocks) on every candidate.
             experiments=research.ledger,
+            # Advisory robustness diagnostics (research/robustness): their
+            # results and progress, read back by the API read-only.
+            robustness=RobustnessStore(robustness_store_path(settings.state_dir)),
         )
     provider = provider or _build_provider(settings)
     ledger = JsonlAuditLedger(settings.audit_path)

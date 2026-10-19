@@ -101,6 +101,19 @@ ALLOWED_BARE_NUMERIC = {
     ("JobView", "max_attempts"),  # job configuration
     ("ShardView", "done"),  # rows written by the shard
     ("ShardView", "total"),  # rows the shard declares
+    # Robustness diagnostics (routers/research_robustness.py, wave 3R). Every
+    # measured number is a Figure; these are RNG seeds shown so a re-draw is
+    # exact, requested configuration, and ordinals.
+    ("ConfidenceBandsView", "seed"),  # RNG seed
+    ("ConfidenceBandsView", "n_boot"),  # requested resample count, configuration
+    ("ConsistencyView", "k"),  # requested number of sub-periods
+    ("RankingView", "min_trades"),  # the declared ranking penalty floor (80)
+    ("RankingRowView", "rank"),  # ordinal position in the ranking
+    ("LookaheadView", "seed"),  # RNG seed
+    ("ExecutionStressView", "seed"),  # RNG seed
+    ("PerturbationView", "seed"),  # RNG seed
+    ("RandomBenchmarkView", "seed"),  # RNG seed
+    ("NoiseView", "seed"),  # RNG seed
 }
 
 

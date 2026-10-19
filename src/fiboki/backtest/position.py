@@ -289,6 +289,10 @@ class ManagedPosition:
     #: breakeven and is never overwritten by it, because a trail only ever
     #: improves on the level breakeven produced.
     stop_moved_by: str = ""
+    #: Fill rules the position's fills met, as the fill model reported them
+    #: (``EntryFill.stale``; ``ExitFill.gapped`` / ``both_touched`` / ``stale``).
+    #: Copied onto the ``Trade``; read by nothing that decides a fill or a size.
+    fill_flags: list[str] = field(default_factory=list)
     reversal_pending: bool = False
     #: Accumulated across the closing fills, so the final ``Trade`` is the sum.
     realised_gross: float = 0.0
@@ -789,6 +793,7 @@ class PositionBook:
                 risk_per_unit=abs(fill.mid_price - fill.effective_stop),
                 initial_stop=fill.effective_stop,
                 ref=order.ref,
+                fill_flags=["entry_stale"] if getattr(fill, "stale", False) else [],
             )
             self.open.append(managed)
             result.entries.append(EntryEvent(order, True, "", fill, managed))
@@ -1137,6 +1142,9 @@ class PositionBook:
         net = gross - spread_cost - commission - slippage_cost - financing
 
         reason = self._exit_reason(op, exit_fill)
+        for flag in ("gapped", "both_touched", "stale"):
+            if getattr(exit_fill, flag, False) and flag not in op.fill_flags:
+                op.fill_flags.append(flag)
         op.realised_gross += gross
         op.realised_spread += spread_cost
         op.realised_commission += commission
@@ -1212,6 +1220,7 @@ class PositionBook:
             ),
             take_profit_targets=tuple(float(leg.price) for leg in op.legs),
             stop_moved_by=op.stop_moved_by,
+            fill_flags=tuple(sorted(op.fill_flags)),
         )
 
     def _costs_to_account(

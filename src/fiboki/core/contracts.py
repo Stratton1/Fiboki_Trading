@@ -514,6 +514,12 @@ class Trade:
     #: ``"breakeven"``, ``"trailing"`` or ``""`` (never moved). The engine does
     #: not record WHEN it moved, so no stop-move history can be drawn honestly.
     stop_moved_by: str = ""
+    #: The fill rules this round trip's fills met, as the engine's fill model
+    #: reported them (``backtest/position.py``): ``entry_stale``, ``gapped``,
+    #: ``both_touched``, ``stale``; empty when none applied. ``None`` means the
+    #: producer did not record them. Like the protection fields, NOT part of
+    #: ``LEDGER_COLUMNS``: recording them moves no stored ``ledger_sha256``.
+    fill_flags: tuple[str, ...] | None = None
 
     @property
     def total_costs(self) -> float:

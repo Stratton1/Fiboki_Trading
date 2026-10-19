@@ -76,6 +76,9 @@ class JobType(str, Enum):
     DATA_QUALITY_SCAN = "data_quality_scan"
     REGIME_SCAN = "regime_scan"
     LIBRARIAN_FILING = "librarian_filing"
+    #: An advisory re-run diagnostic of one stored run (research/robustness):
+    #: read-only analysis, filed in its own cache; it cannot touch a verdict.
+    ROBUSTNESS = "robustness"
 
 
 class JobStatus(str, Enum):

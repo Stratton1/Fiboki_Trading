@@ -115,6 +115,7 @@ RESEARCH_JOB_TYPES: tuple[JobType, ...] = (
     JobType.DATA_QUALITY_SCAN,
     JobType.REGIME_SCAN,
     JobType.LIBRARIAN_FILING,
+    JobType.ROBUSTNESS,
 )
 
 

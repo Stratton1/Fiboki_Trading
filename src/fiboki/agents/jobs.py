@@ -57,6 +57,8 @@ from fiboki.research.artefacts import (
     ValidationReportRecord,
 )
 from fiboki.research.experiment import ExperimentLedger
+from fiboki.research.robustness.job import robustness_handler
+from fiboki.research.robustness.store import RobustnessStore
 from fiboki.research.structure import structure_hash
 from fiboki.sim.profiles import get_profile
 from fiboki.stats.bootstrap import bootstrap_confidence_interval
@@ -212,6 +214,9 @@ def _trade_payload(trade: Trade) -> dict[str, Any]:
         "final_stop": trade.final_stop,
         "take_profit_targets": list(trade.take_profit_targets),
         "stop_moved_by": trade.stop_moved_by,
+        # The fill rules the engine recorded (intra-candle detail, research
+        # robustness item 12). Absent on a row filed before the field existed.
+        **({"fill_flags": list(trade.fill_flags)} if trade.fill_flags is not None else {}),
     }
 
 
@@ -1115,6 +1120,7 @@ HANDLERS: dict[JobType, Any] = {
     JobType.ABLATION: ablation_handler,
     JobType.SENSITIVITY: sensitivity_handler,
     JobType.DATA_QUALITY_SCAN: data_quality_scan_handler,
+    JobType.ROBUSTNESS: robustness_handler,
 }
 
 
@@ -1126,6 +1132,7 @@ def register_research_handlers(
     bars: BarSource | None = None,
     job_types: Sequence[JobType] | None = None,
     experiments: ExperimentLedger | None = None,
+    robustness: RobustnessStore | None = None,
 ) -> None:
     """Wire the deterministic handlers into an orchestrator.
 
@@ -1140,6 +1147,9 @@ def register_research_handlers(
         # The trial count for deflation. Without it the validation handler's
         # DSR is NOT_EVALUATED, which blocks: it will not deflate by a guess.
         "experiments": experiments,
+        # Where the advisory robustness diagnostics file their results and
+        # progress. Without it the robustness handler refuses to run.
+        "robustness": robustness,
     }
     for job_type in job_types or tuple(HANDLERS):
         handler = HANDLERS.get(job_type)

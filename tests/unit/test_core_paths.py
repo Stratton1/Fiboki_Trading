@@ -26,6 +26,7 @@ def test_every_ledger_lives_under_the_state_dir() -> None:
         paths.audit_ledger,
         paths.api_audit,
         paths.holdout_db,
+        paths.robustness_db,
         paths.experiment_db,
         paths.news_store,
         paths.events_store,
