@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import type { Page, Route } from "@playwright/test";
 import { API } from "./fixtures";
+import { mockRobustness } from "./robustness-fixtures";
 
 /**
  * Research analytics API fixtures. The JSON beside this file
@@ -33,4 +34,6 @@ export async function mockResearch(page: Page) {
   await at((p) => /^\/api\/research\/parameter-lab\/[^/]+$/.test(p), "parameter_lab");
   await at((p) => p === "/api/research/jobs", "jobs");
   await at((p) => p === "/api/research/correlations", "correlations");
+  // wave 3R: the robustness panels on the tearsheet and the strategy page.
+  await mockRobustness(page);
 }
