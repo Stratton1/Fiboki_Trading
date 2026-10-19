@@ -11010,6 +11010,25 @@
               "title": "Limit",
               "type": "integer"
             }
+          },
+          {
+            "description": "Centre the window on the bar open at or before this UTC instant.",
+            "in": "query",
+            "name": "around",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Centre the window on the bar open at or before this UTC instant.",
+              "title": "Around"
+            }
           }
         ],
         "responses": {
@@ -11615,6 +11634,23 @@
               "default": true,
               "title": "Include Indicators",
               "type": "boolean"
+            }
+          },
+          {
+            "in": "query",
+            "name": "around",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Around"
             }
           }
         ],

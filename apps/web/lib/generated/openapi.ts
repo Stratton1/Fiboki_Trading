@@ -5904,6 +5904,8 @@ export interface operations {
     bars_api_markets_bars__symbol__get: {
         parameters: {
             query?: {
+                /** @description Centre the window on the bar open at or before this UTC instant. */
+                around?: string | null;
                 limit?: number;
                 timeframe?: string;
             };
@@ -6193,6 +6195,7 @@ export interface operations {
     overlays_api_markets_overlays__symbol__get: {
         parameters: {
             query?: {
+                around?: string | null;
                 from?: string | null;
                 include_indicators?: boolean;
                 limit?: number;

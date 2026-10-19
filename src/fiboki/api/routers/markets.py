@@ -172,6 +172,10 @@ def bars(
     settings: SettingsDep,
     timeframe: str = Query("H1"),
     limit: int = Query(500, ge=1, le=5000),
+    around: Annotated[
+        datetime | None,
+        Query(description="Centre the window on the bar open at or before this UTC instant."),
+    ] = None,
 ) -> Envelope[dict]:
     if not instrument_registry.exists(symbol):
         raise ApiError(
@@ -201,7 +205,7 @@ def bars(
             "The bar dataset could not be read.",
             context={"error_class": type(exc).__name__},
         ) from exc
-    tail = frame.tail(limit)
+    tail = frame.tail(limit) if around is None else _around_window(frame, around, limit)
     volume_kind = _volume_column(tail)
     bars_out: list[dict[str, Any]] = []
     for index, row in tail.iterrows():
@@ -229,6 +233,22 @@ def bars(
         },
         source=_note("live", "Canonical bar store."),
     )
+
+
+def _around_window(frame: Any, around: datetime, limit: int) -> Any:
+    """``limit`` bars centred on the bar open at or before ``around`` (go-to-date).
+
+    Clamped to the dataset's ends, so a date near either end still gets a
+    full window; a date before the first bar centres on the first bar.
+    """
+    import pandas as pd
+
+    at = pd.Timestamp(_utc(around))
+    pos = max(int(frame.index.searchsorted(at, side="right")) - 1, 0)
+    start = max(0, pos - limit // 2)
+    stop = min(len(frame), start + limit)
+    start = max(0, stop - limit)
+    return frame.iloc[start:stop]
 
 
 def _volume_column(frame: Any) -> str | None:
@@ -694,6 +714,7 @@ def overlays(
     timeframe: str = Query("H1"),
     limit: int = Query(500, ge=1, le=OVERLAY_MAX_BARS),
     include_indicators: bool = Query(True),
+    around: Annotated[datetime | None, Query()] = None,
 ) -> Envelope[OverlayView]:
     """Signals, fills, levels, regimes, indicator series, events and headlines.
 
@@ -768,8 +789,12 @@ def overlays(
             for name in ("series", "regimes"):
                 sections[name] = SectionStatus(available=False, detail=detail)
         else:
-            sel = frame if lo is None else frame[frame.index >= pd.Timestamp(lo)]
-            window = sel.tail(limit)
+            if around is not None:
+                # Go-to-date: the same window GET /bars?around= serves.
+                window = _around_window(frame, around, limit)
+            else:
+                sel = frame if lo is None else frame[frame.index >= pd.Timestamp(lo)]
+                window = sel.tail(limit)
             if window.empty:
                 detail = "The dataset has no bars in the requested window."
                 for name in ("series", "regimes"):

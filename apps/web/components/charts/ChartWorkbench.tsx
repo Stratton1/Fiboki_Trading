@@ -49,7 +49,7 @@ import { DataWindow } from "./DataWindow";
 import { ALL_LAYERS_ON, type ChartLayers, type TradeSource } from "./layers";
 import type { DrawingTool } from "./drawing-primitive";
 import type { ChartDrawings, PriceChartProps } from "./PriceChart";
-import { formatBarTime, type TimeZoneId } from "./time";
+import { formatBarTime, TIME_ZONES, type TimeZoneId } from "./time";
 import { useDrawings, type SaveStatus } from "./useDrawings";
 import "./workbench.css";
 
@@ -701,6 +701,7 @@ export default function ChartWorkbench({
             onPick={(key) => selectTrade(key, true)}
             priceDecimals={chart.priceDecimals}
             stopsDetail={run ? (btView?.stops_detail ?? null) : null}
+            timeZone={timeZone}
           />
         ) : panel === "data" ? (
           <div className="cw-trades" id="cw-data-window">
@@ -1016,15 +1017,20 @@ function NoteEditor({
   );
 }
 
-/** "22 Sep 06:00": the trades table's compact UTC entry time (the header says UTC). */
-function shortTime(iso: string): string {
-  const full = formatBarTime(Math.floor(Date.parse(iso) / 1_000));
+/** "22 Sep 06:00": the trades table's compact entry time in the display zone (the header names it). */
+function shortTime(iso: string, tz: TimeZoneId): string {
+  const full = formatBarTime(Math.floor(Date.parse(iso) / 1_000), tz);
   // "Tue 22 Sep 2026 06:00 UTC" -> "22 Sep 06:00"
   const parts = full.split(" ");
   return parts.length >= 5 ? `${parts[1]} ${parts[2]} ${parts[4]}` : full;
 }
 
+function zoneLabel(tz: TimeZoneId): string {
+  return TIME_ZONES.find((z) => z.id === tz)?.label ?? tz;
+}
+
 function TradesTable({
+  timeZone,
   trades,
   selected,
   onPick,
@@ -1036,6 +1042,7 @@ function TradesTable({
   onPick: (key: string) => void;
   priceDecimals: number | null;
   stopsDetail: string | null;
+  timeZone: TimeZoneId;
 }) {
   const rowRefs = useRef(new Map<string, HTMLTableRowElement>());
   // Keep the selected row in view when the chart selects it.
@@ -1085,7 +1092,7 @@ function TradesTable({
             <thead>
               <tr>
                 <th scope="col">Trade</th>
-                <th scope="col">Entry UTC</th>
+                <th scope="col">Entry {timeZone === "UTC" ? "UTC" : zoneLabel(timeZone)}</th>
                 <th scope="col" className="r">Entry</th>
                 <th scope="col" className="r">Exit</th>
                 <th scope="col" className="r">Net P&amp;L</th>
@@ -1127,7 +1134,7 @@ function TradesTable({
                         {t.direction === "short" ? "▼S" : t.direction === "long" ? "▲L" : "?"}
                       </span>
                     </td>
-                    <td className="num">{entryIso ? shortTime(entryIso) : "—"}</td>
+                    <td className="num">{entryIso ? shortTime(entryIso, timeZone) : "—"}</td>
                     <td className="r">{price(t.entryPrice)}</td>
                     <td className="r">{price(t.exitPrice)}</td>
                     <td className={`r num ${pnl && pnl.value !== null ? signClass(pnl.value, pnl.unit) : ""}`}>
@@ -1145,7 +1152,7 @@ function TradesTable({
       )}
       {stopsDetail ? <p className="cw-trades__note muted">{stopsDetail}</p> : null}
       <p className="cw-trades__note muted">
-        Entry times are UTC. Every figure is the platform&apos;s; the chart computes none. Click a row
+        Entry times are {timeZone === "UTC" ? "UTC" : `shown in ${zoneLabel(timeZone)} (stored UTC)`}. Every figure is the platform&apos;s; the chart computes none. Click a row
         (or Enter) to bring the trade into view.
       </p>
     </section>

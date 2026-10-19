@@ -2,7 +2,7 @@
 
 import type { ChartModel, ModelSeries } from "@/lib/chart-model";
 import { formatNumber } from "@/lib/format";
-import { formatBarTime } from "./time";
+import { formatBarTime, type TimeZoneId } from "./time";
 
 /**
  * The crosshair readout (report G C15): the bar under the crosshair, or under
@@ -48,7 +48,9 @@ export function CrosshairReadout({
   priceDecimals,
   paneDecimals,
   volumeKind,
+  timeZone = "UTC",
 }: {
+  timeZone?: TimeZoneId;
   id: string;
   model: ChartModel;
   index: number | null;
@@ -94,7 +96,7 @@ export function CrosshairReadout({
     >
       <div className="readout__row readout__row--bar">
         <span className="readout__time" data-testid="readout-time">
-          {formatBarTime(time)}
+          {formatBarTime(time, timeZone)}
         </span>
         <span className="readout__tag">
           {source === "latest" ? "latest bar" : source === "keyboard" ? "cursor" : "crosshair"}

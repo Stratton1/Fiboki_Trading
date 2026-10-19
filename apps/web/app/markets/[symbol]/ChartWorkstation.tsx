@@ -10,6 +10,9 @@ import { CrosshairReadout, type ReadoutSource } from "@/components/charts/Crossh
 import { ALL_LAYERS_ON, type ChartLayers, type TradeSource } from "@/components/charts/layers";
 import { LAYER_SECTIONS, OverlayLegend, type LayerKey } from "@/components/charts/OverlayLegend";
 import { preloadGrid } from "@/components/grid";
+import type { PriceChartHandle } from "@/components/charts/PriceChart";
+import type { TimeZoneId } from "@/components/charts/time";
+import { useTimeZone } from "@/components/charts/useTimeZone";
 import { preloadPriceChart } from "@/components/LazyChart";
 import { ProvenanceLabelChip } from "@/components/ProvenanceChip";
 import { Button } from "@/components/ui/Button";
@@ -74,6 +77,8 @@ type Mode = (typeof MODES)[number];
 const modeParser = parseAsStringLiteral(MODES).withDefault("live").withOptions({ history: "replace" });
 /** The replay cursor (`?cursor=`, a UTC instant). */
 const cursorParser = parseAsString.withOptions({ history: "replace" });
+/** Go-to-date (`?at=`, a UTC instant): the window is centred on it. */
+const atParser = parseAsString.withOptions({ history: "push" });
 
 /** A replay step's answer, as the chart's ordinary inputs. Every value is the API's. */
 export interface ReplayFrame {
@@ -142,6 +147,8 @@ export function ChartWorkstation({ symbol }: { symbol: string }) {
           onMode={() => undefined}
           cursor={null}
           onCursor={() => undefined}
+          at={null}
+          onAt={() => undefined}
         />
       }
     >
@@ -156,6 +163,8 @@ function WorkstationFromUrl({ symbol }: { symbol: string }) {
   const [mode, setMode] = useQueryState("mode", modeParser);
   const [cursor, setCursor] = useQueryState("cursor", cursorParser);
   const onCursor = useCallback((next: string | null) => void setCursor(next), [setCursor]);
+  const [at, setAt] = useQueryState("at", atParser);
+  const onAt = useCallback((next: string | null) => void setAt(next), [setAt]);
   return (
     <Workstation
       symbol={symbol}
@@ -167,6 +176,8 @@ function WorkstationFromUrl({ symbol }: { symbol: string }) {
       onMode={(next) => void setMode(next === "live" ? null : next)}
       cursor={cursor}
       onCursor={onCursor}
+      at={at}
+      onAt={onAt}
     />
   );
 }
@@ -197,6 +208,8 @@ function Workstation({
   onMode,
   cursor,
   onCursor,
+  at,
+  onAt,
 }: {
   symbol: string;
   tf: Timeframe;
@@ -207,10 +220,14 @@ function Workstation({
   onMode: (mode: Mode) => void;
   cursor: string | null;
   onCursor: (cursor: string | null) => void;
+  /** Go-to-date: the UTC instant the window is centred on, or null for the latest bars. */
+  at: string | null;
+  onAt: (at: string | null) => void;
 }) {
   const enc = encodeURIComponent(symbol);
   const replay = mode === "replay";
-  const barsPath = `/api/markets/bars/${enc}?timeframe=${tf}&limit=${BAR_LIMIT}`;
+  const aroundQuery = at ? `&around=${encodeURIComponent(at)}` : "";
+  const barsPath = `/api/markets/bars/${enc}?timeframe=${tf}&limit=${BAR_LIMIT}${aroundQuery}`;
   // Layer, series and trade-source choices live here, so they survive a
   // timeframe switch and a template can set them all at once.
   const [chartLayers, setChartLayers] = useState<ChartLayers>(ALL_LAYERS_ON);
@@ -220,12 +237,23 @@ function Workstation({
   // Strategies whose indicators the overlays compute (null: every seed strategy).
   const [strategyIds, setStrategyIds] = useState<string[] | null>(null);
   const strategyQuery = (strategyIds ?? []).map((id) => `&strategy_id=${encodeURIComponent(id)}`).join("");
-  const overlaysPath = `/api/markets/overlays/${enc}?timeframe=${tf}&limit=${BAR_LIMIT}${strategyQuery}`;
+  const overlaysPath = `/api/markets/overlays/${enc}?timeframe=${tf}&limit=${BAR_LIMIT}${strategyQuery}${aroundQuery}`;
   // In replay the live reads stop: everything drawn is the replay's answer.
   const bars = useApi<Envelope<BarsView>>(replay ? null : barsPath, { refreshMs: REFRESH_MS });
   const overlays = useApi<Envelope<OverlayView>>(replay ? null : overlaysPath, { refreshMs: REFRESH_MS });
   const instruments = useApi<Page<InstrumentRow>>("/api/markets/instruments");
   const [dataOpen, setDataOpen] = useState(false);
+  const { tz, setTz } = useTimeZone();
+  const [handle, setHandle] = useState<PriceChartHandle | null>(null);
+  // Go to a date: scroll there when it is on the chart, else re-centre the window on it.
+  const goTo = useCallback(
+    (iso: string) => {
+      const seconds = Math.floor(Date.parse(iso) / 1_000);
+      if (handle && handle.goTo(seconds)) return;
+      onAt(iso);
+    },
+    [handle, onAt],
+  );
   const template: ChartTemplateBody = useMemo(
     () => ({
       layers: chartLayers,
@@ -330,7 +358,15 @@ function Workstation({
             </span>
           ) : null}
           <Suspense fallback={<span className="cw__chip muted">tools…</span>}>
-            <ChartToolbar template={template} onApplyTemplate={applyTemplate} />
+            <ChartToolbar
+              template={template}
+              onApplyTemplate={applyTemplate}
+              tz={tz}
+              onTz={setTz}
+              at={at}
+              onGoTo={goTo}
+              onLatest={() => onAt(null)}
+            />
           </Suspense>
           <SourcesPopover bars={barsEnv} overlays={overlayEnv} />
           <Button
@@ -412,6 +448,9 @@ function Workstation({
                       setToggled={setToggled}
                       tradeSource={tradeSource}
                       onTradeSource={setTradeSource}
+                      timeZone={tz}
+                      onHandle={setHandle}
+                      focusAt={null}
                       replay={frame}
                     />
                   )}
@@ -468,6 +507,9 @@ function Workstation({
                 setToggled={setToggled}
                 tradeSource={tradeSource}
                 onTradeSource={setTradeSource}
+                timeZone={tz}
+                onHandle={setHandle}
+                focusAt={at}
               />
             )}
           </AsyncBoundary>
@@ -663,6 +705,9 @@ function ChartArea({
   setToggled,
   tradeSource,
   onTradeSource,
+  timeZone,
+  onHandle,
+  focusAt,
   replay = null,
 }: {
   symbol: string;
@@ -683,6 +728,10 @@ function ChartArea({
   setToggled: (update: (prev: ReadonlyMap<string, boolean>) => ReadonlyMap<string, boolean>) => void;
   tradeSource: TradeSource;
   onTradeSource: (source: TradeSource) => void;
+  timeZone: TimeZoneId;
+  onHandle: (handle: PriceChartHandle | null) => void;
+  /** Go-to-date: once the chart has drawn this window, put the crosshair on this instant. */
+  focusAt: string | null;
   /** Replay mode: the trades as they stood at the cursor, instead of a run's stored trades. */
   replay?: ReplayFrame | null;
 }) {
@@ -717,6 +766,13 @@ function ChartArea({
   }, [model.groups, toggled, chartLayers.indicators]);
   const [cursor, setCursor] = useState<number | null>(null);
   const [hover, setHover] = useState<number | null>(null);
+  const [chartHandle, setChartHandle] = useState<PriceChartHandle | null>(null);
+  useEffect(() => onHandle(chartHandle), [chartHandle, onHandle]);
+  // Go-to-date: centre the requested instant once this window is drawn.
+  const focusSeconds = focusAt ? Math.floor(Date.parse(focusAt) / 1_000) : null;
+  useEffect(() => {
+    if (chartHandle && focusSeconds !== null && model.times.length > 0) chartHandle.goTo(focusSeconds);
+  }, [chartHandle, focusSeconds, model.times]);
   const readoutId = useId();
 
   const n = model.times.length;
@@ -748,6 +804,8 @@ function ChartArea({
     paneDecimals,
     label: `${symbol} ${tf} price chart, ${n.toLocaleString("en-GB")} bars. Arrow keys move the cursor bar by bar, Shift moves ten, Home and End jump, Escape releases.`,
     describedBy: readoutId,
+    timeZone,
+    onHandle: setChartHandle,
     cursor: keyboard,
     onCursor: (index: number | null, from: "pointer" | "keyboard") => {
       if (from === "keyboard") {
@@ -777,6 +835,7 @@ function ChartArea({
           replay={replay ? { rows: replay.rows, runId: replay.runId } : null}
           overlays={overlayData}
           readoutIndex={shown}
+          timeZone={timeZone}
           chartLayers={chartLayers}
           onChartLayers={setChartLayers}
           tradeSource={tradeSource}
@@ -881,6 +940,7 @@ function ChartArea({
         priceDecimals={decimals}
         paneDecimals={paneDecimals}
         volumeKind={bars.data.volume_kind}
+        timeZone={timeZone}
       />
       <p
         className="cw__summary num"

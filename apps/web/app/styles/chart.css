@@ -372,3 +372,23 @@
   background: var(--bg-sunken);
   color: var(--fg);
 }
+
+/* ------------------------------------------------- go to date, time zone */
+.cw-goto {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.cw-goto input {
+  height: 22px;
+  border: 1px solid var(--border-control);
+  border-radius: var(--r-sm);
+  background: var(--bg-sunken);
+  color: var(--fg);
+  font-family: var(--font-code);
+  font-size: 11px;
+}
+.cw-goto__error {
+  color: var(--critical);
+  font-size: 11px;
+}

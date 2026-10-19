@@ -234,3 +234,32 @@ def test_price_alerts_need_the_operator_role_and_csrf(world):
     no_csrf = client.post("/api/alerts/price", json={"symbol": "EURUSD", "price": 1.2},
                           headers={"Origin": ORIGIN})
     assert no_csrf.status_code == 403
+
+
+# -------------------------------------------------------------- go to date
+
+
+def test_bars_and_overlays_centre_on_a_date_when_asked(world):
+    eur = world["eur"]
+    client = world["client"]
+    target = eur.index[200] + pd.Timedelta(minutes=20)
+    bars = client.get(
+        "/api/markets/bars/EURUSD", params={"timeframe": "H1", "limit": 100, "around": target.isoformat()}
+    ).json()["data"]["bars"]
+    times = [pd.Timestamp(b["t"]) for b in bars]
+    assert times == list(eur.index[150:250])
+    overlays = client.get(
+        "/api/markets/overlays/EURUSD",
+        params={"timeframe": "H1", "limit": 100, "around": target.isoformat()},
+    ).json()["data"]
+    assert pd.Timestamp(overlays["window_from"]) == eur.index[150]
+    assert pd.Timestamp(overlays["window_to"]) == eur.index[249]
+    # Near the end the window is clamped, never short.
+    late = client.get(
+        "/api/markets/bars/EURUSD",
+        params={"timeframe": "H1", "limit": 100, "around": eur.index[-3].isoformat()},
+    ).json()["data"]["bars"]
+    assert [pd.Timestamp(b["t"]) for b in late] == list(eur.index[-100:])
+    # Without `around` nothing changes: the latest bars.
+    latest = client.get("/api/markets/bars/EURUSD", params={"timeframe": "H1", "limit": 5}).json()
+    assert [pd.Timestamp(b["t"]) for b in latest["data"]["bars"]] == list(eur.index[-5:])
