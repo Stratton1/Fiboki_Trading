@@ -108,3 +108,6 @@ export function riskCalculatorPath(form: {
   if (form.entries.trim()) params.set("entries", form.entries.replace(/\s+/g, ""));
   return `/api/trading/risk/calculator?${params.toString()}`;
 }
+
+export type AllocationView = Local<S["AllocationView"]>;
+export const allocationPath = (basis: "backtest" | "paper") => `/api/trading/allocation?basis=${basis}`;

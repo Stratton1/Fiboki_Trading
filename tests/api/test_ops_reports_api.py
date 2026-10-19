@@ -77,3 +77,21 @@ def test_the_risk_calculator_sizes_by_the_platform_and_runs_a_seeded_ruin(report
     none = reports.get("/api/trading/risk/calculator?account_size=1000&risk_pct=1").json()
     assert none["data"]["ruin"] is None and none["data"]["ruin_absent"]
     assert reports.get("/api/trading/risk/calculator?account_size=1000&risk_pct=9").status_code == 422
+
+
+def test_allocation_weights_are_display_only_and_sum_to_one(reports):
+    body = reports.get("/api/trading/allocation?basis=backtest").json()
+    view = body["data"]
+    keys = {m["key"] for m in view["members"]}
+    assert {"donchian_breakout_atr", "ichimoku_kumo_trend"} <= keys
+    assert next(m for m in view["members"] if m["key"] == "donchian_breakout_atr")["in_fleet"]
+    assert view["common_days"] >= 20 and {s["scheme"] for s in view["schemes"]} == {
+        "equal_weight", "equal_risk", "inverse_vol", "min_correlation"}
+    for s in view["schemes"]:
+        assert sum(f["value"] for f in s["weights"].values()) == pytest.approx(100.0, abs=1e-2)
+        assert s["sharpe"]["provenance"] == "backtest"
+    assert "DISPLAY ONLY" in view["method"]
+    again = reports.get("/api/trading/allocation?basis=backtest").json()["data"]
+    assert again["schemes"] == view["schemes"]
+    paper = reports.get("/api/trading/allocation?basis=paper").json()["data"]
+    assert paper["schemes"] == [] and paper["absent_reason"]  # one bot: nothing to weight

@@ -59,6 +59,8 @@ export const SECTIONS: Section[] = [
     links: [
       { href: "/trading/fleet", label: "Fleet", code: "FLT", description: "Every paper bot: state, last decision, positions, P&L; attribution." },
       { href: "/trading/portfolio", label: "Portfolio", code: "PORT", description: "The paper book: balance, equity curve and open positions." },
+      // wave ops
+      { href: "/trading/allocation", label: "Allocation", code: "ALLOC", description: "Advisory equal-risk, inverse-vol and min-correlation weights. Display only." },
     ],
     // wave ops: one bot's control, reconciliation, maturity and audit page.
     entityPrefixes: ["/trading/sessions"],

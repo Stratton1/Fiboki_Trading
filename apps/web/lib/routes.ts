@@ -93,6 +93,7 @@ export const ROUTE_PATTERNS = [
   "/system/services",
   "/system/settings",
   "/system/workers",
+  "/trading/allocation",
   "/trading/candidates",
   "/trading/execution",
   "/trading/exposure",

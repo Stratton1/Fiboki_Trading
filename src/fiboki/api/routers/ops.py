@@ -1104,3 +1104,122 @@ def risk_calculator(
     )
     return Envelope(data=view, source=_note("live", "Computed on request; nothing is stored."),
                     caveats=tuple(caveats))
+
+
+# ============================================================ portfolio weights
+
+
+class AllocationMemberView(BaseModel):
+    model_config = ConfigDict(frozen=True)
+
+    key: str
+    kind: str = Field(pattern="^(strategy|bot)$")
+    in_fleet: bool
+    source: str
+    days: int
+    annual_vol_pct: Figure
+
+
+class SchemeView(BaseModel):
+    model_config = ConfigDict(frozen=True)
+
+    scheme: str
+    label: str
+    weights: dict[str, Figure]
+    annual_return_pct: Figure
+    annual_vol_pct: Figure
+    sharpe: Figure
+    max_drawdown_pct: Figure
+    effective_n: Figure
+
+
+class AllocationView(BaseModel):
+    model_config = ConfigDict(frozen=True)
+
+    basis: str = Field(pattern="^(backtest|paper)$")
+    members: list[AllocationMemberView]
+    common_days: int
+    schemes: list[SchemeView]
+    absent_reason: str | None
+    method: str
+
+
+_SCHEME_LABEL = {
+    "equal_weight": "Equal weight (reference)",
+    "equal_risk": "Equal risk contribution",
+    "inverse_vol": "Inverse volatility",
+    "min_correlation": "Minimum correlation",
+}
+
+
+@router.get("/allocation", response_model=Envelope[AllocationView])
+def allocation(
+    platform: PlatformDep,
+    settings: SettingsDep,
+    basis: str = Query("backtest", pattern="^(backtest|paper)$"),
+) -> Envelope[AllocationView]:
+    """Equal-risk, inverse-vol and min-correlation weights with their portfolio stats. Display only."""
+    import math
+
+    from fiboki.ops.analytics import DAYS_PER_YEAR, daily_returns_from_trades, portfolio_weights
+
+    bots = _forward_sessions(platform)
+    fleet_strategies = {s.strategy_id for s in bots.values()}
+    returns: dict[str, Any] = {}
+    members: list[tuple[str, str, bool, str]] = []
+    prov = Provenance.BACKTEST if basis == "backtest" else Provenance.PAPER
+    if basis == "backtest":
+        cache: dict[str, Any] = {}
+        for doc in platform.strategy_documents():
+            series, label, prov_ = _strategy_returns(platform, settings, doc.strategy_id, cache)
+            if len(series):
+                returns[doc.strategy_id] = series
+                members.append((doc.strategy_id, "strategy", doc.strategy_id in fleet_strategies, label))
+    else:
+        for sid, s in sorted(bots.items()):
+            series = daily_returns_from_trades(
+                [{"exit_time": t.exit_time, "net_pnl": t.net_pnl} for t in s.trades], s.initial_balance
+            )
+            if len(series):
+                returns[sid] = series
+                members.append((sid, "bot", True, f"{len(s.trades)} paper trade(s)"))
+    schemes, _names, days, reason = portfolio_weights(returns)
+
+    def fig(v: float | None, unit: str) -> Figure:
+        return Figure(value=v, provenance=prov, unit=unit, estimated=True, sample_size=days or None) if v is not None \
+            else Figure.missing(prov, unit=unit, reason="Not computable on these days.")
+
+    member_views = []
+    for key, kind, in_fleet, label in members:
+        s = returns[key]
+        vol = float(s.std(ddof=1)) * math.sqrt(DAYS_PER_YEAR) * 100.0 if len(s) > 1 else None
+        member_views.append(AllocationMemberView(
+            key=key, kind=kind, in_fleet=in_fleet, source=label, days=int(len(s)),
+            annual_vol_pct=fig(None if vol is None else round(vol, 4), "pct"),
+        ))
+    scheme_views = [
+        SchemeView(
+            scheme=r.scheme, label=_SCHEME_LABEL.get(r.scheme, r.scheme),
+            weights={k: fig(round(w * 100.0, 4), "pct") for k, w in r.weights.items()},
+            annual_return_pct=fig(r.annual_return_pct, "pct"), annual_vol_pct=fig(r.annual_vol_pct, "pct"),
+            sharpe=fig(r.sharpe, "ratio"), max_drawdown_pct=fig(r.max_drawdown_pct, "pct"),
+            effective_n=fig(r.effective_n, "count"),
+        )
+        for r in schemes
+    ]
+    view = AllocationView(
+        basis=basis, members=member_views, common_days=days, schemes=scheme_views,
+        absent_reason=reason or None,
+        method=(
+            "Daily returns of each member's closed-trade balance curve (17:00 New York days, zero on days "
+            "without an exit), on the days every member has a value. Equal risk: equal risk contribution "
+            "from the sample covariance (fixed-point iteration); inverse vol: weights proportional to 1/sigma; "
+            "minimum correlation: long-only weights minimising w'Cw over the correlation matrix C. Statistics annualised at 252 days. "
+            "DISPLAY ONLY: the paper runtime's portfolio construction decides sizes and reads none of this."
+        ),
+    )
+    return Envelope(
+        data=view,
+        source=_note("live" if scheme_views else "absent",
+                     f"{len(member_views)} member(s) on the {basis} basis; {days} common day(s)."),
+    )

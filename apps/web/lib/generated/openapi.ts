@@ -1115,6 +1115,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/trading/allocation": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Allocation
+         * @description Equal-risk, inverse-vol and min-correlation weights with their portfolio stats. Display only.
+         */
+        get: operations["allocation_api_trading_allocation_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/trading/attribution": {
         parameters: {
             query?: never;
@@ -1680,6 +1700,35 @@ export interface components {
             thresholds: {
                 [key: string]: components["schemas"]["Figure"];
             };
+        };
+        /** AllocationMemberView */
+        AllocationMemberView: {
+            annual_vol_pct: components["schemas"]["Figure"];
+            /** Days */
+            days: number;
+            /** In Fleet */
+            in_fleet: boolean;
+            /** Key */
+            key: string;
+            /** Kind */
+            kind: string;
+            /** Source */
+            source: string;
+        };
+        /** AllocationView */
+        AllocationView: {
+            /** Absent Reason */
+            absent_reason: string | null;
+            /** Basis */
+            basis: string;
+            /** Common Days */
+            common_days: number;
+            /** Members */
+            members: components["schemas"]["AllocationMemberView"][];
+            /** Method */
+            method: string;
+            /** Schemes */
+            schemes: components["schemas"]["SchemeView"][];
         };
         /**
          * AttentionItem
@@ -2423,6 +2472,16 @@ export interface components {
              */
             caveats: components["schemas"]["Caveat"][];
             data: components["schemas"]["AlertsView"];
+            source: components["schemas"]["SourceNote"];
+        };
+        /** Envelope[AllocationView] */
+        Envelope_AllocationView_: {
+            /**
+             * Caveats
+             * @default []
+             */
+            caveats: components["schemas"]["Caveat"][];
+            data: components["schemas"]["AllocationView"];
             source: components["schemas"]["SourceNote"];
         };
         /** Envelope[AttributionView] */
@@ -4949,6 +5008,22 @@ export interface components {
             tearsheet: string;
             total_return_pct: components["schemas"]["Figure"];
         };
+        /** SchemeView */
+        SchemeView: {
+            annual_return_pct: components["schemas"]["Figure"];
+            annual_vol_pct: components["schemas"]["Figure"];
+            effective_n: components["schemas"]["Figure"];
+            /** Label */
+            label: string;
+            max_drawdown_pct: components["schemas"]["Figure"];
+            /** Scheme */
+            scheme: string;
+            sharpe: components["schemas"]["Figure"];
+            /** Weights */
+            weights: {
+                [key: string]: components["schemas"]["Figure"];
+            };
+        };
         /** SearchHit */
         SearchHit: {
             /** Detail */
@@ -7274,6 +7349,37 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Page_WorkerRow_"];
+                };
+            };
+        };
+    };
+    allocation_api_trading_allocation_get: {
+        parameters: {
+            query?: {
+                basis?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_AllocationView_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

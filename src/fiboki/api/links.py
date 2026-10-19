@@ -84,6 +84,7 @@ ROUTE_PATTERNS: tuple[str, ...] = (
     "/system/services",
     "/system/settings",
     "/system/workers",
+    "/trading/allocation",
     "/trading/candidates",
     "/trading/execution",
     "/trading/exposure",

@@ -93,6 +93,9 @@ export async function mockOps(page: Page) {
   await page.route(`${API}/api/trading/candidates/correlation`, (route: Route) =>
     route.fulfill({ json: env(selfCorrelationView()) }),
   );
+  await page.route(`${API}/api/trading/allocation*`, (route: Route) =>
+    route.fulfill({ json: env(allocationView()) }),
+  );
   await page.route(`${API}/api/trading/risk/calculator*`, (route: Route) =>
     route.fulfill({ json: { ...env(riskCalculatorView()), caveats: [] } }),
   );
@@ -261,5 +264,30 @@ export function riskCalculatorView() {
         notional: f(null, "USD"), leverage_cap: f(null, "x"), leverage_binding: false, size_from_risk: f(null, "units"), rejection: "fx_rate_required:JPY->USD" },
     ],
     method: "Sizes: portfolio.sizing.size_trade (the paper runtime's one sizing call).",
+  };
+}
+
+export function allocationView() {
+  const f = (v: number | null, unit: string) => figure(v, "backtest", unit, { estimated: true, sample_size: 400 });
+  const scheme = (id: string, label: string, a: number, b: number) => ({
+    scheme: id, label, weights: { donchian_breakout_atr: f(a, "pct"), ichimoku_kumo_trend: f(b, "pct") },
+    annual_return_pct: f(4.1, "pct"), annual_vol_pct: f(6.2, "pct"), sharpe: f(0.66, "ratio"),
+    max_drawdown_pct: f(8.3, "pct"), effective_n: f(1.9, "count"),
+  });
+  return {
+    basis: "backtest",
+    members: [
+      { key: "donchian_breakout_atr", kind: "strategy", in_fleet: true, source: "backtest bt_0001", days: 400, annual_vol_pct: f(7.1, "pct") },
+      { key: "ichimoku_kumo_trend", kind: "strategy", in_fleet: false, source: "backtest bt_0002", days: 400, annual_vol_pct: f(9.4, "pct") },
+    ],
+    common_days: 400,
+    schemes: [
+      scheme("equal_weight", "Equal weight (reference)", 50, 50),
+      scheme("equal_risk", "Equal risk contribution", 56.2, 43.8),
+      scheme("inverse_vol", "Inverse volatility", 57, 43),
+      scheme("min_correlation", "Minimum correlation", 50, 50),
+    ],
+    absent_reason: null,
+    method: "DISPLAY ONLY: the paper runtime's portfolio construction decides sizes and reads none of this.",
   };
 }

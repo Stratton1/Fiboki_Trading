@@ -191,6 +191,96 @@
         "title": "AlertsView",
         "type": "object"
       },
+      "AllocationMemberView": {
+        "properties": {
+          "annual_vol_pct": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "days": {
+            "title": "Days",
+            "type": "integer"
+          },
+          "in_fleet": {
+            "title": "In Fleet",
+            "type": "boolean"
+          },
+          "key": {
+            "title": "Key",
+            "type": "string"
+          },
+          "kind": {
+            "pattern": "^(strategy|bot)$",
+            "title": "Kind",
+            "type": "string"
+          },
+          "source": {
+            "title": "Source",
+            "type": "string"
+          }
+        },
+        "required": [
+          "key",
+          "kind",
+          "in_fleet",
+          "source",
+          "days",
+          "annual_vol_pct"
+        ],
+        "title": "AllocationMemberView",
+        "type": "object"
+      },
+      "AllocationView": {
+        "properties": {
+          "absent_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Absent Reason"
+          },
+          "basis": {
+            "pattern": "^(backtest|paper)$",
+            "title": "Basis",
+            "type": "string"
+          },
+          "common_days": {
+            "title": "Common Days",
+            "type": "integer"
+          },
+          "members": {
+            "items": {
+              "$ref": "#/components/schemas/AllocationMemberView"
+            },
+            "title": "Members",
+            "type": "array"
+          },
+          "method": {
+            "title": "Method",
+            "type": "string"
+          },
+          "schemes": {
+            "items": {
+              "$ref": "#/components/schemas/SchemeView"
+            },
+            "title": "Schemes",
+            "type": "array"
+          }
+        },
+        "required": [
+          "basis",
+          "members",
+          "common_days",
+          "schemes",
+          "absent_reason",
+          "method"
+        ],
+        "title": "AllocationView",
+        "type": "object"
+      },
       "AttentionItem": {
         "description": "One thing an operator should look at, with where to go to act on it.",
         "properties": {
@@ -2323,6 +2413,30 @@
           "source"
         ],
         "title": "Envelope[AlertsView]",
+        "type": "object"
+      },
+      "Envelope_AllocationView_": {
+        "properties": {
+          "caveats": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/Caveat"
+            },
+            "title": "Caveats",
+            "type": "array"
+          },
+          "data": {
+            "$ref": "#/components/schemas/AllocationView"
+          },
+          "source": {
+            "$ref": "#/components/schemas/SourceNote"
+          }
+        },
+        "required": [
+          "data",
+          "source"
+        ],
+        "title": "Envelope[AllocationView]",
         "type": "object"
       },
       "Envelope_AttributionView_": {
@@ -8971,6 +9085,52 @@
         "title": "RungView",
         "type": "object"
       },
+      "SchemeView": {
+        "properties": {
+          "annual_return_pct": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "annual_vol_pct": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "effective_n": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "max_drawdown_pct": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "scheme": {
+            "title": "Scheme",
+            "type": "string"
+          },
+          "sharpe": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "weights": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/Figure"
+            },
+            "title": "Weights",
+            "type": "object"
+          }
+        },
+        "required": [
+          "scheme",
+          "label",
+          "weights",
+          "annual_return_pct",
+          "annual_vol_pct",
+          "sharpe",
+          "max_drawdown_pct",
+          "effective_n"
+        ],
+        "title": "SchemeView",
+        "type": "object"
+      },
       "SearchHit": {
         "properties": {
           "detail": {
@@ -13411,6 +13571,53 @@
         "summary": "Workers",
         "tags": [
           "system"
+        ],
+        "x-fiboki-auth": "public"
+      }
+    },
+    "/api/trading/allocation": {
+      "get": {
+        "description": "Equal-risk, inverse-vol and min-correlation weights with their portfolio stats. Display only.",
+        "operationId": "allocation_api_trading_allocation_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "basis",
+            "required": false,
+            "schema": {
+              "default": "backtest",
+              "pattern": "^(backtest|paper)$",
+              "title": "Basis",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_AllocationView_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [],
+        "summary": "Allocation",
+        "tags": [
+          "ops"
         ],
         "x-fiboki-auth": "public"
       }
