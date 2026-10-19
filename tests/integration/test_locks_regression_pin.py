@@ -43,7 +43,8 @@ SEEDS = ROOT / "research" / "strategies"
 
 #: Computed before the change, on the tree the change was made against.
 #:
-#: ``exit_policy_fp`` RE-PINNED DELIBERATELY for engine_v3_realism: the exit
+#: ``exit_policy_fp`` RE-PINNED DELIBERATELY for engine_v3_realism and again for
+#: engine_v4_time_units (2026-10-19): the exit
 #: policy fingerprint carries ``key_version = ENGINE_VERSION``
 #: (``backtest/exits.py``), so bumping the engine generation moves it and
 #: nothing else. The document pins (content hashes, JSON, structure,
@@ -56,7 +57,7 @@ PINS: dict[str, dict[str, object]] = {
         "bound_json_sha": "ff58290b2d7acfa14ea4c758b54468fbe812b52af4a88203348cfdc280327dc0",
         "structure_hash": "ea8d0371a473de2a15fb13b01a5f2f9a7be681a923ca1fde7b39e00fa9dba1fe",
         "complexity": 8.0,
-        "exit_policy_fp": "3c73579bf2cefcbf265494b5b02ef48947a72008b4e680e43aa84e73331d1378",
+        "exit_policy_fp": "017e57f11fd9ea78cbf531e41bcd94963cd2f33633b0980255715d87b0f39902",
     },
     "fib_golden_pocket_pullback": {
         "template_content_hash": "fd2a53ed94907ab418b6dd6ecc67a8a0fd49b20c378ca7236860838bb8e84df8",
@@ -65,7 +66,7 @@ PINS: dict[str, dict[str, object]] = {
         "bound_json_sha": "03df806ee32e3a1aabea4f5f4d345145e82fd1a21558d917cbe79c9678d3c85f",
         "structure_hash": "4b480bd11a0ac3651f2dd16d832d26e3c8691e9262f551676ebcdb6bdafc439e",
         "complexity": 14.0,
-        "exit_policy_fp": "5e45a155b8627de608b588ea24a50cadd3be1c46815f292bbaef6821b451464a",
+        "exit_policy_fp": "e776fa59260e950d462e224ee3b15f97f14ee9ec57acc3e9adba48daa494b661",
     },
     "ichimoku_kumo_trend": {
         "template_content_hash": "75caa48f3c2043bc3e2ca07d3665dddf9cefb7644d5a2a7a69d6bf4759123248",
@@ -74,7 +75,7 @@ PINS: dict[str, dict[str, object]] = {
         "bound_json_sha": "f26e0192b58091458a64a4a8c3d2fea80fd3b4e6dc63eaea131d4aaafc4548d3",
         "structure_hash": "6f37891f231f781b6566b878a2fe9bb485ede65a220093beae4210e57763f3ea",
         "complexity": 13.5,
-        "exit_policy_fp": "bd83e4f229fa4a1bdb7d80a901579fdcc1f4dba48881ef507b6d145744a6edad",
+        "exit_policy_fp": "33872e624a5b8cc8a710abf1f7dff80f53256f867d13d4e6f7b81d5ac140446c",
     },
     "macd_ema_trend_hybrid": {
         "template_content_hash": "78083597c61621ad885e5942de6986a133c72ee2bb0a37b3e1af9dee9e84c2d2",
@@ -83,7 +84,7 @@ PINS: dict[str, dict[str, object]] = {
         "bound_json_sha": "adcdf497d13bf4ca8c9a92a4e0d9a58ee4698a300f7e08b0ec8c209e719652cd",
         "structure_hash": "4985a06a17cdf3259439502bca3b49cf21551f5c44c0fc1240400956a097068d",
         "complexity": 14.0,
-        "exit_policy_fp": "f1fcb2b2488ca47cfb496314f3dcd8b19b9b3dc9b6bd320cfe149554626e5f1e",
+        "exit_policy_fp": "7cd31c49ea7f643f6de55165d521bbf4e52aed6f6961a276d4ea39a5b1d874f1",
     },
     "rsi_band_mean_reversion": {
         "template_content_hash": "0a1f5a26c24d96c04586fe589899d4a786d45a0e9a9dd5289552c0bbfb1b6c20",
@@ -92,7 +93,7 @@ PINS: dict[str, dict[str, object]] = {
         "bound_json_sha": "58d2afbad28401f5fdf6930b2fd45ee290da65c3ce3d628dc228987f72a9102c",
         "structure_hash": "4147815be090df81830350397980cd7489781c6f1bb89563de5397399cb02baf",
         "complexity": 13.0,
-        "exit_policy_fp": "0bd4278af10011dec178b5a2dd44dc4354f345f5e2d2d5983f898ed1897dedb9",
+        "exit_policy_fp": "959610fa3b0173872688e4476c044622794a2e238c1bf45585b9fdb7e9d4ef90",
     },
 }
 
