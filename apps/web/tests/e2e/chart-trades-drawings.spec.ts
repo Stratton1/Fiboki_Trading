@@ -102,7 +102,8 @@ test.describe("backtest trades on the chart", () => {
     await expect(counts).toHaveAttribute("data-backtest", "1");
     await expect(counts).toHaveAttribute("data-segments", "0");
     const row = page.locator('[data-testid="trade-row"][data-source="backtest"]');
-    await expect(row.locator("td").nth(5)).toHaveText("—");
+    // SL and TP share one stacked column (Wave 2B, the 1440 px fit): both "—".
+    await expect(row.locator("td").nth(5).locator("span")).toHaveText(["—", "—"]);
     await expect(page.getByTestId("trades-panel")).toContainText("filed before the engine recorded");
   });
 

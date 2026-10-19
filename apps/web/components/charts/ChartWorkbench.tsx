@@ -660,7 +660,7 @@ export default function ChartWorkbench({
           type="button"
           className="cw-bench__toggle"
           aria-pressed={panel === "trades"}
-          aria-controls="cw-trades"
+          aria-controls={panel === "trades" ? "cw-trades" : undefined}
           data-testid="trades-panel-toggle"
           onClick={() => setPanel((v) => (v === "trades" ? null : "trades"))}
         >
@@ -670,7 +670,7 @@ export default function ChartWorkbench({
           type="button"
           className="cw-bench__toggle"
           aria-pressed={panel === "data"}
-          aria-controls="cw-data-window"
+          aria-controls={panel === "data" ? "cw-data-window" : undefined}
           data-testid="data-window-toggle"
           title="Data window: every value at the crosshair, from the platform · Alt W"
           onClick={() => setPanel((v) => (v === "data" ? null : "data"))}
@@ -775,7 +775,7 @@ export default function ChartWorkbench({
           type="button"
           className="cw-bench__toggle"
           aria-pressed={panel === "trades"}
-          aria-controls="cw-trades"
+          aria-controls={panel === "trades" ? "cw-trades" : undefined}
           data-testid="trades-panel-toggle"
           onClick={() => setPanel((v) => (v === "trades" ? null : "trades"))}
         >
@@ -785,7 +785,7 @@ export default function ChartWorkbench({
           type="button"
           className="cw-bench__toggle"
           aria-pressed={panel === "data"}
-          aria-controls="cw-data-window"
+          aria-controls={panel === "data" ? "cw-data-window" : undefined}
           data-testid="data-window-toggle"
           title="Data window: every value at the crosshair, from the platform · Alt W"
           onClick={() => setPanel((v) => (v === "data" ? null : "data"))}

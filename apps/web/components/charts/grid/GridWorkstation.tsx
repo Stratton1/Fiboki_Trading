@@ -355,7 +355,7 @@ function GridCell({
                   {compare}{" "}
                   {compareSeries.values[shown] === null || compareSeries.values[shown] === undefined
                     ? "no bar"
-                    : formatSigned(compareSeries.values[shown] as number, "%", { decimals: 2 })}
+                    : `${formatSigned(compareSeries.values[shown] as number, "", { decimals: 2 })}%`}
                 </>
               ) : null}
             </>

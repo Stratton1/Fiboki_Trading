@@ -1,4 +1,5 @@
 import type { Page, Route } from "@playwright/test";
+import { mockChartWave2B } from "./chart2-fixtures";
 
 /**
  * API mocking for the workstation's Playwright suite.
@@ -869,6 +870,8 @@ export async function mockChart(
     },
   );
   await mockDrawings(page);
+  // Wave 2B: replay, compare, data window, events, templates, alerts, stamp.
+  await mockChartWave2B(page);
   return requests;
 }
 

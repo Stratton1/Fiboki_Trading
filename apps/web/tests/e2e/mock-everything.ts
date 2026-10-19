@@ -1,4 +1,5 @@
 import { type Page, type Route } from "@playwright/test";
+import { mockChartWave2B } from "./chart2-fixtures";
 import {
   API,
   attentionItem,
@@ -290,6 +291,8 @@ export async function mockEverything(page: Page, unexpected: string[]) {
           })
         : route.fallback(),
   );
+  // Wave 2B chart routes (tests/e2e/chart2-fixtures.ts).
+  await mockChartWave2B(page);
 
   // Trading
   await json("/api/trading/risk", env(riskState(), "Limit set limits_v1_paper."));

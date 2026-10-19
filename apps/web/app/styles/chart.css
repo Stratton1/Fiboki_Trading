@@ -649,3 +649,27 @@
 .cw > .cw__head .cw-run {
   width: auto;
 }
+
+/* The stamp line holds its height whatever lands in it (the workbench's run
+   provenance arrives after the chart): one line that scrolls sideways, so
+   nothing above it moves (layout shift; programme P1 #7). */
+.cw > .cw__stamp {
+  flex-wrap: nowrap;
+  height: 28px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  white-space: nowrap;
+  scrollbar-width: thin;
+}
+.cw > .cw__stamp > *,
+.cw-bench__status {
+  flex: none;
+  flex-wrap: nowrap;
+}
+@media (max-width: 639px) {
+  .cw > .cw__stamp {
+    flex-wrap: wrap;
+    height: auto;
+    white-space: normal;
+  }
+}
