@@ -1452,6 +1452,135 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/workspace/column-sets/{grid_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Column Sets
+         * @description The operator's saved column sets for one grid (version 0 and none saved yet: empty).
+         */
+        get: operations["get_column_sets_api_workspace_column_sets__grid_id__get"];
+        /**
+         * Put Column Sets
+         * @description Replace the grid's saved sets. Versioned (409 on stale) and audited.
+         */
+        put: operations["put_column_sets_api_workspace_column_sets__grid_id__put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/workspace/layouts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Layouts
+         * @description The signed-in operator's saved layouts, by name.
+         */
+        get: operations["list_layouts_api_workspace_layouts_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/workspace/layouts/{name}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Layout */
+        get: operations["get_layout_api_workspace_layouts__name__get"];
+        /**
+         * Put Layout
+         * @description Save a layout version. Audited; ``base_version`` must be current (409 otherwise).
+         */
+        put: operations["put_layout_api_workspace_layouts__name__put"];
+        post?: never;
+        /**
+         * Delete Layout
+         * @description Delete a layout (a tombstone version; the history keeps every earlier one).
+         */
+        delete: operations["delete_layout_api_workspace_layouts__name__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/workspace/layouts/{name}/history": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Layout History
+         * @description Every accepted write of this layout, newest first: who, when, save or autosave.
+         */
+        get: operations["layout_history_api_workspace_layouts__name__history_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/workspace/panels": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Panels
+         * @description Every panel kind the workspace can tile.
+         */
+        get: operations["panels_api_workspace_panels_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/workspace/presets": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Presets
+         * @description The preset layouts. Code, reviewed in commits; save one under your own name to edit it.
+         */
+        get: operations["presets_api_workspace_presets_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -1851,6 +1980,44 @@ export interface components {
             sessions: components["schemas"]["MarketSessionView"][];
         };
         /**
+         * ColumnSet
+         * @description One saved column arrangement of a grid: order, shown columns and pins.
+         */
+        ColumnSet: {
+            /** Hidden */
+            hidden?: string[];
+            /** Name */
+            name: string;
+            /** Order */
+            order?: string[];
+            /** Pinned */
+            pinned?: string[];
+        };
+        /** ColumnSetsView */
+        ColumnSetsView: {
+            /** Can Edit */
+            can_edit: boolean;
+            /** Default */
+            default: string | null;
+            /** Grid Id */
+            grid_id: string;
+            /** Sets */
+            sets: components["schemas"]["ColumnSet"][];
+            /** Updated At */
+            updated_at: string | null;
+            /** Version */
+            version: number;
+        };
+        /** ColumnSetsWrite */
+        ColumnSetsWrite: {
+            /** Base Version */
+            base_version: number;
+            /** Default */
+            default?: string | null;
+            /** Sets */
+            sets?: components["schemas"]["ColumnSet"][];
+        };
+        /**
          * CommandSummaryView
          * @description The money strip: the book, the fleet and the research load, all decided here.
          */
@@ -2157,6 +2324,16 @@ export interface components {
             data: components["schemas"]["ClockView"];
             source: components["schemas"]["SourceNote"];
         };
+        /** Envelope[ColumnSetsView] */
+        Envelope_ColumnSetsView_: {
+            /**
+             * Caveats
+             * @default []
+             */
+            caveats: components["schemas"]["Caveat"][];
+            data: components["schemas"]["ColumnSetsView"];
+            source: components["schemas"]["SourceNote"];
+        };
         /** Envelope[CommandSummaryView] */
         Envelope_CommandSummaryView_: {
             /**
@@ -2256,6 +2433,16 @@ export interface components {
              */
             caveats: components["schemas"]["Caveat"][];
             data: components["schemas"]["KillSwitchView"];
+            source: components["schemas"]["SourceNote"];
+        };
+        /** Envelope[LayoutView] */
+        Envelope_LayoutView_: {
+            /**
+             * Caveats
+             * @default []
+             */
+            caveats: components["schemas"]["Caveat"][];
+            data: components["schemas"]["LayoutView"];
             source: components["schemas"]["SourceNote"];
         };
         /** Envelope[LifecycleEvaluationView] */
@@ -3131,6 +3318,107 @@ export interface components {
             /** Reason */
             reason: string;
         };
+        /**
+         * LayoutDoc
+         * @description A whole workspace: the tree and the panels its leaves name.
+         */
+        "LayoutDoc-Input": {
+            /** Panels */
+            panels: components["schemas"]["PanelConfig"][];
+            /** Root */
+            root: components["schemas"]["SplitNode-Input"] | components["schemas"]["PanelLeaf"];
+            /**
+             * Schema
+             * @default fiboki.workspace.layout/1
+             * @constant
+             */
+            schema: "fiboki.workspace.layout/1";
+        };
+        /**
+         * LayoutDoc
+         * @description A whole workspace: the tree and the panels its leaves name.
+         */
+        "LayoutDoc-Output": {
+            /** Panels */
+            panels: components["schemas"]["PanelConfig"][];
+            /** Root */
+            root: components["schemas"]["SplitNode-Output"] | components["schemas"]["PanelLeaf"];
+            /**
+             * Schema
+             * @default fiboki.workspace.layout/1
+             * @constant
+             */
+            schema: "fiboki.workspace.layout/1";
+        };
+        /** LayoutPreset */
+        LayoutPreset: {
+            /** Description */
+            description: string;
+            /** Key */
+            key: string;
+            layout: components["schemas"]["LayoutDoc-Output"];
+            /** Name */
+            name: string;
+        };
+        /** LayoutRevisionView */
+        LayoutRevisionView: {
+            /** Action */
+            action: string;
+            /** Actor */
+            actor: string;
+            /**
+             * At
+             * Format: date-time
+             */
+            at: string;
+            /** Kinds */
+            kinds: string[];
+            /** Panel Count */
+            panel_count: number;
+            /** Version */
+            version: number;
+        };
+        /** LayoutSummary */
+        LayoutSummary: {
+            /** Kinds */
+            kinds: string[];
+            /** Name */
+            name: string;
+            /** Panel Count */
+            panel_count: number;
+            /** Updated At */
+            updated_at: string | null;
+            /** Updated By */
+            updated_by: string;
+            /** Version */
+            version: number;
+        };
+        /** LayoutView */
+        LayoutView: {
+            /** Can Edit */
+            can_edit: boolean;
+            layout: components["schemas"]["LayoutDoc-Output"];
+            /** Name */
+            name: string;
+            /** Updated At */
+            updated_at: string | null;
+            /** Updated By */
+            updated_by: string;
+            /** Version */
+            version: number;
+        };
+        /** LayoutWrite */
+        LayoutWrite: {
+            /**
+             * Action
+             * @default save
+             * @enum {string}
+             */
+            action: "save" | "autosave";
+            /** Base Version */
+            base_version: number;
+            layout: components["schemas"]["LayoutDoc-Input"];
+        };
         /** LevelOverlay */
         LevelOverlay: {
             /** Dataset Version Id */
@@ -3730,6 +4018,98 @@ export interface components {
             /** Total */
             total: number;
         };
+        /** Page[LayoutPreset] */
+        Page_LayoutPreset_: {
+            /**
+             * Caveats
+             * @default []
+             */
+            caveats: components["schemas"]["Caveat"][];
+            /** Items */
+            items: components["schemas"]["LayoutPreset"][];
+            /**
+             * Limit
+             * @default 100
+             */
+            limit: number;
+            /**
+             * Offset
+             * @default 0
+             */
+            offset: number;
+            source: components["schemas"]["SourceNote"];
+            /** Total */
+            total: number;
+        };
+        /** Page[LayoutRevisionView] */
+        Page_LayoutRevisionView_: {
+            /**
+             * Caveats
+             * @default []
+             */
+            caveats: components["schemas"]["Caveat"][];
+            /** Items */
+            items: components["schemas"]["LayoutRevisionView"][];
+            /**
+             * Limit
+             * @default 100
+             */
+            limit: number;
+            /**
+             * Offset
+             * @default 0
+             */
+            offset: number;
+            source: components["schemas"]["SourceNote"];
+            /** Total */
+            total: number;
+        };
+        /** Page[LayoutSummary] */
+        Page_LayoutSummary_: {
+            /**
+             * Caveats
+             * @default []
+             */
+            caveats: components["schemas"]["Caveat"][];
+            /** Items */
+            items: components["schemas"]["LayoutSummary"][];
+            /**
+             * Limit
+             * @default 100
+             */
+            limit: number;
+            /**
+             * Offset
+             * @default 0
+             */
+            offset: number;
+            source: components["schemas"]["SourceNote"];
+            /** Total */
+            total: number;
+        };
+        /** Page[PanelKindSpec] */
+        Page_PanelKindSpec_: {
+            /**
+             * Caveats
+             * @default []
+             */
+            caveats: components["schemas"]["Caveat"][];
+            /** Items */
+            items: components["schemas"]["PanelKindSpec"][];
+            /**
+             * Limit
+             * @default 100
+             */
+            limit: number;
+            /**
+             * Offset
+             * @default 0
+             */
+            offset: number;
+            source: components["schemas"]["SourceNote"];
+            /** Total */
+            total: number;
+        };
         /** Page[PositionRowView] */
         Page_PositionRowView_: {
             /**
@@ -3982,6 +4362,85 @@ export interface components {
             source: components["schemas"]["SourceNote"];
             /** Total */
             total: number;
+        };
+        /**
+         * PanelConfig
+         * @description One panel: its kind, link, symbol (when it shows one) and small settings.
+         */
+        PanelConfig: {
+            /** Id */
+            id: string;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "chart" | "watchlist" | "news" | "calendar" | "fleet" | "risk" | "exposure" | "alerts" | "journal" | "research_runs" | "market_pulse" | "system_board" | "notes";
+            /**
+             * @default {
+             *       "group": "none",
+             *       "role": "both"
+             *     }
+             */
+            link: components["schemas"]["PanelLink"];
+            /** Settings */
+            settings?: {
+                [key: string]: string | boolean | number;
+            };
+            /** Symbol */
+            symbol?: string | null;
+            /**
+             * Title
+             * @default
+             */
+            title: string;
+        };
+        /**
+         * PanelKindSpec
+         * @description What the registry says about one kind (served by GET /api/workspace/panels).
+         */
+        PanelKindSpec: {
+            /** Code */
+            code: string;
+            /** Description */
+            description: string;
+            /** Follows Symbol */
+            follows_symbol: boolean;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "chart" | "watchlist" | "news" | "calendar" | "fleet" | "risk" | "exposure" | "alerts" | "journal" | "research_runs" | "market_pulse" | "system_board" | "notes";
+            /** Label */
+            label: string;
+            /** Publishes Symbol */
+            publishes_symbol: boolean;
+            /** Reads */
+            reads: string[];
+        };
+        /** PanelLeaf */
+        PanelLeaf: {
+            /** Panel */
+            panel: string;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "panel";
+        };
+        /** PanelLink */
+        PanelLink: {
+            /**
+             * Group
+             * @default none
+             * @enum {string}
+             */
+            group: "none" | "amber" | "cyan" | "violet" | "white";
+            /**
+             * Role
+             * @default both
+             * @enum {string}
+             */
+            role: "source" | "destination" | "both";
         };
         /** ParameterLabView */
         ParameterLabView: {
@@ -4557,6 +5016,44 @@ export interface components {
             detail: string;
             /** Kind */
             kind: string;
+        };
+        /** SplitNode */
+        "SplitNode-Input": {
+            /** Children */
+            children: (components["schemas"]["SplitNode-Input"] | components["schemas"]["PanelLeaf"])[];
+            /** Id */
+            id: string;
+            /**
+             * Orientation
+             * @enum {string}
+             */
+            orientation: "horizontal" | "vertical";
+            /** Sizes */
+            sizes: number[];
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "split";
+        };
+        /** SplitNode */
+        "SplitNode-Output": {
+            /** Children */
+            children: (components["schemas"]["SplitNode-Output"] | components["schemas"]["PanelLeaf"])[];
+            /** Id */
+            id: string;
+            /**
+             * Orientation
+             * @enum {string}
+             */
+            orientation: "horizontal" | "vertical";
+            /** Sizes */
+            sizes: number[];
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "split";
         };
         /**
          * StatView
@@ -7064,6 +7561,262 @@ export interface operations {
                 };
                 content: {
                     "application/json": Record<string, never>;
+                };
+            };
+        };
+    };
+    get_column_sets_api_workspace_column_sets__grid_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                grid_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_ColumnSetsView_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    put_column_sets_api_workspace_column_sets__grid_id__put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                grid_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ColumnSetsWrite"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_ColumnSetsView_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_layouts_api_workspace_layouts_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Page_LayoutSummary_"];
+                };
+            };
+        };
+    };
+    get_layout_api_workspace_layouts__name__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                name: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_LayoutView_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    put_layout_api_workspace_layouts__name__put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                name: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LayoutWrite"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_LayoutView_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_layout_api_workspace_layouts__name__delete: {
+        parameters: {
+            query: {
+                base_version: number;
+            };
+            header?: never;
+            path: {
+                name: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    layout_history_api_workspace_layouts__name__history_get: {
+        parameters: {
+            query?: {
+                limit?: number;
+            };
+            header?: never;
+            path: {
+                name: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Page_LayoutRevisionView_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    panels_api_workspace_panels_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Page_PanelKindSpec_"];
+                };
+            };
+        };
+    };
+    presets_api_workspace_presets_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Page_LayoutPreset_"];
                 };
             };
         };

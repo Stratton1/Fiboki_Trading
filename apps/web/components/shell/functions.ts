@@ -48,6 +48,8 @@ export const SCREEN_FUNCTIONS: ScreenFunction[] = SECTIONS.flatMap((section, sec
 export const COMMAND_CODES: { code: string; label: string; description: string; keys: string[] }[] = [
   { code: "HELP", label: "Function directory", description: "Every function and key (also FUNC).", keys: ["?"] },
   { code: "KILL", label: "Kill switch…", description: "Opens the kill-switch dialog. It never arms by itself.", keys: ["⇧K"] },
+  // wave workspace
+  { code: "LAYOUT", label: "Open a layout", description: "LAYOUT <name> opens that named workspace layout (a new name starts from the FX monitoring preset).", keys: [] },
 ];
 
 export const INSTRUMENT_FUNCTIONS: InstrumentFunction[] = [
@@ -132,6 +134,11 @@ export function parseCommand(text: string, symbols: ReadonlySet<string>): Parsed
   if (raw === "") return { kind: "empty" };
   const words = raw.split(/\s+/);
   const first = (words[0] ?? "").toUpperCase();
+  // wave workspace: LAYOUT <name> opens a named workspace layout.
+  if (first === "LAYOUT") {
+    const name = raw.slice((words[0] ?? "").length).trim();
+    return { kind: "alias", href: name === "" ? "/workspace" : `/workspace?layout=${encodeURIComponent(name)}`, code: name === "" ? "LAYOUT" : `LAYOUT ${name}` };
+  }
   if (words.length === 1) {
     if (first === "KILL" || first === "HALT") return { kind: "command", code: "KILL" };
     const alias = aliasHref(first);

@@ -90,6 +90,8 @@ ROUTE_PATTERNS: tuple[str, ...] = (
     "/trading/fleet",
     "/trading/portfolio",
     "/trading/risk",
+    # wave workspace
+    "/workspace",
 )
 
 

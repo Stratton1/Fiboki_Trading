@@ -306,7 +306,7 @@ function useBannerHeight() {
 /**
  * The bar's global keys, installed once the engine has loaded:
  *  - `/` focuses the command line from anywhere that is not a field;
- *  - F1 to F9 go to a section (F5 is left to the browser's reload); the rail
+ *  - F1 to F10 go to a section (F5 is left to the browser's reload); the rail
  *    shows each section's key.
  */
 function TopBarKeys() {
@@ -331,7 +331,7 @@ function TopBarKeys() {
         input.select();
         return;
       }
-      const match = event.shiftKey ? null : /^F([1-9])$/.exec(event.key);
+      const match = event.shiftKey ? null : /^F(10|[1-9])$/.exec(event.key);
       const first = match && match[1] !== "5" ? SECTIONS[Number(match[1]) - 1]?.links[0] : undefined;
       if (first) {
         event.preventDefault();

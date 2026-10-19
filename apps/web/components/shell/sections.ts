@@ -1,5 +1,6 @@
 import {
   ArrowUpDown,
+  LayoutGrid,
   Crosshair,
   Database,
   FlaskConical,
@@ -165,6 +166,19 @@ export const SECTIONS: Section[] = [
       { href: "/trading/execution", label: "Trades", code: "JRN", description: "Every closed trade, from every source." },
     ],
   },
+  // wave workspace: the tenth section (F10). Contiguous block; keep together.
+  {
+    id: "workspace",
+    mnemonic: "WS",
+    chord: "w",
+    title: "Workspace & Monitors",
+    question: "What do I want on screen, side by side, right now?",
+    icon: LayoutGrid,
+    links: [
+      { href: "/workspace", label: "Workspace", code: "WS", description: "Tiling panels, colour link groups, named layouts (LAYOUT <name>)." },
+    ],
+  },
+  // end wave workspace
 ];
 
 /** `g <key>` → the section's first view (plan §4: "g x chords per screen"). */

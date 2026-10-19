@@ -49,6 +49,8 @@ export const route = {
   session: (sessionId: string) => withQuery("/trading/fleet", { session: sessionId }),
   candidate: (contentHash: string) => `/lifecycle/${q(contentHash)}`,
   incident: (id: string) => `/system/incidents/${q(id)}`,
+  // wave workspace
+  workspace: (layout?: string | null) => withQuery("/workspace", { layout: layout ?? null }),
 } as const;
 
 /** Page routes of the workstation ([param] marks a dynamic segment). */
@@ -96,6 +98,8 @@ export const ROUTE_PATTERNS = [
   "/trading/fleet",
   "/trading/portfolio",
   "/trading/risk",
+  // wave workspace
+  "/workspace",
 ] as const;
 
 /** True when an in-app link (path plus optional query) is one of the pages. */

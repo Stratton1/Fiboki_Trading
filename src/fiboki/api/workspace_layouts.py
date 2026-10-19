@@ -97,7 +97,7 @@ PANEL_REGISTRY: tuple[PanelKindSpec, ...] = (
     PanelKindSpec(kind="calendar", label="Calendar", code="ECO", follows_symbol=True, publishes_symbol=True,
                   description="Official economic calendar (newest version), impact filter and countdowns.",
                   reads=("/api/markets/calendar",)),
-    PanelKindSpec(kind="fleet", label="Fleet", code="FLT", follows_symbol=False, publishes_symbol=True,
+    PanelKindSpec(kind="fleet", label="Fleet", code="FLT", follows_symbol=False, publishes_symbol=False,
                   description="Every paper bot: state, last decision, position and day P&L.",
                   reads=("/api/trading/fleet",)),
     PanelKindSpec(kind="risk", label="Risk", code="RSK", follows_symbol=False, publishes_symbol=False,

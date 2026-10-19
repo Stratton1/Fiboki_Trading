@@ -1103,6 +1103,136 @@
         "title": "ClockView",
         "type": "object"
       },
+      "ColumnSet": {
+        "additionalProperties": false,
+        "description": "One saved column arrangement of a grid: order, shown columns and pins.",
+        "properties": {
+          "hidden": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 64,
+            "title": "Hidden",
+            "type": "array"
+          },
+          "name": {
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9 ._-]{0,47}$",
+            "title": "Name",
+            "type": "string"
+          },
+          "order": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 64,
+            "title": "Order",
+            "type": "array"
+          },
+          "pinned": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 16,
+            "title": "Pinned",
+            "type": "array"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "title": "ColumnSet",
+        "type": "object"
+      },
+      "ColumnSetsView": {
+        "properties": {
+          "can_edit": {
+            "title": "Can Edit",
+            "type": "boolean"
+          },
+          "default": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Default"
+          },
+          "grid_id": {
+            "title": "Grid Id",
+            "type": "string"
+          },
+          "sets": {
+            "items": {
+              "$ref": "#/components/schemas/ColumnSet"
+            },
+            "title": "Sets",
+            "type": "array"
+          },
+          "updated_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Updated At"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "grid_id",
+          "version",
+          "updated_at",
+          "sets",
+          "default",
+          "can_edit"
+        ],
+        "title": "ColumnSetsView",
+        "type": "object"
+      },
+      "ColumnSetsWrite": {
+        "additionalProperties": false,
+        "properties": {
+          "base_version": {
+            "minimum": 0.0,
+            "title": "Base Version",
+            "type": "integer"
+          },
+          "default": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Default"
+          },
+          "sets": {
+            "items": {
+              "$ref": "#/components/schemas/ColumnSet"
+            },
+            "maxItems": 32,
+            "title": "Sets",
+            "type": "array"
+          }
+        },
+        "required": [
+          "base_version"
+        ],
+        "title": "ColumnSetsWrite",
+        "type": "object"
+      },
       "CommandSummaryView": {
         "description": "The money strip: the book, the fleet and the research load, all decided here.",
         "properties": {
@@ -1946,6 +2076,30 @@
         "title": "Envelope[ClockView]",
         "type": "object"
       },
+      "Envelope_ColumnSetsView_": {
+        "properties": {
+          "caveats": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/Caveat"
+            },
+            "title": "Caveats",
+            "type": "array"
+          },
+          "data": {
+            "$ref": "#/components/schemas/ColumnSetsView"
+          },
+          "source": {
+            "$ref": "#/components/schemas/SourceNote"
+          }
+        },
+        "required": [
+          "data",
+          "source"
+        ],
+        "title": "Envelope[ColumnSetsView]",
+        "type": "object"
+      },
       "Envelope_CommandSummaryView_": {
         "properties": {
           "caveats": {
@@ -2160,6 +2314,30 @@
           "source"
         ],
         "title": "Envelope[KillSwitchView]",
+        "type": "object"
+      },
+      "Envelope_LayoutView_": {
+        "properties": {
+          "caveats": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/Caveat"
+            },
+            "title": "Caveats",
+            "type": "array"
+          },
+          "data": {
+            "$ref": "#/components/schemas/LayoutView"
+          },
+          "source": {
+            "$ref": "#/components/schemas/SourceNote"
+          }
+        },
+        "required": [
+          "data",
+          "source"
+        ],
+        "title": "Envelope[LayoutView]",
         "type": "object"
       },
       "Envelope_LifecycleEvaluationView_": {
@@ -4734,6 +4912,287 @@
         "title": "LastSignalView",
         "type": "object"
       },
+      "LayoutDoc-Input": {
+        "additionalProperties": false,
+        "description": "A whole workspace: the tree and the panels its leaves name.",
+        "properties": {
+          "panels": {
+            "items": {
+              "$ref": "#/components/schemas/PanelConfig"
+            },
+            "maxItems": 16,
+            "minItems": 1,
+            "title": "Panels",
+            "type": "array"
+          },
+          "root": {
+            "discriminator": {
+              "mapping": {
+                "panel": "#/components/schemas/PanelLeaf",
+                "split": "#/components/schemas/SplitNode-Input"
+              },
+              "propertyName": "type"
+            },
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/SplitNode-Input"
+              },
+              {
+                "$ref": "#/components/schemas/PanelLeaf"
+              }
+            ],
+            "title": "Root"
+          },
+          "schema": {
+            "const": "fiboki.workspace.layout/1",
+            "default": "fiboki.workspace.layout/1",
+            "title": "Schema",
+            "type": "string"
+          }
+        },
+        "required": [
+          "root",
+          "panels"
+        ],
+        "title": "LayoutDoc",
+        "type": "object"
+      },
+      "LayoutDoc-Output": {
+        "additionalProperties": false,
+        "description": "A whole workspace: the tree and the panels its leaves name.",
+        "properties": {
+          "panels": {
+            "items": {
+              "$ref": "#/components/schemas/PanelConfig"
+            },
+            "maxItems": 16,
+            "minItems": 1,
+            "title": "Panels",
+            "type": "array"
+          },
+          "root": {
+            "discriminator": {
+              "mapping": {
+                "panel": "#/components/schemas/PanelLeaf",
+                "split": "#/components/schemas/SplitNode-Output"
+              },
+              "propertyName": "type"
+            },
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/SplitNode-Output"
+              },
+              {
+                "$ref": "#/components/schemas/PanelLeaf"
+              }
+            ],
+            "title": "Root"
+          },
+          "schema": {
+            "const": "fiboki.workspace.layout/1",
+            "default": "fiboki.workspace.layout/1",
+            "title": "Schema",
+            "type": "string"
+          }
+        },
+        "required": [
+          "root",
+          "panels"
+        ],
+        "title": "LayoutDoc",
+        "type": "object"
+      },
+      "LayoutPreset": {
+        "properties": {
+          "description": {
+            "title": "Description",
+            "type": "string"
+          },
+          "key": {
+            "title": "Key",
+            "type": "string"
+          },
+          "layout": {
+            "$ref": "#/components/schemas/LayoutDoc-Output"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "key",
+          "name",
+          "description",
+          "layout"
+        ],
+        "title": "LayoutPreset",
+        "type": "object"
+      },
+      "LayoutRevisionView": {
+        "properties": {
+          "action": {
+            "title": "Action",
+            "type": "string"
+          },
+          "actor": {
+            "title": "Actor",
+            "type": "string"
+          },
+          "at": {
+            "format": "date-time",
+            "title": "At",
+            "type": "string"
+          },
+          "kinds": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Kinds",
+            "type": "array"
+          },
+          "panel_count": {
+            "title": "Panel Count",
+            "type": "integer"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "version",
+          "action",
+          "at",
+          "actor",
+          "panel_count",
+          "kinds"
+        ],
+        "title": "LayoutRevisionView",
+        "type": "object"
+      },
+      "LayoutSummary": {
+        "properties": {
+          "kinds": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Kinds",
+            "type": "array"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "panel_count": {
+            "title": "Panel Count",
+            "type": "integer"
+          },
+          "updated_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Updated At"
+          },
+          "updated_by": {
+            "title": "Updated By",
+            "type": "string"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "name",
+          "version",
+          "updated_at",
+          "updated_by",
+          "panel_count",
+          "kinds"
+        ],
+        "title": "LayoutSummary",
+        "type": "object"
+      },
+      "LayoutView": {
+        "properties": {
+          "can_edit": {
+            "title": "Can Edit",
+            "type": "boolean"
+          },
+          "layout": {
+            "$ref": "#/components/schemas/LayoutDoc-Output"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "updated_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Updated At"
+          },
+          "updated_by": {
+            "title": "Updated By",
+            "type": "string"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "name",
+          "version",
+          "updated_at",
+          "updated_by",
+          "layout",
+          "can_edit"
+        ],
+        "title": "LayoutView",
+        "type": "object"
+      },
+      "LayoutWrite": {
+        "additionalProperties": false,
+        "properties": {
+          "action": {
+            "default": "save",
+            "enum": [
+              "save",
+              "autosave"
+            ],
+            "title": "Action",
+            "type": "string"
+          },
+          "base_version": {
+            "minimum": 0.0,
+            "title": "Base Version",
+            "type": "integer"
+          },
+          "layout": {
+            "$ref": "#/components/schemas/LayoutDoc-Input"
+          }
+        },
+        "required": [
+          "base_version",
+          "layout"
+        ],
+        "title": "LayoutWrite",
+        "type": "object"
+      },
       "LevelOverlay": {
         "properties": {
           "dataset_version_id": {
@@ -6136,6 +6595,178 @@
         "title": "Page[InstrumentView]",
         "type": "object"
       },
+      "Page_LayoutPreset_": {
+        "properties": {
+          "caveats": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/Caveat"
+            },
+            "title": "Caveats",
+            "type": "array"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/LayoutPreset"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "limit": {
+            "default": 100,
+            "title": "Limit",
+            "type": "integer"
+          },
+          "offset": {
+            "default": 0,
+            "title": "Offset",
+            "type": "integer"
+          },
+          "source": {
+            "$ref": "#/components/schemas/SourceNote"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "total",
+          "source"
+        ],
+        "title": "Page[LayoutPreset]",
+        "type": "object"
+      },
+      "Page_LayoutRevisionView_": {
+        "properties": {
+          "caveats": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/Caveat"
+            },
+            "title": "Caveats",
+            "type": "array"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/LayoutRevisionView"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "limit": {
+            "default": 100,
+            "title": "Limit",
+            "type": "integer"
+          },
+          "offset": {
+            "default": 0,
+            "title": "Offset",
+            "type": "integer"
+          },
+          "source": {
+            "$ref": "#/components/schemas/SourceNote"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "total",
+          "source"
+        ],
+        "title": "Page[LayoutRevisionView]",
+        "type": "object"
+      },
+      "Page_LayoutSummary_": {
+        "properties": {
+          "caveats": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/Caveat"
+            },
+            "title": "Caveats",
+            "type": "array"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/LayoutSummary"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "limit": {
+            "default": 100,
+            "title": "Limit",
+            "type": "integer"
+          },
+          "offset": {
+            "default": 0,
+            "title": "Offset",
+            "type": "integer"
+          },
+          "source": {
+            "$ref": "#/components/schemas/SourceNote"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "total",
+          "source"
+        ],
+        "title": "Page[LayoutSummary]",
+        "type": "object"
+      },
+      "Page_PanelKindSpec_": {
+        "properties": {
+          "caveats": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/Caveat"
+            },
+            "title": "Caveats",
+            "type": "array"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/PanelKindSpec"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "limit": {
+            "default": 100,
+            "title": "Limit",
+            "type": "integer"
+          },
+          "offset": {
+            "default": 0,
+            "title": "Offset",
+            "type": "integer"
+          },
+          "source": {
+            "$ref": "#/components/schemas/SourceNote"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "total",
+          "source"
+        ],
+        "title": "Page[PanelKindSpec]",
+        "type": "object"
+      },
       "Page_PositionRowView_": {
         "properties": {
           "caveats": {
@@ -6650,6 +7281,197 @@
           "source"
         ],
         "title": "Page[dict]",
+        "type": "object"
+      },
+      "PanelConfig": {
+        "additionalProperties": false,
+        "description": "One panel: its kind, link, symbol (when it shows one) and small settings.",
+        "properties": {
+          "id": {
+            "pattern": "^[A-Za-z0-9_-]{1,32}$",
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "chart",
+              "watchlist",
+              "news",
+              "calendar",
+              "fleet",
+              "risk",
+              "exposure",
+              "alerts",
+              "journal",
+              "research_runs",
+              "market_pulse",
+              "system_board",
+              "notes"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "link": {
+            "$ref": "#/components/schemas/PanelLink",
+            "default": {
+              "group": "none",
+              "role": "both"
+            }
+          },
+          "settings": {
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "maxProperties": 16,
+            "title": "Settings",
+            "type": "object"
+          },
+          "symbol": {
+            "anyOf": [
+              {
+                "pattern": "^[A-Z0-9_]{2,16}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Symbol"
+          },
+          "title": {
+            "default": "",
+            "maxLength": 48,
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "kind"
+        ],
+        "title": "PanelConfig",
+        "type": "object"
+      },
+      "PanelKindSpec": {
+        "description": "What the registry says about one kind (served by GET /api/workspace/panels).",
+        "properties": {
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "description": {
+            "title": "Description",
+            "type": "string"
+          },
+          "follows_symbol": {
+            "title": "Follows Symbol",
+            "type": "boolean"
+          },
+          "kind": {
+            "enum": [
+              "chart",
+              "watchlist",
+              "news",
+              "calendar",
+              "fleet",
+              "risk",
+              "exposure",
+              "alerts",
+              "journal",
+              "research_runs",
+              "market_pulse",
+              "system_board",
+              "notes"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "publishes_symbol": {
+            "title": "Publishes Symbol",
+            "type": "boolean"
+          },
+          "reads": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Reads",
+            "type": "array"
+          }
+        },
+        "required": [
+          "kind",
+          "label",
+          "code",
+          "description",
+          "follows_symbol",
+          "publishes_symbol",
+          "reads"
+        ],
+        "title": "PanelKindSpec",
+        "type": "object"
+      },
+      "PanelLeaf": {
+        "additionalProperties": false,
+        "properties": {
+          "panel": {
+            "pattern": "^[A-Za-z0-9_-]{1,32}$",
+            "title": "Panel",
+            "type": "string"
+          },
+          "type": {
+            "const": "panel",
+            "default": "panel",
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "panel"
+        ],
+        "title": "PanelLeaf",
+        "type": "object"
+      },
+      "PanelLink": {
+        "additionalProperties": false,
+        "properties": {
+          "group": {
+            "default": "none",
+            "enum": [
+              "none",
+              "amber",
+              "cyan",
+              "violet",
+              "white"
+            ],
+            "title": "Group",
+            "type": "string"
+          },
+          "role": {
+            "default": "both",
+            "enum": [
+              "source",
+              "destination",
+              "both"
+            ],
+            "title": "Role",
+            "type": "string"
+          }
+        },
+        "title": "PanelLink",
         "type": "object"
       },
       "ParameterLabView": {
@@ -8202,6 +9024,134 @@
           "detail"
         ],
         "title": "SourceNote",
+        "type": "object"
+      },
+      "SplitNode-Input": {
+        "additionalProperties": false,
+        "properties": {
+          "children": {
+            "items": {
+              "discriminator": {
+                "mapping": {
+                  "panel": "#/components/schemas/PanelLeaf",
+                  "split": "#/components/schemas/SplitNode-Input"
+                },
+                "propertyName": "type"
+              },
+              "oneOf": [
+                {
+                  "$ref": "#/components/schemas/SplitNode-Input"
+                },
+                {
+                  "$ref": "#/components/schemas/PanelLeaf"
+                }
+              ]
+            },
+            "maxItems": 16,
+            "minItems": 2,
+            "title": "Children",
+            "type": "array"
+          },
+          "id": {
+            "pattern": "^[A-Za-z0-9_-]{1,32}$",
+            "title": "Id",
+            "type": "string"
+          },
+          "orientation": {
+            "enum": [
+              "horizontal",
+              "vertical"
+            ],
+            "title": "Orientation",
+            "type": "string"
+          },
+          "sizes": {
+            "items": {
+              "type": "number"
+            },
+            "maxItems": 16,
+            "minItems": 2,
+            "title": "Sizes",
+            "type": "array"
+          },
+          "type": {
+            "const": "split",
+            "default": "split",
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "orientation",
+          "sizes",
+          "children"
+        ],
+        "title": "SplitNode",
+        "type": "object"
+      },
+      "SplitNode-Output": {
+        "additionalProperties": false,
+        "properties": {
+          "children": {
+            "items": {
+              "discriminator": {
+                "mapping": {
+                  "panel": "#/components/schemas/PanelLeaf",
+                  "split": "#/components/schemas/SplitNode-Output"
+                },
+                "propertyName": "type"
+              },
+              "oneOf": [
+                {
+                  "$ref": "#/components/schemas/SplitNode-Output"
+                },
+                {
+                  "$ref": "#/components/schemas/PanelLeaf"
+                }
+              ]
+            },
+            "maxItems": 16,
+            "minItems": 2,
+            "title": "Children",
+            "type": "array"
+          },
+          "id": {
+            "pattern": "^[A-Za-z0-9_-]{1,32}$",
+            "title": "Id",
+            "type": "string"
+          },
+          "orientation": {
+            "enum": [
+              "horizontal",
+              "vertical"
+            ],
+            "title": "Orientation",
+            "type": "string"
+          },
+          "sizes": {
+            "items": {
+              "type": "number"
+            },
+            "maxItems": 16,
+            "minItems": 2,
+            "title": "Sizes",
+            "type": "array"
+          },
+          "type": {
+            "const": "split",
+            "default": "split",
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "orientation",
+          "sizes",
+          "children"
+        ],
+        "title": "SplitNode",
         "type": "object"
       },
       "StatView": {
@@ -12648,6 +13598,407 @@
         "summary": "Version",
         "tags": [
           "system"
+        ],
+        "x-fiboki-auth": "public"
+      }
+    },
+    "/api/workspace/column-sets/{grid_id}": {
+      "get": {
+        "description": "The operator's saved column sets for one grid (version 0 and none saved yet: empty).",
+        "operationId": "get_column_sets_api_workspace_column_sets__grid_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "grid_id",
+            "required": true,
+            "schema": {
+              "title": "Grid Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_ColumnSetsView_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "summary": "Get Column Sets",
+        "tags": [
+          "workspace"
+        ],
+        "x-fiboki-auth": "session"
+      },
+      "put": {
+        "description": "Replace the grid's saved sets. Versioned (409 on stale) and audited.",
+        "operationId": "put_column_sets_api_workspace_column_sets__grid_id__put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "grid_id",
+            "required": true,
+            "schema": {
+              "title": "Grid Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ColumnSetsWrite"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_ColumnSetsView_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "csrfHeader": [],
+            "sessionCookie": []
+          }
+        ],
+        "summary": "Put Column Sets",
+        "tags": [
+          "workspace"
+        ],
+        "x-fiboki-auth": "operator"
+      }
+    },
+    "/api/workspace/layouts": {
+      "get": {
+        "description": "The signed-in operator's saved layouts, by name.",
+        "operationId": "list_layouts_api_workspace_layouts_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Page_LayoutSummary_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "summary": "List Layouts",
+        "tags": [
+          "workspace"
+        ],
+        "x-fiboki-auth": "session"
+      }
+    },
+    "/api/workspace/layouts/{name}": {
+      "delete": {
+        "description": "Delete a layout (a tombstone version; the history keeps every earlier one).",
+        "operationId": "delete_layout_api_workspace_layouts__name__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "name",
+            "required": true,
+            "schema": {
+              "title": "Name",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "base_version",
+            "required": true,
+            "schema": {
+              "minimum": 1,
+              "title": "Base Version",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "csrfHeader": [],
+            "sessionCookie": []
+          }
+        ],
+        "summary": "Delete Layout",
+        "tags": [
+          "workspace"
+        ],
+        "x-fiboki-auth": "operator"
+      },
+      "get": {
+        "operationId": "get_layout_api_workspace_layouts__name__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "name",
+            "required": true,
+            "schema": {
+              "title": "Name",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_LayoutView_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "summary": "Get Layout",
+        "tags": [
+          "workspace"
+        ],
+        "x-fiboki-auth": "session"
+      },
+      "put": {
+        "description": "Save a layout version. Audited; ``base_version`` must be current (409 otherwise).",
+        "operationId": "put_layout_api_workspace_layouts__name__put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "name",
+            "required": true,
+            "schema": {
+              "title": "Name",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LayoutWrite"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_LayoutView_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "csrfHeader": [],
+            "sessionCookie": []
+          }
+        ],
+        "summary": "Put Layout",
+        "tags": [
+          "workspace"
+        ],
+        "x-fiboki-auth": "operator"
+      }
+    },
+    "/api/workspace/layouts/{name}/history": {
+      "get": {
+        "description": "Every accepted write of this layout, newest first: who, when, save or autosave.",
+        "operationId": "layout_history_api_workspace_layouts__name__history_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "name",
+            "required": true,
+            "schema": {
+              "title": "Name",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Page_LayoutRevisionView_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "summary": "Layout History",
+        "tags": [
+          "workspace"
+        ],
+        "x-fiboki-auth": "session"
+      }
+    },
+    "/api/workspace/panels": {
+      "get": {
+        "description": "Every panel kind the workspace can tile.",
+        "operationId": "panels_api_workspace_panels_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Page_PanelKindSpec_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [],
+        "summary": "Panels",
+        "tags": [
+          "workspace"
+        ],
+        "x-fiboki-auth": "public"
+      }
+    },
+    "/api/workspace/presets": {
+      "get": {
+        "description": "The preset layouts. Code, reviewed in commits; save one under your own name to edit it.",
+        "operationId": "presets_api_workspace_presets_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Page_LayoutPreset_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [],
+        "summary": "Presets",
+        "tags": [
+          "workspace"
         ],
         "x-fiboki-auth": "public"
       }

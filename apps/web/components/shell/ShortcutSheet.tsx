@@ -18,9 +18,9 @@ export const SHORTCUTS: readonly { keys: string[]; label: string; what: string }
     what: "Focus the command line: a code (RSK, FLT, LAB), a symbol (EURUSD), or a symbol and a function (EURUSD H4, EURUSD BT), then Enter. ↑ recalls the last 50 commands. FUNC lists every function, KILL opens the kill-switch dialog, an empty Enter opens the palette.",
   },
   {
-    keys: ["F1", "…", "F9"],
-    label: "F1 to F9",
-    what: "Go to a section: F1 Command, F2 Fleet, F3 Lifecycle, F4 Lab, F6 Risk, F7 Data, F8 System, F9 Journal. F5 stays the browser's reload. The rail shows each section's key.",
+    keys: ["F1", "…", "F10"],
+    label: "F1 to F10",
+    what: "Go to a section: F1 Command, F2 Fleet, F3 Lifecycle, F4 Lab, F6 Risk, F7 Data, F8 System, F9 Journal, F10 Workspace. F5 stays the browser's reload. The rail shows each section's key.",
   },
   {
     keys: ["⇧", "K"],
@@ -32,6 +32,11 @@ export const SHORTCUTS: readonly { keys: string[]; label: string; what: string }
   { keys: ["Enter"], label: "Enter", what: "Open the focused row, where the grid supports it" },
   { keys: ["⌘", "⇧", "D"], label: "Command Shift D", what: "Cycle row density" },
   { keys: ["⌘", "⇧", "L"], label: "Command Shift L", what: "Toggle light and dark" },
+  // wave workspace
+  { keys: ["⌘", "1…9"], label: "Command 1 to 9", what: "Workspace: focus panel 1 to 9 (reading order)" },
+  { keys: ["Tab"], label: "Tab on a tile title", what: "Workspace: next tile header (⇧Tab previous); Enter or ↓ steps into the panel" },
+  { keys: ["Esc"], label: "Escape", what: "Workspace: restore a maximised panel (double-click a header maximises)" },
+  { keys: ["⌘", "S"], label: "Command S", what: "Workspace: save the layout now (it also autosaves after a pause)" },
 ];
 
 /**
