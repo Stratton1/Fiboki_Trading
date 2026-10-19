@@ -31,6 +31,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from fiboki.api.deps import AnyPrincipal, AuditDep, SettingsDep
 from fiboki.api.errors import ApiError
+from fiboki.api.grid_format import FORMAT_RULES, FormatRule
 from fiboki.api.logging import current_correlation_id
 from fiboki.api.models import Envelope, Page, SourceNote
 from fiboki.api.security import Principal, Role, require_operator
@@ -473,3 +474,27 @@ def put_column_sets(
         label="Column sets for",
     )
     return Envelope(data=_sets_view(stored, principal), source=_store_note(store))
+
+
+# ========================================================= format rules
+
+
+class FormatRulesView(BaseModel):
+    model_config = ConfigDict(frozen=True)
+
+    grid_id: str
+    rules: list[FormatRule]
+
+
+@router.get("/format-rules/{grid_id}", response_model=Envelope[FormatRulesView])
+def format_rules(grid_id: str, _: AnyPrincipal) -> Envelope[FormatRulesView]:
+    """The conditional-formatting rules the API applies to a grid's rows (a legend).
+
+    The API evaluates them and sends a tone per cell (``tones``); this lists them so
+    the grid can say what each colour means. A grid with no rules gets an empty list.
+    """
+    rules = list(FORMAT_RULES.get(_grid_id(grid_id), ()))
+    return Envelope(
+        data=FormatRulesView(grid_id=grid_id, rules=rules),
+        source=_note("live", "Conditional-format rules in fiboki.api.grid_format (code)."),
+    )

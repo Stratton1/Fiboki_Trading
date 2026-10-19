@@ -16,7 +16,7 @@ import {
   type RowData,
 } from "@tanstack/react-table";
 import { useVirtualizer } from "@tanstack/react-virtual";
-import { ArrowDown, ArrowUp, ArrowUpDown, Columns3, Download, Pin, PinOff } from "lucide-react";
+import { ArrowDown, ArrowUp, ArrowUpDown, ChevronDown, ChevronUp, Columns3, Download, Palette, Pin, PinOff } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 import {
   useEffect,
@@ -27,8 +27,12 @@ import {
   type KeyboardEvent,
   type ReactNode,
 } from "react";
+import { ApiError } from "@/lib/api";
 import { displayDecimals, unitDecimals } from "@/lib/format";
-import type { Figure } from "@/lib/types";
+import { useApi } from "@/lib/query";
+import type { Envelope, Figure } from "@/lib/types";
+import { PATHS, saveColumnSets, type ColumnSet, type ColumnSetsView } from "@/lib/workspace";
+import type { components } from "@/lib/generated/openapi";
 import { FigureValue } from "../FigureValue";
 import { Button } from "../ui/Button";
 import { Popover } from "../ui/Popover";
@@ -48,7 +52,13 @@ import type { DataGridProps, GridColumn } from "./types";
  *    differ: the grid never pretends), fixed decimals per unit, and a shared
  *    precision for unitless columns so the digits line up.
  *  - Pinned columns stick to the start; the fixed layout keeps offsets exact.
- *  - Saved column sets (visibility and pins) in localStorage, per grid.
+ *  - Column ORDER (move a column up or down in the Columns menu), visibility
+ *    and pins; saved column sets in localStorage, or on the server per
+ *    operator (`serverSets`, GET/PUT /api/workspace/column-sets/<id>,
+ *    versioned: a set saved in another tab is never overwritten silently).
+ *  - Conditional formatting by the API's rules: a row's `tones` (decided by
+ *    src/fiboki/api/grid_format.py) become a class per cell; `formatRules`
+ *    shows the API's legend of what each colour means.
  *  - Keyboard: the rows are a roving tab stop (one row is tabbable); ↓/j, ↑/k,
  *    Home, End, PageDown, PageUp move; Enter activates. The selected row is
  *    tracked by ROW KEY, so a live update that changes a cell, or re-sorts
@@ -181,6 +191,9 @@ export default function DataGrid<T extends RowData>({
   maxHeight = "min(70vh, 720px)",
   testId = "data-grid",
   rowTestId = "grid-row",
+  tones,
+  formatRules,
+  serverSets = false,
 }: DataGridProps<T>) {
   const [layout, setLayout] = useState<GridLayout>(() => initialLayout(id, columns));
   const [sets, setSets] = useState<SavedSets>(() => loadSets(id));
@@ -232,8 +245,10 @@ export default function DataGrid<T extends RowData>({
 
   const rows = table.getRowModel().rows;
 
-  // Pinned first (in pin order), then the rest in declared order.
-  const visible = columns.filter((c) => layout.visibility[c.id] !== false);
+  // Pinned first (in pin order), then the rest in the operator's order
+  // (declared order for any column the saved order does not name).
+  const byOrder = orderedColumns(columns, layout.order);
+  const visible = byOrder.filter((c) => layout.visibility[c.id] !== false);
   const pinnedVisible = layout.pinned
     .map((key) => visible.find((c) => c.id === key))
     .filter((c): c is GridColumn<T> => c !== undefined);
@@ -350,7 +365,7 @@ export default function DataGrid<T extends RowData>({
     const exportedAt = new Date().toISOString();
     const csv = toCsv(
       rows.map((row) => row.original),
-      columns,
+      byOrder,
       { source, exportedAt },
     );
     const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
@@ -421,8 +436,9 @@ export default function DataGrid<T extends RowData>({
             : `${rows.length.toLocaleString("en-GB")} of ${data.length.toLocaleString("en-GB")} rows match`}
         </span>
         <span className="grid__spacer" />
+        {formatRules ? <FormatLegend grid={formatRules} /> : null}
         <ColumnsMenu
-          columns={columns}
+          columns={byOrder}
           layout={layout}
           sets={sets}
           onLayout={setLayout}
@@ -432,6 +448,7 @@ export default function DataGrid<T extends RowData>({
           }}
           onReset={() => setLayout(defaultLayout(columns))}
           label={label}
+          server={serverSets ? id : null}
         />
         <Button size="sm" onClick={exportCsv} data-testid="grid-export">
           <Download size={12} aria-hidden="true" />
@@ -531,6 +548,7 @@ export default function DataGrid<T extends RowData>({
               const row = rows[item.index];
               if (!row) return null;
               const selected = row.id === activeId;
+              const rowTones = tones?.(row.original) ?? null;
               return (
                 <tr
                   key={row.id}
@@ -547,16 +565,20 @@ export default function DataGrid<T extends RowData>({
                     if (event.target === event.currentTarget) setActiveId(row.id);
                   }}
                 >
-                  {ordered.map((column) => (
+                  {ordered.map((column) => {
+                    const tone = rowTones?.[column.id];
+                    return (
                     <td
                       key={column.id}
-                      className={cellClass(column, "grid__td")}
+                      className={cellClass(column, tone ? `grid__td tone-${tone}` : "grid__td")}
                       style={cellStyle(column)}
                       data-column={column.id}
+                      data-tone={tone}
                     >
                       {renderCell(column, row.original)}
                     </td>
-                  ))}
+                    );
+                  })}
                 </tr>
               );
             })}
@@ -586,7 +608,9 @@ function ColumnsMenu<T>({
   onSets,
   onReset,
   label,
+  server,
 }: {
+  /** In the current display order. */
   columns: GridColumn<T>[];
   layout: GridLayout;
   sets: SavedSets;
@@ -594,8 +618,22 @@ function ColumnsMenu<T>({
   onSets: (next: SavedSets) => void;
   onReset: () => void;
   label: string;
+  /** The grid id when its sets are kept on the server, else null. */
+  server: string | null;
 }) {
   const [name, setName] = useState("");
+  const remote = useServerSets(server);
+  const [hadLocal] = useState(() => server !== null && loadLayout(server) !== null);
+  const appliedDefault = useRef(false);
+  // A server-side default set is applied when the grid opens with no
+  // arrangement remembered in this browser.
+  useEffect(() => {
+    if (appliedDefault.current || hadLocal || remote.view === null) return;
+    appliedDefault.current = true;
+    const preferred = remote.view.sets.find((x) => x.name === remote.view?.default);
+    if (preferred) onLayout(() => fromServerSet(preferred));
+  }, [hadLocal, remote.view, onLayout]);
+
   const toggleVisible = (key: string, on: boolean) =>
     onLayout((prev) => ({ ...prev, visibility: { ...prev.visibility, [key]: on } }));
   const togglePin = (key: string) =>
@@ -603,6 +641,39 @@ function ColumnsMenu<T>({
       ...prev,
       pinned: prev.pinned.includes(key) ? prev.pinned.filter((k) => k !== key) : [...prev.pinned, key],
     }));
+  const ids = columns.map((c) => c.id);
+  const move = (key: string, by: -1 | 1) =>
+    onLayout((prev) => {
+      const order = [...ids];
+      const at = order.indexOf(key);
+      const to = at + by;
+      if (at < 0 || to < 0 || to >= order.length) return prev;
+      order.splice(at, 1);
+      order.splice(to, 0, key);
+      return { ...prev, order };
+    });
+  const serverSets: ColumnSet[] = remote.view?.sets ?? [];
+  const named: [string, GridLayout][] =
+    server === null ? Object.entries(sets) : serverSets.map((x) => [x.name, fromServerSet(x)]);
+  const saveSet = (setName: string) => {
+    if (server === null) {
+      onSets({ ...sets, [setName]: layout });
+      return;
+    }
+    const next = [...serverSets.filter((x) => x.name !== setName), toServerSet(setName, { ...layout, order: layout.order ?? ids }, columns)];
+    void remote.write(next, remote.view?.default ?? null);
+  };
+  const deleteSet = (setName: string) => {
+    if (server === null) {
+      const next = { ...sets };
+      delete next[setName];
+      onSets(next);
+      return;
+    }
+    const def = remote.view?.default === setName ? null : (remote.view?.default ?? null);
+    void remote.write(serverSets.filter((x) => x.name !== setName), def);
+  };
+  const canSave = server === null || remote.view?.can_edit === true;
   return (
     <Popover
       title={`Columns: ${label}`}
@@ -613,7 +684,7 @@ function ColumnsMenu<T>({
           type="button"
           className="grid__tool"
           data-testid="grid-columns"
-          aria-label={`Columns of ${label}: show, hide, pin and saved sets`}
+          aria-label={`Columns of ${label}: order, show, hide, pin and saved sets`}
         >
           <Columns3 size={12} aria-hidden="true" />
           Columns
@@ -621,13 +692,13 @@ function ColumnsMenu<T>({
       }
     >
       <fieldset className="grid__menu">
-        <legend className="field-label">Show and pin</legend>
+        <legend className="field-label">Order, show and pin</legend>
         <ul className="grid__menu-list">
-          {columns.map((column) => {
+          {columns.map((column, index) => {
             const shown = layout.visibility[column.id] !== false;
             const pinned = layout.pinned.includes(column.id);
             return (
-              <li key={column.id} className="grid__menu-row">
+              <li key={column.id} className="grid__menu-row" data-testid={`grid-order-${column.id}`}>
                 <label>
                   <input
                     type="checkbox"
@@ -637,16 +708,38 @@ function ColumnsMenu<T>({
                   />
                   {column.header}
                 </label>
-                <button
-                  type="button"
-                  className="grid__pin"
-                  aria-pressed={pinned}
-                  aria-label={`${pinned ? "Unpin" : "Pin"} ${column.header}`}
-                  onClick={() => togglePin(column.id)}
-                  data-testid={`grid-pin-${column.id}`}
-                >
-                  {pinned ? <PinOff size={12} aria-hidden="true" /> : <Pin size={12} aria-hidden="true" />}
-                </button>
+                <span className="row">
+                  <button
+                    type="button"
+                    className="grid__pin"
+                    aria-label={`Move ${column.header} earlier`}
+                    disabled={index === 0}
+                    onClick={() => move(column.id, -1)}
+                    data-testid={`grid-up-${column.id}`}
+                  >
+                    <ChevronUp size={12} aria-hidden="true" />
+                  </button>
+                  <button
+                    type="button"
+                    className="grid__pin"
+                    aria-label={`Move ${column.header} later`}
+                    disabled={index === columns.length - 1}
+                    onClick={() => move(column.id, 1)}
+                    data-testid={`grid-down-${column.id}`}
+                  >
+                    <ChevronDown size={12} aria-hidden="true" />
+                  </button>
+                  <button
+                    type="button"
+                    className="grid__pin"
+                    aria-pressed={pinned}
+                    aria-label={`${pinned ? "Unpin" : "Pin"} ${column.header}`}
+                    onClick={() => togglePin(column.id)}
+                    data-testid={`grid-pin-${column.id}`}
+                  >
+                    {pinned ? <PinOff size={12} aria-hidden="true" /> : <Pin size={12} aria-hidden="true" />}
+                  </button>
+                </span>
               </li>
             );
           })}
@@ -657,48 +750,65 @@ function ColumnsMenu<T>({
         onSubmit={(event) => {
           event.preventDefault();
           const trimmed = name.trim();
-          if (!trimmed) return;
-          onSets({ ...sets, [trimmed]: layout });
+          if (!trimmed || !canSave) return;
+          saveSet(trimmed);
           setName("");
         }}
       >
         <label className="field-label" htmlFor={`grid-set-name-${label}`}>
-          Save these columns as a set
+          Save these columns as a set{server === null ? " (this browser)" : " (on the server, yours)"}
         </label>
         <div className="row">
           <input
             id={`grid-set-name-${label}`}
             type="text"
             value={name}
+            maxLength={48}
             onChange={(event) => setName(event.target.value)}
             data-testid="grid-set-name"
           />
-          <Button size="sm" type="submit" data-testid="grid-set-save">
+          <Button size="sm" type="submit" data-testid="grid-set-save" disabled={!canSave}>
             Save
           </Button>
         </div>
       </form>
-      {Object.keys(sets).length > 0 ? (
-        <ul className="grid__menu-list" data-testid="grid-sets">
-          {Object.entries(sets).map(([setName, saved]) => (
+      {server !== null && remote.state.status === "error" ? (
+        <p className="muted" role="status" data-testid="grid-sets-error">
+          Saved sets could not be read: {remote.state.error.message}
+        </p>
+      ) : null}
+      {remote.message ? (
+        <p className="muted" role="status" data-testid="grid-sets-message">
+          {remote.message}
+        </p>
+      ) : null}
+      {named.length > 0 ? (
+        <ul className="grid__menu-list" data-testid="grid-sets" data-server={server !== null || undefined}>
+          {named.map(([setName, saved]) => (
             <li key={setName} className="grid__menu-row">
-              <span>{setName}</span>
+              <span>
+                {setName}
+                {server !== null && remote.view?.default === setName ? <span className="muted"> · default</span> : null}
+              </span>
               <span className="row">
                 <Button size="sm" onClick={() => onLayout(() => saved)} data-testid={`grid-set-apply-${setName}`}>
                   Apply
                 </Button>
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  onClick={() => {
-                    const next = { ...sets };
-                    delete next[setName];
-                    onSets(next);
-                  }}
-                  aria-label={`Delete column set ${setName}`}
-                >
-                  Delete
-                </Button>
+                {server !== null && canSave && remote.view?.default !== setName ? (
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => void remote.write(serverSets, setName)}
+                    data-testid={`grid-set-default-${setName}`}
+                  >
+                    Default
+                  </Button>
+                ) : null}
+                {canSave ? (
+                  <Button size="sm" variant="ghost" onClick={() => deleteSet(setName)} aria-label={`Delete column set ${setName}`}>
+                    Delete
+                  </Button>
+                ) : null}
               </span>
             </li>
           ))}
@@ -709,4 +819,98 @@ function ColumnsMenu<T>({
       </Button>
     </Popover>
   );
+}
+
+/** Columns in the operator's order; ids the order does not name keep their declared place after it. */
+export function orderedColumns<T>(columns: GridColumn<T>[], order: string[] | undefined): GridColumn<T>[] {
+  if (!order || order.length === 0) return columns;
+  const rank = new Map(order.map((id, i) => [id, i]));
+  return columns
+    .map((column, declared) => ({ column, key: rank.has(column.id) ? (rank.get(column.id) as number) : order.length + declared }))
+    .sort((a, b) => a.key - b.key)
+    .map((x) => x.column);
+}
+
+type FormatRule = components["schemas"]["FormatRule"];
+type FormatRulesView = components["schemas"]["FormatRulesView"];
+
+/** The API's conditional-format rules for this grid: what each colour means. */
+function FormatLegend({ grid }: { grid: string }) {
+  return (
+    <Popover
+      title="Colours in this grid (the API's rules)"
+      testId="grid-format-legend"
+      align="end"
+      trigger={
+        <button type="button" className="grid__tool" data-testid="grid-format" aria-label="What the colours in this grid mean">
+          <Palette size={12} aria-hidden="true" />
+          Colours
+        </button>
+      }
+    >
+      <LegendBody grid={grid} />
+    </Popover>
+  );
+}
+
+function LegendBody({ grid }: { grid: string }) {
+  const rules = useApi<Envelope<FormatRulesView>>(`/api/workspace/format-rules/${encodeURIComponent(grid)}`);
+  if (rules.status === "loading") return <p className="muted">Loading the rules…</p>;
+  if (rules.status === "error") return <p className="muted">The rules could not be loaded: {rules.error.message}</p>;
+  const list: FormatRule[] = rules.data.data.rules;
+  if (list.length === 0) return <p className="muted">The API applies no conditional formatting to this grid.</p>;
+  return (
+    <ul className="grid__menu-list" data-testid="grid-format-rules">
+      {list.map((r, i) => (
+        <li key={`${r.column}-${i}`} className="grid__menu-row">
+          <span className={`grid__swatch tone-${r.tone}`} data-tone={r.tone}>
+            {r.tone}
+          </span>
+          <span>
+            <span className="mono">{r.column}</span>: {r.description}
+          </span>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+function toServerSet(name: string, layout: GridLayout, columns: { id: string }[]): ColumnSet {
+  return {
+    name,
+    order: layout.order ?? columns.map((c) => c.id),
+    hidden: Object.entries(layout.visibility).filter(([, on]) => on === false).map(([k]) => k),
+    pinned: layout.pinned,
+  };
+}
+
+function fromServerSet(set: ColumnSet): GridLayout {
+  return {
+    visibility: Object.fromEntries((set.hidden ?? []).map((k) => [k, false])),
+    pinned: set.pinned ?? [],
+    order: set.order ?? [],
+  };
+}
+
+/** Saved column sets on the server, per operator and grid. */
+function useServerSets(grid: string | null) {
+  const path = grid === null ? null : PATHS.columnSets(grid);
+  const state = useApi<Envelope<ColumnSetsView>>(path);
+  const [message, setMessage] = useState<string | null>(null);
+  const view = state.status === "success" ? state.data.data : null;
+  const write = async (sets: ColumnSet[], defaultSet: string | null) => {
+    if (grid === null || view === null) return;
+    try {
+      await saveColumnSets(grid, view.version, sets, defaultSet);
+      setMessage(null);
+    } catch (error) {
+      setMessage(
+        error instanceof ApiError && error.code === "workspace_conflict"
+          ? "These sets changed in another tab; reloaded. Save again to apply your change."
+          : `Not saved: ${error instanceof Error ? error.message : String(error)}`,
+      );
+    }
+    state.reload();
+  };
+  return { view, state, message, write };
 }

@@ -7,6 +7,8 @@
 export interface GridLayout {
   visibility: Record<string, boolean>;
   pinned: string[];
+  /** Column ids in the operator's order (absent: the declared order). */
+  order?: string[];
 }
 
 export type SavedSets = Record<string, GridLayout>;
@@ -33,7 +35,12 @@ function write(k: string, value: unknown) {
 function valid(layout: unknown): layout is GridLayout {
   if (layout === null || typeof layout !== "object") return false;
   const l = layout as GridLayout;
-  return typeof l.visibility === "object" && l.visibility !== null && Array.isArray(l.pinned);
+  return (
+    typeof l.visibility === "object" &&
+    l.visibility !== null &&
+    Array.isArray(l.pinned) &&
+    (l.order === undefined || Array.isArray(l.order))
+  );
 }
 
 export function loadLayout(grid: string): GridLayout | null {

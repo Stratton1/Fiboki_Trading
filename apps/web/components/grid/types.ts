@@ -67,4 +67,18 @@ export interface DataGridProps<T> {
   testId?: string;
   /** A test id on every row (defaults to `grid-row`). */
   rowTestId?: string;
+  /**
+   * Conditional-format tones per column for a row, AS THE API SENT THEM
+   * (`tones` on the row, decided by src/fiboki/api/grid_format.py). The grid
+   * maps a tone to a class and decides nothing.
+   */
+  tones?: (row: T) => Record<string, string> | null | undefined;
+  /** The API's rule set for this grid (GET /api/workspace/format-rules/<id>), shown as a legend. */
+  formatRules?: string;
+  /**
+   * Keep saved column sets on the server, per operator
+   * (GET/PUT /api/workspace/column-sets/<id>, versioned), instead of only in
+   * this browser. The current arrangement stays per browser either way.
+   */
+  serverSets?: boolean;
 }

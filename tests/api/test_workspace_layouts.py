@@ -157,3 +157,17 @@ def test_column_sets_are_versioned(client):
     assert client.put("/api/workspace/column-sets/watchlist", json=body, headers=h).status_code == 409
     bad = {"base_version": 1, "sets": [], "default": "Nope"}
     assert client.put("/api/workspace/column-sets/watchlist", json=bad, headers=h).status_code == 422
+
+
+def test_format_rules_are_the_api_s_and_tones_are_evaluated_server_side(client):
+    from fiboki.api.grid_format import tones_for
+
+    login(client, "joe", ADMIN_PW)
+    body = client.get("/api/workspace/format-rules/watchlist").json()["data"]
+    assert {r["tone"] for r in body["rules"]} >= {"rise", "fall", "stale"}
+    assert client.get("/api/workspace/format-rules/unknown-grid").json()["data"]["rules"] == []
+    assert tones_for("watchlist", {"change_pct": 0.4, "data_state": "stale", "spread_ratio": 2.5}) == {
+        "change": "rise", "age": "stale", "spread": "warn",
+    }
+    assert tones_for("watchlist", {"change_pct": None, "data_state": "live", "spread_ratio": None}) == {}
+    assert tones_for("watchlist", {"change_pct": -0.1}) == {"change": "fall"}
