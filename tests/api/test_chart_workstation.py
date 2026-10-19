@@ -11,7 +11,7 @@ from fastapi.testclient import TestClient
 
 from fiboki.api.app import create_app
 from fiboki.api.settings import load_settings
-from tests.api.conftest import ORIGIN
+from tests.api.conftest import ADMIN_PW, OPERATOR_PW, ORIGIN, VIEWER_PW, csrf_headers, login
 from tests.api.test_chart_replay import _write
 from tests.api.test_overlays import _write_session
 from tests.data_fixtures import make_bars
@@ -124,3 +124,113 @@ def test_data_window_needs_a_bar_at_or_before_t(world):
     )
     assert response.status_code == 404
     assert response.json()["code"] == "no_bar_at_time"
+
+
+# ---------------------------------------------------------------- templates
+
+
+TEMPLATE = {
+    "layers": {"drawings": True, "trades": False, "events": True, "indicators": True},
+    "groups": {"atr_14|atr_14": False, "ichimoku_9_26_52_26_26|price": True},
+    "strategy_ids": ["donchian_breakout_atr"],
+    "trade_source": "backtest",
+}
+
+
+def test_templates_are_saved_per_operator_versioned_and_audited(client):
+    assert login(client, "tom", OPERATOR_PW).status_code == 200
+    empty = client.get("/api/chart/templates").json()["data"]
+    assert empty["templates"] == [] and empty["can_edit"] is True
+    url = "/api/chart/templates/Ichimoku%20only"
+    created = client.put(url, json={"base_version": 0, "template": TEMPLATE}, headers=csrf_headers(client))
+    assert created.status_code == 200, created.text
+    [row] = created.json()["data"]["templates"]
+    assert row["name"] == "Ichimoku only" and row["version"] == 1
+    assert row["template"] == TEMPLATE
+    # A stale write is refused, nothing overwritten.
+    stale = client.put(url, json={"base_version": 0, "template": {}}, headers=csrf_headers(client))
+    assert stale.status_code == 409 and stale.json()["code"] == "template_conflict"
+    updated = client.put(url, json={"base_version": 1, "template": {**TEMPLATE, "trade_source": "both"}},
+                         headers=csrf_headers(client))
+    assert updated.json()["data"]["templates"][0]["version"] == 2
+    # Another operator sees none of Tom's.
+    client.post("/api/auth/logout", headers=csrf_headers(client))
+    assert login(client, "joe", ADMIN_PW).status_code == 200
+    assert client.get("/api/chart/templates").json()["data"]["templates"] == []
+    client.post("/api/auth/logout", headers=csrf_headers(client))
+    assert login(client, "tom", OPERATOR_PW).status_code == 200
+    gone = client.delete(f"{url}?base_version=2", headers=csrf_headers(client))
+    assert gone.status_code == 200 and gone.json()["data"]["templates"] == []
+    actions = [(e.action, e.outcome) for e in client.app.state.audit.entries()]
+    assert ("chart.templates.put", "allowed") in actions
+    assert ("chart.templates.put", "refused") in actions
+    assert ("chart.templates.delete", "allowed") in actions
+
+
+def test_a_template_is_display_choices_only(client):
+    assert login(client, "tom", OPERATOR_PW).status_code == 200
+    bad_layer = client.put("/api/chart/templates/x", json={"base_version": 0, "template": {"layers": {"orders": True}}},
+                           headers=csrf_headers(client))
+    assert bad_layer.status_code == 422
+    smuggled = client.put("/api/chart/templates/x",
+                          json={"base_version": 0, "template": {"stop_loss": 1.1}},
+                          headers=csrf_headers(client))
+    assert smuggled.status_code == 422
+    assert client.put("/api/chart/templates/..%2Fx", json={"base_version": 0, "template": {}},
+                      headers=csrf_headers(client)).status_code in (404, 422)
+
+
+def test_a_viewer_reads_but_cannot_save_templates(client):
+    assert login(client, "guest", VIEWER_PW).status_code == 200
+    assert client.get("/api/chart/templates").json()["data"]["can_edit"] is False
+    response = client.put("/api/chart/templates/x", json={"base_version": 0, "template": {}},
+                          headers=csrf_headers(client))
+    assert response.status_code == 403
+
+
+# ------------------------------------------------------------- price alerts
+
+
+def test_price_alert_direction_is_decided_by_the_platform(world):
+    client = world["client"]
+    eur = world["eur"]
+    assert login(client, "tom", OPERATOR_PW).status_code == 200
+    last = float(eur["close"].iloc[-1])
+    above = client.post("/api/alerts/price", json={"symbol": "EURUSD", "price": last + 0.01,
+                                                   "drawing_id": "d_1", "origin": "level"},
+                        headers=csrf_headers(client))
+    assert above.status_code == 201, above.text
+    below = client.post("/api/alerts/price", json={"symbol": "EURUSD", "price": last - 0.01,
+                                                   "origin": "zone_bottom"},
+                        headers=csrf_headers(client))
+    data = below.json()["data"]
+    assert [a["condition"] for a in data["alerts"]] == ["cross_above", "cross_below"]
+    first = data["alerts"][0]
+    assert first["reference_close"] == last
+    assert pd.Timestamp(first["reference_time"]) == eur.index[-1]
+    assert first["dataset_version_id"] == world["v_eur"]
+    assert first["drawing_id"] == "d_1" and first["status"] == "armed"
+    # Honest about the gap: nothing evaluates these yet.
+    assert data["evaluated"] is False
+    assert [c["code"] for c in below.json()["caveats"]] == ["price_alerts_not_evaluated"]
+    assert ("alerts.price.create", "allowed") in [
+        (e.action, e.outcome) for e in client.app.state.audit.entries()
+    ]
+    listed = client.get("/api/alerts/price", params={"symbol": "EURUSD"}).json()["data"]["alerts"]
+    assert len(listed) == 2
+    at_close = client.post("/api/alerts/price", json={"symbol": "EURUSD", "price": last},
+                           headers=csrf_headers(client))
+    assert at_close.status_code == 422
+
+
+def test_price_alerts_need_the_operator_role_and_csrf(world):
+    client = world["client"]
+    assert login(client, "guest", VIEWER_PW).status_code == 200
+    refused = client.post("/api/alerts/price", json={"symbol": "EURUSD", "price": 1.2},
+                          headers=csrf_headers(client))
+    assert refused.status_code == 403
+    client.post("/api/auth/logout", headers=csrf_headers(client))
+    assert login(client, "tom", OPERATOR_PW).status_code == 200
+    no_csrf = client.post("/api/alerts/price", json={"symbol": "EURUSD", "price": 1.2},
+                          headers={"Origin": ORIGIN})
+    assert no_csrf.status_code == 403

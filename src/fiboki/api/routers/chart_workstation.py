@@ -15,22 +15,37 @@ P&L: those are the stored ones, or the indicator package's, served as they are.
 """
 from __future__ import annotations
 
+import sqlite3
 from datetime import UTC, datetime, timedelta
 from typing import Annotated, Any
 
-from fastapi import APIRouter, Query, status
+from fastapi import APIRouter, Depends, Path, Query, Request, status
 from pydantic import BaseModel, ConfigDict, Field
 
-from fiboki.api.deps import PlatformDep, SettingsDep
+from fiboki.api.chart_store import (
+    MAX_TEMPLATES,
+    ChartTemplate,
+    PriceAlert,
+    PriceAlertStore,
+    StoredTemplate,
+    TemplateConflict,
+    TemplateStore,
+)
+from fiboki.api.deps import AnyPrincipal, AuditDep, PlatformDep, SettingsDep
 from fiboki.api.errors import ApiError
+from fiboki.api.logging import current_correlation_id
 from fiboki.api.models import Envelope, SourceNote
 from fiboki.api.provenance import Caveat, Figure
 from fiboki.api.routers import chart as chart_router
 from fiboki.api.routers import markets as markets_router
+from fiboki.api.security import Principal, Role, require_operator
 from fiboki.core import instruments as instrument_registry
 from fiboki.core.enums import Provenance, Timeframe
+from fiboki.core.paths import resolve_paths
 
 router = APIRouter(tags=["chart-workstation"])
+
+OperatorPrincipal = Annotated[Principal, Depends(require_operator)]
 
 #: Closed bars served per replay step.
 REPLAY_DEFAULT_BARS = 300
@@ -615,3 +630,285 @@ def data_window(
         ),
         caveats=env.caveats,
     )
+
+
+# =============================================================== templates
+
+TEMPLATE_NAME = r"^[A-Za-z0-9][A-Za-z0-9 _.-]{0,47}$"
+
+
+class ChartTemplateView(BaseModel):
+    model_config = ConfigDict(frozen=True)
+
+    name: str
+    version: int
+    updated_at: datetime
+    template: ChartTemplate
+
+
+class ChartTemplatesView(BaseModel):
+    model_config = ConfigDict(frozen=True)
+
+    owner: str
+    templates: list[ChartTemplateView]
+    #: Whether the signed-in role may save (operator or admin). The server
+    #: refuses a viewer's write whatever this says.
+    can_edit: bool
+    max_templates: int
+
+
+class ChartTemplateWrite(BaseModel):
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    #: The version this template was edited from; 0 to create. Stale: 409.
+    base_version: int = Field(ge=0)
+    template: ChartTemplate
+
+
+def _paths(settings: Any) -> Any:
+    # One path rule (core.paths): the API's state dir, resolved like the CLI's.
+    return resolve_paths({"FIBOKI_STATE_DIR": str(settings.state_dir)})
+
+
+def _templates_view(store: TemplateStore, principal: Principal) -> Envelope[ChartTemplatesView]:
+    try:
+        items = store.list(principal.user_id)
+    except (sqlite3.Error, ValueError) as exc:
+        raise ApiError(
+            status.HTTP_503_SERVICE_UNAVAILABLE,
+            "templates_unavailable",
+            "The template store could not be read. Your templates are not lost; they "
+            "could not be loaded.",
+            context={"error_class": type(exc).__name__},
+        ) from exc
+    return Envelope(
+        data=ChartTemplatesView(
+            owner=principal.user_id,
+            templates=[_template_view(t) for t in items],
+            can_edit=principal.role.satisfies(Role.OPERATOR),
+            max_templates=MAX_TEMPLATES,
+        ),
+        source=_note(
+            "live",
+            f"Operator chart templates at {store.path}: display choices only (layers, "
+            "indicator toggles, strategies), never read by a strategy or the risk engine.",
+        ),
+    )
+
+
+def _template_view(t: StoredTemplate) -> ChartTemplateView:
+    return ChartTemplateView(name=t.name, version=t.version, updated_at=t.updated_at,
+                             template=t.template)
+
+
+def _audit(audit: Any, request: Request, settings: Any, principal: Principal, action: str,
+           outcome: str, reason: str, target: str, detail: dict[str, Any]) -> None:
+    audit.record(
+        action,
+        actor=principal.user_id,
+        actor_role=principal.role.value,
+        outcome=outcome,
+        reason=reason,
+        target=target,
+        execution_mode=settings.execution_mode.value,
+        correlation_id=current_correlation_id(),
+        source_ip=request.client.host if request.client else "",
+        detail=detail,
+    )
+
+
+@router.get("/api/chart/templates", response_model=Envelope[ChartTemplatesView])
+def list_templates(settings: SettingsDep, principal: AnyPrincipal) -> Envelope[ChartTemplatesView]:
+    """The signed-in operator's chart templates, by name."""
+    return _templates_view(TemplateStore(_paths(settings).chart_templates_db), principal)
+
+
+@router.put("/api/chart/templates/{name}", response_model=Envelope[ChartTemplatesView])
+def put_template(
+    name: Annotated[str, Path(pattern=TEMPLATE_NAME)],
+    body: ChartTemplateWrite,
+    request: Request,
+    settings: SettingsDep,
+    audit: AuditDep,
+    principal: OperatorPrincipal,
+) -> Envelope[ChartTemplatesView]:
+    """Create (base_version 0) or replace one template. Audited; versioned."""
+    store = TemplateStore(_paths(settings).chart_templates_db)
+    detail = {"name": name, "base_version": body.base_version}
+    try:
+        stored = store.put(principal.user_id, name, body.template, base_version=body.base_version)
+    except TemplateConflict as conflict:
+        _audit(audit, request, settings, principal, "chart.templates.put", "refused",
+               "stale base version", name, {**detail, "current_version": conflict.current_version})
+        raise ApiError(
+            status.HTTP_409_CONFLICT,
+            "template_conflict",
+            f"Template {name!r} is at version {conflict.current_version}, not "
+            f"{body.base_version}. Nothing was overwritten; reload to see it.",
+            context={"current_version": conflict.current_version},
+        ) from conflict
+    except ValueError as exc:
+        _audit(audit, request, settings, principal, "chart.templates.put", "refused",
+               str(exc), name, detail)
+        raise ApiError(status.HTTP_422_UNPROCESSABLE_ENTITY, "invalid_template", str(exc)) from exc
+    except sqlite3.Error as exc:
+        raise ApiError(
+            status.HTTP_503_SERVICE_UNAVAILABLE,
+            "templates_unavailable",
+            "The template store could not be written. Nothing was saved.",
+            context={"error_class": type(exc).__name__},
+        ) from exc
+    _audit(audit, request, settings, principal, "chart.templates.put", "allowed",
+           f"version {stored.version}", name, {**detail, "version": stored.version})
+    return _templates_view(store, principal)
+
+
+@router.delete("/api/chart/templates/{name}", response_model=Envelope[ChartTemplatesView])
+def delete_template(
+    name: Annotated[str, Path(pattern=TEMPLATE_NAME)],
+    request: Request,
+    settings: SettingsDep,
+    audit: AuditDep,
+    principal: OperatorPrincipal,
+    base_version: int = Query(..., ge=1),
+) -> Envelope[ChartTemplatesView]:
+    store = TemplateStore(_paths(settings).chart_templates_db)
+    try:
+        store.delete(principal.user_id, name, base_version=base_version)
+    except TemplateConflict as conflict:
+        _audit(audit, request, settings, principal, "chart.templates.delete", "refused",
+               "stale or missing", name, {"name": name, "base_version": base_version})
+        raise ApiError(
+            status.HTTP_409_CONFLICT if conflict.current_version else status.HTTP_404_NOT_FOUND,
+            "template_conflict" if conflict.current_version else "unknown_template",
+            f"Template {name!r} is not at version {base_version}; nothing was deleted.",
+            context={"current_version": conflict.current_version},
+        ) from conflict
+    _audit(audit, request, settings, principal, "chart.templates.delete", "allowed",
+           "deleted", name, {"name": name, "base_version": base_version})
+    return _templates_view(store, principal)
+
+
+# ============================================================ price alerts
+
+
+class PriceAlertCreate(BaseModel):
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    symbol: str
+    price: float = Field(gt=0, allow_inf_nan=False)
+    timeframe: str = "H1"
+    drawing_id: str | None = Field(default=None, pattern=r"^[A-Za-z0-9_-]{1,64}$")
+    origin: str | None = Field(default=None, pattern="^(level|zone_top|zone_bottom)$")
+    note: str = Field(default="", max_length=280)
+
+
+class PriceAlertsView(BaseModel):
+    model_config = ConfigDict(frozen=True)
+
+    alerts: list[PriceAlert]
+    #: True when something evaluates these alerts. False on this branch.
+    evaluated: bool
+    evaluator_detail: str
+
+
+EVALUATOR_DETAIL = (
+    "Stored, not watched: no price-alert evaluator is wired on this deployment yet, so an "
+    "alert will not fire. It records the level and the direction the platform decided."
+)
+
+
+def _alerts_envelope(alerts: list[PriceAlert], store: PriceAlertStore) -> Envelope[PriceAlertsView]:
+    return Envelope(
+        data=PriceAlertsView(alerts=alerts, evaluated=False, evaluator_detail=EVALUATOR_DETAIL),
+        source=_note("live", f"Operator price alerts at {store.path} (append-only)."),
+        caveats=(
+            Caveat(
+                code="price_alerts_not_evaluated",
+                severity="warning",
+                message=EVALUATOR_DETAIL,
+                affects="alerts",
+                direction="optimistic",
+            ),
+        ),
+    )
+
+
+@router.get("/api/alerts/price", response_model=Envelope[PriceAlertsView])
+def list_price_alerts(
+    settings: SettingsDep, principal: AnyPrincipal, symbol: str | None = Query(None)
+) -> Envelope[PriceAlertsView]:
+    store = PriceAlertStore(_paths(settings).price_alerts_db)
+    sym = _symbol(symbol) if symbol else None
+    return _alerts_envelope(store.list(principal.user_id, sym), store)
+
+
+@router.post(
+    "/api/alerts/price",
+    response_model=Envelope[PriceAlertsView],
+    status_code=status.HTTP_201_CREATED,
+)
+def create_price_alert(
+    body: PriceAlertCreate,
+    request: Request,
+    settings: SettingsDep,
+    audit: AuditDep,
+    principal: OperatorPrincipal,
+) -> Envelope[PriceAlertsView]:
+    """An alert at ``price``; the platform decides cross-above or cross-below.
+
+    The direction is read against the latest CLOSED bar in the store: above
+    that close, the alert waits for a cross above; below it, a cross below. A
+    level equal to the close is refused (no direction can be decided).
+    """
+    sym = _symbol(body.symbol)
+    tf = _tf(body.timeframe)
+    _mounted(settings, sym, tf.value)
+    frame, version = _read_frame(settings, sym, tf)
+    if frame.empty:
+        raise ApiError(status.HTTP_409_CONFLICT, "no_reference_bar",
+                       f"No {sym} {tf.value} bar to decide a direction against.")
+    import pandas as pd
+
+    now = pd.Timestamp(datetime.now(tz=UTC))
+    closes = frame.index + pd.Timedelta(minutes=tf.minutes)
+    closed = frame[closes <= now]
+    ref = closed if not closed.empty else frame
+    ref_time = ref.index[-1].to_pydatetime()
+    ref_close = float(ref["close"].iloc[-1])
+    if body.price == ref_close:
+        raise ApiError(
+            status.HTTP_422_UNPROCESSABLE_ENTITY,
+            "alert_at_reference_close",
+            f"{body.price} is the latest close; move the level to set a direction.",
+        )
+    store = PriceAlertStore(_paths(settings).price_alerts_db)
+    alert = PriceAlert(
+        alert_id=store.new_id(),
+        owner=principal.user_id,
+        symbol=sym,
+        price=body.price,
+        condition="cross_above" if body.price > ref_close else "cross_below",
+        reference_close=ref_close,
+        reference_time=ref_time,
+        dataset_version_id=version,
+        drawing_id=body.drawing_id,
+        origin=body.origin,
+        note=body.note,
+        created_at=datetime.now(tz=UTC),
+    )
+    try:
+        store.add(alert)
+    except sqlite3.Error as exc:
+        _audit(audit, request, settings, principal, "alerts.price.create", "failed",
+               type(exc).__name__, sym, {"price": body.price})
+        raise ApiError(
+            status.HTTP_503_SERVICE_UNAVAILABLE,
+            "price_alerts_unavailable",
+            "The alert store could not be written. No alert was created.",
+            context={"error_class": type(exc).__name__},
+        ) from exc
+    _audit(audit, request, settings, principal, "alerts.price.create", "allowed",
+           alert.condition, sym, {"alert_id": alert.alert_id, "price": body.price,
+                                  "drawing_id": body.drawing_id})
+    return _alerts_envelope(store.list(principal.user_id, sym), store)

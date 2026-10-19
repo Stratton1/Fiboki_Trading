@@ -313,3 +313,62 @@
 .cw-dw__src {
   margin: 0;
 }
+
+/* ---------------------------------------------------------- templates */
+.cw-tools {
+  display: inline-flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 4px;
+}
+.cw-tpl {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 260px;
+  max-width: 340px;
+  font-size: 12px;
+}
+.cw-tpl__list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.cw-tpl__row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.cw-tpl__apply {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  padding: 2px 6px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--r-xs);
+  background: var(--bg-sunken);
+  color: var(--fg);
+  text-align: left;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.cw-tpl__apply:hover {
+  border-color: var(--accent);
+}
+.cw-tpl__save {
+  display: flex;
+  gap: 4px;
+}
+.cw-tpl__save input {
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 26px;
+  padding: 0 6px;
+  border: 1px solid var(--border-control);
+  border-radius: var(--r-sm);
+  background: var(--bg-sunken);
+  color: var(--fg);
+}

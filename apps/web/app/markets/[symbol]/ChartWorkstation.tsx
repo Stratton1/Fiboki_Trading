@@ -7,6 +7,7 @@ import { lazy, Suspense, useCallback, useEffect, useId, useMemo, useState } from
 import { AsyncBoundary } from "@/components/AsyncBoundary";
 import { CaveatList } from "@/components/CaveatList";
 import { CrosshairReadout, type ReadoutSource } from "@/components/charts/CrosshairReadout";
+import { ALL_LAYERS_ON, type ChartLayers, type TradeSource } from "@/components/charts/layers";
 import { LAYER_SECTIONS, OverlayLegend, type LayerKey } from "@/components/charts/OverlayLegend";
 import { preloadGrid } from "@/components/grid";
 import { preloadPriceChart } from "@/components/LazyChart";
@@ -17,7 +18,7 @@ import { Segmented } from "@/components/ui/Segmented";
 import { StaleBadge } from "@/components/ui/StaleBadge";
 import { ViewStateTag } from "@/components/ui/ViewStateTag";
 import { UrlState } from "@/components/UrlState";
-import type { ReplayView } from "@/lib/chart-contract";
+import type { ChartTemplateBody, ReplayView } from "@/lib/chart-contract";
 import { buildChartModel, replayRow, visiblePanes, type ChartModel } from "@/lib/chart-model";
 import { isStale } from "@/lib/freshness";
 import { displayDecimals, formatUtcTime, priceDecimals } from "@/lib/format";
@@ -57,6 +58,9 @@ const SplitPane = lazy(() => loadSplitPane().then((m) => ({ default: m.SplitPane
  */
 const loadWorkbench = () => import("@/components/charts/ChartWorkbench");
 const ChartWorkbench = lazy(loadWorkbench);
+/** Templates, layers, go-to-date, time zone and snapshot: one chunk, after first paint. */
+const loadToolbar = () => import("@/components/charts/toolbar/ChartToolbar");
+const ChartToolbar = lazy(loadToolbar);
 /** Bar-by-bar replay: fetched only in replay mode (`?mode=replay`). */
 const ReplayController = lazy(() => import("@/components/charts/replay/ReplayController"));
 
@@ -118,7 +122,11 @@ const BAR_LIMIT = 500;
 const REFRESH_MS = 60_000;
 
 type Layers = Record<LayerKey, boolean>;
-const ALL_LAYERS: Layers = { regimes: true, signals: true, fills: true, levels: true };
+
+/** The legend's four overlay layers, from the chart's layer state (levels are "stops"). */
+function legendLayers(l: ChartLayers): Layers {
+  return { regimes: l.regimes, signals: l.signals, fills: l.fills, levels: l.stops };
+}
 
 export function ChartWorkstation({ symbol }: { symbol: string }) {
   return (
@@ -203,21 +211,48 @@ function Workstation({
   const enc = encodeURIComponent(symbol);
   const replay = mode === "replay";
   const barsPath = `/api/markets/bars/${enc}?timeframe=${tf}&limit=${BAR_LIMIT}`;
-  const overlaysPath = `/api/markets/overlays/${enc}?timeframe=${tf}&limit=${BAR_LIMIT}`;
+  // Layer, series and trade-source choices live here, so they survive a
+  // timeframe switch and a template can set them all at once.
+  const [chartLayers, setChartLayers] = useState<ChartLayers>(ALL_LAYERS_ON);
+  // Explicit operator choices; every other group follows its default.
+  const [toggled, setToggled] = useState<ReadonlyMap<string, boolean>>(new Map());
+  const [tradeSource, setTradeSource] = useState<TradeSource>("both");
+  // Strategies whose indicators the overlays compute (null: every seed strategy).
+  const [strategyIds, setStrategyIds] = useState<string[] | null>(null);
+  const strategyQuery = (strategyIds ?? []).map((id) => `&strategy_id=${encodeURIComponent(id)}`).join("");
+  const overlaysPath = `/api/markets/overlays/${enc}?timeframe=${tf}&limit=${BAR_LIMIT}${strategyQuery}`;
   // In replay the live reads stop: everything drawn is the replay's answer.
   const bars = useApi<Envelope<BarsView>>(replay ? null : barsPath, { refreshMs: REFRESH_MS });
   const overlays = useApi<Envelope<OverlayView>>(replay ? null : overlaysPath, { refreshMs: REFRESH_MS });
   const instruments = useApi<Page<InstrumentRow>>("/api/markets/instruments");
   const [dataOpen, setDataOpen] = useState(false);
-  // Layer and series toggles live here, so they survive a timeframe switch.
-  const [layers, setLayers] = useState<Layers>(ALL_LAYERS);
-  // Explicit operator choices; every other group follows its default.
-  const [toggled, setToggled] = useState<ReadonlyMap<string, boolean>>(new Map());
+  const template: ChartTemplateBody = useMemo(
+    () => ({
+      layers: chartLayers,
+      groups: Object.fromEntries(toggled),
+      strategy_ids: strategyIds,
+      trade_source: tradeSource,
+    }),
+    [chartLayers, toggled, strategyIds, tradeSource],
+  );
+  const applyTemplate = useCallback((_name: string, t: ChartTemplateBody) => {
+    setChartLayers((prev) => {
+      const next = { ...prev };
+      for (const [k, v] of Object.entries(t.layers)) {
+        if (k in next && typeof v === "boolean") next[k as keyof ChartLayers] = v;
+      }
+      return next;
+    });
+    setToggled(new Map(Object.entries(t.groups)));
+    setStrategyIds(t.strategy_ids);
+    setTradeSource(t.trade_source);
+  }, []);
 
   useEffect(() => {
     // Fetch the chart engine and its tools while the bars are still on their way.
     void preloadPriceChart();
     void loadWorkbench();
+    void loadToolbar();
   }, []);
   useEffect(() => {
     if (!dataOpen) return;
@@ -294,6 +329,9 @@ function Workstation({
               )}
             </span>
           ) : null}
+          <Suspense fallback={<span className="cw__chip muted">tools…</span>}>
+            <ChartToolbar template={template} onApplyTemplate={applyTemplate} />
+          </Suspense>
           <SourcesPopover bars={barsEnv} overlays={overlayEnv} />
           <Button
             size="sm"
@@ -368,10 +406,12 @@ function Workstation({
                       dataOpen={dataOpen}
                       run={run}
                       onRun={onRun}
-                      layers={layers}
-                      setLayers={setLayers}
+                      chartLayers={chartLayers}
+                      setChartLayers={setChartLayers}
                       toggled={toggled}
                       setToggled={setToggled}
+                      tradeSource={tradeSource}
+                      onTradeSource={setTradeSource}
                       replay={frame}
                     />
                   )}
@@ -422,10 +462,12 @@ function Workstation({
                 dataOpen={dataOpen}
                 run={run}
                 onRun={onRun}
-                layers={layers}
-                setLayers={setLayers}
+                chartLayers={chartLayers}
+                setChartLayers={setChartLayers}
                 toggled={toggled}
                 setToggled={setToggled}
+                tradeSource={tradeSource}
+                onTradeSource={setTradeSource}
               />
             )}
           </AsyncBoundary>
@@ -615,10 +657,12 @@ function ChartArea({
   dataOpen,
   run,
   onRun,
-  layers,
-  setLayers,
+  chartLayers,
+  setChartLayers,
   toggled,
   setToggled,
+  tradeSource,
+  onTradeSource,
   replay = null,
 }: {
   symbol: string;
@@ -633,10 +677,12 @@ function ChartArea({
   dataOpen: boolean;
   run: string | null;
   onRun: (run: string | null) => void;
-  layers: Layers;
-  setLayers: (update: (layers: Layers) => Layers) => void;
+  chartLayers: ChartLayers;
+  setChartLayers: (update: (layers: ChartLayers) => ChartLayers) => void;
   toggled: ReadonlyMap<string, boolean>;
   setToggled: (update: (prev: ReadonlyMap<string, boolean>) => ReadonlyMap<string, boolean>) => void;
+  tradeSource: TradeSource;
+  onTradeSource: (source: TradeSource) => void;
   /** Replay mode: the trades as they stood at the cursor, instead of a run's stored trades. */
   replay?: ReplayFrame | null;
 }) {
@@ -659,14 +705,16 @@ function ChartArea({
     return widest;
   }, [fromPip, bars.data.bars]);
 
+  const layers = legendLayers(chartLayers);
   const hidden = useMemo(() => {
     const out = new Set<string>();
     for (const g of model.groups) {
       const shown = toggled.get(g.id);
-      if (shown === undefined ? !g.defaultVisible : !shown) out.add(g.id);
+      // The Indicators layer off hides every series; the toggles are kept.
+      if (!chartLayers.indicators || (shown === undefined ? !g.defaultVisible : !shown)) out.add(g.id);
     }
     return out;
-  }, [model.groups, toggled]);
+  }, [model.groups, toggled, chartLayers.indicators]);
   const [cursor, setCursor] = useState<number | null>(null);
   const [hover, setHover] = useState<number | null>(null);
   const readoutId = useId();
@@ -729,6 +777,10 @@ function ChartArea({
           replay={replay ? { rows: replay.rows, runId: replay.runId } : null}
           overlays={overlayData}
           readoutIndex={shown}
+          chartLayers={chartLayers}
+          onChartLayers={setChartLayers}
+          tradeSource={tradeSource}
+          onTradeSource={onTradeSource}
         />
       </Suspense>
     </div>
@@ -741,7 +793,12 @@ function ChartArea({
         overlays={overlayData}
         overlaysPending={overlays.status !== "success"}
         layers={layers}
-        onLayer={(layer) => setLayers((l) => ({ ...l, [layer]: !l[layer] }))}
+        onLayer={(layer) =>
+          setChartLayers((l) => {
+            const key = layer === "levels" ? "stops" : layer;
+            return { ...l, [key]: !l[key] };
+          })
+        }
         hidden={hidden}
         onGroup={(group) =>
           setToggled((prev) => {

@@ -17,7 +17,14 @@ DECISION_PACKAGES = (
     "strategy", "backtest", "risk", "portfolio", "broker", "validation", "research",
     "sim", "indicators", "marketstate", "workers", "entrypoints", "agents", "lifecycle",
 )
-FORBIDDEN = ("fiboki.api.drawings", "fiboki.api.routers.chart")
+FORBIDDEN = (
+    "fiboki.api.drawings",
+    "fiboki.api.routers.chart",
+    # Wave 2B: chart templates and price alerts are display choices and
+    # operator reminders, never strategy, risk or execution input either.
+    "fiboki.api.chart_store",
+    "fiboki.api.routers.chart_workstation",
+)
 
 
 def _imports(path: Path) -> list[str]:

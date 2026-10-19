@@ -24,10 +24,19 @@ NON_ADMIN_MUTATING = {
     # They are still behind require_operator (role, CSRF, allow-listed Origin)
     # and audited; OPERATOR_GATED_MUTATING below asserts it.
     "/api/markets/drawings/{symbol}": "operator annotations: require_operator, asserted below",
+    # Wave 2B: chart templates are display choices; price alerts are operator
+    # reminders that place, size and close nothing (and nothing evaluates
+    # them yet). Both behind require_operator and audited, asserted below.
+    "/api/chart/templates/{name}": "operator display choices: require_operator, asserted below",
+    "/api/alerts/price": "operator reminders, no execution: require_operator, asserted below",
 }
 
 #: The non-admin mutating routes that must still be operator-gated.
-OPERATOR_GATED_MUTATING = {"/api/markets/drawings/{symbol}"}
+OPERATOR_GATED_MUTATING = {
+    "/api/markets/drawings/{symbol}",
+    "/api/chart/templates/{name}",
+    "/api/alerts/price",
+}
 
 
 def _routes(app):

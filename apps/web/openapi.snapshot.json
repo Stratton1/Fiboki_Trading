@@ -1080,6 +1080,132 @@
         "title": "Caveat",
         "type": "object"
       },
+      "ChartTemplate": {
+        "additionalProperties": false,
+        "description": "Display choices only: no symbol, no price, no parameter.",
+        "properties": {
+          "groups": {
+            "additionalProperties": {
+              "type": "boolean"
+            },
+            "maxProperties": 200,
+            "title": "Groups",
+            "type": "object"
+          },
+          "layers": {
+            "additionalProperties": {
+              "type": "boolean"
+            },
+            "title": "Layers",
+            "type": "object"
+          },
+          "strategy_ids": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "maxItems": 20,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Strategy Ids"
+          },
+          "trade_source": {
+            "default": "both",
+            "enum": [
+              "paper",
+              "backtest",
+              "both"
+            ],
+            "title": "Trade Source",
+            "type": "string"
+          }
+        },
+        "title": "ChartTemplate",
+        "type": "object"
+      },
+      "ChartTemplateView": {
+        "properties": {
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "template": {
+            "$ref": "#/components/schemas/ChartTemplate"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "name",
+          "version",
+          "updated_at",
+          "template"
+        ],
+        "title": "ChartTemplateView",
+        "type": "object"
+      },
+      "ChartTemplateWrite": {
+        "additionalProperties": false,
+        "properties": {
+          "base_version": {
+            "minimum": 0.0,
+            "title": "Base Version",
+            "type": "integer"
+          },
+          "template": {
+            "$ref": "#/components/schemas/ChartTemplate"
+          }
+        },
+        "required": [
+          "base_version",
+          "template"
+        ],
+        "title": "ChartTemplateWrite",
+        "type": "object"
+      },
+      "ChartTemplatesView": {
+        "properties": {
+          "can_edit": {
+            "title": "Can Edit",
+            "type": "boolean"
+          },
+          "max_templates": {
+            "title": "Max Templates",
+            "type": "integer"
+          },
+          "owner": {
+            "title": "Owner",
+            "type": "string"
+          },
+          "templates": {
+            "items": {
+              "$ref": "#/components/schemas/ChartTemplateView"
+            },
+            "title": "Templates",
+            "type": "array"
+          }
+        },
+        "required": [
+          "owner",
+          "templates",
+          "can_edit",
+          "max_templates"
+        ],
+        "title": "ChartTemplatesView",
+        "type": "object"
+      },
       "ClockView": {
         "description": "The API's clock and the market sessions, for the shell's session clocks.",
         "properties": {
@@ -2163,6 +2289,30 @@
         "title": "Envelope[BrokerHealthView]",
         "type": "object"
       },
+      "Envelope_ChartTemplatesView_": {
+        "properties": {
+          "caveats": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/Caveat"
+            },
+            "title": "Caveats",
+            "type": "array"
+          },
+          "data": {
+            "$ref": "#/components/schemas/ChartTemplatesView"
+          },
+          "source": {
+            "$ref": "#/components/schemas/SourceNote"
+          }
+        },
+        "required": [
+          "data",
+          "source"
+        ],
+        "title": "Envelope[ChartTemplatesView]",
+        "type": "object"
+      },
       "Envelope_ClockView_": {
         "properties": {
           "caveats": {
@@ -2617,6 +2767,30 @@
           "source"
         ],
         "title": "Envelope[PortfolioView]",
+        "type": "object"
+      },
+      "Envelope_PriceAlertsView_": {
+        "properties": {
+          "caveats": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/Caveat"
+            },
+            "title": "Caveats",
+            "type": "array"
+          },
+          "data": {
+            "$ref": "#/components/schemas/PriceAlertsView"
+          },
+          "source": {
+            "$ref": "#/components/schemas/SourceNote"
+          }
+        },
+        "required": [
+          "data",
+          "source"
+        ],
+        "title": "Envelope[PriceAlertsView]",
         "type": "object"
       },
       "Envelope_PromotePreflightView_": {
@@ -7301,6 +7475,181 @@
         "title": "PositionRowView",
         "type": "object"
       },
+      "PriceAlert": {
+        "properties": {
+          "alert_id": {
+            "title": "Alert Id",
+            "type": "string"
+          },
+          "condition": {
+            "enum": [
+              "cross_above",
+              "cross_below"
+            ],
+            "title": "Condition",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "dataset_version_id": {
+            "title": "Dataset Version Id",
+            "type": "string"
+          },
+          "drawing_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Drawing Id"
+          },
+          "note": {
+            "title": "Note",
+            "type": "string"
+          },
+          "origin": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Origin"
+          },
+          "owner": {
+            "title": "Owner",
+            "type": "string"
+          },
+          "price": {
+            "title": "Price",
+            "type": "number"
+          },
+          "reference_close": {
+            "title": "Reference Close",
+            "type": "number"
+          },
+          "reference_time": {
+            "format": "date-time",
+            "title": "Reference Time",
+            "type": "string"
+          },
+          "status": {
+            "const": "armed",
+            "default": "armed",
+            "title": "Status",
+            "type": "string"
+          },
+          "symbol": {
+            "title": "Symbol",
+            "type": "string"
+          }
+        },
+        "required": [
+          "alert_id",
+          "owner",
+          "symbol",
+          "price",
+          "condition",
+          "reference_close",
+          "reference_time",
+          "dataset_version_id",
+          "drawing_id",
+          "origin",
+          "note",
+          "created_at"
+        ],
+        "title": "PriceAlert",
+        "type": "object"
+      },
+      "PriceAlertCreate": {
+        "additionalProperties": false,
+        "properties": {
+          "drawing_id": {
+            "anyOf": [
+              {
+                "pattern": "^[A-Za-z0-9_-]{1,64}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Drawing Id"
+          },
+          "note": {
+            "default": "",
+            "maxLength": 280,
+            "title": "Note",
+            "type": "string"
+          },
+          "origin": {
+            "anyOf": [
+              {
+                "pattern": "^(level|zone_top|zone_bottom)$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Origin"
+          },
+          "price": {
+            "exclusiveMinimum": 0.0,
+            "title": "Price",
+            "type": "number"
+          },
+          "symbol": {
+            "title": "Symbol",
+            "type": "string"
+          },
+          "timeframe": {
+            "default": "H1",
+            "title": "Timeframe",
+            "type": "string"
+          }
+        },
+        "required": [
+          "symbol",
+          "price"
+        ],
+        "title": "PriceAlertCreate",
+        "type": "object"
+      },
+      "PriceAlertsView": {
+        "properties": {
+          "alerts": {
+            "items": {
+              "$ref": "#/components/schemas/PriceAlert"
+            },
+            "title": "Alerts",
+            "type": "array"
+          },
+          "evaluated": {
+            "title": "Evaluated",
+            "type": "boolean"
+          },
+          "evaluator_detail": {
+            "title": "Evaluator Detail",
+            "type": "string"
+          }
+        },
+        "required": [
+          "alerts",
+          "evaluated",
+          "evaluator_detail"
+        ],
+        "title": "PriceAlertsView",
+        "type": "object"
+      },
       "PrincipalView": {
         "properties": {
           "can_arm_kill_switch": {
@@ -9836,6 +10185,108 @@
   },
   "openapi": "3.1.0",
   "paths": {
+    "/api/alerts/price": {
+      "get": {
+        "operationId": "list_price_alerts_api_alerts_price_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "symbol",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Symbol"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_PriceAlertsView_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "summary": "List Price Alerts",
+        "tags": [
+          "chart-workstation"
+        ],
+        "x-fiboki-auth": "session"
+      },
+      "post": {
+        "description": "An alert at ``price``; the platform decides cross-above or cross-below.\n\nThe direction is read against the latest CLOSED bar in the store: above\nthat close, the alert waits for a cross above; below it, a cross below. A\nlevel equal to the close is refused (no direction can be decided).",
+        "operationId": "create_price_alert_api_alerts_price_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PriceAlertCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_PriceAlertsView_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "csrfHeader": [],
+            "sessionCookie": []
+          }
+        ],
+        "summary": "Create Price Alert",
+        "tags": [
+          "chart-workstation"
+        ],
+        "x-fiboki-auth": "operator"
+      }
+    },
     "/api/auth/login": {
       "post": {
         "operationId": "login_api_auth_login_post",
@@ -9924,6 +10375,153 @@
           "auth"
         ],
         "x-fiboki-auth": "session"
+      }
+    },
+    "/api/chart/templates": {
+      "get": {
+        "description": "The signed-in operator's chart templates, by name.",
+        "operationId": "list_templates_api_chart_templates_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_ChartTemplatesView_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "summary": "List Templates",
+        "tags": [
+          "chart-workstation"
+        ],
+        "x-fiboki-auth": "session"
+      }
+    },
+    "/api/chart/templates/{name}": {
+      "delete": {
+        "operationId": "delete_template_api_chart_templates__name__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "name",
+            "required": true,
+            "schema": {
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9 _.-]{0,47}$",
+              "title": "Name",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "base_version",
+            "required": true,
+            "schema": {
+              "minimum": 1,
+              "title": "Base Version",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_ChartTemplatesView_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "csrfHeader": [],
+            "sessionCookie": []
+          }
+        ],
+        "summary": "Delete Template",
+        "tags": [
+          "chart-workstation"
+        ],
+        "x-fiboki-auth": "operator"
+      },
+      "put": {
+        "description": "Create (base_version 0) or replace one template. Audited; versioned.",
+        "operationId": "put_template_api_chart_templates__name__put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "name",
+            "required": true,
+            "schema": {
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9 _.-]{0,47}$",
+              "title": "Name",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChartTemplateWrite"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_ChartTemplatesView_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "csrfHeader": [],
+            "sessionCookie": []
+          }
+        ],
+        "summary": "Put Template",
+        "tags": [
+          "chart-workstation"
+        ],
+        "x-fiboki-auth": "operator"
       }
     },
     "/api/command/attention": {

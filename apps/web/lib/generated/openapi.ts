@@ -5,6 +5,31 @@
  */
 
 export interface paths {
+    "/api/alerts/price": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Price Alerts */
+        get: operations["list_price_alerts_api_alerts_price_get"];
+        put?: never;
+        /**
+         * Create Price Alert
+         * @description An alert at ``price``; the platform decides cross-above or cross-below.
+         *
+         *     The direction is read against the latest CLOSED bar in the store: above
+         *     that close, the alert waits for a cross above; below it, a cross below. A
+         *     level equal to the close is refused (no direction can be decided).
+         */
+        post: operations["create_price_alert_api_alerts_price_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/auth/login": {
         parameters: {
             query?: never;
@@ -51,6 +76,47 @@ export interface paths {
         put?: never;
         post?: never;
         delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/chart/templates": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Templates
+         * @description The signed-in operator's chart templates, by name.
+         */
+        get: operations["list_templates_api_chart_templates_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/chart/templates/{name}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Put Template
+         * @description Create (base_version 0) or replace one template. Audited; versioned.
+         */
+        put: operations["put_template_api_chart_templates__name__put"];
+        post?: never;
+        /** Delete Template */
+        delete: operations["delete_template_api_chart_templates__name__delete"];
         options?: never;
         head?: never;
         patch?: never;
@@ -1905,6 +1971,58 @@ export interface components {
             severity: string;
         };
         /**
+         * ChartTemplate
+         * @description Display choices only: no symbol, no price, no parameter.
+         */
+        ChartTemplate: {
+            /** Groups */
+            groups?: {
+                [key: string]: boolean;
+            };
+            /** Layers */
+            layers?: {
+                [key: string]: boolean;
+            };
+            /** Strategy Ids */
+            strategy_ids?: string[] | null;
+            /**
+             * Trade Source
+             * @default both
+             * @enum {string}
+             */
+            trade_source: "paper" | "backtest" | "both";
+        };
+        /** ChartTemplatesView */
+        ChartTemplatesView: {
+            /** Can Edit */
+            can_edit: boolean;
+            /** Max Templates */
+            max_templates: number;
+            /** Owner */
+            owner: string;
+            /** Templates */
+            templates: components["schemas"]["ChartTemplateView"][];
+        };
+        /** ChartTemplateView */
+        ChartTemplateView: {
+            /** Name */
+            name: string;
+            template: components["schemas"]["ChartTemplate"];
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+            /** Version */
+            version: number;
+        };
+        /** ChartTemplateWrite */
+        ChartTemplateWrite: {
+            /** Base Version */
+            base_version: number;
+            template: components["schemas"]["ChartTemplate"];
+        };
+        /**
          * ClockView
          * @description The API's clock and the market sessions, for the shell's session clocks.
          */
@@ -2302,6 +2420,16 @@ export interface components {
             data: components["schemas"]["BrokerHealthView"];
             source: components["schemas"]["SourceNote"];
         };
+        /** Envelope[ChartTemplatesView] */
+        Envelope_ChartTemplatesView_: {
+            /**
+             * Caveats
+             * @default []
+             */
+            caveats: components["schemas"]["Caveat"][];
+            data: components["schemas"]["ChartTemplatesView"];
+            source: components["schemas"]["SourceNote"];
+        };
         /** Envelope[ClockView] */
         Envelope_ClockView_: {
             /**
@@ -2501,6 +2629,16 @@ export interface components {
              */
             caveats: components["schemas"]["Caveat"][];
             data: components["schemas"]["PortfolioView"];
+            source: components["schemas"]["SourceNote"];
+        };
+        /** Envelope[PriceAlertsView] */
+        Envelope_PriceAlertsView_: {
+            /**
+             * Caveats
+             * @default []
+             */
+            caveats: components["schemas"]["Caveat"][];
+            data: components["schemas"]["PriceAlertsView"];
             source: components["schemas"]["SourceNote"];
         };
         /** Envelope[PromotePreflightView] */
@@ -4283,6 +4421,78 @@ export interface components {
             take_profit: components["schemas"]["Figure"];
             unrealised_pnl: components["schemas"]["Figure"];
         };
+        /** PriceAlert */
+        PriceAlert: {
+            /** Alert Id */
+            alert_id: string;
+            /**
+             * Condition
+             * @enum {string}
+             */
+            condition: "cross_above" | "cross_below";
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Dataset Version Id */
+            dataset_version_id: string;
+            /** Drawing Id */
+            drawing_id: string | null;
+            /** Note */
+            note: string;
+            /** Origin */
+            origin: string | null;
+            /** Owner */
+            owner: string;
+            /** Price */
+            price: number;
+            /** Reference Close */
+            reference_close: number;
+            /**
+             * Reference Time
+             * Format: date-time
+             */
+            reference_time: string;
+            /**
+             * Status
+             * @default armed
+             * @constant
+             */
+            status: "armed";
+            /** Symbol */
+            symbol: string;
+        };
+        /** PriceAlertCreate */
+        PriceAlertCreate: {
+            /** Drawing Id */
+            drawing_id?: string | null;
+            /**
+             * Note
+             * @default
+             */
+            note: string;
+            /** Origin */
+            origin?: string | null;
+            /** Price */
+            price: number;
+            /** Symbol */
+            symbol: string;
+            /**
+             * Timeframe
+             * @default H1
+             */
+            timeframe: string;
+        };
+        /** PriceAlertsView */
+        PriceAlertsView: {
+            /** Alerts */
+            alerts: components["schemas"]["PriceAlert"][];
+            /** Evaluated */
+            evaluated: boolean;
+            /** Evaluator Detail */
+            evaluator_detail: string;
+        };
         /** PrincipalView */
         PrincipalView: {
             /** Can Arm Kill Switch */
@@ -5193,6 +5403,70 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    list_price_alerts_api_alerts_price_get: {
+        parameters: {
+            query?: {
+                symbol?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_PriceAlertsView_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_price_alert_api_alerts_price_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PriceAlertCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_PriceAlertsView_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     login_api_auth_login_post: {
         parameters: {
             query?: never;
@@ -5260,6 +5534,94 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PrincipalView"];
+                };
+            };
+        };
+    };
+    list_templates_api_chart_templates_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_ChartTemplatesView_"];
+                };
+            };
+        };
+    };
+    put_template_api_chart_templates__name__put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                name: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ChartTemplateWrite"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_ChartTemplatesView_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_template_api_chart_templates__name__delete: {
+        parameters: {
+            query: {
+                base_version: number;
+            };
+            header?: never;
+            path: {
+                name: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_ChartTemplatesView_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

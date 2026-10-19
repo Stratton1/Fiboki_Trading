@@ -46,6 +46,7 @@ import type {
   Page,
 } from "@/lib/types";
 import { DataWindow } from "./DataWindow";
+import { ALL_LAYERS_ON, type ChartLayers, type TradeSource } from "./layers";
 import type { DrawingTool } from "./drawing-primitive";
 import type { ChartDrawings, PriceChartProps } from "./PriceChart";
 import { formatBarTime, type TimeZoneId } from "./time";
@@ -68,7 +69,7 @@ import "./workbench.css";
  * computes a P&L, a stop or a target.
  */
 
-export type TradeSource = "both" | "paper" | "backtest";
+export type { TradeSource };
 
 type ChartBase = Omit<
   PriceChartProps,
@@ -93,6 +94,12 @@ export interface ChartWorkbenchProps {
   /** The bar the crosshair or keyboard cursor is on, or null (the latest). */
   readoutIndex?: number | null;
   timeZone?: TimeZoneId;
+  /** The chart's display layers (drawings, trades, stops, events, …); all on by default. */
+  chartLayers?: ChartLayers;
+  onChartLayers?: (update: (layers: ChartLayers) => ChartLayers) => void;
+  /** Which trades are drawn; owned by the workstation so a template can set it. */
+  tradeSource?: TradeSource;
+  onTradeSource?: (source: TradeSource) => void;
 }
 
 type PanelTab = "trades" | "data";
@@ -265,12 +272,18 @@ export default function ChartWorkbench({
   overlays = null,
   readoutIndex = null,
   timeZone = "UTC",
+  chartLayers = ALL_LAYERS_ON,
+  onChartLayers,
+  tradeSource,
+  onTradeSource,
 }: ChartWorkbenchProps) {
   const notify = useToast();
   const operator = useOperator();
   const model: ChartModel = chart.model;
   const enc = encodeURIComponent(symbol);
-  const [source, setSource] = useState<TradeSource>("both");
+  const [ownSource, setOwnSource] = useState<TradeSource>("both");
+  const source = tradeSource ?? ownSource;
+  const setSource = onTradeSource ?? setOwnSource;
   // Selections belong to one symbol and timeframe: a switch drops them.
   const scopeKey = `${symbol}|${tf}`;
   const [tradePick, setTradePick] = useState<{ scope: string; key: string | null }>({ scope: "", key: null });
@@ -306,7 +319,7 @@ export default function ChartWorkbench({
   );
   const placedPaper = useMemo(() => placePaperTrades(model), [model]);
   // The legend's Levels toggle governs every stop and target, paper and backtest.
-  const showLevels = chart.layers.levels;
+  const showLevels = chartLayers.stops;
   const allTrades = useMemo(
     () =>
       [...placedPaper, ...placedBt.trades]
@@ -316,6 +329,10 @@ export default function ChartWorkbench({
   );
   const showPaper = source !== "backtest";
   const showBacktest = source !== "paper";
+  // The Trades layer hides trade markers and connectors on the chart; the
+  // table keeps listing them (hiding a layer never hides a figure).
+  const drawPaper = showPaper && chartLayers.trades;
+  const drawBacktest = showBacktest && chartLayers.trades;
   const tableTrades = allTrades.filter((t) => (t.source === "paper" ? showPaper : showBacktest));
 
   const selectTrade = useCallback(
@@ -339,7 +356,16 @@ export default function ChartWorkbench({
     [scopeKey],
   );
   const [lockedAll, setLockedAll] = useState(false);
-  const [hiddenAll, setHiddenAll] = useState(false);
+  // The Drawings layer: the rail's eye button and Alt Shift H toggle it.
+  const hiddenAll = !chartLayers.drawings;
+  const setLayers = useCallback(
+    (update: (layers: ChartLayers) => ChartLayers) => onChartLayers?.(update),
+    [onChartLayers],
+  );
+  const setHiddenAll = useCallback(
+    (update: (hidden: boolean) => boolean) => setLayers((l) => ({ ...l, drawings: !update(!l.drawings) })),
+    [setLayers],
+  );
   const [scopeToTf, setScopeToTf] = useState(false);
   const [measured, setMeasured] = useState<string | null>(null);
   const [note, setNote] = useState<{
@@ -490,7 +516,7 @@ export default function ChartWorkbench({
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [drawings, toggleLock, chooseTool, tool, selectedId, setSelectedId, deleteSelected]);
+  }, [drawings, toggleLock, chooseTool, tool, selectedId, setSelectedId, deleteSelected, setHiddenAll]);
 
   const runsList = runs.status === "success" ? runs.data.items : [];
   const runRow = btView?.run ?? runsList.find((r) => r.run_id === run) ?? null;
@@ -633,7 +659,7 @@ export default function ChartWorkbench({
             {...chart}
             layers={overlayLayers}
             trades={allTrades}
-            tradeLayers={{ backtest: showBacktest, paper: showPaper }}
+            tradeLayers={{ backtest: drawBacktest, paper: drawPaper }}
             selectedTrade={selectedTrade}
             focusTrade={focusTrade}
             onTradeClick={(key) => selectTrade(key, false)}

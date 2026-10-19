@@ -109,6 +109,58 @@ export interface DataWindowView {
   sections: Record<string, SectionStatus>;
 }
 
+// --------------------------------------------------------------- templates
+
+export type TradeSource = "both" | "paper" | "backtest";
+
+/** A chart template as the API stores it: display choices only. */
+export interface ChartTemplateBody {
+  layers: Partial<Record<string, boolean>>;
+  groups: Record<string, boolean>;
+  strategy_ids: string[] | null;
+  trade_source: TradeSource;
+}
+
+export interface ChartTemplateRow {
+  name: string;
+  version: number;
+  updated_at: string;
+  template: ChartTemplateBody;
+}
+
+/** GET /api/chart/templates (Envelope): the signed-in operator's templates. */
+export interface ChartTemplatesView {
+  owner: string;
+  templates: ChartTemplateRow[];
+  can_edit: boolean;
+  max_templates: number;
+}
+
+// ------------------------------------------------------------ price alerts
+
+export interface PriceAlertRow {
+  alert_id: string;
+  owner: string;
+  symbol: string;
+  price: number;
+  condition: "cross_above" | "cross_below";
+  reference_close: number;
+  reference_time: string;
+  dataset_version_id: string;
+  drawing_id: string | null;
+  origin: string | null;
+  note: string;
+  created_at: string;
+  status: "armed";
+}
+
+/** GET / POST /api/alerts/price (Envelope). `evaluated` false: nothing watches them yet. */
+export interface PriceAlertsView {
+  alerts: PriceAlertRow[];
+  evaluated: boolean;
+  evaluator_detail: string;
+}
+
 // ------------------------------------------------------------------ checks
 
 type SameKeys<A, B> = [Exclude<keyof A, keyof B>, Exclude<keyof B, keyof A>] extends [never, never]
@@ -122,6 +174,11 @@ export type ChartContractChecks = [
   SameKeys<CompareView, S["CompareView"]>,
   SameKeys<DataWindowValue, S["DataWindowValue"]>,
   SameKeys<DataWindowView, S["DataWindowView"]>,
+  SameKeys<ChartTemplateBody, S["ChartTemplate"]>,
+  SameKeys<ChartTemplateRow, S["ChartTemplateView"]>,
+  SameKeys<ChartTemplatesView, S["ChartTemplatesView"]>,
+  SameKeys<PriceAlertRow, S["PriceAlert"]>,
+  SameKeys<PriceAlertsView, S["PriceAlertsView"]>,
 ];
 
 /** Fails to compile when any check above is not `true`. */
