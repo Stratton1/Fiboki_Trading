@@ -245,7 +245,7 @@ EvaluatorFactory = Callable[[Any, Any, Any], Any]
 
 
 def default_evaluator_factory(calendar: Any) -> EvaluatorFactory:
-    """The research engine path (engine_v3_realism, GBP, IG_REALISTIC, construction_v2)."""
+    """The research engine path (engine_v4_time_units, GBP, IG_REALISTIC, construction_v2)."""
 
     def make(document: Any, series: Any, cache: Any) -> Any:
         return gps._evaluator_for(document, series, series.frame, series.dataset_version_id,

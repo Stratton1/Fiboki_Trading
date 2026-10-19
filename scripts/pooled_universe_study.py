@@ -65,6 +65,8 @@ from typing import Any
 import numpy as np
 import pandas as pd
 
+from fiboki.backtest.version import ENGINE_VERSION
+
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 import gate_power_study as gps
@@ -671,7 +673,7 @@ class P0Study:
             "skipped": self.skipped,
             "documents": [src.describe() for src in self.sources],
             "calendar": blackout_fingerprint(self.calendar),
-            "engine": "engine_v3_realism via EngineEvaluator (GBP 10,000 per sleeve, IG_REALISTIC, "
+            "engine": f"{ENGINE_VERSION} via EngineEvaluator (GBP 10,000 per sleeve, IG_REALISTIC, "
                       "fixed_fractional_v2, research construction), default binding, research window "
                       "common to the document's sleeves",
             "resampling": "joint stationary bootstrap of calendar days, one day sequence for every "

@@ -681,6 +681,49 @@ Size at sr = 0: 0 of 400 (0.000); effective z-variance 0.991 (passes <= 1.25). P
 (fewer trades per candidate), as the filing anticipated. Both timeframes are now admitted; the main
 stage may start under the filing.
 
+## E-4 main stage (first run) VOID: engine time-unit defect; `engine_v4_time_units` (2026-10-19)
+
+**First run, 2026-10-18 on the Mac, 3 shards: 172 candidates, 0 cleared rungs 0 to 5, all 172 bound
+at `min_track_record`, 0 errors.** The run is VOID under amendment 2
+(`research/preregistration/pooled_universe_e4_amendment_2.md`). Every row's design effect fell back
+to the sleeve count ("too few periods": 7 daily periods in 16 years). The cause was that stored bars
+are `datetime64[us]`, and four places read `DatetimeIndex.asi8` as nanoseconds:
+
+- the pooled DEFF;
+- the engine's bar interval, which flagged most fills STALE and doubled their spread, since
+  2026-09-19;
+- the engine's volatility-targeting equity curve, which had realised volatility about 31.6x too
+  high and so cut positions, since 2026-10-10;
+- the NumPy annualisation.
+
+On the Mac's real EURUSD and USDJPY H4 bars the defect left the trades unchanged and changed sizes,
+spread cost and net P&L (table in amendment 2).
+
+Kept, and not decided on: 163 of 172 had pooled per-trade Sharpe <= 0. With no dependence
+correction at all (DEFF = 1), the best `n / MinTRL_95` was 0.04 (H4) and 0.45 (D1).
+
+**Effect on earlier entries (stated, not re-decided here).** Every real-data engine run before this
+entry ran with the stale-spread doubling:
+
+- K1 to K5;
+- E-1 and E-2's real-data processes;
+- E-4 P0's trade sources.
+
+From 2026-10-10 they also ran with the volatility-target cut. Each of those results is a result for
+a costlier, and from 10 October smaller, version of the strategies. The direction of the cost error
+is against the strategies, so the nulls are not made easier by it. Whether any null would have
+survived is answered only by re-running, never by assertion. Synthetic-bar results and the golden
+tests were unaffected (nanosecond fixtures).
+
+**Next, under the filing:**
+
+1. Re-run P0 for H4 and D1 on `engine_v4_time_units`.
+2. Read admission.
+3. Run the main stage.
+
+The first run's files are renamed `*.engine_v3` on the Mac and kept. K6 stays DRAFT, and its
+engine references move to v4.
+
 ## K6 drafted, `campaign_k6_generated_100k` (DRAFT 2026-10-10, not filed; no compute on evidence data)
 
 **Why it exists.** The operator asked for "100,000 more" strategies. Tested one by one that would be

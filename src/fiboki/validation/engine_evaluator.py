@@ -293,7 +293,7 @@ def frame_digest(frame: pd.DataFrame) -> str:
     """
     cols = [c for c in ("open", "high", "low", "close") if c in frame.columns]
     arr = np.ascontiguousarray(frame[cols].to_numpy(dtype=np.float64))
-    return hashlib.sha256(arr.tobytes() + frame.index.asi8.tobytes()).hexdigest()
+    return hashlib.sha256(arr.tobytes() + pd.DatetimeIndex(frame.index).as_unit("ns").asi8.tobytes()).hexdigest()
 
 
 class UnfingerprintableBlackout(ValueError):

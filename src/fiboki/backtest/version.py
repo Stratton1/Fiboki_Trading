@@ -45,6 +45,7 @@ from __future__ import annotations
 
 __all__ = [
     "ENGINE_V3_REASONS",
+    "ENGINE_V4_REASONS",
     "ENGINE_VERSION",
     "ENGINE_VERSION_HISTORY",
     "is_current",
@@ -53,7 +54,7 @@ __all__ = [
 
 
 #: The current engine generation. Every stored backtest is stamped with it.
-ENGINE_VERSION = "engine_v3_realism"
+ENGINE_VERSION = "engine_v4_time_units"
 
 #: Why ``engine_v3_realism`` superseded ``engine_v2_exit_vocabulary``, one line
 #: per change, in the order of the backend audit (F_backend_audit.md section 2).
@@ -85,6 +86,22 @@ ENGINE_V3_REASONS: tuple[str, ...] = (
     "P3-4 the engine requires a UTC index, not merely a tz-aware one.",
 )
 
+#: Why ``engine_v4_time_units`` superseded ``engine_v3_realism``. The store reads
+#: bars as ``datetime64[us]`` and three helpers read ``DatetimeIndex.asi8`` (the
+#: index's own unit) as nanoseconds. Synthetic fixtures are nanoseconds, so only
+#: real-data runs were affected. Pinned by tests/integration/test_time_units.py.
+ENGINE_V4_REASONS: tuple[str, ...] = (
+    "Bar interval: a 4-hour bar was read as 14.4 seconds, so every fill after a "
+    "bar gap of more than three times that was STALE and paid "
+    "stale_spread_multiple (2x) the spread (since 2026-09-19).",
+    "Volatility targeting: the engine's equity curve was rebuilt on microsecond "
+    "integers read as nanoseconds, so realised portfolio volatility was about "
+    "31.6x too high and the 0.12 target cut every position (since 2026-10-10).",
+    "Pooled DEFF: days were bucketed on microsecond integers, so 16 years were 7 "
+    "'days' and DEFF fell back to the sleeve count on every real pooled candidate.",
+    "Cache and run fingerprints hash the index in nanoseconds whatever its unit.",
+)
+
 #: Every generation, oldest first, with what changed. An empty string is the
 #: unstamped generation: everything written before the stamp existed.
 ENGINE_VERSION_HISTORY: tuple[tuple[str, str], ...] = (
@@ -105,9 +122,16 @@ ENGINE_VERSION_HISTORY: tuple[tuple[str, str], ...] = (
         "that ignored costs, calendar-night financing and bar-return Sharpe.",
     ),
     (
-        ENGINE_VERSION,
+        "engine_v3_realism",
         "Realism corrections from the 2026-09 backend audit: "
-        + " ".join(ENGINE_V3_REASONS),
+        + " ".join(ENGINE_V3_REASONS)
+        + " Superseded by engine_v4_time_units: on stored (microsecond) bars it "
+        "doubled the spread on most fills and, from 2026-10-10, shrank positions "
+        "through a 31.6x realised-volatility error.",
+    ),
+    (
+        ENGINE_VERSION,
+        "Time-unit corrections (2026-10-19): " + " ".join(ENGINE_V4_REASONS),
     ),
 )
 

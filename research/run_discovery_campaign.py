@@ -147,7 +147,7 @@ SEED_DIR = REPO / "research" / "strategies"
 HYPOTHESIS_DIR = REPO / "research" / "hypotheses"
 
 #: The engine generation ``--engine-version-check`` requires by default.
-K3_ENGINE_VERSION = "engine_v3_realism"
+K3_ENGINE_VERSION = "engine_v4_time_units"
 
 #: The account currency the legacy ``FX_SERIES_FOR`` table converts into. Only
 #: ``--account-ccy USD`` uses it; research runs in GBP.

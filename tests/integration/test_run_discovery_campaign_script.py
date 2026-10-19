@@ -106,7 +106,7 @@ def test_main_writes_the_effective_configuration_the_gbp_fx_label_and_a_report(
     assert header[0].startswith("==== run_discovery_campaign ")
     fields = dict(line.split(": ", 1) for line in header[1:])
     assert fields["campaign_id"] == "k3_smoke"
-    assert fields["engine_version"] == f"{ENGINE_VERSION} (required engine_v3_realism: ok)"
+    assert fields["engine_version"] == f"{ENGINE_VERSION} (required engine_v4_time_units: ok)"
     assert fields["account_ccy"] == "GBP"
     assert fields["fx_label"].startswith("SeriesFxSource(GBP; daily closes as-of bar close;")
     assert "GBPUSD@ds_" in fields["fx_label"]

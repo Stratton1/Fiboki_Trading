@@ -95,6 +95,7 @@ from typing import Any
 import numpy as np
 import pandas as pd
 
+from fiboki.backtest.version import ENGINE_VERSION
 from fiboki.validation.evaluation import (
     Candidate,
     DateWindow,
@@ -830,7 +831,7 @@ def campaign_grid_shape() -> tuple[int, int]:
 
 def _evaluator_for(document: Any, series: BarSeries, frame: pd.DataFrame, vid: str,
                    calendar: Any, lineage: Mapping[str, Any], cache: Any = None) -> Any:
-    """The research engine path: engine_v3_realism, GBP, IG_REALISTIC, construction_v2."""
+    """The research engine path: engine_v4_time_units, GBP, IG_REALISTIC, construction_v2."""
     from fiboki.validation.engine_evaluator import EngineEvaluator, EvaluatorConfig
 
     return EngineEvaluator(
@@ -1444,7 +1445,7 @@ class RealStudy:
                 for d in self.documents
             ],
             "calendar": blackout_fingerprint(self.calendar),
-            "engine": "engine_v3_realism via fiboki.validation.engine_evaluator.EngineEvaluator "
+            "engine": f"{ENGINE_VERSION} via fiboki.validation.engine_evaluator.EngineEvaluator "
                       "(GBP 10,000, IG_REALISTIC, fixed_fractional_v2, research construction)",
             "holdout": f"HoldoutRegistry.define(first bar, last bar, {DEFAULT_HOLDOUT_FRACTION}); "
                        "the holdout segment is excluded from every source",

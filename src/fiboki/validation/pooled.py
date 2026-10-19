@@ -331,7 +331,9 @@ class PooledEvaluator:
                     f"{len(idx)} bars in {window}; the sleeve's calendar is not its evaluator's"
                 )
             evaluations.append(ev)
-            bars.append(np.asarray(idx.asi8, dtype=np.int64))
+            # Nanoseconds whatever the stored unit: design_effect buckets days
+            # as ``ts // 86_400e9``; microsecond integers made 16 years 7 "days".
+            bars.append(np.asarray(pd.DatetimeIndex(idx).as_unit("ns").asi8, dtype=np.int64))
 
         union = np.unique(np.concatenate(bars)) if bars else np.zeros(0, dtype=np.int64)
         pnl = np.zeros((union.size, len(self.sleeves)), dtype=float)

@@ -387,7 +387,9 @@ def _periods_per_year_arrays(index: pd.DatetimeIndex) -> float | None:
     """:func:`_periods_per_year` without building a Series of timedeltas."""
     if len(index) < 3:
         return None
-    deltas = np.diff(index.asi8).astype(np.float64)
+    # ``asi8`` is in the index's own unit (bars are stored as microseconds);
+    # the spacing is read in nanoseconds whatever that unit is.
+    deltas = np.diff(pd.DatetimeIndex(index).as_unit("ns").asi8).astype(np.float64)
     median = pd.Timedelta(np.timedelta64(int(np.median(deltas)), "ns"))
     seconds = float(median.total_seconds())
     if seconds <= 0:

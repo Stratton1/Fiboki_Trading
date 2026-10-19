@@ -915,9 +915,11 @@ class BacktestEngine:
         # equal Timestamp for a fraction of the cost. Values are identical, so
         # nothing downstream can tell the difference.
         self._timeline_ts: list[pd.Timestamp] = list(self.timeline)
-        self._utc_timeline = pd.DatetimeIndex(
-            self.timeline.asi8.astype("datetime64[ns]"), tz="UTC"
-        )
+        # In nanoseconds whatever unit the bars were stored in: the canonical
+        # store reads ``datetime64[us]`` and ``asi8`` is in the index's own
+        # unit, so reinterpreting it as ns put the equity curve in 1970 with
+        # bars 1,000 times closer together (engine_v4_time_units).
+        self._utc_timeline = _utc_ns(self.timeline)
         self._frame_ts: dict[str, list[pd.Timestamp]] = {
             sym: list(self.frames[sym].index) for sym in self.symbols
         }
@@ -929,10 +931,10 @@ class BacktestEngine:
         # np.isin on a DatetimeIndex falls back to an O(n*m) scan, which cost 40s
         # on a 40k-bar EURUSD run; a searchsorted comparison is O(n log n).
         self._exact: dict[str, np.ndarray] = {}
-        tl = self.timeline.asi8
+        tl = _utc_ns(self.timeline).asi8
         for sym in self.symbols:
             pos = self._positions[sym]
-            own = self.frames[sym].index.asi8
+            own = _utc_ns(self.frames[sym].index).asi8
             found = pos >= 0
             exact = np.zeros(len(tl), dtype=bool)
             exact[found] = own[pos[found]] == tl[found]
@@ -1430,7 +1432,7 @@ class BacktestEngine:
             arr = self._ohlc[sym]
             digest = hashlib.sha256(
                 np.ascontiguousarray(arr).tobytes()
-                + self.frames[sym].index.asi8.tobytes()
+                + _utc_ns(self.frames[sym].index).asi8.tobytes()
             ).hexdigest()
             entry: dict[str, object] = {
                 "price_basis": self.price_basis.get(sym, "assumed_mid"),
@@ -1607,10 +1609,20 @@ def _union_timeline(frames: dict[str, pd.DataFrame], symbols: tuple[str, ...]) -
     return pd.DatetimeIndex(idx).sort_values()
 
 
+def _utc_ns(index: pd.DatetimeIndex) -> pd.DatetimeIndex:
+    """``index`` in UTC nanoseconds. ``asi8`` is in the index's OWN unit, and
+    the canonical store reads bars as ``datetime64[us]``; every integer view of
+    a timestamp in the engine goes through this so the unit is never assumed."""
+    idx = pd.DatetimeIndex(index)
+    if idx.tz is None:
+        idx = idx.tz_localize("UTC")
+    return idx.tz_convert("UTC").as_unit("ns")
+
+
 def _median_interval(index: pd.DatetimeIndex) -> pd.Timedelta:
     if len(index) < 3:
         return pd.Timedelta(hours=1)
-    deltas = np.diff(index.asi8)
+    deltas = np.diff(_utc_ns(index).asi8)
     return pd.Timedelta(int(np.median(deltas)), unit="ns")
 
 
