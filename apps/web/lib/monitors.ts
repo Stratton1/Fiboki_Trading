@@ -35,6 +35,20 @@ export type QuoteRow = Local<S["QuoteRowView"]>;
 export type Watchlist = S["WatchlistView"];
 export type DataState = QuoteRow["data_state"];
 
+export type NewsView = Local<S["NewsView"]>;
+export type Headline = Local<S["HeadlineView"]>;
+export const NEWS_HOURS = [1, 4, 12, 24, 72, 168] as const;
+export const NEWS_CURRENCIES = ["USD", "EUR", "GBP", "JPY", "CHF", "AUD"] as const;
+
+export function newsPath(filter: { instrument?: string | null; currencies?: string[]; source?: string | null; hours: number }): string {
+  const q = new URLSearchParams();
+  if (filter.instrument) q.set("instrument", filter.instrument);
+  for (const c of filter.currencies ?? []) q.append("currency", c);
+  if (filter.source) q.set("source", filter.source);
+  q.set("hours", String(filter.hours));
+  return `/api/markets/news?${q.toString()}`;
+}
+
 export const QUOTE_WINDOWS = ["1h", "4h", "24h"] as const;
 export type QuoteWindow = (typeof QUOTE_WINDOWS)[number];
 

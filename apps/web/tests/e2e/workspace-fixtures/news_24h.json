@@ -1,0 +1,138 @@
+{
+ "caveats": [],
+ "data": {
+  "available_sources": [
+   "boe_rss",
+   "boj_rss",
+   "ecb_rss",
+   "fed_rss",
+   "finnhub",
+   "snb_rss"
+  ],
+  "currencies": [],
+  "headlines": [
+   {
+    "chart_links": [],
+    "currency": null,
+    "id": 5,
+    "observed_at": "2026-10-19T08:48:00Z",
+    "source": "finnhub",
+    "title": "Dollar steadies ahead of US data",
+    "url": "https://finnhub.example/1",
+    "vendor_published_at": "2026-10-19T08:41:00Z"
+   },
+   {
+    "chart_links": [
+     {
+      "href": "/markets/USDJPY",
+      "symbol": "USDJPY"
+     },
+     {
+      "href": "/markets/GBPJPY",
+      "symbol": "GBPJPY"
+     },
+     {
+      "href": "/markets/EURJPY",
+      "symbol": "EURJPY"
+     }
+    ],
+    "currency": "JPY",
+    "id": 4,
+    "observed_at": "2026-10-19T08:20:00Z",
+    "source": "boj_rss",
+    "title": "Minutes of the Monetary Policy Meeting",
+    "url": "https://www.boj.or.jp/1",
+    "vendor_published_at": "2026-10-19T08:13:00Z"
+   },
+   {
+    "chart_links": [
+     {
+      "href": "/markets/GBPUSD",
+      "symbol": "GBPUSD"
+     },
+     {
+      "href": "/markets/EURGBP",
+      "symbol": "EURGBP"
+     },
+     {
+      "href": "/markets/GBPJPY",
+      "symbol": "GBPJPY"
+     },
+     {
+      "href": "/markets/GBPAUD",
+      "symbol": "GBPAUD"
+     }
+    ],
+    "currency": "GBP",
+    "id": 3,
+    "observed_at": "2026-10-19T07:45:00Z",
+    "source": "boe_rss",
+    "title": "Bank of England Monetary Policy Summary",
+    "url": "https://www.bankofengland.co.uk/1",
+    "vendor_published_at": "2026-10-19T07:38:00Z"
+   },
+   {
+    "chart_links": [
+     {
+      "href": "/markets/EURUSD",
+      "symbol": "EURUSD"
+     },
+     {
+      "href": "/markets/GBPUSD",
+      "symbol": "GBPUSD"
+     },
+     {
+      "href": "/markets/USDJPY",
+      "symbol": "USDJPY"
+     },
+     {
+      "href": "/markets/USDCHF",
+      "symbol": "USDCHF"
+     }
+    ],
+    "currency": "USD",
+    "id": 2,
+    "observed_at": "2026-10-19T07:00:00Z",
+    "source": "fed_rss",
+    "title": "Federal Reserve issues FOMC statement",
+    "url": "https://www.federalreserve.gov/1",
+    "vendor_published_at": "2026-10-19T06:53:00Z"
+   },
+   {
+    "chart_links": [
+     {
+      "href": "/markets/EURUSD",
+      "symbol": "EURUSD"
+     },
+     {
+      "href": "/markets/EURGBP",
+      "symbol": "EURGBP"
+     },
+     {
+      "href": "/markets/EURJPY",
+      "symbol": "EURJPY"
+     }
+    ],
+    "currency": "EUR",
+    "id": 1,
+    "observed_at": "2026-10-19T04:00:00Z",
+    "source": "ecb_rss",
+    "title": "ECB keeps the deposit rate unchanged",
+    "url": "https://www.ecb.europa.eu/press/1",
+    "vendor_published_at": "2026-10-19T03:53:00Z"
+   }
+  ],
+  "hours": 24,
+  "instrument": null,
+  "last_observed_at": "2026-10-19T08:48:00Z",
+  "last_poll_at": "2026-10-19T08:58:40Z",
+  "recorder_detail": "The last poll finished 80 s ago.",
+  "recorder_state": "live",
+  "sources": []
+ },
+ "source": {
+  "as_of": "2026-10-19T09:00:00Z",
+  "detail": "Append-only headline store at /tmp/tmpbjf5skwz/state/news/headlines.sqlite, read-only; ordered by observed_at (our clock), never by the vendor's time.",
+  "kind": "live"
+ }
+}

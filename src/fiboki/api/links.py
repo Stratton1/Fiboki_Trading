@@ -93,6 +93,7 @@ ROUTE_PATTERNS: tuple[str, ...] = (
     # wave workspace
     "/workspace",
     "/markets/watchlist",
+    "/markets/news",
 )
 
 

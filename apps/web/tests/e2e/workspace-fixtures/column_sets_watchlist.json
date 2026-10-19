@@ -9,8 +9,8 @@
   "version": 0
  },
  "source": {
-  "as_of": "2026-10-19T01:46:06.006442Z",
-  "detail": "Operator workspace documents at /tmp/tmp465lho37/state/workspace/workspace.sqlite: display state chosen by hand, never read by a strategy, the risk engine or a backtest.",
+  "as_of": "2026-10-19T01:54:32.726805Z",
+  "detail": "Operator workspace documents at /tmp/tmpbjf5skwz/state/workspace/workspace.sqlite: display state chosen by hand, never read by a strategy, the risk engine or a backtest.",
   "kind": "live"
  }
 }

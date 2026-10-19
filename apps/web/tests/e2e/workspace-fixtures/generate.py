@@ -67,6 +67,25 @@ def seed_quotes(state: Path) -> None:
         os.utime(seg, (stamp, stamp))
 
 
+def seed_news(state: Path) -> None:
+    from fiboki.data.news.store import HeadlineStore, NewItem, NewsSource, default_store_path
+
+    items = [
+        (NewsSource.ECB_RSS, "ECB keeps the deposit rate unchanged", "https://www.ecb.europa.eu/press/1", 300),
+        (NewsSource.FED_RSS, "Federal Reserve issues FOMC statement", "https://www.federalreserve.gov/1", 120),
+        (NewsSource.BOE_RSS, "Bank of England Monetary Policy Summary", "https://www.bankofengland.co.uk/1", 75),
+        (NewsSource.BOJ_RSS, "Minutes of the Monetary Policy Meeting", "https://www.boj.or.jp/1", 40),
+        (NewsSource.FINNHUB, "Dollar steadies ahead of US data", "https://finnhub.example/1", 12),
+        (NewsSource.SNB_RSS, "SNB quarterly bulletin", "https://www.snb.ch/1", 60 * 30),
+    ]
+    with HeadlineStore(default_store_path(state)) as store:
+        for src, title, url, minutes in items:
+            store.record([NewItem(source=src, feed_key=f"{src.value}:main", url=url, title=title, summary=None,
+                                  source_item_id=None, vendor_published_at=NOW - timedelta(minutes=minutes + 7),
+                                  raw={})], NOW - timedelta(minutes=minutes))
+        store.log_poll(NOW - timedelta(seconds=90), NOW - timedelta(seconds=80), {"fed_rss": "ok"})
+
+
 def pin_clocks() -> None:
     """The routers read the API's clock; pin it so the fixtures are reproducible."""
     import fiboki.api.routers.monitors as monitors
@@ -82,6 +101,8 @@ def dump(client: TestClient) -> None:
     write("watchlist_majors_24h", client.get("/api/markets/watchlists/Majors/quotes?window=24h").json())
     write("quotes_fx", client.get("/api/markets/quotes?symbols=EURUSD,GBPUSD,USDJPY,USDCHF,AUDUSD,XAUUSD&window=24h").json())
     write("column_sets_watchlist", client.get("/api/workspace/column-sets/watchlist").json())
+    write("news_24h", client.get("/api/markets/news?hours=24").json())
+    write("news_eurusd", client.get("/api/markets/news?instrument=EURUSD&hours=24").json())
     for extra in EXTRA_DUMPS:
         extra(client)
 
@@ -104,6 +125,7 @@ def main() -> None:
             "FIBOKI_SESSION_SECRET": "fixture-secret",
         })
         seed_quotes(state)
+        seed_news(state)
         pin_clocks()
         app = create_app(settings, configure_logs=False)
         with TestClient(app, base_url=ORIGIN) as client:

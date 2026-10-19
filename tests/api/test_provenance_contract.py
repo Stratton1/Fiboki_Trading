@@ -113,6 +113,10 @@ ALLOWED_BARE_NUMERIC = {
     # A conditional-format rule's DISPLAY threshold (api/grid_format.py), code
     # configuration like a gate threshold, not a measurement.
     ("FormatRule", "value"),
+    # News monitor (routers/monitors.py): the store's row id and the requested
+    # window in hours (configuration echo), not measurements.
+    ("HeadlineView", "id"),
+    ("NewsView", "hours"),
 }
 
 

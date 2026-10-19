@@ -182,6 +182,10 @@ export async function mockMonitors(page: Page): Promise<MonitorMock> {
       },
     });
   });
+  await page.route((url) => url.origin === API && url.pathname === "/api/markets/news", (route) => {
+    const url = new URL(route.request().url());
+    return route.fulfill({ json: wsFixture(url.searchParams.get("instrument") ? "news_eurusd" : "news_24h") });
+  });
   await page.route(`${API}/api/workspace/column-sets/watchlist`, (route) => {
     if (route.request().method() === "PUT") {
       const body = route.request().postDataJSON() as { base_version: number; sets: unknown[]; default: string | null };

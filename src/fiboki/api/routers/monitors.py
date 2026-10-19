@@ -34,7 +34,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from fiboki.api.deps import AnyPrincipal, AuditDep, SettingsDep
 from fiboki.api.errors import ApiError
 from fiboki.api.grid_format import Tone, tones_for
-from fiboki.api.models import Page, SourceNote
+from fiboki.api.models import Envelope, Page, SourceNote
 from fiboki.api.provenance import Caveat, Figure, Series, SeriesPoint
 from fiboki.api.routers.workspace import check_name, workspace_store, write_document
 from fiboki.api.security import Principal, Role, require_operator
@@ -409,3 +409,177 @@ def watchlist_quotes(
     check_name(name, "watchlist")
     wl = resolve_watchlist(settings, principal, name)
     return quotes_page(settings, wl.symbols, window, _now(None))
+
+
+# ==================================================================== news
+
+#: The headline recorder polls every 300 s (deploy/launchd/uk.fiboki.news.plist);
+#: three missed polls is a recorder that is not recording.
+NEWS_STALE_AFTER_S = 900.0
+NEWS_HOURS = (1, 4, 12, 24, 72, 168)
+_RELATED_UNIVERSE: tuple[str, ...] = tuple(
+    dict.fromkeys(BUILTIN_WATCHLISTS["Majors"] + BUILTIN_WATCHLISTS["GBP crosses"] + ("EURJPY", "XAUUSD"))
+)
+
+
+class ChartLink(BaseModel):
+    model_config = ConfigDict(frozen=True)
+
+    symbol: str
+    href: str
+
+
+class HeadlineView(BaseModel):
+    model_config = ConfigDict(frozen=True)
+
+    id: int
+    source: str
+    #: The currency of a central-bank source; ``None`` for a vendor source (not tagged).
+    currency: str | None
+    title: str
+    url: str
+    #: The point-in-time key: when OUR recorder first saw it (UTC).
+    observed_at: datetime
+    #: The vendor's own claim, shown for reference and never used for ordering.
+    vendor_published_at: datetime | None
+    chart_links: list[ChartLink]
+
+
+class NewsView(BaseModel):
+    model_config = ConfigDict(frozen=True)
+
+    headlines: list[HeadlineView]
+    #: Echo of the filters the API applied.
+    instrument: str | None
+    currencies: list[str]
+    sources: list[str]
+    hours: int
+    #: Every source the store holds (for the filter), whatever the window.
+    available_sources: list[str]
+    last_observed_at: datetime | None
+    last_poll_at: datetime | None
+    recorder_state: Literal["live", "stale", "never"]
+    recorder_detail: str
+
+
+def _ts(text: str | None) -> datetime | None:
+    if not text:
+        return None
+    try:
+        return datetime.strptime(text, "%Y-%m-%dT%H:%M:%S.%fZ").replace(tzinfo=UTC)
+    except ValueError:
+        return None
+
+
+def _chart_links(currency: str | None, instrument: str | None) -> list[ChartLink]:
+    from fiboki.marketstate.calendar import instrument_currencies
+
+    if instrument:
+        return [ChartLink(symbol=instrument, href=f"/markets/{instrument}")]
+    if currency is None:
+        return []
+    out = [s for s in _RELATED_UNIVERSE if currency in instrument_currencies(s)][:4]
+    return [ChartLink(symbol=s, href=f"/markets/{s}") for s in out]
+
+
+@router.get("/news", response_model=Envelope[NewsView])
+def news(
+    settings: SettingsDep,
+    _: AnyPrincipal,
+    instrument: str | None = Query(None),
+    currency: Annotated[list[str] | None, Query()] = None,
+    source: Annotated[list[str] | None, Query()] = None,
+    hours: int = Query(24),
+    limit: int = Query(200, ge=1, le=500),
+) -> Envelope[NewsView]:
+    """Recorded headlines, newest first, filtered by instrument, currency and source.
+
+    Read-only (the store is opened ``mode=ro``). An instrument filter narrows the
+    central-bank sources to its currencies; VENDOR headlines are not currency-tagged
+    at this layer and pass through an instrument or currency filter, said so in a
+    caveat, exactly as the chart's headline overlay treats them.
+    """
+    from fiboki.data.news.store import CURRENCY_BY_SOURCE, NewsSource, to_utc_text
+    from fiboki.marketstate.calendar import instrument_currencies
+
+    if hours not in NEWS_HOURS:
+        raise ApiError(status.HTTP_422_UNPROCESSABLE_ENTITY, "invalid_hours",
+                       f"hours is one of {', '.join(map(str, NEWS_HOURS))}.")
+    sym = known_symbol(instrument) if instrument else None
+    ccys = {c.strip().upper() for c in (currency or []) if c.strip()}
+    if sym:
+        ccys |= set(instrument_currencies(sym))
+    valid_sources = {s.value for s in NewsSource}
+    wanted = {s.strip().lower() for s in (source or []) if s.strip()}
+    if wanted - valid_sources:
+        raise ApiError(status.HTTP_422_UNPROCESSABLE_ENTITY, "unknown_source",
+                       f"Unknown source(s): {', '.join(sorted(wanted - valid_sources))}.")
+    now = _now(None)
+    since = now - timedelta(hours=hours)
+    path = resolve_paths({"FIBOKI_STATE_DIR": str(settings.state_dir)}).news_store
+    banks = {s.value: c for s, c in CURRENCY_BY_SOURCE.items()}
+    caveats: list[Caveat] = []
+    if ccys:
+        caveats.append(Caveat(code="vendor_untagged", severity="info",
+                              message="Central-bank headlines are narrowed to the chosen currencies; vendor "
+                              "headlines are not currency-tagged and pass through.", affects="filter",
+                              direction="unknown"))
+    empty = NewsView(headlines=[], instrument=sym, currencies=sorted(ccys), sources=sorted(wanted), hours=hours,
+                     available_sources=[], last_observed_at=None, last_poll_at=None, recorder_state="never",
+                     recorder_detail="No headline store has been recorded on this deployment (fiboki news record).")
+    if not path.exists():
+        return Envelope(data=empty, source=SourceNote(kind="absent", detail=f"No headline store at {path}.", as_of=now),
+                        caveats=tuple(caveats))
+    try:
+        with sqlite3.connect(f"file:{path.resolve()}?mode=ro", uri=True, timeout=2.0) as conn:
+            if conn.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='headline'").fetchone() is None:
+                return Envelope(data=empty, source=SourceNote(kind="absent", detail="The headline store is empty.",
+                                                              as_of=now), caveats=tuple(caveats))
+            available = [r[0] for r in conn.execute("SELECT DISTINCT source FROM headline ORDER BY source")]
+            last_obs = conn.execute("SELECT MAX(observed_at) FROM headline").fetchone()[0]
+            try:
+                last_poll = conn.execute("SELECT MAX(finished_at) FROM poll_log").fetchone()[0]
+            except sqlite3.OperationalError:
+                last_poll = None
+            rows = conn.execute(
+                "SELECT id, source, url, title, vendor_published_at, observed_at FROM headline "
+                "WHERE observed_at >= ? AND observed_at <= ? ORDER BY observed_at DESC, id DESC",
+                (to_utc_text(since), to_utc_text(now)),
+            ).fetchall()
+    except sqlite3.Error as exc:
+        raise ApiError(status.HTTP_503_SERVICE_UNAVAILABLE, "news_unavailable",
+                       "The headline store could not be read.", context={"error_class": type(exc).__name__}) from exc
+    items: list[HeadlineView] = []
+    for hid, src, url, title, vendor, observed in rows:
+        bank_ccy = banks.get(src)
+        if wanted and src not in wanted:
+            continue
+        if ccys and bank_ccy is not None and bank_ccy not in ccys:
+            continue
+        seen = _ts(observed)
+        if seen is None:
+            continue
+        items.append(HeadlineView(
+            id=int(hid), source=src, currency=bank_ccy, title=title, url=url, observed_at=seen,
+            vendor_published_at=_ts(vendor), chart_links=_chart_links(bank_ccy, sym),
+        ))
+        if len(items) >= limit:
+            break
+    poll_at = _ts(last_poll)
+    if poll_at is None:
+        state, detail = "never", "The store has headlines but no poll log: the recorder's cadence is unknown."
+    else:
+        age = (now - poll_at).total_seconds()
+        if age > NEWS_STALE_AFTER_S:
+            state, detail = "stale", f"The last poll finished {age:.0f} s ago (stale after {NEWS_STALE_AFTER_S:.0f} s)."
+        else:
+            state, detail = "live", f"The last poll finished {age:.0f} s ago."
+    view = NewsView(headlines=items, instrument=sym, currencies=sorted(ccys), sources=sorted(wanted), hours=hours,
+                    available_sources=available, last_observed_at=_ts(last_obs), last_poll_at=poll_at,
+                    recorder_state=state, recorder_detail=detail)
+    return Envelope(
+        data=view,
+        source=SourceNote(kind="live", detail=f"Append-only headline store at {path}, read-only; "
+                          "ordered by observed_at (our clock), never by the vendor's time.", as_of=now),
+        caveats=tuple(caveats),
+    )

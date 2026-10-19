@@ -1080,6 +1080,24 @@
         "title": "Caveat",
         "type": "object"
       },
+      "ChartLink": {
+        "properties": {
+          "href": {
+            "title": "Href",
+            "type": "string"
+          },
+          "symbol": {
+            "title": "Symbol",
+            "type": "string"
+          }
+        },
+        "required": [
+          "symbol",
+          "href"
+        ],
+        "title": "ChartLink",
+        "type": "object"
+      },
       "ClockView": {
         "description": "The API's clock and the market sessions, for the shell's session clocks.",
         "properties": {
@@ -2434,6 +2452,30 @@
           "source"
         ],
         "title": "Envelope[MonteCarloView]",
+        "type": "object"
+      },
+      "Envelope_NewsView_": {
+        "properties": {
+          "caveats": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/Caveat"
+            },
+            "title": "Caveats",
+            "type": "array"
+          },
+          "data": {
+            "$ref": "#/components/schemas/NewsView"
+          },
+          "source": {
+            "$ref": "#/components/schemas/SourceNote"
+          }
+        },
+        "required": [
+          "data",
+          "source"
+        ],
+        "title": "Envelope[NewsView]",
         "type": "object"
       },
       "Envelope_OverlayView_": {
@@ -4046,6 +4088,73 @@
           "source"
         ],
         "title": "HeadlineOverlay",
+        "type": "object"
+      },
+      "HeadlineView": {
+        "properties": {
+          "chart_links": {
+            "items": {
+              "$ref": "#/components/schemas/ChartLink"
+            },
+            "title": "Chart Links",
+            "type": "array"
+          },
+          "currency": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Currency"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "observed_at": {
+            "format": "date-time",
+            "title": "Observed At",
+            "type": "string"
+          },
+          "source": {
+            "title": "Source",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "url": {
+            "title": "Url",
+            "type": "string"
+          },
+          "vendor_published_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Vendor Published At"
+          }
+        },
+        "required": [
+          "id",
+          "source",
+          "currency",
+          "title",
+          "url",
+          "observed_at",
+          "vendor_published_at",
+          "chart_links"
+        ],
+        "title": "HeadlineView",
         "type": "object"
       },
       "HealthCheck": {
@@ -5969,6 +6078,104 @@
           "return_pct"
         ],
         "title": "MonthlyCellView",
+        "type": "object"
+      },
+      "NewsView": {
+        "properties": {
+          "available_sources": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Available Sources",
+            "type": "array"
+          },
+          "currencies": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Currencies",
+            "type": "array"
+          },
+          "headlines": {
+            "items": {
+              "$ref": "#/components/schemas/HeadlineView"
+            },
+            "title": "Headlines",
+            "type": "array"
+          },
+          "hours": {
+            "title": "Hours",
+            "type": "integer"
+          },
+          "instrument": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Instrument"
+          },
+          "last_observed_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Observed At"
+          },
+          "last_poll_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Poll At"
+          },
+          "recorder_detail": {
+            "title": "Recorder Detail",
+            "type": "string"
+          },
+          "recorder_state": {
+            "enum": [
+              "live",
+              "stale",
+              "never"
+            ],
+            "title": "Recorder State",
+            "type": "string"
+          },
+          "sources": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Sources",
+            "type": "array"
+          }
+        },
+        "required": [
+          "headlines",
+          "instrument",
+          "currencies",
+          "sources",
+          "hours",
+          "available_sources",
+          "last_observed_at",
+          "last_poll_at",
+          "recorder_state",
+          "recorder_detail"
+        ],
+        "title": "NewsView",
         "type": "object"
       },
       "OpenPositionView": {
@@ -11513,6 +11720,122 @@
           "markets"
         ],
         "x-fiboki-auth": "public"
+      }
+    },
+    "/api/markets/news": {
+      "get": {
+        "description": "Recorded headlines, newest first, filtered by instrument, currency and source.\n\nRead-only (the store is opened ``mode=ro``). An instrument filter narrows the\ncentral-bank sources to its currencies; VENDOR headlines are not currency-tagged\nat this layer and pass through an instrument or currency filter, said so in a\ncaveat, exactly as the chart's headline overlay treats them.",
+        "operationId": "news_api_markets_news_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "instrument",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Instrument"
+            }
+          },
+          {
+            "in": "query",
+            "name": "currency",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Currency"
+            }
+          },
+          {
+            "in": "query",
+            "name": "source",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Source"
+            }
+          },
+          {
+            "in": "query",
+            "name": "hours",
+            "required": false,
+            "schema": {
+              "default": 24,
+              "title": "Hours",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 200,
+              "maximum": 500,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_NewsView_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "summary": "News",
+        "tags": [
+          "monitors"
+        ],
+        "x-fiboki-auth": "session"
       }
     },
     "/api/markets/overlays/{symbol}": {

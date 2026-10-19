@@ -66,9 +66,9 @@ export const INSTRUMENT_FUNCTIONS: InstrumentFunction[] = [
   { code: "TRD", label: "Trades", description: "Every closed trade on this instrument.", href: (s) => route.journal({ instrument: s }) },
   {
     code: "NEWS",
-    label: "News on chart",
-    description: "Headlines are drawn on the chart workstation; a news monitor is Wave 2A.",
-    href: (s) => route.instrument(s),
+    label: "News",
+    description: "The news monitor filtered to this instrument's currencies (NWS).",
+    href: (s) => route.news(s),
   },
   {
     code: "CAL",

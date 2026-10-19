@@ -354,6 +354,31 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/markets/news": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * News
+         * @description Recorded headlines, newest first, filtered by instrument, currency and source.
+         *
+         *     Read-only (the store is opened ``mode=ro``). An instrument filter narrows the
+         *     central-bank sources to its currencies; VENDOR headlines are not currency-tagged
+         *     at this layer and pass through an instrument or currency filter, said so in a
+         *     caveat, exactly as the chart's headline overlay treats them.
+         */
+        get: operations["news_api_markets_news_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/markets/overlays/{symbol}": {
         parameters: {
             query?: never;
@@ -2073,6 +2098,13 @@ export interface components {
              */
             severity: string;
         };
+        /** ChartLink */
+        ChartLink: {
+            /** Href */
+            href: string;
+            /** Symbol */
+            symbol: string;
+        };
         /**
          * ClockView
          * @description The API's clock and the market sessions, for the shell's session clocks.
@@ -2590,6 +2622,16 @@ export interface components {
              */
             caveats: components["schemas"]["Caveat"][];
             data: components["schemas"]["MonteCarloView"];
+            source: components["schemas"]["SourceNote"];
+        };
+        /** Envelope[NewsView] */
+        Envelope_NewsView_: {
+            /**
+             * Caveats
+             * @default []
+             */
+            caveats: components["schemas"]["Caveat"][];
+            data: components["schemas"]["NewsView"];
             source: components["schemas"]["SourceNote"];
         };
         /** Envelope[OverlayView] */
@@ -3119,6 +3161,28 @@ export interface components {
              * Format: date-time
              */
             t: string;
+            /** Title */
+            title: string;
+            /** Url */
+            url: string;
+            /** Vendor Published At */
+            vendor_published_at: string | null;
+        };
+        /** HeadlineView */
+        HeadlineView: {
+            /** Chart Links */
+            chart_links: components["schemas"]["ChartLink"][];
+            /** Currency */
+            currency: string | null;
+            /** Id */
+            id: number;
+            /**
+             * Observed At
+             * Format: date-time
+             */
+            observed_at: string;
+            /** Source */
+            source: string;
             /** Title */
             title: string;
             /** Url */
@@ -3798,6 +3862,32 @@ export interface components {
             return_pct: components["schemas"]["Figure"];
             /** Year */
             year: number;
+        };
+        /** NewsView */
+        NewsView: {
+            /** Available Sources */
+            available_sources: string[];
+            /** Currencies */
+            currencies: string[];
+            /** Headlines */
+            headlines: components["schemas"]["HeadlineView"][];
+            /** Hours */
+            hours: number;
+            /** Instrument */
+            instrument: string | null;
+            /** Last Observed At */
+            last_observed_at: string | null;
+            /** Last Poll At */
+            last_poll_at: string | null;
+            /** Recorder Detail */
+            recorder_detail: string;
+            /**
+             * Recorder State
+             * @enum {string}
+             */
+            recorder_state: "live" | "stale" | "never";
+            /** Sources */
+            sources: string[];
         };
         /** OpenPositionView */
         OpenPositionView: {
@@ -6231,6 +6321,41 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Page_InstrumentView_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    news_api_markets_news_get: {
+        parameters: {
+            query?: {
+                currency?: string[] | null;
+                hours?: number;
+                instrument?: string | null;
+                limit?: number;
+                source?: string[] | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_NewsView_"];
                 };
             };
             /** @description Validation Error */

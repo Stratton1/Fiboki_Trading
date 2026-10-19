@@ -147,7 +147,7 @@
  "limit": 13,
  "offset": 0,
  "source": {
-  "as_of": "2026-10-19T01:46:05.909653Z",
+  "as_of": "2026-10-19T01:54:32.674713Z",
   "detail": "The panel registry in fiboki.api.workspace_layouts (code).",
   "kind": "live"
  },

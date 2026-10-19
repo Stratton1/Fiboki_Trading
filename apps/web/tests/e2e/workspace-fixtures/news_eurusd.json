@@ -1,0 +1,84 @@
+{
+ "caveats": [
+  {
+   "affects": "filter",
+   "code": "vendor_untagged",
+   "direction": "unknown",
+   "message": "Central-bank headlines are narrowed to the chosen currencies; vendor headlines are not currency-tagged and pass through.",
+   "severity": "info"
+  }
+ ],
+ "data": {
+  "available_sources": [
+   "boe_rss",
+   "boj_rss",
+   "ecb_rss",
+   "fed_rss",
+   "finnhub",
+   "snb_rss"
+  ],
+  "currencies": [
+   "EUR",
+   "USD"
+  ],
+  "headlines": [
+   {
+    "chart_links": [
+     {
+      "href": "/markets/EURUSD",
+      "symbol": "EURUSD"
+     }
+    ],
+    "currency": null,
+    "id": 5,
+    "observed_at": "2026-10-19T08:48:00Z",
+    "source": "finnhub",
+    "title": "Dollar steadies ahead of US data",
+    "url": "https://finnhub.example/1",
+    "vendor_published_at": "2026-10-19T08:41:00Z"
+   },
+   {
+    "chart_links": [
+     {
+      "href": "/markets/EURUSD",
+      "symbol": "EURUSD"
+     }
+    ],
+    "currency": "USD",
+    "id": 2,
+    "observed_at": "2026-10-19T07:00:00Z",
+    "source": "fed_rss",
+    "title": "Federal Reserve issues FOMC statement",
+    "url": "https://www.federalreserve.gov/1",
+    "vendor_published_at": "2026-10-19T06:53:00Z"
+   },
+   {
+    "chart_links": [
+     {
+      "href": "/markets/EURUSD",
+      "symbol": "EURUSD"
+     }
+    ],
+    "currency": "EUR",
+    "id": 1,
+    "observed_at": "2026-10-19T04:00:00Z",
+    "source": "ecb_rss",
+    "title": "ECB keeps the deposit rate unchanged",
+    "url": "https://www.ecb.europa.eu/press/1",
+    "vendor_published_at": "2026-10-19T03:53:00Z"
+   }
+  ],
+  "hours": 24,
+  "instrument": "EURUSD",
+  "last_observed_at": "2026-10-19T08:48:00Z",
+  "last_poll_at": "2026-10-19T08:58:40Z",
+  "recorder_detail": "The last poll finished 80 s ago.",
+  "recorder_state": "live",
+  "sources": []
+ },
+ "source": {
+  "as_of": "2026-10-19T09:00:00Z",
+  "detail": "Append-only headline store at /tmp/tmpbjf5skwz/state/news/headlines.sqlite, read-only; ordered by observed_at (our clock), never by the vendor's time.",
+  "kind": "live"
+ }
+}
