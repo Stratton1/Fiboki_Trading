@@ -2856,6 +2856,30 @@
         "title": "Envelope[PromotePreflightView]",
         "type": "object"
       },
+      "Envelope_PulseView_": {
+        "properties": {
+          "caveats": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/Caveat"
+            },
+            "title": "Caveats",
+            "type": "array"
+          },
+          "data": {
+            "$ref": "#/components/schemas/PulseView"
+          },
+          "source": {
+            "$ref": "#/components/schemas/SourceNote"
+          }
+        },
+        "required": [
+          "data",
+          "source"
+        ],
+        "title": "Envelope[PulseView]",
+        "type": "object"
+      },
       "Envelope_ResearchMemoryView_": {
         "properties": {
           "caveats": {
@@ -6338,6 +6362,28 @@
         "title": "MonthlyCellView",
         "type": "object"
       },
+      "MoverView": {
+        "properties": {
+          "change_pct": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "chart_href": {
+            "title": "Chart Href",
+            "type": "string"
+          },
+          "symbol": {
+            "title": "Symbol",
+            "type": "string"
+          }
+        },
+        "required": [
+          "symbol",
+          "change_pct",
+          "chart_href"
+        ],
+        "title": "MoverView",
+        "type": "object"
+      },
       "NewsView": {
         "properties": {
           "available_sources": {
@@ -8801,6 +8847,85 @@
         "title": "ProvenanceBlock",
         "type": "object"
       },
+      "PulseView": {
+        "properties": {
+          "definitions": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "title": "Definitions",
+            "type": "object"
+          },
+          "instruments_recorded": {
+            "title": "Instruments Recorded",
+            "type": "integer"
+          },
+          "instruments_registered": {
+            "title": "Instruments Registered",
+            "type": "integer"
+          },
+          "movers_down": {
+            "items": {
+              "$ref": "#/components/schemas/MoverView"
+            },
+            "title": "Movers Down",
+            "type": "array"
+          },
+          "movers_up": {
+            "items": {
+              "$ref": "#/components/schemas/MoverView"
+            },
+            "title": "Movers Up",
+            "type": "array"
+          },
+          "rows": {
+            "items": {
+              "$ref": "#/components/schemas/QuoteRowView"
+            },
+            "title": "Rows",
+            "type": "array"
+          },
+          "sessions": {
+            "items": {
+              "$ref": "#/components/schemas/MarketSessionView"
+            },
+            "title": "Sessions",
+            "type": "array"
+          },
+          "strength": {
+            "items": {
+              "$ref": "#/components/schemas/StrengthView"
+            },
+            "title": "Strength",
+            "type": "array"
+          },
+          "volatility": {
+            "items": {
+              "$ref": "#/components/schemas/VolatilityView"
+            },
+            "title": "Volatility",
+            "type": "array"
+          },
+          "window": {
+            "title": "Window",
+            "type": "string"
+          }
+        },
+        "required": [
+          "window",
+          "rows",
+          "movers_up",
+          "movers_down",
+          "volatility",
+          "strength",
+          "sessions",
+          "instruments_recorded",
+          "instruments_registered",
+          "definitions"
+        ],
+        "title": "PulseView",
+        "type": "object"
+      },
       "QuoteRowView": {
         "description": "One watchlist row: the recorded quote, its age and the API's verdict on it.",
         "properties": {
@@ -10301,6 +10426,27 @@
         "title": "StrategyView",
         "type": "object"
       },
+      "StrengthView": {
+        "properties": {
+          "currency": {
+            "title": "Currency",
+            "type": "string"
+          },
+          "pairs": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "score_pct": {
+            "$ref": "#/components/schemas/Figure"
+          }
+        },
+        "required": [
+          "currency",
+          "score_pct",
+          "pairs"
+        ],
+        "title": "StrengthView",
+        "type": "object"
+      },
       "SurfaceCellView": {
         "properties": {
           "isolated_peak": {
@@ -10782,6 +10928,36 @@
           "detail"
         ],
         "title": "ValidationSummary",
+        "type": "object"
+      },
+      "VolatilityView": {
+        "properties": {
+          "chart_href": {
+            "title": "Chart Href",
+            "type": "string"
+          },
+          "range_pct": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "realised_vol_pct": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "spread_ratio": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "symbol": {
+            "title": "Symbol",
+            "type": "string"
+          }
+        },
+        "required": [
+          "symbol",
+          "realised_vol_pct",
+          "range_pct",
+          "spread_ratio",
+          "chart_href"
+        ],
+        "title": "VolatilityView",
         "type": "object"
       },
       "WalkForwardView": {
@@ -12417,6 +12593,56 @@
           "markets"
         ],
         "x-fiboki-auth": "public"
+      }
+    },
+    "/api/markets/pulse": {
+      "get": {
+        "description": "Market Pulse over EVERY instrument the recorder has quotes for in the window.\n\nMovers, currency strength, volatility and the session clocks, all computed\nhere (``marketstate/quote_stats.py``) from recorded quotes; the workstation\ndraws them. An instrument with no quote in the window is not in the pulse.",
+        "operationId": "pulse_api_markets_pulse_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "window",
+            "required": false,
+            "schema": {
+              "default": "24h",
+              "title": "Window",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_PulseView_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "summary": "Pulse",
+        "tags": [
+          "monitors"
+        ],
+        "x-fiboki-auth": "session"
       }
     },
     "/api/markets/quotes": {

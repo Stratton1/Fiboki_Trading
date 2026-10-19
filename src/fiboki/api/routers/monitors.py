@@ -35,6 +35,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from fiboki.api.deps import AnyPrincipal, AuditDep, SettingsDep
 from fiboki.api.errors import ApiError
 from fiboki.api.grid_format import Tone, tones_for
+from fiboki.api.market_sessions import MarketSessionView
 from fiboki.api.models import Envelope, Page, SourceNote
 from fiboki.api.provenance import Caveat, Figure, Series, SeriesPoint
 from fiboki.api.routers.workspace import check_name, workspace_store, write_document
@@ -169,7 +170,7 @@ def data_state(last: QuoteRecord | None, session_open: bool, now: datetime) -> t
     return "live", f"Recorded {age:.0f} s ago.", age
 
 
-def quote_row(symbol: str, window: QuoteWindow, start: datetime, now: datetime) -> QuoteRowView:
+def quote_row(symbol: str, window: QuoteWindow, start: datetime, now: datetime, *, grid: str = "watchlist") -> QuoteRowView:
     inst = instrument_registry.get(symbol)
     quotes = window.by_instrument.get(symbol, [])
     last = quotes[-1] if quotes else None
@@ -216,7 +217,7 @@ def quote_row(symbol: str, window: QuoteWindow, start: datetime, now: datetime) 
         market_state=last.market_state.value if last else None,
         session=session,
         sparkline=Series(name=f"{symbol} mid, last per bucket", provenance=prov, points=points),
-        tones=tones_for("watchlist", row_values),
+        tones=tones_for(grid, row_values),
         chart_href=f"/markets/{symbol}",
     )
 
@@ -775,3 +776,135 @@ def calendar_event(event_id: str, _: AnyPrincipal, instrument: str | None = Quer
             return Envelope(data=view, source=SourceNote(kind="live", detail=f"Official calendar {version}.", as_of=now))
     raise ApiError(status.HTTP_404_NOT_FOUND, "event_not_found",
                    f"No event {event_id!r} in the official calendar {version}.")
+
+
+# ============================================================ market pulse
+
+MOVERS = 5
+VOL_TOP = 10
+
+
+class MoverView(BaseModel):
+    model_config = ConfigDict(frozen=True)
+
+    symbol: str
+    change_pct: Figure
+    chart_href: str
+
+
+class VolatilityView(BaseModel):
+    model_config = ConfigDict(frozen=True)
+
+    symbol: str
+    realised_vol_pct: Figure
+    range_pct: Figure
+    spread_ratio: Figure
+    chart_href: str
+
+
+class StrengthView(BaseModel):
+    model_config = ConfigDict(frozen=True)
+
+    currency: str
+    #: Mean signed change over the FX pairs the currency is in (base +, quote -).
+    score_pct: Figure
+    pairs: Figure
+
+
+class PulseView(BaseModel):
+    model_config = ConfigDict(frozen=True)
+
+    window: str
+    rows: list[QuoteRowView]
+    movers_up: list[MoverView]
+    movers_down: list[MoverView]
+    volatility: list[VolatilityView]
+    strength: list[StrengthView]
+    sessions: list[MarketSessionView]
+    instruments_recorded: int
+    instruments_registered: int
+    definitions: dict[str, str]
+
+
+PULSE_DEFINITIONS = {
+    "change_pct": "Last recorded mid over the first recorded mid in the window, minus one, in percent.",
+    "range_pct": "Highest minus lowest recorded mid in the window, over the last mid, in percent.",
+    "realised_vol_pct": "Standard deviation of log returns between consecutive bucket closes (48 buckets, "
+    "empty buckets skipped) times the square root of their count, in percent; not annualised.",
+    "strength": "For each currency, the mean over the recorded FX pairs it is in of +change (as base) or "
+    "-change (as quote). Not a trade-weighted index.",
+    "spread_ratio": "Spread now over the instrument's single typical spread in the registry.",
+}
+
+
+@router.get("/pulse", response_model=Envelope[PulseView])
+def pulse(settings: SettingsDep, _: AnyPrincipal, window: str = Query("24h")) -> Envelope[PulseView]:
+    """Market Pulse over EVERY instrument the recorder has quotes for in the window.
+
+    Movers, currency strength, volatility and the session clocks, all computed
+    here (``marketstate/quote_stats.py``) from recorded quotes; the workstation
+    draws them. An instrument with no quote in the window is not in the pulse.
+    """
+    from fiboki.api.market_sessions import market_sessions
+    from fiboki.marketstate.quote_stats import currency_strength, instrument_stats, ranked
+
+    span = _window(window)
+    now = _now(None)
+    start = now - span
+    win = read_window(quotes_dir(settings), start, now)
+    known = [s for s in win.instruments if _registered(s)]
+    rows = [quote_row(s, win, start, now, grid="pulse") for s in known]
+    stats = {s: instrument_stats(win.by_instrument[s], start, now, buckets=SPARK_BUCKETS) for s in known}
+    by_row = {r.symbol: r for r in rows}
+    changes = {s: st.change_pct for s, st in stats.items()}
+
+    def mover(sym: str) -> MoverView:
+        return MoverView(symbol=sym, change_pct=by_row[sym].change_pct, chart_href=f"/markets/{sym}")
+
+    up = [mover(s) for s, _v in ranked(changes.items(), descending=True)[:MOVERS] if (changes[s] or 0.0) > 0]
+    down = [mover(s) for s, _v in ranked(changes.items(), descending=False)[:MOVERS] if (changes[s] or 0.0) < 0]
+    prov = Provenance.BROKER_DEMO
+    vols = ranked(((s, st.realised_vol_pct) for s, st in stats.items()), descending=True)[:VOL_TOP]
+    volatility = [
+        VolatilityView(
+            symbol=s,
+            realised_vol_pct=Figure(value=v, provenance=prov, unit="pct", sample_size=stats[s].n_quotes),
+            range_pct=by_row[s].range_pct,
+            spread_ratio=by_row[s].spread_ratio,
+            chart_href=f"/markets/{s}",
+        )
+        for s, v in vols
+    ]
+    pairs = {}
+    for s in known:
+        inst = instrument_registry.get(s)
+        if inst.is_fx:
+            pairs[s] = (inst.base, inst.quote)
+    strength = [
+        StrengthView(
+            currency=c.currency,
+            score_pct=Figure(value=c.score_pct, provenance=prov, unit="pct", sample_size=c.pairs),
+            pairs=Figure(value=float(c.pairs), provenance=prov, unit="count"),
+        )
+        for c in currency_strength(changes, pairs)
+    ]
+    view = PulseView(
+        window=window, rows=rows, movers_up=up, movers_down=down, volatility=volatility, strength=strength,
+        sessions=market_sessions(now), instruments_recorded=len(known),
+        instruments_registered=len(instrument_registry.all_symbols()), definitions=PULSE_DEFINITIONS,
+    )
+    detail = (f"{len(known)} recorded instrument(s) from the executable-price recorder over the last {window}; "
+              f"computed by the API at {now.isoformat()}.")
+    return Envelope(
+        data=view,
+        source=SourceNote(kind="absent" if win.absent else "live", detail=detail, as_of=now),
+        caveats=recorder_caveats(win, now),
+    )
+
+
+def _registered(symbol: str) -> bool:
+    try:
+        instrument_registry.get(symbol)
+        return True
+    except KeyError:
+        return False

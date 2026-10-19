@@ -193,6 +193,11 @@ export async function mockMonitors(page: Page): Promise<MonitorMock> {
   await page.route((url) => url.origin === API && url.pathname.startsWith("/api/markets/calendar/events/"), (route) =>
     route.fulfill({ json: wsFixture("calendar_event") }),
   );
+  await page.route((url) => url.origin === API && url.pathname === "/api/markets/pulse", (route) => route.fulfill({ json: wsFixture("pulse_24h") }));
+  await page.route(`${API}/api/workspace/format-rules/pulse`, (route) => route.fulfill({ json: wsFixture("format_rules_pulse") }));
+  await page.route(`${API}/api/workspace/column-sets/pulse`, (route) =>
+    route.fulfill({ json: { ...columnSets, data: { ...columnSets.data, grid_id: "pulse" } } }),
+  );
   await page.route(`${API}/api/workspace/column-sets/watchlist`, (route) => {
     if (route.request().method() === "PUT") {
       const body = route.request().postDataJSON() as { base_version: number; sets: unknown[]; default: string | null };

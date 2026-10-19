@@ -1,73 +1,34 @@
 "use client";
 
-import { useApi } from "@/lib/query";
-import { AsyncBoundary } from "@/components/AsyncBoundary";
-import { BarChart } from "@/components/charts";
-import { Card, PageHead, SourceBadge } from "@/components/primitives";
-import { deriveProvenance } from "@/lib/provenance";
-import type { InstrumentRow, Page, RegimeRow } from "@/lib/types";
+import { parseAsStringLiteral, useQueryState } from "nuqs";
+import { PulseMonitor } from "@/components/monitors/PulseMonitor";
+import { PageHead } from "@/components/primitives";
+import { UrlState } from "@/components/UrlState";
+import { QUOTE_WINDOWS } from "@/lib/monitors";
 
-/** COMMAND · Market Pulse: what the universe looks like right now. */
+/**
+ * COMMAND · Market Pulse (PULSE): movers, currency strength, volatility and
+ * the session clocks over every recorded instrument (programme P1 13), from
+ * GET /api/markets/pulse. `?window=1h|4h|24h`.
+ */
 export default function MarketPulsePage() {
-  const instruments = useApi<Page<InstrumentRow>>("/api/markets/instruments?limit=40");
-  const regimes = useApi<Page<RegimeRow>>("/api/markets/regimes");
-
   return (
     <>
       <PageHead
         title="Market Pulse"
-        intro="The traded universe and its regime standing. Where a regime cannot be computed the platform says so rather than guessing one."
+        intro="What the recorded universe did over the window: the biggest movers, a currency strength map, realised volatility and the trading sessions, all computed by the platform from the quotes the recorder captured (OANDA practice top of book, polled). An instrument with no recorded quote in the window is not in the pulse; the stamp says how many are. Definitions are at the foot."
       />
-      <Card title="Spread cost across the universe">
-        <AsyncBoundary state={instruments} label="instruments" onRetry={instruments.reload}>
-          {(page) => {
-            const charted = page.items.slice(0, 20);
-            return (
-              <>
-                <SourceBadge source={page.source} />
-                <BarChart
-                  title="Typical spread (pips)"
-                  // Whatever provenance the API attaches to each spread figure.
-                  // Instrument specifications are reference data rather than a
-                  // result; the chip shows the API's label, not a page's claim.
-                  provenance={deriveProvenance(
-                    charted.map((row) => row.typical_spread_pips.provenance),
-                  )}
-                  unit="pips"
-                  bars={charted.map((row) => ({
-                    label: row.symbol,
-                    value: row.typical_spread_pips.value,
-                  }))}
-                />
-              </>
-            );
-          }}
-        </AsyncBoundary>
-      </Card>
-      <Card title="Regime standing">
-        <AsyncBoundary state={regimes} label="regimes" onRetry={regimes.reload}>
-          {(page) => {
-            const known = page.items.filter((row) => row.available).length;
-            return (
-              <>
-                <SourceBadge source={page.source} />
-                <p>
-                  {known} of {page.items.length} instruments have a computed regime.
-                </p>
-                {known === 0 ? (
-                  <div className="state state--error">
-                    <div className="state__title">No regime is computable</div>
-                    <div className="state__body">
-                      Every regime-gated strategy is unevaluable in this
-                      deployment. This is a missing input, not a calm market.
-                    </div>
-                  </div>
-                ) : null}
-              </>
-            );
-          }}
-        </AsyncBoundary>
-      </Card>
+      <UrlState fallback={<p className="muted" role="status">Loading Market Pulse…</p>}>
+        <PulseScreen />
+      </UrlState>
     </>
   );
+}
+
+function PulseScreen() {
+  const [window, setWindow] = useQueryState(
+    "window",
+    parseAsStringLiteral(QUOTE_WINDOWS).withDefault("24h").withOptions({ history: "replace" }),
+  );
+  return <PulseMonitor window={window} onWindow={(w) => void setWindow(w)} />;
 }

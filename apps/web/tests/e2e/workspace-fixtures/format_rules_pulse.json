@@ -1,0 +1,67 @@
+{
+ "caveats": [],
+ "data": {
+  "grid_id": "pulse",
+  "rules": [
+   {
+    "column": "change",
+    "description": "Mid above the window's first mid.",
+    "grid": "pulse",
+    "source": "change_pct",
+    "tone": "rise",
+    "value": 0.0,
+    "when": "gt"
+   },
+   {
+    "column": "change",
+    "description": "Mid below the window's first mid.",
+    "grid": "pulse",
+    "source": "change_pct",
+    "tone": "fall",
+    "value": 0.0,
+    "when": "lt"
+   },
+   {
+    "column": "age",
+    "description": "Session open but no recorded quote recently.",
+    "grid": "pulse",
+    "source": "data_state",
+    "tone": "stale",
+    "value": "stale",
+    "when": "eq"
+   },
+   {
+    "column": "age",
+    "description": "The instrument's session is closed.",
+    "grid": "pulse",
+    "source": "data_state",
+    "tone": "muted",
+    "value": "closed",
+    "when": "eq"
+   },
+   {
+    "column": "age",
+    "description": "The recorder has no quote in the window.",
+    "grid": "pulse",
+    "source": "data_state",
+    "tone": "muted",
+    "value": "none",
+    "when": "eq"
+   },
+   {
+    "column": "spread",
+    "description": "Spread at least twice the instrument's typical spread.",
+    "grid": "pulse",
+    "source": "spread_ratio",
+    "tone": "warn",
+    "value": 2.0,
+    "when": "ge"
+   }
+  ]
+ },
+ "source": {
+  "as_of": "2026-10-19T02:04:56.372954Z",
+  "detail": "Conditional-format rules in fiboki.api.grid_format (code).",
+  "kind": "live"
+ }
+}

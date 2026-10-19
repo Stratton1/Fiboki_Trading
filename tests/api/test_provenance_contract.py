@@ -117,6 +117,10 @@ ALLOWED_BARE_NUMERIC = {
     # window in hours (configuration echo), not measurements.
     ("HeadlineView", "id"),
     ("NewsView", "hours"),
+    # Market Pulse: how many instruments were recorded in the window and how
+    # many the registry lists (counts of rows), not measurements.
+    ("PulseView", "instruments_recorded"),
+    ("PulseView", "instruments_registered"),
 }
 
 

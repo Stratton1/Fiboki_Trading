@@ -47,7 +47,7 @@ export const SECTIONS: Section[] = [
     icon: House,
     links: [
       { href: "/", label: "Overview", code: "CMD", description: "Money strip, attention queue, fleet and loss limits." },
-      { href: "/market-pulse", label: "Market Pulse", code: "PULSE", description: "Spreads and activity across the universe." },
+      { href: "/market-pulse", label: "Market Pulse", code: "PULSE", description: "Movers, currency strength, volatility and sessions over every recorded instrument." },
     ],
   },
   {

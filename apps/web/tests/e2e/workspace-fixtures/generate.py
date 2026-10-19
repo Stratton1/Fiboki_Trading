@@ -108,6 +108,8 @@ def dump(client: TestClient) -> None:
     write("calendar_eurusd_high", client.get("/api/markets/calendar?days=14&impact=high&instrument=EURUSD").json())
     first = week["data"]["events"][0]["event_id"]
     write("calendar_event", client.get(f"/api/markets/calendar/events/{first}?instrument=EURUSD").json())
+    write("pulse_24h", client.get("/api/markets/pulse?window=24h").json())
+    write("format_rules_pulse", client.get("/api/workspace/format-rules/pulse").json())
     for extra in EXTRA_DUMPS:
         extra(client)
 

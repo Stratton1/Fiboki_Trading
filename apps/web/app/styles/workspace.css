@@ -201,3 +201,27 @@
 .eco__impact--low { color: var(--fg-subtle); }
 .eco__links { display: inline-flex; gap: 6px; }
 .eco-focus { margin: 0 0 6px; padding: 3px 8px; border: 1px solid var(--border-strong); background: var(--bg-surface); font-size: 12px; }
+
+/* -------------------------------------------------------------- pulse */
+.pulse__sessions { list-style: none; margin: 0 0 6px; padding: 0; display: flex; flex-wrap: wrap; gap: 6px; font-size: 12px; }
+.pulse__sessions li { display: inline-flex; gap: 6px; align-items: baseline; padding: 2px 6px; border: 1px solid var(--border-subtle); color: var(--fg-subtle); }
+.pulse__sessions li[data-open] { color: var(--fg); border-color: var(--border-strong); }
+.pulse__session-name { font-weight: 600; }
+.pulse__session-state { font-family: var(--font-mono, ui-monospace, monospace); font-size: 11px; }
+.pulse__grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); gap: 6px; margin-bottom: 6px; }
+.pulse[data-compact] .pulse__grid { grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr)); }
+.pulse__card { border: 1px solid var(--border-subtle); background: var(--bg-surface); padding: 4px 6px; min-width: 0; }
+.pulse__h { margin: 0 0 4px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--fg-subtle); font-weight: 600; }
+.pulse__movers { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.pulse__movers ol { list-style: none; margin: 0; padding: 0; font-size: 12px; }
+.pulse__movers li { display: flex; justify-content: space-between; gap: 6px; font-variant-numeric: tabular-nums; }
+.pulse__strength { list-style: none; margin: 0; padding: 0; font-size: 12px; }
+.pulse__strength li { display: grid; grid-template-columns: 2.5rem 1fr 4.5rem 2.5rem; gap: 6px; align-items: center; }
+.pulse__bar { position: relative; height: 8px; background: var(--bg-sunken); border-left: 0; }
+.pulse__bar::after { content: ""; position: absolute; left: 50%; top: -2px; bottom: -2px; width: 1px; background: var(--border-strong); }
+.pulse__fill { position: absolute; top: 0; bottom: 0; background: var(--div-pos); }
+.pulse__strength li[data-sign="neg"] .pulse__fill { background: var(--div-neg); }
+.pulse__defs { font-size: 12px; margin-top: 6px; color: var(--fg-muted); }
+.pulse__defs dl { margin: 4px 0 0; }
+.pulse__defs dt { color: var(--fg); }
+.pulse__defs dd { margin: 0 0 4px 1rem; }

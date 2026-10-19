@@ -1,8 +1,12 @@
 "use client";
 
-import type { PanelProps } from "../types";
+import { PulseMonitor } from "@/components/monitors/PulseMonitor";
+import { QUOTE_WINDOWS, type QuoteWindow } from "@/lib/monitors";
+import { settingString, type PanelProps } from "../types";
 
-/** Placeholder until its screen lands in this wave (replaced in a later commit). */
-export default function PulsePanel(_props: PanelProps) {
-  return <p className="muted">This panel&apos;s API lands later in this wave.</p>;
+/** PULSE in a tile: a mover publishes its symbol to the link group. */
+export default function PulsePanel({ panel, onSymbol, onSettings, maximised }: PanelProps) {
+  const raw = settingString(panel, "window", "24h");
+  const window: QuoteWindow = (QUOTE_WINDOWS as readonly string[]).includes(raw) ? (raw as QuoteWindow) : "24h";
+  return <PulseMonitor window={window} onWindow={(w) => onSettings({ window: w })} onSymbol={onSymbol} compact={!maximised} />;
 }

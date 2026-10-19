@@ -65,8 +65,8 @@
  "limit": 4,
  "offset": 0,
  "source": {
-  "as_of": "2026-10-19T01:58:58.827325Z",
-  "detail": "Operator watchlists at /tmp/tmpc5sm3vuv/state/workspace/workspace.sqlite (display state, never a trading universe); built-in lists are code.",
+  "as_of": "2026-10-19T02:04:56.062202Z",
+  "detail": "Operator watchlists at /tmp/tmp57oxsibe/state/workspace/workspace.sqlite (display state, never a trading universe); built-in lists are code.",
   "kind": "live"
  },
  "total": 4

@@ -75,6 +75,9 @@ export function untilWords(eventIso: string, now: number): string {
   return s > 0 ? `in ${text}` : `${text} ago`;
 }
 
+export type PulseView = Local<S["PulseView"]>;
+export const pulsePath = (window: string) => `/api/markets/pulse?window=${window}`;
+
 export const QUOTE_WINDOWS = ["1h", "4h", "24h"] as const;
 export type QuoteWindow = (typeof QUOTE_WINDOWS)[number];
 

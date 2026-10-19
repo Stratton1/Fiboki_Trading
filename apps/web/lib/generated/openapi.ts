@@ -449,6 +449,30 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/markets/pulse": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Pulse
+         * @description Market Pulse over EVERY instrument the recorder has quotes for in the window.
+         *
+         *     Movers, currency strength, volatility and the session clocks, all computed
+         *     here (``marketstate/quote_stats.py``) from recorded quotes; the workstation
+         *     draws them. An instrument with no quote in the window is not in the pulse.
+         */
+        get: operations["pulse_api_markets_pulse_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/markets/quotes": {
         parameters: {
             query?: never;
@@ -2820,6 +2844,16 @@ export interface components {
             data: components["schemas"]["PromotePreflightView"];
             source: components["schemas"]["SourceNote"];
         };
+        /** Envelope[PulseView] */
+        Envelope_PulseView_: {
+            /**
+             * Caveats
+             * @default []
+             */
+            caveats: components["schemas"]["Caveat"][];
+            data: components["schemas"]["PulseView"];
+            source: components["schemas"]["SourceNote"];
+        };
         /** Envelope[ResearchMemoryView] */
         Envelope_ResearchMemoryView_: {
             /**
@@ -3999,6 +4033,14 @@ export interface components {
             /** Year */
             year: number;
         };
+        /** MoverView */
+        MoverView: {
+            change_pct: components["schemas"]["Figure"];
+            /** Chart Href */
+            chart_href: string;
+            /** Symbol */
+            symbol: string;
+        };
         /** NewsView */
         NewsView: {
             /** Available Sources */
@@ -5111,6 +5153,31 @@ export interface components {
             /** Timeframe */
             timeframe: string;
         };
+        /** PulseView */
+        PulseView: {
+            /** Definitions */
+            definitions: {
+                [key: string]: string;
+            };
+            /** Instruments Recorded */
+            instruments_recorded: number;
+            /** Instruments Registered */
+            instruments_registered: number;
+            /** Movers Down */
+            movers_down: components["schemas"]["MoverView"][];
+            /** Movers Up */
+            movers_up: components["schemas"]["MoverView"][];
+            /** Rows */
+            rows: components["schemas"]["QuoteRowView"][];
+            /** Sessions */
+            sessions: components["schemas"]["MarketSessionView"][];
+            /** Strength */
+            strength: components["schemas"]["StrengthView"][];
+            /** Volatility */
+            volatility: components["schemas"]["VolatilityView"][];
+            /** Window */
+            window: string;
+        };
         /**
          * QuoteRowView
          * @description One watchlist row: the recorded quote, its age and the API's verdict on it.
@@ -5639,6 +5706,13 @@ export interface components {
             /** Universe */
             universe: string[];
         };
+        /** StrengthView */
+        StrengthView: {
+            /** Currency */
+            currency: string;
+            pairs: components["schemas"]["Figure"];
+            score_pct: components["schemas"]["Figure"];
+        };
         /** SurfaceCellView */
         SurfaceCellView: {
             /** Isolated Peak */
@@ -5813,6 +5887,16 @@ export interface components {
             strategy_id: string;
             /** Verdict */
             verdict: string;
+        };
+        /** VolatilityView */
+        VolatilityView: {
+            /** Chart Href */
+            chart_href: string;
+            range_pct: components["schemas"]["Figure"];
+            realised_vol_pct: components["schemas"]["Figure"];
+            spread_ratio: components["schemas"]["Figure"];
+            /** Symbol */
+            symbol: string;
         };
         /** WalkForwardView */
         WalkForwardView: {
@@ -6599,6 +6683,37 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Envelope_OverlayView_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    pulse_api_markets_pulse_get: {
+        parameters: {
+            query?: {
+                window?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_PulseView_"];
                 };
             };
             /** @description Validation Error */
