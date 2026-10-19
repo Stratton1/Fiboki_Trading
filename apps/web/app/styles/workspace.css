@@ -152,7 +152,7 @@
 .tone-fall { color: var(--div-neg); }
 .tone-warn { color: var(--warn); }
 .tone-stale { color: var(--fg-data); background: var(--warn-bg); box-shadow: inset 2px 0 0 var(--state-stale); }
-.tone-stale .muted, .tone-stale [data-state] { color: inherit; }
+.tone-stale .muted, .tone-stale [data-testid="wl-state"] { color: var(--fg-data); }
 .tone-muted { color: var(--fg-disabled); }
 .tone-accent { color: var(--accent); font-weight: 600; }
 .grid__swatch {
@@ -165,7 +165,7 @@
 .spark { display: block; }
 .spark__line { stroke: var(--fg); stroke-width: 1.25; }
 .spark--empty { font-size: 11px; }
-[data-testid="wl-state"][data-state="stale"] { color: var(--state-stale); }
+[data-testid="wl-state"][data-state="stale"] { color: var(--fg-data); font-weight: 600; }
 [data-testid="wl-state"][data-state="none"], [data-testid="wl-state"][data-state="closed"] { color: var(--fg-subtle); }
 
 /* ---------------------------------------------------------------- news */

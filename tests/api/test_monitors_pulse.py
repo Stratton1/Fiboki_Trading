@@ -65,7 +65,7 @@ def test_currency_strength_by_hand(pulsed):
     assert by["GBP"]["score_pct"]["value"] == pytest.approx(-0.5, abs=1e-6)
     assert by["USD"]["score_pct"]["value"] == pytest.approx((-1.0 + 0.5 + 0.2) / 3, abs=1e-6)
     assert by["USD"]["pairs"]["value"] == 3 and "XAU" not in by
-    assert [s["currency"] for s in view["strength"]][0] == "EUR"
+    assert view["strength"][0]["currency"] == "EUR"
 
 
 def test_volatility_ranked_and_pulse_is_deterministic(pulsed):
