@@ -1,8 +1,12 @@
 "use client";
 
-import { Eye, EyeOff } from "lucide-react";
+import { Eye, EyeOff, Layers } from "lucide-react";
 import { useEffect } from "react";
-import { ALL_LAYERS_OFF, ALL_LAYERS_ON, LAYER_LABEL, LAYER_NAMES, type ChartLayers, type LayerName } from "../layers";
+import { Popover } from "@/components/ui/Popover";
+import { ALL_LAYERS_OFF, ALL_LAYERS_ON, LAYER_LABEL, LAYER_NAMES, type ChartLayers, type LayerName } from "./layers";
+
+/** A layer's item count as drawn: a number, still reading, or not available from the API. */
+export type LayerCount = number | "pending" | "n/a";
 
 /**
  * The layer toolbar (programme feature 13): show or hide each layer the chart
@@ -18,8 +22,8 @@ export function LayerToolbar({
 }: {
   layers: ChartLayers;
   onLayers: (update: (layers: ChartLayers) => ChartLayers) => void;
-  /** Items the API sent per layer, where it reports a count (null: not reported). */
-  counts: Partial<Record<LayerName, number | null>>;
+  /** Items drawn per layer, where the chart knows them (absent: not counted). */
+  counts: Partial<Record<LayerName, LayerCount>>;
 }) {
   const anyOn = LAYER_NAMES.some((name) => layers[name]);
   useEffect(() => {
@@ -40,8 +44,9 @@ export function LayerToolbar({
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [onLayers]);
-  return (
-    <div className="cw-layers" role="group" aria-label="Chart layers" data-testid="layer-toolbar">
+  const onCount = LAYER_NAMES.filter((name) => layers[name]).length;
+  const toggles = (
+    <div className="cw-layers cw-layers--list" role="group" aria-label="Chart layers" data-testid="layer-list">
       {LAYER_NAMES.map((name, i) => {
         const count = counts[name];
         return (
@@ -51,15 +56,37 @@ export function LayerToolbar({
             className="cw-layers__btn"
             aria-pressed={layers[name]}
             data-testid={`layer-${name}`}
-            data-count={count ?? ""}
+            data-count={typeof count === "number" ? count : ""}
+            data-available={count === undefined || count === "pending" ? "" : String(count !== "n/a")}
             title={`${layers[name] ? "Hide" : "Show"} ${LAYER_LABEL[name].toLowerCase()} · Alt ${i + 1}`}
             onClick={() => onLayers((l) => ({ ...l, [name]: !l[name] }))}
           >
             {LAYER_LABEL[name]}
-            {count !== undefined && count !== null ? <span className="cw-layers__n">{count.toLocaleString("en-GB")}</span> : null}
+            {count === undefined ? null : (
+              <span className="cw-layers__n">
+                {count === "pending" ? "…" : count === "n/a" ? "n/a" : count.toLocaleString("en-GB")}
+              </span>
+            )}
           </button>
         );
       })}
+    </div>
+  );
+  return (
+    <span className="cw-layers" data-testid="layer-toolbar" data-on={onCount}>
+      <Popover
+        title="Chart layers"
+        testId="layer-popover"
+        trigger={
+          <button type="button" className="cw-layers__btn cw-layers__btn--menu" data-testid="layers-menu" aria-pressed={onCount > 0}>
+            <Layers size={12} aria-hidden="true" />
+            Layers {onCount}/{LAYER_NAMES.length}
+          </button>
+        }
+      >
+        {toggles}
+        <p className="muted cw-layers__hint">Alt 1 to Alt 8 toggle these in order; Alt 0 hides or shows all.</p>
+      </Popover>
       <button
         type="button"
         className="cw-layers__btn cw-layers__btn--all"
@@ -71,6 +98,6 @@ export function LayerToolbar({
         {anyOn ? <EyeOff size={12} aria-hidden="true" /> : <Eye size={12} aria-hidden="true" />}
         {anyOn ? "Hide all" : "Show all"}
       </button>
-    </div>
+    </span>
   );
 }

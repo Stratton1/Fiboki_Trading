@@ -70,7 +70,7 @@ export function SnapshotButton({
         onClick={() => void take()}
       >
         <Camera size={13} aria-hidden="true" />
-        PNG
+        <span className="sr-only">Snapshot as PNG</span>
       </Button>
       <span
         className="sr-only"

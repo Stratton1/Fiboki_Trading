@@ -114,8 +114,11 @@ test.describe("chart workstation", () => {
     await expect(summary).toHaveAttribute("data-levels", "3");
     await expect(summary).toHaveAttribute("data-regimes", "3");
     await expect(page.getByTestId("legend-unplaced")).toContainText("1 signal");
-    await expect(page.getByTestId("legend-layer-signals")).toHaveAttribute("data-count", "3");
-    await expect(page.getByTestId("legend-layer-regimes")).toHaveAttribute("data-count", "3");
+    // The layer toolbar (one tool row, Wave 2B) counts what is drawn.
+    await page.getByTestId("layers-menu").click();
+    await expect(page.getByTestId("layer-signals")).toHaveAttribute("data-count", "3");
+    await expect(page.getByTestId("layer-regimes")).toHaveAttribute("data-count", "3");
+    await page.keyboard.press("Escape");
     // Series: price-pane ichimoku (3 lines, one display-only) and ATR in its
     // own pane are shown; the state column starts hidden. Panes: price,
     // volume, atr_14.
@@ -139,17 +142,21 @@ test.describe("chart workstation", () => {
     await page.goto(EURUSD);
     await ready(page);
     const summary = page.getByTestId("chart-summary");
+    // Series groups live in the Series popover of the single tool row.
+    await page.getByTestId("indicator-groups").click();
     const state = page.locator('[data-testid="legend-series-group"][data-pane^="state:"]');
     await expect(state).toHaveAttribute("aria-pressed", "false");
     await state.click();
     await expect(state).toHaveAttribute("aria-pressed", "true");
     await expect(summary).toHaveAttribute("data-series", "5");
     await expect(summary).toHaveAttribute("data-panes", "4");
-    const regimes = page.getByTestId("legend-layer-regimes");
-    await regimes.click();
-    await expect(regimes).toHaveAttribute("aria-pressed", "false");
     // Hiding the ATR pane removes its pane and its values from the readout.
     await page.locator('[data-testid="legend-series-group"][data-pane="atr_14"]').click();
+    await page.keyboard.press("Escape");
+    await page.getByTestId("layers-menu").click();
+    const regimes = page.getByTestId("layer-regimes");
+    await regimes.click();
+    await expect(regimes).toHaveAttribute("aria-pressed", "false");
     await expect(summary).toHaveAttribute("data-panes", "3");
     await expect(page.locator('[data-testid="readout-series"][data-series="atr_14:atr_14"]')).toHaveCount(0);
   });
@@ -341,7 +348,8 @@ test.describe("chart workstation", () => {
     await expect(error).toContainText("Overlay computation failed.");
     await expect(error).toContainText("cid-ov");
     await expect(page.getByTestId("chart-summary")).toHaveAttribute("data-signals", "");
-    await expect(page.getByTestId("legend-layer-signals")).toContainText("…");
+    await page.getByTestId("layers-menu").click();
+    await expect(page.getByTestId("layer-signals")).toContainText("…");
     await expect(page.getByTestId("overlays-retry")).toBeVisible();
   });
 

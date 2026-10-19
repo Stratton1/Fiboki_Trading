@@ -91,7 +91,14 @@ export function OverlayLegend({
   onLayer,
   hidden,
   onGroup,
+  part = "all",
 }: {
+  /**
+   * "controls": the indicator groups (in a popover) and the chart key, for the
+   * workstation's single tool row; "notes": what is not available or not
+   * drawn, under the chart; "all": the legacy three rows.
+   */
+  part?: "all" | "controls" | "notes";
   model: ChartModel;
   overlays: OverlayView | null;
   /** The overlays read has not answered yet (or failed; the page says which). */
@@ -125,6 +132,88 @@ export function OverlayLegend({
   // Calendar events are drawn on the time axis (Wave 2B); headlines are not yet.
   const notDrawn = overlays !== null && overlays.headlines.length > 0;
 
+  const groupsRow =
+    model.groups.length > 0 ? (
+      <div className="legend__row" role="group" aria-label="Indicator series">
+        {model.groups.map((group) => (
+          <button
+            key={group.id}
+            type="button"
+            className="legend__toggle"
+            aria-pressed={!hidden.has(group.id)}
+            data-testid="legend-series-group"
+            data-group={group.id}
+            data-pane={group.pane}
+            data-lines={group.seriesIds.length}
+            onClick={() => onGroup(group.id)}
+          >
+            <span className="series-swatch" data-role={group.role} data-style="solid" aria-hidden="true" />
+            <span>{groupLabel(group)}</span>
+            <span className="legend__count">{group.seriesIds.length}</span>
+          </button>
+        ))}
+      </div>
+    ) : null;
+  const notes =
+    unavailable.length > 0 || outside.length > 0 || notDrawn ? (
+      <details className="legend__details" open={drawnMissing} data-testid="legend-details">
+        <summary className="legend__summary">
+          {[
+            unavailable.length > 0
+              ? `${unavailableNames.size} section${unavailableNames.size === 1 ? "" : "s"} not available`
+              : "",
+            notDrawn ? "received, not drawn" : "",
+            outside.length > 0 ? "outside the bar window" : "",
+          ]
+            .filter(Boolean)
+            .join(" · ")}
+        </summary>
+        <ul className="legend__notes" data-testid="legend-notes">
+          {unavailable.map((u) => (
+            <li key={u.detail} data-testid="legend-unavailable" data-sections={u.names.join(",")}>
+              <ViewStateTag state="absent" /> <strong>{u.names.join(", ")}</strong>: {u.detail}
+            </li>
+          ))}
+          {overlays && notDrawn ? (
+            <li data-testid="legend-not-drawn">
+              Received but not drawn on this chart yet: {overlays.headlines.length.toLocaleString("en-GB")}{" "}
+              headline(s).
+            </li>
+          ) : null}
+          {outside.length > 0 ? (
+            <li data-testid="legend-unplaced">Outside the bar window, not drawn: {outside.join(", ")}.</li>
+          ) : null}
+        </ul>
+      </details>
+    ) : null;
+  if (part === "notes") {
+    return notes ? (
+      <div className="legend legend--notes" data-testid="overlay-legend-notes">
+        {notes}
+      </div>
+    ) : null;
+  }
+  const keyPopover = <ChartKey />;
+  if (part === "controls") {
+    const shown = model.groups.filter((g) => !hidden.has(g.id)).length;
+    return (
+      <span className="legend legend--controls" data-testid="overlay-legend">
+        <Popover
+          title="Indicator series"
+          testId="indicator-groups-popover"
+          trigger={
+            <button type="button" className="legend__toggle" data-testid="indicator-groups" disabled={model.groups.length === 0}>
+              Series {overlaysPending ? "…" : `${shown}/${model.groups.length}`}
+            </button>
+          }
+        >
+          {groupsRow ?? <p className="muted">No indicator series in this payload.</p>}
+        </Popover>
+        {keyPopover}
+      </span>
+    );
+  }
+
   return (
     <div className="legend" data-testid="overlay-legend">
       <div className="legend__row" role="group" aria-label="Overlay layers">
@@ -148,115 +237,69 @@ export function OverlayLegend({
             </button>
           );
         })}
-        <Popover
-          title="Chart key"
-          testId="chart-key-popover"
-          trigger={
-            <button type="button" className="legend__toggle" data-testid="chart-key">
-              Key
-            </button>
-          }
-        >
-          <ul className="legend__key">
-            <li>
-              <MarkerGlyph shape="up" fill="filled" ink="paper" /> long signal, below the bar
-            </li>
-            <li>
-              <MarkerGlyph shape="down" fill="filled" ink="paper" /> short signal, above the bar
-            </li>
-            <li>
-              <MarkerGlyph shape="diamond" fill="filled" ink="paper" /> signal whose side the platform
-              could not match to a fill
-            </li>
-            <li>
-              <MarkerGlyph shape="up" fill="filled" ink="paper" struck /> struck through: the gateway
-              BLOCKED it
-            </li>
-            <li>
-              <MarkerGlyph shape="circle" fill="filled" ink="paper" /> entry fill,{" "}
-              <MarkerGlyph shape="square" fill="filled" ink="paper" /> exit fill, at the recorded price
-            </li>
-            <li>
-              <MarkerGlyph shape="circle" fill="filled" ink="paper" /> filled = executed (paper, shadow,
-              demo, live) ·{" "}
-              <MarkerGlyph shape="circle" fill="hollow" ink="backtest" /> hollow = simulated
-            </li>
-            <li>
-              Entry-to-exit line: coloured by the sign of the platform&apos;s net P&amp;L, dashed when
-              simulated.
-            </li>
-            <li>Levels: entry solid, stop dashed, target dotted, labelled on the price axis.</li>
-            <li>
-              Candles: rising bars hollow, falling bars filled. Neutral ink; green and red mean P&amp;L
-              only.
-            </li>
-            <li>
-              Regimes: a tint per run and a ribbon with its label. UNKNOWN is hatched, never drawn as
-              range.
-            </li>
-            <li>
-              Signals sit on the bar open at their decision time: the API reports when the gateway
-              decided, not which closed bar produced the signal.
-            </li>
-          </ul>
-        </Popover>
+        {keyPopover}
       </div>
 
-      {model.groups.length > 0 ? (
-        <div className="legend__row" role="group" aria-label="Indicator series">
-          {model.groups.map((group) => (
-            <button
-              key={group.id}
-              type="button"
-              className="legend__toggle"
-              aria-pressed={!hidden.has(group.id)}
-              data-testid="legend-series-group"
-              data-group={group.id}
-              data-pane={group.pane}
-              data-lines={group.seriesIds.length}
-              onClick={() => onGroup(group.id)}
-            >
-              <span className="series-swatch" data-role={group.role} data-style="solid" aria-hidden="true" />
-              <span>{groupLabel(group)}</span>
-              <span className="legend__count">{group.seriesIds.length}</span>
-            </button>
-          ))}
-        </div>
-      ) : null}
-
-      {unavailable.length > 0 || outside.length > 0 || notDrawn ? (
-        <details className="legend__details" open={drawnMissing} data-testid="legend-details">
-          <summary className="legend__summary">
-            {[
-              unavailable.length > 0
-                ? `${unavailableNames.size} section${unavailableNames.size === 1 ? "" : "s"} not available`
-                : "",
-              notDrawn ? "received, not drawn" : "",
-              outside.length > 0 ? "outside the bar window" : "",
-            ]
-              .filter(Boolean)
-              .join(" · ")}
-          </summary>
-          <ul className="legend__notes" data-testid="legend-notes">
-            {unavailable.map((u) => (
-              <li key={u.detail} data-testid="legend-unavailable" data-sections={u.names.join(",")}>
-                <ViewStateTag state="absent" /> <strong>{u.names.join(", ")}</strong>: {u.detail}
-              </li>
-            ))}
-            {overlays && notDrawn ? (
-              <li data-testid="legend-not-drawn">
-                Received but not drawn on this chart yet: {overlays.headlines.length.toLocaleString("en-GB")}{" "}
-                headline(s).
-              </li>
-            ) : null}
-            {outside.length > 0 ? (
-              <li data-testid="legend-unplaced">
-                Outside the bar window, not drawn: {outside.join(", ")}.
-              </li>
-            ) : null}
-          </ul>
-        </details>
-      ) : null}
+      {groupsRow}
+      {notes}
     </div>
+  );
+}
+
+/** The chart key: what every glyph, line and tint on the chart means. */
+function ChartKey() {
+  return (
+    <Popover
+      title="Chart key"
+      testId="chart-key-popover"
+      trigger={
+        <button type="button" className="legend__toggle" data-testid="chart-key">
+          Key
+        </button>
+      }
+    >
+      <ul className="legend__key">
+        <li>
+          <MarkerGlyph shape="up" fill="filled" ink="paper" /> long signal, below the bar
+        </li>
+        <li>
+          <MarkerGlyph shape="down" fill="filled" ink="paper" /> short signal, above the bar
+        </li>
+        <li>
+          <MarkerGlyph shape="diamond" fill="filled" ink="paper" /> signal whose side the platform
+          could not match to a fill
+        </li>
+        <li>
+          <MarkerGlyph shape="up" fill="filled" ink="paper" struck /> struck through: the gateway
+          BLOCKED it
+        </li>
+        <li>
+          <MarkerGlyph shape="circle" fill="filled" ink="paper" /> entry fill,{" "}
+          <MarkerGlyph shape="square" fill="filled" ink="paper" /> exit fill, at the recorded price
+        </li>
+        <li>
+          <MarkerGlyph shape="circle" fill="filled" ink="paper" /> filled = executed (paper, shadow,
+          demo, live) ·{" "}
+          <MarkerGlyph shape="circle" fill="hollow" ink="backtest" /> hollow = simulated
+        </li>
+        <li>
+          Entry-to-exit line: coloured by the sign of the platform&apos;s net P&amp;L, dashed when
+          simulated.
+        </li>
+        <li>Levels: entry solid, stop dashed, target dotted, labelled on the price axis.</li>
+        <li>
+          Candles: rising bars hollow, falling bars filled. Neutral ink; green and red mean P&amp;L
+          only.
+        </li>
+        <li>
+          Regimes: a tint per run and a ribbon with its label. UNKNOWN is hatched, never drawn as
+          range.
+        </li>
+        <li>
+          Signals sit on the bar open at their decision time: the API reports when the gateway
+          decided, not which closed bar produced the signal.
+        </li>
+      </ul>
+    </Popover>
   );
 }

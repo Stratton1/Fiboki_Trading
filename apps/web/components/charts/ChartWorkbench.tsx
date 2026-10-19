@@ -23,6 +23,7 @@ import {
   type KeyboardEvent as ReactKeyboardEvent,
   type ReactNode,
 } from "react";
+import { createPortal } from "react-dom";
 import { useOperator } from "@/components/shell/platform";
 import { LazyPriceChart } from "@/components/LazyChart";
 import { ProvenanceLabelChip } from "@/components/ProvenanceChip";
@@ -48,7 +49,7 @@ import type {
 } from "@/lib/types";
 import { DataWindow } from "./DataWindow";
 import { TradeDetail } from "./TradeDetail";
-import { ALL_LAYERS_ON, type ChartLayers, type TradeSource } from "./layers";
+import { ALL_LAYERS_ON, type ChartLayers, type ChartSlots, type TradeSource } from "./layers";
 import type { DrawingTool } from "./drawing-primitive";
 import type { ChartDrawings, PriceChartProps } from "./PriceChart";
 import { formatBarTime, TIME_ZONES, type TimeZoneId } from "./time";
@@ -104,6 +105,8 @@ export interface ChartWorkbenchProps {
   /** Which trades are drawn; owned by the workstation so a template can set it. */
   tradeSource?: TradeSource;
   onTradeSource?: (source: TradeSource) => void;
+  /** The workstation's tool row and stamp line; the bar renders inline without them. */
+  slots?: ChartSlots;
 }
 
 type PanelTab = "trades" | "data";
@@ -280,6 +283,7 @@ export default function ChartWorkbench({
   onChartLayers,
   tradeSource,
   onTradeSource,
+  slots,
 }: ChartWorkbenchProps) {
   const notify = useToast();
   const operator = useOperator();
@@ -581,9 +585,12 @@ export default function ChartWorkbench({
       className="cw-bench"
       data-testid="chart-workbench"
       data-panel={panelOpen ? "open" : "closed"}
+      data-bar={slots?.bench ? "slot" : "inline"}
       data-tool={tool}
     >
-      <div className="cw-bench__bar" role="toolbar" aria-label="Trades on the chart">
+      {slots?.bench
+        ? createPortal(
+            <span className="cw-bench__bar cw-bench__bar--slot" role="toolbar" aria-label="Trades on the chart">
         <fieldset className="cw-seg" data-testid="trade-source">
           <legend className="sr-only">Trades shown</legend>
           {(
@@ -639,7 +646,6 @@ export default function ChartWorkbench({
             ) : null}
           </select>
         </label>
-        {runRow ? <RunProvenance run={runRow} view={btView} /> : null}
         {run && btTrades.status === "loading" ? (
           <span className="cw__chip" role="status" data-testid="bt-loading">
             reading trades…
@@ -650,17 +656,6 @@ export default function ChartWorkbench({
             trades not loaded: {btTrades.error.code}
           </span>
         ) : null}
-        <span
-          className="cw-bench__counts num"
-          data-testid="trade-counts"
-          data-paper={paperCount}
-          data-backtest={btCount}
-          data-backtest-unplaced={placedBt.unplaced}
-          data-segments={allTrades.reduce((n, t) => n + t.segments.length, 0)}
-        >
-          {paperCount} paper · {run ? `${btCount} backtest` : "no run"}
-          {placedBt.unplaced ? ` · ${placedBt.unplaced} outside bars` : ""}
-        </span>
         <button
           type="button"
           className="cw-bench__toggle"
@@ -682,12 +677,139 @@ export default function ChartWorkbench({
         >
           <Table2 size={14} aria-hidden="true" /> Data
         </button>
+            </span>,
+            slots.bench,
+          )
+        : null}
+      {slots?.stamp
+        ? createPortal(
+            <span className="cw-bench__status">
+        {runRow ? <RunProvenance run={runRow} view={btView} /> : null}
+        <span
+          className="cw-bench__counts num"
+          data-testid="trade-counts"
+          data-paper={paperCount}
+          data-backtest={btCount}
+          data-backtest-unplaced={placedBt.unplaced}
+          data-segments={allTrades.reduce((n, t) => n + t.segments.length, 0)}
+        >
+          {paperCount} paper · {run ? `${btCount} backtest` : "no run"}
+          {placedBt.unplaced ? ` · ${placedBt.unplaced} outside bars` : ""}
+        </span>
         {hours ? (
           <span className="cw__chip" data-testid="instrument-hours" title={`${symbol} trading hours: ${hours}`}>
             {hours}
           </span>
+        ) : null}            </span>,
+            slots.stamp,
+          )
+        : null}
+      {slots?.bench ? null : (
+        <div className="cw-bench__bar" role="toolbar" aria-label="Trades on the chart">
+        <fieldset className="cw-seg" data-testid="trade-source">
+          <legend className="sr-only">Trades shown</legend>
+          {(
+            [
+              ["paper", "Paper"],
+              ["backtest", "Backtest"],
+              ["both", "Both"],
+            ] as const
+          ).map(([value, text]) => (
+            <label key={value} className="cw-seg__item" data-checked={source === value}>
+              <input
+                type="radio"
+                name={`trade-source-${symbol}`}
+                value={value}
+                checked={source === value}
+                onChange={() => setSource(value)}
+              />
+              {text}
+            </label>
+          ))}
+        </fieldset>
+        <label className="cw-run">
+          <span className="cw-run__label">Run</span>
+          <select
+            className="cw-run__select"
+            aria-label="Backtest run"
+            data-testid="run-picker"
+            value={run ?? ""}
+            disabled={runs.status !== "success" || runsList.length === 0}
+            onChange={(e) => {
+              onRun(e.target.value === "" ? null : e.target.value);
+              setSelectedTrade(null);
+            }}
+          >
+            <option value="">
+              {runs.status === "loading"
+                ? "reading runs…"
+                : runs.status === "error"
+                  ? "runs could not be read"
+                  : runsList.length === 0
+                    ? runs.data.source.kind === "absent"
+                      ? "research ledger not configured"
+                      : `no stored runs for ${symbol} ${tf}`
+                    : `None (${runsList.length} run${runsList.length === 1 ? "" : "s"})`}
+            </option>
+            {runsList.map((r) => (
+              <option key={r.run_id} value={r.run_id}>
+                {runLabel(r)}
+              </option>
+            ))}
+            {run && !runsList.some((r) => r.run_id === run) ? (
+              <option value={run}>{run} (not listed for {tf})</option>
+            ) : null}
+          </select>
+        </label>
+        {run && btTrades.status === "loading" ? (
+          <span className="cw__chip" role="status" data-testid="bt-loading">
+            reading trades…
+          </span>
         ) : null}
-      </div>
+        {run && btTrades.status === "error" ? (
+          <span className="cw__chip cw__chip--error" role="alert" data-testid="bt-error">
+            trades not loaded: {btTrades.error.code}
+          </span>
+        ) : null}
+        <button
+          type="button"
+          className="cw-bench__toggle"
+          aria-pressed={panel === "trades"}
+          aria-controls="cw-trades"
+          data-testid="trades-panel-toggle"
+          onClick={() => setPanel((v) => (v === "trades" ? null : "trades"))}
+        >
+          <PanelRight size={14} aria-hidden="true" /> Trades ({tableTrades.length})
+        </button>
+        <button
+          type="button"
+          className="cw-bench__toggle"
+          aria-pressed={panel === "data"}
+          aria-controls="cw-data-window"
+          data-testid="data-window-toggle"
+          title="Data window: every value at the crosshair, from the platform · Alt W"
+          onClick={() => setPanel((v) => (v === "data" ? null : "data"))}
+        >
+          <Table2 size={14} aria-hidden="true" /> Data
+        </button>
+        {runRow ? <RunProvenance run={runRow} view={btView} /> : null}
+        <span
+          className="cw-bench__counts num"
+          data-testid="trade-counts"
+          data-paper={paperCount}
+          data-backtest={btCount}
+          data-backtest-unplaced={placedBt.unplaced}
+          data-segments={allTrades.reduce((n, t) => n + t.segments.length, 0)}
+        >
+          {paperCount} paper · {run ? `${btCount} backtest` : "no run"}
+          {placedBt.unplaced ? ` · ${placedBt.unplaced} outside bars` : ""}
+        </span>
+        {hours ? (
+          <span className="cw__chip" data-testid="instrument-hours" title={`${symbol} trading hours: ${hours}`}>
+            {hours}
+          </span>
+        ) : null}        </div>
+      )}
 
       <div className="cw-bench__main">
         <DrawingRail
@@ -1126,6 +1248,30 @@ function shortTime(iso: string, tz: TimeZoneId): string {
   return parts.length >= 5 ? `${parts[1]} ${parts[2]} ${parts[4]}` : full;
 }
 
+/**
+ * The trades table's exit reason, short (programme P1 #9: the TP and EXIT
+ * columns were cut off at 1440 px). The full reason is the cell's title and
+ * the detail panel's text. An unknown reason is shown as the API sent it.
+ */
+const REASON_SHORT: Record<string, string> = {
+  stop_loss: "SL",
+  take_profit: "TP",
+  trailing_stop: "TRAIL",
+  breakeven: "BE",
+  time_stop: "TIME",
+  opposite_signal: "OPP",
+  invalidation: "INVAL",
+  session_close: "SESS",
+  risk_halt: "HALT",
+  end_of_data: "EOD",
+  margin_call: "MARGIN",
+  "open at cursor": "OPEN",
+};
+
+function reasonShort(reason: string): string {
+  return REASON_SHORT[reason] ?? reason.replaceAll("_", " ");
+}
+
 function zoneLabel(tz: TimeZoneId): string {
   return TIME_ZONES.find((z) => z.id === tz)?.label ?? tz;
 }
@@ -1198,8 +1344,9 @@ function TradesTable({
                 <th scope="col" className="r">Entry</th>
                 <th scope="col" className="r">Exit</th>
                 <th scope="col" className="r">Net P&amp;L</th>
-                <th scope="col" className="r">SL</th>
-                <th scope="col" className="r">TP</th>
+                <th scope="col" className="r">
+                  SL<span className="cw-trades__sep">/</span>TP
+                </th>
                 <th scope="col">Exit</th>
               </tr>
             </thead>
@@ -1242,9 +1389,19 @@ function TradesTable({
                     <td className={`r num ${pnl && pnl.value !== null ? signClass(pnl.value, pnl.unit) : ""}`}>
                       {pnlText ?? <span className="muted">no data</span>}
                     </td>
-                    <td className="r">{price(sl)}</td>
-                    <td className="r">{price(tp)}</td>
-                    <td>{reason ? reason.replaceAll("_", " ") : <span className="muted">—</span>}</td>
+                    <td className="r cw-trades__stack">
+                      {price(sl)}
+                      {price(tp)}
+                    </td>
+                    <td title={reason ? reason.replaceAll("_", " ") : undefined}>
+                      {reason ? (
+                        <abbr className="cw-trades__reason" title={reason.replaceAll("_", " ")}>
+                          {reasonShort(reason)}
+                        </abbr>
+                      ) : (
+                        <span className="muted">—</span>
+                      )}
+                    </td>
                   </tr>
                 );
               })}

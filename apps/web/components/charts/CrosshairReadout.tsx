@@ -117,13 +117,16 @@ export function CrosshairReadout({
       {[...groups.entries()].map(([group, list]) => {
         const first = list[0] as ModelSeries;
         const decimals = first.pane === "price" ? priceDecimals : (paneDecimals.get(first.pane) ?? null);
+        // A one-output indicator (atr_14 -> atr_14) is named once, not twice
+        // (programme P1 #9, the duplicated label in the wrapped mobile readout).
+        const single = list.length === 1 && shortName(first) === first.indicatorId;
         return (
           <div className="readout__row" key={group} data-testid="readout-group" data-group={group}>
             <span className="readout__group">{first.indicatorId}</span>
             {list.map((s) => (
               <span className="readout__pair" key={s.id} data-testid="readout-series" data-series={s.id}>
                 <span className="series-swatch" data-role={s.role} data-style={s.lineStyle} aria-hidden="true" />
-                <span className="readout__key">
+                <span className={single ? "sr-only" : "readout__key"}>
                   {shortName(s)}
                   {s.displayOnly ? " (display only)" : ""}
                 </span>

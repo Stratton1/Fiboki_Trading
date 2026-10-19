@@ -51,3 +51,15 @@ export const ALL_LAYERS_OFF: ChartLayers = {
 };
 
 export type { ChartTemplateBody, ChartTemplateRow, ChartTemplatesView, TradeSource } from "@/lib/chart-contract";
+
+/**
+ * Where the chart's controls render (programme P1 #9: one tool row above the
+ * chart). The workstation owns the row; the chart area and the workbench
+ * portal their controls into these elements, and their status chips into the
+ * stamp line under the chart. A null slot renders inline.
+ */
+export interface ChartSlots {
+  legend: HTMLElement | null;
+  bench: HTMLElement | null;
+  stamp: HTMLElement | null;
+}

@@ -460,3 +460,192 @@
 .cw-td__note {
   margin: 4px 0 0;
 }
+
+/* -------------------------------------- one tool row (programme P1 #9) */
+/* The header is THE tool row: title, timeframe, layers, series and key,
+   trades source and run, go-to-date, zone, templates, snapshot, actions.
+   One line at desktop widths (it scrolls sideways inside itself rather than
+   grow a second row); the provenance chips moved to the stamp line under
+   the chart. It wraps on a phone. */
+.cw > .cw__head {
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 6px;
+  min-height: 32px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: thin;
+  white-space: nowrap;
+  padding-bottom: 2px;
+}
+.cw > .cw__head > * {
+  flex: none;
+}
+.cw__slot {
+  display: contents;
+}
+.cw__actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: auto;
+}
+.cw__inline-tools {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+}
+.legend--controls {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.legend--notes {
+  margin-top: 2px;
+}
+.cw-bench__bar--slot {
+  display: inline-flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 6px;
+  height: auto;
+  padding: 0;
+  overflow: visible;
+  border: 0;
+  background: transparent;
+}
+.cw-bench[data-bar="slot"] {
+  grid-template-rows: minmax(0, 1fr);
+}
+.cw-bench__status {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+.cw-bench__status .cw-bench__counts {
+  margin-left: 0;
+}
+.cw > .cw__stamp {
+  flex: none;
+  margin-left: 0;
+  gap: 4px 8px;
+  font-size: 11px;
+}
+@media (max-width: 639px) {
+  .cw > .cw__head {
+    flex-wrap: wrap;
+    overflow-x: visible;
+    white-space: normal;
+  }
+  .cw__actions {
+    margin-left: 0;
+  }
+}
+
+/* ------------------------------------------ trades table fits (P1 #9) */
+/* At 1440 px the TP and EXIT columns were cut off: SL and TP now share a
+   stacked column, the exit reason is short (full text on hover and in the
+   detail panel), and the panel takes a little more of the row. */
+@media (min-width: 1200px) {
+  .cw .cw-bench[data-panel="open"] .cw-bench__main {
+    grid-template-columns: 36px minmax(0, 1fr) minmax(380px, 34%);
+  }
+}
+/* The floating drawing bar never covers the price axis labels (TARGET,
+   STOP, the last price): programme P1 #9's clipped top label on a phone. */
+.cw .cw-dbar {
+  max-width: calc(100% - 140px);
+  overflow: hidden;
+}
+.cw-trades__table th,
+.cw-trades__table td {
+  padding-left: 3px;
+  padding-right: 3px;
+}
+.cw-trades__stack {
+  line-height: 1.15;
+}
+.cw-trades__stack > span {
+  display: block;
+}
+.cw-trades__sep {
+  padding: 0 1px;
+  color: var(--fg-subtle);
+}
+.cw-trades__reason {
+  text-decoration: none;
+  font-size: 11px;
+  letter-spacing: 0.02em;
+}
+
+/* --------------------------------------------- tool row compaction */
+.cw > .cw__head [data-testid="chart-timeframe"] > span:first-child {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+.cw-layers__btn--menu {
+  color: var(--fg);
+  text-decoration: none;
+}
+.cw-layers--list {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 2px;
+  min-width: 180px;
+  border: 0;
+  background: transparent;
+}
+.cw-layers--list .cw-layers__btn {
+  justify-content: space-between;
+  height: 24px;
+}
+.cw-layers__hint {
+  margin: 6px 0 0;
+  font-size: 11px;
+}
+.cw-goto input {
+  width: 150px;
+}
+.cw-run__select {
+  max-width: 170px;
+}
+.legend.legend--controls {
+  flex-direction: row;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 4px;
+}
+
+.cw-tools select,
+.cw-tools input {
+  height: 24px;
+  font-size: 11px;
+}
+@media (max-width: 639px) {
+  .cw > .cw__head {
+    gap: 4px;
+  }
+  .cw > .cw__head .cw-run__label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
+  .cw-run__select {
+    max-width: 140px;
+  }
+  .cw-goto input {
+    width: 140px;
+  }
+}
+.cw > .cw__head .cw-run {
+  width: auto;
+}

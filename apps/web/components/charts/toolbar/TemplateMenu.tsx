@@ -74,7 +74,8 @@ export function TemplateMenu({
       trigger={
         <Button size="sm" data-testid="chart-templates" title="Chart templates: saved layers and indicators, per operator">
           <LayoutTemplate size={13} aria-hidden="true" />
-          Templates{view ? ` (${rows.length})` : ""}
+          <span className="sr-only">Templates</span>
+          {view ? <span className="num">{rows.length}</span> : null}
         </Button>
       }
     >

@@ -1,13 +1,14 @@
 "use client";
 
 import { BarChart3, ExternalLink, History, Layers, Table2 } from "lucide-react";
-import Link from "next/link";
 import { parseAsString, parseAsStringLiteral, useQueryState } from "nuqs";
 import { lazy, Suspense, useCallback, useEffect, useId, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import { AsyncBoundary } from "@/components/AsyncBoundary";
 import { CaveatList } from "@/components/CaveatList";
 import { CrosshairReadout, type ReadoutSource } from "@/components/charts/CrosshairReadout";
-import { ALL_LAYERS_ON, type ChartLayers, type TradeSource } from "@/components/charts/layers";
+import { ALL_LAYERS_ON, type ChartLayers, type ChartSlots, type TradeSource } from "@/components/charts/layers";
+import { LayerToolbar, type LayerCount } from "@/components/charts/LayerToolbar";
 import { LAYER_SECTIONS, OverlayLegend, type LayerKey } from "@/components/charts/OverlayLegend";
 import { preloadGrid } from "@/components/grid";
 import type { PriceChartHandle } from "@/components/charts/PriceChart";
@@ -259,6 +260,10 @@ function Workstation({
   const [dataOpen, setDataOpen] = useState(false);
   const { tz, setTz } = useTimeZone();
   const [handle, setHandle] = useState<PriceChartHandle | null>(null);
+  const [legendSlot, setLegendSlot] = useState<HTMLElement | null>(null);
+  const [benchSlot, setBenchSlot] = useState<HTMLElement | null>(null);
+  const [stampSlot, setStampSlot] = useState<HTMLElement | null>(null);
+  const slots: ChartSlots = { legend: legendSlot, bench: benchSlot, stamp: stampSlot };
   // Go to a date: scroll there when it is on the chart, else re-centre the window on it.
   const goTo = useCallback(
     (iso: string) => {
@@ -323,14 +328,59 @@ function Workstation({
       ]
     : [];
 
+
+  const stampChips = (
+    <div className="cw__meta cw__stamp" data-testid="chart-stamp">
+      {replay ? (
+        <span className="cw__chip" data-testid="chart-freshness" data-freshness="replay">
+          <History size={12} aria-hidden="true" /> replay: not live
+        </span>
+      ) : (
+        <Freshness bars={bars} overlays={overlays} />
+      )}
+      {barsEnv ? <DatasetChip version={barsEnv.data.dataset_version_id} /> : null}
+      {datasetMismatch && overlayEnv ? (
+        <span className="badge badge--degraded" data-testid="dataset-mismatch" role="status">
+          overlays from dataset {overlayEnv.data.bars_dataset_version_id}
+        </span>
+      ) : null}
+      {barsEnv ? (
+        <span className="cw__legend-item" data-testid="bars-provenance">
+          <span className="muted">Bars</span>
+          <ProvenanceLabelChip label={{ kind: "source", source: barsEnv.source }} />
+        </span>
+      ) : null}
+      {overlayEnv ? (
+        <span className="cw__legend-item" data-testid="journal-provenance">
+          <span className="muted">Journal</span>
+          {journal.length > 0 ? (
+            <ProvenanceLabelChip label={deriveProvenance(journal)} />
+          ) : (
+            <span className="muted">no items</span>
+          )}
+        </span>
+      ) : null}
+      {/* The workbench's run provenance, trade counts and trading hours. */}
+      <span className="cw__slot" ref={setStampSlot} data-testid="stamp-slot" />
+      <SourcesPopover bars={barsEnv} overlays={overlayEnv} />
+      <Button
+        size="sm"
+        onClick={() => setDataOpen((open) => !open)}
+        aria-expanded={dataOpen}
+        aria-controls="chart-data"
+        data-testid="chart-view-data"
+        disabled={barsEnv === null || barsEnv.data.bars.length === 0}
+      >
+        <Table2 size={13} aria-hidden="true" />
+        {dataOpen ? "Hide data" : "View data"}
+      </Button>
+    </div>
+  );
   return (
     <section className="cw" data-testid="chart-workstation" data-symbol={symbol} data-timeframe={tf}>
-      <header className="cw__head">
+      <header className="cw__head" data-testid="chart-head">
         <div className="cw__title">
           <h1 data-testid="chart-symbol">{symbol}</h1>
-          <Link href="/markets" className="cw__back">
-            All instruments
-          </Link>
         </div>
         <Segmented<Timeframe>
           label="Timeframe"
@@ -339,68 +389,27 @@ function Workstation({
           options={TIMEFRAMES.map((value) => ({ value, label: value }))}
           testId="chart-timeframe"
         />
-        <div className="cw__meta">
-          {replay ? (
-            <span className="cw__chip" data-testid="chart-freshness" data-freshness="replay">
-              <History size={12} aria-hidden="true" /> replay: not live
-            </span>
-          ) : (
-            <Freshness bars={bars} overlays={overlays} />
-          )}
-          {barsEnv ? (
-            <DatasetChip version={barsEnv.data.dataset_version_id} />
-          ) : null}
-          {datasetMismatch && overlayEnv ? (
-            <span className="badge badge--degraded" data-testid="dataset-mismatch" role="status">
-              overlays from dataset {overlayEnv.data.bars_dataset_version_id}
-            </span>
-          ) : null}
-          {barsEnv ? (
-            <span className="cw__legend-item" data-testid="bars-provenance">
-              <span className="muted">Bars</span>
-              <ProvenanceLabelChip label={{ kind: "source", source: barsEnv.source }} />
-            </span>
-          ) : null}
-          {overlayEnv ? (
-            <span className="cw__legend-item" data-testid="journal-provenance">
-              <span className="muted">Journal</span>
-              {journal.length > 0 ? (
-                <ProvenanceLabelChip label={deriveProvenance(journal)} />
-              ) : (
-                <span className="muted">no items</span>
-              )}
-            </span>
-          ) : null}
-          <Suspense fallback={<span className="cw__chip muted">tools…</span>}>
-            <ChartToolbar
-              template={template}
-              onApplyTemplate={applyTemplate}
-              tz={tz}
-              onTz={setTz}
-              at={at}
-              onGoTo={goTo}
-              onLatest={() => onAt(null)}
-              layers={chartLayers}
-              onLayers={setChartLayers}
-              symbol={symbol}
-              tf={tf}
-              datasetVersion={barsEnv?.data.dataset_version_id ?? null}
-              capture={() => handle?.screenshot() ?? null}
-              counts={
-                overlayEnv
-                  ? {
-                      signals: overlayEnv.data.signals.length,
-                      fills: overlayEnv.data.fills.length,
-                      regimes: overlayEnv.data.regimes.length,
-                      stops: overlayEnv.data.levels.length,
-                      events: overlayEnv.data.events.length,
-                      indicators: overlayEnv.data.series.length,
-                    }
-                  : {}
-              }
-            />
-          </Suspense>
-          <SourcesPopover bars={barsEnv} overlays={overlayEnv} />
+        {/* The chart's own controls (layers, series, key) and the workbench's
+            (trades source, run, panels) render into these slots, so there is
+            ONE tool row above the chart (programme P1 #9). */}
+        <span className="cw__slot" ref={setLegendSlot} data-testid="legend-slot" />
+        <span className="cw__slot" ref={setBenchSlot} data-testid="bench-slot" />
+        <Suspense fallback={<span className="cw__chip muted">tools…</span>}>
+          <ChartToolbar
+            template={template}
+            onApplyTemplate={applyTemplate}
+            tz={tz}
+            onTz={setTz}
+            at={at}
+            onGoTo={goTo}
+            onLatest={() => onAt(null)}
+            symbol={symbol}
+            tf={tf}
+            datasetVersion={barsEnv?.data.dataset_version_id ?? null}
+            capture={() => handle?.screenshot() ?? null}
+          />
+        </Suspense>
+        <span className="cw__actions">
           <Button
             size="sm"
             onClick={() => {
@@ -421,18 +430,8 @@ function Workstation({
             <History size={13} aria-hidden="true" />
             {replay ? "Live" : "Replay"}
           </Button>
-          <Button
-            size="sm"
-            onClick={() => setDataOpen((open) => !open)}
-            aria-expanded={dataOpen}
-            aria-controls="chart-data"
-            data-testid="chart-view-data"
-            disabled={barsEnv === null || barsEnv.data.bars.length === 0}
-          >
-            <Table2 size={13} aria-hidden="true" />
-            {dataOpen ? "Hide data" : "View data"}
-          </Button>
-        </div>
+
+        </span>
       </header>
 
       {barsEnv && barsEnv.caveats.length > 0 ? <CaveatList caveats={barsEnv.caveats} /> : null}
@@ -500,6 +499,7 @@ function Workstation({
                       onHandle={setHandle}
                       focusAt={null}
                       focusEvent={null}
+                      slots={slots}
                       replay={frame}
                     />
                   )}
@@ -560,13 +560,20 @@ function Workstation({
                 onHandle={setHandle}
                 focusAt={at}
                 focusEvent={focus?.event_id ?? null}
+                slots={slots}
               />
             )}
           </AsyncBoundary>
         )}
       </div>
+      {stampChips}
     </section>
   );
+}
+
+/** Render into a slot of the tool row, or inline when the slot is not mounted yet. */
+function portal(node: React.ReactNode, slot: HTMLElement | null) {
+  return slot ? createPortal(node, slot) : <div className="cw__inline-tools">{node}</div>;
 }
 
 /** One replay answer turned into the chart's inputs, once per answer. */
@@ -759,6 +766,7 @@ function ChartArea({
   onHandle,
   focusAt,
   focusEvent,
+  slots,
   replay = null,
 }: {
   symbol: string;
@@ -784,6 +792,7 @@ function ChartArea({
   /** Go-to-date: once the chart has drawn this window, put the crosshair on this instant. */
   focusAt: string | null;
   focusEvent: string | null;
+  slots: ChartSlots;
   /** Replay mode: the trades as they stood at the cursor, instead of a run's stored trades. */
   replay?: ReplayFrame | null;
 }) {
@@ -869,6 +878,40 @@ function ChartArea({
       setHover(index);
     },
   };
+  const legend = (part: "controls" | "notes") => (
+    <OverlayLegend
+      part={part}
+      model={model}
+      overlays={overlayData}
+      overlaysPending={overlays.status !== "success"}
+      layers={layers}
+      onLayer={(layer) =>
+        setChartLayers((l) => {
+          const key = layer === "levels" ? "stops" : layer;
+          return { ...l, [key]: !l[key] };
+        })
+      }
+      hidden={hidden}
+      onGroup={(group) =>
+        setToggled((prev) => {
+          const next = new Map(prev);
+          next.set(group, hidden.has(group));
+          return next;
+        })
+      }
+    />
+  );
+  const pending = overlays.status !== "success";
+  const drawn = (layer: LayerKey, n: number): LayerCount =>
+    pending ? "pending" : layerCount(layer, n) === null ? "n/a" : n;
+  const layerCounts: Partial<Record<keyof ChartLayers, LayerCount>> = {
+    signals: drawn("signals", model.signals.length),
+    fills: drawn("fills", model.fills.length),
+    regimes: drawn("regimes", model.regimes.length),
+    stops: drawn("levels", model.levels.length),
+    events: pending ? "pending" : model.events.length,
+    indicators: pending ? "pending" : model.series.length,
+  };
   const chart = (
     <div className="cw__chart">
       <Suspense
@@ -893,6 +936,7 @@ function ChartArea({
           onChartLayers={setChartLayers}
           tradeSource={tradeSource}
           onTradeSource={onTradeSource}
+          slots={slots}
         />
       </Suspense>
     </div>
@@ -900,26 +944,13 @@ function ChartArea({
 
   return (
     <div className="cw__area">
-      <OverlayLegend
-        model={model}
-        overlays={overlayData}
-        overlaysPending={overlays.status !== "success"}
-        layers={layers}
-        onLayer={(layer) =>
-          setChartLayers((l) => {
-            const key = layer === "levels" ? "stops" : layer;
-            return { ...l, [key]: !l[key] };
-          })
-        }
-        hidden={hidden}
-        onGroup={(group) =>
-          setToggled((prev) => {
-            const next = new Map(prev);
-            next.set(group, hidden.has(group));
-            return next;
-          })
-        }
-      />
+      {portal(
+        <>
+          <LayerToolbar layers={chartLayers} onLayers={setChartLayers} counts={layerCounts} />
+          {legend("controls")}
+        </>,
+        slots.legend,
+      )}
       {overlays.status === "loading" ? (
         <p className="cw__note" data-testid="overlays-loading" role="status">
           Reading overlays for {symbol} {tf}… the candles are drawn; signals, fills, levels, regimes
@@ -1014,6 +1045,7 @@ function ChartArea({
         {model.series.length} series · {panes.length} pane{panes.length === 1 ? "" : "s"}
         {model.hasVolume ? ` (with ${bars.data.volume_kind === "tick_volume" ? "tick volume" : "volume"})` : ""}
       </p>
+      {legend("notes")}
     </div>
   );
 }
