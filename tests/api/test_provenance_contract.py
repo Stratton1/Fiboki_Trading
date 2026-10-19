@@ -58,6 +58,28 @@ ALLOWED_BARE_NUMERIC = {
     ("DrawingSetView", "version"),
     ("DrawingSetView", "max_drawings"),
     ("OtherDrawingSet", "version"),
+    # Chart workstation (Wave 2B, routers/chart_workstation.py). Replay bars
+    # are the canonical store's OHLCV, exactly what GET /bars serves inside its
+    # envelope (whose source and dataset_version_id label them); a compare
+    # point and a data-window value are series values like SeriesPoint.v, on
+    # views that name their dataset versions; the rest are counts, versions
+    # and configured limits. An alert price is a level the operator placed
+    # (like DrawingPoint.price); its reference close is the store's bar close,
+    # named with its bar time and dataset version on the same row.
+    ("ReplayBar", "o"),
+    ("ReplayBar", "h"),
+    ("ReplayBar", "l"),
+    ("ReplayBar", "c"),
+    ("ReplayBar", "v"),
+    ("ReplayView", "bars_closed"),
+    ("ReplayView", "bars_total"),
+    ("ComparePoint", "v"),
+    ("CompareView", "unmatched"),
+    ("DataWindowValue", "value"),
+    ("ChartTemplateView", "version"),
+    ("ChartTemplatesView", "max_templates"),
+    ("PriceAlert", "price"),
+    ("PriceAlert", "reference_close"),
     # Research analytics (routers/research_analytics.py). Every MEASURED number
     # there is a Figure, or a list inside a container that declares its
     # provenance and unit (Series, HistogramView, ExcursionTable, the fan).

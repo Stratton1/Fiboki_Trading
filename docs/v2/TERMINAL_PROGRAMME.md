@@ -87,3 +87,61 @@ Not applicable while paper-only: live order ticket, DOM ladder, Level 2.
   alerts from levels, chart defects from P1 #9).
 - Wave 3 Independent audit and critique, then retask fixes; repeat until the rubric is >= 8 in
   every area or the remaining gaps are named and justified.
+
+## Wave 2B: Chart workstation (built 19 October 2026, branch wave/chart2-v2)
+
+Built, each with backend route, tests, typed client (`apps/web/lib/chart-contract.ts`, field
+names checked against the generated schema) and UI:
+
+1. **Replay** (`GET /api/markets/replay/{symbol}?cursor=`, `?mode=replay`, command
+   `EURUSD REPLAY`): only bars closed by the cursor (open + timeframe <= cursor), indicators and
+   regimes computed over those bars alone, paper markers and backtest trades as they stood (an
+   open trade has no exit, P&L or final stop). Play, pause, step (`.` `,`), speed, jump to a UTC
+   date. `tests/api/test_chart_replay.py` perturbs every bar after the cursor and proves the
+   answer is unchanged.
+2. **Grid** `/markets/grid` (1x2, 2x2, 3x3; command `EURUSD GRID`, shell tab GRID): symbol,
+   timeframe, crosshair and time-axis links; one compare per chart from
+   `GET /api/markets/compare/{base}?with=` (rebased to percent on the server, exact bar
+   alignment, gaps counted).
+3. **Data window** (Alt W): OHLCV, every indicator output (hidden ones marked), regime, signals,
+   fills, standing levels, events and spanning trades at the crosshair; Pin reads the bar from
+   `GET /api/markets/datawindow/{symbol}?t=`.
+4. **Templates** `GET/PUT/DELETE /api/chart/templates`: per operator, versioned, audited,
+   display choices only (layers, indicator toggles, strategy filter, trade source).
+5. **Go-to-date** (`?at=`, bars and overlays `?around=`) and a display time-zone selector
+   (labels only; every request and stored time stays UTC).
+6. **Layer toolbar**: drawings, trades, stops/targets, events, indicators, signals, fills,
+   regimes, plus hide-all (Alt 1-8, Alt 0).
+7. **Zones and levels**: horizontal levels and rectangles are drawings (stored server-side);
+   "alert" / "alert top / bottom" posts to `POST /api/alerts/price`, whose direction is decided by
+   the API against the last closed bar. Alerts draw as labelled lines.
+8. **Economic events** on the time axis from the newest official calendar
+   (`GET /api/markets/events/{symbol}`), high impact louder; `?event=<id>` centres and highlights.
+   Fixed: the overlays route stamped events with the 1.0.0 file's digest whatever version it
+   loaded; it now names the version loaded.
+9. **Snapshot**: PNG of the chart with the stamp from `GET /api/chart/stamp/{symbol}` (symbol,
+   timeframe, dataset version and whether it is still current, build sha, server UTC time, mode).
+10. **P1 #9 defects**: one tool row above the chart (provenance chips moved to a fixed-height
+    stamp line beneath it); trades table fits at 1440 (SL/TP stacked, short exit reasons); the
+    floating drawing bar no longer covers the top price labels; a one-output indicator is named
+    once in the readout; candles take `--chart-candle-up/-down`, 0.20 L apart (dark) and 0.24
+    (light), checked by `scripts/contrast.mjs`, which now also reads `app/styles/*.css`.
+11. **Trade detail**: clicking a row scrolls the chart to the trade and shows MAE/MFE (currency
+    and R), R-multiple (the tear sheet's `trade_risk`), entry and exit reasons and the four
+    charged cost components, from the backtest trades route.
+
+Not built / known limits:
+
+- Price alerts are stored, not evaluated: nothing watches them on this branch (stated on every
+  read as a caveat). Wave 2A owns the alert manager; the parent reconciles the two routes.
+- The backtest engine records no entry reason; the detail says so rather than invent one. Paper
+  trades on the chart carry fills, exit reason and net P&L only; MAE/MFE/R for them are on the
+  journal row (linked).
+- Replay serves backtest trades and paper journal items; a paper position's CURRENT stop and
+  target are withheld in replay (the journal does not record their history). Replay re-runs the
+  overlay computation per step, so very fast play on a long history is bounded by the API.
+- Bar close is open + timeframe; a session that closed early (Friday) shows its bar one step late,
+  never early.
+- The "duplicated mobile label" was identified as the readout's `atr_14 atr_14` repetition; if
+  the audit meant a different label it is not addressed here.
+- Grid charts carry no indicators (to keep nine charts cheap); their markers and regimes are drawn.
