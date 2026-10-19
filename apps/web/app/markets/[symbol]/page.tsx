@@ -1,3 +1,5 @@
+import { Suspense } from "react";
+import { EventFocus } from "@/components/monitors/EventFocus";
 import { ChartWorkstation } from "./ChartWorkstation";
 
 /**
@@ -19,5 +21,14 @@ export function generateStaticParams() {
 
 export default async function ChartPage({ params }: { params: Promise<{ symbol: string }> }) {
   const { symbol } = await params;
-  return <ChartWorkstation symbol={decodeURIComponent(symbol)} />;
+  const sym = decodeURIComponent(symbol);
+  return (
+    <>
+      {/* wave workspace: `?event=<id>` from the economic calendar (ECO). */}
+      <Suspense fallback={null}>
+        <EventFocus symbol={sym} />
+      </Suspense>
+      <ChartWorkstation symbol={sym} />
+    </>
+  );
 }

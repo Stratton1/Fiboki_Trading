@@ -963,6 +963,216 @@
         "title": "BrokerHealthView",
         "type": "object"
       },
+      "CalendarEventView": {
+        "properties": {
+          "chart_links": {
+            "items": {
+              "$ref": "#/components/schemas/ChartLink"
+            },
+            "title": "Chart Links",
+            "type": "array"
+          },
+          "currency": {
+            "title": "Currency",
+            "type": "string"
+          },
+          "event_id": {
+            "title": "Event Id",
+            "type": "string"
+          },
+          "event_time": {
+            "format": "date-time",
+            "title": "Event Time",
+            "type": "string"
+          },
+          "impact": {
+            "enum": [
+              "low",
+              "medium",
+              "high"
+            ],
+            "title": "Impact",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "source": {
+            "title": "Source",
+            "type": "string"
+          },
+          "source_url": {
+            "title": "Source Url",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "upcoming",
+              "in_progress",
+              "released"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "tags": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Tags",
+            "type": "array"
+          },
+          "time_known": {
+            "title": "Time Known",
+            "type": "boolean"
+          },
+          "window_end": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Window End"
+          }
+        },
+        "required": [
+          "event_id",
+          "name",
+          "currency",
+          "impact",
+          "event_time",
+          "window_end",
+          "time_known",
+          "status",
+          "source",
+          "source_url",
+          "tags",
+          "chart_links"
+        ],
+        "title": "CalendarEventView",
+        "type": "object"
+      },
+      "CalendarView": {
+        "properties": {
+          "calendar_version": {
+            "title": "Calendar Version",
+            "type": "string"
+          },
+          "covered_currencies": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Covered Currencies",
+            "type": "array"
+          },
+          "currencies": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Currencies",
+            "type": "array"
+          },
+          "declared_end": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Declared End"
+          },
+          "declared_start": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Declared Start"
+          },
+          "events": {
+            "items": {
+              "$ref": "#/components/schemas/CalendarEventView"
+            },
+            "title": "Events",
+            "type": "array"
+          },
+          "events_sha256": {
+            "title": "Events Sha256",
+            "type": "string"
+          },
+          "impacts": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Impacts",
+            "type": "array"
+          },
+          "instrument": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Instrument"
+          },
+          "next_event_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Event Id"
+          },
+          "research_pinned_version": {
+            "title": "Research Pinned Version",
+            "type": "string"
+          },
+          "window_from": {
+            "format": "date-time",
+            "title": "Window From",
+            "type": "string"
+          },
+          "window_to": {
+            "format": "date-time",
+            "title": "Window To",
+            "type": "string"
+          }
+        },
+        "required": [
+          "events",
+          "calendar_version",
+          "research_pinned_version",
+          "events_sha256",
+          "declared_start",
+          "declared_end",
+          "covered_currencies",
+          "window_from",
+          "window_to",
+          "impacts",
+          "currencies",
+          "instrument",
+          "next_event_id"
+        ],
+        "title": "CalendarView",
+        "type": "object"
+      },
       "CandidateView": {
         "description": "A strategy proposed for promotion. ONE surface answers 'what next?'.\n\nV1 had four competing surfaces for this question and six routes to approve,\neach with different copy and different gating.",
         "properties": {
@@ -2068,6 +2278,54 @@
           "source"
         ],
         "title": "Envelope[BrokerHealthView]",
+        "type": "object"
+      },
+      "Envelope_CalendarEventView_": {
+        "properties": {
+          "caveats": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/Caveat"
+            },
+            "title": "Caveats",
+            "type": "array"
+          },
+          "data": {
+            "$ref": "#/components/schemas/CalendarEventView"
+          },
+          "source": {
+            "$ref": "#/components/schemas/SourceNote"
+          }
+        },
+        "required": [
+          "data",
+          "source"
+        ],
+        "title": "Envelope[CalendarEventView]",
+        "type": "object"
+      },
+      "Envelope_CalendarView_": {
+        "properties": {
+          "caveats": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/Caveat"
+            },
+            "title": "Caveats",
+            "type": "array"
+          },
+          "data": {
+            "$ref": "#/components/schemas/CalendarView"
+          },
+          "source": {
+            "$ref": "#/components/schemas/SourceNote"
+          }
+        },
+        "required": [
+          "data",
+          "source"
+        ],
+        "title": "Envelope[CalendarView]",
         "type": "object"
       },
       "Envelope_ClockView_": {
@@ -11423,6 +11681,199 @@
           "markets"
         ],
         "x-fiboki-auth": "public"
+      }
+    },
+    "/api/markets/calendar": {
+      "get": {
+        "description": "Scheduled official releases from the NEWEST official calendar version.\n\nThe paper path and every operator view read the newest version; research and\nbacktests pin ``PINNED_RESEARCH_CALENDAR_VERSION`` (``marketstate/calendar.py``)\nand are unaffected by what this screen shows. Events after the calendar's\ndeclared end are unknown, not absent, and the response says so.",
+        "operationId": "calendar_api_markets_calendar_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "impact",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Impact"
+            }
+          },
+          {
+            "in": "query",
+            "name": "currency",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Currency"
+            }
+          },
+          {
+            "in": "query",
+            "name": "instrument",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Instrument"
+            }
+          },
+          {
+            "in": "query",
+            "name": "days",
+            "required": false,
+            "schema": {
+              "default": 7,
+              "title": "Days",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "past_hours",
+            "required": false,
+            "schema": {
+              "default": 6,
+              "maximum": 72,
+              "minimum": 0,
+              "title": "Past Hours",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 200,
+              "maximum": 1000,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_CalendarView_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "summary": "Calendar",
+        "tags": [
+          "monitors"
+        ],
+        "x-fiboki-auth": "session"
+      }
+    },
+    "/api/markets/calendar/events/{event_id}": {
+      "get": {
+        "description": "One event of the newest official calendar, by id (what a chart opened with ``?event=`` shows).",
+        "operationId": "calendar_event_api_markets_calendar_events__event_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "event_id",
+            "required": true,
+            "schema": {
+              "title": "Event Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "instrument",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Instrument"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_CalendarEventView_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "summary": "Calendar Event",
+        "tags": [
+          "monitors"
+        ],
+        "x-fiboki-auth": "session"
       }
     },
     "/api/markets/correlations": {

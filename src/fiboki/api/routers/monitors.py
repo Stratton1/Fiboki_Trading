@@ -26,6 +26,7 @@ from __future__ import annotations
 import sqlite3
 from datetime import UTC, datetime, timedelta
 from typing import Annotated, Any, Literal
+from urllib.parse import quote
 
 import pandas as pd
 from fastapi import APIRouter, Depends, Query, Request, status
@@ -583,3 +584,194 @@ def news(
                           "ordered by observed_at (our clock), never by the vendor's time.", as_of=now),
         caveats=tuple(caveats),
     )
+
+
+# ================================================================ calendar
+
+CALENDAR_DAYS = (1, 3, 7, 14, 31)
+#: How long after its time an instant release still reads as "in progress".
+RELEASE_GRACE = timedelta(minutes=15)
+
+EventStatus = Literal["upcoming", "in_progress", "released"]
+
+
+class CalendarEventView(BaseModel):
+    model_config = ConfigDict(frozen=True)
+
+    event_id: str
+    name: str
+    currency: str
+    impact: Literal["low", "medium", "high"]
+    event_time: datetime
+    #: For a release with no fixed time (the Bank of Japan): the window's end.
+    window_end: datetime | None
+    time_known: bool
+    #: The API's judgement at ``as_of``: upcoming, in progress (a window, or the
+    #: first 15 minutes after an instant release) or released.
+    status: EventStatus
+    source: str
+    source_url: str
+    tags: list[str]
+    #: Charts of the instruments this currency moves, each opened at the event.
+    chart_links: list[ChartLink]
+
+
+class CalendarView(BaseModel):
+    model_config = ConfigDict(frozen=True)
+
+    events: list[CalendarEventView]
+    #: The official calendar version read: the NEWEST listed (the paper path),
+    #: never the research-pinned one.
+    calendar_version: str
+    research_pinned_version: str
+    events_sha256: str
+    declared_start: datetime | None
+    declared_end: datetime | None
+    covered_currencies: list[str]
+    window_from: datetime
+    window_to: datetime
+    impacts: list[str]
+    currencies: list[str]
+    instrument: str | None
+    #: The next upcoming event in the filtered set, if any (for a countdown).
+    next_event_id: str | None
+
+
+def _calendar_index_entry(version: str) -> dict[str, Any]:
+    from fiboki.marketstate.calendar import official_calendar_index
+
+    return official_calendar_index()["versions"][version]
+
+
+_CALENDARS: dict[str, Any] = {}
+
+
+def newest_calendar() -> tuple[str, Any]:
+    """The newest listed official calendar (paper path), loaded once per version."""
+    from fiboki.marketstate.calendar import latest_official_calendar_version, load_official_calendar
+
+    version = latest_official_calendar_version()
+    if version not in _CALENDARS:
+        _CALENDARS[version] = load_official_calendar(version=version)
+    return version, _CALENDARS[version]
+
+
+def event_status(event: Any, now: datetime) -> EventStatus:
+    start = event.event_time.to_pydatetime()
+    end = event.window_end.to_pydatetime() if event.window_end is not None else start + RELEASE_GRACE
+    if now < start:
+        return "upcoming"
+    if now <= end:
+        return "in_progress"
+    return "released"
+
+
+@router.get("/calendar", response_model=Envelope[CalendarView])
+def calendar(
+    _: AnyPrincipal,
+    impact: Annotated[list[str] | None, Query()] = None,
+    currency: Annotated[list[str] | None, Query()] = None,
+    instrument: str | None = Query(None),
+    days: int = Query(7),
+    past_hours: int = Query(6, ge=0, le=72),
+    limit: int = Query(200, ge=1, le=1000),
+) -> Envelope[CalendarView]:
+    """Scheduled official releases from the NEWEST official calendar version.
+
+    The paper path and every operator view read the newest version; research and
+    backtests pin ``PINNED_RESEARCH_CALENDAR_VERSION`` (``marketstate/calendar.py``)
+    and are unaffected by what this screen shows. Events after the calendar's
+    declared end are unknown, not absent, and the response says so.
+    """
+    from fiboki.marketstate.calendar import (
+        PINNED_RESEARCH_CALENDAR_VERSION,
+        ImpactLevel,
+        instrument_currencies,
+    )
+
+    if days not in CALENDAR_DAYS:
+        raise ApiError(status.HTTP_422_UNPROCESSABLE_ENTITY, "invalid_days",
+                       f"days is one of {', '.join(map(str, CALENDAR_DAYS))}.")
+    impacts = sorted({i.strip().lower() for i in (impact or []) if i.strip()})
+    valid = {i.value for i in ImpactLevel}
+    if set(impacts) - valid:
+        raise ApiError(status.HTTP_422_UNPROCESSABLE_ENTITY, "invalid_impact",
+                       f"impact is one or more of {', '.join(sorted(valid))}.")
+    sym = known_symbol(instrument) if instrument else None
+    ccys = {c.strip().upper() for c in (currency or []) if c.strip()}
+    if sym:
+        ccys |= set(instrument_currencies(sym))
+    now = _now(None)
+    lo, hi = now - timedelta(hours=past_hours), now + timedelta(days=days)
+    try:
+        version, cal = newest_calendar()
+        entry = _calendar_index_entry(version)
+    except Exception as exc:  # the loader refuses a tampered version: say so
+        raise ApiError(status.HTTP_503_SERVICE_UNAVAILABLE, "calendar_unavailable",
+                       f"The official calendar could not be loaded: {type(exc).__name__}: {exc}") from exc
+    found = cal.events_between(pd.Timestamp(lo), pd.Timestamp(hi), currencies=sorted(ccys) or None)
+    events: list[CalendarEventView] = []
+    for e in sorted(found, key=lambda x: (x.event_time, x.currency, x.event_id)):
+        if impacts and e.impact.value not in impacts:
+            continue
+        links = _chart_links(e.currency, sym)
+        events.append(CalendarEventView(
+            event_id=e.event_id, name=e.name, currency=e.currency, impact=e.impact.value,
+            event_time=e.event_time.to_pydatetime(),
+            window_end=e.window_end.to_pydatetime() if e.window_end is not None else None,
+            time_known=e.time_known, status=event_status(e, now), source=e.source, source_url=e.source_url,
+            tags=list(e.tags),
+            chart_links=[ChartLink(symbol=link.symbol, href=f"{link.href}?event={quote(e.event_id, safe='')}") for link in links],
+        ))
+        if len(events) >= limit:
+            break
+    coverage = cal.coverage()
+    caveats: list[Caveat] = []
+    declared_end = coverage.declared_end.to_pydatetime() if coverage.declared_end is not None else None
+    if declared_end is not None and hi > declared_end:
+        caveats.append(Caveat(code="beyond_declared_end", severity="warning",
+                              message=f"The calendar is complete only to {declared_end.isoformat()}; later "
+                              "releases are unknown, not absent.", affects="events", direction="unknown"))
+    uncovered = sorted(ccys - set(coverage.currencies))
+    if uncovered:
+        caveats.append(Caveat(code="currency_not_covered", severity="warning",
+                              message=f"No official events are recorded for {', '.join(uncovered)}: an empty "
+                              "list for them is a gap in the calendar, not a quiet week.", affects="events",
+                              direction="unknown"))
+    upcoming = next((ev for ev in events if ev.status == "upcoming"), None)
+    view = CalendarView(
+        events=events, calendar_version=version, research_pinned_version=PINNED_RESEARCH_CALENDAR_VERSION,
+        events_sha256=str(entry.get("events_sha256", "")),
+        declared_start=coverage.declared_start.to_pydatetime() if coverage.declared_start is not None else None,
+        declared_end=declared_end, covered_currencies=list(coverage.currencies), window_from=lo, window_to=hi,
+        impacts=impacts, currencies=sorted(ccys), instrument=sym,
+        next_event_id=upcoming.event_id if upcoming else None,
+    )
+    return Envelope(
+        data=view,
+        source=SourceNote(kind="live", detail=f"Official scheduled-events calendar {version} (newest listed; "
+                          f"the paper path). Research pins {PINNED_RESEARCH_CALENDAR_VERSION}.", as_of=now),
+        caveats=tuple(caveats),
+    )
+
+
+@router.get("/calendar/events/{event_id}", response_model=Envelope[CalendarEventView])
+def calendar_event(event_id: str, _: AnyPrincipal, instrument: str | None = Query(None)) -> Envelope[CalendarEventView]:
+    """One event of the newest official calendar, by id (what a chart opened with ``?event=`` shows)."""
+    sym = known_symbol(instrument) if instrument else None
+    version, cal = newest_calendar()
+    now = _now(None)
+    for e in cal.all_events():
+        if e.event_id == event_id:
+            links = _chart_links(e.currency, sym)
+            view = CalendarEventView(
+                event_id=e.event_id, name=e.name, currency=e.currency, impact=e.impact.value,
+                event_time=e.event_time.to_pydatetime(),
+                window_end=e.window_end.to_pydatetime() if e.window_end is not None else None,
+                time_known=e.time_known, status=event_status(e, now), source=e.source, source_url=e.source_url,
+                tags=list(e.tags),
+                chart_links=[ChartLink(symbol=link.symbol, href=f"{link.href}?event={quote(e.event_id, safe='')}") for link in links],
+            )
+            return Envelope(data=view, source=SourceNote(kind="live", detail=f"Official calendar {version}.", as_of=now))
+    raise ApiError(status.HTTP_404_NOT_FOUND, "event_not_found",
+                   f"No event {event_id!r} in the official calendar {version}.")

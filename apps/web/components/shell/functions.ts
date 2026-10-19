@@ -72,9 +72,9 @@ export const INSTRUMENT_FUNCTIONS: InstrumentFunction[] = [
   },
   {
     code: "CAL",
-    label: "Calendar on chart",
-    description: "Economic events are drawn on the chart workstation; a calendar panel is Wave 2A.",
-    href: (s) => route.instrument(s),
+    label: "Calendar",
+    description: "The economic calendar for this instrument's currencies (ECO).",
+    href: (s) => route.calendar(s),
   },
   { code: "DES", label: "Description", description: "The instrument's row in the explorer.", href: (s) => `/markets?row=${encodeURIComponent(s)}` },
   { code: "DQ", label: "Data quality", description: "The instrument's dataset quality.", href: (s) => `/markets/data-quality?row=${encodeURIComponent(s)}` },

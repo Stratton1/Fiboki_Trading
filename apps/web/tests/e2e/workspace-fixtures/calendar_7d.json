@@ -1,0 +1,95 @@
+{
+ "caveats": [],
+ "data": {
+  "calendar_version": "1.1.0",
+  "covered_currencies": [
+   "EUR",
+   "GBP",
+   "JPY",
+   "USD"
+  ],
+  "currencies": [],
+  "declared_end": "2027-12-03T13:30:00Z",
+  "declared_start": "2024-01-01T00:00:00Z",
+  "events": [
+   {
+    "chart_links": [
+     {
+      "href": "/markets/GBPUSD?event=GBP%3AUK%20Labour%20Market%20Report%3A2026-10-20T06%3A00%3A00%2B00%3A00",
+      "symbol": "GBPUSD"
+     },
+     {
+      "href": "/markets/EURGBP?event=GBP%3AUK%20Labour%20Market%20Report%3A2026-10-20T06%3A00%3A00%2B00%3A00",
+      "symbol": "EURGBP"
+     },
+     {
+      "href": "/markets/GBPJPY?event=GBP%3AUK%20Labour%20Market%20Report%3A2026-10-20T06%3A00%3A00%2B00%3A00",
+      "symbol": "GBPJPY"
+     },
+     {
+      "href": "/markets/GBPAUD?event=GBP%3AUK%20Labour%20Market%20Report%3A2026-10-20T06%3A00%3A00%2B00%3A00",
+      "symbol": "GBPAUD"
+     }
+    ],
+    "currency": "GBP",
+    "event_id": "GBP:UK Labour Market Report:2026-10-20T06:00:00+00:00",
+    "event_time": "2026-10-20T06:00:00Z",
+    "impact": "high",
+    "name": "UK Labour Market Report",
+    "source": "ons_labour_market",
+    "source_url": "https://www.ons.gov.uk/releases/uklabourmarketoctober2026",
+    "status": "upcoming",
+    "tags": [
+     "employment"
+    ],
+    "time_known": true,
+    "window_end": null
+   },
+   {
+    "chart_links": [
+     {
+      "href": "/markets/GBPUSD?event=GBP%3AUK%20CPI%3A2026-10-21T06%3A00%3A00%2B00%3A00",
+      "symbol": "GBPUSD"
+     },
+     {
+      "href": "/markets/EURGBP?event=GBP%3AUK%20CPI%3A2026-10-21T06%3A00%3A00%2B00%3A00",
+      "symbol": "EURGBP"
+     },
+     {
+      "href": "/markets/GBPJPY?event=GBP%3AUK%20CPI%3A2026-10-21T06%3A00%3A00%2B00%3A00",
+      "symbol": "GBPJPY"
+     },
+     {
+      "href": "/markets/GBPAUD?event=GBP%3AUK%20CPI%3A2026-10-21T06%3A00%3A00%2B00%3A00",
+      "symbol": "GBPAUD"
+     }
+    ],
+    "currency": "GBP",
+    "event_id": "GBP:UK CPI:2026-10-21T06:00:00+00:00",
+    "event_time": "2026-10-21T06:00:00Z",
+    "impact": "high",
+    "name": "UK CPI",
+    "source": "ons_cpi",
+    "source_url": "https://www.ons.gov.uk/releases/consumerpriceinflationukseptember2026",
+    "status": "upcoming",
+    "tags": [
+     "cpi"
+    ],
+    "time_known": true,
+    "window_end": null
+   }
+  ],
+  "events_sha256": "d4a8896b63ffb744ce37d9501a65704f8a60fca0a8eb726bc3af14c3adea92e0",
+  "impacts": [],
+  "instrument": null,
+  "next_event_id": "GBP:UK Labour Market Report:2026-10-20T06:00:00+00:00",
+  "research_pinned_version": "1.0.0",
+  "window_from": "2026-10-19T03:00:00Z",
+  "window_to": "2026-10-26T09:00:00Z"
+ },
+ "source": {
+  "as_of": "2026-10-19T09:00:00Z",
+  "detail": "Official scheduled-events calendar 1.1.0 (newest listed; the paper path). Research pins 1.0.0.",
+  "kind": "live"
+ }
+}

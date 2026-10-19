@@ -186,6 +186,13 @@ export async function mockMonitors(page: Page): Promise<MonitorMock> {
     const url = new URL(route.request().url());
     return route.fulfill({ json: wsFixture(url.searchParams.get("instrument") ? "news_eurusd" : "news_24h") });
   });
+  await page.route((url) => url.origin === API && url.pathname === "/api/markets/calendar", (route) => {
+    const url = new URL(route.request().url());
+    return route.fulfill({ json: wsFixture(url.searchParams.get("instrument") ? "calendar_eurusd_high" : "calendar_7d") });
+  });
+  await page.route((url) => url.origin === API && url.pathname.startsWith("/api/markets/calendar/events/"), (route) =>
+    route.fulfill({ json: wsFixture("calendar_event") }),
+  );
   await page.route(`${API}/api/workspace/column-sets/watchlist`, (route) => {
     if (route.request().method() === "PUT") {
       const body = route.request().postDataJSON() as { base_version: number; sets: unknown[]; default: string | null };

@@ -178,6 +178,7 @@ export const SECTIONS: Section[] = [
       { href: "/workspace", label: "Workspace", code: "WS", description: "Tiling panels, colour link groups, named layouts (LAYOUT <name>)." },
       { href: "/markets/watchlist", label: "Watchlist", code: "WL", description: "Saved lists over recorded quotes: sparkline, session, data age." },
       { href: "/markets/news", label: "News", code: "NWS", description: "Recorded headlines by instrument, currency and source, linked to charts." },
+      { href: "/markets/calendar", label: "Calendar", code: "ECO", description: "Official economic calendar (newest version): impact filter, countdowns, chart links." },
     ],
   },
   // end wave workspace

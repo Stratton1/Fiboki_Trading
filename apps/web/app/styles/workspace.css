@@ -186,3 +186,18 @@
   .nws__item { grid-template-columns: auto auto 1fr; }
   .nws__title, .nws__links, .nws__vendor { grid-column: 1 / -1; }
 }
+
+/* ------------------------------------------------------------ calendar */
+.eco__table td { vertical-align: baseline; }
+.eco__name a { color: var(--fg-data); text-decoration: none; }
+.eco__name a:hover, .eco__name a:focus-visible { text-decoration: underline; }
+.eco__until { color: var(--fg-muted); }
+.eco__table tr[data-status="released"] td { color: var(--fg-subtle); }
+.eco__table tr[data-status="in_progress"] td { background: var(--warn-bg); }
+.eco__table tr[data-next] td { box-shadow: inset 0 -1px 0 var(--fg); }
+.eco__impact { font-family: var(--font-mono, ui-monospace, monospace); font-size: 11px; padding: 0 4px; border: 1px solid var(--border-subtle); }
+.eco__impact--high { color: var(--fg-on-fill); background: var(--fg); border-color: var(--fg); }
+.eco__impact--medium { color: var(--fg); border-color: var(--fg); }
+.eco__impact--low { color: var(--fg-subtle); }
+.eco__links { display: inline-flex; gap: 6px; }
+.eco-focus { margin: 0 0 6px; padding: 3px 8px; border: 1px solid var(--border-strong); background: var(--bg-surface); font-size: 12px; }

@@ -103,6 +103,11 @@ def dump(client: TestClient) -> None:
     write("column_sets_watchlist", client.get("/api/workspace/column-sets/watchlist").json())
     write("news_24h", client.get("/api/markets/news?hours=24").json())
     write("news_eurusd", client.get("/api/markets/news?instrument=EURUSD&hours=24").json())
+    week = client.get("/api/markets/calendar?days=7").json()
+    write("calendar_7d", week)
+    write("calendar_eurusd_high", client.get("/api/markets/calendar?days=14&impact=high&instrument=EURUSD").json())
+    first = week["data"]["events"][0]["event_id"]
+    write("calendar_event", client.get(f"/api/markets/calendar/events/{first}?instrument=EURUSD").json())
     for extra in EXTRA_DUMPS:
         extra(client)
 

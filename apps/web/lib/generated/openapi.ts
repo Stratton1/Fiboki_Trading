@@ -278,6 +278,51 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/markets/calendar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Calendar
+         * @description Scheduled official releases from the NEWEST official calendar version.
+         *
+         *     The paper path and every operator view read the newest version; research and
+         *     backtests pin ``PINNED_RESEARCH_CALENDAR_VERSION`` (``marketstate/calendar.py``)
+         *     and are unaffected by what this screen shows. Events after the calendar's
+         *     declared end are unknown, not absent, and the response says so.
+         */
+        get: operations["calendar_api_markets_calendar_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/markets/calendar/events/{event_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Calendar Event
+         * @description One event of the newest official calendar, by id (what a chart opened with ``?event=`` shows).
+         */
+        get: operations["calendar_event_api_markets_calendar_events__event_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/markets/correlations": {
         parameters: {
             query?: never;
@@ -2040,6 +2085,77 @@ export interface components {
             /** Venue Url Host */
             venue_url_host: string;
         };
+        /** CalendarEventView */
+        CalendarEventView: {
+            /** Chart Links */
+            chart_links: components["schemas"]["ChartLink"][];
+            /** Currency */
+            currency: string;
+            /** Event Id */
+            event_id: string;
+            /**
+             * Event Time
+             * Format: date-time
+             */
+            event_time: string;
+            /**
+             * Impact
+             * @enum {string}
+             */
+            impact: "low" | "medium" | "high";
+            /** Name */
+            name: string;
+            /** Source */
+            source: string;
+            /** Source Url */
+            source_url: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "upcoming" | "in_progress" | "released";
+            /** Tags */
+            tags: string[];
+            /** Time Known */
+            time_known: boolean;
+            /** Window End */
+            window_end: string | null;
+        };
+        /** CalendarView */
+        CalendarView: {
+            /** Calendar Version */
+            calendar_version: string;
+            /** Covered Currencies */
+            covered_currencies: string[];
+            /** Currencies */
+            currencies: string[];
+            /** Declared End */
+            declared_end: string | null;
+            /** Declared Start */
+            declared_start: string | null;
+            /** Events */
+            events: components["schemas"]["CalendarEventView"][];
+            /** Events Sha256 */
+            events_sha256: string;
+            /** Impacts */
+            impacts: string[];
+            /** Instrument */
+            instrument: string | null;
+            /** Next Event Id */
+            next_event_id: string | null;
+            /** Research Pinned Version */
+            research_pinned_version: string;
+            /**
+             * Window From
+             * Format: date-time
+             */
+            window_from: string;
+            /**
+             * Window To
+             * Format: date-time
+             */
+            window_to: string;
+        };
         /**
          * CandidateView
          * @description A strategy proposed for promotion. ONE surface answers 'what next?'.
@@ -2451,6 +2567,26 @@ export interface components {
              */
             caveats: components["schemas"]["Caveat"][];
             data: components["schemas"]["BrokerHealthView"];
+            source: components["schemas"]["SourceNote"];
+        };
+        /** Envelope[CalendarEventView] */
+        Envelope_CalendarEventView_: {
+            /**
+             * Caveats
+             * @default []
+             */
+            caveats: components["schemas"]["Caveat"][];
+            data: components["schemas"]["CalendarEventView"];
+            source: components["schemas"]["SourceNote"];
+        };
+        /** Envelope[CalendarView] */
+        Envelope_CalendarView_: {
+            /**
+             * Caveats
+             * @default []
+             */
+            caveats: components["schemas"]["Caveat"][];
+            data: components["schemas"]["CalendarView"];
             source: components["schemas"]["SourceNote"];
         };
         /** Envelope[ClockView] */
@@ -6139,6 +6275,75 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Envelope_dict_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    calendar_api_markets_calendar_get: {
+        parameters: {
+            query?: {
+                currency?: string[] | null;
+                days?: number;
+                impact?: string[] | null;
+                instrument?: string | null;
+                limit?: number;
+                past_hours?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_CalendarView_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    calendar_event_api_markets_calendar_events__event_id__get: {
+        parameters: {
+            query?: {
+                instrument?: string | null;
+            };
+            header?: never;
+            path: {
+                event_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_CalendarEventView_"];
                 };
             };
             /** @description Validation Error */

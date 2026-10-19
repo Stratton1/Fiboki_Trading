@@ -132,7 +132,7 @@
  },
  "source": {
   "as_of": "2026-10-19T09:00:00Z",
-  "detail": "Append-only headline store at /tmp/tmpbjf5skwz/state/news/headlines.sqlite, read-only; ordered by observed_at (our clock), never by the vendor's time.",
+  "detail": "Append-only headline store at /tmp/tmpc5sm3vuv/state/news/headlines.sqlite, read-only; ordered by observed_at (our clock), never by the vendor's time.",
   "kind": "live"
  }
 }

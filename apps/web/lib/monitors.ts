@@ -49,6 +49,32 @@ export function newsPath(filter: { instrument?: string | null; currencies?: stri
   return `/api/markets/news?${q.toString()}`;
 }
 
+export type CalendarView = Local<S["CalendarView"]>;
+export type CalendarEvent = Local<S["CalendarEventView"]>;
+export const CALENDAR_DAYS = [1, 3, 7, 14, 31] as const;
+export const IMPACTS = ["high", "medium", "low"] as const;
+
+export function calendarPath(filter: { impacts: string[]; currencies: string[]; instrument?: string | null; days: number }): string {
+  const q = new URLSearchParams();
+  for (const i of filter.impacts) q.append("impact", i);
+  for (const c of filter.currencies) q.append("currency", c);
+  if (filter.instrument) q.set("instrument", filter.instrument);
+  q.set("days", String(filter.days));
+  return `/api/markets/calendar?${q.toString()}`;
+}
+
+/** "in 2h 05m", "due", "3h ago": display of the time to an event (the status is the API's). */
+export function untilWords(eventIso: string, now: number): string {
+  const s = Math.round((Date.parse(eventIso) - now) / 1000);
+  const abs = Math.abs(s);
+  const h = Math.floor(abs / 3600);
+  const m = Math.floor((abs % 3600) / 60);
+  const d = Math.floor(h / 24);
+  const text = d >= 2 ? `${d}d ${h % 24}h` : h > 0 ? `${h}h ${String(m).padStart(2, "0")}m` : abs >= 60 ? `${m}m` : `${abs}s`;
+  if (abs < 30) return "due";
+  return s > 0 ? `in ${text}` : `${text} ago`;
+}
+
 export const QUOTE_WINDOWS = ["1h", "4h", "24h"] as const;
 export type QuoteWindow = (typeof QUOTE_WINDOWS)[number];
 
