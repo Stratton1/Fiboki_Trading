@@ -673,3 +673,10 @@
     white-space: normal;
   }
 }
+/* The tool row has one height before and after its lazy tools arrive. */
+@media (min-width: 640px) {
+  .cw > .cw__head {
+    height: 38px;
+    min-height: 38px;
+  }
+}

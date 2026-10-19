@@ -20,10 +20,21 @@ import {
   useMemo,
   useRef,
   useState,
+  useSyncExternalStore,
   type KeyboardEvent as ReactKeyboardEvent,
   type ReactNode,
 } from "react";
 import { createPortal } from "react-dom";
+
+const PHONE = "(max-width: 639px)";
+function isPhone(): boolean {
+  return window.matchMedia(PHONE).matches;
+}
+function subscribePhone(listener: () => void): () => void {
+  const query = window.matchMedia(PHONE);
+  query.addEventListener("change", listener);
+  return () => query.removeEventListener("change", listener);
+}
 import { useOperator } from "@/components/shell/platform";
 import { LazyPriceChart } from "@/components/LazyChart";
 import { ProvenanceLabelChip } from "@/components/ProvenanceChip";
@@ -283,8 +294,12 @@ export default function ChartWorkbench({
   onChartLayers,
   tradeSource,
   onTradeSource,
-  slots,
+  slots: givenSlots,
 }: ChartWorkbenchProps) {
+  // On a phone the trades bar stays under the chart (the chart comes first
+  // there); from 640 px up it joins the workstation's single tool row.
+  const phone = useSyncExternalStore(subscribePhone, isPhone, () => false);
+  const slots = phone ? undefined : givenSlots;
   const notify = useToast();
   const operator = useOperator();
   const model: ChartModel = chart.model;

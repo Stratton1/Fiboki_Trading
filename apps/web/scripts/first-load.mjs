@@ -77,7 +77,9 @@ export function stylesheetsIn(html) {
 }
 
 export function assetPath(url) {
-  return join(NEXT, url.replace(/^\/_next\//, ""));
+  // Dynamic-segment chunks are referenced URL-encoded (`%5Bhash%5D`); the
+  // file on disk is `[hash]`.
+  return join(NEXT, decodeURIComponent(url.replace(/^\/_next\//, "")));
 }
 
 const gzCache = new Map();

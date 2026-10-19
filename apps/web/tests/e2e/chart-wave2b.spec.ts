@@ -168,7 +168,8 @@ test.describe("data window, layers, templates, go-to-date, time zone", () => {
 });
 
 test.describe("zones, events, snapshot, trade detail", () => {
-  test("a horizontal level creates a price alert; the API decides the direction", async ({ page }) => {
+  test("a horizontal level creates a price alert; the API decides the direction", async ({ page }, info) => {
+    test.skip(info.project.name !== "desktop", "selects the level with a pointer sweep sized for desktop");
     await mockChart(page);
     const level = { id: "lvl_1", kind: "hline", points: [{ t: barTime(10), price: 1.115 }], timeframe: null, text: "", locked: false, hidden: false, fib_extensions: false };
     await page.route(
