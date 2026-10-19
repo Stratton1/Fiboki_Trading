@@ -18,6 +18,7 @@ import {
   riskState,
   source,
 } from "./fixtures";
+import { mockResearch } from "./research-fixtures";
 
 const page1 = <T>(items: T[], detail = "Inventory fixture.") => ({
   items,
@@ -86,6 +87,11 @@ export async function mockEverything(page: Page, unexpected: string[]) {
     });
   });
   await mockShell(page);
+  // The research analytics and robustness reads (runs list incl. ?limit=300,
+  // tearsheet, compare, jobs, correlations, walk-forward, robustness panels),
+  // answered with the backend-produced fixtures. Registered before the
+  // walkthrough's own research mocks below, so those still win where both exist.
+  await mockResearch(page);
 
   const json = (pattern: string, body: unknown) =>
     page.route(`${API}${pattern}`, (route: Route) => route.fulfill({ json: body }));

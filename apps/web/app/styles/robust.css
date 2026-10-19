@@ -87,6 +87,21 @@
 .rb-table .num {
   text-align: right;
 }
+/* A run link in a dense row is still a 24px target (WCAG 2.5.8, axe target-size). */
+.rb-table td > a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+}
+/* The estimate / flag popover triggers inside a figure, as `table.dense` has them. */
+.rb-table .figure__est,
+.rb-table .figure__flag {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 24px;
+  min-width: 24px;
+}
 .rb-range {
   display: block;
   width: 120px;
