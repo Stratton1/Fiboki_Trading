@@ -221,7 +221,7 @@ export async function mockChartWave2B(page: Page, options: { canEdit?: boolean }
         if (method === "PUT") {
           const body = route.request().postDataJSON() as { base_version: number; template: unknown };
           const existing = state.templates.find((t) => t.name === name);
-          if ((existing?.version ?? 0) !== body.base_version) {
+          if ((existing ? existing.version : 0) !== body.base_version) {
             return route.fulfill({
               status: 409,
               json: { code: "template_conflict", detail: "Stale.", correlation_id: "cid-t", context: {} },
