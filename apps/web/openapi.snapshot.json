@@ -1857,6 +1857,113 @@
         "title": "DivergenceDimensionView",
         "type": "object"
       },
+      "DivergenceView": {
+        "properties": {
+          "backtest": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Figure"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "backtest_text": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Backtest Text"
+          },
+          "delta": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Figure"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "detail": {
+            "title": "Detail",
+            "type": "string"
+          },
+          "direction": {
+            "title": "Direction",
+            "type": "string"
+          },
+          "entry_time": {
+            "format": "date-time",
+            "title": "Entry Time",
+            "type": "string"
+          },
+          "explained": {
+            "title": "Explained",
+            "type": "boolean"
+          },
+          "field": {
+            "title": "Field",
+            "type": "string"
+          },
+          "instrument": {
+            "title": "Instrument",
+            "type": "string"
+          },
+          "kind": {
+            "pattern": "^(field|paper_only|backtest_only)$",
+            "title": "Kind",
+            "type": "string"
+          },
+          "paper": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Figure"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "paper_text": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Paper Text"
+          },
+          "reason": {
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "instrument",
+          "direction",
+          "entry_time",
+          "field",
+          "paper",
+          "backtest",
+          "paper_text",
+          "backtest_text",
+          "delta",
+          "reason",
+          "explained",
+          "detail"
+        ],
+        "title": "DivergenceView",
+        "type": "object"
+      },
       "DrawdownPeriodView": {
         "properties": {
           "decline_days": {
@@ -2726,6 +2833,30 @@
           "source"
         ],
         "title": "Envelope[PromotePreflightView]",
+        "type": "object"
+      },
+      "Envelope_ReconciliationView_": {
+        "properties": {
+          "caveats": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/Caveat"
+            },
+            "title": "Caveats",
+            "type": "array"
+          },
+          "data": {
+            "$ref": "#/components/schemas/ReconciliationView"
+          },
+          "source": {
+            "$ref": "#/components/schemas/SourceNote"
+          }
+        },
+        "required": [
+          "data",
+          "source"
+        ],
+        "title": "Envelope[ReconciliationView]",
         "type": "object"
       },
       "Envelope_ResearchMemoryView_": {
@@ -5838,6 +5969,62 @@
         "title": "OpenPositionView",
         "type": "object"
       },
+      "OpsJobView": {
+        "properties": {
+          "error": {
+            "title": "Error",
+            "type": "string"
+          },
+          "job_id": {
+            "title": "Job Id",
+            "type": "string"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "reason": {
+            "title": "Reason",
+            "type": "string"
+          },
+          "requested_at": {
+            "format": "date-time",
+            "title": "Requested At",
+            "type": "string"
+          },
+          "requested_by": {
+            "title": "Requested By",
+            "type": "string"
+          },
+          "runner_note": {
+            "title": "Runner Note",
+            "type": "string"
+          },
+          "status": {
+            "pattern": "^(queued|running|succeeded|failed)$",
+            "title": "Status",
+            "type": "string"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "job_id",
+          "kind",
+          "status",
+          "requested_by",
+          "reason",
+          "requested_at",
+          "updated_at",
+          "error",
+          "runner_note"
+        ],
+        "title": "OpsJobView",
+        "type": "object"
+      },
       "OtherDrawingSet": {
         "description": "Another operator's drawings on this symbol: shown, never editable here.",
         "properties": {
@@ -7794,6 +7981,209 @@
           "tearsheet_version"
         ],
         "title": "ProvenanceBlock",
+        "type": "object"
+      },
+      "ReconcileRequest": {
+        "properties": {
+          "reason": {
+            "maxLength": 500,
+            "minLength": 8,
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "reason"
+        ],
+        "title": "ReconcileRequest",
+        "type": "object"
+      },
+      "ReconciliationReportView": {
+        "properties": {
+          "approximations": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Approximations",
+            "type": "array"
+          },
+          "backtest_only": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "backtest_trades": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "digest": {
+            "title": "Digest",
+            "type": "string"
+          },
+          "divergences": {
+            "items": {
+              "$ref": "#/components/schemas/DivergenceView"
+            },
+            "title": "Divergences",
+            "type": "array"
+          },
+          "explained": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "first_divergence_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "First Divergence At"
+          },
+          "generated_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Generated At"
+          },
+          "job_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Job Id"
+          },
+          "matched": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "matched_identical": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "outside_window": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "paper_only": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "paper_trades": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "provenance": {
+            "title": "Provenance",
+            "type": "object"
+          },
+          "reasons": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "Reasons",
+            "type": "object"
+          },
+          "status": {
+            "pattern": "^(match|diverged|not_evaluated)$",
+            "title": "Status",
+            "type": "string"
+          },
+          "status_reason": {
+            "title": "Status Reason",
+            "type": "string"
+          },
+          "unexplained": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "window_end": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Window End"
+          },
+          "window_start": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Window Start"
+          }
+        },
+        "required": [
+          "status",
+          "status_reason",
+          "window_start",
+          "window_end",
+          "paper_trades",
+          "backtest_trades",
+          "matched",
+          "matched_identical",
+          "paper_only",
+          "backtest_only",
+          "outside_window",
+          "explained",
+          "unexplained",
+          "first_divergence_at",
+          "divergences",
+          "reasons",
+          "approximations",
+          "provenance",
+          "digest",
+          "generated_at",
+          "job_id"
+        ],
+        "title": "ReconciliationReportView",
+        "type": "object"
+      },
+      "ReconciliationView": {
+        "properties": {
+          "job": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/OpsJobView"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "report": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ReconciliationReportView"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "session_id": {
+            "title": "Session Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "session_id",
+          "job",
+          "report"
+        ],
+        "title": "ReconciliationView",
         "type": "object"
       },
       "RegimeOverlay": {
@@ -13202,6 +13592,108 @@
           "ops"
         ],
         "x-fiboki-auth": "admin"
+      }
+    },
+    "/api/trading/sessions/{session_id}/reconciliation": {
+      "get": {
+        "operationId": "session_reconciliation_api_trading_sessions__session_id__reconciliation_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "session_id",
+            "required": true,
+            "schema": {
+              "title": "Session Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_ReconciliationView_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [],
+        "summary": "Session Reconciliation",
+        "tags": [
+          "ops"
+        ],
+        "x-fiboki-auth": "public"
+      },
+      "post": {
+        "description": "Queue a reconciliation. Recorded and audited; run by a separate process.",
+        "operationId": "request_reconciliation_api_trading_sessions__session_id__reconciliation_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "session_id",
+            "required": true,
+            "schema": {
+              "title": "Session Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReconcileRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_ReconciliationView_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "csrfHeader": [],
+            "sessionCookie": []
+          }
+        ],
+        "summary": "Request Reconciliation",
+        "tags": [
+          "ops"
+        ],
+        "x-fiboki-auth": "operator"
       }
     },
     "/api/trading/trades": {

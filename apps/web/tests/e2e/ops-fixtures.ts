@@ -90,6 +90,9 @@ export async function mockOps(page: Page) {
   await page.route(`${API}/api/trading/sessions/*/audit-chain*`, (route: Route) =>
     route.fulfill({ json: env(chainTail()) }),
   );
+  await page.route(`${API}/api/trading/sessions/*/reconciliation`, (route: Route) =>
+    route.request().method() === "GET" ? route.fulfill({ json: env(reconciliationView()) }) : route.fallback(),
+  );
 }
 
 
@@ -119,5 +122,59 @@ export function chainTail(overrides: Record<string, unknown> = {}) {
       { seq: 1284, at: "2026-10-19T08:00:05+00:00", kind: "trade_closed", summary: "EURUSD trailing_stop net -12.5", hash: "a".repeat(64), prev_hash: "b".repeat(64) },
       { seq: 1283, at: "2026-10-19T08:00:05+00:00", kind: "risk_decision", summary: "EURUSD allowed", hash: "b".repeat(64), prev_hash: "c".repeat(64) },
     ],
+  };
+}
+
+export function reconciliationView(overrides: Record<string, unknown> = {}) {
+  const count = (v: number, p = "paper") => figure(v, p, "count");
+  return {
+    session_id: OPS_SESSION,
+    job: {
+      job_id: "ops_0123456789ab",
+      kind: "reconcile",
+      status: "succeeded",
+      requested_by: "tom",
+      reason: "weekly reconciliation",
+      requested_at: "2026-10-19T08:00:00Z",
+      updated_at: "2026-10-19T08:01:00Z",
+      error: "",
+      runner_note: "Run by `fiboki ops jobs` (a separate process; the API never runs a backtest). Until it runs, the job stays queued.",
+    },
+    report: {
+      status: "diverged",
+      status_reason: "3 divergence(s), 3 attributed, 0 unexplained",
+      window_start: "2026-10-12T00:00:00Z",
+      window_end: "2026-10-19T04:00:00Z",
+      paper_trades: count(12),
+      backtest_trades: count(13, "backtest"),
+      matched: count(12),
+      matched_identical: count(11),
+      paper_only: count(0),
+      backtest_only: count(1, "backtest"),
+      outside_window: count(0),
+      explained: count(3),
+      unexplained: count(0),
+      first_divergence_at: "2026-10-14T08:00:00Z",
+      divergences: [
+        {
+          kind: "backtest_only", instrument: "EURUSD", direction: "long", entry_time: "2026-10-14T08:00:00Z", field: "trade",
+          paper: null, backtest: figure(84.2, "backtest", "USD"), paper_text: null, backtest_text: null, delta: null,
+          reason: "operator_control", explained: true, detail: "the bot was paused on that bar; the entry was suppressed and journalled",
+        },
+        {
+          kind: "field", instrument: "GBPUSD", direction: "short", entry_time: "2026-10-16T12:00:00Z", field: "slippage_cost",
+          paper: figure(0.91, "paper", "USD"), backtest: figure(1.37, "backtest", "USD"), paper_text: null, backtest_text: null,
+          delta: figure(-0.46, "paper", "USD", { estimated: true }),
+          reason: "slippage_draw", explained: true, detail: "slippage is drawn per bar by rng_for(seed, bar_index, sequence)",
+        },
+      ],
+      reasons: { operator_control: 1, slippage_draw: 2 },
+      approximations: ["Paper indicators are computed over a sliding window of 1500 bars."],
+      provenance: { wiring_version: "paper_forward_v1", account_ccy: "USD" },
+      digest: "0f1e2d3c4b5a69788796a5b4c3d2e1f00f1e2d3c4b5a69788796a5b4c3d2e1f0",
+      generated_at: "2026-10-19T08:01:00Z",
+      job_id: "ops_0123456789ab",
+    },
+    ...overrides,
   };
 }

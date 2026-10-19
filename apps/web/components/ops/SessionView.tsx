@@ -11,6 +11,7 @@ import { AsyncBoundary } from "../AsyncBoundary";
 import { Card, PageHead, SourceBadge } from "../primitives";
 import { UrlState } from "../UrlState";
 import { SessionAuditChain } from "./AuditChain";
+import { Reconciliation } from "./Reconciliation";
 import { BotControlButton, ControlStateTag } from "./BotControl";
 
 /**
@@ -36,6 +37,9 @@ export function SessionView({ sessionId }: { sessionId: string }) {
       <UrlState fallback={<ControlCard sessionId={sessionId} act={null} />}>
         <ControlFromUrl sessionId={sessionId} />
       </UrlState>
+      <Card title="Backtest vs paper reconciliation">
+        <Reconciliation sessionId={sessionId} />
+      </Card>
       <Card title="Audit chain">
         <SessionAuditChain sessionId={sessionId} />
       </Card>

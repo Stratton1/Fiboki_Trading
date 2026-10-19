@@ -3875,6 +3875,57 @@ def paper_forward(
 
 
 # ===========================================================================
+# ops: the operator job runner (Wave 3O). A separate process, never the API.
+# ===========================================================================
+
+ops_app = typer.Typer(
+    help="Operator jobs: backtest-versus-paper reconciliation (requested from the workstation).",
+    no_args_is_help=True,
+)
+app.add_typer(ops_app, name="ops")
+
+
+@ops_app.command("jobs")
+def ops_jobs(
+    loop: bool = typer.Option(False, "--loop", help="Keep polling the queue instead of draining it once."),
+    interval: float = typer.Option(30.0, "--interval", help="Seconds between polls with --loop."),
+) -> None:
+    """Run every queued ops job (reconciliations), then exit (or keep polling with --loop)."""
+    from fiboki.api.settings import load_settings
+    from fiboki.entrypoints.ops_jobs import run_jobs
+
+    settings = load_settings()
+    done = run_jobs(settings, once=not loop, interval_s=interval)
+    _ok(f"ran {done} ops job(s)")
+
+
+@ops_app.command("reconcile")
+def ops_reconcile(
+    session: str = typer.Argument(..., help="The paper session id, e.g. forward-paper_forward_v1."),
+    as_json: bool = typer.Option(False, "--json"),
+) -> None:
+    """Reconcile one paper session against the backtest engine now and print the report."""
+    from fiboki.api.settings import load_settings
+    from fiboki.entrypoints.ops_jobs import reconcile_session
+
+    report = reconcile_session(load_settings(), session)
+    if as_json:
+        console.print_json(json.dumps(report.as_dict(), default=str))
+        return
+    console.print(
+        Panel(
+            f"status:      [bold]{report.status}[/bold]  {report.status_reason}\n"
+            f"window:      {report.window_start} .. {report.window_end}\n"
+            f"trades:      paper {report.paper_trades}, backtest {report.backtest_trades}, "
+            f"matched {report.matched} ({report.matched_identical} identical)\n"
+            f"divergences: {len(report.divergences)} ({report.explained} attributed, "
+            f"{report.unexplained} unexplained)",
+            title=f"reconciliation {session} (advisory)",
+        )
+    )
+
+
+# ===========================================================================
 # agents tier: the signed record of how far agent output may reach
 # ===========================================================================
 

@@ -1490,6 +1490,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/trading/sessions/{session_id}/reconciliation": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Session Reconciliation */
+        get: operations["session_reconciliation_api_trading_sessions__session_id__reconciliation_get"];
+        put?: never;
+        /**
+         * Request Reconciliation
+         * @description Queue a reconciliation. Recorded and audited; run by a separate process.
+         */
+        post: operations["request_reconciliation_api_trading_sessions__session_id__reconciliation_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/trading/trades": {
         parameters: {
             query?: never;
@@ -2172,6 +2193,35 @@ export interface components {
             expected: components["schemas"]["Figure"];
             observed: components["schemas"]["Figure"];
         };
+        /** DivergenceView */
+        DivergenceView: {
+            backtest: components["schemas"]["Figure"] | null;
+            /** Backtest Text */
+            backtest_text: string | null;
+            delta: components["schemas"]["Figure"] | null;
+            /** Detail */
+            detail: string;
+            /** Direction */
+            direction: string;
+            /**
+             * Entry Time
+             * Format: date-time
+             */
+            entry_time: string;
+            /** Explained */
+            explained: boolean;
+            /** Field */
+            field: string;
+            /** Instrument */
+            instrument: string;
+            /** Kind */
+            kind: string;
+            paper: components["schemas"]["Figure"] | null;
+            /** Paper Text */
+            paper_text: string | null;
+            /** Reason */
+            reason: string;
+        };
         /** DrawdownPeriodView */
         DrawdownPeriodView: {
             decline_days: components["schemas"]["Figure"];
@@ -2542,6 +2592,16 @@ export interface components {
              */
             caveats: components["schemas"]["Caveat"][];
             data: components["schemas"]["PromotePreflightView"];
+            source: components["schemas"]["SourceNote"];
+        };
+        /** Envelope[ReconciliationView] */
+        Envelope_ReconciliationView_: {
+            /**
+             * Caveats
+             * @default []
+             */
+            caveats: components["schemas"]["Caveat"][];
+            data: components["schemas"]["ReconciliationView"];
             source: components["schemas"]["SourceNote"];
         };
         /** Envelope[ResearchMemoryView] */
@@ -3586,6 +3646,33 @@ export interface components {
             size: components["schemas"]["Figure"];
             unrealised_pnl: components["schemas"]["Figure"];
         };
+        /** OpsJobView */
+        OpsJobView: {
+            /** Error */
+            error: string;
+            /** Job Id */
+            job_id: string;
+            /** Kind */
+            kind: string;
+            /** Reason */
+            reason: string;
+            /**
+             * Requested At
+             * Format: date-time
+             */
+            requested_at: string;
+            /** Requested By */
+            requested_by: string;
+            /** Runner Note */
+            runner_note: string;
+            /** Status */
+            status: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+        };
         /**
          * OtherDrawingSet
          * @description Another operator's drawings on this symbol: shown, never editable here.
@@ -4485,6 +4572,56 @@ export interface components {
             tearsheet_version: string;
             /** Timeframe */
             timeframe: string;
+        };
+        /** ReconcileRequest */
+        ReconcileRequest: {
+            /** Reason */
+            reason: string;
+        };
+        /** ReconciliationReportView */
+        ReconciliationReportView: {
+            /** Approximations */
+            approximations: string[];
+            backtest_only: components["schemas"]["Figure"];
+            backtest_trades: components["schemas"]["Figure"];
+            /** Digest */
+            digest: string;
+            /** Divergences */
+            divergences: components["schemas"]["DivergenceView"][];
+            explained: components["schemas"]["Figure"];
+            /** First Divergence At */
+            first_divergence_at: string | null;
+            /** Generated At */
+            generated_at: string | null;
+            /** Job Id */
+            job_id: string | null;
+            matched: components["schemas"]["Figure"];
+            matched_identical: components["schemas"]["Figure"];
+            outside_window: components["schemas"]["Figure"];
+            paper_only: components["schemas"]["Figure"];
+            paper_trades: components["schemas"]["Figure"];
+            /** Provenance */
+            provenance: Record<string, never>;
+            /** Reasons */
+            reasons: {
+                [key: string]: number;
+            };
+            /** Status */
+            status: string;
+            /** Status Reason */
+            status_reason: string;
+            unexplained: components["schemas"]["Figure"];
+            /** Window End */
+            window_end: string | null;
+            /** Window Start */
+            window_start: string | null;
+        };
+        /** ReconciliationView */
+        ReconciliationView: {
+            job: components["schemas"]["OpsJobView"] | null;
+            report: components["schemas"]["ReconciliationReportView"] | null;
+            /** Session Id */
+            session_id: string;
         };
         /** RegimeOverlay */
         RegimeOverlay: {
@@ -7395,6 +7532,72 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Envelope_BotControlView_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    session_reconciliation_api_trading_sessions__session_id__reconciliation_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                session_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_ReconciliationView_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    request_reconciliation_api_trading_sessions__session_id__reconciliation_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                session_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReconcileRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_ReconciliationView_"];
                 };
             };
             /** @description Validation Error */

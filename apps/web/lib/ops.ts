@@ -57,3 +57,18 @@ export const sessionChainPath = (sessionId: string, limit = 50) =>
 
 /** Badge tone per chain status (the status is the API's verdict). */
 export const CHAIN_TONE: Record<string, "ok" | "down" | "unknown"> = { ok: "ok", broken: "down", absent: "unknown" };
+
+export type ReconciliationView = Local<S["ReconciliationView"]>;
+export type ReconciliationReportView = Local<S["ReconciliationReportView"]>;
+export type DivergenceView = Local<S["DivergenceView"]>;
+export type OpsJobView = Local<S["OpsJobView"]>;
+
+export const sessionReconciliationPath = (sessionId: string) =>
+  `/api/trading/sessions/${encodeURIComponent(sessionId)}/reconciliation`;
+
+/** Badge tone per reconciliation status (the status is the API's). */
+export const RECON_TONE: Record<string, "ok" | "degraded" | "unknown"> = {
+  match: "ok",
+  diverged: "degraded",
+  not_evaluated: "unknown",
+};

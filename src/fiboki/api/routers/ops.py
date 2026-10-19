@@ -26,7 +26,7 @@ from fiboki.api.errors import ApiError
 from fiboki.api.logging import current_correlation_id
 from fiboki.api.models import Envelope, Page, SourceNote
 from fiboki.api.provenance import Figure
-from fiboki.api.security import Principal, require_admin
+from fiboki.api.security import Principal, require_admin, require_operator
 from fiboki.core.enums import Provenance
 from fiboki.ops.audit_chain import CHAIN_FILE, ChainVerification, PaperAuditChain
 from fiboki.ops.controls import (
@@ -37,6 +37,8 @@ from fiboki.ops.controls import (
     ControlRecord,
     ControlRefused,
 )
+from fiboki.ops.jobs import OpsJob, OpsJobQueue
+from fiboki.ops.reconcile import EXPLAINED as _EXPLAINED
 
 router = APIRouter(prefix="/api/trading", tags=["ops"])
 
@@ -479,3 +481,203 @@ def session_audit_chain(
         data=ChainTailView(integrity=integrity, rows=rows),
         source=_note("live" if integrity.present else "absent", integrity.reason),
     )
+
+
+# ================================================================ reconciliation
+
+
+OperatorPrincipal = Annotated[Principal, Depends(require_operator)]
+
+
+class OpsJobView(BaseModel):
+    model_config = ConfigDict(frozen=True)
+
+    job_id: str
+    kind: str
+    status: str = Field(pattern="^(queued|running|succeeded|failed)$")
+    requested_by: str
+    reason: str
+    requested_at: datetime
+    updated_at: datetime
+    error: str
+    #: How the job will run: the API never runs it (``fiboki ops jobs`` does).
+    runner_note: str
+
+
+class DivergenceView(BaseModel):
+    model_config = ConfigDict(frozen=True)
+
+    kind: str = Field(pattern="^(field|paper_only|backtest_only)$")
+    instrument: str
+    direction: str
+    entry_time: datetime
+    field: str
+    paper: Figure | None
+    backtest: Figure | None
+    paper_text: str | None
+    backtest_text: str | None
+    delta: Figure | None
+    reason: str
+    explained: bool
+    detail: str
+
+
+class ReconciliationReportView(BaseModel):
+    model_config = ConfigDict(frozen=True)
+
+    status: str = Field(pattern="^(match|diverged|not_evaluated)$")
+    status_reason: str
+    window_start: datetime | None
+    window_end: datetime | None
+    paper_trades: Figure
+    backtest_trades: Figure
+    matched: Figure
+    matched_identical: Figure
+    paper_only: Figure
+    backtest_only: Figure
+    outside_window: Figure
+    explained: Figure
+    unexplained: Figure
+    first_divergence_at: datetime | None
+    divergences: list[DivergenceView]
+    reasons: dict[str, int]
+    approximations: list[str]
+    provenance: dict[str, Any]
+    digest: str
+    generated_at: datetime | None
+    job_id: str | None
+
+
+class ReconciliationView(BaseModel):
+    model_config = ConfigDict(frozen=True)
+
+    session_id: str
+    job: OpsJobView | None
+    report: ReconciliationReportView | None
+
+
+class ReconcileRequest(BaseModel):
+    reason: str = Field(min_length=REASON_MIN, max_length=REASON_MAX)
+
+
+_RUNNER_NOTE = (
+    "Run by `fiboki ops jobs` (a separate process; the API never runs a backtest). "
+    "Until it runs, the job stays queued."
+)
+
+
+def _job_view(job: OpsJob) -> OpsJobView:
+    return OpsJobView(
+        job_id=job.job_id, kind=job.kind, status=job.status, requested_by=job.requested_by,
+        reason=job.reason, requested_at=datetime.fromisoformat(job.requested_at),
+        updated_at=datetime.fromisoformat(job.updated_at), error=job.error, runner_note=_RUNNER_NOTE,
+    )
+
+
+def _count(n: Any, p: Provenance = Provenance.PAPER) -> Figure:
+    return Figure(value=float(n or 0), provenance=p, unit="count")
+
+
+def _value(v: Any, p: Provenance, unit: str) -> tuple[Figure | None, str | None]:
+    if v is None:
+        return None, None
+    if isinstance(v, int | float):
+        return Figure(value=float(v), provenance=p, unit=unit), None
+    return None, str(v)
+
+
+_FIELD_UNITS = {"size": "units", "entry_price": "", "exit_price": ""}
+
+
+def report_view(body: dict[str, Any]) -> ReconciliationReportView:
+    r = body["report"]
+    ccy = str((r.get("provenance") or {}).get("account_ccy") or "")
+    divs: list[DivergenceView] = []
+    reasons: dict[str, int] = {}
+    for d in r.get("divergences") or []:
+        unit = _FIELD_UNITS.get(d["field"], ccy)
+        pf, pt = _value(d.get("paper"), Provenance.PAPER, unit)
+        bf, btx = _value(d.get("backtest"), Provenance.BACKTEST, unit)
+        delta = d.get("delta")
+        reasons[d["reason"]] = reasons.get(d["reason"], 0) + 1
+        divs.append(DivergenceView(
+            kind=d["kind"], instrument=d["instrument"], direction=d["direction"],
+            entry_time=datetime.fromisoformat(d["entry_time"]), field=d["field"],
+            paper=pf, backtest=bf, paper_text=pt, backtest_text=btx,
+            delta=None if delta is None else Figure(value=float(delta), provenance=Provenance.PAPER, unit=unit,
+                                                    estimated=True),
+            reason=d["reason"], explained=d["reason"] in _EXPLAINED, detail=d["detail"],
+        ))
+
+    def dt(v: Any) -> datetime | None:
+        return None if not v else datetime.fromisoformat(str(v))
+
+    return ReconciliationReportView(
+        status=r["status"], status_reason=r["status_reason"],
+        window_start=dt(r.get("window_start")), window_end=dt(r.get("window_end")),
+        paper_trades=_count(r.get("paper_trades")),
+        backtest_trades=_count(r.get("backtest_trades"), Provenance.BACKTEST),
+        matched=_count(r.get("matched")), matched_identical=_count(r.get("matched_identical")),
+        paper_only=_count(r.get("paper_only")),
+        backtest_only=_count(r.get("backtest_only"), Provenance.BACKTEST),
+        outside_window=_count(r.get("outside_window")),
+        explained=_count(r.get("explained")), unexplained=_count(r.get("unexplained")),
+        first_divergence_at=dt(r.get("first_divergence_at")),
+        divergences=divs, reasons=reasons,
+        approximations=list(r.get("approximations") or []),
+        provenance=dict(r.get("provenance") or {}),
+        digest=str(body.get("digest", "")), generated_at=dt(body.get("generated_at")),
+        job_id=body.get("job_id"),
+    )
+
+
+
+
+@router.get("/sessions/{session_id}/reconciliation", response_model=Envelope[ReconciliationView])
+def session_reconciliation(
+    session_id: str, platform: PlatformDep, settings: SettingsDep
+) -> Envelope[ReconciliationView]:
+    if session_id not in _forward_sessions(platform):
+        raise ApiError(status.HTTP_404_NOT_FOUND, "unknown_session",
+                       f"No forward paper session {session_id!r}: only a forward session has a paper "
+                       "record to reconcile.")
+    queue = OpsJobQueue(settings.paths.ops_dir)
+    jobs = queue.for_session(session_id)
+    body = queue.latest_result(session_id)
+    report = report_view(body) if body else None
+    view = ReconciliationView(session_id=session_id, job=_job_view(jobs[-1]) if jobs else None, report=report)
+    if report is None:
+        detail = ("No reconciliation has run for this session. Request one; `fiboki ops jobs` runs it."
+                  if not jobs else f"Latest job {jobs[-1].job_id} is {jobs[-1].status}. " + _RUNNER_NOTE)
+        return Envelope(data=view, source=_note("absent", detail))
+    return Envelope(
+        data=view,
+        source=_note("live", f"Report {report.job_id} ({report.digest[:12]}), written by the ops job runner.",
+                     report.generated_at),
+    )
+
+
+@router.post("/sessions/{session_id}/reconciliation", response_model=Envelope[ReconciliationView],
+             status_code=status.HTTP_202_ACCEPTED)
+def request_reconciliation(
+    session_id: str,
+    body: ReconcileRequest,
+    platform: PlatformDep,
+    settings: SettingsDep,
+    audit: AuditDep,
+    principal: OperatorPrincipal,
+    request: Request,
+) -> Envelope[ReconciliationView]:
+    """Queue a reconciliation. Recorded and audited; run by a separate process."""
+    if session_id not in _forward_sessions(platform):
+        raise ApiError(status.HTTP_404_NOT_FOUND, "unknown_session", f"No forward paper session {session_id!r}.")
+    job = OpsJobQueue(settings.paths.ops_dir).request(
+        "reconcile", session_id, requested_by=principal.user_id, reason=body.reason
+    )
+    audit.record(
+        "ops.reconcile.request", actor=principal.user_id, actor_role=principal.role.value,
+        outcome="allowed", reason=body.reason, target=session_id,
+        execution_mode=settings.execution_mode.value, correlation_id=current_correlation_id(),
+        source_ip=request.client.host if request.client else "", detail={"job_id": job.job_id},
+    )
+    return session_reconciliation(session_id, platform, settings)
