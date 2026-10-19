@@ -291,3 +291,43 @@ def test_levels_and_zones_are_stored_with_the_drawings_and_alert_from_their_edge
     [alert] = made.json()["data"]["alerts"]
     assert alert["drawing_id"] == "zone_1" and alert["origin"] == "zone_top"
     assert alert["condition"] == "cross_below"  # the zone sits under the last close
+
+
+# ------------------------------------------------------------------ events
+
+
+def test_events_come_from_the_newest_official_calendar_and_focus_by_id(client):
+    from fiboki.marketstate.calendar import (
+        latest_official_calendar_version,
+        load_official_calendar,
+    )
+
+    version = latest_official_calendar_version()
+    calendar = load_official_calendar(version=version)
+    usd = [e for e in calendar.all_events() if e.currency == "USD"]
+    assert usd, "the official calendar holds USD events"
+    pick = usd[len(usd) // 2]
+    lo = (pick.event_time - pd.Timedelta(days=3)).isoformat()
+    hi = (pick.event_time + pd.Timedelta(days=3)).isoformat()
+    body = client.get(
+        "/api/markets/events/EURUSD", params={"from": lo, "to": hi, "event_id": pick.event_id}
+    ).json()
+    data = body["data"]
+    assert data["calendar_version"] == version
+    assert data["focus"]["event_id"] == pick.event_id
+    assert pd.Timestamp(data["focus"]["t"]) == pick.event_time
+    assert pick.event_id in {e["event_id"] for e in data["events"]}
+    assert all(e["currency"] in ("EUR", "USD") for e in data["events"])
+    assert {e["impact"] for e in data["events"]} <= {"high", "medium", "low"}
+    assert all(e["dataset_version_id"].startswith(f"official_calendar:{version}") for e in data["events"])
+    missing = client.get("/api/markets/events/EURUSD", params={"event_id": "nope"})
+    assert missing.status_code == 404 and missing.json()["code"] == "unknown_event"
+
+
+def test_overlay_events_are_stamped_with_the_version_they_were_loaded_from(world):
+    from fiboki.marketstate.calendar import latest_official_calendar_version
+
+    data = world["client"].get("/api/markets/overlays/EURUSD", params={"timeframe": "H1"}).json()["data"]
+    version = latest_official_calendar_version()
+    for event in data["events"]:
+        assert event["dataset_version_id"].startswith(f"official_calendar:{version}")

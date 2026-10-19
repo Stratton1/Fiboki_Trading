@@ -912,3 +912,132 @@ def create_price_alert(
            alert.condition, sym, {"alert_id": alert.alert_id, "price": body.price,
                                   "drawing_id": body.drawing_id})
     return _alerts_envelope(store.list(principal.user_id, sym), store)
+
+
+# ================================================================== events
+
+
+class CalendarEventsView(BaseModel):
+    model_config = ConfigDict(frozen=True)
+
+    symbol: str
+    #: The official calendar version served (the newest listed one).
+    calendar_version: str
+    calendar_digest: str | None
+    currencies: list[str]
+    window_from: datetime | None
+    window_to: datetime | None
+    events: list[markets_router.EventOverlay]
+    #: The event ``event_id`` named, wherever it is (null when none was asked).
+    focus: markets_router.EventOverlay | None
+    #: The calendar's declared coverage: no event outside it is known.
+    declared_start: datetime | None
+    declared_end: datetime | None
+
+
+def _event_view(event: Any, version: str, digest: str | None) -> markets_router.EventOverlay:
+    return markets_router.EventOverlay(
+        t=event.event_time.to_pydatetime(),
+        window_end=event.window_end.to_pydatetime() if event.window_end is not None else None,
+        time_known=event.time_known,
+        currency=event.currency,
+        name=event.name,
+        impact=event.impact.value,
+        event_id=event.event_id,
+        source_url=event.source_url,
+        dataset_version_id=f"official_calendar:{version}" + (f" {digest}" if digest else ""),
+        source=markets_router.OverlaySource(
+            kind="official_calendar", detail=f"{event.source} (official calendar {version})"
+        ),
+    )
+
+
+@router.get("/api/markets/events/{symbol}", response_model=Envelope[CalendarEventsView])
+def calendar_events(
+    symbol: str,
+    from_: Annotated[datetime | None, Query(alias="from")] = None,
+    to: Annotated[datetime | None, Query()] = None,
+    event_id: str | None = Query(None, max_length=200),
+) -> Envelope[CalendarEventsView]:
+    """Scheduled events for the instrument's currencies from the NEWEST official calendar.
+
+    With ``event_id`` the named event is returned as ``focus`` (any currency),
+    so a link ``/markets/EURUSD?event=<id>`` can centre the chart on it.
+    """
+    import pandas as pd
+
+    from fiboki.marketstate.calendar import (
+        CalendarError,
+        instrument_currencies,
+        latest_official_calendar_version,
+        load_official_calendar,
+        official_calendar_path,
+    )
+
+    sym = _symbol(symbol)
+    try:
+        version = latest_official_calendar_version()
+        calendar = load_official_calendar(version=version)
+        digest = markets_router._file_digest(official_calendar_path(version))
+    except CalendarError as exc:
+        raise ApiError(
+            status.HTTP_503_SERVICE_UNAVAILABLE,
+            "calendar_unavailable",
+            f"The official calendar could not be loaded: {exc}",
+        ) from exc
+    currencies = list(instrument_currencies(sym))
+    lo = _utc(from_) if from_ else None
+    hi = _utc(to) if to else None
+    events: list[markets_router.EventOverlay] = []
+    if lo is not None and hi is not None:
+        if lo > hi:
+            raise ApiError(status.HTTP_400_BAD_REQUEST, "invalid_window", "'from' is after 'to'.")
+        events = [
+            _event_view(e, version, digest)
+            for e in calendar.events_between(pd.Timestamp(lo), pd.Timestamp(hi), currencies=currencies)
+        ]
+    focus = None
+    if event_id:
+        match = next((e for e in calendar.all_events() if e.event_id == event_id), None)
+        if match is None:
+            raise ApiError(
+                status.HTTP_404_NOT_FOUND,
+                "unknown_event",
+                f"Official calendar {version} has no event {event_id!r}.",
+            )
+        focus = _event_view(match, version, digest)
+    coverage = calendar.coverage()
+    caveats: list[Caveat] = []
+    uncovered = sorted(set(currencies) - set(coverage.currencies))
+    if uncovered:
+        caveats.append(
+            Caveat(
+                code="calendar_currency_not_covered",
+                severity="warning",
+                message=f"The official calendar records no events for {', '.join(uncovered)}: "
+                "an empty axis there is missing data, not a quiet week.",
+                affects="events",
+                direction="optimistic",
+            )
+        )
+    start, end = calendar.declared_span()
+    return Envelope(
+        data=CalendarEventsView(
+            symbol=sym,
+            calendar_version=version,
+            calendar_digest=digest,
+            currencies=currencies,
+            window_from=lo,
+            window_to=hi,
+            events=events,
+            focus=focus,
+            declared_start=start.to_pydatetime() if start is not None else None,
+            declared_end=end.to_pydatetime() if end is not None else None,
+        ),
+        source=_note(
+            "live",
+            f"Official scheduled-events calendar {version}, fetched from the publishers' "
+            "own pages and committed (no network access).",
+        ),
+        caveats=tuple(caveats),
+    )

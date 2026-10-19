@@ -114,6 +114,7 @@ export function OverlayLegend({
     u.signals ? `${u.signals} signal${u.signals === 1 ? "" : "s"}` : "",
     u.fills ? `${u.fills} fill${u.fills === 1 ? "" : "s"}` : "",
     u.regimes ? `${u.regimes} regime run${u.regimes === 1 ? "" : "s"}` : "",
+    u.events ? `${u.events} calendar event${u.events === 1 ? "" : "s"}` : "",
     u.seriesPoints ? `${u.seriesPoints} series point${u.seriesPoints === 1 ? "" : "s"}` : "",
   ].filter(Boolean);
   // A layer the chart DRAWS being unavailable is the one thing an operator
@@ -121,7 +122,8 @@ export function OverlayLegend({
   const drawnMissing = ["regimes", "signals", "fills", "levels", "series"].some((name) =>
     unavailableNames.has(name),
   );
-  const notDrawn = overlays !== null && (overlays.events.length > 0 || overlays.headlines.length > 0);
+  // Calendar events are drawn on the time axis (Wave 2B); headlines are not yet.
+  const notDrawn = overlays !== null && overlays.headlines.length > 0;
 
   return (
     <div className="legend" data-testid="overlay-legend">
@@ -243,8 +245,8 @@ export function OverlayLegend({
             ))}
             {overlays && notDrawn ? (
               <li data-testid="legend-not-drawn">
-                Received but not drawn on this chart yet: {overlays.events.length.toLocaleString("en-GB")}{" "}
-                calendar event(s), {overlays.headlines.length.toLocaleString("en-GB")} headline(s).
+                Received but not drawn on this chart yet: {overlays.headlines.length.toLocaleString("en-GB")}{" "}
+                headline(s).
               </li>
             ) : null}
             {outside.length > 0 ? (

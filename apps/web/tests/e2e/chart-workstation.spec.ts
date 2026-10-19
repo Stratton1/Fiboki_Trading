@@ -128,7 +128,10 @@ test.describe("chart workstation", () => {
       "records experiment metrics, not per-trade fills",
     );
     await expect(unavailable.filter({ hasText: "headlines" })).toContainText("No headline store");
-    await expect(page.getByTestId("legend-not-drawn")).toContainText("1 calendar event(s)");
+    // Calendar events are drawn on the time axis now (Wave 2B); the fixture
+    // has no headlines, so nothing is "received but not drawn".
+    await expect(page.getByTestId("legend-not-drawn")).toHaveCount(0);
+    await expect(page.getByTestId("price-chart")).toHaveAttribute("data-events", "1");
   });
 
   test("the legend toggles layers and series groups", async ({ page }) => {

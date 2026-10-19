@@ -336,7 +336,10 @@ def test_calendar_events_in_range_for_the_instruments_currencies(overlay_world):
     assert ("US Non-Farm Payrolls", "USD") in names
     for event in data["events"]:
         assert event["currency"] in {"EUR", "USD"}
-        assert event["dataset_version_id"].startswith("sha256:")
+        # The version actually loaded (the newest), then its file digest
+        # (Wave 2B: the stamp used to digest the 1.0.0 file whatever was loaded).
+        assert event["dataset_version_id"].startswith("official_calendar:")
+        assert " sha256:" in event["dataset_version_id"]
         assert data["window_from"] <= event["t"] <= data["window_to"]
 
 

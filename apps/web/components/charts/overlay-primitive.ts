@@ -41,12 +41,16 @@ export interface OverlayLayers {
   regimes: boolean;
   signals: boolean;
   fills: boolean;
+  /** Scheduled calendar events on the time axis (Wave 2B). */
+  events?: boolean;
 }
 
 export interface OverlayDrawState {
   model: ChartModel;
   theme: ChartTheme;
   layers: OverlayLayers;
+  /** The event `?event=` focuses: drawn in the accent, thicker. */
+  focusEvent?: string | null;
 }
 
 const RIBBON_PX = 3;
@@ -264,6 +268,56 @@ class MarkerRenderer implements IPrimitivePaneRenderer {
   }
 }
 
+/**
+ * Calendar events on the time axis: a vertical rule at the bar open at the
+ * event's time, as loud as the API's impact says. HIGH: a solid full-height
+ * rule in the foreground ink with its name at the top; MEDIUM: a dashed
+ * muted rule with a short label; LOW: a tick on the axis only. The focused
+ * event (`?event=`) is drawn in the accent. Neutral inks: no event colour
+ * can be mistaken for P&L.
+ */
+class EventRenderer implements IPrimitivePaneRenderer {
+  constructor(private readonly layer: OverlayPrimitive) {}
+
+  draw(target: Parameters<IPrimitivePaneRenderer["draw"]>[0]) {
+    const scope = this.layer.scope();
+    if (!scope || !scope.state.layers.events) return;
+    const { chart, state } = scope;
+    const { theme, model } = state;
+    const time = chart.timeScale();
+    target.useMediaCoordinateSpace(({ context: ctx, mediaSize }) => {
+      const height = mediaSize.height;
+      ctx.save();
+      ctx.textBaseline = "top";
+      for (const ev of model.events) {
+        const x = time.logicalToCoordinate(ev.index as Logical);
+        if (x === null || x < -2 || x > mediaSize.width + 2) continue;
+        const focused = state.focusEvent === ev.item.event_id;
+        const impact = ev.item.impact;
+        const ink = focused ? theme.drawing : impact === "high" ? theme.text : impact === "medium" ? theme.textMuted : theme.neutral;
+        ctx.strokeStyle = ink;
+        ctx.fillStyle = ink;
+        if (impact === "high" || impact === "medium" || focused) {
+          ctx.lineWidth = focused ? 2 : impact === "high" ? 1.25 : 1;
+          ctx.setLineDash(impact === "high" || focused ? [] : [3, 3]);
+          ctx.beginPath();
+          ctx.moveTo(x + 0.5, 0);
+          ctx.lineTo(x + 0.5, height);
+          ctx.stroke();
+          ctx.setLineDash([]);
+          ctx.font = `${impact === "high" || focused ? 700 : 500} 10px ${theme.fontUi}`;
+          const label = `${ev.item.currency} ${ev.item.name}`;
+          ctx.fillText(label.length > 28 ? `${label.slice(0, 27)}…` : label, x + 3, 2);
+        }
+        // Every event, whatever its impact, has its tick on the time axis.
+        const tick = impact === "high" || focused ? 10 : impact === "medium" ? 7 : 5;
+        ctx.fillRect(x - 1, height - tick, 3, tick);
+      }
+      ctx.restore();
+    });
+  }
+}
+
 class View implements IPrimitivePaneView {
   constructor(
     private readonly order: PrimitivePaneViewZOrder,
@@ -286,6 +340,7 @@ export class OverlayPrimitive implements ISeriesPrimitive<Time> {
   constructor(private state: OverlayDrawState) {
     this.views = [
       new View("bottom", new RegimeRenderer(this)),
+      new View("bottom", new EventRenderer(this)),
       new View("top", new MarkerRenderer(this)),
     ];
   }

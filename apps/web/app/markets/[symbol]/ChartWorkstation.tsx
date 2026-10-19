@@ -21,7 +21,7 @@ import { Segmented } from "@/components/ui/Segmented";
 import { StaleBadge } from "@/components/ui/StaleBadge";
 import { ViewStateTag } from "@/components/ui/ViewStateTag";
 import { UrlState } from "@/components/UrlState";
-import type { ChartTemplateBody, ReplayView } from "@/lib/chart-contract";
+import type { CalendarEventsView, ChartTemplateBody, ReplayView } from "@/lib/chart-contract";
 import { buildChartModel, replayRow, visiblePanes, type ChartModel } from "@/lib/chart-model";
 import { isStale } from "@/lib/freshness";
 import { displayDecimals, formatUtcTime, priceDecimals } from "@/lib/format";
@@ -79,6 +79,8 @@ const modeParser = parseAsStringLiteral(MODES).withDefault("live").withOptions({
 const cursorParser = parseAsString.withOptions({ history: "replace" });
 /** Go-to-date (`?at=`, a UTC instant): the window is centred on it. */
 const atParser = parseAsString.withOptions({ history: "push" });
+/** A calendar event to focus (`?event=<id>`, from the official calendar). */
+const eventParser = parseAsString.withOptions({ history: "replace" });
 
 /** A replay step's answer, as the chart's ordinary inputs. Every value is the API's. */
 export interface ReplayFrame {
@@ -149,6 +151,7 @@ export function ChartWorkstation({ symbol }: { symbol: string }) {
           onCursor={() => undefined}
           at={null}
           onAt={() => undefined}
+          event={null}
         />
       }
     >
@@ -165,6 +168,7 @@ function WorkstationFromUrl({ symbol }: { symbol: string }) {
   const onCursor = useCallback((next: string | null) => void setCursor(next), [setCursor]);
   const [at, setAt] = useQueryState("at", atParser);
   const onAt = useCallback((next: string | null) => void setAt(next), [setAt]);
+  const [event] = useQueryState("event", eventParser);
   return (
     <Workstation
       symbol={symbol}
@@ -178,6 +182,7 @@ function WorkstationFromUrl({ symbol }: { symbol: string }) {
       onCursor={onCursor}
       at={at}
       onAt={onAt}
+      event={event}
     />
   );
 }
@@ -208,8 +213,9 @@ function Workstation({
   onMode,
   cursor,
   onCursor,
-  at,
+  at: atParam,
   onAt,
+  event,
 }: {
   symbol: string;
   tf: Timeframe;
@@ -223,8 +229,16 @@ function Workstation({
   /** Go-to-date: the UTC instant the window is centred on, or null for the latest bars. */
   at: string | null;
   onAt: (at: string | null) => void;
+  /** `?event=<id>`: centre the chart on that official-calendar event. */
+  event: string | null;
 }) {
   const enc = encodeURIComponent(symbol);
+  const eventRead = useApi<Envelope<CalendarEventsView>>(
+    event ? `/api/markets/events/${enc}?event_id=${encodeURIComponent(event)}` : null,
+  );
+  const focus = eventRead.status === "success" ? eventRead.data.data.focus : null;
+  // An explicit go-to-date wins; otherwise a focused event centres the window.
+  const at = atParam ?? focus?.t ?? null;
   const replay = mode === "replay";
   const aroundQuery = at ? `&around=${encodeURIComponent(at)}` : "";
   const barsPath = `/api/markets/bars/${enc}?timeframe=${tf}&limit=${BAR_LIMIT}${aroundQuery}`;
@@ -420,6 +434,22 @@ function Workstation({
       {barsEnv && barsEnv.caveats.length > 0 ? <CaveatList caveats={barsEnv.caveats} /> : null}
       {overlayEnv && overlayEnv.caveats.length > 0 ? <CaveatList caveats={overlayEnv.caveats} /> : null}
 
+      {event && eventRead.status === "error" ? (
+        <p className="cw__note cw__note--error" role="alert" data-testid="event-focus-error">
+          Event {event} could not be focused: {eventRead.error.message}{" "}
+          <span className="state__code">code: {eventRead.error.code}</span>
+        </p>
+      ) : null}
+      {focus ? (
+        <p className="cw__note" role="status" data-testid="event-focus" data-event={focus.event_id}>
+          <strong>
+            {focus.impact.toUpperCase()} · {focus.currency} {focus.name}
+          </strong>{" "}
+          at {formatUtcTime(focus.t)}
+          {focus.time_known ? "" : " (time not published; a window)"} · official calendar{" "}
+          {eventRead.status === "success" ? eventRead.data.data.calendar_version : ""}
+        </p>
+      ) : null}
       <div className="cw__body">
         {replay ? (
           <Suspense
@@ -465,6 +495,7 @@ function Workstation({
                       timeZone={tz}
                       onHandle={setHandle}
                       focusAt={null}
+                      focusEvent={null}
                       replay={frame}
                     />
                   )}
@@ -524,6 +555,7 @@ function Workstation({
                 timeZone={tz}
                 onHandle={setHandle}
                 focusAt={at}
+                focusEvent={focus?.event_id ?? null}
               />
             )}
           </AsyncBoundary>
@@ -722,6 +754,7 @@ function ChartArea({
   timeZone,
   onHandle,
   focusAt,
+  focusEvent,
   replay = null,
 }: {
   symbol: string;
@@ -746,6 +779,7 @@ function ChartArea({
   onHandle: (handle: PriceChartHandle | null) => void;
   /** Go-to-date: once the chart has drawn this window, put the crosshair on this instant. */
   focusAt: string | null;
+  focusEvent: string | null;
   /** Replay mode: the trades as they stood at the cursor, instead of a run's stored trades. */
   replay?: ReplayFrame | null;
 }) {
@@ -768,7 +802,7 @@ function ChartArea({
     return widest;
   }, [fromPip, bars.data.bars]);
 
-  const layers = legendLayers(chartLayers);
+  const layers = { ...legendLayers(chartLayers), events: chartLayers.events };
   const hidden = useMemo(() => {
     const out = new Set<string>();
     for (const g of model.groups) {
@@ -820,6 +854,7 @@ function ChartArea({
     describedBy: readoutId,
     timeZone,
     onHandle: setChartHandle,
+    focusEvent,
     cursor: keyboard,
     onCursor: (index: number | null, from: "pointer" | "keyboard") => {
       if (from === "keyboard") {

@@ -70,6 +70,8 @@ export interface PriceChartProps {
   /** Series groups the operator has hidden (OverlayLegend). */
   hidden: ReadonlySet<string>;
   layers: OverlayLayers & { levels: boolean };
+  /** The calendar event `?event=` focuses (drawn in the accent). */
+  focusEvent?: string | null;
   /** Price decimals from the instrument's pip size; null when not known. */
   priceDecimals: number | null;
   /** Decimals per non-price pane (undeclared precision, lib/format.ts rule). */
@@ -226,6 +228,7 @@ export default function PriceChart({
   onHandle,
   compact = false,
   alerts = [],
+  focusEvent = null,
 }: PriceChartProps) {
   const box = useRef<HTMLDivElement>(null);
   const tradeRef = useRef<TradePrimitive | null>(null);
@@ -712,9 +715,16 @@ export default function PriceChart({
     primitiveRef.current?.update({
       model,
       theme,
-      layers: { regimes: layers.regimes, signals: layers.signals, fills: layers.fills },
+      layers: {
+        regimes: layers.regimes,
+        signals: layers.signals,
+        fills: layers.fills,
+        events: layers.events !== false,
+      },
+      focusEvent,
     });
-  }, [model, theme, layers.regimes, layers.signals, layers.fills]);
+    if (box.current) box.current.dataset.events = layers.events === false ? "hidden" : String(model.events.length);
+  }, [model, theme, layers.regimes, layers.signals, layers.fills, layers.events, focusEvent]);
 
   // ---- the trade layer follows the trades, toggles, selection and hover.
   const hovered = hover?.key ?? null;

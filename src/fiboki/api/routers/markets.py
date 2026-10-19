@@ -1191,14 +1191,19 @@ def overlays(
     # ---- calendar ------------------------------------------------------------
     try:
         from fiboki.marketstate.calendar import (
-            OFFICIAL_EVENTS_FIXTURE,
             instrument_currencies,
+            latest_official_calendar_version,
             load_official_calendar,
+            official_calendar_path,
         )
 
         currencies = list(instrument_currencies(symbol))
-        calendar = load_official_calendar()
-        cal_version = _file_digest(OFFICIAL_EVENTS_FIXTURE)
+        # The NEWEST listed version, as load_official_calendar() loads it. The
+        # stamp used to digest the 1.0.0 file whatever version was loaded.
+        cal_label = latest_official_calendar_version()
+        calendar = load_official_calendar(version=cal_label)
+        digest = _file_digest(official_calendar_path(cal_label))
+        cal_version = f"official_calendar:{cal_label}" + (f" {digest}" if digest else "")
         if win_lo is not None and win_hi is not None:
             for event in calendar.events_between(
                 pd.Timestamp(win_lo), pd.Timestamp(win_hi), currencies=currencies
@@ -1217,7 +1222,8 @@ def overlays(
                         source_url=event.source_url,
                         dataset_version_id=cal_version,
                         source=OverlaySource(
-                            kind="official_calendar", detail=f"{event.source}"
+                            kind="official_calendar",
+                            detail=f"{event.source} (official calendar {cal_label})",
                         ),
                     )
                 )

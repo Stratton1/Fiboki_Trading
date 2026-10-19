@@ -963,6 +963,115 @@
         "title": "BrokerHealthView",
         "type": "object"
       },
+      "CalendarEventsView": {
+        "properties": {
+          "calendar_digest": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Calendar Digest"
+          },
+          "calendar_version": {
+            "title": "Calendar Version",
+            "type": "string"
+          },
+          "currencies": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Currencies",
+            "type": "array"
+          },
+          "declared_end": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Declared End"
+          },
+          "declared_start": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Declared Start"
+          },
+          "events": {
+            "items": {
+              "$ref": "#/components/schemas/EventOverlay"
+            },
+            "title": "Events",
+            "type": "array"
+          },
+          "focus": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/EventOverlay"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "symbol": {
+            "title": "Symbol",
+            "type": "string"
+          },
+          "window_from": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Window From"
+          },
+          "window_to": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Window To"
+          }
+        },
+        "required": [
+          "symbol",
+          "calendar_version",
+          "calendar_digest",
+          "currencies",
+          "window_from",
+          "window_to",
+          "events",
+          "focus",
+          "declared_start",
+          "declared_end"
+        ],
+        "title": "CalendarEventsView",
+        "type": "object"
+      },
       "CandidateView": {
         "description": "A strategy proposed for promotion. ONE surface answers 'what next?'.\n\nV1 had four competing surfaces for this question and six routes to approve,\neach with different copy and different gating.",
         "properties": {
@@ -2287,6 +2396,30 @@
           "source"
         ],
         "title": "Envelope[BrokerHealthView]",
+        "type": "object"
+      },
+      "Envelope_CalendarEventsView_": {
+        "properties": {
+          "caveats": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/Caveat"
+            },
+            "title": "Caveats",
+            "type": "array"
+          },
+          "data": {
+            "$ref": "#/components/schemas/CalendarEventsView"
+          },
+          "source": {
+            "$ref": "#/components/schemas/SourceNote"
+          }
+        },
+        "required": [
+          "data",
+          "source"
+        ],
+        "title": "Envelope[CalendarEventsView]",
         "type": "object"
       },
       "Envelope_ChartTemplatesView_": {
@@ -11472,6 +11605,102 @@
           "markets"
         ],
         "x-fiboki-auth": "operator"
+      }
+    },
+    "/api/markets/events/{symbol}": {
+      "get": {
+        "description": "Scheduled events for the instrument's currencies from the NEWEST official calendar.\n\nWith ``event_id`` the named event is returned as ``focus`` (any currency),\nso a link ``/markets/EURUSD?event=<id>`` can centre the chart on it.",
+        "operationId": "calendar_events_api_markets_events__symbol__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "symbol",
+            "required": true,
+            "schema": {
+              "title": "Symbol",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "from",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "From"
+            }
+          },
+          {
+            "in": "query",
+            "name": "to",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "To"
+            }
+          },
+          {
+            "in": "query",
+            "name": "event_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 200,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Event Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_CalendarEventsView_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [],
+        "summary": "Calendar Events",
+        "tags": [
+          "chart-workstation"
+        ],
+        "x-fiboki-auth": "public"
       }
     },
     "/api/markets/instruments": {

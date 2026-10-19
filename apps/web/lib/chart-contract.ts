@@ -161,6 +161,22 @@ export interface PriceAlertsView {
   evaluator_detail: string;
 }
 
+// ------------------------------------------------------------------ events
+
+/** GET /api/markets/events/{symbol} (Envelope): the newest official calendar. */
+export interface CalendarEventsView {
+  symbol: string;
+  calendar_version: string;
+  calendar_digest: string | null;
+  currencies: string[];
+  window_from: string | null;
+  window_to: string | null;
+  events: EventOverlay[];
+  focus: EventOverlay | null;
+  declared_start: string | null;
+  declared_end: string | null;
+}
+
 // ------------------------------------------------------------------ checks
 
 type SameKeys<A, B> = [Exclude<keyof A, keyof B>, Exclude<keyof B, keyof A>] extends [never, never]
@@ -179,6 +195,7 @@ export type ChartContractChecks = [
   SameKeys<ChartTemplatesView, S["ChartTemplatesView"]>,
   SameKeys<PriceAlertRow, S["PriceAlert"]>,
   SameKeys<PriceAlertsView, S["PriceAlertsView"]>,
+  SameKeys<CalendarEventsView, S["CalendarEventsView"]>,
 ];
 
 /** Fails to compile when any check above is not `true`. */

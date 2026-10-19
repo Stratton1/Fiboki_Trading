@@ -5,6 +5,7 @@ import type {
   BacktestTradeRow,
   BacktestTradesView,
   Bar,
+  EventOverlay,
   Figure,
   FillOverlay,
   LevelOverlay,
@@ -121,6 +122,12 @@ export interface PlacedFill {
   item: FillOverlay;
 }
 
+/** A scheduled calendar event on the bar open at its time (the API's impact decides how loud). */
+export interface PlacedEvent {
+  index: number;
+  item: EventOverlay;
+}
+
 export interface PlacedRegime {
   /** First bar in the run. */
   start: number;
@@ -143,6 +150,7 @@ export interface Unplaced {
   signals: number;
   fills: number;
   regimes: number;
+  events: number;
   /** Series points whose time is not a bar time in this window. */
   seriesPoints: number;
 }
@@ -155,6 +163,7 @@ export interface ChartModel {
   groups: SeriesGroup[];
   signals: PlacedSignal[];
   fills: PlacedFill[];
+  events: PlacedEvent[];
   levels: LevelOverlay[];
   regimes: PlacedRegime[];
   connectors: TradeConnector[];
@@ -212,7 +221,7 @@ export function buildChartModel(
   times.forEach((t, i) => timeIndex.set(t, i));
   const hasVolume = volumeKind !== null && bars.some((b) => typeof b.v === "number");
 
-  const unplaced: Unplaced = { signals: 0, fills: 0, regimes: 0, seriesPoints: 0 };
+  const unplaced: Unplaced = { signals: 0, fills: 0, regimes: 0, events: 0, seriesPoints: 0 };
 
   // ---- series: panes as the API names them, roles by indicator order.
   const series: ModelSeries[] = [];
@@ -301,6 +310,13 @@ export function buildChartModel(
     else fills.push({ index, item });
   }
 
+  const events: PlacedEvent[] = [];
+  for (const item of overlays?.events ?? []) {
+    const index = placeAt(times, item.t);
+    if (index === null) unplaced.events += 1;
+    else events.push({ index, item });
+  }
+
   // ---- entry-to-exit connectors, only where the API sent both ends.
   const entries = new Map<string, PlacedFill>();
   for (const fill of fills) {
@@ -332,6 +348,7 @@ export function buildChartModel(
     groups: [...groups.values()],
     signals,
     fills,
+    events,
     levels: overlays?.levels ?? [],
     regimes: regimes.placed,
     connectors,

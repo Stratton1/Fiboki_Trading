@@ -450,6 +450,29 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/markets/events/{symbol}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Calendar Events
+         * @description Scheduled events for the instrument's currencies from the NEWEST official calendar.
+         *
+         *     With ``event_id`` the named event is returned as ``focus`` (any currency),
+         *     so a link ``/markets/EURUSD?event=<id>`` can centre the chart on it.
+         */
+        get: operations["calendar_events_api_markets_events__symbol__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/markets/instruments": {
         parameters: {
             query?: never;
@@ -1912,6 +1935,28 @@ export interface components {
             /** Venue Url Host */
             venue_url_host: string;
         };
+        /** CalendarEventsView */
+        CalendarEventsView: {
+            /** Calendar Digest */
+            calendar_digest: string | null;
+            /** Calendar Version */
+            calendar_version: string;
+            /** Currencies */
+            currencies: string[];
+            /** Declared End */
+            declared_end: string | null;
+            /** Declared Start */
+            declared_start: string | null;
+            /** Events */
+            events: components["schemas"]["EventOverlay"][];
+            focus: components["schemas"]["EventOverlay"] | null;
+            /** Symbol */
+            symbol: string;
+            /** Window From */
+            window_from: string | null;
+            /** Window To */
+            window_to: string | null;
+        };
         /**
          * CandidateView
          * @description A strategy proposed for promotion. ONE surface answers 'what next?'.
@@ -2418,6 +2463,16 @@ export interface components {
              */
             caveats: components["schemas"]["Caveat"][];
             data: components["schemas"]["BrokerHealthView"];
+            source: components["schemas"]["SourceNote"];
+        };
+        /** Envelope[CalendarEventsView] */
+        Envelope_CalendarEventsView_: {
+            /**
+             * Caveats
+             * @default []
+             */
+            caveats: components["schemas"]["Caveat"][];
+            data: components["schemas"]["CalendarEventsView"];
             source: components["schemas"]["SourceNote"];
         };
         /** Envelope[ChartTemplatesView] */
@@ -6147,6 +6202,41 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Envelope_DrawingSetView_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    calendar_events_api_markets_events__symbol__get: {
+        parameters: {
+            query?: {
+                event_id?: string | null;
+                from?: string | null;
+                to?: string | null;
+            };
+            header?: never;
+            path: {
+                symbol: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_CalendarEventsView_"];
                 };
             };
             /** @description Validation Error */
