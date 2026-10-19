@@ -87,3 +87,71 @@ Not applicable while paper-only: live order ticket, DOM ladder, Level 2.
   alerts from levels, chart defects from P1 #9).
 - Wave 3 Independent audit and critique, then retask fixes; repeat until the rubric is >= 8 in
   every area or the remaining gaps are named and justified.
+
+## Wave 2A status (Workspace; rebuilt 19 October 2026 on `wave/workspace-v2`)
+
+Built, each end to end (API, tests, generated types, UI, Playwright):
+
+- **Workspace** (`/workspace`, WS, F10, `LAYOUT <name>`): a tiling tree over a typed panel
+  registry (13 kinds: chart, watchlist, news, calendar, fleet, risk, exposure, alerts,
+  journal, research runs, market pulse, system board, notes). The kinds are a `Literal` in
+  `api/workspace_layouts.py`, generated into the client, and `components/workspace/registry.tsx`
+  is `Record<PanelKind, …>`, so a kind cannot exist on one side only. Split right/down,
+  drag-resize (react-resizable-panels), close, add; double-click a header to maximise, Esc
+  restores; Ctrl/⌘+1..9 focuses a panel; Tab/⇧Tab move across tile headers, Enter or ↓ enters
+  a panel. Below 760 px the tiles stack in reading order. Each panel body is its own lazy chunk.
+- **Link groups** (TWS style): amber, cyan, violet, white (never red/green). A panel is a
+  source, destination or both; a source's selection retargets every destination in its group.
+- **Named layouts per operator, server-side** (`api/workspace_store.py`,
+  `<state>/workspace/workspace.sqlite`): versioned, append-only revision trail, API audit row
+  per write, 409 on a stale base version (the UI offers "Load theirs" or "Keep mine"),
+  unsaved marker, 1.5 s debounced autosave (recorded as `autosave`), ⌘/Ctrl+S, history popover,
+  delete as a tombstone. Presets in code: FX monitoring, Research, Incident.
+- **Watchlists** (WL, `/markets/watchlist`): CRUD server-side (versioned; four built-in lists
+  until saved over); rows from the quote recorder's log (`data/quote_view.py`, a cached tail
+  reader) with bid/ask/mid/spread, change and range, a 48-bucket sparkline, session state from
+  the instrument's session calendar, data age and the API's verdict (`live`, `stale` after
+  90 s with the session open, `closed`, `none`). Statistics in `marketstate/quote_stats.py`
+  (pure, hand-checked tests).
+- **News monitor** (NWS, `/markets/news`, `<SYM> NEWS`): the headline store read-only, ordered
+  by `observed_at`, filtered on the server by instrument, currency and source; chart links per
+  headline; recorder state (`stale` after 900 s).
+- **Economic calendar** (ECO, `/markets/calendar`, `<SYM> CAL`): the NEWEST official calendar
+  version (`latest_official_calendar_version`, the paper path), never the research pin
+  (asserted by test); impact/currency/instrument filters; the API decides upcoming / in
+  progress / released; countdowns; chart links `?event=<id>` (URL-encoded), and the chart
+  page shows a one-line event focus for that id (`GET /api/markets/calendar/events/{id}`).
+  Coverage gaps (AUD, CAD, CHF, NZD; beyond the declared end) are caveats, never empty calm.
+- **Market Pulse** rebuilt (`/market-pulse`): movers, currency strength (mean signed change
+  per currency across recorded FX pairs), realised volatility and session clocks over every
+  recorded instrument, all from `GET /api/markets/pulse`; definitions shipped with the data.
+- **Price and level alerts**: rules (above, below, cross; mid/bid/ask; once or re-arm) in
+  `obs/price_alerts.py` (`<state>/alerts/price_alerts.sqlite`, append-only notifications and
+  revisions), CRUD over `/api/alerts/rules` (versioned, audited). Evaluated by a PROCESS, never
+  the API: the quote recorder evaluates after every poll (`fiboki quotes record`, failures
+  never stop recording) and `fiboki alerts price-evaluate --once|--loop` catches up from the
+  log; re-reading quotes never fires twice. NTF (`/alerts/notifications`): history with the
+  API's unread count and a server-side read marker (forward only); evaluator state (`stale`
+  after 180 s); opt-in browser notifications (off by default, no backlog replay).
+- **Data grid**: column order (move up/down), server-side column sets per operator
+  (`/api/workspace/column-sets/{grid}`, versioned, default set), CSV export in display order,
+  and API-decided conditional formatting (`api/grid_format.py` evaluates rules and sends
+  `tones` per cell; `/api/workspace/format-rules/{grid}` is the legend).
+
+Not built / known limits:
+
+- The chart workstation itself does not scroll to or highlight `?event=`; it shows the event
+  line above the chart and draws calendar events as it already did. Highlighting is Wave 2B's.
+- Browser notifications fire only while NTF or an alerts tile is open (no service worker, no
+  background push). Ctrl/⌘+1..9 can be taken by the browser for tab switching in some
+  browsers; the panels stay reachable by Tab.
+- Quotes are OANDA practice top of book polled every 30 s: moves between polls are invisible
+  (an alert crossing inside a poll fires only if the polled price ended across), and spot
+  crypto is not recorded by that recorder, so crypto rows read `none`.
+- The recorder hook evaluates a poll's quotes when the next poll starts: alert latency is up
+  to one poll interval.
+- Currency strength is a stated simple mean, not a trade-weighted index; realised volatility
+  is not annualised.
+- No new launchd service: evaluation rides on the existing `quotes` service.
+- `scripts/first-load.mjs` now decodes percent-encoded chunk paths (`%5Bhash%5D`); without it
+  the size report could not run on this build.

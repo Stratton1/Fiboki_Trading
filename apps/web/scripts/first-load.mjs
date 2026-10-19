@@ -77,7 +77,8 @@ export function stylesheetsIn(html) {
 }
 
 export function assetPath(url) {
-  return join(NEXT, url.replace(/^\/_next\//, ""));
+  // Script URLs are percent-encoded (`%5Bhash%5D` for a dynamic segment); files are not.
+  return join(NEXT, decodeURIComponent(url.replace(/^\/_next\//, "")));
 }
 
 const gzCache = new Map();

@@ -151,7 +151,8 @@
 .tone-rise { color: var(--div-pos); }
 .tone-fall { color: var(--div-neg); }
 .tone-warn { color: var(--warn); }
-.tone-stale { color: var(--state-stale); background: var(--warn-bg); }
+.tone-stale { color: var(--fg-data); background: var(--warn-bg); box-shadow: inset 2px 0 0 var(--state-stale); }
+.tone-stale .muted, .tone-stale [data-state] { color: inherit; }
 .tone-muted { color: var(--fg-disabled); }
 .tone-accent { color: var(--accent); font-weight: 600; }
 .grid__swatch {
@@ -214,7 +215,8 @@
 .pulse__h { margin: 0 0 4px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--fg-subtle); font-weight: 600; }
 .pulse__movers { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 .pulse__movers ol { list-style: none; margin: 0; padding: 0; font-size: 12px; }
-.pulse__movers li { display: flex; justify-content: space-between; gap: 6px; font-variant-numeric: tabular-nums; }
+.pulse__movers li { display: flex; justify-content: space-between; align-items: center; gap: 6px; min-height: 24px; font-variant-numeric: tabular-nums; }
+.pulse__movers [data-testid="pulse-symbol"], .pulse__card [data-testid="pulse-symbol"] { display: inline-flex; align-items: center; min-height: 24px; }
 .pulse__strength { list-style: none; margin: 0; padding: 0; font-size: 12px; }
 .pulse__strength li { display: grid; grid-template-columns: 2.5rem 1fr 4.5rem 2.5rem; gap: 6px; align-items: center; }
 .pulse__bar { position: relative; height: 8px; background: var(--bg-sunken); border-left: 0; }

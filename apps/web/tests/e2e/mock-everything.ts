@@ -18,7 +18,7 @@ import {
   riskState,
   source,
 } from "./fixtures";
-import { mockMonitors, mockWorkspace } from "./workspace-fixtures";
+import { mockMonitors, mockWorkspace, presetLayout } from "./workspace-fixtures";
 
 const page1 = <T>(items: T[], detail = "Inventory fixture.") => ({
   items,
@@ -87,8 +87,9 @@ export async function mockEverything(page: Page, unexpected: string[]) {
     });
   });
   await mockShell(page);
-  // wave workspace: the workspace, monitors and notifications.
-  await mockWorkspace(page, { bars: false });
+  // wave workspace: the workspace (a saved "Main"; the 404 of a never-saved
+  // name is covered by workspace.spec.ts), monitors and notifications.
+  await mockWorkspace(page, { bars: false, saved: { Main: presetLayout("fx-monitoring") } });
   await mockMonitors(page);
 
   const json = (pattern: string, body: unknown) =>
