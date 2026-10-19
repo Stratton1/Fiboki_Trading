@@ -121,6 +121,14 @@ ALLOWED_BARE_NUMERIC = {
     # many the registry lists (counts of rows), not measurements.
     ("PulseView", "instruments_recorded"),
     ("PulseView", "instruments_registered"),
+    # Price alerts (routers/price_alerts.py): a rule's optimistic-concurrency
+    # version, the notification sequence, counts of rows and the read marker
+    # (a sequence number). Levels and prices are Figures.
+    ("PriceRuleView", "version"),
+    ("NotificationView", "seq"),
+    ("NotificationsView", "total"),
+    ("NotificationsView", "unread"),
+    ("NotificationsView", "read_through"),
 }
 
 

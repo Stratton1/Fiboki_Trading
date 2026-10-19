@@ -55,6 +55,12 @@ def test_no_decision_package_imports_workspace_or_alert_state() -> None:
     assert offenders == []
 
 
+def test_the_alert_evaluator_cannot_reach_execution() -> None:
+    module = SRC / "obs" / "price_alerts.py"
+    assert module.exists()
+    assert _hits(_imports(module), EXECUTION) == []
+
+
 def test_the_scan_catches_an_import(tmp_path: Path) -> None:
     planted = tmp_path / "planted.py"
     planted.write_text("from fiboki.api.workspace_store import WorkspaceStore\n", encoding="utf-8")

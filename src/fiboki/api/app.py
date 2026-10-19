@@ -35,6 +35,7 @@ from fiboki.api.routers import intelligence as intelligence_router
 from fiboki.api.routers import lifecycle as lifecycle_router
 from fiboki.api.routers import markets as markets_router
 from fiboki.api.routers import monitors as monitors_router
+from fiboki.api.routers import price_alerts as price_alerts_router
 from fiboki.api.routers import research as research_router
 from fiboki.api.routers import research_analytics as research_analytics_router
 from fiboki.api.routers import search as search_router
@@ -178,6 +179,7 @@ def create_app(settings: Settings | None = None, *, configure_logs: bool = True)
         research_analytics_router,
         markets_router,
         monitors_router,
+        price_alerts_router,
         chart_router,
         intelligence_router,
         command_router,
