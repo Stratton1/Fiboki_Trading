@@ -1,0 +1,73 @@
+{
+ "caveats": [],
+ "items": [
+  {
+   "builtin": true,
+   "can_edit": true,
+   "column_set": null,
+   "name": "Majors",
+   "symbols": [
+    "EURUSD",
+    "GBPUSD",
+    "USDJPY",
+    "USDCHF",
+    "AUDUSD",
+    "USDCAD",
+    "NZDUSD"
+   ],
+   "updated_at": null,
+   "version": 0
+  },
+  {
+   "builtin": true,
+   "can_edit": true,
+   "column_set": null,
+   "name": "GBP crosses",
+   "symbols": [
+    "EURGBP",
+    "GBPJPY",
+    "GBPAUD",
+    "GBPCAD",
+    "GBPCHF",
+    "GBPNZD"
+   ],
+   "updated_at": null,
+   "version": 0
+  },
+  {
+   "builtin": true,
+   "can_edit": true,
+   "column_set": null,
+   "name": "Metals and indices",
+   "symbols": [
+    "XAUUSD",
+    "XAGUSD",
+    "US500",
+    "UK100",
+    "DE40"
+   ],
+   "updated_at": null,
+   "version": 0
+  },
+  {
+   "builtin": true,
+   "can_edit": true,
+   "column_set": null,
+   "name": "Crypto",
+   "symbols": [
+    "BTCGBP",
+    "ETHGBP"
+   ],
+   "updated_at": null,
+   "version": 0
+  }
+ ],
+ "limit": 4,
+ "offset": 0,
+ "source": {
+  "as_of": "2026-10-19T01:46:05.921926Z",
+  "detail": "Operator watchlists at /tmp/tmp465lho37/state/workspace/workspace.sqlite (display state, never a trading universe); built-in lists are code.",
+  "kind": "live"
+ },
+ "total": 4
+}

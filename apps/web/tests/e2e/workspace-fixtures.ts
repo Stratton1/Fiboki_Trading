@@ -155,3 +155,43 @@ export function presetLayout(key: string): Record<string, unknown> {
   if (!found) throw new Error(`no preset ${key}`);
   return JSON.parse(JSON.stringify(found.layout)) as Record<string, unknown>;
 }
+
+export interface MonitorMock {
+  watchlistWrites: { name: string; body: Record<string, unknown> }[];
+  columnSetWrites: Record<string, unknown>[];
+}
+
+/** The market monitors (watchlists, quotes, column sets, format rules), from the backend-written JSON. */
+export async function mockMonitors(page: Page): Promise<MonitorMock> {
+  const mock: MonitorMock = { watchlistWrites: [], columnSetWrites: [] };
+  let columnSets = wsFixture<{ data: Record<string, unknown> }>("column_sets_watchlist");
+  await page.route(`${API}/api/workspace/format-rules/watchlist`, (route) => route.fulfill({ json: wsFixture("format_rules_watchlist") }));
+  await page.route(`${API}/api/markets/watchlists`, (route) => route.fulfill({ json: wsFixture("watchlists") }));
+  await page.route((url) => url.origin === API && /^\/api\/markets\/watchlists\/[^/]+\/quotes$/.test(url.pathname), (route) =>
+    route.fulfill({ json: wsFixture("watchlist_majors_24h") }),
+  );
+  await page.route((url) => url.origin === API && url.pathname === "/api/markets/quotes", (route) => route.fulfill({ json: wsFixture("quotes_fx") }));
+  await page.route((url) => url.origin === API && /^\/api\/markets\/watchlists\/[^/]+$/.test(url.pathname), (route) => {
+    const name = decodeURIComponent(new URL(route.request().url()).pathname.split("/").pop() ?? "");
+    const body = route.request().method() === "PUT" ? (route.request().postDataJSON() as Record<string, unknown>) : {};
+    mock.watchlistWrites.push({ name, body });
+    return route.fulfill({
+      json: {
+        items: [{ name, version: 1, updated_at: "2026-10-19T09:00:00Z", symbols: body.symbols ?? [], column_set: null, builtin: false, can_edit: true }],
+        total: 1, offset: 0, limit: 1, source: source("live"), caveats: [],
+      },
+    });
+  });
+  await page.route(`${API}/api/workspace/column-sets/watchlist`, (route) => {
+    if (route.request().method() === "PUT") {
+      const body = route.request().postDataJSON() as { base_version: number; sets: unknown[]; default: string | null };
+      mock.columnSetWrites.push(body);
+      columnSets = {
+        ...columnSets,
+        data: { ...columnSets.data, version: body.base_version + 1, sets: body.sets, default: body.default },
+      };
+    }
+    return route.fulfill({ json: columnSets });
+  });
+  return mock;
+}

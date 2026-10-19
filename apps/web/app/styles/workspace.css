@@ -158,3 +158,11 @@
   display: inline-block; min-width: 3.5rem; padding: 0 4px; border: 1px solid var(--border-subtle);
   font-family: var(--font-mono, ui-monospace, monospace); font-size: 11px; text-align: center;
 }
+
+/* ----------------------------------------------------------- watchlist */
+.wl { display: flex; flex-direction: column; min-width: 0; }
+.spark { display: block; }
+.spark__line { stroke: var(--fg); stroke-width: 1.25; }
+.spark--empty { font-size: 11px; }
+[data-testid="wl-state"][data-state="stale"] { color: var(--state-stale); }
+[data-testid="wl-state"][data-state="none"], [data-testid="wl-state"][data-state="closed"] { color: var(--fg-subtle); }

@@ -1,0 +1,2091 @@
+{
+ "caveats": [],
+ "items": [
+  {
+   "age_s": {
+    "as_of": null,
+    "caveats": [],
+    "estimated": false,
+    "provenance": "broker_demo",
+    "sample_size": null,
+    "unit": "s",
+    "value": 20.0
+   },
+   "ask": {
+    "as_of": "2026-10-19T08:59:40Z",
+    "caveats": [
+     {
+      "affects": "price",
+      "code": "practice_prices",
+      "direction": "unknown",
+      "message": "OANDA practice top of book, polled; not a live executable price.",
+      "severity": "info"
+     }
+    ],
+    "estimated": false,
+    "provenance": "broker_demo",
+    "sample_size": 73,
+    "unit": "",
+    "value": 1.087871
+   },
+   "asset_class": "fx_major",
+   "bid": {
+    "as_of": "2026-10-19T08:59:40Z",
+    "caveats": [
+     {
+      "affects": "price",
+      "code": "practice_prices",
+      "direction": "unknown",
+      "message": "OANDA practice top of book, polled; not a live executable price.",
+      "severity": "info"
+     }
+    ],
+    "estimated": false,
+    "provenance": "broker_demo",
+    "sample_size": 73,
+    "unit": "",
+    "value": 1.087849
+   },
+   "change_pct": {
+    "as_of": "2026-10-19T08:59:40Z",
+    "caveats": [
+     {
+      "affects": "price",
+      "code": "practice_prices",
+      "direction": "unknown",
+      "message": "OANDA practice top of book, polled; not a live executable price.",
+      "severity": "info"
+     }
+    ],
+    "estimated": false,
+    "provenance": "broker_demo",
+    "sample_size": 73,
+    "unit": "pct",
+    "value": 0.2691393072427939
+   },
+   "chart_href": "/markets/EURUSD",
+   "data_state": "live",
+   "data_state_detail": "Recorded 20 s ago.",
+   "market_state": "open",
+   "mid": {
+    "as_of": "2026-10-19T08:59:40Z",
+    "caveats": [
+     {
+      "affects": "price",
+      "code": "practice_prices",
+      "direction": "unknown",
+      "message": "OANDA practice top of book, polled; not a live executable price.",
+      "severity": "info"
+     }
+    ],
+    "estimated": false,
+    "provenance": "broker_demo",
+    "sample_size": 73,
+    "unit": "",
+    "value": 1.08786
+   },
+   "provider": "oanda_practice_pricing",
+   "quote_time": "2026-10-19T08:59:40Z",
+   "range_pct": {
+    "as_of": "2026-10-19T08:59:40Z",
+    "caveats": [
+     {
+      "affects": "price",
+      "code": "practice_prices",
+      "direction": "unknown",
+      "message": "OANDA practice top of book, polled; not a live executable price.",
+      "severity": "info"
+     }
+    ],
+    "estimated": false,
+    "provenance": "broker_demo",
+    "sample_size": 73,
+    "unit": "pct",
+    "value": 0.2684168918794729
+   },
+   "session": {
+    "calendar": "fx_24_5",
+    "open": true,
+    "trading_hours": "fx_24_5"
+   },
+   "sparkline": {
+    "caveats": [],
+    "name": "EURUSD mid, last per bucket",
+    "points": [
+     {
+      "t": "2026-10-18T09:00:00Z",
+      "v": 1.085
+     },
+     {
+      "t": "2026-10-18T09:30:00Z",
+      "v": 1.08506
+     },
+     {
+      "t": "2026-10-18T10:00:00Z",
+      "v": 1.08518
+     },
+     {
+      "t": "2026-10-18T10:30:00Z",
+      "v": 1.08524
+     },
+     {
+      "t": "2026-10-18T11:00:00Z",
+      "v": 1.08522
+     },
+     {
+      "t": "2026-10-18T11:30:00Z",
+      "v": 1.08528
+     },
+     {
+      "t": "2026-10-18T12:00:00Z",
+      "v": 1.0854
+     },
+     {
+      "t": "2026-10-18T12:30:00Z",
+      "v": 1.08546
+     },
+     {
+      "t": "2026-10-18T13:00:00Z",
+      "v": 1.08558
+     },
+     {
+      "t": "2026-10-18T13:30:00Z",
+      "v": 1.0855
+     },
+     {
+      "t": "2026-10-18T14:00:00Z",
+      "v": 1.08562
+     },
+     {
+      "t": "2026-10-18T14:30:00Z",
+      "v": 1.08568
+     },
+     {
+      "t": "2026-10-18T15:00:00Z",
+      "v": 1.0857999999999999
+     },
+     {
+      "t": "2026-10-18T15:30:00Z",
+      "v": 1.08586
+     },
+     {
+      "t": "2026-10-18T16:00:00Z",
+      "v": 1.08584
+     },
+     {
+      "t": "2026-10-18T16:30:00Z",
+      "v": 1.0859
+     },
+     {
+      "t": "2026-10-18T17:00:00Z",
+      "v": 1.08602
+     },
+     {
+      "t": "2026-10-18T17:30:00Z",
+      "v": 1.08608
+     },
+     {
+      "t": "2026-10-18T18:00:00Z",
+      "v": 1.08606
+     },
+     {
+      "t": "2026-10-18T18:30:00Z",
+      "v": 1.08612
+     },
+     {
+      "t": "2026-10-18T19:00:00Z",
+      "v": 1.08624
+     },
+     {
+      "t": "2026-10-18T19:30:00Z",
+      "v": 1.0863
+     },
+     {
+      "t": "2026-10-18T20:00:00Z",
+      "v": 1.08642
+     },
+     {
+      "t": "2026-10-18T20:30:00Z",
+      "v": 1.08634
+     },
+     {
+      "t": "2026-10-18T21:00:00Z",
+      "v": 1.08646
+     },
+     {
+      "t": "2026-10-18T21:30:00Z",
+      "v": 1.08652
+     },
+     {
+      "t": "2026-10-18T22:00:00Z",
+      "v": 1.08664
+     },
+     {
+      "t": "2026-10-18T22:30:00Z",
+      "v": 1.0867
+     },
+     {
+      "t": "2026-10-18T23:00:00Z",
+      "v": 1.08668
+     },
+     {
+      "t": "2026-10-18T23:30:00Z",
+      "v": 1.08674
+     },
+     {
+      "t": "2026-10-19T00:00:00Z",
+      "v": 1.08686
+     },
+     {
+      "t": "2026-10-19T00:30:00Z",
+      "v": 1.08692
+     },
+     {
+      "t": "2026-10-19T01:00:00Z",
+      "v": 1.0869
+     },
+     {
+      "t": "2026-10-19T01:30:00Z",
+      "v": 1.08696
+     },
+     {
+      "t": "2026-10-19T02:00:00Z",
+      "v": 1.08708
+     },
+     {
+      "t": "2026-10-19T02:30:00Z",
+      "v": 1.08714
+     },
+     {
+      "t": "2026-10-19T03:00:00Z",
+      "v": 1.0872600000000001
+     },
+     {
+      "t": "2026-10-19T03:30:00Z",
+      "v": 1.08718
+     },
+     {
+      "t": "2026-10-19T04:00:00Z",
+      "v": 1.0873
+     },
+     {
+      "t": "2026-10-19T04:30:00Z",
+      "v": 1.0873599999999999
+     },
+     {
+      "t": "2026-10-19T05:00:00Z",
+      "v": 1.08748
+     },
+     {
+      "t": "2026-10-19T05:30:00Z",
+      "v": 1.08754
+     },
+     {
+      "t": "2026-10-19T06:00:00Z",
+      "v": 1.08752
+     },
+     {
+      "t": "2026-10-19T06:30:00Z",
+      "v": 1.08758
+     },
+     {
+      "t": "2026-10-19T07:00:00Z",
+      "v": 1.0877
+     },
+     {
+      "t": "2026-10-19T07:30:00Z",
+      "v": 1.08776
+     },
+     {
+      "t": "2026-10-19T08:00:00Z",
+      "v": 1.08774
+     },
+     {
+      "t": "2026-10-19T08:30:00Z",
+      "v": 1.08786
+     }
+    ],
+    "provenance": "broker_demo",
+    "unit": ""
+   },
+   "spread_pips": {
+    "as_of": "2026-10-19T08:59:40Z",
+    "caveats": [
+     {
+      "affects": "price",
+      "code": "practice_prices",
+      "direction": "unknown",
+      "message": "OANDA practice top of book, polled; not a live executable price.",
+      "severity": "info"
+     }
+    ],
+    "estimated": false,
+    "provenance": "broker_demo",
+    "sample_size": 73,
+    "unit": "pips",
+    "value": 0.2199999999996649
+   },
+   "spread_ratio": {
+    "as_of": null,
+    "caveats": [
+     {
+      "affects": "spread",
+      "code": "static_typical_spread",
+      "direction": "unknown",
+      "message": "Divided by the registry's single typical spread, itself an assumption.",
+      "severity": "info"
+     }
+    ],
+    "estimated": true,
+    "provenance": "broker_demo",
+    "sample_size": null,
+    "unit": "x",
+    "value": 0.24444444444407212
+   },
+   "symbol": "EURUSD",
+   "tones": {
+    "change": "rise"
+   }
+  },
+  {
+   "age_s": {
+    "as_of": null,
+    "caveats": [],
+    "estimated": false,
+    "provenance": "broker_demo",
+    "sample_size": null,
+    "unit": "s",
+    "value": 20.0
+   },
+   "ask": {
+    "as_of": "2026-10-19T08:59:40Z",
+    "caveats": [
+     {
+      "affects": "price",
+      "code": "practice_prices",
+      "direction": "unknown",
+      "message": "OANDA practice top of book, polled; not a live executable price.",
+      "severity": "info"
+     }
+    ],
+    "estimated": false,
+    "provenance": "broker_demo",
+    "sample_size": 73,
+    "unit": "",
+    "value": 1.267982
+   },
+   "asset_class": "fx_major",
+   "bid": {
+    "as_of": "2026-10-19T08:59:40Z",
+    "caveats": [
+     {
+      "affects": "price",
+      "code": "practice_prices",
+      "direction": "unknown",
+      "message": "OANDA practice top of book, polled; not a live executable price.",
+      "severity": "info"
+     }
+    ],
+    "estimated": false,
+    "provenance": "broker_demo",
+    "sample_size": 73,
+    "unit": "",
+    "value": 1.267728
+   },
+   "change_pct": {
+    "as_of": "2026-10-19T08:59:40Z",
+    "caveats": [
+     {
+      "affects": "price",
+      "code": "practice_prices",
+      "direction": "unknown",
+      "message": "OANDA practice top of book, polled; not a live executable price.",
+      "severity": "info"
+     }
+    ],
+    "estimated": false,
+    "provenance": "broker_demo",
+    "sample_size": 73,
+    "unit": "pct",
+    "value": -0.17243483498616818
+   },
+   "chart_href": "/markets/GBPUSD",
+   "data_state": "live",
+   "data_state_detail": "Recorded 20 s ago.",
+   "market_state": "open",
+   "mid": {
+    "as_of": "2026-10-19T08:59:40Z",
+    "caveats": [
+     {
+      "affects": "price",
+      "code": "practice_prices",
+      "direction": "unknown",
+      "message": "OANDA practice top of book, polled; not a live executable price.",
+      "severity": "info"
+     }
+    ],
+    "estimated": false,
+    "provenance": "broker_demo",
+    "sample_size": 73,
+    "unit": "",
+    "value": 1.267855
+   },
+   "provider": "oanda_practice_pricing",
+   "quote_time": "2026-10-19T08:59:40Z",
+   "range_pct": {
+    "as_of": "2026-10-19T08:59:40Z",
+    "caveats": [
+     {
+      "affects": "price",
+      "code": "practice_prices",
+      "direction": "unknown",
+      "message": "OANDA practice top of book, polled; not a live executable price.",
+      "severity": "info"
+     }
+    ],
+    "estimated": false,
+    "provenance": "broker_demo",
+    "sample_size": 73,
+    "unit": "pct",
+    "value": 0.17273268630877636
+   },
+   "session": {
+    "calendar": "fx_24_5",
+    "open": true,
+    "trading_hours": "fx_24_5"
+   },
+   "sparkline": {
+    "caveats": [],
+    "name": "GBPUSD mid, last per bucket",
+    "points": [
+     {
+      "t": "2026-10-18T09:00:00Z",
+      "v": 1.27
+     },
+     {
+      "t": "2026-10-18T09:30:00Z",
+      "v": 1.269955
+     },
+     {
+      "t": "2026-10-18T10:00:00Z",
+      "v": 1.269865
+     },
+     {
+      "t": "2026-10-18T10:30:00Z",
+      "v": 1.26982
+     },
+     {
+      "t": "2026-10-18T11:00:00Z",
+      "v": 1.269835
+     },
+     {
+      "t": "2026-10-18T11:30:00Z",
+      "v": 1.26979
+     },
+     {
+      "t": "2026-10-18T12:00:00Z",
+      "v": 1.2697
+     },
+     {
+      "t": "2026-10-18T12:30:00Z",
+      "v": 1.269655
+     },
+     {
+      "t": "2026-10-18T13:00:00Z",
+      "v": 1.269565
+     },
+     {
+      "t": "2026-10-18T13:30:00Z",
+      "v": 1.269625
+     },
+     {
+      "t": "2026-10-18T14:00:00Z",
+      "v": 1.2695349999999999
+     },
+     {
+      "t": "2026-10-18T14:30:00Z",
+      "v": 1.26949
+     },
+     {
+      "t": "2026-10-18T15:00:00Z",
+      "v": 1.2694
+     },
+     {
+      "t": "2026-10-18T15:30:00Z",
+      "v": 1.269355
+     },
+     {
+      "t": "2026-10-18T16:00:00Z",
+      "v": 1.2693699999999999
+     },
+     {
+      "t": "2026-10-18T16:30:00Z",
+      "v": 1.269325
+     },
+     {
+      "t": "2026-10-18T17:00:00Z",
+      "v": 1.2692350000000001
+     },
+     {
+      "t": "2026-10-18T17:30:00Z",
+      "v": 1.26919
+     },
+     {
+      "t": "2026-10-18T18:00:00Z",
+      "v": 1.269205
+     },
+     {
+      "t": "2026-10-18T18:30:00Z",
+      "v": 1.26916
+     },
+     {
+      "t": "2026-10-18T19:00:00Z",
+      "v": 1.2690700000000001
+     },
+     {
+      "t": "2026-10-18T19:30:00Z",
+      "v": 1.269025
+     },
+     {
+      "t": "2026-10-18T20:00:00Z",
+      "v": 1.268935
+     },
+     {
+      "t": "2026-10-18T20:30:00Z",
+      "v": 1.2689949999999999
+     },
+     {
+      "t": "2026-10-18T21:00:00Z",
+      "v": 1.268905
+     },
+     {
+      "t": "2026-10-18T21:30:00Z",
+      "v": 1.26886
+     },
+     {
+      "t": "2026-10-18T22:00:00Z",
+      "v": 1.26877
+     },
+     {
+      "t": "2026-10-18T22:30:00Z",
+      "v": 1.2687249999999999
+     },
+     {
+      "t": "2026-10-18T23:00:00Z",
+      "v": 1.26874
+     },
+     {
+      "t": "2026-10-18T23:30:00Z",
+      "v": 1.2686950000000001
+     },
+     {
+      "t": "2026-10-19T00:00:00Z",
+      "v": 1.268605
+     },
+     {
+      "t": "2026-10-19T00:30:00Z",
+      "v": 1.26856
+     },
+     {
+      "t": "2026-10-19T01:00:00Z",
+      "v": 1.268575
+     },
+     {
+      "t": "2026-10-19T01:30:00Z",
+      "v": 1.26853
+     },
+     {
+      "t": "2026-10-19T02:00:00Z",
+      "v": 1.26844
+     },
+     {
+      "t": "2026-10-19T02:30:00Z",
+      "v": 1.268395
+     },
+     {
+      "t": "2026-10-19T03:00:00Z",
+      "v": 1.268305
+     },
+     {
+      "t": "2026-10-19T03:30:00Z",
+      "v": 1.268365
+     },
+     {
+      "t": "2026-10-19T04:00:00Z",
+      "v": 1.268275
+     },
+     {
+      "t": "2026-10-19T04:30:00Z",
+      "v": 1.26823
+     },
+     {
+      "t": "2026-10-19T05:00:00Z",
+      "v": 1.26814
+     },
+     {
+      "t": "2026-10-19T05:30:00Z",
+      "v": 1.268095
+     },
+     {
+      "t": "2026-10-19T06:00:00Z",
+      "v": 1.26811
+     },
+     {
+      "t": "2026-10-19T06:30:00Z",
+      "v": 1.268065
+     },
+     {
+      "t": "2026-10-19T07:00:00Z",
+      "v": 1.2679749999999999
+     },
+     {
+      "t": "2026-10-19T07:30:00Z",
+      "v": 1.26793
+     },
+     {
+      "t": "2026-10-19T08:00:00Z",
+      "v": 1.267945
+     },
+     {
+      "t": "2026-10-19T08:30:00Z",
+      "v": 1.267855
+     }
+    ],
+    "provenance": "broker_demo",
+    "unit": ""
+   },
+   "spread_pips": {
+    "as_of": "2026-10-19T08:59:40Z",
+    "caveats": [
+     {
+      "affects": "price",
+      "code": "practice_prices",
+      "direction": "unknown",
+      "message": "OANDA practice top of book, polled; not a live executable price.",
+      "severity": "info"
+     }
+    ],
+    "estimated": false,
+    "provenance": "broker_demo",
+    "sample_size": 73,
+    "unit": "pips",
+    "value": 2.5399999999997647
+   },
+   "spread_ratio": {
+    "as_of": null,
+    "caveats": [
+     {
+      "affects": "spread",
+      "code": "static_typical_spread",
+      "direction": "unknown",
+      "message": "Divided by the registry's single typical spread, itself an assumption.",
+      "severity": "info"
+     }
+    ],
+    "estimated": true,
+    "provenance": "broker_demo",
+    "sample_size": null,
+    "unit": "x",
+    "value": 2.116666666666471
+   },
+   "symbol": "GBPUSD",
+   "tones": {
+    "change": "fall",
+    "spread": "warn"
+   }
+  },
+  {
+   "age_s": {
+    "as_of": null,
+    "caveats": [],
+    "estimated": false,
+    "provenance": "broker_demo",
+    "sample_size": null,
+    "unit": "s",
+    "value": 20.0
+   },
+   "ask": {
+    "as_of": "2026-10-19T08:59:40Z",
+    "caveats": [
+     {
+      "affects": "price",
+      "code": "practice_prices",
+      "direction": "unknown",
+      "message": "OANDA practice top of book, polled; not a live executable price.",
+      "severity": "info"
+     }
+    ],
+    "estimated": false,
+    "provenance": "broker_demo",
+    "sample_size": 73,
+    "unit": "",
+    "value": 150.087501
+   },
+   "asset_class": "fx_major",
+   "bid": {
+    "as_of": "2026-10-19T08:59:40Z",
+    "caveats": [
+     {
+      "affects": "price",
+      "code": "practice_prices",
+      "direction": "unknown",
+      "message": "OANDA practice top of book, polled; not a live executable price.",
+      "severity": "info"
+     }
+    ],
+    "estimated": false,
+    "provenance": "broker_demo",
+    "sample_size": 73,
+    "unit": "",
+    "value": 150.084499
+   },
+   "change_pct": {
+    "as_of": "2026-10-19T08:59:40Z",
+    "caveats": [
+     {
+      "affects": "price",
+      "code": "practice_prices",
+      "direction": "unknown",
+      "message": "OANDA practice top of book, polled; not a live executable price.",
+      "severity": "info"
+     }
+    ],
+    "estimated": false,
+    "provenance": "broker_demo",
+    "sample_size": 73,
+    "unit": "pct",
+    "value": 0.1949343765437872
+   },
+   "chart_href": "/markets/USDJPY",
+   "data_state": "live",
+   "data_state_detail": "Recorded 20 s ago.",
+   "market_state": "open",
+   "mid": {
+    "as_of": "2026-10-19T08:59:40Z",
+    "caveats": [
+     {
+      "affects": "price",
+      "code": "practice_prices",
+      "direction": "unknown",
+      "message": "OANDA practice top of book, polled; not a live executable price.",
+      "severity": "info"
+     }
+    ],
+    "estimated": false,
+    "provenance": "broker_demo",
+    "sample_size": 73,
+    "unit": "",
+    "value": 150.086
+   },
+   "provider": "oanda_practice_pricing",
+   "quote_time": "2026-10-19T08:59:40Z",
+   "range_pct": {
+    "as_of": "2026-10-19T08:59:40Z",
+    "caveats": [
+     {
+      "affects": "price",
+      "code": "practice_prices",
+      "direction": "unknown",
+      "message": "OANDA practice top of book, polled; not a live executable price.",
+      "severity": "info"
+     }
+    ],
+    "estimated": false,
+    "provenance": "broker_demo",
+    "sample_size": 73,
+    "unit": "pct",
+    "value": 0.19455512173020906
+   },
+   "session": {
+    "calendar": "fx_24_5",
+    "open": true,
+    "trading_hours": "fx_24_5"
+   },
+   "sparkline": {
+    "caveats": [],
+    "name": "USDJPY mid, last per bucket",
+    "points": [
+     {
+      "t": "2026-10-18T09:00:00Z",
+      "v": 149.8
+     },
+     {
+      "t": "2026-10-18T09:30:00Z",
+      "v": 149.806
+     },
+     {
+      "t": "2026-10-18T10:00:00Z",
+      "v": 149.818
+     },
+     {
+      "t": "2026-10-18T10:30:00Z",
+      "v": 149.824
+     },
+     {
+      "t": "2026-10-18T11:00:00Z",
+      "v": 149.822
+     },
+     {
+      "t": "2026-10-18T11:30:00Z",
+      "v": 149.828
+     },
+     {
+      "t": "2026-10-18T12:00:00Z",
+      "v": 149.84
+     },
+     {
+      "t": "2026-10-18T12:30:00Z",
+      "v": 149.846
+     },
+     {
+      "t": "2026-10-18T13:00:00Z",
+      "v": 149.858
+     },
+     {
+      "t": "2026-10-18T13:30:00Z",
+      "v": 149.8500005
+     },
+     {
+      "t": "2026-10-18T14:00:00Z",
+      "v": 149.862
+     },
+     {
+      "t": "2026-10-18T14:30:00Z",
+      "v": 149.868
+     },
+     {
+      "t": "2026-10-18T15:00:00Z",
+      "v": 149.88
+     },
+     {
+      "t": "2026-10-18T15:30:00Z",
+      "v": 149.886
+     },
+     {
+      "t": "2026-10-18T16:00:00Z",
+      "v": 149.88400000000001
+     },
+     {
+      "t": "2026-10-18T16:30:00Z",
+      "v": 149.89
+     },
+     {
+      "t": "2026-10-18T17:00:00Z",
+      "v": 149.902
+     },
+     {
+      "t": "2026-10-18T17:30:00Z",
+      "v": 149.90800000000002
+     },
+     {
+      "t": "2026-10-18T18:00:00Z",
+      "v": 149.906
+     },
+     {
+      "t": "2026-10-18T18:30:00Z",
+      "v": 149.912
+     },
+     {
+      "t": "2026-10-18T19:00:00Z",
+      "v": 149.924
+     },
+     {
+      "t": "2026-10-18T19:30:00Z",
+      "v": 149.93
+     },
+     {
+      "t": "2026-10-18T20:00:00Z",
+      "v": 149.942
+     },
+     {
+      "t": "2026-10-18T20:30:00Z",
+      "v": 149.934
+     },
+     {
+      "t": "2026-10-18T21:00:00Z",
+      "v": 149.946
+     },
+     {
+      "t": "2026-10-18T21:30:00Z",
+      "v": 149.952
+     },
+     {
+      "t": "2026-10-18T22:00:00Z",
+      "v": 149.964
+     },
+     {
+      "t": "2026-10-18T22:30:00Z",
+      "v": 149.97
+     },
+     {
+      "t": "2026-10-18T23:00:00Z",
+      "v": 149.96800000000002
+     },
+     {
+      "t": "2026-10-18T23:30:00Z",
+      "v": 149.974
+     },
+     {
+      "t": "2026-10-19T00:00:00Z",
+      "v": 149.986
+     },
+     {
+      "t": "2026-10-19T00:30:00Z",
+      "v": 149.99200000000002
+     },
+     {
+      "t": "2026-10-19T01:00:00Z",
+      "v": 149.99
+     },
+     {
+      "t": "2026-10-19T01:30:00Z",
+      "v": 149.99599999999998
+     },
+     {
+      "t": "2026-10-19T02:00:00Z",
+      "v": 150.00799999999998
+     },
+     {
+      "t": "2026-10-19T02:30:00Z",
+      "v": 150.014
+     },
+     {
+      "t": "2026-10-19T03:00:00Z",
+      "v": 150.026
+     },
+     {
+      "t": "2026-10-19T03:30:00Z",
+      "v": 150.018
+     },
+     {
+      "t": "2026-10-19T04:00:00Z",
+      "v": 150.03
+     },
+     {
+      "t": "2026-10-19T04:30:00Z",
+      "v": 150.036
+     },
+     {
+      "t": "2026-10-19T05:00:00Z",
+      "v": 150.048
+     },
+     {
+      "t": "2026-10-19T05:30:00Z",
+      "v": 150.054
+     },
+     {
+      "t": "2026-10-19T06:00:00Z",
+      "v": 150.05200000000002
+     },
+     {
+      "t": "2026-10-19T06:30:00Z",
+      "v": 150.058
+     },
+     {
+      "t": "2026-10-19T07:00:00Z",
+      "v": 150.07
+     },
+     {
+      "t": "2026-10-19T07:30:00Z",
+      "v": 150.07600000000002
+     },
+     {
+      "t": "2026-10-19T08:00:00Z",
+      "v": 150.074
+     },
+     {
+      "t": "2026-10-19T08:30:00Z",
+      "v": 150.086
+     }
+    ],
+    "provenance": "broker_demo",
+    "unit": ""
+   },
+   "spread_pips": {
+    "as_of": "2026-10-19T08:59:40Z",
+    "caveats": [
+     {
+      "affects": "price",
+      "code": "practice_prices",
+      "direction": "unknown",
+      "message": "OANDA practice top of book, polled; not a live executable price.",
+      "severity": "info"
+     }
+    ],
+    "estimated": false,
+    "provenance": "broker_demo",
+    "sample_size": 73,
+    "unit": "pips",
+    "value": 0.3002000000009275
+   },
+   "spread_ratio": {
+    "as_of": null,
+    "caveats": [
+     {
+      "affects": "spread",
+      "code": "static_typical_spread",
+      "direction": "unknown",
+      "message": "Divided by the registry's single typical spread, itself an assumption.",
+      "severity": "info"
+     }
+    ],
+    "estimated": true,
+    "provenance": "broker_demo",
+    "sample_size": null,
+    "unit": "x",
+    "value": 0.3335555555565861
+   },
+   "symbol": "USDJPY",
+   "tones": {
+    "change": "rise"
+   }
+  },
+  {
+   "age_s": {
+    "as_of": null,
+    "caveats": [],
+    "estimated": false,
+    "provenance": "broker_demo",
+    "sample_size": null,
+    "unit": "s",
+    "value": 1170.0
+   },
+   "ask": {
+    "as_of": "2026-10-19T08:40:30Z",
+    "caveats": [
+     {
+      "affects": "price",
+      "code": "practice_prices",
+      "direction": "unknown",
+      "message": "OANDA practice top of book, polled; not a live executable price.",
+      "severity": "info"
+     }
+    ],
+    "estimated": false,
+    "provenance": "broker_demo",
+    "sample_size": 72,
+    "unit": "",
+    "value": 0.888609
+   },
+   "asset_class": "fx_major",
+   "bid": {
+    "as_of": "2026-10-19T08:40:30Z",
+    "caveats": [
+     {
+      "affects": "price",
+      "code": "practice_prices",
+      "direction": "unknown",
+      "message": "OANDA practice top of book, polled; not a live executable price.",
+      "severity": "info"
+     }
+    ],
+    "estimated": false,
+    "provenance": "broker_demo",
+    "sample_size": 72,
+    "unit": "",
+    "value": 0.888591
+   },
+   "change_pct": {
+    "as_of": "2026-10-19T08:40:30Z",
+    "caveats": [
+     {
+      "affects": "price",
+      "code": "practice_prices",
+      "direction": "unknown",
+      "message": "OANDA practice top of book, polled; not a live executable price.",
+      "severity": "info"
+     }
+    ],
+    "estimated": false,
+    "provenance": "broker_demo",
+    "sample_size": 72,
+    "unit": "pct",
+    "value": -0.1606687415030894
+   },
+   "chart_href": "/markets/USDCHF",
+   "data_state": "stale",
+   "data_state_detail": "Session open but the newest recorded quote is 1170 s old (stale after 90 s).",
+   "market_state": "open",
+   "mid": {
+    "as_of": "2026-10-19T08:40:30Z",
+    "caveats": [
+     {
+      "affects": "price",
+      "code": "practice_prices",
+      "direction": "unknown",
+      "message": "OANDA practice top of book, polled; not a live executable price.",
+      "severity": "info"
+     }
+    ],
+    "estimated": false,
+    "provenance": "broker_demo",
+    "sample_size": 72,
+    "unit": "",
+    "value": 0.8886000000000001
+   },
+   "provider": "oanda_practice_pricing",
+   "quote_time": "2026-10-19T08:40:30Z",
+   "range_pct": {
+    "as_of": "2026-10-19T08:40:30Z",
+    "caveats": [
+     {
+      "affects": "price",
+      "code": "practice_prices",
+      "direction": "unknown",
+      "message": "OANDA practice top of book, polled; not a live executable price.",
+      "severity": "info"
+     }
+    ],
+    "estimated": false,
+    "provenance": "broker_demo",
+    "sample_size": 72,
+    "unit": "pct",
+    "value": 0.1620526671168126
+   },
+   "session": {
+    "calendar": "fx_24_5",
+    "open": true,
+    "trading_hours": "fx_24_5"
+   },
+   "sparkline": {
+    "caveats": [],
+    "name": "USDCHF mid, last per bucket",
+    "points": [
+     {
+      "t": "2026-10-18T09:00:00Z",
+      "v": 0.89
+     },
+     {
+      "t": "2026-10-18T09:30:00Z",
+      "v": 0.8899699999999999
+     },
+     {
+      "t": "2026-10-18T10:00:00Z",
+      "v": 0.88991
+     },
+     {
+      "t": "2026-10-18T10:30:00Z",
+      "v": 0.88988
+     },
+     {
+      "t": "2026-10-18T11:00:00Z",
+      "v": 0.8898900000000001
+     },
+     {
+      "t": "2026-10-18T11:30:00Z",
+      "v": 0.88986
+     },
+     {
+      "t": "2026-10-18T12:00:00Z",
+      "v": 0.8897999999999999
+     },
+     {
+      "t": "2026-10-18T12:30:00Z",
+      "v": 0.88977
+     },
+     {
+      "t": "2026-10-18T13:00:00Z",
+      "v": 0.88971
+     },
+     {
+      "t": "2026-10-18T13:30:00Z",
+      "v": 0.88975
+     },
+     {
+      "t": "2026-10-18T14:00:00Z",
+      "v": 0.8896900000000001
+     },
+     {
+      "t": "2026-10-18T14:30:00Z",
+      "v": 0.88966
+     },
+     {
+      "t": "2026-10-18T15:00:00Z",
+      "v": 0.8896
+     },
+     {
+      "t": "2026-10-18T15:30:00Z",
+      "v": 0.88957
+     },
+     {
+      "t": "2026-10-18T16:00:00Z",
+      "v": 0.88958
+     },
+     {
+      "t": "2026-10-18T16:30:00Z",
+      "v": 0.8895500000000001
+     },
+     {
+      "t": "2026-10-18T17:00:00Z",
+      "v": 0.88949
+     },
+     {
+      "t": "2026-10-18T17:30:00Z",
+      "v": 0.8894599999999999
+     },
+     {
+      "t": "2026-10-18T18:00:00Z",
+      "v": 0.88947
+     },
+     {
+      "t": "2026-10-18T18:30:00Z",
+      "v": 0.88944
+     },
+     {
+      "t": "2026-10-18T19:00:00Z",
+      "v": 0.8893800000000001
+     },
+     {
+      "t": "2026-10-18T19:30:00Z",
+      "v": 0.8893500000000001
+     },
+     {
+      "t": "2026-10-18T20:00:00Z",
+      "v": 0.8892899999999999
+     },
+     {
+      "t": "2026-10-18T20:30:00Z",
+      "v": 0.88933
+     },
+     {
+      "t": "2026-10-18T21:00:00Z",
+      "v": 0.88927
+     },
+     {
+      "t": "2026-10-18T21:30:00Z",
+      "v": 0.88924
+     },
+     {
+      "t": "2026-10-18T22:00:00Z",
+      "v": 0.8891800000000001
+     },
+     {
+      "t": "2026-10-18T22:30:00Z",
+      "v": 0.88915
+     },
+     {
+      "t": "2026-10-18T23:00:00Z",
+      "v": 0.88916
+     },
+     {
+      "t": "2026-10-18T23:30:00Z",
+      "v": 0.88913
+     },
+     {
+      "t": "2026-10-19T00:00:00Z",
+      "v": 0.88907
+     },
+     {
+      "t": "2026-10-19T00:30:00Z",
+      "v": 0.88904
+     },
+     {
+      "t": "2026-10-19T01:00:00Z",
+      "v": 0.88905
+     },
+     {
+      "t": "2026-10-19T01:30:00Z",
+      "v": 0.8890199999999999
+     },
+     {
+      "t": "2026-10-19T02:00:00Z",
+      "v": 0.88896
+     },
+     {
+      "t": "2026-10-19T02:30:00Z",
+      "v": 0.88893
+     },
+     {
+      "t": "2026-10-19T03:00:00Z",
+      "v": 0.88887
+     },
+     {
+      "t": "2026-10-19T03:30:00Z",
+      "v": 0.8889100000000001
+     },
+     {
+      "t": "2026-10-19T04:00:00Z",
+      "v": 0.8888499999999999
+     },
+     {
+      "t": "2026-10-19T04:30:00Z",
+      "v": 0.8888199999999999
+     },
+     {
+      "t": "2026-10-19T05:00:00Z",
+      "v": 0.88876
+     },
+     {
+      "t": "2026-10-19T05:30:00Z",
+      "v": 0.88873
+     },
+     {
+      "t": "2026-10-19T06:00:00Z",
+      "v": 0.8887400000000001
+     },
+     {
+      "t": "2026-10-19T06:30:00Z",
+      "v": 0.88871
+     },
+     {
+      "t": "2026-10-19T07:00:00Z",
+      "v": 0.8886499999999999
+     },
+     {
+      "t": "2026-10-19T07:30:00Z",
+      "v": 0.88862
+     },
+     {
+      "t": "2026-10-19T08:00:00Z",
+      "v": 0.88863
+     },
+     {
+      "t": "2026-10-19T08:30:00Z",
+      "v": 0.8886000000000001
+     }
+    ],
+    "provenance": "broker_demo",
+    "unit": ""
+   },
+   "spread_pips": {
+    "as_of": "2026-10-19T08:40:30Z",
+    "caveats": [
+     {
+      "affects": "price",
+      "code": "practice_prices",
+      "direction": "unknown",
+      "message": "OANDA practice top of book, polled; not a live executable price.",
+      "severity": "info"
+     }
+    ],
+    "estimated": false,
+    "provenance": "broker_demo",
+    "sample_size": 72,
+    "unit": "pips",
+    "value": 0.1799999999996249
+   },
+   "spread_ratio": {
+    "as_of": null,
+    "caveats": [
+     {
+      "affects": "spread",
+      "code": "static_typical_spread",
+      "direction": "unknown",
+      "message": "Divided by the registry's single typical spread, itself an assumption.",
+      "severity": "info"
+     }
+    ],
+    "estimated": true,
+    "provenance": "broker_demo",
+    "sample_size": null,
+    "unit": "x",
+    "value": 0.13846153846124992
+   },
+   "symbol": "USDCHF",
+   "tones": {
+    "age": "stale",
+    "change": "fall"
+   }
+  },
+  {
+   "age_s": {
+    "as_of": null,
+    "caveats": [],
+    "estimated": false,
+    "provenance": "broker_demo",
+    "sample_size": null,
+    "unit": "s",
+    "value": 20.0
+   },
+   "ask": {
+    "as_of": "2026-10-19T08:59:40Z",
+    "caveats": [
+     {
+      "affects": "price",
+      "code": "practice_prices",
+      "direction": "unknown",
+      "message": "OANDA practice top of book, polled; not a live executable price.",
+      "severity": "info"
+     }
+    ],
+    "estimated": false,
+    "provenance": "broker_demo",
+    "sample_size": 73,
+    "unit": "",
+    "value": 0.660722
+   },
+   "asset_class": "fx_cross",
+   "bid": {
+    "as_of": "2026-10-19T08:59:40Z",
+    "caveats": [
+     {
+      "affects": "price",
+      "code": "practice_prices",
+      "direction": "unknown",
+      "message": "OANDA practice top of book, polled; not a live executable price.",
+      "severity": "info"
+     }
+    ],
+    "estimated": false,
+    "provenance": "broker_demo",
+    "sample_size": 73,
+    "unit": "",
+    "value": 0.660708
+   },
+   "change_pct": {
+    "as_of": "2026-10-19T08:59:40Z",
+    "caveats": [
+     {
+      "affects": "price",
+      "code": "practice_prices",
+      "direction": "unknown",
+      "message": "OANDA practice top of book, polled; not a live executable price.",
+      "severity": "info"
+     }
+    ],
+    "estimated": false,
+    "provenance": "broker_demo",
+    "sample_size": 73,
+    "unit": "pct",
+    "value": 0.11060857443727645
+   },
+   "chart_href": "/markets/AUDUSD",
+   "data_state": "live",
+   "data_state_detail": "Recorded 20 s ago.",
+   "market_state": "open",
+   "mid": {
+    "as_of": "2026-10-19T08:59:40Z",
+    "caveats": [
+     {
+      "affects": "price",
+      "code": "practice_prices",
+      "direction": "unknown",
+      "message": "OANDA practice top of book, polled; not a live executable price.",
+      "severity": "info"
+     }
+    ],
+    "estimated": false,
+    "provenance": "broker_demo",
+    "sample_size": 73,
+    "unit": "",
+    "value": 0.6607149999999999
+   },
+   "provider": "oanda_practice_pricing",
+   "quote_time": "2026-10-19T08:59:40Z",
+   "range_pct": {
+    "as_of": "2026-10-19T08:59:40Z",
+    "caveats": [
+     {
+      "affects": "price",
+      "code": "practice_prices",
+      "direction": "unknown",
+      "message": "OANDA practice top of book, polled; not a live executable price.",
+      "severity": "info"
+     }
+    ],
+    "estimated": false,
+    "provenance": "broker_demo",
+    "sample_size": 73,
+    "unit": "pct",
+    "value": 0.11048636704174984
+   },
+   "session": {
+    "calendar": "fx_24_5",
+    "open": true,
+    "trading_hours": "fx_24_5"
+   },
+   "sparkline": {
+    "caveats": [],
+    "name": "AUDUSD mid, last per bucket",
+    "points": [
+     {
+      "t": "2026-10-18T09:00:00Z",
+      "v": 0.66
+     },
+     {
+      "t": "2026-10-18T09:30:00Z",
+      "v": 0.660015
+     },
+     {
+      "t": "2026-10-18T10:00:00Z",
+      "v": 0.660045
+     },
+     {
+      "t": "2026-10-18T10:30:00Z",
+      "v": 0.66006
+     },
+     {
+      "t": "2026-10-18T11:00:00Z",
+      "v": 0.6600550000000001
+     },
+     {
+      "t": "2026-10-18T11:30:00Z",
+      "v": 0.6600699999999999
+     },
+     {
+      "t": "2026-10-18T12:00:00Z",
+      "v": 0.6601
+     },
+     {
+      "t": "2026-10-18T12:30:00Z",
+      "v": 0.660115
+     },
+     {
+      "t": "2026-10-18T13:00:00Z",
+      "v": 0.660145
+     },
+     {
+      "t": "2026-10-18T13:30:00Z",
+      "v": 0.6601250000000001
+     },
+     {
+      "t": "2026-10-18T14:00:00Z",
+      "v": 0.660155
+     },
+     {
+      "t": "2026-10-18T14:30:00Z",
+      "v": 0.66017
+     },
+     {
+      "t": "2026-10-18T15:00:00Z",
+      "v": 0.6602
+     },
+     {
+      "t": "2026-10-18T15:30:00Z",
+      "v": 0.660215
+     },
+     {
+      "t": "2026-10-18T16:00:00Z",
+      "v": 0.66021
+     },
+     {
+      "t": "2026-10-18T16:30:00Z",
+      "v": 0.6602250000000001
+     },
+     {
+      "t": "2026-10-18T17:00:00Z",
+      "v": 0.660255
+     },
+     {
+      "t": "2026-10-18T17:30:00Z",
+      "v": 0.66027
+     },
+     {
+      "t": "2026-10-18T18:00:00Z",
+      "v": 0.660265
+     },
+     {
+      "t": "2026-10-18T18:30:00Z",
+      "v": 0.66028
+     },
+     {
+      "t": "2026-10-18T19:00:00Z",
+      "v": 0.66031
+     },
+     {
+      "t": "2026-10-18T19:30:00Z",
+      "v": 0.660325
+     },
+     {
+      "t": "2026-10-18T20:00:00Z",
+      "v": 0.660355
+     },
+     {
+      "t": "2026-10-18T20:30:00Z",
+      "v": 0.660335
+     },
+     {
+      "t": "2026-10-18T21:00:00Z",
+      "v": 0.660365
+     },
+     {
+      "t": "2026-10-18T21:30:00Z",
+      "v": 0.66038
+     },
+     {
+      "t": "2026-10-18T22:00:00Z",
+      "v": 0.6604099999999999
+     },
+     {
+      "t": "2026-10-18T22:30:00Z",
+      "v": 0.660425
+     },
+     {
+      "t": "2026-10-18T23:00:00Z",
+      "v": 0.66042
+     },
+     {
+      "t": "2026-10-18T23:30:00Z",
+      "v": 0.660435
+     },
+     {
+      "t": "2026-10-19T00:00:00Z",
+      "v": 0.660465
+     },
+     {
+      "t": "2026-10-19T00:30:00Z",
+      "v": 0.66048
+     },
+     {
+      "t": "2026-10-19T01:00:00Z",
+      "v": 0.660475
+     },
+     {
+      "t": "2026-10-19T01:30:00Z",
+      "v": 0.66049
+     },
+     {
+      "t": "2026-10-19T02:00:00Z",
+      "v": 0.66052
+     },
+     {
+      "t": "2026-10-19T02:30:00Z",
+      "v": 0.660535
+     },
+     {
+      "t": "2026-10-19T03:00:00Z",
+      "v": 0.6605650000000001
+     },
+     {
+      "t": "2026-10-19T03:30:00Z",
+      "v": 0.6605449999999999
+     },
+     {
+      "t": "2026-10-19T04:00:00Z",
+      "v": 0.660575
+     },
+     {
+      "t": "2026-10-19T04:30:00Z",
+      "v": 0.66059
+     },
+     {
+      "t": "2026-10-19T05:00:00Z",
+      "v": 0.66062
+     },
+     {
+      "t": "2026-10-19T05:30:00Z",
+      "v": 0.660635
+     },
+     {
+      "t": "2026-10-19T06:00:00Z",
+      "v": 0.66063
+     },
+     {
+      "t": "2026-10-19T06:30:00Z",
+      "v": 0.6606449999999999
+     },
+     {
+      "t": "2026-10-19T07:00:00Z",
+      "v": 0.660675
+     },
+     {
+      "t": "2026-10-19T07:30:00Z",
+      "v": 0.66069
+     },
+     {
+      "t": "2026-10-19T08:00:00Z",
+      "v": 0.660685
+     },
+     {
+      "t": "2026-10-19T08:30:00Z",
+      "v": 0.6607149999999999
+     }
+    ],
+    "provenance": "broker_demo",
+    "unit": ""
+   },
+   "spread_pips": {
+    "as_of": "2026-10-19T08:59:40Z",
+    "caveats": [
+     {
+      "affects": "price",
+      "code": "practice_prices",
+      "direction": "unknown",
+      "message": "OANDA practice top of book, polled; not a live executable price.",
+      "severity": "info"
+     }
+    ],
+    "estimated": false,
+    "provenance": "broker_demo",
+    "sample_size": 73,
+    "unit": "pips",
+    "value": 0.14000000000069512
+   },
+   "spread_ratio": {
+    "as_of": null,
+    "caveats": [
+     {
+      "affects": "spread",
+      "code": "static_typical_spread",
+      "direction": "unknown",
+      "message": "Divided by the registry's single typical spread, itself an assumption.",
+      "severity": "info"
+     }
+    ],
+    "estimated": true,
+    "provenance": "broker_demo",
+    "sample_size": null,
+    "unit": "x",
+    "value": 0.14000000000069512
+   },
+   "symbol": "AUDUSD",
+   "tones": {
+    "change": "rise"
+   }
+  },
+  {
+   "age_s": {
+    "as_of": null,
+    "caveats": [],
+    "estimated": false,
+    "provenance": "broker_demo",
+    "sample_size": null,
+    "unit": "s",
+    "value": 20.0
+   },
+   "ask": {
+    "as_of": "2026-10-19T08:59:40Z",
+    "caveats": [
+     {
+      "affects": "price",
+      "code": "practice_prices",
+      "direction": "unknown",
+      "message": "OANDA practice top of book, polled; not a live executable price.",
+      "severity": "info"
+     }
+    ],
+    "estimated": false,
+    "provenance": "broker_demo",
+    "sample_size": 73,
+    "unit": "",
+    "value": 2675.185501
+   },
+   "asset_class": "metal",
+   "bid": {
+    "as_of": "2026-10-19T08:59:40Z",
+    "caveats": [
+     {
+      "affects": "price",
+      "code": "practice_prices",
+      "direction": "unknown",
+      "message": "OANDA practice top of book, polled; not a live executable price.",
+      "severity": "info"
+     }
+    ],
+    "estimated": false,
+    "provenance": "broker_demo",
+    "sample_size": 73,
+    "unit": "",
+    "value": 2674.864498
+   },
+   "change_pct": {
+    "as_of": "2026-10-19T08:59:40Z",
+    "caveats": [
+     {
+      "affects": "price",
+      "code": "practice_prices",
+      "direction": "unknown",
+      "message": "OANDA practice top of book, polled; not a live executable price.",
+      "severity": "info"
+     }
+    ],
+    "estimated": false,
+    "provenance": "broker_demo",
+    "sample_size": 73,
+    "unit": "pct",
+    "value": 0.9643419734097991
+   },
+   "chart_href": "/markets/XAUUSD",
+   "data_state": "live",
+   "data_state_detail": "Recorded 20 s ago.",
+   "market_state": "open",
+   "mid": {
+    "as_of": "2026-10-19T08:59:40Z",
+    "caveats": [
+     {
+      "affects": "price",
+      "code": "practice_prices",
+      "direction": "unknown",
+      "message": "OANDA practice top of book, polled; not a live executable price.",
+      "severity": "info"
+     }
+    ],
+    "estimated": false,
+    "provenance": "broker_demo",
+    "sample_size": 73,
+    "unit": "",
+    "value": 2675.0249995
+   },
+   "provider": "oanda_practice_pricing",
+   "quote_time": "2026-10-19T08:59:40Z",
+   "range_pct": {
+    "as_of": "2026-10-19T08:59:40Z",
+    "caveats": [
+     {
+      "affects": "price",
+      "code": "practice_prices",
+      "direction": "unknown",
+      "message": "OANDA practice top of book, polled; not a live executable price.",
+      "severity": "info"
+     }
+    ],
+    "estimated": false,
+    "provenance": "broker_demo",
+    "sample_size": 73,
+    "unit": "pct",
+    "value": 0.9551312419426068
+   },
+   "session": {
+    "calendar": "metals",
+    "open": true,
+    "trading_hours": "fx_24_5"
+   },
+   "sparkline": {
+    "caveats": [],
+    "name": "XAUUSD mid, last per bucket",
+    "points": [
+     {
+      "t": "2026-10-18T09:00:00Z",
+      "v": 2650.0
+     },
+     {
+      "t": "2026-10-18T09:30:00Z",
+      "v": 2650.5249995
+     },
+     {
+      "t": "2026-10-18T10:00:00Z",
+      "v": 2651.5750005
+     },
+     {
+      "t": "2026-10-18T10:30:00Z",
+      "v": 2652.1
+     },
+     {
+      "t": "2026-10-18T11:00:00Z",
+      "v": 2651.9249995
+     },
+     {
+      "t": "2026-10-18T11:30:00Z",
+      "v": 2652.45
+     },
+     {
+      "t": "2026-10-18T12:00:00Z",
+      "v": 2653.5
+     },
+     {
+      "t": "2026-10-18T12:30:00Z",
+      "v": 2654.0250005
+     },
+     {
+      "t": "2026-10-18T13:00:00Z",
+      "v": 2655.0750005
+     },
+     {
+      "t": "2026-10-18T13:30:00Z",
+      "v": 2654.375
+     },
+     {
+      "t": "2026-10-18T14:00:00Z",
+      "v": 2655.4249995
+     },
+     {
+      "t": "2026-10-18T14:30:00Z",
+      "v": 2655.95
+     },
+     {
+      "t": "2026-10-18T15:00:00Z",
+      "v": 2657.0
+     },
+     {
+      "t": "2026-10-18T15:30:00Z",
+      "v": 2657.525
+     },
+     {
+      "t": "2026-10-18T16:00:00Z",
+      "v": 2657.3500000000004
+     },
+     {
+      "t": "2026-10-18T16:30:00Z",
+      "v": 2657.875
+     },
+     {
+      "t": "2026-10-18T17:00:00Z",
+      "v": 2658.9250005
+     },
+     {
+      "t": "2026-10-18T17:30:00Z",
+      "v": 2659.45
+     },
+     {
+      "t": "2026-10-18T18:00:00Z",
+      "v": 2659.275
+     },
+     {
+      "t": "2026-10-18T18:30:00Z",
+      "v": 2659.8
+     },
+     {
+      "t": "2026-10-18T19:00:00Z",
+      "v": 2660.85
+     },
+     {
+      "t": "2026-10-18T19:30:00Z",
+      "v": 2661.375
+     },
+     {
+      "t": "2026-10-18T20:00:00Z",
+      "v": 2662.4250005
+     },
+     {
+      "t": "2026-10-18T20:30:00Z",
+      "v": 2661.7249995
+     },
+     {
+      "t": "2026-10-18T21:00:00Z",
+      "v": 2662.7749995
+     },
+     {
+      "t": "2026-10-18T21:30:00Z",
+      "v": 2663.3
+     },
+     {
+      "t": "2026-10-18T22:00:00Z",
+      "v": 2664.35
+     },
+     {
+      "t": "2026-10-18T22:30:00Z",
+      "v": 2664.875
+     },
+     {
+      "t": "2026-10-18T23:00:00Z",
+      "v": 2664.7
+     },
+     {
+      "t": "2026-10-18T23:30:00Z",
+      "v": 2665.2250000000004
+     },
+     {
+      "t": "2026-10-19T00:00:00Z",
+      "v": 2666.2750005
+     },
+     {
+      "t": "2026-10-19T00:30:00Z",
+      "v": 2666.8
+     },
+     {
+      "t": "2026-10-19T01:00:00Z",
+      "v": 2666.625
+     },
+     {
+      "t": "2026-10-19T01:30:00Z",
+      "v": 2667.15
+     },
+     {
+      "t": "2026-10-19T02:00:00Z",
+      "v": 2668.2
+     },
+     {
+      "t": "2026-10-19T02:30:00Z",
+      "v": 2668.7250004999996
+     },
+     {
+      "t": "2026-10-19T03:00:00Z",
+      "v": 2669.775
+     },
+     {
+      "t": "2026-10-19T03:30:00Z",
+      "v": 2669.0749995
+     },
+     {
+      "t": "2026-10-19T04:00:00Z",
+      "v": 2670.125
+     },
+     {
+      "t": "2026-10-19T04:30:00Z",
+      "v": 2670.6499999999996
+     },
+     {
+      "t": "2026-10-19T05:00:00Z",
+      "v": 2671.7
+     },
+     {
+      "t": "2026-10-19T05:30:00Z",
+      "v": 2672.2249995
+     },
+     {
+      "t": "2026-10-19T06:00:00Z",
+      "v": 2672.05
+     },
+     {
+      "t": "2026-10-19T06:30:00Z",
+      "v": 2672.575
+     },
+     {
+      "t": "2026-10-19T07:00:00Z",
+      "v": 2673.625
+     },
+     {
+      "t": "2026-10-19T07:30:00Z",
+      "v": 2674.15
+     },
+     {
+      "t": "2026-10-19T08:00:00Z",
+      "v": 2673.9749995
+     },
+     {
+      "t": "2026-10-19T08:30:00Z",
+      "v": 2675.0249995
+     }
+    ],
+    "provenance": "broker_demo",
+    "unit": ""
+   },
+   "spread_pips": {
+    "as_of": "2026-10-19T08:59:40Z",
+    "caveats": [
+     {
+      "affects": "price",
+      "code": "practice_prices",
+      "direction": "unknown",
+      "message": "OANDA practice top of book, polled; not a live executable price.",
+      "severity": "info"
+     }
+    ],
+    "estimated": false,
+    "provenance": "broker_demo",
+    "sample_size": 73,
+    "unit": "pips",
+    "value": 32.10030000000188
+   },
+   "spread_ratio": {
+    "as_of": null,
+    "caveats": [
+     {
+      "affects": "spread",
+      "code": "static_typical_spread",
+      "direction": "unknown",
+      "message": "Divided by the registry's single typical spread, itself an assumption.",
+      "severity": "info"
+     }
+    ],
+    "estimated": true,
+    "provenance": "broker_demo",
+    "sample_size": null,
+    "unit": "x",
+    "value": 1.0700100000000627
+   },
+   "symbol": "XAUUSD",
+   "tones": {
+    "change": "rise"
+   }
+  }
+ ],
+ "limit": 6,
+ "offset": 0,
+ "source": {
+  "as_of": "2026-10-19T09:00:00Z",
+  "detail": "Executable-price recorder log (1 segment(s), 437 quote(s) in the last 24h); computed by the API at 2026-10-19T09:00:00+00:00.",
+  "kind": "live"
+ },
+ "total": 6
+}

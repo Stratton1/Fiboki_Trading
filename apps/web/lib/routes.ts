@@ -51,6 +51,7 @@ export const route = {
   incident: (id: string) => `/system/incidents/${q(id)}`,
   // wave workspace
   workspace: (layout?: string | null) => withQuery("/workspace", { layout: layout ?? null }),
+  watchlist: (list?: string | null) => withQuery("/markets/watchlist", { list: list ?? null }),
 } as const;
 
 /** Page routes of the workstation ([param] marks a dynamic segment). */
@@ -100,6 +101,7 @@ export const ROUTE_PATTERNS = [
   "/trading/risk",
   // wave workspace
   "/workspace",
+  "/markets/watchlist",
 ] as const;
 
 /** True when an in-app link (path plus optional query) is one of the pages. */

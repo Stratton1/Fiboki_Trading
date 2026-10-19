@@ -39,17 +39,58 @@ def write(name: str, payload: object) -> None:
     print("wrote", name)
 
 
-def seed(state: Path) -> None:
-    """Hooks for the later screens (quotes, news, alerts) append here."""
-    try:
-        from seed_monitors import seed_monitors  # type: ignore[import-not-found]
-    except ImportError:
-        return
-    seed_monitors(state, NOW)
+def seed_quotes(state: Path) -> None:
+    from fiboki.data.recorder import MarketState, QuoteRecord, QuoteRecorder
+
+    rows = []
+    walk = {"EURUSD": (1.0850, 0.00004), "GBPUSD": (1.2700, -0.00003), "USDJPY": (149.80, 0.004),
+            "USDCHF": (0.8900, -0.00002), "AUDUSD": (0.6600, 0.00001), "XAUUSD": (2650.0, 0.35)}
+    for symbol, (start, drift) in walk.items():
+        for i in range(0, 24 * 60 + 20, 20):  # a quote every 20 minutes for a day, the last 20 s ago
+            t = min(NOW - timedelta(seconds=20), NOW - timedelta(hours=24) + timedelta(minutes=i, seconds=30))
+            if symbol == "USDCHF" and t > NOW - timedelta(minutes=15):
+                continue  # stale: the session is open but nothing recent
+            wiggle = ((i // 20) % 7 - 3) * drift * 0.5
+            mid = start + drift * (i // 20) + wiggle
+            spread = mid * (0.00002 if symbol != "XAUUSD" else 0.00012)
+            if symbol == "GBPUSD" and i >= 24 * 60 - 40:
+                spread *= 10  # a wide spread at the end
+            rows.append(QuoteRecord(timestamp=t, instrument=symbol, bid=round(mid - spread / 2, 6),
+                                    ask=round(mid + spread / 2, 6), provider="oanda_practice_pricing",
+                                    market_state=MarketState.OPEN))
+    rows.sort(key=lambda r: (r.timestamp, r.instrument))
+    with QuoteRecorder(state / "quotes") as rec:
+        for r in rows:
+            rec.record(r)
+    stamp = (NOW - timedelta(seconds=10)).timestamp()
+    for seg in (state / "quotes").glob("seg-*"):
+        os.utime(seg, (stamp, stamp))
+
+
+def pin_clocks() -> None:
+    """The routers read the API's clock; pin it so the fixtures are reproducible."""
+    import fiboki.api.routers.monitors as monitors
+
+    monitors._now = lambda at=None: NOW  # type: ignore[assignment]
+
+
+def dump(client: TestClient) -> None:
+    write("panels", client.get("/api/workspace/panels").json())
+    write("presets", client.get("/api/workspace/presets").json())
+    write("format_rules_watchlist", client.get("/api/workspace/format-rules/watchlist").json())
+    write("watchlists", client.get("/api/markets/watchlists").json())
+    write("watchlist_majors_24h", client.get("/api/markets/watchlists/Majors/quotes?window=24h").json())
+    write("quotes_fx", client.get("/api/markets/quotes?symbols=EURUSD,GBPUSD,USDJPY,USDCHF,AUDUSD,XAUUSD&window=24h").json())
+    write("column_sets_watchlist", client.get("/api/workspace/column-sets/watchlist").json())
+    for extra in EXTRA_DUMPS:
+        extra(client)
+
+
+#: Later screens register their dumps here.
+EXTRA_DUMPS: list = []
 
 
 def main() -> None:
-    sys.path.insert(0, str(OUT))
     from fiboki.api.app import create_app
     from fiboki.api.settings import load_settings
 
@@ -62,17 +103,12 @@ def main() -> None:
             "FIBOKI_COOKIE_SECURE": "false",
             "FIBOKI_SESSION_SECRET": "fixture-secret",
         })
-        seed(state)
+        seed_quotes(state)
+        pin_clocks()
         app = create_app(settings, configure_logs=False)
         with TestClient(app, base_url=ORIGIN) as client:
             client.post("/api/auth/login", json={"username": "joe", "password": "pw"}, headers={"Origin": ORIGIN})
-            write("panels", client.get("/api/workspace/panels").json())
-            write("presets", client.get("/api/workspace/presets").json())
-            try:
-                from routes_monitors import dump_monitors  # type: ignore[import-not-found]
-            except ImportError:
-                return
-            dump_monitors(client, write, NOW)
+            dump(client)
 
 
 if __name__ == "__main__":
