@@ -1916,6 +1916,61 @@ app.add_typer(alerts_app, name="alerts")
 app.add_typer(watchdog_app, name="watchdog")
 
 
+@alerts_app.command("price-evaluate")
+def alerts_price_evaluate(
+    once: bool = typer.Option(False, "--once", help="Evaluate once and exit."),
+    loop: bool = typer.Option(False, "--loop", help="Evaluate until SIGTERM/SIGINT."),
+    interval: float = typer.Option(30.0, "--interval", help="Seconds between evaluations (min 5)."),
+    lookback: float = typer.Option(600.0, "--lookback", help="Seconds of recorded quotes to read each time."),
+    state_dir: Path | None = typer.Option(None, "--state-dir", help="Default: $FIBOKI_STATE_DIR or ./var."),
+) -> None:
+    """Evaluate price and level alert rules over the RECORDED quote log (catch-up / stand-alone).
+
+    Paper-safe: reads the quote log and writes notification rows; it imports
+    nothing from the execution layer. Re-reading quotes it already evaluated
+    never fires twice (each rule remembers the last quote it saw). The quote
+    recorder runs the same evaluation after every poll, so this command is for
+    catching up or for running alerts without the recorder's hook.
+    """
+    import signal
+    import time
+    from datetime import UTC, datetime, timedelta
+
+    from fiboki.core.paths import resolve_paths
+    from fiboki.data.quote_view import QuoteTail
+    from fiboki.obs.price_alerts import PriceAlertStore
+
+    if once == loop:
+        _fail("choose exactly one of --once or --loop", EXIT_MISUSE)
+    paths = (resolve_paths({"FIBOKI_STATE_DIR": str(state_dir)}) if state_dir is not None
+             else resolve_paths(os.environ, cwd=Path.cwd()))
+    store = PriceAlertStore(paths.price_alerts_db)
+    tail = QuoteTail(paths.quotes_dir)
+    stop = {"flag": False}
+
+    def _stop(*_: Any) -> None:
+        stop["flag"] = True
+
+    signal.signal(signal.SIGTERM, _stop)
+    signal.signal(signal.SIGINT, _stop)
+    while True:
+        now = datetime.now(tz=UTC)
+        window = tail.window(now - timedelta(seconds=lookback), now)
+        quotes = [q for rows in window.by_instrument.values() for q in rows]
+        fired = store.evaluate(quotes, now=now, source="fiboki alerts price-evaluate")
+        console.print(f"{now.isoformat()}  quotes={len(quotes)} fired={len(fired)}"
+                      + (" (no quote log)" if window.absent else ""))
+        for n in fired:
+            console.print(f"  ALERT {n.owner}: {n.message}")
+        if once or stop["flag"]:
+            return
+        deadline = time.monotonic() + max(5.0, interval)
+        while not stop["flag"] and time.monotonic() < deadline:
+            time.sleep(1.0)
+        if stop["flag"]:
+            return
+
+
 @alerts_app.command("test")
 def alerts_test(
     critical: bool = typer.Option(
@@ -2247,6 +2302,35 @@ def _quotes_dir(state_dir: Path | None) -> Path:
     return resolve_paths(os.environ, cwd=Path.cwd()).quotes_dir
 
 
+class _PollAlerts:
+    """Price alerts evaluated by the recorder after each poll (an extension of this worker).
+
+    The records of one poll are buffered and evaluated when the next poll
+    starts (latency: one poll interval), so the evaluator's heartbeat beats on
+    every poll even when no quote changed. An evaluation failure is printed and
+    never stops the recorder: recording quotes matters more than an alert.
+    """
+
+    def __init__(self, quotes_directory: Path) -> None:
+        from fiboki.core.paths import resolve_paths
+        from fiboki.obs.price_alerts import PriceAlertStore
+
+        state = quotes_directory.parent
+        self.store = PriceAlertStore(resolve_paths({"FIBOKI_STATE_DIR": str(state)}).price_alerts_db)
+        self.buffer: list[Any] = []
+
+    def add(self, quote: Any) -> None:
+        self.buffer.append(quote)
+
+    def flush(self) -> None:
+        batch, self.buffer = self.buffer, []
+        try:
+            for n in self.store.evaluate(batch, source="fiboki quotes record"):
+                console.print(f"ALERT {n.owner}: {n.message}")
+        except Exception as exc:  # never let alerts stop the recorder
+            err_console.print(f"price alert evaluation failed: {type(exc).__name__}: {exc}")
+
+
 @quotes_app.command("record")
 def quotes_record(
     once: bool = typer.Option(False, "--once", help="Poll once and exit."),
@@ -2324,8 +2408,13 @@ def quotes_record(
                 f"recording {len(symbols)} instruments to {directory} every {interval:.0f}s; "
                 "SIGTERM to stop"
             )
+        alerts = _PollAlerts(directory)
+        feed.on_poll = lambda report: (alerts.flush(), _report(report))
         with QuoteRecorder(directory, fsync_every=50) as recorder:
-            recorder.run(feed, symbols)
+            for quote in feed.stream(symbols):
+                recorder.record(quote)
+                alerts.add(quote)
+        alerts.flush()
     report = last.get("report")
     if report is not None and report.error and report.received == 0:
         raise typer.Exit(EXIT_FAIL)
