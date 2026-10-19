@@ -1218,6 +1218,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/trading/candidates/correlation": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Candidate Self Correlation
+         * @description Each candidate's daily-return correlation with each paper bot. Advisory flag above 0.7.
+         */
+        get: operations["candidate_self_correlation_api_trading_candidates_correlation_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/trading/controls": {
         parameters: {
             query?: never;
@@ -1924,6 +1944,20 @@ export interface components {
             reasons: string[];
             /** Venue Url Host */
             venue_url_host: string;
+        };
+        /** CandidateCorrelationRow */
+        CandidateCorrelationRow: {
+            /** Cells */
+            cells: components["schemas"]["SelfCorrelationCellView"][];
+            /** Flag Reason */
+            flag_reason: string;
+            /** Flagged */
+            flagged: boolean;
+            max_abs_rho: components["schemas"]["Figure"];
+            /** Source */
+            source: string;
+            /** Strategy Id */
+            strategy_id: string;
         };
         /**
          * CandidateView
@@ -2670,6 +2704,16 @@ export interface components {
              */
             caveats: components["schemas"]["Caveat"][];
             data: components["schemas"]["RiskStateView"];
+            source: components["schemas"]["SourceNote"];
+        };
+        /** Envelope[SelfCorrelationView] */
+        Envelope_SelfCorrelationView_: {
+            /**
+             * Caveats
+             * @default []
+             */
+            caveats: components["schemas"]["Caveat"][];
+            data: components["schemas"]["SelfCorrelationView"];
             source: components["schemas"]["SourceNote"];
         };
         /** Envelope[SettingsView] */
@@ -4852,6 +4896,35 @@ export interface components {
             available: boolean;
             /** Detail */
             detail: string;
+        };
+        /** SelfCorrelationCellView */
+        SelfCorrelationCellView: {
+            /** Basis */
+            basis: string;
+            /** Bot Strategy Id */
+            bot_strategy_id: string;
+            /** Flagged */
+            flagged: boolean;
+            /** N Common */
+            n_common: number;
+            rho: components["schemas"]["Figure"];
+            /** Same Strategy */
+            same_strategy: boolean;
+            /** Session Id */
+            session_id: string;
+        };
+        /** SelfCorrelationView */
+        SelfCorrelationView: {
+            /** Bots */
+            bots: string[];
+            /** Method */
+            method: string;
+            /** Min Common Days */
+            min_common_days: number;
+            /** Rows */
+            rows: components["schemas"]["CandidateCorrelationRow"][];
+            /** Threshold */
+            threshold: number;
         };
         /**
          * Series
@@ -7235,6 +7308,26 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    candidate_self_correlation_api_trading_candidates_correlation_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_SelfCorrelationView_"];
                 };
             };
         };

@@ -800,3 +800,137 @@ def session_maturity(
         source=_note("live", f"Paper session {session_id}; reference {ref.label}; criteria "
                      f"{report.criteria.version} (advisory)."),
     )
+
+
+# ============================================================ self-correlation
+
+_NON_PAPER = {Provenance.BACKTEST, Provenance.OUT_OF_SAMPLE, Provenance.WALKFORWARD, Provenance.HOLDOUT}
+
+
+def _strategy_returns(platform: Any, settings: Any, strategy_id: str, cache: dict[str, Any]) -> tuple[Any, str, Provenance]:
+    """A strategy's reference daily returns: its latest current stored backtest,
+    else (the seed deployment) its non-paper journal trades. ``(series, label, provenance)``."""
+    import pandas as pd
+
+    from fiboki.api.ops_sources import reference_backtest
+    from fiboki.ops.analytics import daily_returns_from_trades
+
+    if strategy_id in cache:
+        return cache[strategy_id]
+    ref = reference_backtest(settings, strategy_id)
+    if ref.available:
+        out = (daily_returns_from_trades(ref.trades, ref.initial_equity or 10_000.0), ref.label, Provenance.BACKTEST)
+    else:
+        rows, _ = platform.trades(strategy_id=strategy_id, provenance=_NON_PAPER, limit=100_000)
+        trades = [{"exit_time": t.exit_time, "net_pnl": t.net_pnl} for t in rows]
+        prov = rows[0].provenance if rows else Provenance.BACKTEST
+        out = (
+            daily_returns_from_trades(trades, 10_000.0) if trades else pd.Series([], dtype=float),
+            f"{len(rows)} {prov.value} journal trade(s)" if rows else (ref.reason or "no trade record"),
+            prov,
+        )
+    cache[strategy_id] = out
+    return out
+
+
+class SelfCorrelationCellView(BaseModel):
+    model_config = ConfigDict(frozen=True)
+
+    session_id: str
+    bot_strategy_id: str
+    #: ``backtest``: the candidate's backtest against the bot strategy's
+    #: backtest; ``paper``: against the bot's own paper returns.
+    basis: str = Field(pattern="^(backtest|paper)$")
+    rho: Figure
+    n_common: int
+    flagged: bool
+    same_strategy: bool
+
+
+class CandidateCorrelationRow(BaseModel):
+    model_config = ConfigDict(frozen=True)
+
+    strategy_id: str
+    source: str
+    cells: list[SelfCorrelationCellView]
+    max_abs_rho: Figure
+    flagged: bool
+    flag_reason: str
+
+
+class SelfCorrelationView(BaseModel):
+    model_config = ConfigDict(frozen=True)
+
+    threshold: float
+    min_common_days: int
+    bots: list[str]
+    rows: list[CandidateCorrelationRow]
+    method: str
+
+
+@router.get("/candidates/correlation", response_model=Envelope[SelfCorrelationView])
+def candidate_self_correlation(platform: PlatformDep, settings: SettingsDep) -> Envelope[SelfCorrelationView]:
+    """Each candidate's daily-return correlation with each paper bot. Advisory flag above 0.7."""
+    from fiboki.ops.analytics import (
+        MIN_COMMON_DAYS,
+        SELF_CORRELATION_FLAG,
+        daily_returns_from_trades,
+        pairwise,
+    )
+
+    cache: dict[str, Any] = {}
+    bots = _forward_sessions(platform)
+    bot_paper = {
+        sid: daily_returns_from_trades(
+            [{"exit_time": t.exit_time, "net_pnl": t.net_pnl} for t in s.trades], s.initial_balance
+        )
+        for sid, s in bots.items()
+    }
+    rows: list[CandidateCorrelationRow] = []
+    for doc in platform.strategy_documents():
+        cand, label, cprov = _strategy_returns(platform, settings, doc.strategy_id, cache)
+        cells: list[SelfCorrelationCellView] = []
+        for sid in sorted(bots):
+            bot_strategy = bots[sid].strategy_id
+            same = bot_strategy == doc.strategy_id
+            bt, _bl, bprov = _strategy_returns(platform, settings, bot_strategy, cache)
+            for basis, other, prov in (("backtest", bt, cprov), ("paper", bot_paper[sid], Provenance.PAPER)):
+                pair = pairwise(cand, other)
+                rho = (
+                    Figure(value=round(pair.rho, 4), provenance=prov, unit="ratio", sample_size=pair.n_common)
+                    if pair.rho is not None
+                    else Figure.missing(prov, unit="ratio", reason=f"{pair.n_common} common day(s); "
+                                        f"{MIN_COMMON_DAYS} with dispersion on both sides are needed.")
+                )
+                cells.append(SelfCorrelationCellView(
+                    session_id=sid, bot_strategy_id=bot_strategy, basis=basis, rho=rho, n_common=pair.n_common,
+                    flagged=bool(pair.rho is not None and abs(pair.rho) > SELF_CORRELATION_FLAG and not same),
+                    same_strategy=same,
+                ))
+        measured = [abs(c.rho.value) for c in cells if c.rho.value is not None and not c.same_strategy]
+        worst = max(measured) if measured else None
+        flagged = any(c.flagged for c in cells)
+        top = max((c for c in cells if c.flagged), key=lambda c: abs(c.rho.value or 0), default=None)
+        rows.append(CandidateCorrelationRow(
+            strategy_id=doc.strategy_id, source=label, cells=cells,
+            max_abs_rho=Figure(value=round(worst, 4), provenance=cprov, unit="ratio")
+            if worst is not None else Figure.missing(cprov, unit="ratio", reason="No measurable pair."),
+            flagged=flagged,
+            flag_reason=(
+                f"|rho| {abs(top.rho.value or 0):.2f} with {top.session_id} ({top.basis} basis) is above "
+                f"{SELF_CORRELATION_FLAG}: it would largely re-buy risk the fleet already holds."
+                if top is not None else
+                ("No pair above the threshold." if measured else "Not measurable: no overlap with the fleet.")
+            ),
+        ))
+    view = SelfCorrelationView(
+        threshold=SELF_CORRELATION_FLAG, min_common_days=MIN_COMMON_DAYS, bots=sorted(bots), rows=rows,
+        method=(
+            "Pearson correlation of daily returns of the closed-trade balance curve (17:00 New York days, "
+            "zero on days without an exit), on common days only. Candidate returns are its latest current "
+            "stored backtest; each bot is compared on its strategy's backtest and on its own paper record. "
+            "Advisory: nothing reads the flag."
+        ),
+    )
+    return Envelope(data=view, source=_note("live" if rows else "absent",
+                                            f"{len(rows)} candidate(s) against {len(bots)} paper bot(s)."))

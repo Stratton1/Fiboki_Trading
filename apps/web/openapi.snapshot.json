@@ -1061,6 +1061,46 @@
         "title": "BrokerHealthView",
         "type": "object"
       },
+      "CandidateCorrelationRow": {
+        "properties": {
+          "cells": {
+            "items": {
+              "$ref": "#/components/schemas/SelfCorrelationCellView"
+            },
+            "title": "Cells",
+            "type": "array"
+          },
+          "flag_reason": {
+            "title": "Flag Reason",
+            "type": "string"
+          },
+          "flagged": {
+            "title": "Flagged",
+            "type": "boolean"
+          },
+          "max_abs_rho": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "source": {
+            "title": "Source",
+            "type": "string"
+          },
+          "strategy_id": {
+            "title": "Strategy Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "strategy_id",
+          "source",
+          "cells",
+          "max_abs_rho",
+          "flagged",
+          "flag_reason"
+        ],
+        "title": "CandidateCorrelationRow",
+        "type": "object"
+      },
       "CandidateView": {
         "description": "A strategy proposed for promotion. ONE surface answers 'what next?'.\n\nV1 had four competing surfaces for this question and six routes to approve,\neach with different copy and different gating.",
         "properties": {
@@ -2979,6 +3019,30 @@
           "source"
         ],
         "title": "Envelope[RiskStateView]",
+        "type": "object"
+      },
+      "Envelope_SelfCorrelationView_": {
+        "properties": {
+          "caveats": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/Caveat"
+            },
+            "title": "Caveats",
+            "type": "array"
+          },
+          "data": {
+            "$ref": "#/components/schemas/SelfCorrelationView"
+          },
+          "source": {
+            "$ref": "#/components/schemas/SourceNote"
+          }
+        },
+        "required": [
+          "data",
+          "source"
+        ],
+        "title": "Envelope[SelfCorrelationView]",
         "type": "object"
       },
       "Envelope_SettingsView_": {
@@ -8799,6 +8863,88 @@
         "title": "SectionStatus",
         "type": "object"
       },
+      "SelfCorrelationCellView": {
+        "properties": {
+          "basis": {
+            "pattern": "^(backtest|paper)$",
+            "title": "Basis",
+            "type": "string"
+          },
+          "bot_strategy_id": {
+            "title": "Bot Strategy Id",
+            "type": "string"
+          },
+          "flagged": {
+            "title": "Flagged",
+            "type": "boolean"
+          },
+          "n_common": {
+            "title": "N Common",
+            "type": "integer"
+          },
+          "rho": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "same_strategy": {
+            "title": "Same Strategy",
+            "type": "boolean"
+          },
+          "session_id": {
+            "title": "Session Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "session_id",
+          "bot_strategy_id",
+          "basis",
+          "rho",
+          "n_common",
+          "flagged",
+          "same_strategy"
+        ],
+        "title": "SelfCorrelationCellView",
+        "type": "object"
+      },
+      "SelfCorrelationView": {
+        "properties": {
+          "bots": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Bots",
+            "type": "array"
+          },
+          "method": {
+            "title": "Method",
+            "type": "string"
+          },
+          "min_common_days": {
+            "title": "Min Common Days",
+            "type": "integer"
+          },
+          "rows": {
+            "items": {
+              "$ref": "#/components/schemas/CandidateCorrelationRow"
+            },
+            "title": "Rows",
+            "type": "array"
+          },
+          "threshold": {
+            "title": "Threshold",
+            "type": "number"
+          }
+        },
+        "required": [
+          "threshold",
+          "min_common_days",
+          "bots",
+          "rows",
+          "method"
+        ],
+        "title": "SelfCorrelationView",
+        "type": "object"
+      },
       "Series": {
         "description": "A labelled time series. The label belongs to the series, not the chart.",
         "properties": {
@@ -13107,6 +13253,30 @@
         "summary": "Candidates",
         "tags": [
           "trading"
+        ],
+        "x-fiboki-auth": "public"
+      }
+    },
+    "/api/trading/candidates/correlation": {
+      "get": {
+        "description": "Each candidate's daily-return correlation with each paper bot. Advisory flag above 0.7.",
+        "operationId": "candidate_self_correlation_api_trading_candidates_correlation_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_SelfCorrelationView_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [],
+        "summary": "Candidate Self Correlation",
+        "tags": [
+          "ops"
         ],
         "x-fiboki-auth": "public"
       }

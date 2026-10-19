@@ -90,6 +90,9 @@ export async function mockOps(page: Page) {
   await page.route(`${API}/api/trading/sessions/*/audit-chain*`, (route: Route) =>
     route.fulfill({ json: env(chainTail()) }),
   );
+  await page.route(`${API}/api/trading/candidates/correlation`, (route: Route) =>
+    route.fulfill({ json: env(selfCorrelationView()) }),
+  );
   await page.route(`${API}/api/trading/sessions/*/maturity`, (route: Route) =>
     route.fulfill({ json: env(maturityView()) }),
   );
@@ -213,5 +216,26 @@ export function maturityView(overrides: Record<string, unknown> = {}) {
     note: "Advisory only. This report enables nothing: no lifecycle state, execution mode, limit or flag reads it.",
     notes: [],
     ...overrides,
+  };
+}
+
+export function selfCorrelationView() {
+  const cell = (basis: string, rho: number | null, n: number, flagged = false, same = false) => ({
+    session_id: OPS_SESSION, bot_strategy_id: "donchian_breakout_atr", basis,
+    rho: rho === null ? figure(null, basis === "paper" ? "paper" : "backtest", "ratio") : figure(rho, basis === "paper" ? "paper" : "backtest", "ratio", { sample_size: n }),
+    n_common: n, flagged, same_strategy: same,
+  });
+  return {
+    threshold: 0.7,
+    min_common_days: 20,
+    bots: [OPS_SESSION],
+    rows: [
+      { strategy_id: "ichimoku_kumo_trend", source: "backtest bt_0002", cells: [cell("backtest", 0.82, 400, true), cell("paper", null, 6)],
+        max_abs_rho: figure(0.82, "backtest", "ratio"), flagged: true,
+        flag_reason: "|rho| 0.82 with forward-paper_forward_v1 (backtest basis) is above 0.7: it would largely re-buy risk the fleet already holds." },
+      { strategy_id: "donchian_breakout_atr", source: "backtest bt_0001", cells: [cell("backtest", 1, 400, false, true), cell("paper", 0.9, 30, false, true)],
+        max_abs_rho: figure(null, "backtest", "ratio"), flagged: false, flag_reason: "Not measurable: no overlap with the fleet." },
+    ],
+    method: "Pearson correlation of daily returns of the closed-trade balance curve, on common days only.",
   };
 }

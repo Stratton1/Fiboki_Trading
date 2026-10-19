@@ -81,3 +81,6 @@ export const sessionMaturityPath = (sessionId: string) =>
 /** Badge tone and label per checklist status (the status is the API's). */
 export const CHECK_TONE: Record<string, "ok" | "down" | "unknown"> = { pass: "ok", fail: "down", not_evaluated: "unknown" };
 export const CHECK_LABEL: Record<string, string> = { pass: "PASS", fail: "FAIL", not_evaluated: "NOT EVALUATED" };
+
+export type SelfCorrelationView = Local<S["SelfCorrelationView"]>;
+export const SELF_CORRELATION_PATH = "/api/trading/candidates/correlation";

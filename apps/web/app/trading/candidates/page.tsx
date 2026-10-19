@@ -6,6 +6,7 @@ import { ApiError, apiFetch } from "@/lib/api";
 import { capability } from "@/lib/auth";
 import { PHONE_QUERY, useMediaQuery } from "@/lib/media";
 import { route } from "@/lib/routes";
+import { SelfCorrelation } from "@/components/ops/SelfCorrelation";
 import { useApi } from "@/lib/query";
 import { AsyncBoundary } from "@/components/AsyncBoundary";
 import { useExecutionMode, useOperator } from "@/components/shell/platform";
@@ -375,6 +376,8 @@ export default function CandidatesPage() {
         choices={choices}
         acknowledgements={acknowledgements}
       />
+      {/* wave ops: advisory self-correlation of each candidate with the paper fleet */}
+      <SelfCorrelation />
     </>
   );
 }
