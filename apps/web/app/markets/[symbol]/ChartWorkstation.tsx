@@ -1,9 +1,9 @@
 "use client";
 
-import { BarChart3, ExternalLink, Layers, Table2 } from "lucide-react";
+import { BarChart3, ExternalLink, History, Layers, Table2 } from "lucide-react";
 import Link from "next/link";
 import { parseAsString, parseAsStringLiteral, useQueryState } from "nuqs";
-import { lazy, Suspense, useEffect, useId, useMemo, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useId, useMemo, useState } from "react";
 import { AsyncBoundary } from "@/components/AsyncBoundary";
 import { CaveatList } from "@/components/CaveatList";
 import { CrosshairReadout, type ReadoutSource } from "@/components/charts/CrosshairReadout";
@@ -17,12 +17,13 @@ import { Segmented } from "@/components/ui/Segmented";
 import { StaleBadge } from "@/components/ui/StaleBadge";
 import { ViewStateTag } from "@/components/ui/ViewStateTag";
 import { UrlState } from "@/components/UrlState";
-import { buildChartModel, visiblePanes, type ChartModel } from "@/lib/chart-model";
+import type { ReplayView } from "@/lib/chart-contract";
+import { buildChartModel, replayRow, visiblePanes, type ChartModel } from "@/lib/chart-model";
 import { isStale } from "@/lib/freshness";
 import { displayDecimals, formatUtcTime, priceDecimals } from "@/lib/format";
 import { deriveProvenance } from "@/lib/provenance";
 import { useApi, type ApiHandle } from "@/lib/query";
-import type { BarsView, Envelope, InstrumentRow, OverlayView, Page } from "@/lib/types";
+import type { BacktestTradeRow, BarsView, Envelope, InstrumentRow, OverlayView, Page } from "@/lib/types";
 
 /**
  * The chart workstation (plan §6, report G §2.4 C1–C18; this build covers the
@@ -56,12 +57,60 @@ const SplitPane = lazy(() => loadSplitPane().then((m) => ({ default: m.SplitPane
  */
 const loadWorkbench = () => import("@/components/charts/ChartWorkbench");
 const ChartWorkbench = lazy(loadWorkbench);
+/** Bar-by-bar replay: fetched only in replay mode (`?mode=replay`). */
+const ReplayController = lazy(() => import("@/components/charts/replay/ReplayController"));
 
 const TIMEFRAMES = ["H1", "H4", "D1"] as const;
 type Timeframe = (typeof TIMEFRAMES)[number];
 const tfParser = parseAsStringLiteral(TIMEFRAMES).withDefault("H1").withOptions({ history: "replace" });
 /** The backtest run drawn over the candles (`?run=`), shareable as a link. */
 const runParser = parseAsString.withOptions({ history: "replace" });
+const MODES = ["live", "replay"] as const;
+type Mode = (typeof MODES)[number];
+const modeParser = parseAsStringLiteral(MODES).withDefault("live").withOptions({ history: "replace" });
+/** The replay cursor (`?cursor=`, a UTC instant). */
+const cursorParser = parseAsString.withOptions({ history: "replace" });
+
+/** A replay step's answer, as the chart's ordinary inputs. Every value is the API's. */
+export interface ReplayFrame {
+  bars: Envelope<BarsView>;
+  overlays: ApiHandle<Envelope<OverlayView>>;
+  rows: BacktestTradeRow[];
+  runId: string | null;
+}
+
+function replayFrame(env: Envelope<ReplayView>): ReplayFrame {
+  const v = env.data;
+  const asOf = env.source.as_of ?? v.cursor;
+  return {
+    bars: {
+      data: {
+        symbol: v.symbol,
+        timeframe: v.timeframe,
+        dataset_version_id: v.dataset_version_id,
+        volume_kind: v.volume_kind,
+        bars: v.bars,
+      },
+      source: env.source,
+      caveats: env.caveats,
+    },
+    overlays: {
+      status: "success",
+      data: { data: v.overlays, source: env.source, caveats: [] },
+      error: null,
+      freshness: "fresh",
+      asOf,
+      sourceAsOf: null,
+      refreshing: false,
+      refreshError: null,
+      resyncing: false,
+      reload: () => undefined,
+      refreshMs: undefined,
+    },
+    rows: v.trades.map((t) => replayRow(t, v.last_close ?? v.cursor)),
+    runId: v.run_id,
+  };
+}
 
 /** Bars per request: the API's own default window (routers/markets.py, limit=500). */
 const BAR_LIMIT = 500;
@@ -75,7 +124,17 @@ export function ChartWorkstation({ symbol }: { symbol: string }) {
   return (
     <UrlState
       fallback={
-        <Workstation symbol={symbol} tf="H1" onTf={() => undefined} run={null} onRun={() => undefined} />
+        <Workstation
+          symbol={symbol}
+          tf="H1"
+          onTf={() => undefined}
+          run={null}
+          onRun={() => undefined}
+          mode="live"
+          onMode={() => undefined}
+          cursor={null}
+          onCursor={() => undefined}
+        />
       }
     >
       <WorkstationFromUrl symbol={symbol} />
@@ -86,6 +145,9 @@ export function ChartWorkstation({ symbol }: { symbol: string }) {
 function WorkstationFromUrl({ symbol }: { symbol: string }) {
   const [tf, setTf] = useQueryState("tf", tfParser);
   const [run, setRun] = useQueryState("run", runParser);
+  const [mode, setMode] = useQueryState("mode", modeParser);
+  const [cursor, setCursor] = useQueryState("cursor", cursorParser);
+  const onCursor = useCallback((next: string | null) => void setCursor(next), [setCursor]);
   return (
     <Workstation
       symbol={symbol}
@@ -93,6 +155,10 @@ function WorkstationFromUrl({ symbol }: { symbol: string }) {
       onTf={(next) => void setTf(next)}
       run={run}
       onRun={(next) => void setRun(next)}
+      mode={mode}
+      onMode={(next) => void setMode(next === "live" ? null : next)}
+      cursor={cursor}
+      onCursor={onCursor}
     />
   );
 }
@@ -119,18 +185,28 @@ function Workstation({
   onTf,
   run,
   onRun,
+  mode,
+  onMode,
+  cursor,
+  onCursor,
 }: {
   symbol: string;
   tf: Timeframe;
   onTf: (tf: Timeframe) => void;
   run: string | null;
   onRun: (run: string | null) => void;
+  mode: Mode;
+  onMode: (mode: Mode) => void;
+  cursor: string | null;
+  onCursor: (cursor: string | null) => void;
 }) {
   const enc = encodeURIComponent(symbol);
+  const replay = mode === "replay";
   const barsPath = `/api/markets/bars/${enc}?timeframe=${tf}&limit=${BAR_LIMIT}`;
   const overlaysPath = `/api/markets/overlays/${enc}?timeframe=${tf}&limit=${BAR_LIMIT}`;
-  const bars = useApi<Envelope<BarsView>>(barsPath, { refreshMs: REFRESH_MS });
-  const overlays = useApi<Envelope<OverlayView>>(overlaysPath, { refreshMs: REFRESH_MS });
+  // In replay the live reads stop: everything drawn is the replay's answer.
+  const bars = useApi<Envelope<BarsView>>(replay ? null : barsPath, { refreshMs: REFRESH_MS });
+  const overlays = useApi<Envelope<OverlayView>>(replay ? null : overlaysPath, { refreshMs: REFRESH_MS });
   const instruments = useApi<Page<InstrumentRow>>("/api/markets/instruments");
   const [dataOpen, setDataOpen] = useState(false);
   // Layer and series toggles live here, so they survive a timeframe switch.
@@ -187,7 +263,13 @@ function Workstation({
           testId="chart-timeframe"
         />
         <div className="cw__meta">
-          <Freshness bars={bars} overlays={overlays} />
+          {replay ? (
+            <span className="cw__chip" data-testid="chart-freshness" data-freshness="replay">
+              <History size={12} aria-hidden="true" /> replay: not live
+            </span>
+          ) : (
+            <Freshness bars={bars} overlays={overlays} />
+          )}
           {barsEnv ? (
             <DatasetChip version={barsEnv.data.dataset_version_id} />
           ) : null}
@@ -215,6 +297,26 @@ function Workstation({
           <SourcesPopover bars={barsEnv} overlays={overlayEnv} />
           <Button
             size="sm"
+            onClick={() => {
+              if (replay) {
+                onMode("live");
+                onCursor(null);
+              } else {
+                const list = barsEnv?.data.bars ?? [];
+                const start = list[Math.max(0, list.length - 100)];
+                onCursor(start ? start.t : null);
+                onMode("replay");
+              }
+            }}
+            aria-pressed={replay}
+            data-testid="chart-replay"
+            title="Bar-by-bar replay from the platform: closed candles only, nothing after the cursor"
+          >
+            <History size={13} aria-hidden="true" />
+            {replay ? "Live" : "Replay"}
+          </Button>
+          <Button
+            size="sm"
             onClick={() => setDataOpen((open) => !open)}
             aria-expanded={dataOpen}
             aria-controls="chart-data"
@@ -231,7 +333,53 @@ function Workstation({
       {overlayEnv && overlayEnv.caveats.length > 0 ? <CaveatList caveats={overlayEnv.caveats} /> : null}
 
       <div className="cw__body">
-        {bars.status === "error" && bars.error.code === "market_data_not_mounted" ? (
+        {replay ? (
+          <Suspense
+            fallback={
+              <div className="price-chart price-chart--pending" role="status" data-testid="replay-pending">
+                Loading the replay controls…
+              </div>
+            }
+          >
+            <ReplayController
+              symbol={symbol}
+              tf={tf}
+              run={run}
+              cursor={cursor}
+              onCursor={onCursor}
+              onExit={() => {
+                onMode("live");
+                onCursor(null);
+              }}
+            >
+              {(env) => (
+                <ReplayArea
+                  env={env}
+                  render={(frame) => (
+                    <ChartArea
+                      symbol={symbol}
+                      tf={tf}
+                      bars={frame.bars}
+                      barsPath={barsPath}
+                      overlays={frame.overlays}
+                      overlaysPath={overlaysPath}
+                      pipSize={pip}
+                      hours={null}
+                      dataOpen={dataOpen}
+                      run={run}
+                      onRun={onRun}
+                      layers={layers}
+                      setLayers={setLayers}
+                      toggled={toggled}
+                      setToggled={setToggled}
+                      replay={frame}
+                    />
+                  )}
+                />
+              )}
+            </ReplayController>
+          </Suspense>
+        ) : bars.status === "error" && bars.error.code === "market_data_not_mounted" ? (
           <div className="state state--empty cw__state" data-testid="state-absent" role="status">
             <div className="state__title">
               <span>No market data is mounted</span>
@@ -285,6 +433,18 @@ function Workstation({
       </div>
     </section>
   );
+}
+
+/** One replay answer turned into the chart's inputs, once per answer. */
+function ReplayArea({
+  env,
+  render,
+}: {
+  env: Envelope<ReplayView>;
+  render: (frame: ReplayFrame) => React.ReactNode;
+}) {
+  const frame = useMemo(() => replayFrame(env), [env]);
+  return <>{render(frame)}</>;
 }
 
 function Freshness({
@@ -459,6 +619,7 @@ function ChartArea({
   setLayers,
   toggled,
   setToggled,
+  replay = null,
 }: {
   symbol: string;
   tf: Timeframe;
@@ -476,6 +637,8 @@ function ChartArea({
   setLayers: (update: (layers: Layers) => Layers) => void;
   toggled: ReadonlyMap<string, boolean>;
   setToggled: (update: (prev: ReadonlyMap<string, boolean>) => ReadonlyMap<string, boolean>) => void;
+  /** Replay mode: the trades as they stood at the cursor, instead of a run's stored trades. */
+  replay?: ReplayFrame | null;
 }) {
   const overlayData = overlays.status === "success" ? overlays.data.data : null;
   const model = useMemo(
@@ -556,7 +719,15 @@ function ChartArea({
           </div>
         }
       >
-        <ChartWorkbench symbol={symbol} tf={tf} hours={hours} chart={chartProps} run={run} onRun={onRun} />
+        <ChartWorkbench
+          symbol={symbol}
+          tf={tf}
+          hours={hours}
+          chart={chartProps}
+          run={run}
+          onRun={onRun}
+          replay={replay ? { rows: replay.rows, runId: replay.runId } : null}
+        />
       </Suspense>
     </div>
   );

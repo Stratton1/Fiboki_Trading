@@ -61,6 +61,13 @@ export const INSTRUMENT_FUNCTIONS: InstrumentFunction[] = [
     description: "Backtest trades on this instrument in the journal; runs are on the chart's run picker.",
     href: (s) => `${route.journal({ instrument: s })}&provenance=backtest`,
   },
+  // wave chart2
+  {
+    code: "REPLAY",
+    label: "Replay",
+    description: "Bar-by-bar replay from the platform: closed candles, trades and markers as of a cursor.",
+    href: (s) => route.instrument(s, { mode: "replay" }),
+  },
   { code: "TRD", label: "Trades", description: "Every closed trade on this instrument.", href: (s) => route.journal({ instrument: s }) },
   {
     code: "NEWS",

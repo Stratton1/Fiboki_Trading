@@ -1,9 +1,11 @@
 import { parseUtc, roundedSign } from "./format";
 import { SERIES_ROLES, type SeriesRole } from "./chart-theme";
+import type { ReplayTrade } from "./chart-contract";
 import type {
   BacktestTradeRow,
   BacktestTradesView,
   Bar,
+  Figure,
   FillOverlay,
   LevelOverlay,
   OverlayView,
@@ -451,9 +453,54 @@ export function placeBacktestTrades(
   view: BacktestTradesView | null,
 ): PlacedTrades {
   if (!view) return { trades: [], unplaced: 0 };
+  return placeBacktestRows(times, view.run.run_id, view.trades);
+}
+
+/** A figure the platform did not supply (yet), with the trade's own provenance. */
+function absent(provenance: Provenance, unit = ""): Figure {
+  return { value: null, provenance, unit, as_of: null, sample_size: null, caveats: [], estimated: false };
+}
+
+/**
+ * A replayed trade as a table and tooltip row. A trade still open at the
+ * cursor has no exit yet: its exit is placed at the cursor's last bar with no
+ * price, no P&L and no final stop (the API withheld them), and its reason
+ * says so. Nothing is filled in from the trade's stored future.
+ */
+export function replayRow(t: ReplayTrade, cursor: string): BacktestTradeRow {
+  const p = t.provenance;
+  return {
+    trade_id: t.trade_id,
+    strategy_id: t.strategy_id,
+    direction: t.direction,
+    size: t.size,
+    entry_time: t.entry_time,
+    exit_time: t.exit_time ?? cursor,
+    entry_price: t.entry_price,
+    exit_price: t.exit_price ?? absent(p),
+    exit_reason: t.open_at_cursor ? "open at cursor" : (t.exit_reason ?? ""),
+    net_pnl: t.net_pnl ?? absent(p),
+    gross_pnl: absent(p),
+    costs: absent(p),
+    bars_held: absent(p, "bars"),
+    stop_loss: t.stop_loss,
+    final_stop: t.final_stop ?? absent(p),
+    take_profit: t.take_profit_targets[0] ?? absent(p),
+    take_profit_targets: t.take_profit_targets,
+    stop_moved_by: null,
+    provenance: p,
+  };
+}
+
+/** Place backtest rows (one run's) on the bars. Every number is the API's. */
+export function placeBacktestRows(
+  times: readonly number[],
+  runId: string,
+  rows: readonly BacktestTradeRow[],
+): PlacedTrades {
   const trades: PlacedTrade[] = [];
   let unplaced = 0;
-  for (const row of view.trades) {
+  for (const row of rows) {
     const span = tradeSpan(times, row.entry_time, row.exit_time);
     if (span === null) {
       unplaced += 1;
@@ -461,7 +508,7 @@ export function placeBacktestTrades(
     }
     const pnl = row.net_pnl;
     trades.push({
-      key: `bt|${view.run.run_id}|${row.trade_id}`,
+      key: `bt|${runId}|${row.trade_id}`,
       source: "backtest",
       tradeId: row.trade_id,
       direction: row.direction,
@@ -476,7 +523,7 @@ export function placeBacktestTrades(
       segments: backtestSegments(row, span.from, span.to),
       row,
       fills: null,
-      origin: view.run.run_id,
+      origin: runId,
     });
   }
   return { trades, unplaced };

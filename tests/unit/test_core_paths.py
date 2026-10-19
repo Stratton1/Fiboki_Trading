@@ -30,6 +30,8 @@ def test_every_ledger_lives_under_the_state_dir() -> None:
         paths.news_store,
         paths.events_store,
         paths.drawings_db,
+        paths.chart_templates_db,
+        paths.price_alerts_db,
         paths.alert_outbox,
         paths.paper_root,
     ):

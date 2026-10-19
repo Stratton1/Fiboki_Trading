@@ -41,8 +41,25 @@ export const route = {
   system: () => "/system",
   alerts: () => "/alerts",
   functions: () => "/system/functions",
-  instrument: (symbol: string, opts: { tf?: string | null; run?: string | null; trade?: string | null } = {}) =>
-    withQuery(`/markets/${q(symbol.toUpperCase())}`, { tf: opts.tf, run: opts.run, trade: opts.trade }),
+  instrument: (
+    symbol: string,
+    opts: {
+      tf?: string | null;
+      run?: string | null;
+      trade?: string | null;
+      mode?: "replay" | null;
+      at?: string | null;
+      event?: string | null;
+    } = {},
+  ) =>
+    withQuery(`/markets/${q(symbol.toUpperCase())}`, {
+      tf: opts.tf,
+      run: opts.run,
+      trade: opts.trade,
+      mode: opts.mode,
+      at: opts.at,
+      event: opts.event,
+    }),
   strategy: (id: string) => `/research/strategies/${q(id)}`,
   run: (runId: string) => `/research/runs/${q(runId)}`,
   trade: (tradeId: string) => withQuery("/trading/execution", { row: tradeId }),

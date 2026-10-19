@@ -2354,6 +2354,30 @@
         "title": "Envelope[PromotePreflightView]",
         "type": "object"
       },
+      "Envelope_ReplayView_": {
+        "properties": {
+          "caveats": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/Caveat"
+            },
+            "title": "Caveats",
+            "type": "array"
+          },
+          "data": {
+            "$ref": "#/components/schemas/ReplayView"
+          },
+          "source": {
+            "$ref": "#/components/schemas/SourceNote"
+          }
+        },
+        "required": [
+          "data",
+          "source"
+        ],
+        "title": "Envelope[ReplayView]",
+        "type": "object"
+      },
       "Envelope_ResearchMemoryView_": {
         "properties": {
           "caveats": {
@@ -7467,6 +7491,322 @@
         "title": "RegimeView",
         "type": "object"
       },
+      "ReplayBar": {
+        "properties": {
+          "c": {
+            "title": "C",
+            "type": "number"
+          },
+          "h": {
+            "title": "H",
+            "type": "number"
+          },
+          "l": {
+            "title": "L",
+            "type": "number"
+          },
+          "o": {
+            "title": "O",
+            "type": "number"
+          },
+          "t": {
+            "format": "date-time",
+            "title": "T",
+            "type": "string"
+          },
+          "v": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "V"
+          }
+        },
+        "required": [
+          "t",
+          "o",
+          "h",
+          "l",
+          "c"
+        ],
+        "title": "ReplayBar",
+        "type": "object"
+      },
+      "ReplayTrade": {
+        "description": "A backtest trade AS IT STOOD at the cursor.\n\n``open_at_cursor`` trades have entered but not exited by the cursor: their\nexit, exit reason, P&L, costs and final stop are not known yet and are\nnull, never the stored future values.",
+        "properties": {
+          "direction": {
+            "pattern": "^(long|short)$",
+            "title": "Direction",
+            "type": "string"
+          },
+          "entry_price": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "entry_time": {
+            "format": "date-time",
+            "title": "Entry Time",
+            "type": "string"
+          },
+          "exit_price": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Figure"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "exit_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Exit Reason"
+          },
+          "exit_time": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Exit Time"
+          },
+          "final_stop": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Figure"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "net_pnl": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Figure"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "open_at_cursor": {
+            "title": "Open At Cursor",
+            "type": "boolean"
+          },
+          "provenance": {
+            "$ref": "#/components/schemas/Provenance"
+          },
+          "size": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "stop_loss": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "strategy_id": {
+            "title": "Strategy Id",
+            "type": "string"
+          },
+          "take_profit_targets": {
+            "items": {
+              "$ref": "#/components/schemas/Figure"
+            },
+            "title": "Take Profit Targets",
+            "type": "array"
+          },
+          "trade_id": {
+            "title": "Trade Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "trade_id",
+          "strategy_id",
+          "direction",
+          "size",
+          "entry_time",
+          "entry_price",
+          "stop_loss",
+          "take_profit_targets",
+          "open_at_cursor",
+          "exit_time",
+          "exit_price",
+          "exit_reason",
+          "net_pnl",
+          "final_stop",
+          "provenance"
+        ],
+        "title": "ReplayTrade",
+        "type": "object"
+      },
+      "ReplayView": {
+        "properties": {
+          "bars": {
+            "items": {
+              "$ref": "#/components/schemas/ReplayBar"
+            },
+            "title": "Bars",
+            "type": "array"
+          },
+          "bars_closed": {
+            "title": "Bars Closed",
+            "type": "integer"
+          },
+          "bars_total": {
+            "title": "Bars Total",
+            "type": "integer"
+          },
+          "cursor": {
+            "format": "date-time",
+            "title": "Cursor",
+            "type": "string"
+          },
+          "dataset_version_id": {
+            "title": "Dataset Version Id",
+            "type": "string"
+          },
+          "first_bar": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "First Bar"
+          },
+          "last_bar": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Bar"
+          },
+          "last_close": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Close"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Cursor"
+          },
+          "overlays": {
+            "$ref": "#/components/schemas/OverlayView"
+          },
+          "prev_cursor": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Prev Cursor"
+          },
+          "run_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Run Id"
+          },
+          "symbol": {
+            "title": "Symbol",
+            "type": "string"
+          },
+          "timeframe": {
+            "title": "Timeframe",
+            "type": "string"
+          },
+          "trades": {
+            "items": {
+              "$ref": "#/components/schemas/ReplayTrade"
+            },
+            "title": "Trades",
+            "type": "array"
+          },
+          "trades_detail": {
+            "title": "Trades Detail",
+            "type": "string"
+          },
+          "volume_kind": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Volume Kind"
+          }
+        },
+        "required": [
+          "symbol",
+          "timeframe",
+          "cursor",
+          "dataset_version_id",
+          "volume_kind",
+          "bars",
+          "last_close",
+          "next_cursor",
+          "prev_cursor",
+          "first_bar",
+          "last_bar",
+          "bars_closed",
+          "bars_total",
+          "overlays",
+          "run_id",
+          "trades",
+          "trades_detail"
+        ],
+        "title": "ReplayView",
+        "type": "object"
+      },
       "ResearchMemoryView": {
         "properties": {
           "available": {
@@ -10261,6 +10601,113 @@
         "summary": "Regimes",
         "tags": [
           "markets"
+        ],
+        "x-fiboki-auth": "public"
+      }
+    },
+    "/api/markets/replay/{symbol}": {
+      "get": {
+        "description": "Closed candles, overlays and trades as of ``cursor``; never anything later.",
+        "operationId": "replay_api_markets_replay__symbol__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "symbol",
+            "required": true,
+            "schema": {
+              "title": "Symbol",
+              "type": "string"
+            }
+          },
+          {
+            "description": "UTC instant; nothing after it is served.",
+            "in": "query",
+            "name": "cursor",
+            "required": true,
+            "schema": {
+              "description": "UTC instant; nothing after it is served.",
+              "format": "date-time",
+              "title": "Cursor",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "timeframe",
+            "required": false,
+            "schema": {
+              "default": "H1",
+              "title": "Timeframe",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 300,
+              "maximum": 2000,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "A backtest run whose trades to replay.",
+            "in": "query",
+            "name": "run",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "A backtest run whose trades to replay.",
+              "title": "Run"
+            }
+          },
+          {
+            "in": "query",
+            "name": "include_indicators",
+            "required": false,
+            "schema": {
+              "default": true,
+              "title": "Include Indicators",
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_ReplayView_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [],
+        "summary": "Replay",
+        "tags": [
+          "chart-workstation"
         ],
         "x-fiboki-auth": "public"
       }

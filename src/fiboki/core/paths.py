@@ -81,6 +81,10 @@ class FibokiPaths:
     #: Operator chart drawings (annotations, never strategy input), per
     #: operator and symbol, written by the API (``api/drawings.py``).
     drawings_db: Path
+    #: Operator chart templates (indicator and layer choices), per operator.
+    chart_templates_db: Path
+    #: Operator price alerts created from chart levels (``api/chart_store.py``).
+    price_alerts_db: Path
     #: Worker lease + heartbeat database (``WorkerStore``).
     heartbeat_db: Path
     #: The API's heartbeat file/database (``FIBOKI_WORKER_HEARTBEAT``).
@@ -154,6 +158,8 @@ def resolve_paths(env: Mapping[str, str], *, cwd: str | Path | None = None) -> F
         news_store=state_dir / "news" / "headlines.sqlite",
         events_store=state_dir / "events" / "annotations.sqlite",
         drawings_db=state_dir / "chart" / "drawings.sqlite",
+        chart_templates_db=state_dir / "chart" / "templates.sqlite",
+        price_alerts_db=state_dir / "alerts" / "price_alerts.sqlite",
         heartbeat_db=opt("FIBOKI_STATE_DB") or home / "state.db",
         worker_heartbeat=opt("FIBOKI_WORKER_HEARTBEAT") or state_dir / "worker.heartbeat",
         paper_root=opt("FIBOKI_PAPER_ROOT") or state_dir / "paper",

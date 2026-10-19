@@ -26,6 +26,7 @@ import { LazyPriceChart } from "@/components/LazyChart";
 import { ProvenanceLabelChip } from "@/components/ProvenanceChip";
 import { useToast } from "@/components/ui/Toast";
 import {
+  placeBacktestRows,
   placeBacktestTrades,
   placePaperTrades,
   type ChartModel,
@@ -34,7 +35,7 @@ import {
 import { newDrawingId } from "@/lib/drawing-geometry";
 import { formatFigure, formatNumber, signClass } from "@/lib/format";
 import { useApi } from "@/lib/query";
-import type { BacktestRunRow, BacktestTradesView, Drawing, Envelope, Page } from "@/lib/types";
+import type { BacktestRunRow, BacktestTradeRow, BacktestTradesView, Drawing, Envelope, Page } from "@/lib/types";
 import type { DrawingTool } from "./drawing-primitive";
 import type { ChartDrawings, PriceChartProps } from "./PriceChart";
 import { formatBarTime } from "./time";
@@ -72,6 +73,11 @@ export interface ChartWorkbenchProps {
   chart: ChartBase;
   run: string | null;
   onRun: (run: string | null) => void;
+  /**
+   * Replay: the run's trades as they stood at the replay cursor (the API's
+   * answer, exits withheld while open). When set, the stored trades are not read.
+   */
+  replay?: { rows: BacktestTradeRow[]; runId: string | null } | null;
 }
 
 interface ToolSpec {
@@ -231,7 +237,7 @@ function runLabel(run: BacktestRunRow): string {
   } trades${flags.length ? ` · ${flags.join(", ")}` : ""}`;
 }
 
-export default function ChartWorkbench({ symbol, tf, hours, chart, run, onRun }: ChartWorkbenchProps) {
+export default function ChartWorkbench({ symbol, tf, hours, chart, run, onRun, replay = null }: ChartWorkbenchProps) {
   const notify = useToast();
   const operator = useOperator();
   const model: ChartModel = chart.model;
@@ -254,13 +260,21 @@ export default function ChartWorkbench({ symbol, tf, hours, chart, run, onRun }:
   const first = model.bars[0]?.t ?? null;
   const last = model.bars[model.bars.length - 1]?.t ?? null;
   const tradesPath =
-    run && first && last
+    run && first && last && replay === null
       ? `/api/markets/backtests/${enc}/${encodeURIComponent(run)}/trades?timeframe=${tf}&from=${encodeURIComponent(first)}&to=${encodeURIComponent(last)}`
       : null;
   const btTrades = useApi<Envelope<BacktestTradesView>>(tradesPath);
   const btView = btTrades.status === "success" ? btTrades.data.data : null;
 
-  const placedBt = useMemo(() => placeBacktestTrades(model.times, run ? btView : null), [model.times, btView, run]);
+  const placedBt = useMemo(
+    () =>
+      replay
+        ? replay.runId
+          ? placeBacktestRows(model.times, replay.runId, replay.rows)
+          : { trades: [], unplaced: 0 }
+        : placeBacktestTrades(model.times, run ? btView : null),
+    [model.times, btView, run, replay],
+  );
   const placedPaper = useMemo(() => placePaperTrades(model), [model]);
   // The legend's Levels toggle governs every stop and target, paper and backtest.
   const showLevels = chart.layers.levels;

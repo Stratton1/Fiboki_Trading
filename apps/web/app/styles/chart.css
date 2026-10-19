@@ -1,0 +1,91 @@
+/*
+ * Wave 2B: the chart workstation (replay, grid, data window, templates,
+ * go-to-date and time zone, layer toolbar, zones and alerts, events,
+ * snapshot, trade detail) and its defect fixes. Imported once from
+ * app/layout.tsx. Unlayered, like components/charts/workbench.css, so it
+ * refines the layered component rules in globals.css. Tokens only.
+ */
+
+/* ------------------------------------------------------------- replay */
+.cw-replay {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-height: 0;
+  height: 100%;
+}
+.cw-replay__bar {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 6px;
+  min-height: 30px;
+  padding: 2px 8px;
+  overflow-x: auto;
+  white-space: nowrap;
+  border: 1px solid var(--state-replay);
+  border-radius: var(--r-sm);
+  background: var(--bg-surface);
+  font-size: 12px;
+}
+.cw-replay__bar > * {
+  flex: none;
+}
+.cw-replay__tag {
+  padding: 0 6px;
+  border-radius: var(--r-xs);
+  background: var(--state-replay);
+  color: var(--fg-on-fill);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+}
+.cw-replay__btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  min-width: 24px;
+  height: 22px;
+  padding: 0 4px;
+  border: 1px solid var(--border-control);
+  border-radius: var(--r-sm);
+  background: var(--bg-sunken);
+  color: var(--fg);
+}
+.cw-replay__btn--text {
+  padding: 0 8px;
+  font-size: 11px;
+}
+.cw-replay__btn[aria-disabled="true"] {
+  color: var(--fg-disabled);
+  cursor: not-allowed;
+}
+.cw-replay__btn[aria-pressed="true"] {
+  border-color: var(--state-replay);
+}
+.cw-replay__field {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.cw-replay__field select,
+.cw-replay__field input {
+  height: 22px;
+  border: 1px solid var(--border-control);
+  border-radius: var(--r-sm);
+  background: var(--bg-sunken);
+  color: var(--fg);
+  font-family: var(--font-code);
+  font-size: 11px;
+}
+.cw-replay__status {
+  color: var(--fg-muted);
+  font-family: var(--font-code);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+.cw-replay > .cw__area {
+  flex: 1 1 auto;
+  min-height: 0;
+}

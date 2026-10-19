@@ -396,6 +396,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/markets/replay/{symbol}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Replay
+         * @description Closed candles, overlays and trades as of ``cursor``; never anything later.
+         */
+        get: operations["replay_api_markets_replay__symbol__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/research/compare": {
         parameters: {
             query?: never;
@@ -2336,6 +2356,16 @@ export interface components {
              */
             caveats: components["schemas"]["Caveat"][];
             data: components["schemas"]["PromotePreflightView"];
+            source: components["schemas"]["SourceNote"];
+        };
+        /** Envelope[ReplayView] */
+        Envelope_ReplayView_: {
+            /**
+             * Caveats
+             * @default []
+             */
+            caveats: components["schemas"]["Caveat"][];
+            data: components["schemas"]["ReplayView"];
             source: components["schemas"]["SourceNote"];
         };
         /** Envelope[ResearchMemoryView] */
@@ -4281,6 +4311,99 @@ export interface components {
             /** Volatility */
             volatility?: string | null;
         };
+        /** ReplayBar */
+        ReplayBar: {
+            /** C */
+            c: number;
+            /** H */
+            h: number;
+            /** L */
+            l: number;
+            /** O */
+            o: number;
+            /**
+             * T
+             * Format: date-time
+             */
+            t: string;
+            /** V */
+            v?: number | null;
+        };
+        /**
+         * ReplayTrade
+         * @description A backtest trade AS IT STOOD at the cursor.
+         *
+         *     ``open_at_cursor`` trades have entered but not exited by the cursor: their
+         *     exit, exit reason, P&L, costs and final stop are not known yet and are
+         *     null, never the stored future values.
+         */
+        ReplayTrade: {
+            /** Direction */
+            direction: string;
+            entry_price: components["schemas"]["Figure"];
+            /**
+             * Entry Time
+             * Format: date-time
+             */
+            entry_time: string;
+            exit_price: components["schemas"]["Figure"] | null;
+            /** Exit Reason */
+            exit_reason: string | null;
+            /** Exit Time */
+            exit_time: string | null;
+            final_stop: components["schemas"]["Figure"] | null;
+            net_pnl: components["schemas"]["Figure"] | null;
+            /** Open At Cursor */
+            open_at_cursor: boolean;
+            provenance: components["schemas"]["Provenance"];
+            size: components["schemas"]["Figure"];
+            stop_loss: components["schemas"]["Figure"];
+            /** Strategy Id */
+            strategy_id: string;
+            /** Take Profit Targets */
+            take_profit_targets: components["schemas"]["Figure"][];
+            /** Trade Id */
+            trade_id: string;
+        };
+        /** ReplayView */
+        ReplayView: {
+            /** Bars */
+            bars: components["schemas"]["ReplayBar"][];
+            /** Bars Closed */
+            bars_closed: number;
+            /** Bars Total */
+            bars_total: number;
+            /**
+             * Cursor
+             * Format: date-time
+             */
+            cursor: string;
+            /** Dataset Version Id */
+            dataset_version_id: string;
+            /** First Bar */
+            first_bar: string | null;
+            /** Last Bar */
+            last_bar: string | null;
+            /** Last Close */
+            last_close: string | null;
+            /** Next Cursor */
+            next_cursor: string | null;
+            overlays: components["schemas"]["OverlayView"];
+            /** Prev Cursor */
+            prev_cursor: string | null;
+            /** Run Id */
+            run_id: string | null;
+            /** Symbol */
+            symbol: string;
+            /** Timeframe */
+            timeframe: string;
+            /** Trades */
+            trades: components["schemas"]["ReplayTrade"][];
+            /** Trades Detail */
+            trades_detail: string;
+            /** Volume Kind */
+            volume_kind: string | null;
+        };
         /** ResearchMemoryView */
         ResearchMemoryView: {
             /** Available */
@@ -5531,6 +5654,45 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Page_RegimeView_"];
+                };
+            };
+        };
+    };
+    replay_api_markets_replay__symbol__get: {
+        parameters: {
+            query: {
+                /** @description UTC instant; nothing after it is served. */
+                cursor: string;
+                include_indicators?: boolean;
+                limit?: number;
+                /** @description A backtest run whose trades to replay. */
+                run?: string | null;
+                timeframe?: string;
+            };
+            header?: never;
+            path: {
+                symbol: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_ReplayView_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
