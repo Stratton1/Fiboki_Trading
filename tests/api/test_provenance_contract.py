@@ -109,6 +109,10 @@ ALLOWED_BARE_NUMERIC = {
     ("LayoutRevisionView", "version"),
     ("LayoutRevisionView", "panel_count"),
     ("ColumnSetsView", "version"),
+    ("WatchlistView", "version"),
+    # A conditional-format rule's DISPLAY threshold (api/grid_format.py), code
+    # configuration like a gate threshold, not a measurement.
+    ("FormatRule", "value"),
 }
 
 

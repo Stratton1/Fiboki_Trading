@@ -2220,6 +2220,30 @@
         "title": "Envelope[ExecutionModeBanner]",
         "type": "object"
       },
+      "Envelope_FormatRulesView_": {
+        "properties": {
+          "caveats": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/Caveat"
+            },
+            "title": "Caveats",
+            "type": "array"
+          },
+          "data": {
+            "$ref": "#/components/schemas/FormatRulesView"
+          },
+          "source": {
+            "$ref": "#/components/schemas/SourceNote"
+          }
+        },
+        "required": [
+          "data",
+          "source"
+        ],
+        "title": "Envelope[FormatRulesView]",
+        "type": "object"
+      },
       "Envelope_IncidentView_": {
         "properties": {
           "caveats": {
@@ -3683,6 +3707,96 @@
           "selected_params"
         ],
         "title": "FoldView",
+        "type": "object"
+      },
+      "FormatRule": {
+        "properties": {
+          "column": {
+            "title": "Column",
+            "type": "string"
+          },
+          "description": {
+            "title": "Description",
+            "type": "string"
+          },
+          "grid": {
+            "title": "Grid",
+            "type": "string"
+          },
+          "source": {
+            "default": "",
+            "title": "Source",
+            "type": "string"
+          },
+          "tone": {
+            "enum": [
+              "rise",
+              "fall",
+              "warn",
+              "stale",
+              "muted",
+              "accent"
+            ],
+            "title": "Tone",
+            "type": "string"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              },
+              {
+                "type": "boolean"
+              }
+            ],
+            "title": "Value"
+          },
+          "when": {
+            "enum": [
+              "gt",
+              "lt",
+              "ge",
+              "le",
+              "eq",
+              "ne"
+            ],
+            "title": "When",
+            "type": "string"
+          }
+        },
+        "required": [
+          "grid",
+          "column",
+          "when",
+          "value",
+          "tone",
+          "description"
+        ],
+        "title": "FormatRule",
+        "type": "object"
+      },
+      "FormatRulesView": {
+        "properties": {
+          "grid_id": {
+            "title": "Grid Id",
+            "type": "string"
+          },
+          "rules": {
+            "items": {
+              "$ref": "#/components/schemas/FormatRule"
+            },
+            "title": "Rules",
+            "type": "array"
+          }
+        },
+        "required": [
+          "grid_id",
+          "rules"
+        ],
+        "title": "FormatRulesView",
         "type": "object"
       },
       "GateCheckView": {
@@ -6810,6 +6924,49 @@
         "title": "Page[PositionRowView]",
         "type": "object"
       },
+      "Page_QuoteRowView_": {
+        "properties": {
+          "caveats": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/Caveat"
+            },
+            "title": "Caveats",
+            "type": "array"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/QuoteRowView"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "limit": {
+            "default": 100,
+            "title": "Limit",
+            "type": "integer"
+          },
+          "offset": {
+            "default": 0,
+            "title": "Offset",
+            "type": "integer"
+          },
+          "source": {
+            "$ref": "#/components/schemas/SourceNote"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "total",
+          "source"
+        ],
+        "title": "Page[QuoteRowView]",
+        "type": "object"
+      },
       "Page_RegimeView_": {
         "properties": {
           "caveats": {
@@ -7195,6 +7352,49 @@
           "source"
         ],
         "title": "Page[ValidationSummary]",
+        "type": "object"
+      },
+      "Page_WatchlistView_": {
+        "properties": {
+          "caveats": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/Caveat"
+            },
+            "title": "Caveats",
+            "type": "array"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/WatchlistView"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "limit": {
+            "default": 100,
+            "title": "Limit",
+            "type": "integer"
+          },
+          "offset": {
+            "default": 0,
+            "title": "Offset",
+            "type": "integer"
+          },
+          "source": {
+            "$ref": "#/components/schemas/SourceNote"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "total",
+          "source"
+        ],
+        "title": "Page[WatchlistView]",
         "type": "object"
       },
       "Page_WorkerRow_": {
@@ -8136,6 +8336,139 @@
         "title": "ProvenanceBlock",
         "type": "object"
       },
+      "QuoteRowView": {
+        "description": "One watchlist row: the recorded quote, its age and the API's verdict on it.",
+        "properties": {
+          "age_s": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "ask": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "asset_class": {
+            "title": "Asset Class",
+            "type": "string"
+          },
+          "bid": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "change_pct": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "chart_href": {
+            "title": "Chart Href",
+            "type": "string"
+          },
+          "data_state": {
+            "enum": [
+              "live",
+              "stale",
+              "closed",
+              "none"
+            ],
+            "title": "Data State",
+            "type": "string"
+          },
+          "data_state_detail": {
+            "title": "Data State Detail",
+            "type": "string"
+          },
+          "market_state": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Market State"
+          },
+          "mid": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "provider": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Provider"
+          },
+          "quote_time": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Quote Time"
+          },
+          "range_pct": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "session": {
+            "$ref": "#/components/schemas/SessionView"
+          },
+          "sparkline": {
+            "$ref": "#/components/schemas/Series"
+          },
+          "spread_pips": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "spread_ratio": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "symbol": {
+            "title": "Symbol",
+            "type": "string"
+          },
+          "tones": {
+            "additionalProperties": {
+              "enum": [
+                "rise",
+                "fall",
+                "warn",
+                "stale",
+                "muted",
+                "accent"
+              ],
+              "type": "string"
+            },
+            "title": "Tones",
+            "type": "object"
+          }
+        },
+        "required": [
+          "symbol",
+          "asset_class",
+          "provider",
+          "quote_time",
+          "bid",
+          "ask",
+          "mid",
+          "spread_pips",
+          "spread_ratio",
+          "change_pct",
+          "range_pct",
+          "age_s",
+          "data_state",
+          "data_state_detail",
+          "market_state",
+          "session",
+          "sparkline",
+          "tones",
+          "chart_href"
+        ],
+        "title": "QuoteRowView",
+        "type": "object"
+      },
       "RegimeOverlay": {
         "properties": {
           "axes": {
@@ -8745,6 +9078,29 @@
           "latency"
         ],
         "title": "ServiceRow",
+        "type": "object"
+      },
+      "SessionView": {
+        "properties": {
+          "calendar": {
+            "title": "Calendar",
+            "type": "string"
+          },
+          "open": {
+            "title": "Open",
+            "type": "boolean"
+          },
+          "trading_hours": {
+            "title": "Trading Hours",
+            "type": "string"
+          }
+        },
+        "required": [
+          "open",
+          "calendar",
+          "trading_hours"
+        ],
+        "title": "SessionView",
         "type": "object"
       },
       "SettingsView": {
@@ -10089,6 +10445,103 @@
         "title": "WalkForwardView",
         "type": "object"
       },
+      "WatchlistView": {
+        "properties": {
+          "builtin": {
+            "title": "Builtin",
+            "type": "boolean"
+          },
+          "can_edit": {
+            "title": "Can Edit",
+            "type": "boolean"
+          },
+          "column_set": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Column Set"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "symbols": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Symbols",
+            "type": "array"
+          },
+          "updated_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Updated At"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "name",
+          "version",
+          "updated_at",
+          "symbols",
+          "column_set",
+          "builtin",
+          "can_edit"
+        ],
+        "title": "WatchlistView",
+        "type": "object"
+      },
+      "WatchlistWrite": {
+        "additionalProperties": false,
+        "properties": {
+          "base_version": {
+            "minimum": 0.0,
+            "title": "Base Version",
+            "type": "integer"
+          },
+          "column_set": {
+            "anyOf": [
+              {
+                "maxLength": 48,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Column Set"
+          },
+          "symbols": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 60,
+            "title": "Symbols",
+            "type": "array"
+          }
+        },
+        "required": [
+          "base_version",
+          "symbols"
+        ],
+        "title": "WatchlistWrite",
+        "type": "object"
+      },
       "WorkerRow": {
         "properties": {
           "detail": {
@@ -11192,6 +11645,69 @@
         "x-fiboki-auth": "public"
       }
     },
+    "/api/markets/quotes": {
+      "get": {
+        "description": "Recorded quotes, sparkline, session and data age for each symbol.",
+        "operationId": "quotes_api_markets_quotes_get",
+        "parameters": [
+          {
+            "description": "Comma-separated symbols.",
+            "in": "query",
+            "name": "symbols",
+            "required": true,
+            "schema": {
+              "description": "Comma-separated symbols.",
+              "maxLength": 1200,
+              "minLength": 2,
+              "title": "Symbols",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "window",
+            "required": false,
+            "schema": {
+              "default": "24h",
+              "title": "Window",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Page_QuoteRowView_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "summary": "Quotes",
+        "tags": [
+          "monitors"
+        ],
+        "x-fiboki-auth": "session"
+      }
+    },
     "/api/markets/regimes": {
       "get": {
         "operationId": "regimes_api_markets_regimes_get",
@@ -11213,6 +11729,211 @@
           "markets"
         ],
         "x-fiboki-auth": "public"
+      }
+    },
+    "/api/markets/watchlists": {
+      "get": {
+        "description": "The operator's saved watchlists, then any built-in list they have not saved over.",
+        "operationId": "list_watchlists_api_markets_watchlists_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Page_WatchlistView_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "summary": "List Watchlists",
+        "tags": [
+          "monitors"
+        ],
+        "x-fiboki-auth": "session"
+      }
+    },
+    "/api/markets/watchlists/{name}": {
+      "delete": {
+        "description": "Delete a saved watchlist (a tombstone version; a deleted built-in stays hidden).",
+        "operationId": "delete_watchlist_api_markets_watchlists__name__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "name",
+            "required": true,
+            "schema": {
+              "title": "Name",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "base_version",
+            "required": true,
+            "schema": {
+              "minimum": 1,
+              "title": "Base Version",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Page_WatchlistView_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "csrfHeader": [],
+            "sessionCookie": []
+          }
+        ],
+        "summary": "Delete Watchlist",
+        "tags": [
+          "monitors"
+        ],
+        "x-fiboki-auth": "operator"
+      },
+      "put": {
+        "description": "Save a watchlist version (``base_version`` 0 creates or saves over a built-in). 409 on stale.",
+        "operationId": "put_watchlist_api_markets_watchlists__name__put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "name",
+            "required": true,
+            "schema": {
+              "title": "Name",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WatchlistWrite"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Page_WatchlistView_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "csrfHeader": [],
+            "sessionCookie": []
+          }
+        ],
+        "summary": "Put Watchlist",
+        "tags": [
+          "monitors"
+        ],
+        "x-fiboki-auth": "operator"
+      }
+    },
+    "/api/markets/watchlists/{name}/quotes": {
+      "get": {
+        "description": "The list's rows: recorded quote, sparkline, session and data age per symbol.",
+        "operationId": "watchlist_quotes_api_markets_watchlists__name__quotes_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "name",
+            "required": true,
+            "schema": {
+              "title": "Name",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "window",
+            "required": false,
+            "schema": {
+              "default": "24h",
+              "title": "Window",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Page_QuoteRowView_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "summary": "Watchlist Quotes",
+        "tags": [
+          "monitors"
+        ],
+        "x-fiboki-auth": "session"
       }
     },
     "/api/research/compare": {
@@ -13707,6 +14428,55 @@
           "workspace"
         ],
         "x-fiboki-auth": "operator"
+      }
+    },
+    "/api/workspace/format-rules/{grid_id}": {
+      "get": {
+        "description": "The conditional-formatting rules the API applies to a grid's rows (a legend).\n\nThe API evaluates them and sends a tone per cell (``tones``); this lists them so\nthe grid can say what each colour means. A grid with no rules gets an empty list.",
+        "operationId": "format_rules_api_workspace_format_rules__grid_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "grid_id",
+            "required": true,
+            "schema": {
+              "title": "Grid Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_FormatRulesView_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "summary": "Format Rules",
+        "tags": [
+          "workspace"
+        ],
+        "x-fiboki-auth": "session"
       }
     },
     "/api/workspace/layouts": {

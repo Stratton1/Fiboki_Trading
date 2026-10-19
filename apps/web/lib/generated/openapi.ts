@@ -379,6 +379,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/markets/quotes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Quotes
+         * @description Recorded quotes, sparkline, session and data age for each symbol.
+         */
+        get: operations["quotes_api_markets_quotes_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/markets/regimes": {
         parameters: {
             query?: never;
@@ -388,6 +408,70 @@ export interface paths {
         };
         /** Regimes */
         get: operations["regimes_api_markets_regimes_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/markets/watchlists": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Watchlists
+         * @description The operator's saved watchlists, then any built-in list they have not saved over.
+         */
+        get: operations["list_watchlists_api_markets_watchlists_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/markets/watchlists/{name}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Put Watchlist
+         * @description Save a watchlist version (``base_version`` 0 creates or saves over a built-in). 409 on stale.
+         */
+        put: operations["put_watchlist_api_markets_watchlists__name__put"];
+        post?: never;
+        /**
+         * Delete Watchlist
+         * @description Delete a saved watchlist (a tombstone version; a deleted built-in stays hidden).
+         */
+        delete: operations["delete_watchlist_api_markets_watchlists__name__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/markets/watchlists/{name}/quotes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Watchlist Quotes
+         * @description The list's rows: recorded quote, sparkline, session and data age per symbol.
+         */
+        get: operations["watchlist_quotes_api_markets_watchlists__name__quotes_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1476,6 +1560,29 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/workspace/format-rules/{grid_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Format Rules
+         * @description The conditional-formatting rules the API applies to a grid's rows (a legend).
+         *
+         *     The API evaluates them and sends a tone per cell (``tones``); this lists them so
+         *     the grid can say what each colour means. A grid with no rules gets an empty list.
+         */
+        get: operations["format_rules_api_workspace_format_rules__grid_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/workspace/layouts": {
         parameters: {
             query?: never;
@@ -2395,6 +2502,16 @@ export interface components {
             data: components["schemas"]["ExecutionModeBanner"];
             source: components["schemas"]["SourceNote"];
         };
+        /** Envelope[FormatRulesView] */
+        Envelope_FormatRulesView_: {
+            /**
+             * Caveats
+             * @default []
+             */
+            caveats: components["schemas"]["Caveat"][];
+            data: components["schemas"]["FormatRulesView"];
+            source: components["schemas"]["SourceNote"];
+        };
         /** Envelope[IncidentView] */
         Envelope_IncidentView_: {
             /**
@@ -2899,6 +3016,39 @@ export interface components {
             train_end: string | null;
             /** Train Start */
             train_start: string | null;
+        };
+        /** FormatRule */
+        FormatRule: {
+            /** Column */
+            column: string;
+            /** Description */
+            description: string;
+            /** Grid */
+            grid: string;
+            /**
+             * Source
+             * @default
+             */
+            source: string;
+            /**
+             * Tone
+             * @enum {string}
+             */
+            tone: "rise" | "fall" | "warn" | "stale" | "muted" | "accent";
+            /** Value */
+            value: number | string | boolean;
+            /**
+             * When
+             * @enum {string}
+             */
+            when: "gt" | "lt" | "ge" | "le" | "eq" | "ne";
+        };
+        /** FormatRulesView */
+        FormatRulesView: {
+            /** Grid Id */
+            grid_id: string;
+            /** Rules */
+            rules: components["schemas"]["FormatRule"][];
         };
         /**
          * GateCheckView
@@ -4133,6 +4283,29 @@ export interface components {
             /** Total */
             total: number;
         };
+        /** Page[QuoteRowView] */
+        Page_QuoteRowView_: {
+            /**
+             * Caveats
+             * @default []
+             */
+            caveats: components["schemas"]["Caveat"][];
+            /** Items */
+            items: components["schemas"]["QuoteRowView"][];
+            /**
+             * Limit
+             * @default 100
+             */
+            limit: number;
+            /**
+             * Offset
+             * @default 0
+             */
+            offset: number;
+            source: components["schemas"]["SourceNote"];
+            /** Total */
+            total: number;
+        };
         /** Page[RegimeView] */
         Page_RegimeView_: {
             /**
@@ -4326,6 +4499,29 @@ export interface components {
             caveats: components["schemas"]["Caveat"][];
             /** Items */
             items: components["schemas"]["ValidationSummary"][];
+            /**
+             * Limit
+             * @default 100
+             */
+            limit: number;
+            /**
+             * Offset
+             * @default 0
+             */
+            offset: number;
+            source: components["schemas"]["SourceNote"];
+            /** Total */
+            total: number;
+        };
+        /** Page[WatchlistView] */
+        Page_WatchlistView_: {
+            /**
+             * Caveats
+             * @default []
+             */
+            caveats: components["schemas"]["Caveat"][];
+            /** Items */
+            items: components["schemas"]["WatchlistView"][];
             /**
              * Limit
              * @default 100
@@ -4689,6 +4885,45 @@ export interface components {
             /** Timeframe */
             timeframe: string;
         };
+        /**
+         * QuoteRowView
+         * @description One watchlist row: the recorded quote, its age and the API's verdict on it.
+         */
+        QuoteRowView: {
+            age_s: components["schemas"]["Figure"];
+            ask: components["schemas"]["Figure"];
+            /** Asset Class */
+            asset_class: string;
+            bid: components["schemas"]["Figure"];
+            change_pct: components["schemas"]["Figure"];
+            /** Chart Href */
+            chart_href: string;
+            /**
+             * Data State
+             * @enum {string}
+             */
+            data_state: "live" | "stale" | "closed" | "none";
+            /** Data State Detail */
+            data_state_detail: string;
+            /** Market State */
+            market_state: string | null;
+            mid: components["schemas"]["Figure"];
+            /** Provider */
+            provider: string | null;
+            /** Quote Time */
+            quote_time: string | null;
+            range_pct: components["schemas"]["Figure"];
+            session: components["schemas"]["SessionView"];
+            sparkline: components["schemas"]["Series"];
+            spread_pips: components["schemas"]["Figure"];
+            spread_ratio: components["schemas"]["Figure"];
+            /** Symbol */
+            symbol: string;
+            /** Tones */
+            tones: {
+                [key: string]: "rise" | "fall" | "warn" | "stale" | "muted" | "accent";
+            };
+        };
         /** RegimeOverlay */
         RegimeOverlay: {
             /** Axes */
@@ -4913,6 +5148,15 @@ export interface components {
             latency: components["schemas"]["Figure"];
             /** Name */
             name: string;
+        };
+        /** SessionView */
+        SessionView: {
+            /** Calendar */
+            calendar: string;
+            /** Open */
+            open: boolean;
+            /** Trading Hours */
+            trading_hours: string;
         };
         /** SettingsView */
         SettingsView: {
@@ -5386,6 +5630,32 @@ export interface components {
             /** Strategy Id */
             strategy_id: string;
             walk_forward_efficiency: components["schemas"]["Figure"];
+        };
+        /** WatchlistView */
+        WatchlistView: {
+            /** Builtin */
+            builtin: boolean;
+            /** Can Edit */
+            can_edit: boolean;
+            /** Column Set */
+            column_set: string | null;
+            /** Name */
+            name: string;
+            /** Symbols */
+            symbols: string[];
+            /** Updated At */
+            updated_at: string | null;
+            /** Version */
+            version: number;
+        };
+        /** WatchlistWrite */
+        WatchlistWrite: {
+            /** Base Version */
+            base_version: number;
+            /** Column Set */
+            column_set?: string | null;
+            /** Symbols */
+            symbols: string[];
         };
         /** WorkerRow */
         WorkerRow: {
@@ -6012,6 +6282,39 @@ export interface operations {
             };
         };
     };
+    quotes_api_markets_quotes_get: {
+        parameters: {
+            query: {
+                /** @description Comma-separated symbols. */
+                symbols: string;
+                window?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Page_QuoteRowView_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     regimes_api_markets_regimes_get: {
         parameters: {
             query?: never;
@@ -6028,6 +6331,127 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Page_RegimeView_"];
+                };
+            };
+        };
+    };
+    list_watchlists_api_markets_watchlists_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Page_WatchlistView_"];
+                };
+            };
+        };
+    };
+    put_watchlist_api_markets_watchlists__name__put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                name: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WatchlistWrite"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Page_WatchlistView_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_watchlist_api_markets_watchlists__name__delete: {
+        parameters: {
+            query: {
+                base_version: number;
+            };
+            header?: never;
+            path: {
+                name: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Page_WatchlistView_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    watchlist_quotes_api_markets_watchlists__name__quotes_get: {
+        parameters: {
+            query?: {
+                window?: string;
+            };
+            header?: never;
+            path: {
+                name: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Page_QuoteRowView_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
@@ -7618,6 +8042,37 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Envelope_ColumnSetsView_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    format_rules_api_workspace_format_rules__grid_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                grid_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_FormatRulesView_"];
                 };
             };
             /** @description Validation Error */
