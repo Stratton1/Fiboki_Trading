@@ -747,7 +747,25 @@ D1's was 6.75%). As expected, P0's bootstrap demeans and rescales the trade sour
 defect barely touched it. Both are below 0.5, so a main-stage null at 0.08 will be described as
 underpowered (decision rule 5), and F3 (H4 power at 0.08 below 0.20) is not triggered.
 
-Next: the main stage on both timeframes, run with `e4_p0_<TF>.json` copied from these r400 files.
+### E-4 main stage on `engine_v4_time_units`: null, underpowered, holdout unspent (2026-10-19, MacBook)
+
+The void `main.*-of-3` shards and logs were moved into `void_engine_v3/` before this run, so resume and merge could not see them. Three shards (`WORKERS=3`, `nice -n 10`, `caffeinate -i`) read the marked data root `var/datastore`, with `e4_p0_H4.json` and `e4_p0_D1.json` the deciding P0 files. Merged file on the runtime checkout: `research/reports/e4_pooled/e4_main.json`, sha256 `f8a30a37a53ea7617e2e7c9bc8fe3ebfad9beac18bae1b3306b391e0a1fe106b`, `partial: false`. It is not committed. The file's `wall_seconds` is 1323.712, the sum of the three shard clocks. Wall clock was about eight minutes (19:44:01Z to 19:51:41Z).
+
+Every stored report's sleeve `key_version` is `engine_v4_time_units` (172 of 172 report sha256 values match the merge). The report code stamp is `1bce200195cd828451729d04a0bae6b322e7f2ea+dirty`: HEAD is that commit and `git diff` is empty; the dirty flag is the untracked E-4 artefact tree on the runtime checkout. Gate set `v2.1.0-calibrated`, fingerprint `9a195b2aed052b245fac2d42d99931a8bb509c6661e120de54dbacfbda6218fc`. Plan: 172 candidates, planned trials 1,064, prior trials 20,904, true trial count 21,968. Generated manifest `4f87aaedb5fbb63887e462953793d006a6d28f68fa0188f3d27233d6f513148e`.
+
+**Decision rule 3.** Read under `v2.1.0-calibrated`. No candidate cleared rungs 0 to 5. All 172 runs are `reject`, binding `min_track_record`, 0 errors (11 seed rows, 161 generated rows). There is no pooled survivor, so this entry names no N_raw, N_eff, DEFF or deflated Sharpe.
+
+**Decision rule 5.** Each timeframe's null sits beside the P0 re-run's power. Both powers are below 0.5, so both nulls are underpowered.
+
+| | H4 | D1 |
+|---|---|---|
+| Main-stage rows | 106, all `min_track_record` | 66, all `min_track_record` |
+| P0 power at 0.08 | 24.75% (MC SE 2.2%) | 7.25% |
+| P0 power at 0.12 | 48.25% | 22.5% |
+
+**Decision rule 4.** The holdout stays unspent. No seed cleared rungs 0 to 5, so the rule did not select a look. The merge records rung 6 as deferred. No `holdout.sqlite` is present under the runtime `var/` or `~/.fiboki`. The K3, K4 and K5 campaign registries were last written 2026-10-09T00:18:09Z.
+
+K6 stays draft. Nothing in this run is a promotion.
 
 ## K6 drafted, `campaign_k6_generated_100k` (DRAFT 2026-10-10, not filed; no compute on evidence data)
 
