@@ -1,0 +1,162 @@
+{
+ "caveats": [],
+ "data": {
+  "can_edit": true,
+  "evaluator": {
+   "detail": "Evaluated 20 s ago (0 quote(s), 0 rule(s)).",
+   "last_run_at": "2026-10-19T08:59:40Z",
+   "source": "evaluator",
+   "state": "live"
+  },
+  "rules": [
+   {
+    "armed": true,
+    "chart_href": "/markets/EURUSD",
+    "created_at": "2026-10-19T07:00:00Z",
+    "enabled": true,
+    "fired_count": {
+     "as_of": null,
+     "caveats": [],
+     "estimated": false,
+     "provenance": "broker_demo",
+     "sample_size": null,
+     "unit": "count",
+     "value": 2.0
+    },
+    "id": "pa_cd5e7f7fe039",
+    "instrument": "EURUSD",
+    "kind": "cross",
+    "last_fired_at": "2026-10-19T08:20:00Z",
+    "last_price": {
+     "as_of": "2026-10-19T08:10:00Z",
+     "caveats": [],
+     "estimated": false,
+     "provenance": "broker_demo",
+     "sample_size": null,
+     "unit": "",
+     "value": 1.0865
+    },
+    "last_quote_at": "2026-10-19T08:10:00Z",
+    "last_side": "below",
+    "level": {
+     "as_of": null,
+     "caveats": [],
+     "estimated": false,
+     "provenance": "broker_demo",
+     "sample_size": null,
+     "unit": "",
+     "value": 1.087
+    },
+    "mode": "rearm",
+    "note": "range top",
+    "side": "mid",
+    "state": "armed",
+    "updated_at": "2026-10-19T07:00:00Z",
+    "version": 1
+   },
+   {
+    "armed": false,
+    "chart_href": "/markets/GBPUSD",
+    "created_at": "2026-10-19T07:00:00Z",
+    "enabled": true,
+    "fired_count": {
+     "as_of": null,
+     "caveats": [],
+     "estimated": false,
+     "provenance": "broker_demo",
+     "sample_size": null,
+     "unit": "count",
+     "value": 1.0
+    },
+    "id": "pa_3fb44960e87c",
+    "instrument": "GBPUSD",
+    "kind": "below",
+    "last_fired_at": "2026-10-19T08:20:00Z",
+    "last_price": {
+     "as_of": "2026-10-19T07:50:00Z",
+     "caveats": [],
+     "estimated": false,
+     "provenance": "broker_demo",
+     "sample_size": null,
+     "unit": "",
+     "value": 1.2685
+    },
+    "last_quote_at": "2026-10-19T07:50:00Z",
+    "last_side": "below",
+    "level": {
+     "as_of": null,
+     "caveats": [],
+     "estimated": false,
+     "provenance": "broker_demo",
+     "sample_size": null,
+     "unit": "",
+     "value": 1.269
+    },
+    "mode": "once",
+    "note": "",
+    "side": "mid",
+    "state": "fired",
+    "updated_at": "2026-10-19T07:00:00Z",
+    "version": 1
+   },
+   {
+    "armed": true,
+    "chart_href": "/markets/USDJPY",
+    "created_at": "2026-10-19T07:00:00Z",
+    "enabled": true,
+    "fired_count": {
+     "as_of": null,
+     "caveats": [],
+     "estimated": false,
+     "provenance": "broker_demo",
+     "sample_size": null,
+     "unit": "count",
+     "value": 0.0
+    },
+    "id": "pa_2a0979219554",
+    "instrument": "USDJPY",
+    "kind": "above",
+    "last_fired_at": null,
+    "last_price": {
+     "as_of": null,
+     "caveats": [
+      {
+       "affects": "",
+       "code": "value_unavailable",
+       "direction": "unknown",
+       "message": "Not yet observed.",
+       "severity": "warning"
+      }
+     ],
+     "estimated": false,
+     "provenance": "broker_demo",
+     "sample_size": null,
+     "unit": "",
+     "value": null
+    },
+    "last_quote_at": null,
+    "last_side": null,
+    "level": {
+     "as_of": null,
+     "caveats": [],
+     "estimated": false,
+     "provenance": "broker_demo",
+     "sample_size": null,
+     "unit": "",
+     "value": 152.0
+    },
+    "mode": "once",
+    "note": "intervention zone",
+    "side": "mid",
+    "state": "armed",
+    "updated_at": "2026-10-19T07:00:00Z",
+    "version": 1
+   }
+  ]
+ },
+ "source": {
+  "as_of": "2026-10-19T09:00:00Z",
+  "detail": "Price alert store at /tmp/tmp059kqq28/state/alerts/price_alerts.sqlite; rules are evaluated over recorded OANDA practice quotes by a separate process, never by the API.",
+  "kind": "live"
+ }
+}

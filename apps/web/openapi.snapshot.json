@@ -142,6 +142,31 @@
         "title": "AlertRuleView",
         "type": "object"
       },
+      "AlertRulesView": {
+        "properties": {
+          "can_edit": {
+            "title": "Can Edit",
+            "type": "boolean"
+          },
+          "evaluator": {
+            "$ref": "#/components/schemas/EvaluatorView"
+          },
+          "rules": {
+            "items": {
+              "$ref": "#/components/schemas/PriceRuleView"
+            },
+            "title": "Rules",
+            "type": "array"
+          }
+        },
+        "required": [
+          "rules",
+          "evaluator",
+          "can_edit"
+        ],
+        "title": "AlertRulesView",
+        "type": "object"
+      },
       "AlertsView": {
         "properties": {
           "channels": {
@@ -2136,6 +2161,30 @@
         "title": "DrawingSetWrite",
         "type": "object"
       },
+      "Envelope_AlertRulesView_": {
+        "properties": {
+          "caveats": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/Caveat"
+            },
+            "title": "Caveats",
+            "type": "array"
+          },
+          "data": {
+            "$ref": "#/components/schemas/AlertRulesView"
+          },
+          "source": {
+            "$ref": "#/components/schemas/SourceNote"
+          }
+        },
+        "required": [
+          "data",
+          "source"
+        ],
+        "title": "Envelope[AlertRulesView]",
+        "type": "object"
+      },
       "Envelope_AlertsView_": {
         "properties": {
           "caveats": {
@@ -2736,6 +2785,30 @@
         "title": "Envelope[NewsView]",
         "type": "object"
       },
+      "Envelope_NotificationsView_": {
+        "properties": {
+          "caveats": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/Caveat"
+            },
+            "title": "Caveats",
+            "type": "array"
+          },
+          "data": {
+            "$ref": "#/components/schemas/NotificationsView"
+          },
+          "source": {
+            "$ref": "#/components/schemas/SourceNote"
+          }
+        },
+        "required": [
+          "data",
+          "source"
+        ],
+        "title": "Envelope[NotificationsView]",
+        "type": "object"
+      },
       "Envelope_OverlayView_": {
         "properties": {
           "caveats": {
@@ -3095,6 +3168,47 @@
           "source"
         ],
         "title": "Envelope[dict]",
+        "type": "object"
+      },
+      "EvaluatorView": {
+        "properties": {
+          "detail": {
+            "title": "Detail",
+            "type": "string"
+          },
+          "last_run_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Run At"
+          },
+          "source": {
+            "title": "Source",
+            "type": "string"
+          },
+          "state": {
+            "enum": [
+              "live",
+              "stale",
+              "never"
+            ],
+            "title": "State",
+            "type": "string"
+          }
+        },
+        "required": [
+          "last_run_at",
+          "source",
+          "state",
+          "detail"
+        ],
+        "title": "EvaluatorView",
         "type": "object"
       },
       "EventOverlay": {
@@ -6176,6 +6290,21 @@
         "title": "LoginRequest",
         "type": "object"
       },
+      "MarkRead": {
+        "additionalProperties": false,
+        "properties": {
+          "through_seq": {
+            "minimum": 0.0,
+            "title": "Through Seq",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "through_seq"
+        ],
+        "title": "MarkRead",
+        "type": "object"
+      },
       "MarketSessionView": {
         "properties": {
           "detail": {
@@ -6480,6 +6609,125 @@
           "recorder_detail"
         ],
         "title": "NewsView",
+        "type": "object"
+      },
+      "NotificationView": {
+        "properties": {
+          "chart_href": {
+            "title": "Chart Href",
+            "type": "string"
+          },
+          "fired_at": {
+            "format": "date-time",
+            "title": "Fired At",
+            "type": "string"
+          },
+          "instrument": {
+            "title": "Instrument",
+            "type": "string"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "level": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "message": {
+            "title": "Message",
+            "type": "string"
+          },
+          "price": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "quote_time": {
+            "format": "date-time",
+            "title": "Quote Time",
+            "type": "string"
+          },
+          "read": {
+            "title": "Read",
+            "type": "boolean"
+          },
+          "rule_id": {
+            "title": "Rule Id",
+            "type": "string"
+          },
+          "seq": {
+            "title": "Seq",
+            "type": "integer"
+          },
+          "side": {
+            "title": "Side",
+            "type": "string"
+          },
+          "tones": {
+            "additionalProperties": {
+              "enum": [
+                "rise",
+                "fall",
+                "warn",
+                "stale",
+                "muted",
+                "accent"
+              ],
+              "type": "string"
+            },
+            "title": "Tones",
+            "type": "object"
+          }
+        },
+        "required": [
+          "seq",
+          "rule_id",
+          "instrument",
+          "kind",
+          "side",
+          "level",
+          "price",
+          "quote_time",
+          "fired_at",
+          "message",
+          "read",
+          "tones",
+          "chart_href"
+        ],
+        "title": "NotificationView",
+        "type": "object"
+      },
+      "NotificationsView": {
+        "properties": {
+          "evaluator": {
+            "$ref": "#/components/schemas/EvaluatorView"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/NotificationView"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "read_through": {
+            "title": "Read Through",
+            "type": "integer"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          },
+          "unread": {
+            "title": "Unread",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "total",
+          "unread",
+          "read_through",
+          "evaluator"
+        ],
+        "title": "NotificationsView",
         "type": "object"
       },
       "OpenPositionView": {
@@ -8521,6 +8769,150 @@
         "title": "PositionRowView",
         "type": "object"
       },
+      "PriceRuleView": {
+        "properties": {
+          "armed": {
+            "title": "Armed",
+            "type": "boolean"
+          },
+          "chart_href": {
+            "title": "Chart Href",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "enabled": {
+            "title": "Enabled",
+            "type": "boolean"
+          },
+          "fired_count": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "instrument": {
+            "title": "Instrument",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "above",
+              "below",
+              "cross"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "last_fired_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Fired At"
+          },
+          "last_price": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "last_quote_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Quote At"
+          },
+          "last_side": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Side"
+          },
+          "level": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "mode": {
+            "enum": [
+              "once",
+              "rearm"
+            ],
+            "title": "Mode",
+            "type": "string"
+          },
+          "note": {
+            "title": "Note",
+            "type": "string"
+          },
+          "side": {
+            "enum": [
+              "mid",
+              "bid",
+              "ask"
+            ],
+            "title": "Side",
+            "type": "string"
+          },
+          "state": {
+            "enum": [
+              "armed",
+              "fired",
+              "disabled"
+            ],
+            "title": "State",
+            "type": "string"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "instrument",
+          "kind",
+          "side",
+          "level",
+          "mode",
+          "note",
+          "enabled",
+          "armed",
+          "version",
+          "created_at",
+          "updated_at",
+          "last_side",
+          "last_price",
+          "last_quote_at",
+          "fired_count",
+          "last_fired_at",
+          "state",
+          "chart_href"
+        ],
+        "title": "PriceRuleView",
+        "type": "object"
+      },
       "PrincipalView": {
         "properties": {
           "can_arm_kill_switch": {
@@ -9374,6 +9766,132 @@
           "threshold"
         ],
         "title": "RuleEvaluationView",
+        "type": "object"
+      },
+      "RuleUpdate": {
+        "additionalProperties": false,
+        "properties": {
+          "base_version": {
+            "minimum": 1.0,
+            "title": "Base Version",
+            "type": "integer"
+          },
+          "enabled": {
+            "default": true,
+            "title": "Enabled",
+            "type": "boolean"
+          },
+          "instrument": {
+            "title": "Instrument",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "above",
+              "below",
+              "cross"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "level": {
+            "exclusiveMinimum": 0.0,
+            "title": "Level",
+            "type": "number"
+          },
+          "mode": {
+            "default": "once",
+            "enum": [
+              "once",
+              "rearm"
+            ],
+            "title": "Mode",
+            "type": "string"
+          },
+          "note": {
+            "default": "",
+            "maxLength": 200,
+            "title": "Note",
+            "type": "string"
+          },
+          "side": {
+            "default": "mid",
+            "enum": [
+              "mid",
+              "bid",
+              "ask"
+            ],
+            "title": "Side",
+            "type": "string"
+          }
+        },
+        "required": [
+          "instrument",
+          "kind",
+          "level",
+          "base_version"
+        ],
+        "title": "RuleUpdate",
+        "type": "object"
+      },
+      "RuleWrite": {
+        "additionalProperties": false,
+        "properties": {
+          "enabled": {
+            "default": true,
+            "title": "Enabled",
+            "type": "boolean"
+          },
+          "instrument": {
+            "title": "Instrument",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "above",
+              "below",
+              "cross"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "level": {
+            "exclusiveMinimum": 0.0,
+            "title": "Level",
+            "type": "number"
+          },
+          "mode": {
+            "default": "once",
+            "enum": [
+              "once",
+              "rearm"
+            ],
+            "title": "Mode",
+            "type": "string"
+          },
+          "note": {
+            "default": "",
+            "maxLength": 200,
+            "title": "Note",
+            "type": "string"
+          },
+          "side": {
+            "default": "mid",
+            "enum": [
+              "mid",
+              "bid",
+              "ask"
+            ],
+            "title": "Side",
+            "type": "string"
+          }
+        },
+        "required": [
+          "instrument",
+          "kind",
+          "level"
+        ],
+        "title": "RuleWrite",
         "type": "object"
       },
       "RunSummaryView": {
@@ -11251,6 +11769,310 @@
   },
   "openapi": "3.1.0",
   "paths": {
+    "/api/alerts/notifications": {
+      "get": {
+        "description": "What fired, newest first, with the API's unread count and read marker.",
+        "operationId": "notifications_api_alerts_notifications_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 100,
+              "maximum": 500,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "before",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Before"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_NotificationsView_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "summary": "Notifications",
+        "tags": [
+          "alerts"
+        ],
+        "x-fiboki-auth": "session"
+      }
+    },
+    "/api/alerts/notifications/read": {
+      "post": {
+        "description": "Move the operator's read marker forward to ``through_seq`` (never back).",
+        "operationId": "mark_read_api_alerts_notifications_read_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MarkRead"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_NotificationsView_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "csrfHeader": [],
+            "sessionCookie": []
+          }
+        ],
+        "summary": "Mark Read",
+        "tags": [
+          "alerts"
+        ],
+        "x-fiboki-auth": "operator"
+      }
+    },
+    "/api/alerts/rules": {
+      "get": {
+        "description": "The operator's price and level alert rules, and whether anything is evaluating them.",
+        "operationId": "list_rules_api_alerts_rules_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_AlertRulesView_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "summary": "List Rules",
+        "tags": [
+          "alerts"
+        ],
+        "x-fiboki-auth": "session"
+      },
+      "post": {
+        "description": "Create a rule (armed). Audited. Evaluation starts with the next recorded quote after now.",
+        "operationId": "create_rule_api_alerts_rules_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RuleWrite"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_AlertRulesView_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "csrfHeader": [],
+            "sessionCookie": []
+          }
+        ],
+        "summary": "Create Rule",
+        "tags": [
+          "alerts"
+        ],
+        "x-fiboki-auth": "operator"
+      }
+    },
+    "/api/alerts/rules/{rule_id}": {
+      "delete": {
+        "description": "Delete a rule (its revisions and the notifications it raised are kept).",
+        "operationId": "delete_rule_api_alerts_rules__rule_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "rule_id",
+            "required": true,
+            "schema": {
+              "title": "Rule Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "base_version",
+            "required": true,
+            "schema": {
+              "minimum": 1,
+              "title": "Base Version",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "csrfHeader": [],
+            "sessionCookie": []
+          }
+        ],
+        "summary": "Delete Rule",
+        "tags": [
+          "alerts"
+        ],
+        "x-fiboki-auth": "operator"
+      },
+      "put": {
+        "description": "Replace a rule's spec (re-arms it). ``base_version`` must be current: 409 otherwise.",
+        "operationId": "update_rule_api_alerts_rules__rule_id__put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "rule_id",
+            "required": true,
+            "schema": {
+              "title": "Rule Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RuleUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_AlertRulesView_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "csrfHeader": [],
+            "sessionCookie": []
+          }
+        ],
+        "summary": "Update Rule",
+        "tags": [
+          "alerts"
+        ],
+        "x-fiboki-auth": "operator"
+      }
+    },
     "/api/auth/login": {
       "post": {
         "operationId": "login_api_auth_login_post",

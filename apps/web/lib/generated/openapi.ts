@@ -5,6 +5,94 @@
  */
 
 export interface paths {
+    "/api/alerts/notifications": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Notifications
+         * @description What fired, newest first, with the API's unread count and read marker.
+         */
+        get: operations["notifications_api_alerts_notifications_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/alerts/notifications/read": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Mark Read
+         * @description Move the operator's read marker forward to ``through_seq`` (never back).
+         */
+        post: operations["mark_read_api_alerts_notifications_read_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/alerts/rules": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Rules
+         * @description The operator's price and level alert rules, and whether anything is evaluating them.
+         */
+        get: operations["list_rules_api_alerts_rules_get"];
+        put?: never;
+        /**
+         * Create Rule
+         * @description Create a rule (armed). Audited. Evaluation starts with the next recorded quote after now.
+         */
+        post: operations["create_rule_api_alerts_rules_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/alerts/rules/{rule_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Update Rule
+         * @description Replace a rule's spec (re-arms it). ``base_version`` must be current: 409 otherwise.
+         */
+        put: operations["update_rule_api_alerts_rules__rule_id__put"];
+        post?: never;
+        /**
+         * Delete Rule
+         * @description Delete a rule (its revisions and the notifications it raised are kept).
+         */
+        delete: operations["delete_rule_api_alerts_rules__rule_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/auth/login": {
         parameters: {
             query?: never;
@@ -1818,6 +1906,14 @@ export interface components {
             /** Source */
             source: string;
         };
+        /** AlertRulesView */
+        AlertRulesView: {
+            /** Can Edit */
+            can_edit: boolean;
+            evaluator: components["schemas"]["EvaluatorView"];
+            /** Rules */
+            rules: components["schemas"]["PriceRuleView"][];
+        };
         /** AlertRuleView */
         AlertRuleView: {
             /** Category */
@@ -2533,6 +2629,16 @@ export interface components {
             /** Drawings */
             drawings: components["schemas"]["Drawing"][];
         };
+        /** Envelope[AlertRulesView] */
+        Envelope_AlertRulesView_: {
+            /**
+             * Caveats
+             * @default []
+             */
+            caveats: components["schemas"]["Caveat"][];
+            data: components["schemas"]["AlertRulesView"];
+            source: components["schemas"]["SourceNote"];
+        };
         /** Envelope[AlertsView] */
         Envelope_AlertsView_: {
             /**
@@ -2794,6 +2900,16 @@ export interface components {
             data: components["schemas"]["NewsView"];
             source: components["schemas"]["SourceNote"];
         };
+        /** Envelope[NotificationsView] */
+        Envelope_NotificationsView_: {
+            /**
+             * Caveats
+             * @default []
+             */
+            caveats: components["schemas"]["Caveat"][];
+            data: components["schemas"]["NotificationsView"];
+            source: components["schemas"]["SourceNote"];
+        };
         /** Envelope[OverlayView] */
         Envelope_OverlayView_: {
             /**
@@ -2933,6 +3049,20 @@ export interface components {
             caveats: components["schemas"]["Caveat"][];
             data: components["schemas"]["WalkForwardView"];
             source: components["schemas"]["SourceNote"];
+        };
+        /** EvaluatorView */
+        EvaluatorView: {
+            /** Detail */
+            detail: string;
+            /** Last Run At */
+            last_run_at: string | null;
+            /** Source */
+            source: string;
+            /**
+             * State
+             * @enum {string}
+             */
+            state: "live" | "stale" | "never";
         };
         /** EventOverlay */
         EventOverlay: {
@@ -3982,6 +4112,11 @@ export interface components {
             /** Timezone */
             timezone: string;
         };
+        /** MarkRead */
+        MarkRead: {
+            /** Through Seq */
+            through_seq: number;
+        };
         /** MonteCarloView */
         MonteCarloView: {
             /** Account Ccy */
@@ -4066,6 +4201,53 @@ export interface components {
             recorder_state: "live" | "stale" | "never";
             /** Sources */
             sources: string[];
+        };
+        /** NotificationsView */
+        NotificationsView: {
+            evaluator: components["schemas"]["EvaluatorView"];
+            /** Items */
+            items: components["schemas"]["NotificationView"][];
+            /** Read Through */
+            read_through: number;
+            /** Total */
+            total: number;
+            /** Unread */
+            unread: number;
+        };
+        /** NotificationView */
+        NotificationView: {
+            /** Chart Href */
+            chart_href: string;
+            /**
+             * Fired At
+             * Format: date-time
+             */
+            fired_at: string;
+            /** Instrument */
+            instrument: string;
+            /** Kind */
+            kind: string;
+            level: components["schemas"]["Figure"];
+            /** Message */
+            message: string;
+            price: components["schemas"]["Figure"];
+            /**
+             * Quote Time
+             * Format: date-time
+             */
+            quote_time: string;
+            /** Read */
+            read: boolean;
+            /** Rule Id */
+            rule_id: string;
+            /** Seq */
+            seq: number;
+            /** Side */
+            side: string;
+            /** Tones */
+            tones: {
+                [key: string]: "rise" | "fall" | "warn" | "stale" | "muted" | "accent";
+            };
         };
         /** OpenPositionView */
         OpenPositionView: {
@@ -5021,6 +5203,62 @@ export interface components {
             take_profit: components["schemas"]["Figure"];
             unrealised_pnl: components["schemas"]["Figure"];
         };
+        /** PriceRuleView */
+        PriceRuleView: {
+            /** Armed */
+            armed: boolean;
+            /** Chart Href */
+            chart_href: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Enabled */
+            enabled: boolean;
+            fired_count: components["schemas"]["Figure"];
+            /** Id */
+            id: string;
+            /** Instrument */
+            instrument: string;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "above" | "below" | "cross";
+            /** Last Fired At */
+            last_fired_at: string | null;
+            last_price: components["schemas"]["Figure"];
+            /** Last Quote At */
+            last_quote_at: string | null;
+            /** Last Side */
+            last_side: string | null;
+            level: components["schemas"]["Figure"];
+            /**
+             * Mode
+             * @enum {string}
+             */
+            mode: "once" | "rearm";
+            /** Note */
+            note: string;
+            /**
+             * Side
+             * @enum {string}
+             */
+            side: "mid" | "bid" | "ask";
+            /**
+             * State
+             * @enum {string}
+             */
+            state: "armed" | "fired" | "disabled";
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+            /** Version */
+            version: number;
+        };
         /** PrincipalView */
         PrincipalView: {
             /** Can Arm Kill Switch */
@@ -5323,6 +5561,76 @@ export interface components {
             registration_id: string;
             statistic: components["schemas"]["Figure"];
             threshold: components["schemas"]["Figure"];
+        };
+        /** RuleUpdate */
+        RuleUpdate: {
+            /** Base Version */
+            base_version: number;
+            /**
+             * Enabled
+             * @default true
+             */
+            enabled: boolean;
+            /** Instrument */
+            instrument: string;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "above" | "below" | "cross";
+            /** Level */
+            level: number;
+            /**
+             * Mode
+             * @default once
+             * @enum {string}
+             */
+            mode: "once" | "rearm";
+            /**
+             * Note
+             * @default
+             */
+            note: string;
+            /**
+             * Side
+             * @default mid
+             * @enum {string}
+             */
+            side: "mid" | "bid" | "ask";
+        };
+        /** RuleWrite */
+        RuleWrite: {
+            /**
+             * Enabled
+             * @default true
+             */
+            enabled: boolean;
+            /** Instrument */
+            instrument: string;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "above" | "below" | "cross";
+            /** Level */
+            level: number;
+            /**
+             * Mode
+             * @default once
+             * @enum {string}
+             */
+            mode: "once" | "rearm";
+            /**
+             * Note
+             * @default
+             */
+            note: string;
+            /**
+             * Side
+             * @default mid
+             * @enum {string}
+             */
+            side: "mid" | "bid" | "ask";
         };
         /** RungView */
         RungView: {
@@ -5992,6 +6300,190 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    notifications_api_alerts_notifications_get: {
+        parameters: {
+            query?: {
+                before?: number | null;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_NotificationsView_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    mark_read_api_alerts_notifications_read_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MarkRead"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_NotificationsView_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_rules_api_alerts_rules_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_AlertRulesView_"];
+                };
+            };
+        };
+    };
+    create_rule_api_alerts_rules_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RuleWrite"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_AlertRulesView_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_rule_api_alerts_rules__rule_id__put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                rule_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RuleUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_AlertRulesView_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_rule_api_alerts_rules__rule_id__delete: {
+        parameters: {
+            query: {
+                base_version: number;
+            };
+            header?: never;
+            path: {
+                rule_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     login_api_auth_login_post: {
         parameters: {
             query?: never;

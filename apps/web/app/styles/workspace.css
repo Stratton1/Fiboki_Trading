@@ -225,3 +225,16 @@
 .pulse__defs dl { margin: 4px 0 0; }
 .pulse__defs dt { color: var(--fg); }
 .pulse__defs dd { margin: 0 0 4px 1rem; }
+
+/* -------------------------------------------------------- notifications */
+.ntf__section { margin-bottom: 8px; }
+.ntf__unread { font-family: var(--font-mono, ui-monospace, monospace); font-size: 11px; font-weight: 700; padding: 1px 6px; border: 1px solid var(--accent); color: var(--accent); }
+.ntf__unread[data-unread="0"] { border-color: var(--border-subtle); color: var(--fg-subtle); }
+.ntf__eval { font-family: var(--font-mono, ui-monospace, monospace); font-size: 11px; color: var(--ok); }
+.ntf__eval[data-state="stale"] { color: var(--state-stale); }
+.ntf__eval[data-state="never"] { color: var(--fg-subtle); }
+.ntf__warn { margin: 0 0 4px; font-size: 11px; color: var(--state-stale); }
+.ntf__list { list-style: none; margin: 0; padding: 0; font-size: 12px; }
+.ntf__item { display: grid; grid-template-columns: 5rem 5.5rem minmax(0, 1fr) auto; gap: 8px; padding: 3px 0; border-bottom: 1px solid var(--border-subtle); align-items: baseline; }
+.ntf__item[data-read="true"] { color: var(--fg-subtle); }
+.ntf__form { padding: 4px 0; }

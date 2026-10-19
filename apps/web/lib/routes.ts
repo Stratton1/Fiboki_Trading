@@ -54,6 +54,7 @@ export const route = {
   watchlist: (list?: string | null) => withQuery("/markets/watchlist", { list: list ?? null }),
   news: (instrument?: string | null) => withQuery("/markets/news", { instrument: instrument ?? null }),
   calendar: (instrument?: string | null) => withQuery("/markets/calendar", { instrument: instrument ?? null }),
+  notifications: () => "/alerts/notifications",
 } as const;
 
 /** Page routes of the workstation ([param] marks a dynamic segment). */
@@ -106,6 +107,7 @@ export const ROUTE_PATTERNS = [
   "/markets/watchlist",
   "/markets/news",
   "/markets/calendar",
+  "/alerts/notifications",
 ] as const;
 
 /** True when an in-app link (path plus optional query) is one of the pages. */

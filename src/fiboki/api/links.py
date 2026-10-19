@@ -95,6 +95,7 @@ ROUTE_PATTERNS: tuple[str, ...] = (
     "/markets/watchlist",
     "/markets/news",
     "/markets/calendar",
+    "/alerts/notifications",
 )
 
 

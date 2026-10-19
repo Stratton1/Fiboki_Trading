@@ -78,6 +78,35 @@ export function untilWords(eventIso: string, now: number): string {
 export type PulseView = Local<S["PulseView"]>;
 export const pulsePath = (window: string) => `/api/markets/pulse?window=${window}`;
 
+export type AlertRulesView = Local<S["AlertRulesView"]>;
+export type PriceRule = Local<S["PriceRuleView"]>;
+export type NotificationsView = Local<S["NotificationsView"]>;
+export type AlertNotification = Local<S["NotificationView"]>;
+export type RuleWrite = S["RuleWrite"];
+
+export const ALERT_PATHS = {
+  rules: "/api/alerts/rules",
+  rule: (id: string) => `/api/alerts/rules/${encodeURIComponent(id)}`,
+  notifications: "/api/alerts/notifications",
+  read: "/api/alerts/notifications/read",
+} as const;
+
+export function createRule(rule: RuleWrite): Promise<{ data: AlertRulesView }> {
+  return apiFetch(ALERT_PATHS.rules, { method: "POST", body: JSON.stringify(rule) });
+}
+
+export function updateRule(id: string, baseVersion: number, rule: RuleWrite): Promise<{ data: AlertRulesView }> {
+  return apiFetch(ALERT_PATHS.rule(id), { method: "PUT", body: JSON.stringify({ ...rule, base_version: baseVersion }) });
+}
+
+export function deleteRule(id: string, baseVersion: number): Promise<void> {
+  return apiFetch(`${ALERT_PATHS.rule(id)}?base_version=${baseVersion}`, { method: "DELETE" });
+}
+
+export function markRead(throughSeq: number): Promise<{ data: NotificationsView }> {
+  return apiFetch(ALERT_PATHS.read, { method: "POST", body: JSON.stringify({ through_seq: throughSeq }) });
+}
+
 export const QUOTE_WINDOWS = ["1h", "4h", "24h"] as const;
 export type QuoteWindow = (typeof QUOTE_WINDOWS)[number];
 

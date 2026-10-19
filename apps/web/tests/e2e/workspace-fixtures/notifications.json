@@ -1,0 +1,118 @@
+{
+ "caveats": [],
+ "data": {
+  "evaluator": {
+   "detail": "Evaluated 20 s ago (0 quote(s), 0 rule(s)).",
+   "last_run_at": "2026-10-19T08:59:40Z",
+   "source": "evaluator",
+   "state": "live"
+  },
+  "items": [
+   {
+    "chart_href": "/markets/EURUSD",
+    "fired_at": "2026-10-19T08:20:00Z",
+    "instrument": "EURUSD",
+    "kind": "cross",
+    "level": {
+     "as_of": null,
+     "caveats": [],
+     "estimated": false,
+     "provenance": "broker_demo",
+     "sample_size": null,
+     "unit": "",
+     "value": 1.087
+    },
+    "message": "EURUSD mid 1.0865 crossed to below 1.087 \u2014 range top",
+    "price": {
+     "as_of": "2026-10-19T08:10:00Z",
+     "caveats": [],
+     "estimated": false,
+     "provenance": "broker_demo",
+     "sample_size": null,
+     "unit": "",
+     "value": 1.0865
+    },
+    "quote_time": "2026-10-19T08:10:00Z",
+    "read": false,
+    "rule_id": "pa_cd5e7f7fe039",
+    "seq": 3,
+    "side": "mid",
+    "tones": {
+     "state": "accent"
+    }
+   },
+   {
+    "chart_href": "/markets/EURUSD",
+    "fired_at": "2026-10-19T08:20:00Z",
+    "instrument": "EURUSD",
+    "kind": "cross",
+    "level": {
+     "as_of": null,
+     "caveats": [],
+     "estimated": false,
+     "provenance": "broker_demo",
+     "sample_size": null,
+     "unit": "",
+     "value": 1.087
+    },
+    "message": "EURUSD mid 1.0875 crossed to above 1.087 \u2014 range top",
+    "price": {
+     "as_of": "2026-10-19T07:30:00Z",
+     "caveats": [],
+     "estimated": false,
+     "provenance": "broker_demo",
+     "sample_size": null,
+     "unit": "",
+     "value": 1.0875
+    },
+    "quote_time": "2026-10-19T07:30:00Z",
+    "read": false,
+    "rule_id": "pa_cd5e7f7fe039",
+    "seq": 2,
+    "side": "mid",
+    "tones": {
+     "state": "accent"
+    }
+   },
+   {
+    "chart_href": "/markets/GBPUSD",
+    "fired_at": "2026-10-19T08:20:00Z",
+    "instrument": "GBPUSD",
+    "kind": "below",
+    "level": {
+     "as_of": null,
+     "caveats": [],
+     "estimated": false,
+     "provenance": "broker_demo",
+     "sample_size": null,
+     "unit": "",
+     "value": 1.269
+    },
+    "message": "GBPUSD mid 1.2685 below 1.269",
+    "price": {
+     "as_of": "2026-10-19T07:50:00Z",
+     "caveats": [],
+     "estimated": false,
+     "provenance": "broker_demo",
+     "sample_size": null,
+     "unit": "",
+     "value": 1.2685
+    },
+    "quote_time": "2026-10-19T07:50:00Z",
+    "read": true,
+    "rule_id": "pa_3fb44960e87c",
+    "seq": 1,
+    "side": "mid",
+    "tones": {}
+   }
+  ],
+  "read_through": 1,
+  "total": 3,
+  "unread": 2
+ },
+ "source": {
+  "as_of": "2026-10-19T09:00:00Z",
+  "detail": "Price alert store at /tmp/tmp059kqq28/state/alerts/price_alerts.sqlite; rules are evaluated over recorded OANDA practice quotes by a separate process, never by the API.",
+  "kind": "live"
+ }
+}

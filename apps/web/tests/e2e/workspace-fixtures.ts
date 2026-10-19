@@ -159,11 +159,38 @@ export function presetLayout(key: string): Record<string, unknown> {
 export interface MonitorMock {
   watchlistWrites: { name: string; body: Record<string, unknown> }[];
   columnSetWrites: Record<string, unknown>[];
+  alertWrites: { method: string; path: string; body: Record<string, unknown> | null }[];
 }
 
 /** The market monitors (watchlists, quotes, column sets, format rules), from the backend-written JSON. */
 export async function mockMonitors(page: Page): Promise<MonitorMock> {
-  const mock: MonitorMock = { watchlistWrites: [], columnSetWrites: [] };
+  const mock: MonitorMock = { watchlistWrites: [], columnSetWrites: [], alertWrites: [] };
+  type Notes = { data: { items: { seq: number; read: boolean; tones: Record<string, string> }[]; unread: number; read_through: number } };
+  let notes = wsFixture<Notes>("notifications");
+  await page.route((url) => url.origin === API && url.pathname === "/api/alerts/notifications", (route) => route.fulfill({ json: notes }));
+  await page.route(`${API}/api/alerts/notifications/read`, (route) => {
+    const body = route.request().postDataJSON() as { through_seq: number };
+    mock.alertWrites.push({ method: "POST", path: "read", body });
+    notes = {
+      ...notes,
+      data: {
+        ...notes.data,
+        unread: 0,
+        read_through: body.through_seq,
+        items: notes.data.items.map((n) => ({ ...n, read: true, tones: {} })),
+      },
+    };
+    return route.fulfill({ json: notes });
+  });
+  await page.route((url) => url.origin === API && url.pathname.startsWith("/api/alerts/rules"), (route) => {
+    const method = route.request().method();
+    if (method !== "GET") {
+      const raw = route.request().postData();
+      mock.alertWrites.push({ method, path: new URL(route.request().url()).pathname, body: raw ? (JSON.parse(raw) as Record<string, unknown>) : null });
+    }
+    if (method === "DELETE") return route.fulfill({ status: 204, body: "" });
+    return route.fulfill({ status: method === "POST" ? 201 : 200, json: wsFixture("alert_rules") });
+  });
   let columnSets = wsFixture<{ data: Record<string, unknown> }>("column_sets_watchlist");
   await page.route(`${API}/api/workspace/format-rules/watchlist`, (route) => route.fulfill({ json: wsFixture("format_rules_watchlist") }));
   await page.route(`${API}/api/markets/watchlists`, (route) => route.fulfill({ json: wsFixture("watchlists") }));

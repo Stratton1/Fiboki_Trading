@@ -1,8 +1,9 @@
 "use client";
 
+import { AlertsMonitor } from "@/components/monitors/AlertsMonitor";
 import type { PanelProps } from "../types";
 
-/** Placeholder until its screen lands in this wave (replaced in a later commit). */
-export default function AlertsPanel(_props: PanelProps) {
-  return <p className="muted">This panel&apos;s API lands later in this wave.</p>;
+/** NTF in a tile: notifications (rules too when maximised); an instrument publishes to the link group. */
+export default function AlertsPanel({ onSymbol, maximised, readOnly }: PanelProps) {
+  return <AlertsMonitor onSymbol={onSymbol} compact={!maximised} readOnly={readOnly} />;
 }

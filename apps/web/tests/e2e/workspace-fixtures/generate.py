@@ -86,11 +86,36 @@ def seed_news(state: Path) -> None:
         store.log_poll(NOW - timedelta(seconds=90), NOW - timedelta(seconds=80), {"fed_rss": "ok"})
 
 
+def seed_alerts(state: Path) -> None:
+    from fiboki.core.paths import resolve_paths
+    from fiboki.data.recorder import MarketState, QuoteRecord
+    from fiboki.obs.price_alerts import PriceAlertStore, RuleSpec
+
+    store = PriceAlertStore(resolve_paths({"FIBOKI_STATE_DIR": str(state)}).price_alerts_db)
+    t0 = NOW - timedelta(hours=2)
+    store.create("joe", RuleSpec("EURUSD", "cross", 1.0870, mode="rearm", note="range top"), actor="joe", now=t0)
+    store.create("joe", RuleSpec("GBPUSD", "below", 1.2690), actor="joe", now=t0)
+    store.create("joe", RuleSpec("USDJPY", "above", 152.0, note="intervention zone"), actor="joe", now=t0)
+
+    def q(minutes: int, sym: str, mid: float) -> QuoteRecord:
+        return QuoteRecord(timestamp=t0 + timedelta(minutes=minutes), instrument=sym, bid=mid - 0.0001,
+                           ask=mid + 0.0001, provider="oanda_practice_pricing", market_state=MarketState.OPEN)
+
+    store.evaluate([q(10, "EURUSD", 1.0860), q(30, "EURUSD", 1.0875), q(50, "GBPUSD", 1.2685),
+                    q(70, "EURUSD", 1.0865)], now=NOW - timedelta(minutes=40))
+    newest = store.notifications("joe")[-1].seq  # the oldest one: mark it read
+    store.mark_read("joe", newest, now=NOW - timedelta(minutes=30))
+    store.evaluate([], now=NOW - timedelta(seconds=20))
+
+
 def pin_clocks() -> None:
     """The routers read the API's clock; pin it so the fixtures are reproducible."""
     import fiboki.api.routers.monitors as monitors
 
     monitors._now = lambda at=None: NOW  # type: ignore[assignment]
+    import fiboki.api.routers.price_alerts as price_alerts
+
+    price_alerts._now = lambda: NOW  # type: ignore[assignment]
 
 
 def dump(client: TestClient) -> None:
@@ -110,6 +135,9 @@ def dump(client: TestClient) -> None:
     write("calendar_event", client.get(f"/api/markets/calendar/events/{first}?instrument=EURUSD").json())
     write("pulse_24h", client.get("/api/markets/pulse?window=24h").json())
     write("format_rules_pulse", client.get("/api/workspace/format-rules/pulse").json())
+    write("alert_rules", client.get("/api/alerts/rules").json())
+    write("notifications", client.get("/api/alerts/notifications?limit=200").json())
+    write("notifications_30", client.get("/api/alerts/notifications?limit=30").json())
     for extra in EXTRA_DUMPS:
         extra(client)
 
@@ -133,6 +161,7 @@ def main() -> None:
         })
         seed_quotes(state)
         seed_news(state)
+        seed_alerts(state)
         pin_clocks()
         app = create_app(settings, configure_logs=False)
         with TestClient(app, base_url=ORIGIN) as client:
