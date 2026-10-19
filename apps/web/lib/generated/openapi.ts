@@ -1135,6 +1135,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/trading/audit-chain": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Audit Chains
+         * @description Every forward bot's audit chain, verified from genesis (re-walked when it changed).
+         */
+        get: operations["audit_chains_api_trading_audit_chain_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/trading/candidates": {
         parameters: {
             query?: never;
@@ -1424,6 +1444,23 @@ export interface paths {
         };
         /** Risk State */
         get: operations["risk_state_api_trading_risk_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/trading/sessions/{session_id}/audit-chain": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Session Audit Chain */
+        get: operations["session_audit_chain_api_trading_sessions__session_id__audit_chain_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1905,6 +1942,60 @@ export interface components {
              */
             severity: string;
         };
+        /** ChainIntegrityView */
+        ChainIntegrityView: {
+            /** File */
+            file: string;
+            /** First At */
+            first_at: string | null;
+            /** First Broken Seq */
+            first_broken_seq: number | null;
+            /** Head Hash */
+            head_hash: string | null;
+            /** Intact */
+            intact: boolean;
+            /** Kinds */
+            kinds: {
+                [key: string]: number;
+            };
+            /** Last At */
+            last_at: string | null;
+            /** Present */
+            present: boolean;
+            /** Reason */
+            reason: string;
+            rows: components["schemas"]["Figure"];
+            /** Session Id */
+            session_id: string;
+            /** Status */
+            status: string;
+            /**
+             * Verified At
+             * Format: date-time
+             */
+            verified_at: string;
+        };
+        /** ChainRowView */
+        ChainRowView: {
+            /** At */
+            at: string;
+            /** Hash */
+            hash: string;
+            /** Kind */
+            kind: string;
+            /** Prev Hash */
+            prev_hash: string;
+            /** Seq */
+            seq: number;
+            /** Summary */
+            summary: string;
+        };
+        /** ChainTailView */
+        ChainTailView: {
+            integrity: components["schemas"]["ChainIntegrityView"];
+            /** Rows */
+            rows: components["schemas"]["ChainRowView"][];
+        };
         /**
          * ClockView
          * @description The API's clock and the market sessions, for the shell's session clocks.
@@ -2250,6 +2341,16 @@ export interface components {
              */
             caveats: components["schemas"]["Caveat"][];
             data: components["schemas"]["BrokerHealthView"];
+            source: components["schemas"]["SourceNote"];
+        };
+        /** Envelope[ChainTailView] */
+        Envelope_ChainTailView_: {
+            /**
+             * Caveats
+             * @default []
+             */
+            caveats: components["schemas"]["Caveat"][];
+            data: components["schemas"]["ChainTailView"];
             source: components["schemas"]["SourceNote"];
         };
         /** Envelope[ClockView] */
@@ -3664,6 +3765,29 @@ export interface components {
             caveats: components["schemas"]["Caveat"][];
             /** Items */
             items: components["schemas"]["CandidateView"][];
+            /**
+             * Limit
+             * @default 100
+             */
+            limit: number;
+            /**
+             * Offset
+             * @default 0
+             */
+            offset: number;
+            source: components["schemas"]["SourceNote"];
+            /** Total */
+            total: number;
+        };
+        /** Page[ChainIntegrityView] */
+        Page_ChainIntegrityView_: {
+            /**
+             * Caveats
+             * @default []
+             */
+            caveats: components["schemas"]["Caveat"][];
+            /** Items */
+            items: components["schemas"]["ChainIntegrityView"][];
             /**
              * Limit
              * @default 100
@@ -6792,6 +6916,26 @@ export interface operations {
             };
         };
     };
+    audit_chains_api_trading_audit_chain_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Page_ChainIntegrityView_"];
+                };
+            };
+        };
+    };
     candidates_api_trading_candidates_get: {
         parameters: {
             query?: never;
@@ -7161,6 +7305,39 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Envelope_RiskStateView_"];
+                };
+            };
+        };
+    };
+    session_audit_chain_api_trading_sessions__session_id__audit_chain_get: {
+        parameters: {
+            query?: {
+                limit?: number;
+            };
+            header?: never;
+            path: {
+                session_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_ChainTailView_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

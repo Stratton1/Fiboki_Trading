@@ -10,6 +10,7 @@ import type { Envelope } from "@/lib/types";
 import { AsyncBoundary } from "../AsyncBoundary";
 import { Card, PageHead, SourceBadge } from "../primitives";
 import { UrlState } from "../UrlState";
+import { SessionAuditChain } from "./AuditChain";
 import { BotControlButton, ControlStateTag } from "./BotControl";
 
 /**
@@ -35,6 +36,9 @@ export function SessionView({ sessionId }: { sessionId: string }) {
       <UrlState fallback={<ControlCard sessionId={sessionId} act={null} />}>
         <ControlFromUrl sessionId={sessionId} />
       </UrlState>
+      <Card title="Audit chain">
+        <SessionAuditChain sessionId={sessionId} />
+      </Card>
     </>
   );
 }

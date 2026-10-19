@@ -143,6 +143,7 @@ from fiboki.marketstate.calendar import (
 )
 from fiboki.obs.alerts import AlertEvent, Severity
 from fiboki.obs.logging import get_logger
+from fiboki.ops.audit_chain import CHAIN_FILE, PaperAuditChain
 from fiboki.ops.controls import (
     BotControlLedger,
     BotControlState,
@@ -473,6 +474,34 @@ class LedgerTrade:
     net_pnl: float
 
 
+#: Journal events that are also appended to the hash-chained audit log: every
+#: order outcome, fill, open, close, amend/close instruction, control and
+#: restart decision. Per-bar marks and pricing samples are not (they are not
+#: decisions, and they are in ``journal.jsonl``).
+CHAINED_EVENTS = frozenset(
+    {
+        "session_start", "session_stop", "venue_fill", "position_opened", "trade_closed",
+        "submission_not_accepted", "entry_refused_by_book", "reversal_scheduled",
+        "kill_switch_flatten", "venue_instruction", "control_applied",
+        "control_state_at_start", "entries_suppressed_by_control",
+        "positions_abandoned_at_restart", "positions_restored_at_restart",
+        "state_snapshot_refused",
+    }
+)
+
+
+class ChainedIntentStore(JsonlIntentStore):
+    """The execution service's intent store, with every write also chained."""
+
+    def __init__(self, path: str | Path, journal: ForwardJournal) -> None:
+        self._journal = journal
+        super().__init__(path)
+
+    def write(self, intent: Any) -> None:
+        super().write(intent)
+        self._journal.intent(intent)
+
+
 class ForwardJournal:
     """Append-only, self-verifying journals, plus the paper session the API reads.
 
@@ -501,11 +530,15 @@ class ForwardJournal:
         session_dir: Path,
         wiring: PaperForwardWiring,
         clock: Callable[[], pd.Timestamp],
+        chain: PaperAuditChain | None = None,
     ) -> None:
         self.ledger_dir = ledger_dir
         self.session_dir = session_dir
         self.wiring = wiring
         self.clock = clock
+        #: The hash-chained audit log (``ops/audit_chain``): every order, fill,
+        #: close, amend, control and risk decision is appended to it as well.
+        self.chain = chain
         self.ledger_dir.mkdir(parents=True, exist_ok=True)
         self.session_dir.mkdir(parents=True, exist_ok=True)
         self.events_path = ledger_dir / "journal.jsonl"
@@ -529,6 +562,8 @@ class ForwardJournal:
             **{k: _jsonable(v) for k, v in fields.items()},
         }
         durable_append(self.events_path, json.dumps(row, sort_keys=True, default=str))
+        if self.chain is not None and kind in CHAINED_EVENTS:
+            self.chain.append(kind, row, at=row["at"])
         return row
 
     def events(self, kind: str | None = None) -> list[dict[str, Any]]:
@@ -536,8 +571,32 @@ class ForwardJournal:
         return [r for r in rows if kind is None or r.get("kind") == kind]
 
     def attempt(self, attempt: ExecutionAttempt) -> None:
-        durable_append(
-            self.attempts_path, json.dumps(_jsonable(attempt.as_row()), sort_keys=True, default=str)
+        row = _jsonable(attempt.as_row())
+        durable_append(self.attempts_path, json.dumps(row, sort_keys=True, default=str))
+        if self.chain is not None:
+            self.chain.append("risk_decision", row, at=self.clock().isoformat())
+
+    def intent(self, intent: Any) -> None:
+        """An order intent the execution service persisted (``ChainedIntentStore``)."""
+        if self.chain is None:
+            return
+        self.chain.append(
+            "order_intent",
+            {
+                "client_ref": intent.client_ref,
+                "plan_id": intent.plan_id,
+                "strategy_id": intent.strategy_id,
+                "instrument": intent.instrument,
+                "direction": intent.direction,
+                "size": intent.size,
+                "mode": intent.mode,
+                "state": intent.state,
+                "broker_ref": intent.broker_ref,
+                "last_error": getattr(intent, "last_error", ""),
+                "closing": bool((intent.extra or {}).get("closing", False)),
+                **self.wiring.stamp(),
+            },
+            at=self.clock().isoformat(),
         )
 
     def record_trades(self, trades: Sequence[Any]) -> list[dict[str, Any]]:
@@ -1877,6 +1936,9 @@ def compose_runtime(
         session_dir=_paper_root(settings) / f"forward-{wired.version}",
         wiring=wired,
         clock=clock,
+        chain=PaperAuditChain(
+            state_dir / wired.ledger_dir / CHAIN_FILE, session_id=forward_session_id(wired.version)
+        ),
     )
     previous = journal.last_account()
     carried_balance = None if previous is None else float(previous["balance"])
@@ -2068,7 +2130,7 @@ def compose_runtime(
     execution = ExecutionService(
         adapter=venue,
         gateway=gateway,
-        store=JsonlIntentStore(journal.intents_path),
+        store=ChainedIntentStore(journal.intents_path, journal),
         mode=ExecutionMode.PAPER,
     )
 

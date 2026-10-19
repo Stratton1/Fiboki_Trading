@@ -86,3 +86,32 @@ def test_a_replay_or_unknown_session_cannot_be_controlled(tmp_path, api_env):
         listed = c.get("/api/trading/controls").json()
         assert [i["session_id"] for i in listed["items"]] == ["forward-paper_forward_v1"]
         assert listed["source"]["kind"] == "absent"
+
+
+def test_the_audit_chain_endpoints_verify_and_report_a_broken_row(tmp_path, api_env):
+    import json as _json
+
+    from fiboki.ops.audit_chain import PaperAuditChain, canonical_json
+
+    with _app(tmp_path, api_env) as c:
+        state = c.app.state.settings.state_dir
+        chain = PaperAuditChain(
+            state / "paper_forward" / "paper_forward_v1" / "audit_chain.jsonl",
+            session_id="forward-paper_forward_v1",
+        )
+        absent = c.get("/api/trading/audit-chain").json()["items"][0]
+        assert absent["status"] == "absent" and not absent["present"]
+        for i in range(3):
+            chain.append("venue_fill", {"instrument": "EURUSD", "price": 1.1 + i / 1000})
+        ok = c.get("/api/trading/audit-chain").json()["items"][0]
+        assert ok["status"] == "ok" and ok["rows"]["value"] == 3 and ok["head_hash"] == chain.head
+        tail = c.get("/api/trading/sessions/forward-paper_forward_v1/audit-chain?limit=2").json()["data"]
+        assert [r["seq"] for r in tail["rows"]] == [3, 2] and "EURUSD" in tail["rows"][0]["summary"]
+        rows = [_json.loads(x) for x in chain.path.read_text().splitlines()]
+        rows[0]["payload"]["price"] = 9.9
+        chain.path.write_text("".join(canonical_json(r) + "\n" for r in rows))
+        broken = c.get("/api/trading/audit-chain").json()
+        item = broken["items"][0]
+        assert item["status"] == "broken" and item["first_broken_seq"] == 1
+        assert "BROKEN" in broken["source"]["detail"]
+        assert c.get("/api/trading/sessions/nope/audit-chain").status_code == 404

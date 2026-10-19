@@ -7,11 +7,25 @@
  * state, verdict, weight and probability in them was computed by the API.
  */
 import type { components } from "./generated/openapi";
+import type { Figure } from "./types";
 
 type S = components["schemas"];
 
-export type BotControlView = S["BotControlView"];
-export type ControlRecordView = S["ControlRecordView"];
+/**
+ * A schema type with every generated Figure replaced by the LOCAL Figure
+ * contract (lib/types.ts, checked against the schema in lib/api-contract.ts),
+ * so ops payloads render through FigureValue like every other screen's.
+ */
+export type Local<T> = T extends S["Figure"]
+  ? Figure
+  : T extends (infer U)[]
+    ? Local<U>[]
+    : T extends object
+      ? { [K in keyof T]: Local<T[K]> }
+      : T;
+
+export type BotControlView = Local<S["BotControlView"]>;
+export type ControlRecordView = Local<S["ControlRecordView"]>;
 export type ControlAction = "pause" | "resume" | "drain";
 
 export const CONTROLS_PATH = "/api/trading/controls";
@@ -32,3 +46,14 @@ export const CONTROL_TONE: Record<string, "ok" | "degraded" | "neutral"> = {
   draining: "degraded",
   stopped: "neutral",
 };
+
+export type ChainIntegrityView = Local<S["ChainIntegrityView"]>;
+export type ChainTailView = Local<S["ChainTailView"]>;
+export type ChainRowView = Local<S["ChainRowView"]>;
+
+export const AUDIT_CHAINS_PATH = "/api/trading/audit-chain";
+export const sessionChainPath = (sessionId: string, limit = 50) =>
+  `/api/trading/sessions/${encodeURIComponent(sessionId)}/audit-chain?limit=${limit}`;
+
+/** Badge tone per chain status (the status is the API's verdict). */
+export const CHAIN_TONE: Record<string, "ok" | "down" | "unknown"> = { ok: "ok", broken: "down", absent: "unknown" };

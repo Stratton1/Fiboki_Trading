@@ -25,7 +25,10 @@ from fiboki.api.deps import AuditDep, PlatformDep, SettingsDep
 from fiboki.api.errors import ApiError
 from fiboki.api.logging import current_correlation_id
 from fiboki.api.models import Envelope, Page, SourceNote
+from fiboki.api.provenance import Figure
 from fiboki.api.security import Principal, require_admin
+from fiboki.core.enums import Provenance
+from fiboki.ops.audit_chain import CHAIN_FILE, ChainVerification, PaperAuditChain
 from fiboki.ops.controls import (
     REASON_MAX,
     REASON_MIN,
@@ -327,3 +330,152 @@ def request_control(
         **common,
     )
     return session_control(session_id, platform, settings)
+
+
+# =================================================================== audit chain
+
+
+#: (path, size, mtime_ns) -> verification. A chain is re-walked only when it changed.
+_VERIFIED: dict[str, tuple[tuple[int, int] | None, ChainVerification]] = {}
+
+
+def _verify_cached(chain: PaperAuditChain) -> ChainVerification:
+    sig = chain.signature()
+    key = str(chain.path)
+    hit = _VERIFIED.get(key)
+    if hit is not None and hit[0] == sig and sig is not None:
+        return hit[1]
+    result = chain.verify()
+    _VERIFIED[key] = (sig, result)
+    return result
+
+
+class ChainIntegrityView(BaseModel):
+    model_config = ConfigDict(frozen=True)
+
+    session_id: str
+    file: str
+    present: bool
+    intact: bool
+    #: ``ok`` (verifies), ``broken`` (a row does not verify), ``absent`` (no chain).
+    status: str = Field(pattern="^(ok|broken|absent)$")
+    rows: Figure
+    first_broken_seq: int | None
+    reason: str
+    head_hash: str | None
+    first_at: str | None
+    last_at: str | None
+    kinds: dict[str, int]
+    verified_at: datetime
+
+
+class ChainRowView(BaseModel):
+    model_config = ConfigDict(frozen=True)
+
+    seq: int
+    at: str
+    kind: str
+    summary: str
+    hash: str
+    prev_hash: str
+
+
+class ChainTailView(BaseModel):
+    model_config = ConfigDict(frozen=True)
+
+    integrity: ChainIntegrityView
+    rows: list[ChainRowView]
+
+
+def _integrity(session_id: str, chain: PaperAuditChain) -> ChainIntegrityView:
+    result = _verify_cached(chain)
+    status_ = "absent" if not result.present else ("ok" if result.intact else "broken")
+    return ChainIntegrityView(
+        session_id=session_id,
+        file=chain.path.name,
+        present=result.present,
+        intact=result.intact,
+        status=status_,
+        rows=Figure(value=float(result.rows), provenance=Provenance.PAPER, unit="count"),
+        first_broken_seq=result.first_broken_seq,
+        reason=result.reason,
+        head_hash=result.head_hash,
+        first_at=result.first_at,
+        last_at=result.last_at,
+        kinds=dict(result.kinds),
+        verified_at=datetime.now(tz=UTC),
+    )
+
+
+def _summary(row: dict[str, Any]) -> str:
+    p = row.get("payload") or {}
+    kind = row.get("kind")
+    if kind == "risk_decision":
+        decision = p.get("decision") or {}
+        reasons = decision.get("reasons") or []
+        verdict = "allowed" if decision.get("allowed") else "blocked"
+        return f"{p.get('instrument', '')} {verdict}" + (f": {', '.join(map(str, reasons))}" if reasons else "")
+    if kind == "order_intent":
+        return f"{p.get('instrument', '')} {p.get('direction', '')} {p.get('size', '')} {p.get('state', '')}".strip()
+    if kind == "venue_fill":
+        return f"{p.get('instrument', '')} {p.get('direction', '')} {p.get('size', '')} @ {p.get('price', '')}"
+    if kind == "trade_closed":
+        return f"{p.get('instrument', '')} {p.get('exit_reason', '')} net {p.get('net_pnl', '')}"
+    if kind == "control_applied":
+        return f"{p.get('action', '')} by {p.get('actor', '')}: {p.get('reason', '')}"
+    if kind == "venue_instruction":
+        t = p.get("telemetry") or {}
+        return f"{t.get('instrument', '')} {t.get('kind', '')} applied={t.get('applied')}"
+    return ", ".join(f"{k}={p[k]}" for k in ("instrument", "reason", "state") if k in p)[:200]
+
+
+def _chain_for(platform: Any, settings: Any, session_id: str) -> PaperAuditChain | None:
+    directory = ledger_dir_for(platform, settings, session_id)
+    if directory is None:
+        return None
+    return PaperAuditChain(directory / CHAIN_FILE, session_id=session_id)
+
+
+@router.get("/audit-chain", response_model=Page[ChainIntegrityView])
+def audit_chains(platform: PlatformDep, settings: SettingsDep) -> Page[ChainIntegrityView]:
+    """Every forward bot's audit chain, verified from genesis (re-walked when it changed)."""
+    items: list[ChainIntegrityView] = []
+    for sid in sorted(_forward_sessions(platform)):
+        chain = _chain_for(platform, settings, sid)
+        if chain is not None:
+            items.append(_integrity(sid, chain))
+    broken = [i.session_id for i in items if i.status == "broken"]
+    return Page(
+        items=items,
+        total=len(items),
+        limit=max(1, len(items)),
+        source=_note(
+            "live" if items else "absent",
+            (f"{len(items)} chain(s) walked from genesis by the API; "
+             + (f"BROKEN: {', '.join(broken)}." if broken else "every present chain verifies."))
+            if items
+            else "No forward paper session, so there is no audit chain to verify.",
+        ),
+    )
+
+
+@router.get("/sessions/{session_id}/audit-chain", response_model=Envelope[ChainTailView])
+def session_audit_chain(
+    session_id: str, platform: PlatformDep, settings: SettingsDep, limit: int = 100
+) -> Envelope[ChainTailView]:
+    chain = _chain_for(platform, settings, session_id)
+    if chain is None:
+        raise ApiError(status.HTTP_404_NOT_FOUND, "unknown_session",
+                       f"No forward paper session {session_id!r} with a ledger directory.")
+    integrity = _integrity(session_id, chain)
+    rows = [
+        ChainRowView(
+            seq=int(r.get("seq", 0)), at=str(r.get("at", "")), kind=str(r.get("kind", "")),
+            summary=_summary(r), hash=str(r.get("hash", "")), prev_hash=str(r.get("prev_hash", "")),
+        )
+        for r in (chain.tail(max(1, min(int(limit), 500))) if integrity.present else [])
+    ]
+    return Envelope(
+        data=ChainTailView(integrity=integrity, rows=rows),
+        source=_note("live" if integrity.present else "absent", integrity.reason),
+    )

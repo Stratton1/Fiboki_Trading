@@ -84,5 +84,40 @@ export async function mockOps(page: Page) {
   await page.route(`${API}/api/trading/sessions/*/control`, (route: Route) =>
     route.request().method() === "GET" ? route.fulfill({ json: env(controlView()) }) : route.fallback(),
   );
+  await page.route(`${API}/api/trading/audit-chain`, (route: Route) =>
+    route.fulfill({ json: page1([chainIntegrity()]) }),
+  );
+  await page.route(`${API}/api/trading/sessions/*/audit-chain*`, (route: Route) =>
+    route.fulfill({ json: env(chainTail()) }),
+  );
 }
 
+
+export function chainIntegrity(overrides: Record<string, unknown> = {}) {
+  return {
+    session_id: OPS_SESSION,
+    file: "audit_chain.jsonl",
+    present: true,
+    intact: true,
+    status: "ok",
+    rows: figure(1284, "paper", "count"),
+    first_broken_seq: null,
+    reason: "1284 row(s) verify from genesis",
+    head_hash: "9f2c41d0a7b3e5c6d8f0123456789abcdef0123456789abcdef0123456789ab",
+    first_at: "2026-10-12T00:00:05+00:00",
+    last_at: "2026-10-19T08:00:05+00:00",
+    kinds: { risk_decision: 900, order_intent: 120, venue_fill: 60, trade_closed: 58 },
+    verified_at: "2026-10-19T09:00:00Z",
+    ...overrides,
+  };
+}
+
+export function chainTail(overrides: Record<string, unknown> = {}) {
+  return {
+    integrity: chainIntegrity(overrides),
+    rows: [
+      { seq: 1284, at: "2026-10-19T08:00:05+00:00", kind: "trade_closed", summary: "EURUSD trailing_stop net -12.5", hash: "a".repeat(64), prev_hash: "b".repeat(64) },
+      { seq: 1283, at: "2026-10-19T08:00:05+00:00", kind: "risk_decision", summary: "EURUSD allowed", hash: "b".repeat(64), prev_hash: "c".repeat(64) },
+    ],
+  };
+}

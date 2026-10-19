@@ -10,6 +10,7 @@ import { AsyncBoundary } from "../AsyncBoundary";
 import { FigureValue } from "../FigureValue";
 import { PageHead, StatusBadge } from "../primitives";
 import { ProvenanceChip } from "../ProvenanceChip";
+import { AuditChainPanel } from "../ops/AuditChain";
 
 /**
  * SYSTEM BOARD (F8): every service, worker, paper bot, broker, data store,
@@ -156,6 +157,8 @@ function Board({
             focused={focus !== null && group.focus === focus}
           />
         ))}
+        {/* wave ops: the paper runtime's hash-chained audit log, verified by the API */}
+        <AuditChainPanel />
       </div>
     </>
   );

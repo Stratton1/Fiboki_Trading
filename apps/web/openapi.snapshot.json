@@ -1178,6 +1178,169 @@
         "title": "Caveat",
         "type": "object"
       },
+      "ChainIntegrityView": {
+        "properties": {
+          "file": {
+            "title": "File",
+            "type": "string"
+          },
+          "first_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "First At"
+          },
+          "first_broken_seq": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "First Broken Seq"
+          },
+          "head_hash": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Head Hash"
+          },
+          "intact": {
+            "title": "Intact",
+            "type": "boolean"
+          },
+          "kinds": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "Kinds",
+            "type": "object"
+          },
+          "last_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last At"
+          },
+          "present": {
+            "title": "Present",
+            "type": "boolean"
+          },
+          "reason": {
+            "title": "Reason",
+            "type": "string"
+          },
+          "rows": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "session_id": {
+            "title": "Session Id",
+            "type": "string"
+          },
+          "status": {
+            "pattern": "^(ok|broken|absent)$",
+            "title": "Status",
+            "type": "string"
+          },
+          "verified_at": {
+            "format": "date-time",
+            "title": "Verified At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "session_id",
+          "file",
+          "present",
+          "intact",
+          "status",
+          "rows",
+          "first_broken_seq",
+          "reason",
+          "head_hash",
+          "first_at",
+          "last_at",
+          "kinds",
+          "verified_at"
+        ],
+        "title": "ChainIntegrityView",
+        "type": "object"
+      },
+      "ChainRowView": {
+        "properties": {
+          "at": {
+            "title": "At",
+            "type": "string"
+          },
+          "hash": {
+            "title": "Hash",
+            "type": "string"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "prev_hash": {
+            "title": "Prev Hash",
+            "type": "string"
+          },
+          "seq": {
+            "title": "Seq",
+            "type": "integer"
+          },
+          "summary": {
+            "title": "Summary",
+            "type": "string"
+          }
+        },
+        "required": [
+          "seq",
+          "at",
+          "kind",
+          "summary",
+          "hash",
+          "prev_hash"
+        ],
+        "title": "ChainRowView",
+        "type": "object"
+      },
+      "ChainTailView": {
+        "properties": {
+          "integrity": {
+            "$ref": "#/components/schemas/ChainIntegrityView"
+          },
+          "rows": {
+            "items": {
+              "$ref": "#/components/schemas/ChainRowView"
+            },
+            "title": "Rows",
+            "type": "array"
+          }
+        },
+        "required": [
+          "integrity",
+          "rows"
+        ],
+        "title": "ChainTailView",
+        "type": "object"
+      },
       "ClockView": {
         "description": "The API's clock and the market sessions, for the shell's session clocks.",
         "properties": {
@@ -2107,6 +2270,30 @@
           "source"
         ],
         "title": "Envelope[BrokerHealthView]",
+        "type": "object"
+      },
+      "Envelope_ChainTailView_": {
+        "properties": {
+          "caveats": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/Caveat"
+            },
+            "title": "Caveats",
+            "type": "array"
+          },
+          "data": {
+            "$ref": "#/components/schemas/ChainTailView"
+          },
+          "source": {
+            "$ref": "#/components/schemas/SourceNote"
+          }
+        },
+        "required": [
+          "data",
+          "source"
+        ],
+        "title": "Envelope[ChainTailView]",
         "type": "object"
       },
       "Envelope_ClockView_": {
@@ -6085,6 +6272,49 @@
           "source"
         ],
         "title": "Page[CandidateView]",
+        "type": "object"
+      },
+      "Page_ChainIntegrityView_": {
+        "properties": {
+          "caveats": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/Caveat"
+            },
+            "title": "Caveats",
+            "type": "array"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ChainIntegrityView"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "limit": {
+            "default": 100,
+            "title": "Limit",
+            "type": "integer"
+          },
+          "offset": {
+            "default": 0,
+            "title": "Offset",
+            "type": "integer"
+          },
+          "source": {
+            "$ref": "#/components/schemas/SourceNote"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "total",
+          "source"
+        ],
+        "title": "Page[ChainIntegrityView]",
         "type": "object"
       },
       "Page_DataQualityRow_": {
@@ -12267,6 +12497,30 @@
         "x-fiboki-auth": "public"
       }
     },
+    "/api/trading/audit-chain": {
+      "get": {
+        "description": "Every forward bot's audit chain, verified from genesis (re-walked when it changed).",
+        "operationId": "audit_chains_api_trading_audit_chain_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Page_ChainIntegrityView_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [],
+        "summary": "Audit Chains",
+        "tags": [
+          "ops"
+        ],
+        "x-fiboki-auth": "public"
+      }
+    },
     "/api/trading/candidates": {
       "get": {
         "description": "The ONE surface that answers 'what should I promote?'.",
@@ -12790,6 +13044,60 @@
         "summary": "Risk State",
         "tags": [
           "trading"
+        ],
+        "x-fiboki-auth": "public"
+      }
+    },
+    "/api/trading/sessions/{session_id}/audit-chain": {
+      "get": {
+        "operationId": "session_audit_chain_api_trading_sessions__session_id__audit_chain_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "session_id",
+            "required": true,
+            "schema": {
+              "title": "Session Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 100,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_ChainTailView_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [],
+        "summary": "Session Audit Chain",
+        "tags": [
+          "ops"
         ],
         "x-fiboki-auth": "public"
       }
