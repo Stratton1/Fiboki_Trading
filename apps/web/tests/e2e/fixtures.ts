@@ -1,4 +1,5 @@
 import type { Page, Route } from "@playwright/test";
+import { mockOps } from "./ops-fixtures";
 
 /**
  * API mocking for the workstation's Playwright suite.
@@ -560,6 +561,8 @@ export async function mockShell(
   page: Page,
   options: { operator?: boolean | "unauthenticated" | Record<string, unknown> } = {},
 ) {
+  // wave ops: the ops routes first, so a spec's own route (registered later) wins.
+  await mockOps(page);
   await mockApi(page);
   await mockOperatorCore(page);
   await page.route(`${API}/api/health`, (route: Route) => route.fulfill({ json: healthReport() }));
@@ -1474,6 +1477,8 @@ export function fleetRow(overrides: Record<string, unknown> = {}) {
     written_at: "2026-10-18T14:00:31Z",
     lifecycle: "paper",
     content_hash: "abc123def456",
+    control_state: "active",
+    control_note: null,
     links: {
       strategy: `/research/strategies/${strategy}`,
       chart: "/markets/EURUSD?tf=H1",

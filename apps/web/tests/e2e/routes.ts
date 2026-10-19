@@ -16,6 +16,8 @@ export const SAMPLE_PARAMS: Readonly<Record<string, string>> = {
   run_id: "bt_0001",
   // /research/strategies/[strategy_id]: a registered strategy id.
   strategy_id: "donchian_breakout_atr",
+  // /trading/sessions/[session_id]: the forward bot the ops fixtures serve (ops-fixtures.ts).
+  session_id: "forward-paper_forward_v1",
 };
 
 /** `/markets/[symbol]` → `/markets/EURUSD`. */

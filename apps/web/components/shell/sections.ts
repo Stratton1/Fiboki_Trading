@@ -60,6 +60,8 @@ export const SECTIONS: Section[] = [
       { href: "/trading/fleet", label: "Fleet", code: "FLT", description: "Every paper bot: state, last decision, positions, P&L; attribution." },
       { href: "/trading/portfolio", label: "Portfolio", code: "PORT", description: "The paper book: balance, equity curve and open positions." },
     ],
+    // wave ops: one bot's control, reconciliation, maturity and audit page.
+    entityPrefixes: ["/trading/sessions"],
   },
   {
     id: "lifecycle",

@@ -1198,6 +1198,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/trading/controls": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Controls
+         * @description The control state of every forward paper bot (and of any id the ledger names).
+         */
+        get: operations["controls_api_trading_controls_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/trading/execution-telemetry": {
         parameters: {
             query?: never;
@@ -1406,6 +1426,27 @@ export interface paths {
         get: operations["risk_state_api_trading_risk_get"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/trading/sessions/{session_id}/control": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Session Control */
+        get: operations["session_control_api_trading_sessions__session_id__control_get"];
+        put?: never;
+        /**
+         * Request Control
+         * @description Pause, resume or drain ONE paper bot. Admin, a reason, and audited either way.
+         */
+        post: operations["request_control_api_trading_sessions__session_id__control_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1750,6 +1791,33 @@ export interface components {
             /** Status */
             status: string;
         };
+        /** BotControlView */
+        BotControlView: {
+            /** Actor */
+            actor: string | null;
+            /** Allowed Actions */
+            allowed_actions: string[];
+            /** Blocks Entries */
+            blocks_entries: boolean;
+            /** Consequences */
+            consequences: {
+                [key: string]: string[];
+            };
+            /** Controllable */
+            controllable: boolean;
+            /** History */
+            history: components["schemas"]["ControlRecordView"][];
+            /** Meaning */
+            meaning: string;
+            /** Reason */
+            reason: string | null;
+            /** Session Id */
+            session_id: string;
+            /** Since */
+            since: string | null;
+            /** State */
+            state: string;
+        };
         /** BotCounts */
         BotCounts: {
             failed: components["schemas"]["Figure"];
@@ -1911,6 +1979,33 @@ export interface components {
             min_common_days: number;
             /** Runs */
             runs: components["schemas"]["ComparedRunView"][];
+        };
+        /** ControlRecordView */
+        ControlRecordView: {
+            /** Action */
+            action: string;
+            /** Actor */
+            actor: string;
+            /** Actor Role */
+            actor_role: string;
+            /**
+             * At
+             * Format: date-time
+             */
+            at: string;
+            /** Reason */
+            reason: string;
+            /** State After */
+            state_after: string;
+            /** State Before */
+            state_before: string;
+        };
+        /** ControlRequest */
+        ControlRequest: {
+            /** Action */
+            action: string;
+            /** Reason */
+            reason: string;
         };
         /** CorrelationCellView */
         CorrelationCellView: {
@@ -2135,6 +2230,16 @@ export interface components {
              */
             caveats: components["schemas"]["Caveat"][];
             data: components["schemas"]["BoardView"];
+            source: components["schemas"]["SourceNote"];
+        };
+        /** Envelope[BotControlView] */
+        Envelope_BotControlView_: {
+            /**
+             * Caveats
+             * @default []
+             */
+            caveats: components["schemas"]["Caveat"][];
+            data: components["schemas"]["BotControlView"];
             source: components["schemas"]["SourceNote"];
         };
         /** Envelope[BrokerHealthView] */
@@ -2648,6 +2753,10 @@ export interface components {
             closed_trades: components["schemas"]["Figure"];
             /** Content Hash */
             content_hash: string | null;
+            /** Control Note */
+            control_note?: string | null;
+            /** Control State */
+            control_state?: string | null;
             day_pnl: components["schemas"]["Figure"];
             equity: components["schemas"]["Figure"];
             /** Health */
@@ -3509,6 +3618,29 @@ export interface components {
             caveats: components["schemas"]["Caveat"][];
             /** Items */
             items: components["schemas"]["BacktestRunView"][];
+            /**
+             * Limit
+             * @default 100
+             */
+            limit: number;
+            /**
+             * Offset
+             * @default 0
+             */
+            offset: number;
+            source: components["schemas"]["SourceNote"];
+            /** Total */
+            total: number;
+        };
+        /** Page[BotControlView] */
+        Page_BotControlView_: {
+            /**
+             * Caveats
+             * @default []
+             */
+            caveats: components["schemas"]["Caveat"][];
+            /** Items */
+            items: components["schemas"]["BotControlView"][];
             /**
              * Limit
              * @default 100
@@ -6746,6 +6878,26 @@ export interface operations {
             };
         };
     };
+    controls_api_trading_controls_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Page_BotControlView_"];
+                };
+            };
+        };
+    };
     execution_telemetry_api_trading_execution_telemetry_get: {
         parameters: {
             query?: {
@@ -7009,6 +7161,72 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Envelope_RiskStateView_"];
+                };
+            };
+        };
+    };
+    session_control_api_trading_sessions__session_id__control_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                session_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_BotControlView_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    request_control_api_trading_sessions__session_id__control_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                session_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ControlRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_BotControlView_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

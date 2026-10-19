@@ -878,6 +878,104 @@
         "title": "BoardView",
         "type": "object"
       },
+      "BotControlView": {
+        "properties": {
+          "actor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Actor"
+          },
+          "allowed_actions": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Allowed Actions",
+            "type": "array"
+          },
+          "blocks_entries": {
+            "title": "Blocks Entries",
+            "type": "boolean"
+          },
+          "consequences": {
+            "additionalProperties": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "title": "Consequences",
+            "type": "object"
+          },
+          "controllable": {
+            "title": "Controllable",
+            "type": "boolean"
+          },
+          "history": {
+            "items": {
+              "$ref": "#/components/schemas/ControlRecordView"
+            },
+            "title": "History",
+            "type": "array"
+          },
+          "meaning": {
+            "title": "Meaning",
+            "type": "string"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          },
+          "session_id": {
+            "title": "Session Id",
+            "type": "string"
+          },
+          "since": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Since"
+          },
+          "state": {
+            "pattern": "^(active|paused|draining|stopped)$",
+            "title": "State",
+            "type": "string"
+          }
+        },
+        "required": [
+          "session_id",
+          "state",
+          "blocks_entries",
+          "meaning",
+          "since",
+          "actor",
+          "reason",
+          "allowed_actions",
+          "controllable",
+          "consequences",
+          "history"
+        ],
+        "title": "BotControlView",
+        "type": "object"
+      },
       "BotCounts": {
         "properties": {
           "failed": {
@@ -1297,6 +1395,71 @@
           "definitions"
         ],
         "title": "ComparisonView",
+        "type": "object"
+      },
+      "ControlRecordView": {
+        "properties": {
+          "action": {
+            "title": "Action",
+            "type": "string"
+          },
+          "actor": {
+            "title": "Actor",
+            "type": "string"
+          },
+          "actor_role": {
+            "title": "Actor Role",
+            "type": "string"
+          },
+          "at": {
+            "format": "date-time",
+            "title": "At",
+            "type": "string"
+          },
+          "reason": {
+            "title": "Reason",
+            "type": "string"
+          },
+          "state_after": {
+            "title": "State After",
+            "type": "string"
+          },
+          "state_before": {
+            "title": "State Before",
+            "type": "string"
+          }
+        },
+        "required": [
+          "action",
+          "state_before",
+          "state_after",
+          "actor",
+          "actor_role",
+          "reason",
+          "at"
+        ],
+        "title": "ControlRecordView",
+        "type": "object"
+      },
+      "ControlRequest": {
+        "properties": {
+          "action": {
+            "pattern": "^(pause|resume|drain)$",
+            "title": "Action",
+            "type": "string"
+          },
+          "reason": {
+            "maxLength": 500,
+            "minLength": 8,
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "action",
+          "reason"
+        ],
+        "title": "ControlRequest",
         "type": "object"
       },
       "CorrelationCellView": {
@@ -1896,6 +2059,30 @@
           "source"
         ],
         "title": "Envelope[BoardView]",
+        "type": "object"
+      },
+      "Envelope_BotControlView_": {
+        "properties": {
+          "caveats": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/Caveat"
+            },
+            "title": "Caveats",
+            "type": "array"
+          },
+          "data": {
+            "$ref": "#/components/schemas/BotControlView"
+          },
+          "source": {
+            "$ref": "#/components/schemas/SourceNote"
+          }
+        },
+        "required": [
+          "data",
+          "source"
+        ],
+        "title": "Envelope[BotControlView]",
         "type": "object"
       },
       "Envelope_BrokerHealthView_": {
@@ -3249,6 +3436,28 @@
               }
             ],
             "title": "Content Hash"
+          },
+          "control_note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Control Note"
+          },
+          "control_state": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Control State"
           },
           "day_pnl": {
             "$ref": "#/components/schemas/Figure"
@@ -5790,6 +5999,49 @@
           "source"
         ],
         "title": "Page[BacktestRunView]",
+        "type": "object"
+      },
+      "Page_BotControlView_": {
+        "properties": {
+          "caveats": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/Caveat"
+            },
+            "title": "Caveats",
+            "type": "array"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/BotControlView"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "limit": {
+            "default": 100,
+            "title": "Limit",
+            "type": "integer"
+          },
+          "offset": {
+            "default": 0,
+            "title": "Offset",
+            "type": "integer"
+          },
+          "source": {
+            "$ref": "#/components/schemas/SourceNote"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "total",
+          "source"
+        ],
+        "title": "Page[BotControlView]",
         "type": "object"
       },
       "Page_CandidateView_": {
@@ -12144,6 +12396,30 @@
         "x-fiboki-auth": "public"
       }
     },
+    "/api/trading/controls": {
+      "get": {
+        "description": "The control state of every forward paper bot (and of any id the ledger names).",
+        "operationId": "controls_api_trading_controls_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Page_BotControlView_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [],
+        "summary": "Controls",
+        "tags": [
+          "ops"
+        ],
+        "x-fiboki-auth": "public"
+      }
+    },
     "/api/trading/execution-telemetry": {
       "get": {
         "operationId": "execution_telemetry_api_trading_execution_telemetry_get",
@@ -12516,6 +12792,108 @@
           "trading"
         ],
         "x-fiboki-auth": "public"
+      }
+    },
+    "/api/trading/sessions/{session_id}/control": {
+      "get": {
+        "operationId": "session_control_api_trading_sessions__session_id__control_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "session_id",
+            "required": true,
+            "schema": {
+              "title": "Session Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_BotControlView_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [],
+        "summary": "Session Control",
+        "tags": [
+          "ops"
+        ],
+        "x-fiboki-auth": "public"
+      },
+      "post": {
+        "description": "Pause, resume or drain ONE paper bot. Admin, a reason, and audited either way.",
+        "operationId": "request_control_api_trading_sessions__session_id__control_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "session_id",
+            "required": true,
+            "schema": {
+              "title": "Session Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ControlRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_BotControlView_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "csrfHeader": [],
+            "sessionCookie": []
+          }
+        ],
+        "summary": "Request Control",
+        "tags": [
+          "ops"
+        ],
+        "x-fiboki-auth": "admin"
       }
     },
     "/api/trading/trades": {

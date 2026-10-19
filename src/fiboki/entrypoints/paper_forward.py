@@ -143,6 +143,12 @@ from fiboki.marketstate.calendar import (
 )
 from fiboki.obs.alerts import AlertEvent, Severity
 from fiboki.obs.logging import get_logger
+from fiboki.ops.controls import (
+    BotControlLedger,
+    BotControlState,
+    BotState,
+    forward_session_id,
+)
 from fiboki.portfolio.construction import CorrelationMatrix
 from fiboki.portfolio.sizing import SizingPolicy
 from fiboki.risk.accounting import RealisedPnlLedger, correlation_from_frames
@@ -1050,6 +1056,149 @@ class _CalendarGuard:
         return self.inner(instrument, now)
 
 
+class ForwardControls:
+    """This bot's control state (``ops/controls``), read every cycle, journalled once.
+
+    The ledger is replayed whenever its file changed (size and mtime), so a
+    PAUSE the API writes binds this process's very next evaluation, as the kill
+    switch does. Each record this process has not journalled yet is journalled
+    as ``control_applied``; at start-up the state found on disk is journalled
+    as ``control_state_at_start`` when the bot is not active, so a restart
+    mid-pause says so in the record of the session it continues.
+
+    Draining: :meth:`maybe_complete_drain` runs at the end of every cycle and
+    records ``drain_complete`` (the bot becomes ``stopped``) once the book is
+    flat -- no open position, no entry the venue filled that the book has still
+    to model, no close the venue has still to confirm.
+    """
+
+    def __init__(
+        self,
+        ledger: BotControlLedger,
+        session_id: str,
+        journal: ForwardJournal,
+        manager: VenuePositionManager,
+        clock: Callable[[], pd.Timestamp],
+        dispatcher: Any = None,
+    ) -> None:
+        self.ledger = ledger
+        self.session_id = session_id
+        self.journal = journal
+        self.manager = manager
+        self.clock = clock
+        self.dispatcher = dispatcher
+        self._signature: Any = object()
+        self._state: BotControlState | None = None
+        state = self.current()
+        self._journaled = state.records
+        if state.state is not BotState.ACTIVE:
+            journal.event(
+                "control_state_at_start",
+                session_id=session_id,
+                **state.summary(),
+                note=(
+                    "this bot was not active when the process started; its control "
+                    "state is replayed from the control ledger, not from the snapshot"
+                ),
+            )
+
+    def current(self) -> BotControlState:
+        sig = self.ledger.signature()
+        if self._state is None or sig != self._signature:
+            self._state = self.ledger.state(self.session_id)
+            self._signature = sig
+        return self._state
+
+    @property
+    def blocks_entries(self) -> bool:
+        return self.current().blocks_entries
+
+    def observe(self) -> None:
+        """Journal every control record this process has not journalled yet."""
+        state = self.current()
+        if state.records <= self._journaled:
+            return
+        for record in self.ledger.records(self.session_id)[self._journaled:]:
+            self.journal.event("control_applied", **record.as_row())
+        self._journaled = state.records
+
+    def flat(self) -> bool:
+        return (
+            not self.manager.open_positions
+            and not self.manager.book.pending
+            and not self.manager.pending_closes
+        )
+
+    def maybe_complete_drain(self) -> bool:
+        if self.current().state is not BotState.DRAINING or not self.flat():
+            return False
+        at = self.clock()
+        self.ledger.complete_drain(
+            self.session_id,
+            at=at.to_pydatetime(),
+            detail={"last_bar": None if self.manager.now is None else self.manager.now.isoformat()},
+        )
+        self.observe()
+        if self.dispatcher is not None:
+            self.dispatcher.fire(
+                AlertEvent.STRATEGY_DEGRADED,
+                f"paper bot {self.session_id} drained: the book is flat and the bot is "
+                "stopped (no new entries until it is resumed)",
+                severity=Severity.INFO,
+                source="paper-forward",
+                dedupe_key=f"bot_drained:{self.session_id}",
+            )
+        return True
+
+    def summary(self) -> dict[str, Any]:
+        return {"session_id": self.session_id, **self.current().summary()}
+
+
+class ControlledEvaluator:
+    """The worker's evaluator, with the bot's control state in front of it.
+
+    The inner evaluator runs exactly as before (so the signals a paused bot
+    would have taken are known); when the control state blocks entries the
+    plans are journalled as ``entries_suppressed_by_control`` and none is
+    returned, so nothing reaches the gateway, the venue or the book. Exits are
+    untouched: they are the book's, not the evaluator's.
+    """
+
+    def __init__(self, inner: Any, controls: ForwardControls, journal: ForwardJournal) -> None:
+        self.inner = inner
+        self.controls = controls
+        self.journal = journal
+        self.suppressed = 0
+
+    def evaluate(self, instruments: Sequence[str], batch: BarBatch) -> list[Any]:
+        plans = list(self.inner.evaluate(instruments, batch))
+        if not plans:
+            return plans
+        state = self.controls.current()
+        if not state.blocks_entries:
+            return plans
+        self.suppressed += len(plans)
+        self.journal.event(
+            "entries_suppressed_by_control",
+            session_id=self.controls.session_id,
+            state=state.state.value,
+            plans=[
+                {
+                    "plan_id": getattr(p, "plan_id", ""),
+                    "instrument": getattr(p, "instrument", ""),
+                    "direction": getattr(getattr(p, "direction", None), "value", ""),
+                    "size": getattr(p, "size", None),
+                    "signal_bar_time": getattr(getattr(p, "signal", None), "bar_time", None),
+                }
+                for p in plans
+            ],
+        )
+        return []
+
+    def __getattr__(self, name: str) -> Any:
+        return getattr(self.inner, name)
+
+
 class ForwardFeed:
     """The worker's ``BarFeed``: poll OANDA, sample pricing, advance the book.
 
@@ -1094,6 +1243,7 @@ class ForwardFeed:
         self.equity_marks: list[tuple[pd.Timestamp, float]] = list(equity_marks)
         self.session_extra = dict(session_extra or {})
         self.flattens = 0
+        self.controls: ForwardControls | None = None
 
     # -- BarFeed -------------------------------------------------------------
 
@@ -1352,6 +1502,12 @@ class ForwardFeed:
                 **self.session_extra,
                 "risk_inputs_live": self.builder.risk_inputs_live(),
                 "spread_source": "oanda_practice_pricing",
+                "ledger_dir": self.wiring.ledger_dir,
+                **(
+                    {}
+                    if self.controls is None
+                    else {"control_state": self.controls.current().state.value}
+                ),
             },
         )
 
@@ -1401,9 +1557,14 @@ class PaperForwardWorker(LiveWorker):
         runtime.persist()
 
     def run_cycle(self) -> Any:
+        controls = self.runtime.controls
         try:
+            if controls is not None:
+                controls.observe()
             return super().run_cycle()
         finally:
+            if controls is not None:
+                controls.maybe_complete_drain()
             self.runtime.persist()
 
     def teardown(self) -> None:
@@ -1447,6 +1608,8 @@ class PaperForwardRuntime:
     snapshot_status: dict[str, Any] = field(default_factory=dict)
     snapshot_path: Path | None = None
     account: ModelledAccount | None = None
+    #: This bot's control state (``ops/controls``); ``None`` only in hand-built tests.
+    controls: ForwardControls | None = None
     _last_snapshot: str = ""
 
     # -- the state snapshot ------------------------------------------------
@@ -1461,6 +1624,9 @@ class PaperForwardRuntime:
                 limits_version=wired.limits_version,
             ),
             "wiring_version": wired.version,
+            # What the bot's control state was when this was written. INFORMATION
+            # only: a restart reads the control ledger, never this copy.
+            "control": None if self.controls is None else self.controls.current().summary(),
             "last_bar": None if self.manager.now is None else self.manager.now.isoformat(),
             "watermark": paper_state.watermark(
                 self.journal.trades_path, self.journal.intents_path
@@ -1568,6 +1734,14 @@ def _killswitch_path(settings: Any) -> Path:
     if paths is not None and getattr(paths, "killswitch_journal", None):
         return Path(paths.killswitch_journal)
     return _state_dir(settings) / "killswitch.jsonl"
+
+
+def _controls_path(settings: Any) -> Path:
+    """``core.paths.FibokiPaths.bot_controls``: the ONE file the API writes and this reads."""
+    paths = getattr(settings, "paths", None)
+    if paths is not None and getattr(paths, "bot_controls", None):
+        return Path(paths.bot_controls)
+    return _state_dir(settings) / "paper_controls.jsonl"
 
 
 def _health(settings: Any) -> Any:
@@ -1990,6 +2164,15 @@ def compose_runtime(
     )
     feed.attach(builder)
     feed.attach(venue)
+    controls = ForwardControls(
+        BotControlLedger(_controls_path(settings)),
+        forward_session_id(wired.version),
+        journal,
+        manager,
+        clock,
+        dispatcher,
+    )
+    controlled = ControlledEvaluator(evaluator, controls, journal)
 
     kill_view = KillSwitchView(switch)
     forward = ForwardFeed(
@@ -2013,13 +2196,14 @@ def compose_runtime(
         },
     )
     builder.equity_curve = forward.equity_curve
+    forward.controls = controls
     managed = ManagedExecution(execution, manager, policy, journal)
 
     wcfg = wired.worker
     worker = PaperForwardWorker(
         execution_service=managed,
         feed=forward,
-        evaluator=evaluator,
+        evaluator=controlled,
         context_builder=builder,
         store=store,
         kill_switch=kill_view,
@@ -2071,6 +2255,7 @@ def compose_runtime(
         snapshot_status=assessment.summary(),
         snapshot_path=snapshot_path,
         account=account,
+        controls=controls,
     )
     worker.runtime = runtime
     if assessment.restorable:

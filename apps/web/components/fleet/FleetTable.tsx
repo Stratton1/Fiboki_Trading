@@ -10,6 +10,7 @@ import type { BotState, FleetRowView, Page } from "@/lib/types";
 import { AsyncBoundary } from "../AsyncBoundary";
 import { FigureValue } from "../FigureValue";
 import { ProvenanceChip } from "../ProvenanceChip";
+import { BotControlButton, ControlStateTag } from "../ops/BotControl";
 
 /**
  * The fleet: one row per paper bot (session), from GET /api/trading/fleet.
@@ -169,7 +170,15 @@ function Row({
           <td className="num muted" title={formatTimestamp(row.written_at)}>
             {ago(row.written_at, now)}
           </td>
+          {/* wave ops: the bot's operator control (pause / resume / drain) */}
+          <td className="ops-fleet-control" data-testid="fleet-control">
+            <ControlStateTag state={row.control_state} note={row.control_note} />
+            {row.kind === "forward" ? <BotControlButton sessionId={row.session_id} label="…" testId="fleet-control-open" ariaLabel={`Pause, resume or drain ${row.label}`} /> : null}
+          </td>
           <td className="fleet-links">
+            <Link href={route.sessionDetail(row.session_id)} data-testid="fleet-session-link">
+              bot
+            </Link>
             <Link href={route.journal({ strategy: row.strategy_id })} data-testid="fleet-journal-link">
               journal
             </Link>
@@ -241,6 +250,7 @@ export function FleetTable({
                         <th scope="col" className="num">
                           Wrote
                         </th>
+                        <th scope="col">Control</th>
                         <th scope="col">Links</th>
                       </>
                     )}

@@ -32,6 +32,8 @@ def test_every_ledger_lives_under_the_state_dir() -> None:
         paths.drawings_db,
         paths.alert_outbox,
         paths.paper_root,
+        paths.bot_controls,
+        paths.ops_dir,
     ):
         assert root in ledger.parents, ledger
     assert paths.killswitch_journal == root / "killswitch.jsonl"

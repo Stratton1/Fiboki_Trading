@@ -94,6 +94,12 @@ class FibokiPaths:
     alert_log: Path | None
     #: At-least-once outbox for CRITICAL alerts to remote channels.
     alert_outbox: Path
+    #: Per-bot pause / resume / drain controls (``ops/controls.py``): written by
+    #: the API on an operator's request, read by the paper runtime every cycle.
+    bot_controls: Path
+    #: Operator workstation state that is not a ledger of record: the ops job
+    #: queue, reconciliation reports and the structured trade journal.
+    ops_dir: Path
 
     def as_dict(self) -> dict[str, str | bool | None]:
         out: dict[str, str | bool | None] = {}
@@ -161,4 +167,6 @@ def resolve_paths(env: Mapping[str, str], *, cwd: str | Path | None = None) -> F
         data_root=opt("FIBOKI_DATA_ROOT"),
         alert_log=opt("FIBOKI_ALERT_LOG"),
         alert_outbox=state_dir / "alerts_outbox.sqlite",
+        bot_controls=state_dir / "paper_controls.jsonl",
+        ops_dir=state_dir / "ops",
     )

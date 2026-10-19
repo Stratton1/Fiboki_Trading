@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useId, useRef, useState, type KeyboardEvent } from "react";
 import { pushHistory, readHistory } from "@/lib/history";
+import { route } from "@/lib/routes";
 import type { Hit } from "@/lib/search";
 import { openCommand } from "./commands";
 import { INSTRUMENT_FUNCTIONS } from "./functions";
@@ -20,6 +21,7 @@ import { SECTIONS } from "./sections";
  *   RSK, FLT, LAB …          a screen code
  *   FUNC, HELP               the function directory
  *   KILL                     opens the kill-switch dialog (never arms)
+ *   PAUSE|RESUME|DRAIN <bot>  opens that bot's control dialog (never acts)
  *   EURUSD                   the instrument's chart
  *   EURUSD H4 | BT | NEWS …  an instrument function
  *
@@ -90,6 +92,16 @@ function CommandLine() {
         pushHistory(operator?.user_id, "KILL");
         reset();
         openCommand("kill-switch");
+        return;
+      case "control":
+        // wave ops: open the bot's page with the act chosen; the dialog there
+        // still needs a reason and a confirm. Without a bot: the fleet.
+        if (parsed.session === null) {
+          go(route.fleet(), parsed.verb);
+          setMessage(`${parsed.verb} needs a bot: ${parsed.verb} <bot id> (the fleet lists them).`);
+          return;
+        }
+        go(route.sessionDetail(parsed.session, parsed.verb.toLowerCase()), `${parsed.verb} ${parsed.session}`);
         return;
       case "alias":
         go(parsed.href, parsed.code);

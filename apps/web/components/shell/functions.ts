@@ -48,7 +48,16 @@ export const SCREEN_FUNCTIONS: ScreenFunction[] = SECTIONS.flatMap((section, sec
 export const COMMAND_CODES: { code: string; label: string; description: string; keys: string[] }[] = [
   { code: "HELP", label: "Function directory", description: "Every function and key (also FUNC).", keys: ["?"] },
   { code: "KILL", label: "Kill switch…", description: "Opens the kill-switch dialog. It never arms by itself.", keys: ["⇧K"] },
+  // wave ops: per-bot controls. Each opens the bot's control dialog with the
+  // act chosen; a reason and a confirm are still required (never acts alone).
+  { code: "PAUSE", label: "Pause a bot…", description: "PAUSE <bot>: stop new entries for one paper bot; open positions keep being managed.", keys: [] },
+  { code: "RESUME", label: "Resume a bot…", description: "RESUME <bot>: let a paused, draining or stopped bot open positions again.", keys: [] },
+  { code: "DRAIN", label: "Drain a bot…", description: "DRAIN <bot>: no new entries; open positions close by their own rules, then the bot stops.", keys: [] },
 ];
+
+/** `PAUSE | RESUME | DRAIN` (wave ops): the control verbs of the command line. */
+export const CONTROL_VERBS = ["PAUSE", "RESUME", "DRAIN"] as const;
+export type ControlVerb = (typeof CONTROL_VERBS)[number];
 
 export const INSTRUMENT_FUNCTIONS: InstrumentFunction[] = [
   { code: "GP", label: "Chart", description: "Chart workstation, H1 (also just the symbol).", href: (s) => route.instrument(s) },
@@ -120,6 +129,7 @@ export type Parsed =
   | { kind: "screen"; fn: ScreenFunction }
   | { kind: "alias"; href: string; code: string }
   | { kind: "command"; code: "KILL" }
+  | { kind: "control"; verb: ControlVerb; session: string | null }
   | { kind: "instrument"; symbol: string; fn: InstrumentFunction | null; rest: string }
   | { kind: "text"; text: string };
 
@@ -132,6 +142,10 @@ export function parseCommand(text: string, symbols: ReadonlySet<string>): Parsed
   if (raw === "") return { kind: "empty" };
   const words = raw.split(/\s+/);
   const first = (words[0] ?? "").toUpperCase();
+  if ((CONTROL_VERBS as readonly string[]).includes(first) && words.length <= 2) {
+    // The bot id is case-sensitive (forward-paper_forward_v1): kept as typed.
+    return { kind: "control", verb: first as ControlVerb, session: words[1] ?? null };
+  }
   if (words.length === 1) {
     if (first === "KILL" || first === "HALT") return { kind: "command", code: "KILL" };
     const alias = aliasHref(first);

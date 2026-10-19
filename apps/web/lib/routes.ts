@@ -47,6 +47,9 @@ export const route = {
   run: (runId: string) => `/research/runs/${q(runId)}`,
   trade: (tradeId: string) => withQuery("/trading/execution", { row: tradeId }),
   session: (sessionId: string) => withQuery("/trading/fleet", { session: sessionId }),
+  /** Wave 3O: one bot's control, reconciliation, maturity and audit page. */
+  sessionDetail: (sessionId: string, act?: string | null) =>
+    withQuery(`/trading/sessions/${q(sessionId)}`, { act }),
   candidate: (contentHash: string) => `/lifecycle/${q(contentHash)}`,
   incident: (id: string) => `/system/incidents/${q(id)}`,
 } as const;
@@ -96,6 +99,7 @@ export const ROUTE_PATTERNS = [
   "/trading/fleet",
   "/trading/portfolio",
   "/trading/risk",
+  "/trading/sessions/[session_id]",
 ] as const;
 
 /** True when an in-app link (path plus optional query) is one of the pages. */

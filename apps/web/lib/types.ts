@@ -979,6 +979,9 @@ export interface FleetRowView {
   written_at: string;
   lifecycle: string | null;
   content_hash: string | null;
+  /** Wave 3O: the bot's operator control state; null for a replay. */
+  control_state?: string | null;
+  control_note?: string | null;
   links: FleetLinkSet;
 }
 

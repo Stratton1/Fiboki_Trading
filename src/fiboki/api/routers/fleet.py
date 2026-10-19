@@ -119,6 +119,12 @@ class FleetRowView(BaseModel):
     written_at: datetime
     lifecycle: str | None
     content_hash: str | None
+    #: The bot's operator control state (``ops/controls``): ``active``,
+    #: ``paused``, ``draining`` or ``stopped``; ``None`` for a replay, which no
+    #: control can bind.
+    control_state: str | None = None
+    #: Who set it and why, in one line; ``None`` when never controlled.
+    control_note: str | None = None
     links: LinkSet
 
 
@@ -236,6 +242,12 @@ def fleet_rows(platform: Any, settings: Any, *, now: datetime | None = None) -> 
     except Exception:  # the fleet is reportable without the ladder
         lifecycle = {}
     rows: list[FleetRowView] = []
+    try:
+        from fiboki.ops.controls import BotControlLedger
+
+        control_states = BotControlLedger(settings.paths.bot_controls).states()
+    except Exception:  # an unreadable control ledger is reported by /api/trading/controls
+        control_states = {}
     for session in journal.sessions:
         summary = platform.session_summary(session.session_id) or {}
         p = session.provenance
@@ -377,6 +389,14 @@ def fleet_rows(platform: Any, settings: Any, *, now: datetime | None = None) -> 
                     chart=links.chart(q.instrument, timeframe=session.timeframe or None),
                 )
             )
+        control = control_states.get(session.session_id)
+        control_state = None if not forward else (control.state.value if control else "active")
+        control_note = (
+            f"{control.last.action.value} by {control.last.actor} at "
+            f"{control.last.at:%Y-%m-%d %H:%MZ}: {control.last.reason}"
+            if forward and control is not None and control.last is not None
+            else None
+        )
         signal = _last_signal(platform, session.session_id)
         content_hash = getattr(status_obj, "strategy_content_hash", None) if status_obj else None
         primary = symbols[0] if symbols else None
@@ -412,6 +432,8 @@ def fleet_rows(platform: Any, settings: Any, *, now: datetime | None = None) -> 
                 written_at=written,
                 lifecycle=lc_state,
                 content_hash=content_hash,
+                control_state=control_state,
+                control_note=control_note,
                 links=LinkSet(
                     strategy=links.strategy(session.strategy_id),
                     chart=links.chart(primary, timeframe=session.timeframe or None) if primary else None,

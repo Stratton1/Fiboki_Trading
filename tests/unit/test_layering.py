@@ -82,6 +82,11 @@ RANKS: dict[str, int] = {
     # the research ledger for novelty, and drives the validation ladder. It sits
     # above all three and is imported by none of them.
     "discovery": 97,
+    # Operator controls and paper evidence (Wave 3O): per-bot control state,
+    # the paper audit chain, reconciliation and advisory reports. Reads
+    # backtest, portfolio, stats and research; read by workers, api and
+    # entrypoints. Never imported by agents (rank alone forbids it).
+    "ops": 98,
     # The LLM research fleet. Above everything, and reaches NONE of the
     # execution stack -- see FORBIDDEN_EDGES.
     "agents": 100,

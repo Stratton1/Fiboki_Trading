@@ -4,6 +4,7 @@ import "@fontsource-variable/jetbrains-mono";
 import { Shell } from "@/components/shell/Shell";
 import { PREPAINT_SCRIPT } from "@/lib/prepaint";
 import "./globals.css";
+import "./styles/ops.css";
 
 // No `title` here: the shell renders it from the execution mode ("[PAPER]
 // Fiboki", "● LIVE Fiboki"), so a second <title> must not compete with it.

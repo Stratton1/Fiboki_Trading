@@ -1,0 +1,131 @@
+/*
+ * Wave 3O (operator, paper-bot control, journal and audit). This wave's own
+ * stylesheet, imported once from app/layout.tsx, so three parallel waves do
+ * not conflict in globals.css. Tokens only: no new colour, no decoration.
+ * Amber and neutral ink carry state; green and red are P&L only and are not
+ * used here (P&L figures render through FigureValue's own classes).
+ */
+@layer components {
+  .ops-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px 12px;
+    margin: 4px 0;
+  }
+  .ops-meaning {
+    color: var(--fg-muted);
+    font-size: var(--text-sm);
+  }
+  .ops-since {
+    margin: 2px 0 6px;
+    font-size: var(--text-xs);
+  }
+  .ops-subhead {
+    margin: 10px 0 4px;
+    font-size: var(--text-xs);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--fg-muted);
+  }
+  .ops-control {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+  .ops-fleet-control {
+    white-space: nowrap;
+  }
+  .ops-fleet-control .ack__blocked {
+    display: none;
+  }
+  .ops-control-tag {
+    font-variant-numeric: tabular-nums;
+  }
+  .ops-head-links {
+    display: inline-flex;
+    gap: 10px;
+    font-size: var(--text-sm);
+  }
+  .ops-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 22rem), 1fr));
+    gap: 8px;
+  }
+  .ops-kv {
+    display: grid;
+    grid-template-columns: max-content 1fr;
+    gap: 2px 12px;
+    margin: 4px 0;
+    font-size: var(--text-sm);
+  }
+  .ops-kv dt {
+    color: var(--fg-muted);
+  }
+  .ops-kv dd {
+    margin: 0;
+    font-variant-numeric: tabular-nums;
+  }
+  .ops-check {
+    display: inline-block;
+    min-width: 4.5em;
+    text-align: center;
+  }
+  .ops-chain {
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+    word-break: break-all;
+  }
+  .ops-form {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 11rem), 1fr));
+    gap: 6px 10px;
+    align-items: end;
+    margin: 4px 0 8px;
+  }
+  .ops-form label {
+    display: grid;
+    gap: 2px;
+    font-size: var(--text-xs);
+    color: var(--fg-muted);
+  }
+  .ops-form input,
+  .ops-form select,
+  .ops-form textarea {
+    width: 100%;
+    min-width: 0;
+  }
+  .ops-note-editor {
+    display: grid;
+    gap: 6px;
+  }
+  .ops-note-editor textarea {
+    min-height: 5rem;
+    resize: vertical;
+  }
+  .ops-tags {
+    display: inline-flex;
+    flex-wrap: wrap;
+    gap: 3px;
+  }
+  .ops-tag {
+    padding: 0 4px;
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--r-xs);
+    font-size: var(--text-xs);
+    color: var(--fg-muted);
+  }
+  .ops-heat-cell {
+    font-variant-numeric: tabular-nums;
+    text-align: right;
+  }
+  .ops-heat-cell[data-flag="true"] {
+    background: var(--warn-bg);
+    color: var(--warn);
+  }
+  .ops-hint {
+    font-size: var(--text-xs);
+    color: var(--fg-muted);
+  }
+}
