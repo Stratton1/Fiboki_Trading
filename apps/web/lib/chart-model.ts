@@ -506,6 +506,17 @@ export function replayRow(t: ReplayTrade, cursor: string): BacktestTradeRow {
     take_profit_targets: t.take_profit_targets,
     stop_moved_by: null,
     provenance: p,
+    mae: absent(p),
+    mfe: absent(p),
+    r_multiple: absent(p, "R"),
+    mae_r: absent(p, "R"),
+    mfe_r: absent(p, "R"),
+    spread_cost: absent(p),
+    commission: absent(p),
+    slippage_cost: absent(p),
+    financing_cost: absent(p),
+    entry_reason: null,
+    entry_reason_detail: "Replay serves a trade's entry, stop and targets as of the cursor; its detail is on the live chart.",
   };
 }
 

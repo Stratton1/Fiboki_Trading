@@ -1845,10 +1845,15 @@ export interface components {
         /** BacktestTradeView */
         BacktestTradeView: {
             bars_held: components["schemas"]["Figure"];
+            commission: components["schemas"]["Figure"];
             costs: components["schemas"]["Figure"];
             /** Direction */
             direction: string;
             entry_price: components["schemas"]["Figure"];
+            /** Entry Reason */
+            entry_reason: string | null;
+            /** Entry Reason Detail */
+            entry_reason_detail: string;
             /**
              * Entry Time
              * Format: date-time
@@ -1863,10 +1868,18 @@ export interface components {
              */
             exit_time: string;
             final_stop: components["schemas"]["Figure"];
+            financing_cost: components["schemas"]["Figure"];
             gross_pnl: components["schemas"]["Figure"];
+            mae: components["schemas"]["Figure"];
+            mae_r: components["schemas"]["Figure"];
+            mfe: components["schemas"]["Figure"];
+            mfe_r: components["schemas"]["Figure"];
             net_pnl: components["schemas"]["Figure"];
             provenance: components["schemas"]["Provenance"];
+            r_multiple: components["schemas"]["Figure"];
             size: components["schemas"]["Figure"];
+            slippage_cost: components["schemas"]["Figure"];
+            spread_cost: components["schemas"]["Figure"];
             stop_loss: components["schemas"]["Figure"];
             /** Stop Moved By */
             stop_moved_by: string | null;

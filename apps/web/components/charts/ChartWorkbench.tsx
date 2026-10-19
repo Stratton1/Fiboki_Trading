@@ -47,6 +47,7 @@ import type {
   Page,
 } from "@/lib/types";
 import { DataWindow } from "./DataWindow";
+import { TradeDetail } from "./TradeDetail";
 import { ALL_LAYERS_ON, type ChartLayers, type TradeSource } from "./layers";
 import type { DrawingTool } from "./drawing-primitive";
 import type { ChartDrawings, PriceChartProps } from "./PriceChart";
@@ -1145,6 +1146,7 @@ function TradesTable({
   timeZone: TimeZoneId;
 }) {
   const rowRefs = useRef(new Map<string, HTMLTableRowElement>());
+  const selectedRow = selected ? (trades.find((t) => t.key === selected) ?? null) : null;
   // Keep the selected row in view when the chart selects it.
   useEffect(() => {
     if (!selected) return;
@@ -1250,6 +1252,7 @@ function TradesTable({
           </table>
         </div>
       )}
+      {selectedRow ? <TradeDetail trade={selectedRow} priceDecimals={priceDecimals} tz={timeZone} /> : null}
       {stopsDetail ? <p className="cw-trades__note muted">{stopsDetail}</p> : null}
       <p className="cw-trades__note muted">
         Entry times are {timeZone === "UTC" ? "UTC" : `shown in ${zoneLabel(timeZone)} (stored UTC)`}. Every figure is the platform&apos;s; the chart computes none. Click a row

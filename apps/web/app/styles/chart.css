@@ -436,3 +436,27 @@
   font-size: 11px;
   font-variant-numeric: tabular-nums;
 }
+
+/* --------------------------------------------------------- trade detail */
+.cw-td {
+  flex: none;
+  max-height: 46%;
+  overflow: auto;
+  padding: 4px 6px 6px;
+  border-top: 1px solid var(--border);
+  background: var(--bg-surface);
+  font-size: 11px;
+}
+.cw-td .cw-dw__h {
+  margin-top: 2px;
+}
+.cw-td dd.pos,
+.cw-td .num.pos {
+  color: var(--pnl-up);
+}
+.cw-td .num.neg {
+  color: var(--pnl-down);
+}
+.cw-td__note {
+  margin: 4px 0 0;
+}

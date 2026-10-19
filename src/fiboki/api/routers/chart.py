@@ -155,6 +155,26 @@ class BacktestTradeView(BaseModel):
     take_profit_targets: list[Figure]
     stop_moved_by: str | None
     provenance: Provenance
+    # -- trade detail (Wave 2B), every one the stored value or derived by the
+    #    research tear sheet's own functions, never by the browser --------
+    #: Maximum adverse / favourable excursion in the account currency, as the
+    #: engine recorded them while the trade was open.
+    mae: Figure
+    mfe: Figure
+    #: Net P&L over the planned risk at entry (|entry - initial stop| x size x
+    #: contract size x fx), ``research.tearsheet.r_multiple``; missing without a stop.
+    r_multiple: Figure
+    mae_r: Figure
+    mfe_r: Figure
+    #: The cost components the engine charged, account currency.
+    spread_cost: Figure
+    commission: Figure
+    slippage_cost: Figure
+    financing_cost: Figure
+    #: Why the trade was entered, when the producer recorded it; else null and
+    #: ``entry_reason_detail`` says so.
+    entry_reason: str | None
+    entry_reason_detail: str
 
 
 class BacktestTradesView(BaseModel):
@@ -475,6 +495,37 @@ def _trade_view(
         else run_stops_note
     )
     moved = row.get("stop_moved_by")
+    from fiboki.research.tearsheet import trade_risk
+
+    instrument = str(row.get("instrument") or "")
+    try:
+        contract = float(instrument_registry.get(instrument).contract_size)
+    except Exception:  # an instrument no longer registered: no R can be stated
+        contract = None
+    risk = trade_risk(row, contract) if contract is not None else None
+    net = _num(row.get("net_pnl"))
+    no_risk = (
+        "No R: the trade has no recorded initial stop, so its planned risk is unknown."
+        if _num(row.get("initial_stop")) is None
+        else "No R: the planned risk could not be computed."
+    )
+
+    def money(key: str, missing: str) -> Figure:
+        value = _num(row.get(key)) if key in row else None
+        return (
+            Figure(value=value, provenance=p, unit=ccy)
+            if value is not None
+            else Figure.missing(p, unit=ccy, reason=missing)
+        )
+
+    def per_r(value: float | None) -> Figure:
+        if risk and value is not None:
+            return Figure(value=value / risk, provenance=p, unit="R")
+        return Figure.missing(p, unit="R", reason=no_risk)
+
+    mae = _num(row.get("max_adverse_excursion")) if "max_adverse_excursion" in row else None
+    mfe = _num(row.get("max_favourable_excursion")) if "max_favourable_excursion" in row else None
+    reason = row.get("entry_reason") or row.get("signal_rationale") or row.get("rationale")
     return BacktestTradeView(
         trade_id=str(row.get("trade_id") or ""),
         strategy_id=str(row.get("strategy_id") or ""),
@@ -510,6 +561,22 @@ def _trade_view(
         take_profit_targets=[Figure(value=float(t), provenance=p) for t in targets],
         stop_moved_by=str(moved) if moved else None,
         provenance=p,
+        mae=money("max_adverse_excursion", "MAE was not recorded for this trade."),
+        mfe=money("max_favourable_excursion", "MFE was not recorded for this trade."),
+        r_multiple=per_r(net),
+        mae_r=per_r(mae),
+        mfe_r=per_r(mfe),
+        spread_cost=money("spread_cost", "No spread cost was stored."),
+        commission=money("commission", "No commission was stored."),
+        slippage_cost=money("slippage_cost", "No slippage cost was stored."),
+        financing_cost=money("financing_cost", "No financing cost was stored."),
+        entry_reason=str(reason) if reason else None,
+        entry_reason_detail=(
+            "As recorded with the trade."
+            if reason
+            else "The backtest engine does not record an entry reason per trade; the "
+            f"entry follows {row.get('strategy_id') or 'the strategy'}'s signal on a closed bar."
+        ),
     )
 
 

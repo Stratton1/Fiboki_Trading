@@ -470,3 +470,38 @@ def test_the_principal_says_who_may_draw(client):
 def test_crypto_symbols_have_drawings_and_runs(operator_client):
     assert operator_client.get("/api/markets/drawings/BTCGBP").status_code == 200
     assert operator_client.get("/api/markets/backtests/BTCGBP").status_code == 200
+
+
+# ------------------------------------------------------- trade detail (2B)
+
+
+def test_trade_detail_serves_mae_mfe_r_costs_and_says_when_no_reason_was_recorded(ledger_client):
+    """R is the tear sheet's own definition: net P&L over the planned risk at
+    entry. Trade 0 (fixture): entry 1.1000, initial stop 1.0950, size 0.5,
+    EURUSD contract size 1 (OANDA units, core.instruments), fx 0.8 -> risk
+    0.0050 x 0.5 x 1 x 0.8 = 0.002 GBP; net 10 -> R 5000; MAE -2 -> -1000 R;
+    MFE 4 -> 2000 R. (The fixture's size is tiny; the arithmetic is the point.)"""
+    client, runs = ledger_client
+    body = client.get(f"/api/markets/backtests/EURUSD/{runs['new'].backtest_id}/trades").json()
+    trade = {t["trade_id"]: t for t in body["data"]["trades"]}["trd_0"]
+    assert trade["mae"]["value"] == -2.0 and trade["mae"]["unit"] == "GBP"
+    assert trade["mfe"]["value"] == 4.0
+    assert trade["r_multiple"]["value"] == pytest.approx(5000.0)
+    assert trade["r_multiple"]["unit"] == "R"
+    assert trade["mae_r"]["value"] == pytest.approx(-1000.0)
+    assert trade["mfe_r"]["value"] == pytest.approx(2000.0)
+    assert trade["spread_cost"]["value"] == 1.0
+    assert trade["slippage_cost"]["value"] == 0.5
+    assert trade["commission"]["value"] == 0.0
+    assert trade["entry_reason"] is None
+    assert "does not record an entry reason" in trade["entry_reason_detail"]
+    assert trade["exit_reason"] == "take_profit"
+
+
+def test_trade_detail_without_a_stop_has_no_r(ledger_client):
+    client, runs = ledger_client
+    body = client.get(f"/api/markets/backtests/EURUSD/{runs['old'].backtest_id}/trades").json()
+    [trade] = body["data"]["trades"]
+    assert trade["r_multiple"]["value"] is None
+    assert "no recorded initial stop" in trade["r_multiple"]["caveats"][0]["message"]
+    assert trade["mae"]["value"] == -2.0  # recorded even when no stop was

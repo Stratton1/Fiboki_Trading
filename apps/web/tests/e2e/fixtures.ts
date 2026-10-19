@@ -961,6 +961,20 @@ function btTrade(
     take_profit_targets: prices.targets.map((t) => figure(t, "backtest")),
     stop_moved_by: moved,
     provenance: "backtest",
+    // Trade detail (Wave 2B, routers/chart.py): stored excursions, the tear
+    // sheet's R (missing without a stop), charged cost components.
+    mae: figure(-6.5, "backtest", "GBP"),
+    mfe: figure(pnl > 0 ? pnl + 4 : 3.25, "backtest", "GBP"),
+    r_multiple: prices.stop === null ? p(null, "No R: the trade has no recorded initial stop, so its planned risk is unknown.") : figure(pnl / 10, "backtest", "R"),
+    mae_r: prices.stop === null ? p(null, "No R.") : figure(-0.65, "backtest", "R"),
+    mfe_r: prices.stop === null ? p(null, "No R.") : figure((pnl > 0 ? pnl + 4 : 3.25) / 10, "backtest", "R"),
+    spread_cost: figure(1.0, "backtest", "GBP"),
+    commission: figure(0, "backtest", "GBP"),
+    slippage_cost: figure(0.5, "backtest", "GBP"),
+    financing_cost: figure(0, "backtest", "GBP"),
+    entry_reason: null,
+    entry_reason_detail:
+      "The backtest engine does not record an entry reason per trade; the entry follows donchian_breakout_atr's signal on a closed bar.",
   };
 }
 

@@ -727,6 +727,18 @@ export interface BacktestTradeRow {
   take_profit_targets: Figure[];
   stop_moved_by: string | null;
   provenance: Provenance;
+  /** Trade detail (Wave 2B): stored excursions, the tear sheet's R, charged costs. */
+  mae: Figure;
+  mfe: Figure;
+  r_multiple: Figure;
+  mae_r: Figure;
+  mfe_r: Figure;
+  spread_cost: Figure;
+  commission: Figure;
+  slippage_cost: Figure;
+  financing_cost: Figure;
+  entry_reason: string | null;
+  entry_reason_detail: string;
 }
 
 /** GET /api/markets/backtests/{symbol}/{run_id}/trades (Envelope). */

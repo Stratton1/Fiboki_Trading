@@ -571,6 +571,9 @@
           "bars_held": {
             "$ref": "#/components/schemas/Figure"
           },
+          "commission": {
+            "$ref": "#/components/schemas/Figure"
+          },
           "costs": {
             "$ref": "#/components/schemas/Figure"
           },
@@ -581,6 +584,21 @@
           },
           "entry_price": {
             "$ref": "#/components/schemas/Figure"
+          },
+          "entry_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Entry Reason"
+          },
+          "entry_reason_detail": {
+            "title": "Entry Reason Detail",
+            "type": "string"
           },
           "entry_time": {
             "format": "date-time",
@@ -602,7 +620,22 @@
           "final_stop": {
             "$ref": "#/components/schemas/Figure"
           },
+          "financing_cost": {
+            "$ref": "#/components/schemas/Figure"
+          },
           "gross_pnl": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "mae": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "mae_r": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "mfe": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "mfe_r": {
             "$ref": "#/components/schemas/Figure"
           },
           "net_pnl": {
@@ -611,7 +644,16 @@
           "provenance": {
             "$ref": "#/components/schemas/Provenance"
           },
+          "r_multiple": {
+            "$ref": "#/components/schemas/Figure"
+          },
           "size": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "slippage_cost": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "spread_cost": {
             "$ref": "#/components/schemas/Figure"
           },
           "stop_loss": {
@@ -666,7 +708,18 @@
           "take_profit",
           "take_profit_targets",
           "stop_moved_by",
-          "provenance"
+          "provenance",
+          "mae",
+          "mfe",
+          "r_multiple",
+          "mae_r",
+          "mfe_r",
+          "spread_cost",
+          "commission",
+          "slippage_cost",
+          "financing_cost",
+          "entry_reason",
+          "entry_reason_detail"
         ],
         "title": "BacktestTradeView",
         "type": "object"
