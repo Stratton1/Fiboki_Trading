@@ -84,3 +84,27 @@ export const CHECK_LABEL: Record<string, string> = { pass: "PASS", fail: "FAIL",
 
 export type SelfCorrelationView = Local<S["SelfCorrelationView"]>;
 export const SELF_CORRELATION_PATH = "/api/trading/candidates/correlation";
+
+export type RiskCalculatorView = Local<S["RiskCalculatorView"]>;
+
+/** Build the calculator's GET path from the form (inputs only; every number comes back from the API). */
+export function riskCalculatorPath(form: {
+  accountSize: string;
+  accountCcy: string;
+  riskPct: string;
+  ruinPct: string;
+  strategyId: string;
+  rMultiples: string;
+  entries: string;
+}): string {
+  const params = new URLSearchParams({
+    account_size: form.accountSize.trim(),
+    account_ccy: form.accountCcy.trim().toUpperCase(),
+    risk_pct: form.riskPct.trim(),
+    ruin_pct: form.ruinPct.trim(),
+  });
+  if (form.rMultiples.trim()) params.set("r_multiples", form.rMultiples.replace(/\s+/g, ""));
+  else if (form.strategyId.trim()) params.set("strategy_id", form.strategyId.trim());
+  if (form.entries.trim()) params.set("entries", form.entries.replace(/\s+/g, ""));
+  return `/api/trading/risk/calculator?${params.toString()}`;
+}

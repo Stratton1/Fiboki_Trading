@@ -2997,6 +2997,30 @@
         "title": "Envelope[ResearchMemoryView]",
         "type": "object"
       },
+      "Envelope_RiskCalculatorView_": {
+        "properties": {
+          "caveats": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/Caveat"
+            },
+            "title": "Caveats",
+            "type": "array"
+          },
+          "data": {
+            "$ref": "#/components/schemas/RiskCalculatorView"
+          },
+          "source": {
+            "$ref": "#/components/schemas/SourceNote"
+          }
+        },
+        "required": [
+          "data",
+          "source"
+        ],
+        "title": "Envelope[RiskCalculatorView]",
+        "type": "object"
+      },
       "Envelope_RiskStateView_": {
         "properties": {
           "caveats": {
@@ -8634,6 +8658,75 @@
         "title": "ResearchNoteRequest",
         "type": "object"
       },
+      "RiskCalculatorView": {
+        "properties": {
+          "account_ccy": {
+            "title": "Account Ccy",
+            "type": "string"
+          },
+          "account_size": {
+            "title": "Account Size",
+            "type": "number"
+          },
+          "method": {
+            "title": "Method",
+            "type": "string"
+          },
+          "profile": {
+            "title": "Profile",
+            "type": "string"
+          },
+          "risk_pct": {
+            "title": "Risk Pct",
+            "type": "number"
+          },
+          "ruin": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RuinView"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "ruin_absent": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ruin Absent"
+          },
+          "sizes": {
+            "items": {
+              "$ref": "#/components/schemas/SizeRowView"
+            },
+            "title": "Sizes",
+            "type": "array"
+          },
+          "sizing_policy": {
+            "title": "Sizing Policy",
+            "type": "string"
+          }
+        },
+        "required": [
+          "account_size",
+          "account_ccy",
+          "risk_pct",
+          "sizing_policy",
+          "profile",
+          "ruin",
+          "ruin_absent",
+          "sizes",
+          "method"
+        ],
+        "title": "RiskCalculatorView",
+        "type": "object"
+      },
       "RiskStateView": {
         "properties": {
           "breaches": {
@@ -8705,6 +8798,80 @@
           "breaches"
         ],
         "title": "RiskStateView",
+        "type": "object"
+      },
+      "RuinView": {
+        "properties": {
+          "block_length": {
+            "title": "Block Length",
+            "type": "number"
+          },
+          "final_multiple_p5": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "final_multiple_p50": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "final_multiple_p95": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "horizon_trades": {
+            "title": "Horizon Trades",
+            "type": "integer"
+          },
+          "max_drawdown_p50": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "max_drawdown_p95": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "max_drawdown_p99": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "mean_r": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "n_paths": {
+            "title": "N Paths",
+            "type": "integer"
+          },
+          "probability_pct": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "ruin_drawdown_pct": {
+            "title": "Ruin Drawdown Pct",
+            "type": "number"
+          },
+          "seed": {
+            "title": "Seed",
+            "type": "integer"
+          },
+          "source": {
+            "title": "Source",
+            "type": "string"
+          },
+          "win_rate_pct": {
+            "$ref": "#/components/schemas/Figure"
+          }
+        },
+        "required": [
+          "probability_pct",
+          "n_paths",
+          "seed",
+          "horizon_trades",
+          "block_length",
+          "ruin_drawdown_pct",
+          "final_multiple_p5",
+          "final_multiple_p50",
+          "final_multiple_p95",
+          "max_drawdown_p50",
+          "max_drawdown_p95",
+          "max_drawdown_p99",
+          "mean_r",
+          "win_rate_pct",
+          "source"
+        ],
+        "title": "RuinView",
         "type": "object"
       },
       "RuleEvaluationView": {
@@ -9364,6 +9531,69 @@
           "source"
         ],
         "title": "SignalOverlay",
+        "type": "object"
+      },
+      "SizeRowView": {
+        "properties": {
+          "entry": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "instrument": {
+            "title": "Instrument",
+            "type": "string"
+          },
+          "leverage_binding": {
+            "title": "Leverage Binding",
+            "type": "boolean"
+          },
+          "leverage_cap": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "notional": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "rejection": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rejection"
+          },
+          "risk_amount": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "size": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "size_from_risk": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "stop": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "stop_pips": {
+            "title": "Stop Pips",
+            "type": "number"
+          }
+        },
+        "required": [
+          "instrument",
+          "entry",
+          "stop",
+          "stop_pips",
+          "size",
+          "risk_amount",
+          "notional",
+          "leverage_cap",
+          "leverage_binding",
+          "size_from_risk",
+          "rejection"
+        ],
+        "title": "SizeRowView",
         "type": "object"
       },
       "SourceNote": {
@@ -13780,6 +14010,183 @@
         "summary": "Risk State",
         "tags": [
           "trading"
+        ],
+        "x-fiboki-auth": "public"
+      }
+    },
+    "/api/trading/risk/calculator": {
+      "get": {
+        "description": "Position size per instrument by size_trade, and a seeded Monte Carlo risk of ruin. Advisory.",
+        "operationId": "risk_calculator_api_trading_risk_calculator_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "account_size",
+            "required": true,
+            "schema": {
+              "exclusiveMinimum": 0.0,
+              "maximum": 1000000000.0,
+              "title": "Account Size",
+              "type": "number"
+            }
+          },
+          {
+            "in": "query",
+            "name": "account_ccy",
+            "required": false,
+            "schema": {
+              "default": "USD",
+              "maxLength": 3,
+              "minLength": 3,
+              "title": "Account Ccy",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Risk per trade, percent of equity.",
+            "in": "query",
+            "name": "risk_pct",
+            "required": true,
+            "schema": {
+              "description": "Risk per trade, percent of equity.",
+              "exclusiveMinimum": 0.0,
+              "maximum": 5.0,
+              "title": "Risk Pct",
+              "type": "number"
+            }
+          },
+          {
+            "description": "Drawdown from peak that counts as ruin.",
+            "in": "query",
+            "name": "ruin_pct",
+            "required": false,
+            "schema": {
+              "default": 50.0,
+              "description": "Drawdown from peak that counts as ruin.",
+              "exclusiveMaximum": 100.0,
+              "exclusiveMinimum": 0.0,
+              "title": "Ruin Pct",
+              "type": "number"
+            }
+          },
+          {
+            "in": "query",
+            "name": "strategy_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Strategy Id"
+            }
+          },
+          {
+            "description": "Comma-separated R multiples (overrides strategy_id).",
+            "in": "query",
+            "name": "r_multiples",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Comma-separated R multiples (overrides strategy_id).",
+              "title": "R Multiples"
+            }
+          },
+          {
+            "description": "SYMBOL:ENTRY:STOP_PIPS[:FX], comma-separated, up to 12.",
+            "in": "query",
+            "name": "entries",
+            "required": false,
+            "schema": {
+              "default": "",
+              "description": "SYMBOL:ENTRY:STOP_PIPS[:FX], comma-separated, up to 12.",
+              "title": "Entries",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "sizing_policy",
+            "required": false,
+            "schema": {
+              "default": "fixed_fractional_v2",
+              "pattern": "^fixed_fractional_v[12]$",
+              "title": "Sizing Policy",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "profile",
+            "required": false,
+            "schema": {
+              "default": "OANDA_REALISTIC",
+              "title": "Profile",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "paths",
+            "required": false,
+            "schema": {
+              "default": 5000,
+              "maximum": 20000,
+              "minimum": 100,
+              "title": "Paths",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "seed",
+            "required": false,
+            "schema": {
+              "default": 20261019,
+              "maximum": 4294967295,
+              "minimum": 0,
+              "title": "Seed",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_RiskCalculatorView_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [],
+        "summary": "Risk Calculator",
+        "tags": [
+          "ops"
         ],
         "x-fiboki-auth": "public"
       }

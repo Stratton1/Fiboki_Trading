@@ -1472,6 +1472,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/trading/risk/calculator": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Risk Calculator
+         * @description Position size per instrument by size_trade, and a seeded Monte Carlo risk of ruin. Advisory.
+         */
+        get: operations["risk_calculator_api_trading_risk_calculator_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/trading/sessions/{session_id}/audit-chain": {
         parameters: {
             query?: never;
@@ -2694,6 +2714,16 @@ export interface components {
              */
             caveats: components["schemas"]["Caveat"][];
             data: components["schemas"]["ResearchMemoryView"];
+            source: components["schemas"]["SourceNote"];
+        };
+        /** Envelope[RiskCalculatorView] */
+        Envelope_RiskCalculatorView_: {
+            /**
+             * Caveats
+             * @default []
+             */
+            caveats: components["schemas"]["Caveat"][];
+            data: components["schemas"]["RiskCalculatorView"];
             source: components["schemas"]["SourceNote"];
         };
         /** Envelope[RiskStateView] */
@@ -4816,6 +4846,26 @@ export interface components {
             /** Subject */
             subject: string;
         };
+        /** RiskCalculatorView */
+        RiskCalculatorView: {
+            /** Account Ccy */
+            account_ccy: string;
+            /** Account Size */
+            account_size: number;
+            /** Method */
+            method: string;
+            /** Profile */
+            profile: string;
+            /** Risk Pct */
+            risk_pct: number;
+            ruin: components["schemas"]["RuinView"] | null;
+            /** Ruin Absent */
+            ruin_absent: string | null;
+            /** Sizes */
+            sizes: components["schemas"]["SizeRowView"][];
+            /** Sizing Policy */
+            sizing_policy: string;
+        };
         /** RiskStateView */
         RiskStateView: {
             /** Breaches */
@@ -4837,6 +4887,30 @@ export interface components {
             new_risk_permitted: boolean;
             /** New Risk Reason */
             new_risk_reason: string;
+        };
+        /** RuinView */
+        RuinView: {
+            /** Block Length */
+            block_length: number;
+            final_multiple_p5: components["schemas"]["Figure"];
+            final_multiple_p50: components["schemas"]["Figure"];
+            final_multiple_p95: components["schemas"]["Figure"];
+            /** Horizon Trades */
+            horizon_trades: number;
+            max_drawdown_p50: components["schemas"]["Figure"];
+            max_drawdown_p95: components["schemas"]["Figure"];
+            max_drawdown_p99: components["schemas"]["Figure"];
+            mean_r: components["schemas"]["Figure"];
+            /** N Paths */
+            n_paths: number;
+            probability_pct: components["schemas"]["Figure"];
+            /** Ruin Drawdown Pct */
+            ruin_drawdown_pct: number;
+            /** Seed */
+            seed: number;
+            /** Source */
+            source: string;
+            win_rate_pct: components["schemas"]["Figure"];
         };
         /** RuleEvaluationView */
         RuleEvaluationView: {
@@ -5091,6 +5165,24 @@ export interface components {
             t: string;
             /** Timeframe */
             timeframe: string;
+        };
+        /** SizeRowView */
+        SizeRowView: {
+            entry: components["schemas"]["Figure"];
+            /** Instrument */
+            instrument: string;
+            /** Leverage Binding */
+            leverage_binding: boolean;
+            leverage_cap: components["schemas"]["Figure"];
+            notional: components["schemas"]["Figure"];
+            /** Rejection */
+            rejection: string | null;
+            risk_amount: components["schemas"]["Figure"];
+            size: components["schemas"]["Figure"];
+            size_from_risk: components["schemas"]["Figure"];
+            stop: components["schemas"]["Figure"];
+            /** Stop Pips */
+            stop_pips: number;
         };
         /**
          * SourceNote
@@ -7615,6 +7707,51 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Envelope_RiskStateView_"];
+                };
+            };
+        };
+    };
+    risk_calculator_api_trading_risk_calculator_get: {
+        parameters: {
+            query: {
+                account_ccy?: string;
+                account_size: number;
+                /** @description SYMBOL:ENTRY:STOP_PIPS[:FX], comma-separated, up to 12. */
+                entries?: string;
+                paths?: number;
+                profile?: string;
+                /** @description Comma-separated R multiples (overrides strategy_id). */
+                r_multiples?: string | null;
+                /** @description Risk per trade, percent of equity. */
+                risk_pct: number;
+                /** @description Drawdown from peak that counts as ruin. */
+                ruin_pct?: number;
+                seed?: number;
+                sizing_policy?: string;
+                strategy_id?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_RiskCalculatorView_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

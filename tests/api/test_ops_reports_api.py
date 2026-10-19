@@ -57,3 +57,23 @@ def test_the_maturity_band_reads_the_stored_backtest(reports):
     assert items["costs_as_expected"]["status"] == "pass"
     assert items["costs_as_expected"]["value"]["value"] == pytest.approx(12.5 / 100_000.0 / (1.2 / 10_000.0), rel=1e-3)
     assert data["verdict"] == "not_evaluated"  # no reconciliation, no chain yet
+
+
+def test_the_risk_calculator_sizes_by_the_platform_and_runs_a_seeded_ruin(reports):
+    q = ("/api/trading/risk/calculator?account_size=100000&risk_pct=1&ruin_pct=30"
+         "&strategy_id=donchian_breakout_atr&entries=EURUSD:1.1:20,USDJPY:150:30&paths=1000")
+    a = reports.get(q).json()
+    b = reports.get(q).json()
+    assert a["data"]["ruin"] == b["data"]["ruin"]
+    ruin = a["data"]["ruin"]
+    assert ruin["horizon_trades"] == 120 and 0 <= ruin["probability_pct"]["value"] <= 100
+    assert ruin["probability_pct"]["provenance"] == "backtest"
+    sizes = {s["instrument"]: s for s in a["data"]["sizes"]}
+    assert sizes["EURUSD"]["size"]["value"] > 0 and sizes["EURUSD"]["rejection"] is None
+    assert sizes["USDJPY"]["size"]["value"] is None and "fx_rate_required" in sizes["USDJPY"]["rejection"]
+    typed = reports.get("/api/trading/risk/calculator?account_size=1000&risk_pct=2&r_multiples=1,-1,2,-1,-1").json()
+    assert typed["data"]["ruin"]["horizon_trades"] == 5
+    assert "user_supplied_distribution" in {c["code"] for c in typed["caveats"]}
+    none = reports.get("/api/trading/risk/calculator?account_size=1000&risk_pct=1").json()
+    assert none["data"]["ruin"] is None and none["data"]["ruin_absent"]
+    assert reports.get("/api/trading/risk/calculator?account_size=1000&risk_pct=9").status_code == 422

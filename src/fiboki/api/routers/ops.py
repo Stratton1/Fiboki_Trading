@@ -18,14 +18,14 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Annotated, Any
 
-from fastapi import APIRouter, Depends, Request, status
+from fastapi import APIRouter, Depends, Query, Request, status
 from pydantic import BaseModel, ConfigDict, Field
 
 from fiboki.api.deps import AuditDep, PlatformDep, SettingsDep
 from fiboki.api.errors import ApiError
 from fiboki.api.logging import current_correlation_id
 from fiboki.api.models import Envelope, Page, SourceNote
-from fiboki.api.provenance import Figure
+from fiboki.api.provenance import Caveat, Figure
 from fiboki.api.security import Principal, require_admin, require_operator
 from fiboki.core.enums import Provenance
 from fiboki.ops.audit_chain import CHAIN_FILE, ChainVerification, PaperAuditChain
@@ -934,3 +934,173 @@ def candidate_self_correlation(platform: PlatformDep, settings: SettingsDep) -> 
     )
     return Envelope(data=view, source=_note("live" if rows else "absent",
                                             f"{len(rows)} candidate(s) against {len(bots)} paper bot(s)."))
+
+
+# ============================================================ risk calculator
+
+
+
+class SizeRowView(BaseModel):
+    model_config = ConfigDict(frozen=True)
+
+    instrument: str
+    entry: Figure
+    stop: Figure
+    stop_pips: float
+    size: Figure
+    risk_amount: Figure
+    notional: Figure
+    leverage_cap: Figure
+    leverage_binding: bool
+    size_from_risk: Figure
+    rejection: str | None
+
+
+class RuinView(BaseModel):
+    model_config = ConfigDict(frozen=True)
+
+    probability_pct: Figure
+    n_paths: int
+    seed: int
+    horizon_trades: int
+    block_length: float
+    ruin_drawdown_pct: float
+    final_multiple_p5: Figure
+    final_multiple_p50: Figure
+    final_multiple_p95: Figure
+    max_drawdown_p50: Figure
+    max_drawdown_p95: Figure
+    max_drawdown_p99: Figure
+    mean_r: Figure
+    win_rate_pct: Figure
+    source: str
+
+
+class RiskCalculatorView(BaseModel):
+    model_config = ConfigDict(frozen=True)
+
+    account_size: float
+    account_ccy: str
+    risk_pct: float
+    sizing_policy: str
+    profile: str
+    ruin: RuinView | None
+    ruin_absent: str | None
+    sizes: list[SizeRowView]
+    method: str
+
+
+def _parse_entries(raw: str) -> list[Any]:
+    from fiboki.ops.risk_calc import SizeRequest
+
+    out = []
+    for part in [p for p in raw.split(",") if p.strip()][:12]:
+        bits = part.strip().split(":")
+        if len(bits) not in (3, 4):
+            raise ApiError(status.HTTP_400_BAD_REQUEST, "invalid_entries",
+                           f"{part!r}: each entry is SYMBOL:ENTRY:STOP_PIPS[:FX_QUOTE_TO_ACCOUNT].")
+        try:
+            out.append(SizeRequest(bits[0].upper(), float(bits[1]), float(bits[2]),
+                                   float(bits[3]) if len(bits) == 4 else None))
+        except ValueError as exc:
+            raise ApiError(status.HTTP_400_BAD_REQUEST, "invalid_entries", f"{part!r}: {exc}") from exc
+    return out
+
+
+@router.get("/risk/calculator", response_model=Envelope[RiskCalculatorView])
+def risk_calculator(
+    platform: PlatformDep,
+    settings: SettingsDep,
+    account_size: float = Query(..., gt=0, le=1e9),
+    account_ccy: str = Query("USD", min_length=3, max_length=3),
+    risk_pct: float = Query(..., gt=0, le=5.0, description="Risk per trade, percent of equity."),
+    ruin_pct: float = Query(50.0, gt=0, lt=100, description="Drawdown from peak that counts as ruin."),
+    strategy_id: str | None = Query(None),
+    r_multiples: str | None = Query(None, description="Comma-separated R multiples (overrides strategy_id)."),
+    entries: str = Query("", description="SYMBOL:ENTRY:STOP_PIPS[:FX], comma-separated, up to 12."),
+    sizing_policy: str = Query("fixed_fractional_v2", pattern="^fixed_fractional_v[12]$"),
+    profile: str = Query("OANDA_REALISTIC"),
+    paths: int = Query(5_000, ge=100, le=20_000),
+    seed: int = Query(20261019, ge=0, le=2**32 - 1),
+) -> Envelope[RiskCalculatorView]:
+    """Position size per instrument by size_trade, and a seeded Monte Carlo risk of ruin. Advisory."""
+    from fiboki.api.ops_sources import reference_backtest
+    from fiboki.ops.risk_calc import position_sizes, risk_of_ruin
+    from fiboki.sim.profiles import get_profile
+
+    try:
+        get_profile(profile)
+    except Exception as exc:
+        raise ApiError(status.HTTP_400_BAD_REQUEST, "unknown_profile", str(exc)) from exc
+    ccy = account_ccy.upper()
+    rf = risk_pct / 100.0
+    caveats: list[Caveat] = []
+    rows = position_sizes(_parse_entries(entries), account_size=account_size, account_ccy=ccy, risk_fraction=rf,
+                          policy_id=sizing_policy, profile_name=profile)
+    P = Provenance.BACKTEST
+
+    def f(v: float | None, unit: str, reason: str = "Not sized; see the rejection.") -> Figure:
+        return Figure(value=v, provenance=P, unit=unit, estimated=True) if v is not None else Figure.missing(P, unit=unit, reason=reason)
+
+    sizes = [
+        SizeRowView(
+            instrument=r.instrument, entry=f(r.entry, ""), stop=f(r.stop, ""), stop_pips=r.stop_pips,
+            size=f(r.size, "units"), risk_amount=f(r.risk_amount, ccy), notional=f(r.notional, ccy),
+            leverage_cap=f(r.leverage_cap, "x", "Unknown instrument."), leverage_binding=r.leverage_binding,
+            size_from_risk=f(r.size_from_risk, "units"), rejection=r.rejection,
+        )
+        for r in rows
+    ]
+    series: list[float] = []
+    source = ""
+    absent: str | None = None
+    if r_multiples:
+        try:
+            series = [float(x) for x in r_multiples.split(",") if x.strip()]
+        except ValueError as exc:
+            raise ApiError(status.HTTP_400_BAD_REQUEST, "invalid_r_multiples", str(exc)) from exc
+        source = f"{len(series)} R multiple(s) supplied by the operator"
+        caveats.append(Caveat(code="user_supplied_distribution", severity="warning",
+                              message="The trade-return distribution was typed in by the operator, not measured: "
+                              "the ruin figures describe that hypothesis, not any strategy's record.",
+                              affects="ruin", direction="unknown"))
+    elif strategy_id:
+        ref = reference_backtest(settings, strategy_id)
+        series, source = ref.r_multiples, ref.label
+        if not series:
+            absent = ref.reason or f"{ref.label} has no trade with a recorded stop, so no R multiple."
+    else:
+        absent = "Choose a strategy (its latest stored backtest) or type a list of R multiples."
+    ruin = None
+    if series and absent is None:
+        try:
+            res = risk_of_ruin(series, risk_fraction=rf, ruin_drawdown_pct=ruin_pct, n_paths=paths, seed=seed)
+        except ValueError as exc:
+            absent = str(exc)
+        else:
+            ruin = RuinView(
+                probability_pct=Figure(value=round(res.probability * 100.0, 3), provenance=P, unit="pct",
+                                       sample_size=res.n_paths, estimated=True),
+                n_paths=res.n_paths, seed=res.seed, horizon_trades=res.horizon_trades,
+                block_length=round(res.block_length, 3), ruin_drawdown_pct=res.ruin_drawdown_pct,
+                final_multiple_p5=f(round(res.final_multiple_p5, 4), "x"),
+                final_multiple_p50=f(round(res.final_multiple_p50, 4), "x"),
+                final_multiple_p95=f(round(res.final_multiple_p95, 4), "x"),
+                max_drawdown_p50=f(round(res.max_dd_p50, 3), "pct"),
+                max_drawdown_p95=f(round(res.max_dd_p95, 3), "pct"),
+                max_drawdown_p99=f(round(res.max_dd_p99, 3), "pct"),
+                mean_r=f(round(res.mean_r, 4), "R"), win_rate_pct=f(round(res.win_rate * 100.0, 2), "pct"),
+                source=source,
+            )
+    view = RiskCalculatorView(
+        account_size=account_size, account_ccy=ccy, risk_pct=risk_pct, sizing_policy=sizing_policy, profile=profile,
+        ruin=ruin, ruin_absent=absent, sizes=sizes,
+        method=(
+            "Sizes: portfolio.sizing.size_trade (the paper runtime's one sizing call), long entry, stop the given "
+            "pips below, instrument leverage cap. Ruin: stats.bootstrap.resample_with_compounding, stationary "
+            "bootstrap of the R multiples, re-sized off running equity, ruin = a drawdown from the peak deeper "
+            "than the chosen level; horizon = the number of R multiples."
+        ),
+    )
+    return Envelope(data=view, source=_note("live", "Computed on request; nothing is stored."),
+                    caveats=tuple(caveats))

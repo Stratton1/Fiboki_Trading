@@ -93,6 +93,9 @@ export async function mockOps(page: Page) {
   await page.route(`${API}/api/trading/candidates/correlation`, (route: Route) =>
     route.fulfill({ json: env(selfCorrelationView()) }),
   );
+  await page.route(`${API}/api/trading/risk/calculator*`, (route: Route) =>
+    route.fulfill({ json: { ...env(riskCalculatorView()), caveats: [] } }),
+  );
   await page.route(`${API}/api/trading/sessions/*/maturity`, (route: Route) =>
     route.fulfill({ json: env(maturityView()) }),
   );
@@ -237,5 +240,26 @@ export function selfCorrelationView() {
         max_abs_rho: figure(null, "backtest", "ratio"), flagged: false, flag_reason: "Not measurable: no overlap with the fleet." },
     ],
     method: "Pearson correlation of daily returns of the closed-trade balance curve, on common days only.",
+  };
+}
+
+export function riskCalculatorView() {
+  const f = (v: number | null, unit: string) => figure(v, "backtest", unit, { estimated: true });
+  return {
+    account_size: 100000, account_ccy: "USD", risk_pct: 0.5, sizing_policy: "fixed_fractional_v2", profile: "OANDA_REALISTIC",
+    ruin: {
+      probability_pct: f(2.35, "pct"), n_paths: 5000, seed: 20261019, horizon_trades: 140, block_length: 1.6, ruin_drawdown_pct: 30,
+      final_multiple_p5: f(0.94, "x"), final_multiple_p50: f(1.08, "x"), final_multiple_p95: f(1.27, "x"),
+      max_drawdown_p50: f(7.4, "pct"), max_drawdown_p95: f(15.2, "pct"), max_drawdown_p99: f(21.9, "pct"),
+      mean_r: f(0.11, "R"), win_rate_pct: f(41.4, "pct"), source: "backtest bt_0001",
+    },
+    ruin_absent: null,
+    sizes: [
+      { instrument: "EURUSD", entry: f(1.1, ""), stop: f(1.098, ""), stop_pips: 20, size: f(23800, "units"), risk_amount: f(499.8, "USD"),
+        notional: f(26180, "USD"), leverage_cap: f(30, "x"), leverage_binding: false, size_from_risk: f(23810, "units"), rejection: null },
+      { instrument: "USDJPY", entry: f(150, ""), stop: f(null, ""), stop_pips: 30, size: f(null, "units"), risk_amount: f(null, "USD"),
+        notional: f(null, "USD"), leverage_cap: f(null, "x"), leverage_binding: false, size_from_risk: f(null, "units"), rejection: "fx_rate_required:JPY->USD" },
+    ],
+    method: "Sizes: portfolio.sizing.size_trade (the paper runtime's one sizing call).",
   };
 }
