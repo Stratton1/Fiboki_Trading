@@ -1,0 +1,430 @@
+{
+ "caveats": [
+  {
+   "affects": "robustness",
+   "code": "advisory_diagnostic",
+   "direction": "unknown",
+   "message": "Advisory diagnostic: reported beside the ladder verdict, never read by a gate, a threshold or a pre-registration.",
+   "severity": "info"
+  },
+  {
+   "affects": "robustness",
+   "code": "holdout_excluded",
+   "direction": "unknown",
+   "message": "Holdout boundary 2024-11-15T20:48:00+00:00 (provisional): 2 trade(s) that exited at or after it and 480 equity point(s) are EXCLUDED from this diagnostic.",
+   "severity": "info"
+  }
+ ],
+ "data": {
+  "bands": [
+   {
+    "basis": "daily returns",
+    "block_length": {
+     "as_of": null,
+     "caveats": [],
+     "estimated": true,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "observations",
+     "value": 1.0
+    },
+    "key": "cagr_pct",
+    "label": "CAGR",
+    "observations": {
+     "as_of": null,
+     "caveats": [],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "count",
+     "value": 320.0
+    },
+    "p5": {
+     "as_of": null,
+     "caveats": [],
+     "estimated": true,
+     "provenance": "backtest",
+     "sample_size": 320,
+     "unit": "pct",
+     "value": -4.727108730263258
+    },
+    "p50": {
+     "as_of": null,
+     "caveats": [],
+     "estimated": true,
+     "provenance": "backtest",
+     "sample_size": 320,
+     "unit": "pct",
+     "value": 0.6833419350245729
+    },
+    "p95": {
+     "as_of": null,
+     "caveats": [],
+     "estimated": true,
+     "provenance": "backtest",
+     "sample_size": 320,
+     "unit": "pct",
+     "value": 6.788700173681516
+    },
+    "point": {
+     "as_of": null,
+     "caveats": [],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": 320,
+     "unit": "pct",
+     "value": 0.6783502899180727
+    }
+   },
+   {
+    "basis": "daily returns",
+    "block_length": {
+     "as_of": null,
+     "caveats": [],
+     "estimated": true,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "observations",
+     "value": 1.0
+    },
+    "key": "max_drawdown_pct",
+    "label": "Maximum drawdown",
+    "observations": {
+     "as_of": null,
+     "caveats": [],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "count",
+     "value": 320.0
+    },
+    "p5": {
+     "as_of": null,
+     "caveats": [],
+     "estimated": true,
+     "provenance": "backtest",
+     "sample_size": 320,
+     "unit": "pct",
+     "value": -5.591752201685652
+    },
+    "p50": {
+     "as_of": null,
+     "caveats": [],
+     "estimated": true,
+     "provenance": "backtest",
+     "sample_size": 320,
+     "unit": "pct",
+     "value": -2.5490707855785444
+    },
+    "p95": {
+     "as_of": null,
+     "caveats": [],
+     "estimated": true,
+     "provenance": "backtest",
+     "sample_size": 320,
+     "unit": "pct",
+     "value": -1.1481741659832891
+    },
+    "point": {
+     "as_of": null,
+     "caveats": [],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": 320,
+     "unit": "pct",
+     "value": -3.439982214535975
+    }
+   },
+   {
+    "basis": "daily returns",
+    "block_length": {
+     "as_of": null,
+     "caveats": [],
+     "estimated": true,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "observations",
+     "value": 1.0
+    },
+    "key": "sharpe",
+    "label": "Sharpe (annualised)",
+    "observations": {
+     "as_of": null,
+     "caveats": [],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "count",
+     "value": 320.0
+    },
+    "p5": {
+     "as_of": null,
+     "caveats": [],
+     "estimated": true,
+     "provenance": "backtest",
+     "sample_size": 320,
+     "unit": "ratio",
+     "value": -1.4686215093288653
+    },
+    "p50": {
+     "as_of": null,
+     "caveats": [],
+     "estimated": true,
+     "provenance": "backtest",
+     "sample_size": 320,
+     "unit": "ratio",
+     "value": 0.27171516404096163
+    },
+    "p95": {
+     "as_of": null,
+     "caveats": [],
+     "estimated": true,
+     "provenance": "backtest",
+     "sample_size": 320,
+     "unit": "ratio",
+     "value": 1.97136843786781
+    },
+    "point": {
+     "as_of": null,
+     "caveats": [],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": 320,
+     "unit": "ratio",
+     "value": 0.22934455130309556
+    }
+   },
+   {
+    "basis": "trade net P&L",
+    "block_length": {
+     "as_of": null,
+     "caveats": [
+      {
+       "affects": "",
+       "code": "value_unavailable",
+       "direction": "unknown",
+       "message": "Needs at least 8 observations (trade net P&L); the research slice holds 7.",
+       "severity": "warning"
+      }
+     ],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "observations",
+     "value": null
+    },
+    "key": "profit_factor",
+    "label": "Profit factor",
+    "observations": {
+     "as_of": null,
+     "caveats": [],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "count",
+     "value": 7.0
+    },
+    "p5": {
+     "as_of": null,
+     "caveats": [
+      {
+       "affects": "",
+       "code": "value_unavailable",
+       "direction": "unknown",
+       "message": "Needs at least 8 observations (trade net P&L); the research slice holds 7.",
+       "severity": "warning"
+      }
+     ],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "ratio",
+     "value": null
+    },
+    "p50": {
+     "as_of": null,
+     "caveats": [
+      {
+       "affects": "",
+       "code": "value_unavailable",
+       "direction": "unknown",
+       "message": "Needs at least 8 observations (trade net P&L); the research slice holds 7.",
+       "severity": "warning"
+      }
+     ],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "ratio",
+     "value": null
+    },
+    "p95": {
+     "as_of": null,
+     "caveats": [
+      {
+       "affects": "",
+       "code": "value_unavailable",
+       "direction": "unknown",
+       "message": "Needs at least 8 observations (trade net P&L); the research slice holds 7.",
+       "severity": "warning"
+      }
+     ],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "ratio",
+     "value": null
+    },
+    "point": {
+     "as_of": null,
+     "caveats": [
+      {
+       "affects": "",
+       "code": "value_unavailable",
+       "direction": "unknown",
+       "message": "Needs at least 8 observations (trade net P&L); the research slice holds 7.",
+       "severity": "warning"
+      }
+     ],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "ratio",
+     "value": null
+    }
+   },
+   {
+    "basis": "trade net P&L",
+    "block_length": {
+     "as_of": null,
+     "caveats": [
+      {
+       "affects": "",
+       "code": "value_unavailable",
+       "direction": "unknown",
+       "message": "Needs at least 8 observations (trade net P&L); the research slice holds 7.",
+       "severity": "warning"
+      }
+     ],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "observations",
+     "value": null
+    },
+    "key": "win_rate_pct",
+    "label": "Win rate",
+    "observations": {
+     "as_of": null,
+     "caveats": [],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "count",
+     "value": 7.0
+    },
+    "p5": {
+     "as_of": null,
+     "caveats": [
+      {
+       "affects": "",
+       "code": "value_unavailable",
+       "direction": "unknown",
+       "message": "Needs at least 8 observations (trade net P&L); the research slice holds 7.",
+       "severity": "warning"
+      }
+     ],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "pct",
+     "value": null
+    },
+    "p50": {
+     "as_of": null,
+     "caveats": [
+      {
+       "affects": "",
+       "code": "value_unavailable",
+       "direction": "unknown",
+       "message": "Needs at least 8 observations (trade net P&L); the research slice holds 7.",
+       "severity": "warning"
+      }
+     ],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "pct",
+     "value": null
+    },
+    "p95": {
+     "as_of": null,
+     "caveats": [
+      {
+       "affects": "",
+       "code": "value_unavailable",
+       "direction": "unknown",
+       "message": "Needs at least 8 observations (trade net P&L); the research slice holds 7.",
+       "severity": "warning"
+      }
+     ],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "pct",
+     "value": null
+    },
+    "point": {
+     "as_of": null,
+     "caveats": [
+      {
+       "affects": "",
+       "code": "value_unavailable",
+       "direction": "unknown",
+       "message": "Needs at least 8 observations (trade net P&L); the research slice holds 7.",
+       "severity": "warning"
+      }
+     ],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "pct",
+     "value": null
+    }
+   }
+  ],
+  "boundary": {
+   "basis": "provisional",
+   "detail": "No holdout segment is defined for ['inmem:EURUSD:H4:2400'] yet, so the final 20% of the run's own bar span (from 2024-11-15T20:48:00+00:00) is treated as reserved: the fraction the ladder would reserve. Conservative when the run covers only part of its dataset.",
+   "note": "Holdout boundary 2024-11-15T20:48:00+00:00 (provisional): 2 trade(s) that exited at or after it and 480 equity point(s) are EXCLUDED from this diagnostic.",
+   "points_excluded": {
+    "as_of": null,
+    "caveats": [],
+    "estimated": false,
+    "provenance": "backtest",
+    "sample_size": null,
+    "unit": "count",
+    "value": 480.0
+   },
+   "start": "2024-11-15T20:48:00Z",
+   "trades_excluded": {
+    "as_of": null,
+    "caveats": [],
+    "estimated": false,
+    "provenance": "backtest",
+    "sample_size": null,
+    "unit": "count",
+    "value": 2.0
+   }
+  },
+  "method": "Politis-Romano stationary bootstrap (stats/bootstrap.py bootstrap_confidence_interval), 1000 resamples, block length by Politis-White (2004) per series; metric i draws from default_rng([20261018, i]). CAGR, drawdown and Sharpe resample the 320 daily (17:00 New York) returns of the research slice; profit factor and win rate its 7 trades. The bands describe sampling uncertainty of THIS sample, not the selection the search made: they are not deflated.",
+  "n_boot": 1000,
+  "run_id": "bt_0002",
+  "seed": 20261018
+ },
+ "source": {
+  "as_of": "2026-10-19T00:00:00Z",
+  "detail": "Research ledger backtest bt_0002; resampled.",
+  "kind": "live"
+ }
+}

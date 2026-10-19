@@ -1,0 +1,61 @@
+{
+ "caveats": [
+  {
+   "affects": "robustness",
+   "code": "advisory_diagnostic",
+   "direction": "unknown",
+   "message": "Advisory diagnostic: reported beside the ladder verdict, never read by a gate, a threshold or a pre-registration.",
+   "severity": "info"
+  }
+ ],
+ "data": {
+  "execution": null,
+  "lookahead": null,
+  "method": "The binding re-run through the engine (validation/engine_evaluator.py) with N bars more and N bars less history: N earlier bars prepended when they exist (extended), otherwise a second run starting cold N bars later (late start). Signals, indicator columns and trades are compared over the shorter run after its own declared warm-up; a change there means a recursive indicator has not converged by the declared warm-up (Freqtrade recursive-analysis).",
+  "noise": null,
+  "perturbation": null,
+  "provenance": null,
+  "random": null,
+  "run_id": "bt_0002",
+  "status": {
+   "cache_key": "f98a5d9e3307d4a8d1b4af42b9f6b111a595a334dce5afb597626df675c910ef",
+   "computed_at": null,
+   "error": "",
+   "job_id": "",
+   "kind": "warmup",
+   "options": {
+    "extra_bars": [
+     100,
+     300
+    ]
+   },
+   "progress": {
+    "as_of": null,
+    "caveats": [
+     {
+      "affects": "",
+      "code": "value_unavailable",
+      "direction": "unknown",
+      "message": "No progress reported yet.",
+      "severity": "warning"
+     }
+    ],
+    "estimated": false,
+    "provenance": "backtest",
+    "sample_size": null,
+    "unit": "ratio",
+    "value": null
+   },
+   "stage": "",
+   "status": "not_run",
+   "title": "Warm-up stability (recursive indicators)",
+   "updated_at": null
+  },
+  "warmup": null
+ },
+ "source": {
+  "as_of": "2026-10-19T00:00:00Z",
+  "detail": "Not computed yet: queue it, and the research worker runs it.",
+  "kind": "absent"
+ }
+}

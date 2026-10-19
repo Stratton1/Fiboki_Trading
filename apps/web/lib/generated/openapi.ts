@@ -5629,23 +5629,29 @@ export interface components {
         };
         /** WarmupRunView */
         WarmupRunView: {
+            /** Compared From */
+            compared_from: string | null;
             extra_bars: components["schemas"]["Figure"];
             /** First Changed Signal */
             first_changed_signal: string | null;
             /** Indicator Columns */
             indicator_columns: components["schemas"]["IndicatorDriftView"][];
+            /** Indicators Converged */
+            indicators_converged: boolean;
             metrics: components["schemas"]["RunMetricsView"];
+            /** Mode */
+            mode: string;
             signals_changed_after_warmup: components["schemas"]["Figure"];
             signals_changed_in_cold_region: components["schemas"]["Figure"];
             signals_compared: components["schemas"]["Figure"];
             /** Stable */
             stable: boolean;
-            trades_baseline: components["schemas"]["Figure"];
             trades_changed: components["schemas"]["Figure"];
-            trades_extended: components["schemas"]["Figure"];
+            trades_long: components["schemas"]["Figure"];
             trades_matched: components["schemas"]["Figure"];
-            trades_only_baseline: components["schemas"]["Figure"];
-            trades_only_extended: components["schemas"]["Figure"];
+            trades_only_long: components["schemas"]["Figure"];
+            trades_only_short: components["schemas"]["Figure"];
+            trades_short: components["schemas"]["Figure"];
         };
         /** WarmupView */
         WarmupView: {

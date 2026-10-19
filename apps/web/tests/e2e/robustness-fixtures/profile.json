@@ -1,0 +1,207 @@
+{
+ "caveats": [
+  {
+   "affects": "optimisation_profile",
+   "code": "advisory_diagnostic",
+   "direction": "unknown",
+   "message": "Advisory diagnostic: reported beside the ladder verdict, never read by a gate, a threshold or a pre-registration.",
+   "severity": "info"
+  }
+ ],
+ "data": {
+  "median": {
+   "as_of": null,
+   "caveats": [],
+   "estimated": false,
+   "provenance": "backtest",
+   "sample_size": 3,
+   "unit": "ratio",
+   "value": 0.22904557509554796
+  },
+  "median_over_peak": {
+   "as_of": null,
+   "caveats": [],
+   "estimated": false,
+   "provenance": "backtest",
+   "sample_size": 3,
+   "unit": "ratio",
+   "value": 0.6083602211252906
+  },
+  "method": "System Parameter Permutation (Walton 2014): every distinct parameter set with a stored run (the latest run of each), its objective on the research slice (holdout excluded). The MEDIAN is the expected performance of the system; the peak is what the search maximised. Runs whose job is not in the job ledger cannot be placed and are counted.",
+  "n_points": {
+   "as_of": null,
+   "caveats": [],
+   "estimated": false,
+   "provenance": "backtest",
+   "sample_size": null,
+   "unit": "count",
+   "value": 3.0
+  },
+  "n_undefined": {
+   "as_of": null,
+   "caveats": [],
+   "estimated": false,
+   "provenance": "backtest",
+   "sample_size": null,
+   "unit": "count",
+   "value": 0.0
+  },
+  "objective": "sharpe",
+  "p25": {
+   "as_of": null,
+   "caveats": [],
+   "estimated": false,
+   "provenance": "backtest",
+   "sample_size": 3,
+   "unit": "ratio",
+   "value": 0.04871126461051353
+  },
+  "p75": {
+   "as_of": null,
+   "caveats": [],
+   "estimated": false,
+   "provenance": "backtest",
+   "sample_size": 3,
+   "unit": "ratio",
+   "value": 0.3027711042045401
+  },
+  "parameters": [
+   "adx_floor",
+   "kijun_period",
+   "senkou_b_period",
+   "senkou_shift",
+   "stop_buffer_atr",
+   "tenkan_period"
+  ],
+  "peak": {
+   "as_of": null,
+   "caveats": [],
+   "estimated": false,
+   "provenance": "backtest",
+   "sample_size": 3,
+   "unit": "ratio",
+   "value": 0.3764966333135323
+  },
+  "peak_params": {
+   "adx_floor": 20.0,
+   "kijun_period": 26,
+   "senkou_b_period": 52,
+   "senkou_shift": 26,
+   "stop_buffer_atr": 0.5,
+   "tenkan_period": 11
+  },
+  "points": [
+   {
+    "objective": {
+     "as_of": null,
+     "caveats": [],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": 9,
+     "unit": "ratio",
+     "value": 0.3764966333135323
+    },
+    "params": {
+     "adx_floor": 20.0,
+     "kijun_period": 26,
+     "senkou_b_period": 52,
+     "senkou_shift": 26,
+     "stop_buffer_atr": 0.5,
+     "tenkan_period": 11
+    },
+    "run_id": "bt_0003",
+    "trades": {
+     "as_of": null,
+     "caveats": [],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "count",
+     "value": 9.0
+    }
+   },
+   {
+    "objective": {
+     "as_of": null,
+     "caveats": [],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": 7,
+     "unit": "ratio",
+     "value": 0.22904557509554796
+    },
+    "params": {
+     "adx_floor": 20.0,
+     "kijun_period": 26,
+     "senkou_b_period": 52,
+     "senkou_shift": 26,
+     "stop_buffer_atr": 0.5,
+     "tenkan_period": 9
+    },
+    "run_id": "bt_0002",
+    "trades": {
+     "as_of": null,
+     "caveats": [],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "count",
+     "value": 7.0
+    }
+   },
+   {
+    "objective": {
+     "as_of": null,
+     "caveats": [],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": 4,
+     "unit": "ratio",
+     "value": -0.1316230458745209
+    },
+    "params": {
+     "adx_floor": 20.0,
+     "kijun_period": 26,
+     "senkou_b_period": 52,
+     "senkou_shift": 26,
+     "stop_buffer_atr": 0.5,
+     "tenkan_period": 7
+    },
+    "run_id": "bt_0001",
+    "trades": {
+     "as_of": null,
+     "caveats": [],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "count",
+     "value": 4.0
+    }
+   }
+  ],
+  "profitable_share": {
+   "as_of": null,
+   "caveats": [],
+   "estimated": false,
+   "provenance": "backtest",
+   "sample_size": 3,
+   "unit": "ratio",
+   "value": 0.6666666666666666
+  },
+  "runs_unknown_params": {
+   "as_of": null,
+   "caveats": [],
+   "estimated": false,
+   "provenance": "backtest",
+   "sample_size": null,
+   "unit": "count",
+   "value": 0.0
+  },
+  "strategy_id": "ichimoku_kumo_trend"
+ },
+ "source": {
+  "as_of": "2026-10-19T00:00:00Z",
+  "detail": "Stored runs in the research ledger, parameters from the job ledger.",
+  "kind": "live"
+ }
+}

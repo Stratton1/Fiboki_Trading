@@ -31,8 +31,8 @@ REPO = Path(__file__).resolve().parents[2]
 STRATEGY = "ichimoku_kumo_trend"
 
 
-def _doc() -> StrategyDocument:
-    return StrategyDocument.from_json((REPO / "research" / "strategies" / f"{STRATEGY}.json").read_text())
+def _doc(strategy: str = STRATEGY) -> StrategyDocument:
+    return StrategyDocument.from_json((REPO / "research" / "strategies" / f"{strategy}.json").read_text())
 
 
 @pytest.fixture(scope="module")
@@ -54,13 +54,14 @@ class SpyBars(InMemoryBarSource):
 
 
 def _binding(frame: pd.DataFrame, *, start_at: int = 300, boundary_at: int = 1280,
-             end: pd.Timestamp | None = None) -> RunBinding:
-    doc = _doc()
-    params = {"tenkan_period": 9, "kijun_period": 26}
+             end: pd.Timestamp | None = None, strategy: str = STRATEGY,
+             params: dict | None = None) -> RunBinding:
+    doc = _doc(strategy)
+    params = {"tenkan_period": 9, "kijun_period": 26} if params is None else params
     bound = doc.bind({**doc.default_values(), **params})
     b = frame.index[boundary_at]
     return RunBinding(
-        run_id="bt_test", strategy_id=STRATEGY, instrument="EURUSD", timeframe="H4",
+        run_id="bt_test", strategy_id=strategy, instrument="EURUSD", timeframe="H4",
         window_start=frame.index[start_at].isoformat(), window_end=(end or b).isoformat(),
         initial_balance=10_000.0, risk_fraction=0.01, account_ccy="USD", profile_name="IG_REALISTIC",
         parameters=params, construction="none", sizing_policy="fixed_fractional_v2",
@@ -184,14 +185,30 @@ def test_warmup_reports_signals_trades_and_indicator_drift(frame):
     ex, _ = _executor(frame)
     out = RUNNERS["warmup"](ex, extra_bars=[80, 10_000])
     assert out["warmup_period"] > 0
-    first, capped = out["runs"]
-    assert first["extra_bars"] == 80
-    assert capped["extra_bars"] == ex.prologue_available  # never more history than exists
+    first, late = out["runs"]
+    assert (first["mode"], first["extra_bars"]) == ("extended", 80)
+    # More history than exists before the window: the short run starts later instead.
+    assert late["mode"] == "late_start" and 0 < late["extra_bars"] <= 10_000
     for r in out["runs"]:
-        assert r["trades_matched"] + r["trades_only_baseline"] == r["trades_baseline"]
+        assert r["trades_matched"] + r["trades_only_short"] == r["trades_short"]
         assert r["indicator_columns"] and all(c["max_abs_diff"] >= 0 for c in r["indicator_columns"])
         assert r["stable"] == (r["signals_changed_after_warmup"] == 0 and r["trades_changed"] == 0
-                               and r["trades_only_baseline"] == 0 and r["trades_only_extended"] == 0)
+                               and r["trades_only_short"] == 0 and r["trades_only_long"] == 0)
+
+
+def test_warmup_compares_a_recursive_indicator_for_real(frame):
+    """Donchian's chandelier trails on Wilder's ATR, a recursive average. With 200
+    more bars of history its value really does differ (the runs saw different
+    data), and by the end of the declared warm-up the difference is below the
+    report's 1e-9 relative tolerance: the declared warm-up is long enough."""
+    strategy = "donchian_breakout_atr"
+    bars = InMemoryBarSource({("EURUSD", "H4"): frame, **gbp_fx_frames()})
+    ex = BindingExecutor(_binding(frame, strategy=strategy, params={}), _doc(strategy), bars)
+    out = RUNNERS["warmup"](ex, extra_bars=[200])
+    (run,) = out["runs"]
+    (atr,) = [c for c in run["indicator_columns"] if c["column"].startswith("atr")]
+    assert atr["max_abs_diff"] > 0.0
+    assert atr["bars_differing"] == 0 and run["signals_changed_after_warmup"] == 0
 
 
 # --------------------------------------------------------------- stress profiles

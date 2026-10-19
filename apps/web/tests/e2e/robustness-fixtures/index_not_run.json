@@ -1,0 +1,273 @@
+{
+ "caveats": [
+  {
+   "affects": "robustness",
+   "code": "advisory_diagnostic",
+   "direction": "unknown",
+   "message": "Advisory diagnostic: reported beside the ladder verdict, never read by a gate, a threshold or a pre-registration.",
+   "severity": "info"
+  }
+ ],
+ "data": {
+  "binding": {
+   "account_ccy": "USD",
+   "boundary": {
+    "basis": "provisional",
+    "dataset_version_ids": [
+     "inmem:EURUSD:H4:2400"
+    ],
+    "detail": "No holdout segment is defined for ['inmem:EURUSD:H4:2400'] yet, so the final 20% of the run's own bar span (from 2024-11-15T20:48:00+00:00) is treated as reserved: the fraction the ladder would reserve. Conservative when the run covers only part of its dataset.",
+    "start": "2024-11-15T20:48:00+00:00"
+   },
+   "construction": "none",
+   "content_hash": "22fd6a9510e43a079a8e71de7c2d8362e5d3b0e3e8fe80a96aab638fcdf319a5",
+   "dataset_version_id": "inmem:EURUSD:H4:2400",
+   "initial_balance": 10000.0,
+   "instrument": "EURUSD",
+   "ledger_sha256": "d9dfb2be346f8aba610decaa15c9c1b13654867ffc107d9c64ce6690d32e4c27",
+   "parameters": {
+    "adx_floor": 20.0,
+    "kijun_period": 26,
+    "senkou_b_period": 52,
+    "senkou_shift": 26,
+    "stop_buffer_atr": 0.5,
+    "tenkan_period": 9
+   },
+   "profile_name": "IG_REALISTIC",
+   "risk_fraction": 0.01,
+   "run_id": "bt_0002",
+   "run_last": "2025-02-03T20:00:00+00:00",
+   "sizing_policy": "fixed_fractional_v2",
+   "strategy_id": "ichimoku_kumo_trend",
+   "timeframe": "H4",
+   "window_end": "2024-11-15T20:48:00+00:00",
+   "window_start": "2024-01-01T00:00:00+00:00"
+  },
+  "can_queue_note": "Queueing a re-run diagnostic is admin-only and audited (POST). The research worker executes it; the API never runs the engine. Results are cached by the engine fingerprint, so the same diagnostic of the same run under the same engine is computed once.",
+  "kinds": [
+   {
+    "cache_key": "f98a5d9e3307d4a8d1b4af42b9f6b111a595a334dce5afb597626df675c910ef",
+    "computed_at": null,
+    "error": "",
+    "job_id": "",
+    "kind": "warmup",
+    "options": {
+     "extra_bars": [
+      100,
+      300
+     ]
+    },
+    "progress": {
+     "as_of": null,
+     "caveats": [
+      {
+       "affects": "",
+       "code": "value_unavailable",
+       "direction": "unknown",
+       "message": "No progress reported yet.",
+       "severity": "warning"
+      }
+     ],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "ratio",
+     "value": null
+    },
+    "stage": "",
+    "status": "not_run",
+    "title": "Warm-up stability (recursive indicators)",
+    "updated_at": null
+   },
+   {
+    "cache_key": "d042247187c10490a6d43d0bbddd332cb3fbc0b87822f8488ecbeb2885fd4a6a",
+    "computed_at": null,
+    "error": "",
+    "job_id": "",
+    "kind": "lookahead",
+    "options": {
+     "samples": 60,
+     "seed": 20261019
+    },
+    "progress": {
+     "as_of": null,
+     "caveats": [
+      {
+       "affects": "",
+       "code": "value_unavailable",
+       "direction": "unknown",
+       "message": "No progress reported yet.",
+       "severity": "warning"
+      }
+     ],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "ratio",
+     "value": null
+    },
+    "stage": "",
+    "status": "not_run",
+    "title": "Look-ahead detector",
+    "updated_at": null
+   },
+   {
+    "cache_key": "35711a5c7ad8f347422e07a009812b97bdb1c0b967c6fa9fa4008b94e0d0c453",
+    "computed_at": null,
+    "error": "",
+    "job_id": "",
+    "kind": "execution",
+    "options": {
+     "delays": [
+      1,
+      2
+     ],
+     "multipliers": [
+      1.0,
+      1.5,
+      2.0,
+      3.0
+     ],
+     "seed": 20261019,
+     "skip_levels": [
+      0.05,
+      0.1,
+      0.2
+     ],
+     "skip_seeds": 5
+    },
+    "progress": {
+     "as_of": null,
+     "caveats": [
+      {
+       "affects": "",
+       "code": "value_unavailable",
+       "direction": "unknown",
+       "message": "No progress reported yet.",
+       "severity": "warning"
+      }
+     ],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "ratio",
+     "value": null
+    },
+    "stage": "",
+    "status": "not_run",
+    "title": "Execution-realism stress",
+    "updated_at": null
+   },
+   {
+    "cache_key": "ea25b0422592152782be96f7e1075b903ef2bab6e95a4d6bccafb97cb213cf28",
+    "computed_at": null,
+    "error": "",
+    "job_id": "",
+    "kind": "perturbation",
+    "options": {
+     "n": 40,
+     "pct": 10.0,
+     "seed": 20261019
+    },
+    "progress": {
+     "as_of": null,
+     "caveats": [
+      {
+       "affects": "",
+       "code": "value_unavailable",
+       "direction": "unknown",
+       "message": "No progress reported yet.",
+       "severity": "warning"
+      }
+     ],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "ratio",
+     "value": null
+    },
+    "stage": "",
+    "status": "not_run",
+    "title": "Parameter-perturbation Monte Carlo",
+    "updated_at": null
+   },
+   {
+    "cache_key": "203e2eb260c9208c097ec3d8e509984542fea7b5692035cd2d5369ce2f81386c",
+    "computed_at": null,
+    "error": "",
+    "job_id": "",
+    "kind": "random",
+    "options": {
+     "n_runs": 200,
+     "seed": 20261019
+    },
+    "progress": {
+     "as_of": null,
+     "caveats": [
+      {
+       "affects": "",
+       "code": "value_unavailable",
+       "direction": "unknown",
+       "message": "No progress reported yet.",
+       "severity": "warning"
+      }
+     ],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "ratio",
+     "value": null
+    },
+    "stage": "",
+    "status": "not_run",
+    "title": "Versus random entries",
+    "updated_at": null
+   },
+   {
+    "cache_key": "f9ec4ed41a8a2c58207174f1ff509669b3392b54dd7782a4b836e4ae56a33914",
+    "computed_at": null,
+    "error": "",
+    "job_id": "",
+    "kind": "noise",
+    "options": {
+     "levels": [
+      0.1,
+      0.25,
+      0.5
+     ],
+     "n": 8,
+     "seed": 20261019
+    },
+    "progress": {
+     "as_of": null,
+     "caveats": [
+      {
+       "affects": "",
+       "code": "value_unavailable",
+       "direction": "unknown",
+       "message": "No progress reported yet.",
+       "severity": "warning"
+      }
+     ],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "ratio",
+     "value": null
+    },
+    "stage": "",
+    "status": "not_run",
+    "title": "Price-noise test",
+    "updated_at": null
+   }
+  ],
+  "reason": "",
+  "rerunnable": true,
+  "run_id": "bt_0002"
+ },
+ "source": {
+  "as_of": "2026-10-19T00:00:00Z",
+  "detail": "Robustness cache and job ledger, read-only.",
+  "kind": "live"
+ }
+}

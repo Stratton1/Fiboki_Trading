@@ -79,88 +79,107 @@ def _signal_key(sig: Signal | None) -> tuple[Any, ...] | None:
 
 def warmup_stability(executor: BindingExecutor, *, extra_bars: Sequence[int] = (100, 300),
                      progress: Progress = _noop) -> dict[str, Any]:
-    """Run the binding with N extra bars of history before the window (Freqtrade's
-    recursive analysis) and report whether its indicators, signals and trades change.
+    """Run the binding with N MORE or N FEWER bars of history and compare (Freqtrade's
+    recursive analysis): do its indicators, signals and trades depend on where the
+    data happens to start?
 
-    The baseline starts COLD at the window's first bar, as the stored run did.
-    Differences inside the baseline's own warm-up (its first ``warmup_period``
-    bars, where it cannot signal) are expected and reported apart. A difference
-    AFTER it means a recursive indicator (an EMA, a Wilder average) has not
-    converged by the declared warm-up: the result depends on where the data
-    happens to start.
+    Two runs per N, a LONG one (more history) and a SHORT one (N bars less),
+    compared over the SHORT run's bars after its own declared warm-up:
+
+    * ``extended``: the window as stored is the short run and N bars of earlier
+      history are prepended for the long one (when that history exists);
+    * ``late_start``: the stored run already starts at its data's first bar, so
+      the long run is the window as stored and the short run starts cold N bars
+      later.
+
+    A difference inside the short run's own warm-up is expected and reported
+    apart. A difference AFTER it means a recursive indicator (an EMA, a Wilder
+    average) has not converged by the declared warm-up. ``stable`` judges the
+    SIGNALS and the trades' timing and exits (not their P&L, which differs by
+    construction because sizing compounds from a different starting point);
+    ``indicators_converged`` says separately whether every indicator column
+    agreed to 1e-9 relative.
     """
     compiled = compile_strategy(executor.bound)
     warm = int(compiled.warmup_period)
     total = 1 + 2 * len(extra_bars)
     progress(0, total, "baseline")
     base = executor.run()
-    base_frame = executor.window_frame(0)
-    base_prep = compiled.prepare(base_frame)
-    base_signals = [_signal_key(compiled.generate_signal(base_prep, i, instrument=executor.binding.instrument,
-                                                         timeframe=executor.timeframe))
-                    for i in range(len(base_prep))]
     progress(1, total, "baseline")
-    columns = [c for c in base_prep.columns if c not in ("open", "high", "low", "close", "volume", "price_basis")
-               and pd.api.types.is_numeric_dtype(base_prep[c])]
+    window = executor.window_frame(0)
+    sym, tf = executor.binding.instrument, executor.timeframe
     results: list[dict[str, Any]] = []
     for j, n in enumerate(extra_bars):
-        use = min(int(n), executor.prologue_available)
-        frame = executor.window_frame(use)
-        prep = compiled.prepare(frame).iloc[use:]
-        prep.index = base_prep.index
-        sigs = _signals_offset(compiled, frame, use, executor)
-        progress(2 + 2 * j, total, f"+{use} bars: signals")
-        cold = [i for i in range(min(warm, len(base_prep))) if sigs[i] != base_signals[i]]
-        after = [i for i in range(warm, len(base_prep)) if sigs[i] != base_signals[i]]
+        n = int(n)
+        if executor.prologue_available >= n:
+            mode, use = "extended", n
+            long_frame, short_frame = executor.window_frame(n), window
+            long_out, short_out = None, base
+        else:
+            mode, use = "late_start", min(n, max(0, len(window) - warm - 30))
+            long_frame, short_frame = window, window.iloc[use:]
+            long_out, short_out = base, None
+        long_prep = compiled.prepare(long_frame)
+        short_prep = compiled.prepare(short_frame)
+        offset = len(long_prep) - len(short_prep)  # short rows are the long frame's tail
+        long_sig = [_signal_key(compiled.generate_signal(long_prep, i + offset, instrument=sym, timeframe=tf))
+                    for i in range(len(short_prep))]
+        short_sig = [_signal_key(compiled.generate_signal(short_prep, i, instrument=sym, timeframe=tf))
+                     for i in range(len(short_prep))]
+        progress(2 + 2 * j, total, f"{mode} {use} bars: signals")
+        cold = [i for i in range(min(warm, len(short_prep))) if long_sig[i] != short_sig[i]]
+        after = [i for i in range(warm, len(short_prep)) if long_sig[i] != short_sig[i]]
+        columns = [c for c in short_prep.columns
+                   if c not in ("open", "high", "low", "close", "volume", "price_basis")
+                   and pd.api.types.is_numeric_dtype(short_prep[c])]
         col_rows = []
         for c in columns:
-            a = base_prep[c].to_numpy(dtype=float)[warm:]
-            b = prep[c].to_numpy(dtype=float)[warm:]
+            a = long_prep[c].to_numpy(dtype=float)[offset + warm:]
+            b = short_prep[c].to_numpy(dtype=float)[warm:]
             both = np.isfinite(a) & np.isfinite(b)
             nan_mismatch = int((np.isfinite(a) != np.isfinite(b)).sum())
             diff = np.abs(a[both] - b[both])
-            scale = np.maximum(np.abs(a[both]), 1e-12)
-            rel = diff / scale
-            changed = np.flatnonzero(rel > 1e-9)
+            rel = diff / np.maximum(np.abs(a[both]), 1e-12)
+            changed = np.flatnonzero(np.abs(a - b) > 1e-9 * np.maximum(np.abs(a), 1.0))
             col_rows.append({
                 "column": c, "max_abs_diff": float(diff.max()) if diff.size else 0.0,
                 "max_rel_diff": float(rel.max()) if rel.size else 0.0,
                 "bars_differing": int(changed.size) + nan_mismatch,
-                "last_differing_bar": (base_prep.index[warm + int(changed[-1])].isoformat()
+                "last_differing_bar": (short_prep.index[warm + int(changed[-1])].isoformat()
                                        if changed.size else None),
             })
-        out = executor.run(extra_bars=use)
-        progress(3 + 2 * j, total, f"+{use} bars: engine")
-        cut = base_prep.index[min(warm, len(base_prep) - 1)]
-        b_trades = {(t.entry_time, t.direction.value): t for t in base.trades if t.entry_time >= cut}
-        w_trades = {(t.entry_time, t.direction.value): t for t in out.trades if t.entry_time >= cut}
-        matched = sorted(set(b_trades) & set(w_trades))
-        changed_trades = [k for k in matched if (b_trades[k].exit_time != w_trades[k].exit_time
-                                                 or abs(b_trades[k].net_pnl - w_trades[k].net_pnl) > 1e-6)]
+        other = executor.run(extra_bars=use) if mode == "extended" else executor.run(frame=short_frame)
+        long_out = long_out or other
+        short_out = short_out or other
+        progress(3 + 2 * j, total, f"{mode} {use} bars: engine")
+        cut = short_prep.index[min(warm, len(short_prep) - 1)]
+        s_trades = {(t.entry_time, t.direction.value): t for t in short_out.trades if t.entry_time >= cut}
+        l_trades = {(t.entry_time, t.direction.value): t for t in long_out.trades if t.entry_time >= cut}
+        matched = sorted(set(s_trades) & set(l_trades))
+        # Timing and exit, not money: the two runs reach a shared bar with different
+        # equity (sizing compounds), so their P&L differs by construction.
+        changed_trades = [k for k in matched if (s_trades[k].exit_time != l_trades[k].exit_time
+                                                 or s_trades[k].exit_reason != l_trades[k].exit_reason
+                                                 or abs(s_trades[k].exit_price - l_trades[k].exit_price) > 1e-9)]
         results.append({
-            "extra_bars_requested": int(n), "extra_bars": use,
-            "signals_compared": max(0, len(base_prep) - warm),
+            "mode": mode, "extra_bars_requested": n, "extra_bars": use,
+            "compared_from": cut.isoformat(),
+            "signals_compared": max(0, len(short_prep) - warm),
             "signals_changed_after_warmup": len(after),
-            "first_changed_signal": base_prep.index[after[0]].isoformat() if after else None,
+            "first_changed_signal": short_prep.index[after[0]].isoformat() if after else None,
             "signals_changed_in_cold_region": len(cold),
             "indicator_columns": col_rows,
-            "trades_baseline": len(b_trades), "trades_extended": len(w_trades),
-            "trades_matched": len(matched), "trades_only_baseline": len(set(b_trades) - set(w_trades)),
-            "trades_only_extended": len(set(w_trades) - set(b_trades)),
+            "trades_short": len(s_trades), "trades_long": len(l_trades),
+            "trades_matched": len(matched), "trades_only_short": len(set(s_trades) - set(l_trades)),
+            "trades_only_long": len(set(l_trades) - set(s_trades)),
             "trades_changed": len(changed_trades),
-            "metrics": out.metrics,
-            "stable": (not after and not changed_trades and set(b_trades) == set(w_trades)),
+            "metrics": other.metrics,
+            "indicators_converged": all(c["bars_differing"] == 0 for c in col_rows),
+            "stable": (not after and not changed_trades and set(s_trades) == set(l_trades)),
         })
     return {"warmup_period": warm, "baseline": base.brief(), "runs": results,
             "stable": all(r["stable"] for r in results),
             "prologue_available": executor.prologue_available}
-
-
-def _signals_offset(compiled: Any, frame: pd.DataFrame, offset: int, executor: BindingExecutor) -> list[Any]:
-    prep = compiled.prepare(frame)
-    return [_signal_key(compiled.generate_signal(prep, i, instrument=executor.binding.instrument,
-                                                 timeframe=executor.timeframe))
-            for i in range(offset, len(prep))]
 
 
 # ============================================================ 2. look-ahead

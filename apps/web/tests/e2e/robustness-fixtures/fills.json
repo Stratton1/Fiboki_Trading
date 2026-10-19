@@ -1,0 +1,232 @@
+{
+ "caveats": [
+  {
+   "affects": "robustness",
+   "code": "advisory_diagnostic",
+   "direction": "unknown",
+   "message": "Advisory diagnostic: reported beside the ladder verdict, never read by a gate, a threshold or a pre-registration.",
+   "severity": "info"
+  },
+  {
+   "affects": "robustness",
+   "code": "holdout_excluded",
+   "direction": "unknown",
+   "message": "Holdout boundary 2024-11-15T20:48:00+00:00 (provisional): 2 trade(s) that exited at or after it and 480 equity point(s) are EXCLUDED from this diagnostic.",
+   "severity": "info"
+  }
+ ],
+ "data": {
+  "boundary": {
+   "basis": "provisional",
+   "detail": "No holdout segment is defined for ['inmem:EURUSD:H4:2400'] yet, so the final 20% of the run's own bar span (from 2024-11-15T20:48:00+00:00) is treated as reserved: the fraction the ladder would reserve. Conservative when the run covers only part of its dataset.",
+   "note": "Holdout boundary 2024-11-15T20:48:00+00:00 (provisional): 2 trade(s) that exited at or after it and 480 equity point(s) are EXCLUDED from this diagnostic.",
+   "points_excluded": {
+    "as_of": null,
+    "caveats": [],
+    "estimated": false,
+    "provenance": "backtest",
+    "sample_size": null,
+    "unit": "count",
+    "value": 480.0
+   },
+   "start": "2024-11-15T20:48:00Z",
+   "trades_excluded": {
+    "as_of": null,
+    "caveats": [],
+    "estimated": false,
+    "provenance": "backtest",
+    "sample_size": null,
+    "unit": "count",
+    "value": 2.0
+   }
+  },
+  "intrabar_policy": "stop_first",
+  "note": "Fill rules are the flags the engine recorded at each fill (backtest/position.py): intrabar policy stop_first decides a bar where the stop and a target were both touched. Costs are the ledger's own decomposition, in the account currency.",
+  "rule_counts": {
+   "plain": {
+    "as_of": null,
+    "caveats": [],
+    "estimated": false,
+    "provenance": "backtest",
+    "sample_size": null,
+    "unit": "count",
+    "value": 7.0
+   }
+  },
+  "rule_definitions": {
+   "both_touched": "The stop and a target were both inside one bar's range; the intrabar policy decided which filled (the path inside a bar is unknowable).",
+   "entry_stale": "The ENTRY bar was stale (see stale).",
+   "gapped": "The bar OPENED through the level: a stop filled at the worse open (gap loss taken), a target at the level (no gap gift).",
+   "plain": "The level was touched inside the bar and nothing else applied.",
+   "stale": "The bar arrived after a gap of more than the profile's stale multiple of the bar interval; the fill paid the stale spread multiple."
+  },
+  "run_id": "bt_0002",
+  "table": {
+   "commission": [
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0
+   ],
+   "direction": [
+    "long",
+    "long",
+    "short",
+    "long",
+    "short",
+    "short",
+    "long"
+   ],
+   "entry_time": [
+    "2024-01-19T16:00:00Z",
+    "2024-01-24T00:00:00Z",
+    "2024-04-11T12:00:00Z",
+    "2024-05-31T16:00:00Z",
+    "2024-06-18T12:00:00Z",
+    "2024-08-28T16:00:00Z",
+    "2024-11-05T00:00:00Z"
+   ],
+   "exit_reason": [
+    "stop_loss",
+    "breakeven",
+    "stop_loss",
+    "stop_loss",
+    "take_profit",
+    "breakeven",
+    "take_profit"
+   ],
+   "exit_time": [
+    "2024-01-22T04:00:00Z",
+    "2024-01-28T16:00:00Z",
+    "2024-04-13T16:00:00Z",
+    "2024-06-04T12:00:00Z",
+    "2024-06-20T20:00:00Z",
+    "2024-09-01T16:00:00Z",
+    "2024-11-09T00:00:00Z"
+   ],
+   "financing_cost": [
+    3.159814278940751,
+    19.90003941598144,
+    1.766255316255045,
+    5.704374138831803,
+    2.156377842291255,
+    5.271649851514337,
+    6.487306329860867
+   ],
+   "gross_pnl": [
+    -95.00393681083713,
+    0.0,
+    -94.76492815000069,
+    -93.0236450251194,
+    208.99773598166072,
+    0.0,
+    211.3518847282216
+   ],
+   "instrument": [
+    "EURUSD",
+    "EURUSD",
+    "EURUSD",
+    "EURUSD",
+    "EURUSD",
+    "EURUSD",
+    "EURUSD"
+   ],
+   "net_pnl": [
+    -102.7231870897779,
+    -29.284781415981442,
+    -101.35306346625573,
+    -101.75507916395121,
+    204.38840813936946,
+    -10.844589851514337,
+    200.79229039836076
+   ],
+   "provenance": "backtest",
+   "recorded": [
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true
+   ],
+   "rules": [
+    [
+     "plain"
+    ],
+    [
+     "plain"
+    ],
+    [
+     "plain"
+    ],
+    [
+     "plain"
+    ],
+    [
+     "plain"
+    ],
+    [
+     "plain"
+    ],
+    [
+     "plain"
+    ]
+   ],
+   "slippage_cost": [
+    0.0,
+    3.6445600000000002,
+    2.26912,
+    0.0,
+    0.0,
+    2.62256,
+    0.8852800000000001
+   ],
+   "spread_cost": [
+    4.559436,
+    5.740182000000001,
+    2.55276,
+    3.02706,
+    2.45295,
+    2.95038,
+    3.1870080000000005
+   ],
+   "trade_id": [
+    "trd_6ecef50016d44d56",
+    "trd_307642d7288e42fa",
+    "trd_6eff233fd12c45b6",
+    "trd_56fd1cb1f985452b",
+    "trd_7e0812bf4b5e4445",
+    "trd_e8147fe4ee6441b5",
+    "trd_1285d7be2f704764"
+   ],
+   "unit": "USD"
+  },
+  "trades_recorded": {
+   "as_of": null,
+   "caveats": [],
+   "estimated": false,
+   "provenance": "backtest",
+   "sample_size": null,
+   "unit": "count",
+   "value": 7.0
+  },
+  "trades_total": {
+   "as_of": null,
+   "caveats": [],
+   "estimated": false,
+   "provenance": "backtest",
+   "sample_size": null,
+   "unit": "count",
+   "value": 7.0
+  }
+ },
+ "source": {
+  "as_of": "2026-10-19T00:00:00Z",
+  "detail": "Research ledger backtest bt_0002, trade ledger.",
+  "kind": "live"
+ }
+}

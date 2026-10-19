@@ -1,0 +1,3755 @@
+{
+ "caveats": [
+  {
+   "affects": "robustness",
+   "code": "advisory_diagnostic",
+   "direction": "unknown",
+   "message": "Advisory diagnostic: reported beside the ladder verdict, never read by a gate, a threshold or a pre-registration.",
+   "severity": "info"
+  }
+ ],
+ "data": {
+  "execution": {
+   "baseline": {
+    "ledger_sha256": "27938287e0b894509f5b0473c80c3b7f016ef2edcbcdc41e3bea4e65fe39c437",
+    "metrics": {
+     "cagr_pct": {
+      "as_of": null,
+      "caveats": [],
+      "estimated": false,
+      "provenance": "backtest",
+      "sample_size": null,
+      "unit": "pct",
+      "value": 0.6765768665051519
+     },
+     "calmar": {
+      "as_of": null,
+      "caveats": [],
+      "estimated": false,
+      "provenance": "backtest",
+      "sample_size": null,
+      "unit": "ratio",
+      "value": 0.19077664100369343
+     },
+     "expectancy": {
+      "as_of": null,
+      "caveats": [],
+      "estimated": false,
+      "provenance": "backtest",
+      "sample_size": null,
+      "unit": "USD",
+      "value": 8.459999650035659
+     },
+     "max_drawdown_pct": {
+      "as_of": null,
+      "caveats": [],
+      "estimated": false,
+      "provenance": "backtest",
+      "sample_size": null,
+      "unit": "pct",
+      "value": -3.5464345264997794
+     },
+     "n_trades": {
+      "as_of": null,
+      "caveats": [],
+      "estimated": false,
+      "provenance": "backtest",
+      "sample_size": null,
+      "unit": "count",
+      "value": 7.0
+     },
+     "net_profit": {
+      "as_of": null,
+      "caveats": [],
+      "estimated": false,
+      "provenance": "backtest",
+      "sample_size": null,
+      "unit": "USD",
+      "value": 59.21999755024808
+     },
+     "profit_factor": {
+      "as_of": null,
+      "caveats": [],
+      "estimated": false,
+      "provenance": "backtest",
+      "sample_size": null,
+      "unit": "ratio",
+      "value": 1.171175504562273
+     },
+     "sharpe": {
+      "as_of": null,
+      "caveats": [],
+      "estimated": false,
+      "provenance": "backtest",
+      "sample_size": null,
+      "unit": "ratio",
+      "value": 0.22904557509554796
+     },
+     "sortino": {
+      "as_of": null,
+      "caveats": [],
+      "estimated": false,
+      "provenance": "backtest",
+      "sample_size": null,
+      "unit": "ratio",
+      "value": 0.0710413843120632
+     },
+     "total_costs": {
+      "as_of": null,
+      "caveats": [],
+      "estimated": false,
+      "provenance": "backtest",
+      "sample_size": null,
+      "unit": "USD",
+      "value": 78.3371131736755
+     },
+     "total_return_pct": {
+      "as_of": null,
+      "caveats": [],
+      "estimated": false,
+      "provenance": "backtest",
+      "sample_size": null,
+      "unit": "pct",
+      "value": 0.5921999755024832
+     },
+     "win_rate_pct": {
+      "as_of": null,
+      "caveats": [],
+      "estimated": false,
+      "provenance": "backtest",
+      "sample_size": null,
+      "unit": "pct",
+      "value": 28.57142857142857
+     }
+    },
+    "profile": "IG_REALISTIC",
+    "rejections": {},
+    "signals_emitted": {
+     "as_of": null,
+     "caveats": [],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "count",
+     "value": 7.0
+    }
+   },
+   "grid": [
+    {
+     "metrics": {
+      "cagr_pct": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": null,
+       "unit": "pct",
+       "value": 0.6765768665051519
+      },
+      "calmar": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": null,
+       "unit": "ratio",
+       "value": 0.19077664100369343
+      },
+      "expectancy": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": null,
+       "unit": "USD",
+       "value": 8.459999650035659
+      },
+      "max_drawdown_pct": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": null,
+       "unit": "pct",
+       "value": -3.5464345264997794
+      },
+      "n_trades": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": null,
+       "unit": "count",
+       "value": 7.0
+      },
+      "net_profit": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": null,
+       "unit": "USD",
+       "value": 59.21999755024808
+      },
+      "profit_factor": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": null,
+       "unit": "ratio",
+       "value": 1.171175504562273
+      },
+      "sharpe": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": null,
+       "unit": "ratio",
+       "value": 0.22904557509554796
+      },
+      "sortino": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": null,
+       "unit": "ratio",
+       "value": 0.0710413843120632
+      },
+      "total_costs": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": null,
+       "unit": "USD",
+       "value": 78.3371131736755
+      },
+      "total_return_pct": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": null,
+       "unit": "pct",
+       "value": 0.5921999755024832
+      },
+      "win_rate_pct": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": null,
+       "unit": "pct",
+       "value": 28.57142857142857
+      }
+     },
+     "profile": "IG_REALISTIC",
+     "retention": {
+      "as_of": null,
+      "caveats": [],
+      "estimated": true,
+      "provenance": "backtest",
+      "sample_size": null,
+      "unit": "ratio",
+      "value": 1.0
+     },
+     "slippage_x": "1x",
+     "spread_x": "1x"
+    },
+    {
+     "metrics": {
+      "cagr_pct": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": null,
+       "unit": "pct",
+       "value": 0.6268728797276912
+      },
+      "calmar": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": null,
+       "unit": "ratio",
+       "value": 0.17675320206537615
+      },
+      "expectancy": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": null,
+       "unit": "USD",
+       "value": 7.838736086762408
+      },
+      "max_drawdown_pct": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": null,
+       "unit": "pct",
+       "value": -3.5465998488436337
+      },
+      "n_trades": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": null,
+       "unit": "count",
+       "value": 7.0
+      },
+      "net_profit": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": null,
+       "unit": "USD",
+       "value": 54.871152607336626
+      },
+      "profit_factor": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": null,
+       "unit": "ratio",
+       "value": 1.1579669296658832
+      },
+      "sharpe": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": null,
+       "unit": "ratio",
+       "value": 0.21415907002843768
+      },
+      "sortino": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": null,
+       "unit": "ratio",
+       "value": 0.06625811462864091
+      },
+      "total_costs": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": null,
+       "unit": "USD",
+       "value": 82.32750164224055
+      },
+      "total_return_pct": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": null,
+       "unit": "pct",
+       "value": 0.5487115260733644
+      },
+      "win_rate_pct": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": null,
+       "unit": "pct",
+       "value": 28.57142857142857
+      }
+     },
+     "profile": "IG_REALISTIC~l1.5x",
+     "retention": {
+      "as_of": null,
+      "caveats": [],
+      "estimated": true,
+      "provenance": "backtest",
+      "sample_size": null,
+      "unit": "ratio",
+      "value": 0.9265645875918609
+     },
+     "slippage_x": "1.5x",
+     "spread_x": "1x"
+    },
+    {
+     "metrics": {
+      "cagr_pct": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": null,
+       "unit": "pct",
+       "value": 0.5779749604662543
+      },
+      "calmar": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": null,
+       "unit": "ratio",
+       "value": 0.1629633593074585
+      },
+      "expectancy": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": null,
+       "unit": "USD",
+       "value": 7.2275105440326195
+      },
+      "max_drawdown_pct": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": null,
+       "unit": "pct",
+       "value": -3.5466559042625327
+      },
+      "n_trades": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": null,
+       "unit": "count",
+       "value": 7.0
+      },
+      "net_profit": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": null,
+       "unit": "USD",
+       "value": 50.59257380822601
+      },
+      "profit_factor": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": null,
+       "unit": "ratio",
+       "value": 1.1450794876226564
+      },
+      "sharpe": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": null,
+       "unit": "ratio",
+       "value": 0.19938200165725908
+      },
+      "sortino": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": null,
+       "unit": "ratio",
+       "value": 0.0615113185321415
+      },
+      "total_costs": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": null,
+       "unit": "USD",
+       "value": 86.24993287806049
+      },
+      "total_return_pct": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": null,
+       "unit": "pct",
+       "value": 0.5059257380822579
+      },
+      "win_rate_pct": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": null,
+       "unit": "pct",
+       "value": 28.57142857142857
+      }
+     },
+     "profile": "IG_REALISTIC~l2x",
+     "retention": {
+      "as_of": null,
+      "caveats": [],
+      "estimated": true,
+      "provenance": "backtest",
+      "sample_size": null,
+      "unit": "ratio",
+      "value": 0.8543157024837477
+     },
+     "slippage_x": "2x",
+     "spread_x": "1x"
+    },
+    {
+     "metrics": {
+      "cagr_pct": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": null,
+       "unit": "pct",
+       "value": 0.48220015086986034
+      },
+      "calmar": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": null,
+       "unit": "ratio",
+       "value": 0.13595916919813816
+      },
+      "expectancy": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": null,
+       "unit": "USD",
+       "value": 6.030215298895846
+      },
+      "max_drawdown_pct": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": null,
+       "unit": "pct",
+       "value": -3.5466541441359705
+      },
+      "n_trades": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": null,
+       "unit": "count",
+       "value": 7.0
+      },
+      "net_profit": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": null,
+       "unit": "USD",
+       "value": 42.21150709227186
+      },
+      "profit_factor": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": null,
+       "unit": "ratio",
+       "value": 1.1201316836537911
+      },
+      "sharpe": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": null,
+       "unit": "ratio",
+       "value": 0.17005488333536248
+      },
+      "sortino": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": null,
+       "unit": "ratio",
+       "value": 0.0521015633204419
+      },
+      "total_costs": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": null,
+       "unit": "USD",
+       "value": 93.89913680851465
+      },
+      "total_return_pct": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": null,
+       "unit": "pct",
+       "value": 0.42211507092271283
+      },
+      "win_rate_pct": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": null,
+       "unit": "pct",
+       "value": 28.57142857142857
+      }
+     },
+     "profile": "IG_REALISTIC~l3x",
+     "retention": {
+      "as_of": null,
+      "caveats": [],
+      "estimated": true,
+      "provenance": "backtest",
+      "sample_size": null,
+      "unit": "ratio",
+      "value": 0.7127914359749079
+     },
+     "slippage_x": "3x",
+     "spread_x": "1x"
+    },
+    {
+     "metrics": {
+      "cagr_pct": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": null,
+       "unit": "pct",
+       "value": 0.5329880244655971
+      },
+      "calmar": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": null,
+       "unit": "ratio",
+       "value": 0.14950803576314545
+      },
+      "expectancy": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": null,
+       "unit": "USD",
+       "value": 6.6651397805598345
+      },
+      "max_drawdown_pct": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": null,
+       "unit": "pct",
+       "value": -3.5649456682714415
+      },
+      "n_trades": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": null,
+       "unit": "count",
+       "value": 7.0
+      },
+      "net_profit": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": null,
+       "unit": "USD",
+       "value": 46.655978463915744
+      },
+      "profit_factor": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": null,
+       "unit": "ratio",
+       "value": 1.1335261707801014
+      },
+      "sharpe": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": null,
+       "unit": "ratio",
+       "value": 0.18552588761545818
+      },
+      "sortino": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": null,
+       "unit": "ratio",
+       "value": 0.05720692875260173
+      },
+      "total_costs": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": null,
+       "unit": "USD",
+       "value": 88.50484183327168
+      },
+      "total_return_pct": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": null,
+       "unit": "pct",
+       "value": 0.4665597846391645
+      },
+      "win_rate_pct": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": null,
+       "unit": "pct",
+       "value": 28.57142857142857
+      }
+     },
+     "profile": "IG_REALISTIC~s1.5x",
+     "retention": {
+      "as_of": null,
+      "caveats": [],
+      "estimated": true,
+      "provenance": "backtest",
+      "sample_size": null,
+      "unit": "ratio",
+      "value": 0.7878416142170255
+     },
+     "slippage_x": "1x",
+     "spread_x": "1.5x"
+    },
+    {
+     "metrics": {
+      "cagr_pct": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": null,
+       "unit": "pct",
+       "value": 0.4854436036645593
+      },
+      "calmar": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": null,
+       "unit": "ratio",
+       "value": 0.13618508495978343
+      },
+      "expectancy": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": null,
+       "unit": "USD",
+       "value": 6.070764508956801
+      },
+      "max_drawdown_pct": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": null,
+       "unit": "pct",
+       "value": -3.5645871484965825
+      },
+      "n_trades": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": null,
+       "unit": "count",
+       "value": 7.0
+      },
+      "net_profit": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": null,
+       "unit": "USD",
+       "value": 42.49535156269849
+      },
+      "profit_factor": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": null,
+       "unit": "ratio",
+       "value": 1.121163872915434
+      },
+      "sharpe": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": null,
+       "unit": "ratio",
+       "value": 0.17094395553319033
+      },
+      "sortino": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": null,
+       "unit": "ratio",
+       "value": 0.05252687688922035
+      },
+      "total_costs": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": null,
+       "unit": "USD",
+       "value": 92.32490160591925
+      },
+      "total_return_pct": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": null,
+       "unit": "pct",
+       "value": 0.42495351562699124
+      },
+      "win_rate_pct": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": null,
+       "unit": "pct",
+       "value": 28.57142857142857
+      }
+     },
+     "profile": "IG_REALISTIC~s1.5xl1.5x",
+     "retention": {
+      "as_of": null,
+      "caveats": [],
+      "estimated": true,
+      "provenance": "backtest",
+      "sample_size": null,
+      "unit": "ratio",
+      "value": 0.7175844870078092
+     },
+     "slippage_x": "1.5x",
+     "spread_x": "1.5x"
+    },
+    {
+     "metrics": {
+      "cagr_pct": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": null,
+       "unit": "pct",
+       "value": 0.4385645130235094
+      },
+      "calmar": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": null,
+       "unit": "ratio",
+       "value": 0.123046291439439
+      },
+      "expectancy": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": null,
+       "unit": "USD",
+       "value": 5.484672604848969
+      },
+      "max_drawdown_pct": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": null,
+       "unit": "pct",
+       "value": -3.564223739643241
+      },
+      "n_trades": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": null,
+       "unit": "count",
+       "value": 7.0
+      },
+      "net_profit": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": null,
+       "unit": "USD",
+       "value": 38.39270823394145
+      },
+      "profit_factor": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": null,
+       "unit": "ratio",
+       "value": 1.1090653209342765
+      },
+      "sharpe": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": null,
+       "unit": "ratio",
+       "value": 0.1564412846616963
+      },
+      "sortino": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": null,
+       "unit": "ratio",
+       "value": 0.047876994244409526
+      },
+      "total_costs": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": null,
+       "unit": "USD",
+       "value": 96.08192561641589
+      },
+      "total_return_pct": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": null,
+       "unit": "pct",
+       "value": 0.3839270823394081
+      },
+      "win_rate_pct": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": null,
+       "unit": "pct",
+       "value": 28.57142857142857
+      }
+     },
+     "profile": "IG_REALISTIC~s1.5xl2x",
+     "retention": {
+      "as_of": null,
+      "caveats": [],
+      "estimated": true,
+      "provenance": "backtest",
+      "sample_size": null,
+      "unit": "ratio",
+      "value": 0.6483064812923252
+     },
+     "slippage_x": "2x",
+     "spread_x": "1.5x"
+    },
+    {
+     "metrics": {
+      "cagr_pct": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": null,
+       "unit": "pct",
+       "value": 0.34671594802635486
+      },
+      "calmar": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": null,
+       "unit": "ratio",
+       "value": 0.09729898635804876
+      },
+      "expectancy": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": null,
+       "unit": "USD",
+       "value": 4.336264578524756
+      },
+      "max_drawdown_pct": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": null,
+       "unit": "pct",
+       "value": -3.563407605814938
+      },
+      "n_trades": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": null,
+       "unit": "count",
+       "value": 7.0
+      },
+      "net_profit": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": null,
+       "unit": "USD",
+       "value": 30.35385204967497
+      },
+      "profit_factor": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": null,
+       "unit": "ratio",
+       "value": 1.0856186409285422
+      },
+      "sharpe": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": null,
+       "unit": "ratio",
+       "value": 0.12767127580522566
+      },
+      "sortino": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": null,
+       "unit": "ratio",
+       "value": 0.03867225830709093
+      },
+      "total_costs": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": null,
+       "unit": "USD",
+       "value": 103.4136557017526
+      },
+      "total_return_pct": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": null,
+       "unit": "pct",
+       "value": 0.30353852049676
+      },
+      "win_rate_pct": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": null,
+       "unit": "pct",
+       "value": 28.57142857142857
+      }
+     },
+     "profile": "IG_REALISTIC~s1.5xl3x",
+     "retention": {
+      "as_of": null,
+      "caveats": [],
+      "estimated": true,
+      "provenance": "backtest",
+      "sample_size": null,
+      "unit": "ratio",
+      "value": 0.51256084608784
+     },
+     "slippage_x": "3x",
+     "spread_x": "1.5x"
+    },
+    {
+     "metrics": {
+      "cagr_pct": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": null,
+       "unit": "pct",
+       "value": 0.39465458463787684
+      },
+      "calmar": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": null,
+       "unit": "ratio",
+       "value": 0.1101709930874791
+      },
+      "expectancy": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": null,
+       "unit": "USD",
+       "value": 4.935670917658728
+      },
+      "max_drawdown_pct": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": null,
+       "unit": "pct",
+       "value": -3.582200482884902
+      },
+      "n_trades": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": null,
+       "unit": "count",
+       "value": 7.0
+      },
+      "net_profit": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": null,
+       "unit": "USD",
+       "value": 34.54969642360993
+      },
+      "profit_factor": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": null,
+       "unit": "ratio",
+       "value": 1.0979593452680165
+      },
+      "sharpe": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": null,
+       "unit": "ratio",
+       "value": 0.14263795118878525
+      },
+      "sortino": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": null,
+       "unit": "ratio",
+       "value": 0.043564611641356735
+      },
+      "total_costs": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": null,
+       "unit": "USD",
+       "value": 98.29654809067988
+      },
+      "total_return_pct": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": null,
+       "unit": "pct",
+       "value": 0.34549696423609166
+      },
+      "win_rate_pct": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": null,
+       "unit": "pct",
+       "value": 28.57142857142857
+      }
+     },
+     "profile": "IG_REALISTIC~s2x",
+     "retention": {
+      "as_of": null,
+      "caveats": [],
+      "estimated": true,
+      "provenance": "backtest",
+      "sample_size": null,
+      "unit": "ratio",
+      "value": 0.5834126621551202
+     },
+     "slippage_x": "1x",
+     "spread_x": "2x"
+    },
+    {
+     "metrics": {
+      "cagr_pct": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": null,
+       "unit": "pct",
+       "value": 0.3490877697104766
+      },
+      "calmar": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": null,
+       "unit": "ratio",
+       "value": 0.09747057255964667
+      },
+      "expectancy": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": null,
+       "unit": "USD",
+       "value": 4.365921764957903
+      },
+      "max_drawdown_pct": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": null,
+       "unit": "pct",
+       "value": -3.5814683400659617
+      },
+      "n_trades": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": null,
+       "unit": "count",
+       "value": 7.0
+      },
+      "net_profit": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": null,
+       "unit": "USD",
+       "value": 30.56145235470467
+      },
+      "profit_factor": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": null,
+       "unit": "ratio",
+       "value": 1.0863475499667372
+      },
+      "sharpe": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": null,
+       "unit": "ratio",
+       "value": 0.1283390121756274
+      },
+      "sortino": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": null,
+       "unit": "ratio",
+       "value": 0.03898781940417889
+      },
+      "total_costs": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": null,
+       "unit": "USD",
+       "value": 101.95797749132151
+      },
+      "total_return_pct": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": null,
+       "unit": "pct",
+       "value": 0.30561452354704866
+      },
+      "win_rate_pct": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": null,
+       "unit": "pct",
+       "value": 28.57142857142857
+      }
+     },
+     "profile": "IG_REALISTIC~s2xl1.5x",
+     "retention": {
+      "as_of": null,
+      "caveats": [],
+      "estimated": true,
+      "provenance": "backtest",
+      "sample_size": null,
+      "unit": "ratio",
+      "value": 0.5160664238253864
+     },
+     "slippage_x": "1.5x",
+     "spread_x": "2x"
+    },
+    {
+     "metrics": {
+      "cagr_pct": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": null,
+       "unit": "pct",
+       "value": 0.30405826340138553
+      },
+      "calmar": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": null,
+       "unit": "ratio",
+       "value": 0.08491590722242531
+      },
+      "expectancy": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": null,
+       "unit": "USD",
+       "value": 3.8028592998766646
+      },
+      "max_drawdown_pct": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": null,
+       "unit": "pct",
+       "value": -3.580698521007937
+      },
+      "n_trades": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": null,
+       "unit": "count",
+       "value": 7.0
+      },
+      "net_profit": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": null,
+       "unit": "USD",
+       "value": 26.620015099135344
+      },
+      "profit_factor": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": null,
+       "unit": "ratio",
+       "value": 1.074953619220307
+      },
+      "sharpe": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": null,
+       "unit": "ratio",
+       "value": 0.11409168911777487
+      },
+      "sortino": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": null,
+       "unit": "ratio",
+       "value": 0.03443507614717455
+      },
+      "total_costs": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": null,
+       "unit": "USD",
+       "value": 105.56020627633725
+      },
+      "total_return_pct": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": null,
+       "unit": "pct",
+       "value": 0.266200150991347
+      },
+      "win_rate_pct": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": null,
+       "unit": "pct",
+       "value": 28.57142857142857
+      }
+     },
+     "profile": "IG_REALISTIC~s2xl2x",
+     "retention": {
+      "as_of": null,
+      "caveats": [],
+      "estimated": true,
+      "provenance": "backtest",
+      "sample_size": null,
+      "unit": "ratio",
+      "value": 0.4495105741358449
+     },
+     "slippage_x": "2x",
+     "spread_x": "2x"
+    },
+    {
+     "metrics": {
+      "cagr_pct": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": null,
+       "unit": "pct",
+       "value": 0.21608618889434883
+      },
+      "calmar": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": null,
+       "unit": "ratio",
+       "value": 0.06037502255695278
+      },
+      "expectancy": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": null,
+       "unit": "USD",
+       "value": 2.7027393678384692
+      },
+      "max_drawdown_pct": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": null,
+       "unit": "pct",
+       "value": -3.5790659736898824
+      },
+      "n_trades": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": null,
+       "unit": "count",
+       "value": 7.0
+      },
+      "net_profit": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": null,
+       "unit": "USD",
+       "value": 18.91917557486886
+      },
+      "profit_factor": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": null,
+       "unit": "ratio",
+       "value": 1.052918103114623
+      },
+      "sharpe": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": null,
+       "unit": "ratio",
+       "value": 0.08593252032208638
+      },
+      "sortino": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": null,
+       "unit": "ratio",
+       "value": 0.025464789431225807
+      },
+      "total_costs": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": null,
+       "unit": "USD",
+       "value": 112.59331852332582
+      },
+      "total_return_pct": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": null,
+       "unit": "pct",
+       "value": 0.18919175574869662
+      },
+      "win_rate_pct": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": null,
+       "unit": "pct",
+       "value": 28.57142857142857
+      }
+     },
+     "profile": "IG_REALISTIC~s2xl3x",
+     "retention": {
+      "as_of": null,
+      "caveats": [],
+      "estimated": true,
+      "provenance": "backtest",
+      "sample_size": null,
+      "unit": "ratio",
+      "value": 0.3194727517307978
+     },
+     "slippage_x": "3x",
+     "spread_x": "2x"
+    },
+    {
+     "metrics": {
+      "cagr_pct": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": null,
+       "unit": "pct",
+       "value": 0.13277613698938762
+      },
+      "calmar": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": null,
+       "unit": "ratio",
+       "value": 0.03674428437818899
+      },
+      "expectancy": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": null,
+       "unit": "USD",
+       "value": 1.6608088648578294
+      },
+      "max_drawdown_pct": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": null,
+       "unit": "pct",
+       "value": -3.6135181086341173
+      },
+      "n_trades": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": null,
+       "unit": "count",
+       "value": 7.0
+      },
+      "net_profit": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": null,
+       "unit": "USD",
+       "value": 11.625662054002532
+      },
+      "profit_factor": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": null,
+       "unit": "ratio",
+       "value": 1.0324018688020735
+      },
+      "sharpe": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": null,
+       "unit": "ratio",
+       "value": 0.058821741873765425
+      },
+      "sortino": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": null,
+       "unit": "ratio",
+       "value": 0.01695804420405346
+      },
+      "total_costs": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": null,
+       "unit": "USD",
+       "value": 116.84805998555585
+      },
+      "total_return_pct": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": null,
+       "unit": "pct",
+       "value": 0.11625662054002284
+      },
+      "win_rate_pct": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": null,
+       "unit": "pct",
+       "value": 28.57142857142857
+      }
+     },
+     "profile": "IG_REALISTIC~s3x",
+     "retention": {
+      "as_of": null,
+      "caveats": [],
+      "estimated": true,
+      "provenance": "backtest",
+      "sample_size": null,
+      "unit": "ratio",
+      "value": 0.19631311271396415
+     },
+     "slippage_x": "1x",
+     "spread_x": "3x"
+    },
+    {
+     "metrics": {
+      "cagr_pct": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": null,
+       "unit": "pct",
+       "value": 0.09067659494912395
+      },
+      "calmar": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": null,
+       "unit": "ratio",
+       "value": 0.025103450167556978
+      },
+      "expectancy": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": null,
+       "unit": "USD",
+       "value": 1.1342432074155633
+      },
+      "max_drawdown_pct": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": null,
+       "unit": "pct",
+       "value": -3.612116834295229
+      },
+      "n_trades": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": null,
+       "unit": "count",
+       "value": 7.0
+      },
+      "net_profit": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": null,
+       "unit": "USD",
+       "value": 7.9397024519075785
+      },
+      "profit_factor": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": null,
+       "unit": "ratio",
+       "value": 1.0220603058772768
+      },
+      "sharpe": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": null,
+       "unit": "ratio",
+       "value": 0.045028545771256936
+      },
+      "sortino": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": null,
+       "unit": "ratio",
+       "value": 0.012585440430157892
+      },
+      "total_costs": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": null,
+       "unit": "USD",
+       "value": 120.22028375654081
+      },
+      "total_return_pct": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": null,
+       "unit": "pct",
+       "value": 0.07939702451906783
+      },
+      "win_rate_pct": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": null,
+       "unit": "pct",
+       "value": 28.57142857142857
+      }
+     },
+     "profile": "IG_REALISTIC~s3xl1.5x",
+     "retention": {
+      "as_of": null,
+      "caveats": [],
+      "estimated": true,
+      "provenance": "backtest",
+      "sample_size": null,
+      "unit": "ratio",
+      "value": 0.13407130665905131
+     },
+     "slippage_x": "1.5x",
+     "spread_x": "3x"
+    },
+    {
+     "metrics": {
+      "cagr_pct": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": null,
+       "unit": "pct",
+       "value": 0.04925100865273979
+      },
+      "calmar": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": null,
+       "unit": "ratio",
+       "value": 0.013640598311422673
+      },
+      "expectancy": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": null,
+       "unit": "USD",
+       "value": 0.6160802589680097
+      },
+      "max_drawdown_pct": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": null,
+       "unit": "pct",
+       "value": -3.610619382545476
+      },
+      "n_trades": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": null,
+       "unit": "count",
+       "value": 7.0
+      },
+      "net_profit": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": null,
+       "unit": "USD",
+       "value": 4.312561812777858
+      },
+      "profit_factor": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": null,
+       "unit": "ratio",
+       "value": 1.0119463613621558
+      },
+      "sharpe": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": null,
+       "unit": "ratio",
+       "value": 0.031357600988414974
+      },
+      "sortino": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": null,
+       "unit": "ratio",
+       "value": 0.008263654271725122
+      },
+      "total_costs": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": null,
+       "unit": "USD",
+       "value": 123.53947727705692
+      },
+      "total_return_pct": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": null,
+       "unit": "pct",
+       "value": 0.043125618127781706
+      },
+      "win_rate_pct": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": null,
+       "unit": "pct",
+       "value": 28.57142857142857
+      }
+     },
+     "profile": "IG_REALISTIC~s3xl2x",
+     "retention": {
+      "as_of": null,
+      "caveats": [],
+      "estimated": true,
+      "provenance": "backtest",
+      "sample_size": null,
+      "unit": "ratio",
+      "value": 0.07282272865882265
+     },
+     "slippage_x": "2x",
+     "spread_x": "3x"
+    },
+    {
+     "metrics": {
+      "cagr_pct": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": null,
+       "unit": "pct",
+       "value": -0.03196668392372315
+      },
+      "calmar": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": null,
+       "unit": "ratio",
+       "value": -0.00886063637767523
+      },
+      "expectancy": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": null,
+       "unit": "USD",
+       "value": -0.3998910450658286
+      },
+      "max_drawdown_pct": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": null,
+       "unit": "pct",
+       "value": -3.607718741767199
+      },
+      "n_trades": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": null,
+       "unit": "count",
+       "value": 7.0
+      },
+      "net_profit": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": null,
+       "unit": "USD",
+       "value": -2.7992373154593224
+      },
+      "profit_factor": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": null,
+       "unit": "ratio",
+       "value": 0.9922910896423298
+      },
+      "sharpe": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": null,
+       "unit": "ratio",
+       "value": 0.004273365539589744
+      },
+      "sortino": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": null,
+       "unit": "ratio",
+       "value": -0.0002581517345517299
+      },
+      "total_costs": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": null,
+       "unit": "USD",
+       "value": 130.03079385236393
+      },
+      "total_return_pct": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": null,
+       "unit": "pct",
+       "value": -0.02799237315459502
+      },
+      "win_rate_pct": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": null,
+       "unit": "pct",
+       "value": 28.57142857142857
+      }
+     },
+     "profile": "IG_REALISTIC~s3xl3x",
+     "retention": {
+      "as_of": null,
+      "caveats": [],
+      "estimated": true,
+      "provenance": "backtest",
+      "sample_size": null,
+      "unit": "ratio",
+      "value": -0.047268446998569594
+     },
+     "slippage_x": "3x",
+     "spread_x": "3x"
+    }
+   ],
+   "multipliers": [
+    "1x",
+    "1.5x",
+    "2x",
+    "3x"
+   ],
+   "notes": [
+    "Baseline rejection probability of IG_REALISTIC: 0.005; a skip level REPLACES it."
+   ],
+   "rows": [
+    {
+     "level": "5%",
+     "max_drawdown_pct": {
+      "mean": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": 5,
+       "unit": "pct",
+       "value": -3.5855543176366664
+      },
+      "n": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": false,
+       "provenance": "backtest",
+       "sample_size": null,
+       "unit": "count",
+       "value": 5.0
+      },
+      "p25": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": 5,
+       "unit": "pct",
+       "value": -3.5924987975357863
+      },
+      "p5": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": 5,
+       "unit": "pct",
+       "value": -3.614387462765769
+      },
+      "p50": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": 5,
+       "unit": "pct",
+       "value": -3.5867137798268494
+      },
+      "p75": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": 5,
+       "unit": "pct",
+       "value": -3.585911439093972
+      },
+      "p95": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": 5,
+       "unit": "pct",
+       "value": -3.551412641941564
+      }
+     },
+     "net_profit": {
+      "mean": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": 5,
+       "unit": "USD",
+       "value": 16.494943755243366
+      },
+      "n": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": false,
+       "provenance": "backtest",
+       "sample_size": null,
+       "unit": "count",
+       "value": 5.0
+      },
+      "p25": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": 5,
+       "unit": "USD",
+       "value": 51.10328362788641
+      },
+      "p5": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": 5,
+       "unit": "USD",
+       "value": -106.33459176690886
+      },
+      "p50": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": 5,
+       "unit": "USD",
+       "value": 53.527528954864465
+      },
+      "p75": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": 5,
+       "unit": "USD",
+       "value": 57.37501794579475
+      },
+      "p95": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": 5,
+       "unit": "USD",
+       "value": 64.40536267978204
+      }
+     },
+     "profile": "IG_REALISTIC~r0.05seed20261019",
+     "profitable_share": {
+      "as_of": null,
+      "caveats": [],
+      "estimated": true,
+      "provenance": "backtest",
+      "sample_size": null,
+      "unit": "ratio",
+      "value": 0.8
+     },
+     "retention": {
+      "as_of": null,
+      "caveats": [],
+      "estimated": true,
+      "provenance": "backtest",
+      "sample_size": null,
+      "unit": "ratio",
+      "value": 0.9038759062670754
+     },
+     "runs": {
+      "as_of": null,
+      "caveats": [],
+      "estimated": false,
+      "provenance": "backtest",
+      "sample_size": null,
+      "unit": "count",
+      "value": 5.0
+     },
+     "sharpe": {
+      "mean": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": 5,
+       "unit": "ratio",
+       "value": 0.0712710480988868
+      },
+      "n": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": false,
+       "provenance": "backtest",
+       "sample_size": null,
+       "unit": "count",
+       "value": 5.0
+      },
+      "p25": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": 5,
+       "unit": "ratio",
+       "value": 0.1988052750700832
+      },
+      "p5": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": 5,
+       "unit": "ratio",
+       "value": -0.4067286226666741
+      },
+      "p50": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": 5,
+       "unit": "ratio",
+       "value": 0.20845417748799916
+      },
+      "p75": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": 5,
+       "unit": "ratio",
+       "value": 0.2224303947741765
+      },
+      "p95": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": 5,
+       "unit": "ratio",
+       "value": 0.2723080711652661
+      }
+     },
+     "stress": "trade_skip",
+     "trades": {
+      "mean": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": 5,
+       "unit": "count",
+       "value": 6.6
+      },
+      "n": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": false,
+       "provenance": "backtest",
+       "sample_size": null,
+       "unit": "count",
+       "value": 5.0
+      },
+      "p25": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": 5,
+       "unit": "count",
+       "value": 6.0
+      },
+      "p5": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": 5,
+       "unit": "count",
+       "value": 6.0
+      },
+      "p50": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": 5,
+       "unit": "count",
+       "value": 7.0
+      },
+      "p75": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": 5,
+       "unit": "count",
+       "value": 7.0
+      },
+      "p95": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": 5,
+       "unit": "count",
+       "value": 7.0
+      }
+     }
+    },
+    {
+     "level": "10%",
+     "max_drawdown_pct": {
+      "mean": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": 5,
+       "unit": "pct",
+       "value": -3.604991614909938
+      },
+      "n": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": false,
+       "provenance": "backtest",
+       "sample_size": null,
+       "unit": "count",
+       "value": 5.0
+      },
+      "p25": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": 5,
+       "unit": "pct",
+       "value": -3.6198596290732645
+      },
+      "p5": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": 5,
+       "unit": "pct",
+       "value": -3.6359514690305064
+      },
+      "p50": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": 5,
+       "unit": "pct",
+       "value": -3.5924987975357863
+      },
+      "p75": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": 5,
+       "unit": "pct",
+       "value": -3.5867137798268494
+      },
+      "p95": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": 5,
+       "unit": "pct",
+       "value": -3.5860719072405476
+      }
+     },
+     "net_profit": {
+      "mean": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": 5,
+       "unit": "USD",
+       "value": -24.20234390352416
+      },
+      "n": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": false,
+       "provenance": "backtest",
+       "sample_size": null,
+       "unit": "count",
+       "value": 5.0
+      },
+      "p25": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": 5,
+       "unit": "USD",
+       "value": -145.69406061560767
+      },
+      "p5": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": 5,
+       "unit": "USD",
+       "value": -146.02794840155585
+      },
+      "p50": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": 5,
+       "unit": "USD",
+       "value": 51.10328362788641
+      },
+      "p75": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": 5,
+       "unit": "USD",
+       "value": 53.527528954864465
+      },
+      "p95": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": 5,
+       "unit": "USD",
+       "value": 63.635864881595985
+      }
+     },
+     "profile": "IG_REALISTIC~r0.1seed20261019",
+     "profitable_share": {
+      "as_of": null,
+      "caveats": [],
+      "estimated": true,
+      "provenance": "backtest",
+      "sample_size": null,
+      "unit": "ratio",
+      "value": 0.6
+     },
+     "retention": {
+      "as_of": null,
+      "caveats": [],
+      "estimated": true,
+      "provenance": "backtest",
+      "sample_size": null,
+      "unit": "ratio",
+      "value": 0.8629396444085522
+     },
+     "runs": {
+      "as_of": null,
+      "caveats": [],
+      "estimated": false,
+      "provenance": "backtest",
+      "sample_size": null,
+      "unit": "count",
+      "value": 5.0
+     },
+     "sharpe": {
+      "mean": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": 5,
+       "unit": "ratio",
+       "value": -0.09346005575020574
+      },
+      "n": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": false,
+       "provenance": "backtest",
+       "sample_size": null,
+       "unit": "count",
+       "value": 5.0
+      },
+      "p25": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": 5,
+       "unit": "ratio",
+       "value": -0.5581120971008634
+      },
+      "p5": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": 5,
+       "unit": "ratio",
+       "value": -0.5926025189972016
+      },
+      "p50": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": 5,
+       "unit": "ratio",
+       "value": 0.1988052750700832
+      },
+      "p75": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": 5,
+       "unit": "ratio",
+       "value": 0.20845417748799916
+      },
+      "p95": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": 5,
+       "unit": "ratio",
+       "value": 0.26951282770803064
+      }
+     },
+     "stress": "trade_skip",
+     "trades": {
+      "mean": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": 5,
+       "unit": "count",
+       "value": 6.4
+      },
+      "n": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": false,
+       "provenance": "backtest",
+       "sample_size": null,
+       "unit": "count",
+       "value": 5.0
+      },
+      "p25": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": 5,
+       "unit": "count",
+       "value": 6.0
+      },
+      "p5": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": 5,
+       "unit": "count",
+       "value": 6.0
+      },
+      "p50": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": 5,
+       "unit": "count",
+       "value": 6.0
+      },
+      "p75": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": 5,
+       "unit": "count",
+       "value": 7.0
+      },
+      "p95": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": 5,
+       "unit": "count",
+       "value": 7.0
+      }
+     }
+    },
+    {
+     "level": "20%",
+     "max_drawdown_pct": {
+      "mean": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": 5,
+       "unit": "pct",
+       "value": -3.4207121808113796
+      },
+      "n": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": false,
+       "provenance": "backtest",
+       "sample_size": null,
+       "unit": "count",
+       "value": 5.0
+      },
+      "p25": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": 5,
+       "unit": "pct",
+       "value": -3.639974429019817
+      },
+      "p5": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": 5,
+       "unit": "pct",
+       "value": -3.701568813542151
+      },
+      "p50": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": 5,
+       "unit": "pct",
+       "value": -3.5867137798268494
+      },
+      "p75": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": 5,
+       "unit": "pct",
+       "value": -3.585911439093972
+      },
+      "p95": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": 5,
+       "unit": "pct",
+       "value": -2.776377364973615
+      }
+     },
+     "net_profit": {
+      "mean": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": 5,
+       "unit": "USD",
+       "value": -82.38530599220613
+      },
+      "n": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": false,
+       "provenance": "backtest",
+       "sample_size": null,
+       "unit": "count",
+       "value": 5.0
+      },
+      "p25": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": 5,
+       "unit": "USD",
+       "value": -146.11142034804288
+      },
+      "p5": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": 5,
+       "unit": "USD",
+       "value": -309.63764204858523
+      },
+      "p50": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": 5,
+       "unit": "USD",
+       "value": -145.69406061560767
+      },
+      "p75": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": 5,
+       "unit": "USD",
+       "value": 66.16294886327887
+      },
+      "p95": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": 5,
+       "unit": "USD",
+       "value": 144.62074946310528
+      }
+     },
+     "profile": "IG_REALISTIC~r0.2seed20261019",
+     "profitable_share": {
+      "as_of": null,
+      "caveats": [],
+      "estimated": true,
+      "provenance": "backtest",
+      "sample_size": null,
+      "unit": "ratio",
+      "value": 0.4
+     },
+     "retention": {
+      "as_of": null,
+      "caveats": [],
+      "estimated": true,
+      "provenance": "backtest",
+      "sample_size": null,
+      "unit": "ratio",
+      "value": -2.460217268533091
+     },
+     "runs": {
+      "as_of": null,
+      "caveats": [],
+      "estimated": false,
+      "provenance": "backtest",
+      "sample_size": null,
+      "unit": "count",
+      "value": 5.0
+     },
+     "sharpe": {
+      "mean": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": 5,
+       "unit": "ratio",
+       "value": -0.369991573754218
+      },
+      "n": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": false,
+       "provenance": "backtest",
+       "sample_size": null,
+       "unit": "count",
+       "value": 5.0
+      },
+      "p25": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": 5,
+       "unit": "ratio",
+       "value": -0.6012251244712862
+      },
+      "p5": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": 5,
+       "unit": "ratio",
+       "value": -1.4321996519245506
+      },
+      "p50": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": 5,
+       "unit": "ratio",
+       "value": -0.5581120971008634
+      },
+      "p75": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": 5,
+       "unit": "ratio",
+       "value": 0.28477749026303856
+      },
+      "p95": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": 5,
+       "unit": "ratio",
+       "value": 0.5885916151133178
+      }
+     },
+     "stress": "trade_skip",
+     "trades": {
+      "mean": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": 5,
+       "unit": "count",
+       "value": 5.8
+      },
+      "n": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": false,
+       "provenance": "backtest",
+       "sample_size": null,
+       "unit": "count",
+       "value": 5.0
+      },
+      "p25": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": 5,
+       "unit": "count",
+       "value": 6.0
+      },
+      "p5": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": 5,
+       "unit": "count",
+       "value": 5.2
+      },
+      "p50": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": 5,
+       "unit": "count",
+       "value": 6.0
+      },
+      "p75": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": 5,
+       "unit": "count",
+       "value": 6.0
+      },
+      "p95": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": 5,
+       "unit": "count",
+       "value": 6.0
+      }
+     }
+    },
+    {
+     "level": "1 bar(s)",
+     "max_drawdown_pct": {
+      "mean": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": 1,
+       "unit": "pct",
+       "value": -3.684395346518304
+      },
+      "n": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": false,
+       "provenance": "backtest",
+       "sample_size": null,
+       "unit": "count",
+       "value": 1.0
+      },
+      "p25": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": 1,
+       "unit": "pct",
+       "value": -3.684395346518304
+      },
+      "p5": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": 1,
+       "unit": "pct",
+       "value": -3.684395346518304
+      },
+      "p50": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": 1,
+       "unit": "pct",
+       "value": -3.684395346518304
+      },
+      "p75": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": 1,
+       "unit": "pct",
+       "value": -3.684395346518304
+      },
+      "p95": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": 1,
+       "unit": "pct",
+       "value": -3.684395346518304
+      }
+     },
+     "net_profit": {
+      "mean": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": 1,
+       "unit": "USD",
+       "value": 106.45645292760128
+      },
+      "n": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": false,
+       "provenance": "backtest",
+       "sample_size": null,
+       "unit": "count",
+       "value": 1.0
+      },
+      "p25": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": 1,
+       "unit": "USD",
+       "value": 106.45645292760128
+      },
+      "p5": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": 1,
+       "unit": "USD",
+       "value": 106.45645292760128
+      },
+      "p50": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": 1,
+       "unit": "USD",
+       "value": 106.45645292760128
+      },
+      "p75": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": 1,
+       "unit": "USD",
+       "value": 106.45645292760128
+      },
+      "p95": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": 1,
+       "unit": "USD",
+       "value": 106.45645292760128
+      }
+     },
+     "profile": "IG_REALISTIC~d1",
+     "profitable_share": {
+      "as_of": null,
+      "caveats": [],
+      "estimated": true,
+      "provenance": "backtest",
+      "sample_size": null,
+      "unit": "ratio",
+      "value": 1.0
+     },
+     "retention": {
+      "as_of": null,
+      "caveats": [],
+      "estimated": true,
+      "provenance": "backtest",
+      "sample_size": null,
+      "unit": "ratio",
+      "value": 1.7976436563894338
+     },
+     "runs": {
+      "as_of": null,
+      "caveats": [],
+      "estimated": false,
+      "provenance": "backtest",
+      "sample_size": null,
+      "unit": "count",
+      "value": 1.0
+     },
+     "sharpe": {
+      "mean": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": 1,
+       "unit": "ratio",
+       "value": 0.3893852143399915
+      },
+      "n": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": false,
+       "provenance": "backtest",
+       "sample_size": null,
+       "unit": "count",
+       "value": 1.0
+      },
+      "p25": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": 1,
+       "unit": "ratio",
+       "value": 0.3893852143399915
+      },
+      "p5": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": 1,
+       "unit": "ratio",
+       "value": 0.3893852143399915
+      },
+      "p50": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": 1,
+       "unit": "ratio",
+       "value": 0.3893852143399915
+      },
+      "p75": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": 1,
+       "unit": "ratio",
+       "value": 0.3893852143399915
+      },
+      "p95": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": 1,
+       "unit": "ratio",
+       "value": 0.3893852143399915
+      }
+     },
+     "stress": "entry_delay",
+     "trades": {
+      "mean": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": 1,
+       "unit": "count",
+       "value": 7.0
+      },
+      "n": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": false,
+       "provenance": "backtest",
+       "sample_size": null,
+       "unit": "count",
+       "value": 1.0
+      },
+      "p25": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": 1,
+       "unit": "count",
+       "value": 7.0
+      },
+      "p5": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": 1,
+       "unit": "count",
+       "value": 7.0
+      },
+      "p50": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": 1,
+       "unit": "count",
+       "value": 7.0
+      },
+      "p75": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": 1,
+       "unit": "count",
+       "value": 7.0
+      },
+      "p95": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": 1,
+       "unit": "count",
+       "value": 7.0
+      }
+     }
+    },
+    {
+     "level": "2 bar(s)",
+     "max_drawdown_pct": {
+      "mean": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": 1,
+       "unit": "pct",
+       "value": -3.767544088339139
+      },
+      "n": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": false,
+       "provenance": "backtest",
+       "sample_size": null,
+       "unit": "count",
+       "value": 1.0
+      },
+      "p25": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": 1,
+       "unit": "pct",
+       "value": -3.767544088339139
+      },
+      "p5": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": 1,
+       "unit": "pct",
+       "value": -3.767544088339139
+      },
+      "p50": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": 1,
+       "unit": "pct",
+       "value": -3.767544088339139
+      },
+      "p75": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": 1,
+       "unit": "pct",
+       "value": -3.767544088339139
+      },
+      "p95": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": 1,
+       "unit": "pct",
+       "value": -3.767544088339139
+      }
+     },
+     "net_profit": {
+      "mean": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": 1,
+       "unit": "USD",
+       "value": 37.62161672149523
+      },
+      "n": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": false,
+       "provenance": "backtest",
+       "sample_size": null,
+       "unit": "count",
+       "value": 1.0
+      },
+      "p25": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": 1,
+       "unit": "USD",
+       "value": 37.62161672149523
+      },
+      "p5": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": 1,
+       "unit": "USD",
+       "value": 37.62161672149523
+      },
+      "p50": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": 1,
+       "unit": "USD",
+       "value": 37.62161672149523
+      },
+      "p75": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": 1,
+       "unit": "USD",
+       "value": 37.62161672149523
+      },
+      "p95": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": 1,
+       "unit": "USD",
+       "value": 37.62161672149523
+      }
+     },
+     "profile": "IG_REALISTIC~d2",
+     "profitable_share": {
+      "as_of": null,
+      "caveats": [],
+      "estimated": true,
+      "provenance": "backtest",
+      "sample_size": null,
+      "unit": "ratio",
+      "value": 1.0
+     },
+     "retention": {
+      "as_of": null,
+      "caveats": [],
+      "estimated": true,
+      "provenance": "backtest",
+      "sample_size": null,
+      "unit": "ratio",
+      "value": 0.6352856852041128
+     },
+     "runs": {
+      "as_of": null,
+      "caveats": [],
+      "estimated": false,
+      "provenance": "backtest",
+      "sample_size": null,
+      "unit": "count",
+      "value": 1.0
+     },
+     "sharpe": {
+      "mean": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": 1,
+       "unit": "ratio",
+       "value": 0.14914494388496752
+      },
+      "n": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": false,
+       "provenance": "backtest",
+       "sample_size": null,
+       "unit": "count",
+       "value": 1.0
+      },
+      "p25": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": 1,
+       "unit": "ratio",
+       "value": 0.14914494388496752
+      },
+      "p5": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": 1,
+       "unit": "ratio",
+       "value": 0.14914494388496752
+      },
+      "p50": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": 1,
+       "unit": "ratio",
+       "value": 0.14914494388496752
+      },
+      "p75": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": 1,
+       "unit": "ratio",
+       "value": 0.14914494388496752
+      },
+      "p95": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": 1,
+       "unit": "ratio",
+       "value": 0.14914494388496752
+      }
+     },
+     "stress": "entry_delay",
+     "trades": {
+      "mean": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": 1,
+       "unit": "count",
+       "value": 7.0
+      },
+      "n": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": false,
+       "provenance": "backtest",
+       "sample_size": null,
+       "unit": "count",
+       "value": 1.0
+      },
+      "p25": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": 1,
+       "unit": "count",
+       "value": 7.0
+      },
+      "p5": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": 1,
+       "unit": "count",
+       "value": 7.0
+      },
+      "p50": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": 1,
+       "unit": "count",
+       "value": 7.0
+      },
+      "p75": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": 1,
+       "unit": "count",
+       "value": 7.0
+      },
+      "p95": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": 1,
+       "unit": "count",
+       "value": 7.0
+      }
+     }
+    }
+   ],
+   "seed": 20261019
+  },
+  "lookahead": null,
+  "method": "Every cell is a real engine run under a stressed copy of the run's own cost profile (sim/stress_profiles.py): broker rejects at the skip rate under several seeds, latency_bars for an entry delay, and every spread and slippage parameter scaled. Sizing prices the stressed costs too. Retention: median net profit over the baseline's.",
+  "noise": null,
+  "perturbation": null,
+  "provenance": {
+   "boundary": {
+    "basis": "provisional",
+    "dataset_version_ids": [
+     "inmem:EURUSD:H4:2400"
+    ],
+    "detail": "No holdout segment is defined for ['inmem:EURUSD:H4:2400'] yet, so the final 20% of the run's own bar span (from 2024-11-15T20:48:00+00:00) is treated as reserved: the fraction the ladder would reserve. Conservative when the run covers only part of its dataset.",
+    "start": "2024-11-15T20:48:00+00:00"
+   },
+   "covers_stored_run": false,
+   "dataset_version_id": "inmem:EURUSD:H4:1920",
+   "engine": {
+    "account_ccy": "USD",
+    "construction": "none",
+    "engine_version": "engine_v4_time_units",
+    "initial_balance": 10000.0,
+    "profile": {
+     "commission": "CommissionModel(per_trade=0.0, per_unit=0.0, bps_of_notional=0.0, minimum=0.0, currency='quote')",
+     "financing": "FinancingModel(annual_bps_long=290.0, annual_bps_short=110.0, basis_days=365.0, currency='quote')",
+     "guaranteed_stop_premium_pips": 3.0,
+     "key_version": "profile_v2",
+     "latency_bars": 0,
+     "min_deal_size": 0.0,
+     "min_stop_by_asset_class": [
+      [
+       "bond",
+       0.0,
+       3.0
+      ],
+      [
+       "commodity",
+       0.0,
+       3.0
+      ],
+      [
+       "crypto",
+       0.0,
+       3.0
+      ],
+      [
+       "energy",
+       0.0,
+       3.0
+      ],
+      [
+       "equity",
+       0.0,
+       3.0
+      ],
+      [
+       "fx_cross",
+       4.0,
+       0.0
+      ],
+      [
+       "fx_major",
+       4.0,
+       0.0
+      ],
+      [
+       "index",
+       0.0,
+       3.0
+      ],
+      [
+       "metal",
+       0.0,
+       3.0
+      ]
+     ],
+     "min_stop_distance_pips": 4.0,
+     "min_stop_policy": "reject",
+     "name": "IG_REALISTIC",
+     "partial_fill_min_fraction": 1.0,
+     "partial_fill_probability": 0.0,
+     "rejection_probability": 0.005,
+     "seed": 20260919,
+     "slippage": "ProbabilisticAdverseTickSlippage(probability=0.3, tick_pips=0.4, max_ticks=3)",
+     "spread": "TimeOfDayWideningSpread(base=TypicalMultiplierSpread(multiplier=1.0, floor_pips=0.6), windows=((21, 23, 3.0), (23, 6, 1.8)))",
+     "stale_price_max_gap_multiple": 3.0,
+     "use_guaranteed_stops": false
+    },
+    "risk_fraction": 0.01,
+    "sizing_policy": "fixed_fractional_v2"
+   },
+   "engine_runs": {
+    "as_of": null,
+    "caveats": [],
+    "estimated": false,
+    "provenance": "backtest",
+    "sample_size": null,
+    "unit": "count",
+    "value": 33.0
+   },
+   "reproduces_stored": null,
+   "window_bars": {
+    "as_of": null,
+    "caveats": [],
+    "estimated": false,
+    "provenance": "backtest",
+    "sample_size": null,
+    "unit": "bars",
+    "value": 1920.0
+   },
+   "window_end": "2024-11-15T20:48:00Z",
+   "window_start": "2024-01-01T00:00:00Z"
+  },
+  "random": null,
+  "run_id": "bt_0002",
+  "status": {
+   "cache_key": "35711a5c7ad8f347422e07a009812b97bdb1c0b967c6fa9fa4008b94e0d0c453",
+   "computed_at": "2026-10-19T00:00:00Z",
+   "error": "",
+   "job_id": "job_0000000000000001",
+   "kind": "execution",
+   "options": {
+    "delays": [
+     1,
+     2
+    ],
+    "multipliers": [
+     1.0,
+     1.5,
+     2.0,
+     3.0
+    ],
+    "seed": 20261019,
+    "skip_levels": [
+     0.05,
+     0.1,
+     0.2
+    ],
+    "skip_seeds": 5
+   },
+   "progress": {
+    "as_of": null,
+    "caveats": [],
+    "estimated": false,
+    "provenance": "backtest",
+    "sample_size": 34,
+    "unit": "ratio",
+    "value": 1.0
+   },
+   "stage": "spread 3x slippage 3x",
+   "status": "done",
+   "title": "Execution-realism stress",
+   "updated_at": "2026-10-19T00:00:00Z"
+  },
+  "warmup": null
+ },
+ "source": {
+  "as_of": "2026-10-19T00:00:00Z",
+  "detail": "Robustness cache (written by the research worker), read-only.",
+  "kind": "live"
+ }
+}

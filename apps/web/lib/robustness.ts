@@ -250,19 +250,22 @@ export interface IndicatorDriftView {
 }
 
 export interface WarmupRunView {
+  mode: string;
+  compared_from: string | null;
   extra_bars: Figure;
   signals_compared: Figure;
   signals_changed_after_warmup: Figure;
   first_changed_signal: string | null;
   signals_changed_in_cold_region: Figure;
   indicator_columns: IndicatorDriftView[];
-  trades_baseline: Figure;
-  trades_extended: Figure;
+  trades_short: Figure;
+  trades_long: Figure;
   trades_matched: Figure;
-  trades_only_baseline: Figure;
-  trades_only_extended: Figure;
+  trades_only_short: Figure;
+  trades_only_long: Figure;
   trades_changed: Figure;
   metrics: RunMetricsView;
+  indicators_converged: boolean;
   stable: boolean;
 }
 

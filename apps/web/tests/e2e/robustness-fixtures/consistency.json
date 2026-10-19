@@ -1,0 +1,408 @@
+{
+ "caveats": [
+  {
+   "affects": "robustness",
+   "code": "advisory_diagnostic",
+   "direction": "unknown",
+   "message": "Advisory diagnostic: reported beside the ladder verdict, never read by a gate, a threshold or a pre-registration.",
+   "severity": "info"
+  },
+  {
+   "affects": "robustness",
+   "code": "holdout_excluded",
+   "direction": "unknown",
+   "message": "Holdout boundary 2024-11-15T20:48:00+00:00 (provisional): 2 trade(s) that exited at or after it and 480 equity point(s) are EXCLUDED from this diagnostic.",
+   "severity": "info"
+  }
+ ],
+ "data": {
+  "boundary": {
+   "basis": "provisional",
+   "detail": "No holdout segment is defined for ['inmem:EURUSD:H4:2400'] yet, so the final 20% of the run's own bar span (from 2024-11-15T20:48:00+00:00) is treated as reserved: the fraction the ladder would reserve. Conservative when the run covers only part of its dataset.",
+   "note": "Holdout boundary 2024-11-15T20:48:00+00:00 (provisional): 2 trade(s) that exited at or after it and 480 equity point(s) are EXCLUDED from this diagnostic.",
+   "points_excluded": {
+    "as_of": null,
+    "caveats": [],
+    "estimated": false,
+    "provenance": "backtest",
+    "sample_size": null,
+    "unit": "count",
+    "value": 480.0
+   },
+   "start": "2024-11-15T20:48:00Z",
+   "trades_excluded": {
+    "as_of": null,
+    "caveats": [],
+    "estimated": false,
+    "provenance": "backtest",
+    "sample_size": null,
+    "unit": "count",
+    "value": 2.0
+   }
+  },
+  "instrument_positive_share": {
+   "as_of": null,
+   "caveats": [],
+   "estimated": false,
+   "provenance": "backtest",
+   "sample_size": 1,
+   "unit": "ratio",
+   "value": 1.0
+  },
+  "instruments": [
+   {
+    "end": null,
+    "key": "EURUSD",
+    "net_profit": {
+     "as_of": null,
+     "caveats": [],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "USD",
+     "value": 59.219997550249616
+    },
+    "positive": true,
+    "profit_factor": {
+     "as_of": null,
+     "caveats": [],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "ratio",
+     "value": 1.171175504562273
+    },
+    "sharpe": {
+     "as_of": null,
+     "caveats": [
+      {
+       "affects": "",
+       "code": "value_unavailable",
+       "direction": "unknown",
+       "message": "Undefined over this split's curve.",
+       "severity": "warning"
+      }
+     ],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "ratio",
+     "value": null
+    },
+    "start": null,
+    "total_return_pct": {
+     "as_of": null,
+     "caveats": [
+      {
+       "affects": "",
+       "code": "value_unavailable",
+       "direction": "unknown",
+       "message": "Not computed for an instrument split.",
+       "severity": "warning"
+      }
+     ],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "pct",
+     "value": null
+    },
+    "trades": {
+     "as_of": null,
+     "caveats": [],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "count",
+     "value": 7.0
+    },
+    "win_rate_pct": {
+     "as_of": null,
+     "caveats": [],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "pct",
+     "value": 28.571428571428573
+    }
+   }
+  ],
+  "k": 4,
+  "method": "The research slice (holdout excluded) cut into 4 equal spans of time; a trade counts in the span it EXITED in. Instruments: every instrument the run traded (one for a single-instrument run, every sleeve of a pooled one). The share of positive splits ignores empty ones.",
+  "period_empty": {
+   "as_of": null,
+   "caveats": [],
+   "estimated": false,
+   "provenance": "backtest",
+   "sample_size": null,
+   "unit": "count",
+   "value": 0.0
+  },
+  "period_positive_share": {
+   "as_of": null,
+   "caveats": [],
+   "estimated": false,
+   "provenance": "backtest",
+   "sample_size": 4,
+   "unit": "ratio",
+   "value": 0.5
+  },
+  "periods": [
+   {
+    "end": "2024-03-20T23:00:00Z",
+    "key": "P1",
+    "net_profit": {
+     "as_of": null,
+     "caveats": [],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "USD",
+     "value": -132.00796850575932
+    },
+    "positive": false,
+    "profit_factor": {
+     "as_of": null,
+     "caveats": [],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "ratio",
+     "value": 0.0
+    },
+    "sharpe": {
+     "as_of": null,
+     "caveats": [],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "ratio",
+     "value": -2.770183181999171
+    },
+    "start": "2024-01-01T00:00:00Z",
+    "total_return_pct": {
+     "as_of": null,
+     "caveats": [],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "pct",
+     "value": -1.3200796850575847
+    },
+    "trades": {
+     "as_of": null,
+     "caveats": [],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "count",
+     "value": 2.0
+    },
+    "win_rate_pct": {
+     "as_of": null,
+     "caveats": [],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "pct",
+     "value": 0.0
+    }
+   },
+   {
+    "end": "2024-06-08T22:00:00Z",
+    "key": "P2",
+    "net_profit": {
+     "as_of": null,
+     "caveats": [],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "USD",
+     "value": -203.10814263020694
+    },
+    "positive": false,
+    "profit_factor": {
+     "as_of": null,
+     "caveats": [],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "ratio",
+     "value": 0.0
+    },
+    "sharpe": {
+     "as_of": null,
+     "caveats": [],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "ratio",
+     "value": -2.9766229405372364
+    },
+    "start": "2024-03-20T23:00:00Z",
+    "total_return_pct": {
+     "as_of": null,
+     "caveats": [],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "pct",
+     "value": -2.058251992725335
+    },
+    "trades": {
+     "as_of": null,
+     "caveats": [],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "count",
+     "value": 2.0
+    },
+    "win_rate_pct": {
+     "as_of": null,
+     "caveats": [],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "pct",
+     "value": 0.0
+    }
+   },
+   {
+    "end": "2024-08-27T21:00:00Z",
+    "key": "P3",
+    "net_profit": {
+     "as_of": null,
+     "caveats": [],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "USD",
+     "value": 204.38840813936946
+    },
+    "positive": true,
+    "profit_factor": {
+     "as_of": null,
+     "caveats": [
+      {
+       "affects": "",
+       "code": "value_unavailable",
+       "direction": "unknown",
+       "message": "Undefined: no losing trade.",
+       "severity": "warning"
+      }
+     ],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "ratio",
+     "value": null
+    },
+    "sharpe": {
+     "as_of": null,
+     "caveats": [],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "ratio",
+     "value": 3.0988765561281
+    },
+    "start": "2024-06-08T22:00:00Z",
+    "total_return_pct": {
+     "as_of": null,
+     "caveats": [],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "pct",
+     "value": 2.1147528567297957
+    },
+    "trades": {
+     "as_of": null,
+     "caveats": [],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "count",
+     "value": 1.0
+    },
+    "win_rate_pct": {
+     "as_of": null,
+     "caveats": [],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "pct",
+     "value": 100.0
+    }
+   },
+   {
+    "end": "2024-11-15T20:00:00Z",
+    "key": "P4",
+    "net_profit": {
+     "as_of": null,
+     "caveats": [],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "USD",
+     "value": 189.94770054684642
+    },
+    "positive": true,
+    "profit_factor": {
+     "as_of": null,
+     "caveats": [],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "ratio",
+     "value": 18.515434253174835
+    },
+    "sharpe": {
+     "as_of": null,
+     "caveats": [],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "ratio",
+     "value": 2.2658156238542246
+    },
+    "start": "2024-08-27T21:00:00Z",
+    "total_return_pct": {
+     "as_of": null,
+     "caveats": [],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "pct",
+     "value": 1.9246373474214318
+    },
+    "trades": {
+     "as_of": null,
+     "caveats": [],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "count",
+     "value": 2.0
+    },
+    "win_rate_pct": {
+     "as_of": null,
+     "caveats": [],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "pct",
+     "value": 50.0
+    }
+   }
+  ],
+  "pooled": false,
+  "run_id": "bt_0002"
+ },
+ "source": {
+  "as_of": "2026-10-19T00:00:00Z",
+  "detail": "Research ledger backtest bt_0002.",
+  "kind": "live"
+ }
+}

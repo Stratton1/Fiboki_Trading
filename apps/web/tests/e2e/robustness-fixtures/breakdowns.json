@@ -1,0 +1,1355 @@
+{
+ "caveats": [
+  {
+   "affects": "robustness",
+   "code": "advisory_diagnostic",
+   "direction": "unknown",
+   "message": "Advisory diagnostic: reported beside the ladder verdict, never read by a gate, a threshold or a pre-registration.",
+   "severity": "info"
+  },
+  {
+   "affects": "robustness",
+   "code": "holdout_excluded",
+   "direction": "unknown",
+   "message": "Holdout boundary 2024-11-15T20:48:00+00:00 (provisional): 2 trade(s) that exited at or after it and 480 equity point(s) are EXCLUDED from this diagnostic.",
+   "severity": "info"
+  }
+ ],
+ "data": {
+  "account_ccy": "USD",
+  "boundary": {
+   "basis": "provisional",
+   "detail": "No holdout segment is defined for ['inmem:EURUSD:H4:2400'] yet, so the final 20% of the run's own bar span (from 2024-11-15T20:48:00+00:00) is treated as reserved: the fraction the ladder would reserve. Conservative when the run covers only part of its dataset.",
+   "note": "Holdout boundary 2024-11-15T20:48:00+00:00 (provisional): 2 trade(s) that exited at or after it and 480 equity point(s) are EXCLUDED from this diagnostic.",
+   "points_excluded": {
+    "as_of": null,
+    "caveats": [],
+    "estimated": false,
+    "provenance": "backtest",
+    "sample_size": null,
+    "unit": "count",
+    "value": 480.0
+   },
+   "start": "2024-11-15T20:48:00Z",
+   "trades_excluded": {
+    "as_of": null,
+    "caveats": [],
+    "estimated": false,
+    "provenance": "backtest",
+    "sample_size": null,
+    "unit": "count",
+    "value": 2.0
+   }
+  },
+  "calendar_note": "Year, month, weekday, hour and session are of the ENTRY bar, in UTC; sessions are marketstate/features.py session_flags (Tokyo 09-15, London 08-16:30, New York 08-17 local, overlaps named).",
+  "entry_reason_note": "The trade ledger records no entry rule (a signal's rationale is not stored), so entries are broken down by DIRECTION, named as such; exit reasons are the engine's own.",
+  "groups": {
+   "direction": [
+    {
+     "avg_bars_held": {
+      "as_of": null,
+      "caveats": [],
+      "estimated": false,
+      "provenance": "backtest",
+      "sample_size": null,
+      "unit": "bars",
+      "value": 22.5
+     },
+     "expectancy": {
+      "as_of": null,
+      "caveats": [],
+      "estimated": false,
+      "provenance": "backtest",
+      "sample_size": null,
+      "unit": "USD",
+      "value": -8.242689317837446
+     },
+     "key": "long",
+     "net_pnl": {
+      "as_of": null,
+      "caveats": [],
+      "estimated": false,
+      "provenance": "backtest",
+      "sample_size": null,
+      "unit": "USD",
+      "value": -32.97075727134978
+     },
+     "profit_factor": {
+      "as_of": null,
+      "caveats": [],
+      "estimated": false,
+      "provenance": "backtest",
+      "sample_size": null,
+      "unit": "ratio",
+      "value": 0.8589565048880824
+     },
+     "trades": {
+      "as_of": null,
+      "caveats": [],
+      "estimated": false,
+      "provenance": "backtest",
+      "sample_size": null,
+      "unit": "count",
+      "value": 4.0
+     },
+     "win_rate_pct": {
+      "as_of": null,
+      "caveats": [],
+      "estimated": false,
+      "provenance": "backtest",
+      "sample_size": null,
+      "unit": "pct",
+      "value": 25.0
+     }
+    },
+    {
+     "avg_bars_held": {
+      "as_of": null,
+      "caveats": [],
+      "estimated": false,
+      "provenance": "backtest",
+      "sample_size": null,
+      "unit": "bars",
+      "value": 17.0
+     },
+     "expectancy": {
+      "as_of": null,
+      "caveats": [],
+      "estimated": false,
+      "provenance": "backtest",
+      "sample_size": null,
+      "unit": "USD",
+      "value": 30.730251607199794
+     },
+     "key": "short",
+     "net_pnl": {
+      "as_of": null,
+      "caveats": [],
+      "estimated": false,
+      "provenance": "backtest",
+      "sample_size": null,
+      "unit": "USD",
+      "value": 92.19075482159938
+     },
+     "profit_factor": {
+      "as_of": null,
+      "caveats": [],
+      "estimated": false,
+      "provenance": "backtest",
+      "sample_size": null,
+      "unit": "ratio",
+      "value": 1.8216816670888252
+     },
+     "trades": {
+      "as_of": null,
+      "caveats": [],
+      "estimated": false,
+      "provenance": "backtest",
+      "sample_size": null,
+      "unit": "count",
+      "value": 3.0
+     },
+     "win_rate_pct": {
+      "as_of": null,
+      "caveats": [],
+      "estimated": false,
+      "provenance": "backtest",
+      "sample_size": null,
+      "unit": "pct",
+      "value": 33.333333333333336
+     }
+    }
+   ],
+   "exit_reason": [
+    {
+     "avg_bars_held": {
+      "as_of": null,
+      "caveats": [],
+      "estimated": false,
+      "provenance": "backtest",
+      "sample_size": null,
+      "unit": "bars",
+      "value": 26.0
+     },
+     "expectancy": {
+      "as_of": null,
+      "caveats": [],
+      "estimated": false,
+      "provenance": "backtest",
+      "sample_size": null,
+      "unit": "USD",
+      "value": -20.06468563374789
+     },
+     "key": "breakeven",
+     "net_pnl": {
+      "as_of": null,
+      "caveats": [],
+      "estimated": false,
+      "provenance": "backtest",
+      "sample_size": null,
+      "unit": "USD",
+      "value": -40.12937126749578
+     },
+     "profit_factor": {
+      "as_of": null,
+      "caveats": [],
+      "estimated": false,
+      "provenance": "backtest",
+      "sample_size": null,
+      "unit": "ratio",
+      "value": 0.0
+     },
+     "trades": {
+      "as_of": null,
+      "caveats": [],
+      "estimated": false,
+      "provenance": "backtest",
+      "sample_size": null,
+      "unit": "count",
+      "value": 2.0
+     },
+     "win_rate_pct": {
+      "as_of": null,
+      "caveats": [],
+      "estimated": false,
+      "provenance": "backtest",
+      "sample_size": null,
+      "unit": "pct",
+      "value": 0.0
+     }
+    },
+    {
+     "avg_bars_held": {
+      "as_of": null,
+      "caveats": [],
+      "estimated": false,
+      "provenance": "backtest",
+      "sample_size": null,
+      "unit": "bars",
+      "value": 17.0
+     },
+     "expectancy": {
+      "as_of": null,
+      "caveats": [],
+      "estimated": false,
+      "provenance": "backtest",
+      "sample_size": null,
+      "unit": "USD",
+      "value": -101.9437765733283
+     },
+     "key": "stop_loss",
+     "net_pnl": {
+      "as_of": null,
+      "caveats": [],
+      "estimated": false,
+      "provenance": "backtest",
+      "sample_size": null,
+      "unit": "USD",
+      "value": -305.83132971998486
+     },
+     "profit_factor": {
+      "as_of": null,
+      "caveats": [],
+      "estimated": false,
+      "provenance": "backtest",
+      "sample_size": null,
+      "unit": "ratio",
+      "value": 0.0
+     },
+     "trades": {
+      "as_of": null,
+      "caveats": [],
+      "estimated": false,
+      "provenance": "backtest",
+      "sample_size": null,
+      "unit": "count",
+      "value": 3.0
+     },
+     "win_rate_pct": {
+      "as_of": null,
+      "caveats": [],
+      "estimated": false,
+      "provenance": "backtest",
+      "sample_size": null,
+      "unit": "pct",
+      "value": 0.0
+     }
+    },
+    {
+     "avg_bars_held": {
+      "as_of": null,
+      "caveats": [],
+      "estimated": false,
+      "provenance": "backtest",
+      "sample_size": null,
+      "unit": "bars",
+      "value": 19.0
+     },
+     "expectancy": {
+      "as_of": null,
+      "caveats": [],
+      "estimated": false,
+      "provenance": "backtest",
+      "sample_size": null,
+      "unit": "USD",
+      "value": 202.5903492688651
+     },
+     "key": "take_profit",
+     "net_pnl": {
+      "as_of": null,
+      "caveats": [],
+      "estimated": false,
+      "provenance": "backtest",
+      "sample_size": null,
+      "unit": "USD",
+      "value": 405.1806985377302
+     },
+     "profit_factor": {
+      "as_of": null,
+      "caveats": [
+       {
+        "affects": "",
+        "code": "value_unavailable",
+        "direction": "unknown",
+        "message": "Undefined: no losing trade.",
+        "severity": "warning"
+       }
+      ],
+      "estimated": false,
+      "provenance": "backtest",
+      "sample_size": null,
+      "unit": "ratio",
+      "value": null
+     },
+     "trades": {
+      "as_of": null,
+      "caveats": [],
+      "estimated": false,
+      "provenance": "backtest",
+      "sample_size": null,
+      "unit": "count",
+      "value": 2.0
+     },
+     "win_rate_pct": {
+      "as_of": null,
+      "caveats": [],
+      "estimated": false,
+      "provenance": "backtest",
+      "sample_size": null,
+      "unit": "pct",
+      "value": 100.0
+     }
+    }
+   ],
+   "hour": [
+    {
+     "avg_bars_held": {
+      "as_of": null,
+      "caveats": [],
+      "estimated": false,
+      "provenance": "backtest",
+      "sample_size": null,
+      "unit": "bars",
+      "value": 26.0
+     },
+     "expectancy": {
+      "as_of": null,
+      "caveats": [],
+      "estimated": false,
+      "provenance": "backtest",
+      "sample_size": null,
+      "unit": "USD",
+      "value": 85.75375449118965
+     },
+     "key": "00",
+     "net_pnl": {
+      "as_of": null,
+      "caveats": [],
+      "estimated": false,
+      "provenance": "backtest",
+      "sample_size": null,
+      "unit": "USD",
+      "value": 171.5075089823793
+     },
+     "profit_factor": {
+      "as_of": null,
+      "caveats": [],
+      "estimated": false,
+      "provenance": "backtest",
+      "sample_size": null,
+      "unit": "ratio",
+      "value": 6.856540520011645
+     },
+     "trades": {
+      "as_of": null,
+      "caveats": [],
+      "estimated": false,
+      "provenance": "backtest",
+      "sample_size": null,
+      "unit": "count",
+      "value": 2.0
+     },
+     "win_rate_pct": {
+      "as_of": null,
+      "caveats": [],
+      "estimated": false,
+      "provenance": "backtest",
+      "sample_size": null,
+      "unit": "pct",
+      "value": 50.0
+     }
+    },
+    {
+     "avg_bars_held": {
+      "as_of": null,
+      "caveats": [],
+      "estimated": false,
+      "provenance": "backtest",
+      "sample_size": null,
+      "unit": "bars",
+      "value": 13.5
+     },
+     "expectancy": {
+      "as_of": null,
+      "caveats": [],
+      "estimated": false,
+      "provenance": "backtest",
+      "sample_size": null,
+      "unit": "USD",
+      "value": 51.51767233655686
+     },
+     "key": "12",
+     "net_pnl": {
+      "as_of": null,
+      "caveats": [],
+      "estimated": false,
+      "provenance": "backtest",
+      "sample_size": null,
+      "unit": "USD",
+      "value": 103.03534467311373
+     },
+     "profit_factor": {
+      "as_of": null,
+      "caveats": [],
+      "estimated": false,
+      "provenance": "backtest",
+      "sample_size": null,
+      "unit": "ratio",
+      "value": 2.0165982275160146
+     },
+     "trades": {
+      "as_of": null,
+      "caveats": [],
+      "estimated": false,
+      "provenance": "backtest",
+      "sample_size": null,
+      "unit": "count",
+      "value": 2.0
+     },
+     "win_rate_pct": {
+      "as_of": null,
+      "caveats": [],
+      "estimated": false,
+      "provenance": "backtest",
+      "sample_size": null,
+      "unit": "pct",
+      "value": 50.0
+     }
+    },
+    {
+     "avg_bars_held": {
+      "as_of": null,
+      "caveats": [],
+      "estimated": false,
+      "provenance": "backtest",
+      "sample_size": null,
+      "unit": "bars",
+      "value": 20.666666666666668
+     },
+     "expectancy": {
+      "as_of": null,
+      "caveats": [],
+      "estimated": false,
+      "provenance": "backtest",
+      "sample_size": null,
+      "unit": "USD",
+      "value": -71.77428536841448
+     },
+     "key": "16",
+     "net_pnl": {
+      "as_of": null,
+      "caveats": [],
+      "estimated": false,
+      "provenance": "backtest",
+      "sample_size": null,
+      "unit": "USD",
+      "value": -215.32285610524343
+     },
+     "profit_factor": {
+      "as_of": null,
+      "caveats": [],
+      "estimated": false,
+      "provenance": "backtest",
+      "sample_size": null,
+      "unit": "ratio",
+      "value": 0.0
+     },
+     "trades": {
+      "as_of": null,
+      "caveats": [],
+      "estimated": false,
+      "provenance": "backtest",
+      "sample_size": null,
+      "unit": "count",
+      "value": 3.0
+     },
+     "win_rate_pct": {
+      "as_of": null,
+      "caveats": [],
+      "estimated": false,
+      "provenance": "backtest",
+      "sample_size": null,
+      "unit": "pct",
+      "value": 0.0
+     }
+    }
+   ],
+   "month": [
+    {
+     "avg_bars_held": {
+      "as_of": null,
+      "caveats": [],
+      "estimated": false,
+      "provenance": "backtest",
+      "sample_size": null,
+      "unit": "bars",
+      "value": 21.5
+     },
+     "expectancy": {
+      "as_of": null,
+      "caveats": [],
+      "estimated": false,
+      "provenance": "backtest",
+      "sample_size": null,
+      "unit": "USD",
+      "value": -66.00398425287966
+     },
+     "key": "01 Jan",
+     "net_pnl": {
+      "as_of": null,
+      "caveats": [],
+      "estimated": false,
+      "provenance": "backtest",
+      "sample_size": null,
+      "unit": "USD",
+      "value": -132.00796850575932
+     },
+     "profit_factor": {
+      "as_of": null,
+      "caveats": [],
+      "estimated": false,
+      "provenance": "backtest",
+      "sample_size": null,
+      "unit": "ratio",
+      "value": 0.0
+     },
+     "trades": {
+      "as_of": null,
+      "caveats": [],
+      "estimated": false,
+      "provenance": "backtest",
+      "sample_size": null,
+      "unit": "count",
+      "value": 2.0
+     },
+     "win_rate_pct": {
+      "as_of": null,
+      "caveats": [],
+      "estimated": false,
+      "provenance": "backtest",
+      "sample_size": null,
+      "unit": "pct",
+      "value": 0.0
+     }
+    },
+    {
+     "avg_bars_held": {
+      "as_of": null,
+      "caveats": [],
+      "estimated": false,
+      "provenance": "backtest",
+      "sample_size": null,
+      "unit": "bars",
+      "value": 13.0
+     },
+     "expectancy": {
+      "as_of": null,
+      "caveats": [],
+      "estimated": false,
+      "provenance": "backtest",
+      "sample_size": null,
+      "unit": "USD",
+      "value": -101.35306346625573
+     },
+     "key": "04 Apr",
+     "net_pnl": {
+      "as_of": null,
+      "caveats": [],
+      "estimated": false,
+      "provenance": "backtest",
+      "sample_size": null,
+      "unit": "USD",
+      "value": -101.35306346625573
+     },
+     "profit_factor": {
+      "as_of": null,
+      "caveats": [],
+      "estimated": false,
+      "provenance": "backtest",
+      "sample_size": null,
+      "unit": "ratio",
+      "value": 0.0
+     },
+     "trades": {
+      "as_of": null,
+      "caveats": [],
+      "estimated": false,
+      "provenance": "backtest",
+      "sample_size": null,
+      "unit": "count",
+      "value": 1.0
+     },
+     "win_rate_pct": {
+      "as_of": null,
+      "caveats": [],
+      "estimated": false,
+      "provenance": "backtest",
+      "sample_size": null,
+      "unit": "pct",
+      "value": 0.0
+     }
+    },
+    {
+     "avg_bars_held": {
+      "as_of": null,
+      "caveats": [],
+      "estimated": false,
+      "provenance": "backtest",
+      "sample_size": null,
+      "unit": "bars",
+      "value": 23.0
+     },
+     "expectancy": {
+      "as_of": null,
+      "caveats": [],
+      "estimated": false,
+      "provenance": "backtest",
+      "sample_size": null,
+      "unit": "USD",
+      "value": -101.75507916395121
+     },
+     "key": "05 May",
+     "net_pnl": {
+      "as_of": null,
+      "caveats": [],
+      "estimated": false,
+      "provenance": "backtest",
+      "sample_size": null,
+      "unit": "USD",
+      "value": -101.75507916395121
+     },
+     "profit_factor": {
+      "as_of": null,
+      "caveats": [],
+      "estimated": false,
+      "provenance": "backtest",
+      "sample_size": null,
+      "unit": "ratio",
+      "value": 0.0
+     },
+     "trades": {
+      "as_of": null,
+      "caveats": [],
+      "estimated": false,
+      "provenance": "backtest",
+      "sample_size": null,
+      "unit": "count",
+      "value": 1.0
+     },
+     "win_rate_pct": {
+      "as_of": null,
+      "caveats": [],
+      "estimated": false,
+      "provenance": "backtest",
+      "sample_size": null,
+      "unit": "pct",
+      "value": 0.0
+     }
+    },
+    {
+     "avg_bars_held": {
+      "as_of": null,
+      "caveats": [],
+      "estimated": false,
+      "provenance": "backtest",
+      "sample_size": null,
+      "unit": "bars",
+      "value": 14.0
+     },
+     "expectancy": {
+      "as_of": null,
+      "caveats": [],
+      "estimated": false,
+      "provenance": "backtest",
+      "sample_size": null,
+      "unit": "USD",
+      "value": 204.38840813936946
+     },
+     "key": "06 Jun",
+     "net_pnl": {
+      "as_of": null,
+      "caveats": [],
+      "estimated": false,
+      "provenance": "backtest",
+      "sample_size": null,
+      "unit": "USD",
+      "value": 204.38840813936946
+     },
+     "profit_factor": {
+      "as_of": null,
+      "caveats": [
+       {
+        "affects": "",
+        "code": "value_unavailable",
+        "direction": "unknown",
+        "message": "Undefined: no losing trade.",
+        "severity": "warning"
+       }
+      ],
+      "estimated": false,
+      "provenance": "backtest",
+      "sample_size": null,
+      "unit": "ratio",
+      "value": null
+     },
+     "trades": {
+      "as_of": null,
+      "caveats": [],
+      "estimated": false,
+      "provenance": "backtest",
+      "sample_size": null,
+      "unit": "count",
+      "value": 1.0
+     },
+     "win_rate_pct": {
+      "as_of": null,
+      "caveats": [],
+      "estimated": false,
+      "provenance": "backtest",
+      "sample_size": null,
+      "unit": "pct",
+      "value": 100.0
+     }
+    },
+    {
+     "avg_bars_held": {
+      "as_of": null,
+      "caveats": [],
+      "estimated": false,
+      "provenance": "backtest",
+      "sample_size": null,
+      "unit": "bars",
+      "value": 24.0
+     },
+     "expectancy": {
+      "as_of": null,
+      "caveats": [],
+      "estimated": false,
+      "provenance": "backtest",
+      "sample_size": null,
+      "unit": "USD",
+      "value": -10.844589851514337
+     },
+     "key": "08 Aug",
+     "net_pnl": {
+      "as_of": null,
+      "caveats": [],
+      "estimated": false,
+      "provenance": "backtest",
+      "sample_size": null,
+      "unit": "USD",
+      "value": -10.844589851514337
+     },
+     "profit_factor": {
+      "as_of": null,
+      "caveats": [],
+      "estimated": false,
+      "provenance": "backtest",
+      "sample_size": null,
+      "unit": "ratio",
+      "value": 0.0
+     },
+     "trades": {
+      "as_of": null,
+      "caveats": [],
+      "estimated": false,
+      "provenance": "backtest",
+      "sample_size": null,
+      "unit": "count",
+      "value": 1.0
+     },
+     "win_rate_pct": {
+      "as_of": null,
+      "caveats": [],
+      "estimated": false,
+      "provenance": "backtest",
+      "sample_size": null,
+      "unit": "pct",
+      "value": 0.0
+     }
+    },
+    {
+     "avg_bars_held": {
+      "as_of": null,
+      "caveats": [],
+      "estimated": false,
+      "provenance": "backtest",
+      "sample_size": null,
+      "unit": "bars",
+      "value": 24.0
+     },
+     "expectancy": {
+      "as_of": null,
+      "caveats": [],
+      "estimated": false,
+      "provenance": "backtest",
+      "sample_size": null,
+      "unit": "USD",
+      "value": 200.79229039836076
+     },
+     "key": "11 Nov",
+     "net_pnl": {
+      "as_of": null,
+      "caveats": [],
+      "estimated": false,
+      "provenance": "backtest",
+      "sample_size": null,
+      "unit": "USD",
+      "value": 200.79229039836076
+     },
+     "profit_factor": {
+      "as_of": null,
+      "caveats": [
+       {
+        "affects": "",
+        "code": "value_unavailable",
+        "direction": "unknown",
+        "message": "Undefined: no losing trade.",
+        "severity": "warning"
+       }
+      ],
+      "estimated": false,
+      "provenance": "backtest",
+      "sample_size": null,
+      "unit": "ratio",
+      "value": null
+     },
+     "trades": {
+      "as_of": null,
+      "caveats": [],
+      "estimated": false,
+      "provenance": "backtest",
+      "sample_size": null,
+      "unit": "count",
+      "value": 1.0
+     },
+     "win_rate_pct": {
+      "as_of": null,
+      "caveats": [],
+      "estimated": false,
+      "provenance": "backtest",
+      "sample_size": null,
+      "unit": "pct",
+      "value": 100.0
+     }
+    }
+   ],
+   "session": [
+    {
+     "avg_bars_held": {
+      "as_of": null,
+      "caveats": [],
+      "estimated": false,
+      "provenance": "backtest",
+      "sample_size": null,
+      "unit": "bars",
+      "value": 14.0
+     },
+     "expectancy": {
+      "as_of": null,
+      "caveats": [],
+      "estimated": false,
+      "provenance": "backtest",
+      "sample_size": null,
+      "unit": "USD",
+      "value": 0.10405252777860596
+     },
+     "key": "london_new_york",
+     "net_pnl": {
+      "as_of": null,
+      "caveats": [],
+      "estimated": false,
+      "provenance": "backtest",
+      "sample_size": null,
+      "unit": "USD",
+      "value": 0.3121575833358179
+     },
+     "profit_factor": {
+      "as_of": null,
+      "caveats": [],
+      "estimated": false,
+      "provenance": "backtest",
+      "sample_size": null,
+      "unit": "ratio",
+      "value": 1.0015296124977076
+     },
+     "trades": {
+      "as_of": null,
+      "caveats": [],
+      "estimated": false,
+      "provenance": "backtest",
+      "sample_size": null,
+      "unit": "count",
+      "value": 3.0
+     },
+     "win_rate_pct": {
+      "as_of": null,
+      "caveats": [],
+      "estimated": false,
+      "provenance": "backtest",
+      "sample_size": null,
+      "unit": "pct",
+      "value": 33.333333333333336
+     }
+    },
+    {
+     "avg_bars_held": {
+      "as_of": null,
+      "caveats": [],
+      "estimated": false,
+      "provenance": "backtest",
+      "sample_size": null,
+      "unit": "bars",
+      "value": 23.5
+     },
+     "expectancy": {
+      "as_of": null,
+      "caveats": [],
+      "estimated": false,
+      "provenance": "backtest",
+      "sample_size": null,
+      "unit": "USD",
+      "value": -56.299834507732776
+     },
+     "key": "new_york",
+     "net_pnl": {
+      "as_of": null,
+      "caveats": [],
+      "estimated": false,
+      "provenance": "backtest",
+      "sample_size": null,
+      "unit": "USD",
+      "value": -112.59966901546555
+     },
+     "profit_factor": {
+      "as_of": null,
+      "caveats": [],
+      "estimated": false,
+      "provenance": "backtest",
+      "sample_size": null,
+      "unit": "ratio",
+      "value": 0.0
+     },
+     "trades": {
+      "as_of": null,
+      "caveats": [],
+      "estimated": false,
+      "provenance": "backtest",
+      "sample_size": null,
+      "unit": "count",
+      "value": 2.0
+     },
+     "win_rate_pct": {
+      "as_of": null,
+      "caveats": [],
+      "estimated": false,
+      "provenance": "backtest",
+      "sample_size": null,
+      "unit": "pct",
+      "value": 0.0
+     }
+    },
+    {
+     "avg_bars_held": {
+      "as_of": null,
+      "caveats": [],
+      "estimated": false,
+      "provenance": "backtest",
+      "sample_size": null,
+      "unit": "bars",
+      "value": 26.0
+     },
+     "expectancy": {
+      "as_of": null,
+      "caveats": [],
+      "estimated": false,
+      "provenance": "backtest",
+      "sample_size": null,
+      "unit": "USD",
+      "value": 85.75375449118965
+     },
+     "key": "tokyo",
+     "net_pnl": {
+      "as_of": null,
+      "caveats": [],
+      "estimated": false,
+      "provenance": "backtest",
+      "sample_size": null,
+      "unit": "USD",
+      "value": 171.5075089823793
+     },
+     "profit_factor": {
+      "as_of": null,
+      "caveats": [],
+      "estimated": false,
+      "provenance": "backtest",
+      "sample_size": null,
+      "unit": "ratio",
+      "value": 6.856540520011645
+     },
+     "trades": {
+      "as_of": null,
+      "caveats": [],
+      "estimated": false,
+      "provenance": "backtest",
+      "sample_size": null,
+      "unit": "count",
+      "value": 2.0
+     },
+     "win_rate_pct": {
+      "as_of": null,
+      "caveats": [],
+      "estimated": false,
+      "provenance": "backtest",
+      "sample_size": null,
+      "unit": "pct",
+      "value": 50.0
+     }
+    }
+   ],
+   "weekday": [
+    {
+     "avg_bars_held": {
+      "as_of": null,
+      "caveats": [],
+      "estimated": false,
+      "provenance": "backtest",
+      "sample_size": null,
+      "unit": "bars",
+      "value": 19.0
+     },
+     "expectancy": {
+      "as_of": null,
+      "caveats": [],
+      "estimated": false,
+      "provenance": "backtest",
+      "sample_size": null,
+      "unit": "USD",
+      "value": 202.5903492688651
+     },
+     "key": "1 Tue",
+     "net_pnl": {
+      "as_of": null,
+      "caveats": [],
+      "estimated": false,
+      "provenance": "backtest",
+      "sample_size": null,
+      "unit": "USD",
+      "value": 405.1806985377302
+     },
+     "profit_factor": {
+      "as_of": null,
+      "caveats": [
+       {
+        "affects": "",
+        "code": "value_unavailable",
+        "direction": "unknown",
+        "message": "Undefined: no losing trade.",
+        "severity": "warning"
+       }
+      ],
+      "estimated": false,
+      "provenance": "backtest",
+      "sample_size": null,
+      "unit": "ratio",
+      "value": null
+     },
+     "trades": {
+      "as_of": null,
+      "caveats": [],
+      "estimated": false,
+      "provenance": "backtest",
+      "sample_size": null,
+      "unit": "count",
+      "value": 2.0
+     },
+     "win_rate_pct": {
+      "as_of": null,
+      "caveats": [],
+      "estimated": false,
+      "provenance": "backtest",
+      "sample_size": null,
+      "unit": "pct",
+      "value": 100.0
+     }
+    },
+    {
+     "avg_bars_held": {
+      "as_of": null,
+      "caveats": [],
+      "estimated": false,
+      "provenance": "backtest",
+      "sample_size": null,
+      "unit": "bars",
+      "value": 26.0
+     },
+     "expectancy": {
+      "as_of": null,
+      "caveats": [],
+      "estimated": false,
+      "provenance": "backtest",
+      "sample_size": null,
+      "unit": "USD",
+      "value": -20.06468563374789
+     },
+     "key": "2 Wed",
+     "net_pnl": {
+      "as_of": null,
+      "caveats": [],
+      "estimated": false,
+      "provenance": "backtest",
+      "sample_size": null,
+      "unit": "USD",
+      "value": -40.12937126749578
+     },
+     "profit_factor": {
+      "as_of": null,
+      "caveats": [],
+      "estimated": false,
+      "provenance": "backtest",
+      "sample_size": null,
+      "unit": "ratio",
+      "value": 0.0
+     },
+     "trades": {
+      "as_of": null,
+      "caveats": [],
+      "estimated": false,
+      "provenance": "backtest",
+      "sample_size": null,
+      "unit": "count",
+      "value": 2.0
+     },
+     "win_rate_pct": {
+      "as_of": null,
+      "caveats": [],
+      "estimated": false,
+      "provenance": "backtest",
+      "sample_size": null,
+      "unit": "pct",
+      "value": 0.0
+     }
+    },
+    {
+     "avg_bars_held": {
+      "as_of": null,
+      "caveats": [],
+      "estimated": false,
+      "provenance": "backtest",
+      "sample_size": null,
+      "unit": "bars",
+      "value": 13.0
+     },
+     "expectancy": {
+      "as_of": null,
+      "caveats": [],
+      "estimated": false,
+      "provenance": "backtest",
+      "sample_size": null,
+      "unit": "USD",
+      "value": -101.35306346625573
+     },
+     "key": "3 Thu",
+     "net_pnl": {
+      "as_of": null,
+      "caveats": [],
+      "estimated": false,
+      "provenance": "backtest",
+      "sample_size": null,
+      "unit": "USD",
+      "value": -101.35306346625573
+     },
+     "profit_factor": {
+      "as_of": null,
+      "caveats": [],
+      "estimated": false,
+      "provenance": "backtest",
+      "sample_size": null,
+      "unit": "ratio",
+      "value": 0.0
+     },
+     "trades": {
+      "as_of": null,
+      "caveats": [],
+      "estimated": false,
+      "provenance": "backtest",
+      "sample_size": null,
+      "unit": "count",
+      "value": 1.0
+     },
+     "win_rate_pct": {
+      "as_of": null,
+      "caveats": [],
+      "estimated": false,
+      "provenance": "backtest",
+      "sample_size": null,
+      "unit": "pct",
+      "value": 0.0
+     }
+    },
+    {
+     "avg_bars_held": {
+      "as_of": null,
+      "caveats": [],
+      "estimated": false,
+      "provenance": "backtest",
+      "sample_size": null,
+      "unit": "bars",
+      "value": 19.0
+     },
+     "expectancy": {
+      "as_of": null,
+      "caveats": [],
+      "estimated": false,
+      "provenance": "backtest",
+      "sample_size": null,
+      "unit": "USD",
+      "value": -102.23913312686454
+     },
+     "key": "4 Fri",
+     "net_pnl": {
+      "as_of": null,
+      "caveats": [],
+      "estimated": false,
+      "provenance": "backtest",
+      "sample_size": null,
+      "unit": "USD",
+      "value": -204.4782662537291
+     },
+     "profit_factor": {
+      "as_of": null,
+      "caveats": [],
+      "estimated": false,
+      "provenance": "backtest",
+      "sample_size": null,
+      "unit": "ratio",
+      "value": 0.0
+     },
+     "trades": {
+      "as_of": null,
+      "caveats": [],
+      "estimated": false,
+      "provenance": "backtest",
+      "sample_size": null,
+      "unit": "count",
+      "value": 2.0
+     },
+     "win_rate_pct": {
+      "as_of": null,
+      "caveats": [],
+      "estimated": false,
+      "provenance": "backtest",
+      "sample_size": null,
+      "unit": "pct",
+      "value": 0.0
+     }
+    }
+   ],
+   "year": [
+    {
+     "avg_bars_held": {
+      "as_of": null,
+      "caveats": [],
+      "estimated": false,
+      "provenance": "backtest",
+      "sample_size": null,
+      "unit": "bars",
+      "value": 20.142857142857142
+     },
+     "expectancy": {
+      "as_of": null,
+      "caveats": [],
+      "estimated": false,
+      "provenance": "backtest",
+      "sample_size": null,
+      "unit": "USD",
+      "value": 8.459999650035659
+     },
+     "key": "2024",
+     "net_pnl": {
+      "as_of": null,
+      "caveats": [],
+      "estimated": false,
+      "provenance": "backtest",
+      "sample_size": null,
+      "unit": "USD",
+      "value": 59.219997550249616
+     },
+     "profit_factor": {
+      "as_of": null,
+      "caveats": [],
+      "estimated": false,
+      "provenance": "backtest",
+      "sample_size": null,
+      "unit": "ratio",
+      "value": 1.171175504562273
+     },
+     "trades": {
+      "as_of": null,
+      "caveats": [],
+      "estimated": false,
+      "provenance": "backtest",
+      "sample_size": null,
+      "unit": "count",
+      "value": 7.0
+     },
+     "win_rate_pct": {
+      "as_of": null,
+      "caveats": [],
+      "estimated": false,
+      "provenance": "backtest",
+      "sample_size": null,
+      "unit": "pct",
+      "value": 28.571428571428573
+     }
+    }
+   ]
+  },
+  "run_id": "bt_0002"
+ },
+ "source": {
+  "as_of": "2026-10-19T00:00:00Z",
+  "detail": "Research ledger backtest bt_0002, trade ledger.",
+  "kind": "live"
+ }
+}

@@ -1,0 +1,974 @@
+{
+ "caveats": [
+  {
+   "affects": "robustness",
+   "code": "advisory_diagnostic",
+   "direction": "unknown",
+   "message": "Advisory diagnostic: reported beside the ladder verdict, never read by a gate, a threshold or a pre-registration.",
+   "severity": "info"
+  }
+ ],
+ "data": {
+  "execution": null,
+  "lookahead": null,
+  "method": "OHLC perturbed by seeded uniform noise of +/- x ATR(14) of the previous bar, bars made valid again (high >= max(open, close), low <= min(open, close)), re-run through the engine.",
+  "noise": {
+   "atr_period": {
+    "as_of": null,
+    "caveats": [],
+    "estimated": false,
+    "provenance": "backtest",
+    "sample_size": null,
+    "unit": "bars",
+    "value": 14.0
+   },
+   "baseline": {
+    "ledger_sha256": "27938287e0b894509f5b0473c80c3b7f016ef2edcbcdc41e3bea4e65fe39c437",
+    "metrics": {
+     "cagr_pct": {
+      "as_of": null,
+      "caveats": [],
+      "estimated": false,
+      "provenance": "backtest",
+      "sample_size": null,
+      "unit": "pct",
+      "value": 0.6765768665051519
+     },
+     "calmar": {
+      "as_of": null,
+      "caveats": [],
+      "estimated": false,
+      "provenance": "backtest",
+      "sample_size": null,
+      "unit": "ratio",
+      "value": 0.19077664100369343
+     },
+     "expectancy": {
+      "as_of": null,
+      "caveats": [],
+      "estimated": false,
+      "provenance": "backtest",
+      "sample_size": null,
+      "unit": "USD",
+      "value": 8.459999650035659
+     },
+     "max_drawdown_pct": {
+      "as_of": null,
+      "caveats": [],
+      "estimated": false,
+      "provenance": "backtest",
+      "sample_size": null,
+      "unit": "pct",
+      "value": -3.5464345264997794
+     },
+     "n_trades": {
+      "as_of": null,
+      "caveats": [],
+      "estimated": false,
+      "provenance": "backtest",
+      "sample_size": null,
+      "unit": "count",
+      "value": 7.0
+     },
+     "net_profit": {
+      "as_of": null,
+      "caveats": [],
+      "estimated": false,
+      "provenance": "backtest",
+      "sample_size": null,
+      "unit": "USD",
+      "value": 59.21999755024808
+     },
+     "profit_factor": {
+      "as_of": null,
+      "caveats": [],
+      "estimated": false,
+      "provenance": "backtest",
+      "sample_size": null,
+      "unit": "ratio",
+      "value": 1.171175504562273
+     },
+     "sharpe": {
+      "as_of": null,
+      "caveats": [],
+      "estimated": false,
+      "provenance": "backtest",
+      "sample_size": null,
+      "unit": "ratio",
+      "value": 0.22904557509554796
+     },
+     "sortino": {
+      "as_of": null,
+      "caveats": [],
+      "estimated": false,
+      "provenance": "backtest",
+      "sample_size": null,
+      "unit": "ratio",
+      "value": 0.0710413843120632
+     },
+     "total_costs": {
+      "as_of": null,
+      "caveats": [],
+      "estimated": false,
+      "provenance": "backtest",
+      "sample_size": null,
+      "unit": "USD",
+      "value": 78.3371131736755
+     },
+     "total_return_pct": {
+      "as_of": null,
+      "caveats": [],
+      "estimated": false,
+      "provenance": "backtest",
+      "sample_size": null,
+      "unit": "pct",
+      "value": 0.5921999755024832
+     },
+     "win_rate_pct": {
+      "as_of": null,
+      "caveats": [],
+      "estimated": false,
+      "provenance": "backtest",
+      "sample_size": null,
+      "unit": "pct",
+      "value": 28.57142857142857
+     }
+    },
+    "profile": "IG_REALISTIC",
+    "rejections": {},
+    "signals_emitted": {
+     "as_of": null,
+     "caveats": [],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "count",
+     "value": 7.0
+    }
+   },
+   "rows": [
+    {
+     "atr_fraction": "0.1 ATR",
+     "degradation": {
+      "as_of": null,
+      "caveats": [],
+      "estimated": true,
+      "provenance": "backtest",
+      "sample_size": null,
+      "unit": "ratio",
+      "value": 3.589584392495481
+     },
+     "net_profit": {
+      "mean": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": 8,
+       "unit": "USD",
+       "value": 245.66956989894993
+      },
+      "n": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": false,
+       "provenance": "backtest",
+       "sample_size": null,
+       "unit": "count",
+       "value": 8.0
+      },
+      "p25": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": 8,
+       "unit": "USD",
+       "value": 141.05307117289703
+      },
+      "p5": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": 8,
+       "unit": "USD",
+       "value": 21.881144868627874
+      },
+      "p50": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": 8,
+       "unit": "USD",
+       "value": 212.57517892999113
+      },
+      "p75": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": 8,
+       "unit": "USD",
+       "value": 349.43336582502025
+      },
+      "p95": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": 8,
+       "unit": "USD",
+       "value": 507.109533608337
+      }
+     },
+     "profitable_share": {
+      "as_of": null,
+      "caveats": [],
+      "estimated": true,
+      "provenance": "backtest",
+      "sample_size": null,
+      "unit": "ratio",
+      "value": 0.875
+     },
+     "runs": {
+      "as_of": null,
+      "caveats": [],
+      "estimated": false,
+      "provenance": "backtest",
+      "sample_size": null,
+      "unit": "count",
+      "value": 8.0
+     },
+     "sharpe": {
+      "mean": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": 8,
+       "unit": "ratio",
+       "value": 0.7903555454157685
+      },
+      "n": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": false,
+       "provenance": "backtest",
+       "sample_size": null,
+       "unit": "count",
+       "value": 8.0
+      },
+      "p25": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": 8,
+       "unit": "ratio",
+       "value": 0.5114041159202727
+      },
+      "p5": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": 8,
+       "unit": "ratio",
+       "value": 0.09121850001620745
+      },
+      "p50": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": 8,
+       "unit": "ratio",
+       "value": 0.7381096077257558
+      },
+      "p75": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": 8,
+       "unit": "ratio",
+       "value": 1.1307574069137476
+      },
+      "p95": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": 8,
+       "unit": "ratio",
+       "value": 1.4968588175708706
+      }
+     },
+     "trades": {
+      "mean": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": 8,
+       "unit": "count",
+       "value": 7.125
+      },
+      "n": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": false,
+       "provenance": "backtest",
+       "sample_size": null,
+       "unit": "count",
+       "value": 8.0
+      },
+      "p25": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": 8,
+       "unit": "count",
+       "value": 6.0
+      },
+      "p5": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": 8,
+       "unit": "count",
+       "value": 6.0
+      },
+      "p50": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": 8,
+       "unit": "count",
+       "value": 7.5
+      },
+      "p75": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": 8,
+       "unit": "count",
+       "value": 8.0
+      },
+      "p95": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": 8,
+       "unit": "count",
+       "value": 8.0
+      }
+     }
+    },
+    {
+     "atr_fraction": "0.25 ATR",
+     "degradation": {
+      "as_of": null,
+      "caveats": [],
+      "estimated": true,
+      "provenance": "backtest",
+      "sample_size": null,
+      "unit": "ratio",
+      "value": 0.033563002257187086
+     },
+     "net_profit": {
+      "mean": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": 8,
+       "unit": "USD",
+       "value": 123.57875736422648
+      },
+      "n": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": false,
+       "provenance": "backtest",
+       "sample_size": null,
+       "unit": "count",
+       "value": 8.0
+      },
+      "p25": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": 8,
+       "unit": "USD",
+       "value": -70.49824734704725
+      },
+      "p5": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": 8,
+       "unit": "USD",
+       "value": -181.52880852169292
+      },
+      "p50": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": 8,
+       "unit": "USD",
+       "value": 1.98760091144959
+      },
+      "p75": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": 8,
+       "unit": "USD",
+       "value": 335.4728001074959
+      },
+      "p95": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": 8,
+       "unit": "USD",
+       "value": 562.253838304892
+      }
+     },
+     "profitable_share": {
+      "as_of": null,
+      "caveats": [],
+      "estimated": true,
+      "provenance": "backtest",
+      "sample_size": null,
+      "unit": "ratio",
+      "value": 0.5
+     },
+     "runs": {
+      "as_of": null,
+      "caveats": [],
+      "estimated": false,
+      "provenance": "backtest",
+      "sample_size": null,
+      "unit": "count",
+      "value": 8.0
+     },
+     "sharpe": {
+      "mean": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": 8,
+       "unit": "ratio",
+       "value": 0.3254739447461284
+      },
+      "n": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": false,
+       "provenance": "backtest",
+       "sample_size": null,
+       "unit": "count",
+       "value": 8.0
+      },
+      "p25": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": 8,
+       "unit": "ratio",
+       "value": -0.256492625820735
+      },
+      "p5": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": 8,
+       "unit": "ratio",
+       "value": -0.7599946416457705
+      },
+      "p50": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": 8,
+       "unit": "ratio",
+       "value": 0.022912906560263617
+      },
+      "p75": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": 8,
+       "unit": "ratio",
+       "value": 1.2059612296018454
+      },
+      "p95": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": 8,
+       "unit": "ratio",
+       "value": 1.5084733692685148
+      }
+     },
+     "trades": {
+      "mean": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": 8,
+       "unit": "count",
+       "value": 7.0
+      },
+      "n": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": false,
+       "provenance": "backtest",
+       "sample_size": null,
+       "unit": "count",
+       "value": 8.0
+      },
+      "p25": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": 8,
+       "unit": "count",
+       "value": 6.0
+      },
+      "p5": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": 8,
+       "unit": "count",
+       "value": 6.0
+      },
+      "p50": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": 8,
+       "unit": "count",
+       "value": 6.5
+      },
+      "p75": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": 8,
+       "unit": "count",
+       "value": 7.25
+      },
+      "p95": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": 8,
+       "unit": "count",
+       "value": 9.299999999999999
+      }
+     }
+    },
+    {
+     "atr_fraction": "0.5 ATR",
+     "degradation": {
+      "as_of": null,
+      "caveats": [],
+      "estimated": true,
+      "provenance": "backtest",
+      "sample_size": null,
+      "unit": "ratio",
+      "value": 2.3283031857416
+     },
+     "net_profit": {
+      "mean": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": 8,
+       "unit": "USD",
+       "value": 100.93687255488953
+      },
+      "n": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": false,
+       "provenance": "backtest",
+       "sample_size": null,
+       "unit": "count",
+       "value": 8.0
+      },
+      "p25": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": 8,
+       "unit": "USD",
+       "value": -71.98871445202622
+      },
+      "p5": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": 8,
+       "unit": "USD",
+       "value": -206.31724735937433
+      },
+      "p50": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": 8,
+       "unit": "USD",
+       "value": 137.88210895585235
+      },
+      "p75": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": 8,
+       "unit": "USD",
+       "value": 264.20251776878195
+      },
+      "p95": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": 8,
+       "unit": "USD",
+       "value": 366.98855573708676
+      }
+     },
+     "profitable_share": {
+      "as_of": null,
+      "caveats": [],
+      "estimated": true,
+      "provenance": "backtest",
+      "sample_size": null,
+      "unit": "ratio",
+      "value": 0.625
+     },
+     "runs": {
+      "as_of": null,
+      "caveats": [],
+      "estimated": false,
+      "provenance": "backtest",
+      "sample_size": null,
+      "unit": "count",
+      "value": 8.0
+     },
+     "sharpe": {
+      "mean": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": 8,
+       "unit": "ratio",
+       "value": 0.3503393092201377
+      },
+      "n": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": false,
+       "provenance": "backtest",
+       "sample_size": null,
+       "unit": "count",
+       "value": 8.0
+      },
+      "p25": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": 8,
+       "unit": "ratio",
+       "value": -0.2815636341696162
+      },
+      "p5": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": 8,
+       "unit": "ratio",
+       "value": -0.8130853077060562
+      },
+      "p50": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": 8,
+       "unit": "ratio",
+       "value": 0.5124856698716913
+      },
+      "p75": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": 8,
+       "unit": "ratio",
+       "value": 1.1323490990274578
+      },
+      "p95": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": 8,
+       "unit": "ratio",
+       "value": 1.1744107640259434
+      }
+     },
+     "trades": {
+      "mean": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": 8,
+       "unit": "count",
+       "value": 6.75
+      },
+      "n": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": false,
+       "provenance": "backtest",
+       "sample_size": null,
+       "unit": "count",
+       "value": 8.0
+      },
+      "p25": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": 8,
+       "unit": "count",
+       "value": 6.0
+      },
+      "p5": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": 8,
+       "unit": "count",
+       "value": 5.35
+      },
+      "p50": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": 8,
+       "unit": "count",
+       "value": 7.0
+      },
+      "p75": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": 8,
+       "unit": "count",
+       "value": 7.25
+      },
+      "p95": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": true,
+       "provenance": "backtest",
+       "sample_size": 8,
+       "unit": "count",
+       "value": 8.0
+      }
+     }
+    }
+   ],
+   "seed": 20261019
+  },
+  "perturbation": null,
+  "provenance": {
+   "boundary": {
+    "basis": "provisional",
+    "dataset_version_ids": [
+     "inmem:EURUSD:H4:2400"
+    ],
+    "detail": "No holdout segment is defined for ['inmem:EURUSD:H4:2400'] yet, so the final 20% of the run's own bar span (from 2024-11-15T20:48:00+00:00) is treated as reserved: the fraction the ladder would reserve. Conservative when the run covers only part of its dataset.",
+    "start": "2024-11-15T20:48:00+00:00"
+   },
+   "covers_stored_run": false,
+   "dataset_version_id": "inmem:EURUSD:H4:1920",
+   "engine": {
+    "account_ccy": "USD",
+    "construction": "none",
+    "engine_version": "engine_v4_time_units",
+    "initial_balance": 10000.0,
+    "profile": {
+     "commission": "CommissionModel(per_trade=0.0, per_unit=0.0, bps_of_notional=0.0, minimum=0.0, currency='quote')",
+     "financing": "FinancingModel(annual_bps_long=290.0, annual_bps_short=110.0, basis_days=365.0, currency='quote')",
+     "guaranteed_stop_premium_pips": 3.0,
+     "key_version": "profile_v2",
+     "latency_bars": 0,
+     "min_deal_size": 0.0,
+     "min_stop_by_asset_class": [
+      [
+       "bond",
+       0.0,
+       3.0
+      ],
+      [
+       "commodity",
+       0.0,
+       3.0
+      ],
+      [
+       "crypto",
+       0.0,
+       3.0
+      ],
+      [
+       "energy",
+       0.0,
+       3.0
+      ],
+      [
+       "equity",
+       0.0,
+       3.0
+      ],
+      [
+       "fx_cross",
+       4.0,
+       0.0
+      ],
+      [
+       "fx_major",
+       4.0,
+       0.0
+      ],
+      [
+       "index",
+       0.0,
+       3.0
+      ],
+      [
+       "metal",
+       0.0,
+       3.0
+      ]
+     ],
+     "min_stop_distance_pips": 4.0,
+     "min_stop_policy": "reject",
+     "name": "IG_REALISTIC",
+     "partial_fill_min_fraction": 1.0,
+     "partial_fill_probability": 0.0,
+     "rejection_probability": 0.005,
+     "seed": 20260919,
+     "slippage": "ProbabilisticAdverseTickSlippage(probability=0.3, tick_pips=0.4, max_ticks=3)",
+     "spread": "TimeOfDayWideningSpread(base=TypicalMultiplierSpread(multiplier=1.0, floor_pips=0.6), windows=((21, 23, 3.0), (23, 6, 1.8)))",
+     "stale_price_max_gap_multiple": 3.0,
+     "use_guaranteed_stops": false
+    },
+    "risk_fraction": 0.01,
+    "sizing_policy": "fixed_fractional_v2"
+   },
+   "engine_runs": {
+    "as_of": null,
+    "caveats": [],
+    "estimated": false,
+    "provenance": "backtest",
+    "sample_size": null,
+    "unit": "count",
+    "value": 25.0
+   },
+   "reproduces_stored": null,
+   "window_bars": {
+    "as_of": null,
+    "caveats": [],
+    "estimated": false,
+    "provenance": "backtest",
+    "sample_size": null,
+    "unit": "bars",
+    "value": 1920.0
+   },
+   "window_end": "2024-11-15T20:48:00Z",
+   "window_start": "2024-01-01T00:00:00Z"
+  },
+  "random": null,
+  "run_id": "bt_0002",
+  "status": {
+   "cache_key": "f9ec4ed41a8a2c58207174f1ff509669b3392b54dd7782a4b836e4ae56a33914",
+   "computed_at": "2026-10-19T00:00:00Z",
+   "error": "",
+   "job_id": "job_0000000000000001",
+   "kind": "noise",
+   "options": {
+    "levels": [
+     0.1,
+     0.25,
+     0.5
+    ],
+    "n": 8,
+    "seed": 20261019
+   },
+   "progress": {
+    "as_of": null,
+    "caveats": [],
+    "estimated": false,
+    "provenance": "backtest",
+    "sample_size": 25,
+    "unit": "ratio",
+    "value": 1.0
+   },
+   "stage": "noise 0.5 ATR",
+   "status": "done",
+   "title": "Price-noise test",
+   "updated_at": "2026-10-19T00:00:00Z"
+  },
+  "warmup": null
+ },
+ "source": {
+  "as_of": "2026-10-19T00:00:00Z",
+  "detail": "Robustness cache (written by the research worker), read-only.",
+  "kind": "live"
+ }
+}

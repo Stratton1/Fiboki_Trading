@@ -11084,6 +11084,18 @@
       },
       "WarmupRunView": {
         "properties": {
+          "compared_from": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Compared From"
+          },
           "extra_bars": {
             "$ref": "#/components/schemas/Figure"
           },
@@ -11106,8 +11118,16 @@
             "title": "Indicator Columns",
             "type": "array"
           },
+          "indicators_converged": {
+            "title": "Indicators Converged",
+            "type": "boolean"
+          },
           "metrics": {
             "$ref": "#/components/schemas/RunMetricsView"
+          },
+          "mode": {
+            "title": "Mode",
+            "type": "string"
           },
           "signals_changed_after_warmup": {
             "$ref": "#/components/schemas/Figure"
@@ -11122,39 +11142,42 @@
             "title": "Stable",
             "type": "boolean"
           },
-          "trades_baseline": {
-            "$ref": "#/components/schemas/Figure"
-          },
           "trades_changed": {
             "$ref": "#/components/schemas/Figure"
           },
-          "trades_extended": {
+          "trades_long": {
             "$ref": "#/components/schemas/Figure"
           },
           "trades_matched": {
             "$ref": "#/components/schemas/Figure"
           },
-          "trades_only_baseline": {
+          "trades_only_long": {
             "$ref": "#/components/schemas/Figure"
           },
-          "trades_only_extended": {
+          "trades_only_short": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "trades_short": {
             "$ref": "#/components/schemas/Figure"
           }
         },
         "required": [
+          "mode",
+          "compared_from",
           "extra_bars",
           "signals_compared",
           "signals_changed_after_warmup",
           "first_changed_signal",
           "signals_changed_in_cold_region",
           "indicator_columns",
-          "trades_baseline",
-          "trades_extended",
+          "trades_short",
+          "trades_long",
           "trades_matched",
-          "trades_only_baseline",
-          "trades_only_extended",
+          "trades_only_short",
+          "trades_only_long",
           "trades_changed",
           "metrics",
+          "indicators_converged",
           "stable"
         ],
         "title": "WarmupRunView",

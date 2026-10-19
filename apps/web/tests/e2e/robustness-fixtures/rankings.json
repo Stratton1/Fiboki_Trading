@@ -1,0 +1,423 @@
+{
+ "caveats": [
+  {
+   "affects": "ranking",
+   "code": "advisory_diagnostic",
+   "direction": "unknown",
+   "message": "Advisory diagnostic: reported beside the ladder verdict, never read by a gate, a threshold or a pre-registration.",
+   "severity": "info"
+  }
+ ],
+ "data": {
+  "min_trades": 80,
+  "note": "Display and ranking only. The ladder ranks and promotes on its own versioned gate set (validation/gates.py); this ordering changes no verdict. Every objective is computed on the research slice of each run (holdout excluded), so it can differ from the stored headline.",
+  "objective": "sharpe",
+  "objectives": [
+   {
+    "definition": "Sum of net trade P&L over the research slice.",
+    "key": "net_profit",
+    "label": "Net profit",
+    "neutral": {
+     "as_of": null,
+     "caveats": [],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "account",
+     "value": 0.0
+    },
+    "unit": "account"
+   },
+   {
+    "definition": "Annualised Sharpe of daily (17:00 New York) equity returns.",
+    "key": "sharpe",
+    "label": "Sharpe",
+    "neutral": {
+     "as_of": null,
+     "caveats": [],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "ratio",
+     "value": 0.0
+    },
+    "unit": "ratio"
+   },
+   {
+    "definition": "Annualised mean daily return over downside deviation.",
+    "key": "sortino",
+    "label": "Sortino",
+    "neutral": {
+     "as_of": null,
+     "caveats": [],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "ratio",
+     "value": 0.0
+    },
+    "unit": "ratio"
+   },
+   {
+    "definition": "CAGR over the absolute maximum drawdown.",
+    "key": "calmar",
+    "label": "Calmar",
+    "neutral": {
+     "as_of": null,
+     "caveats": [],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "ratio",
+     "value": 0.0
+    },
+    "unit": "ratio"
+   },
+   {
+    "definition": "Van Tharp's system quality number: sqrt(n) x mean / sd of per-trade R (net P&L when a stop was not recorded for every trade).",
+    "key": "sqn",
+    "label": "SQN",
+    "neutral": {
+     "as_of": null,
+     "caveats": [],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "ratio",
+     "value": 0.0
+    },
+    "unit": "ratio"
+   },
+   {
+    "definition": "Mean net P&L per trade.",
+    "key": "expectancy",
+    "label": "Expectancy",
+    "neutral": {
+     "as_of": null,
+     "caveats": [],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "account",
+     "value": 0.0
+    },
+    "unit": "account"
+   },
+   {
+    "definition": "Gross winning P&L over gross losing P&L.",
+    "key": "profit_factor",
+    "label": "Profit factor",
+    "neutral": {
+     "as_of": null,
+     "caveats": [],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "ratio",
+     "value": 1.0
+    },
+    "unit": "ratio"
+   }
+  ],
+  "penalty": "Below 80 trades the favourable part of every objective is shrunk towards its neutral value by n / 80 (profit factor towards 1, the rest towards 0); an unfavourable value is never shrunk, so the penalty cannot flatter a loser.",
+  "rows": [
+   {
+    "basis": "",
+    "holdout_excluded": {
+     "as_of": null,
+     "caveats": [],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "count",
+     "value": 6.0
+    },
+    "penalised": true,
+    "penalty_factor": {
+     "as_of": null,
+     "caveats": [],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "ratio",
+     "value": 0.1125
+    },
+    "rank": 1,
+    "raw": {
+     "as_of": null,
+     "caveats": [],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": 9,
+     "unit": "ratio",
+     "value": 0.3764966333135323
+    },
+    "run": {
+     "created_at": "2026-10-19T00:00:00Z",
+     "dataset_version_ids": [
+      "inmem:EURUSD:H4:2400"
+     ],
+     "engine_current": true,
+     "engine_version": "engine_v4_time_units",
+     "gate_report_id": null,
+     "gate_verdict": "not_evaluated",
+     "instruments": [
+      "EURUSD"
+     ],
+     "kind": "backtest",
+     "label": "",
+     "provenance": "backtest",
+     "run_id": "bt_0003",
+     "strategy_id": "ichimoku_kumo_trend",
+     "superseded": false,
+     "timeframe": "H4",
+     "trade_count": {
+      "as_of": null,
+      "caveats": [],
+      "estimated": false,
+      "provenance": "backtest",
+      "sample_size": null,
+      "unit": "count",
+      "value": 15.0
+     },
+     "trades_on_symbol": {
+      "as_of": null,
+      "caveats": [],
+      "estimated": false,
+      "provenance": "backtest",
+      "sample_size": null,
+      "unit": "count",
+      "value": 15.0
+     },
+     "trades_with_stops": {
+      "as_of": null,
+      "caveats": [],
+      "estimated": false,
+      "provenance": "backtest",
+      "sample_size": null,
+      "unit": "count",
+      "value": 15.0
+     }
+    },
+    "score": {
+     "as_of": null,
+     "caveats": [],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": 9,
+     "unit": "ratio",
+     "value": 0.04235587124777238
+    },
+    "trades": {
+     "as_of": null,
+     "caveats": [],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "count",
+     "value": 9.0
+    }
+   },
+   {
+    "basis": "",
+    "holdout_excluded": {
+     "as_of": null,
+     "caveats": [],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "count",
+     "value": 2.0
+    },
+    "penalised": true,
+    "penalty_factor": {
+     "as_of": null,
+     "caveats": [],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "ratio",
+     "value": 0.0875
+    },
+    "rank": 2,
+    "raw": {
+     "as_of": null,
+     "caveats": [],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": 7,
+     "unit": "ratio",
+     "value": 0.22904557509554796
+    },
+    "run": {
+     "created_at": "2026-10-19T00:00:00Z",
+     "dataset_version_ids": [
+      "inmem:EURUSD:H4:2400"
+     ],
+     "engine_current": true,
+     "engine_version": "engine_v4_time_units",
+     "gate_report_id": null,
+     "gate_verdict": "not_evaluated",
+     "instruments": [
+      "EURUSD"
+     ],
+     "kind": "backtest",
+     "label": "",
+     "provenance": "backtest",
+     "run_id": "bt_0002",
+     "strategy_id": "ichimoku_kumo_trend",
+     "superseded": false,
+     "timeframe": "H4",
+     "trade_count": {
+      "as_of": null,
+      "caveats": [],
+      "estimated": false,
+      "provenance": "backtest",
+      "sample_size": null,
+      "unit": "count",
+      "value": 9.0
+     },
+     "trades_on_symbol": {
+      "as_of": null,
+      "caveats": [],
+      "estimated": false,
+      "provenance": "backtest",
+      "sample_size": null,
+      "unit": "count",
+      "value": 9.0
+     },
+     "trades_with_stops": {
+      "as_of": null,
+      "caveats": [],
+      "estimated": false,
+      "provenance": "backtest",
+      "sample_size": null,
+      "unit": "count",
+      "value": 9.0
+     }
+    },
+    "score": {
+     "as_of": null,
+     "caveats": [],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": 7,
+     "unit": "ratio",
+     "value": 0.020041487820860446
+    },
+    "trades": {
+     "as_of": null,
+     "caveats": [],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "count",
+     "value": 7.0
+    }
+   },
+   {
+    "basis": "",
+    "holdout_excluded": {
+     "as_of": null,
+     "caveats": [],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "count",
+     "value": 3.0
+    },
+    "penalised": false,
+    "penalty_factor": {
+     "as_of": null,
+     "caveats": [],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "ratio",
+     "value": 0.05
+    },
+    "rank": 3,
+    "raw": {
+     "as_of": null,
+     "caveats": [],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": 4,
+     "unit": "ratio",
+     "value": -0.1316230458745209
+    },
+    "run": {
+     "created_at": "2026-10-19T00:00:00Z",
+     "dataset_version_ids": [
+      "inmem:EURUSD:H4:2400"
+     ],
+     "engine_current": true,
+     "engine_version": "engine_v4_time_units",
+     "gate_report_id": null,
+     "gate_verdict": "not_evaluated",
+     "instruments": [
+      "EURUSD"
+     ],
+     "kind": "backtest",
+     "label": "",
+     "provenance": "backtest",
+     "run_id": "bt_0001",
+     "strategy_id": "ichimoku_kumo_trend",
+     "superseded": false,
+     "timeframe": "H4",
+     "trade_count": {
+      "as_of": null,
+      "caveats": [],
+      "estimated": false,
+      "provenance": "backtest",
+      "sample_size": null,
+      "unit": "count",
+      "value": 7.0
+     },
+     "trades_on_symbol": {
+      "as_of": null,
+      "caveats": [],
+      "estimated": false,
+      "provenance": "backtest",
+      "sample_size": null,
+      "unit": "count",
+      "value": 7.0
+     },
+     "trades_with_stops": {
+      "as_of": null,
+      "caveats": [],
+      "estimated": false,
+      "provenance": "backtest",
+      "sample_size": null,
+      "unit": "count",
+      "value": 7.0
+     }
+    },
+    "score": {
+     "as_of": null,
+     "caveats": [],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": 4,
+     "unit": "ratio",
+     "value": -0.1316230458745209
+    },
+    "trades": {
+     "as_of": null,
+     "caveats": [],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "count",
+     "value": 4.0
+    }
+   }
+  ],
+  "unranked": []
+ },
+ "source": {
+  "as_of": "2026-10-19T00:00:00Z",
+  "detail": "Research ledger, read-only.",
+  "kind": "live"
+ }
+}

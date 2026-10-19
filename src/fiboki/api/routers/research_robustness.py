@@ -952,19 +952,23 @@ class IndicatorDriftView(BaseModel):
 class WarmupRunView(BaseModel):
     model_config = ConfigDict(frozen=True)
 
+    #: ``extended`` (N earlier bars prepended) or ``late_start`` (the short run starts N bars later).
+    mode: str
+    compared_from: datetime | None
     extra_bars: Figure
     signals_compared: Figure
     signals_changed_after_warmup: Figure
     first_changed_signal: datetime | None
     signals_changed_in_cold_region: Figure
     indicator_columns: list[IndicatorDriftView]
-    trades_baseline: Figure
-    trades_extended: Figure
+    trades_short: Figure
+    trades_long: Figure
     trades_matched: Figure
-    trades_only_baseline: Figure
-    trades_only_extended: Figure
+    trades_only_short: Figure
+    trades_only_long: Figure
     trades_changed: Figure
     metrics: RunMetricsView
+    indicators_converged: bool
     stable: bool
 
 
@@ -1114,10 +1118,11 @@ class RerunResultView(BaseModel):
 
 
 METHODS = {
-    "warmup": ("The binding re-run through the engine (validation/engine_evaluator.py) cold, as stored, and "
-               "with N extra bars of history before the window; signals, indicator columns and trades are "
-               "compared after the baseline's own warm-up. A change there means a recursive indicator has "
-               "not converged by the declared warm-up (Freqtrade recursive-analysis)."),
+    "warmup": ("The binding re-run through the engine (validation/engine_evaluator.py) with N bars more and N "
+               "bars less history: N earlier bars prepended when they exist (extended), otherwise a second run "
+               "starting cold N bars later (late start). Signals, indicator columns and trades are compared "
+               "over the shorter run after its own declared warm-up; a change there means a recursive "
+               "indicator has not converged by the declared warm-up (Freqtrade recursive-analysis)."),
     "lookahead": ("Signals and indicator columns at seeded sampled bars, recomputed on data truncated at that "
                   "bar, compared with the full-data values. Any difference is look-ahead (Freqtrade "
                   "lookahead-analysis)."),
@@ -1140,6 +1145,7 @@ def _result_view(kind: str, result: dict[str, Any], ccy: str) -> dict[str, Any]:
     base = _brief(out.get("baseline"), ccy)
     if kind == "warmup":
         runs = [WarmupRunView(
+            mode=str(r.get("mode") or ""), compared_from=_parse(r.get("compared_from")),
             extra_bars=_count(r.get("extra_bars")), signals_compared=_count(r.get("signals_compared")),
             signals_changed_after_warmup=_count(r.get("signals_changed_after_warmup")),
             first_changed_signal=_parse(r.get("first_changed_signal")),
@@ -1148,10 +1154,11 @@ def _result_view(kind: str, result: dict[str, Any], ccy: str) -> dict[str, Any]:
                 column=str(c["column"]), max_abs_diff=_fig(c.get("max_abs_diff"), P, "price"),
                 max_rel_diff=_fig(c.get("max_rel_diff"), P, "ratio"), bars_differing=_count(c.get("bars_differing")),
                 last_differing_bar=_parse(c.get("last_differing_bar"))) for c in r.get("indicator_columns") or []],
-            trades_baseline=_count(r.get("trades_baseline")), trades_extended=_count(r.get("trades_extended")),
-            trades_matched=_count(r.get("trades_matched")), trades_only_baseline=_count(r.get("trades_only_baseline")),
-            trades_only_extended=_count(r.get("trades_only_extended")), trades_changed=_count(r.get("trades_changed")),
-            metrics=_metrics(r.get("metrics"), ccy), stable=bool(r.get("stable")),
+            trades_short=_count(r.get("trades_short")), trades_long=_count(r.get("trades_long")),
+            trades_matched=_count(r.get("trades_matched")), trades_only_short=_count(r.get("trades_only_short")),
+            trades_only_long=_count(r.get("trades_only_long")), trades_changed=_count(r.get("trades_changed")),
+            metrics=_metrics(r.get("metrics"), ccy), indicators_converged=bool(r.get("indicators_converged")),
+            stable=bool(r.get("stable")),
         ) for r in out.get("runs") or []]
         return {"warmup": WarmupView(warmup_period=_fig(out.get("warmup_period"), P, "bars"),
                                      prologue_available=_fig(out.get("prologue_available"), P, "bars"),

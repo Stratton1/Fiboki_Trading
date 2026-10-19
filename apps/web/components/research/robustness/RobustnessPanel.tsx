@@ -558,18 +558,19 @@ function WarmupResult({ v }: { v: RerunResultView }) {
       {w.runs.map((r, i) => (
         <section key={i} className="rb-sub" aria-label={`plus ${r.extra_bars.value} bars`}>
           <h4 className="rb-h4">
-            +<Fig f={r.extra_bars} /> bars of history{" "}
-            <ToneBadge tone={findingTone(r.stable, ["STABLE", "UNSTABLE"], true)} testId="rb-warmup-run" value={String(r.stable)} />
+            {r.mode === "late_start" ? "Start " : "+"}<Fig f={r.extra_bars} /> bars {r.mode === "late_start" ? "later (less history)" : "of earlier history"}{" "}
+            <ToneBadge tone={findingTone(r.stable, ["SIGNALS STABLE", "SIGNALS OR TRADES CHANGE"], true)} testId="rb-warmup-run" value={String(r.stable)} />
+            <ToneBadge tone={findingTone(r.indicators_converged, ["INDICATORS CONVERGED", "INDICATORS STILL DRIFT"], true)} testId="rb-warmup-indicators" value={String(r.indicators_converged)} />
           </h4>
           <dl className="rs-kv">
-            <div><dt>Signals compared</dt><dd><Fig f={r.signals_compared} /></dd></div>
+            <div><dt>Signals compared</dt><dd><Fig f={r.signals_compared} /> {r.compared_from ? <span className="mono muted">from {formatTimestamp(r.compared_from)}</span> : null}</dd></div>
             <div><dt>Changed after warm-up</dt><dd><Fig f={r.signals_changed_after_warmup} /> {r.first_changed_signal ? <span className="mono muted">first {formatTimestamp(r.first_changed_signal)}</span> : null}</dd></div>
             <div><dt>Changed in cold region</dt><dd><Fig f={r.signals_changed_in_cold_region} /> <span className="muted">(expected)</span></dd></div>
-            <div><dt>Trades base / extended</dt><dd><Fig f={r.trades_baseline} /> / <Fig f={r.trades_extended} /></dd></div>
+            <div><dt>Trades short / long run</dt><dd><Fig f={r.trades_short} /> / <Fig f={r.trades_long} /></dd></div>
             <div><dt>Matched · changed</dt><dd><Fig f={r.trades_matched} /> · <Fig f={r.trades_changed} /></dd></div>
-            <div><dt>Only base · only extended</dt><dd><Fig f={r.trades_only_baseline} /> · <Fig f={r.trades_only_extended} /></dd></div>
+            <div><dt>Only short · only long</dt><dd><Fig f={r.trades_only_short} /> · <Fig f={r.trades_only_long} /></dd></div>
           </dl>
-          <MetricsStrip m={r.metrics} label="Extended run" />
+          <MetricsStrip m={r.metrics} label={r.mode === "late_start" ? "Late-start run" : "Extended run"} />
           <div className="table-wrap">
             <table className="rs-table rb-table" data-testid="rb-drift">
               <thead><tr><th scope="col">Indicator column</th><th scope="col" className="num">Max |Δ|</th><th scope="col" className="num">Max rel Δ</th><th scope="col" className="num">Bars differing</th><th scope="col">Last differing</th></tr></thead>

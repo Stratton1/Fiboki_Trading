@@ -1,0 +1,1467 @@
+{
+ "caveats": [
+  {
+   "affects": "robustness",
+   "code": "advisory_diagnostic",
+   "direction": "unknown",
+   "message": "Advisory diagnostic: reported beside the ladder verdict, never read by a gate, a threshold or a pre-registration.",
+   "severity": "info"
+  }
+ ],
+ "data": {
+  "execution": null,
+  "lookahead": null,
+  "method": "The binding re-run through the engine (validation/engine_evaluator.py) with N bars more and N bars less history: N earlier bars prepended when they exist (extended), otherwise a second run starting cold N bars later (late start). Signals, indicator columns and trades are compared over the shorter run after its own declared warm-up; a change there means a recursive indicator has not converged by the declared warm-up (Freqtrade recursive-analysis).",
+  "noise": null,
+  "perturbation": null,
+  "provenance": {
+   "boundary": {
+    "basis": "provisional",
+    "dataset_version_ids": [
+     "inmem:EURUSD:H4:2400"
+    ],
+    "detail": "No holdout segment is defined for ['inmem:EURUSD:H4:2400'] yet, so the final 20% of the run's own bar span (from 2024-11-15T20:48:00+00:00) is treated as reserved: the fraction the ladder would reserve. Conservative when the run covers only part of its dataset.",
+    "start": "2024-11-15T20:48:00+00:00"
+   },
+   "covers_stored_run": false,
+   "dataset_version_id": "inmem:EURUSD:H4:1920",
+   "engine": {
+    "account_ccy": "USD",
+    "construction": "none",
+    "engine_version": "engine_v4_time_units",
+    "initial_balance": 10000.0,
+    "profile": {
+     "commission": "CommissionModel(per_trade=0.0, per_unit=0.0, bps_of_notional=0.0, minimum=0.0, currency='quote')",
+     "financing": "FinancingModel(annual_bps_long=290.0, annual_bps_short=110.0, basis_days=365.0, currency='quote')",
+     "guaranteed_stop_premium_pips": 3.0,
+     "key_version": "profile_v2",
+     "latency_bars": 0,
+     "min_deal_size": 0.0,
+     "min_stop_by_asset_class": [
+      [
+       "bond",
+       0.0,
+       3.0
+      ],
+      [
+       "commodity",
+       0.0,
+       3.0
+      ],
+      [
+       "crypto",
+       0.0,
+       3.0
+      ],
+      [
+       "energy",
+       0.0,
+       3.0
+      ],
+      [
+       "equity",
+       0.0,
+       3.0
+      ],
+      [
+       "fx_cross",
+       4.0,
+       0.0
+      ],
+      [
+       "fx_major",
+       4.0,
+       0.0
+      ],
+      [
+       "index",
+       0.0,
+       3.0
+      ],
+      [
+       "metal",
+       0.0,
+       3.0
+      ]
+     ],
+     "min_stop_distance_pips": 4.0,
+     "min_stop_policy": "reject",
+     "name": "IG_REALISTIC",
+     "partial_fill_min_fraction": 1.0,
+     "partial_fill_probability": 0.0,
+     "rejection_probability": 0.005,
+     "seed": 20260919,
+     "slippage": "ProbabilisticAdverseTickSlippage(probability=0.3, tick_pips=0.4, max_ticks=3)",
+     "spread": "TimeOfDayWideningSpread(base=TypicalMultiplierSpread(multiplier=1.0, floor_pips=0.6), windows=((21, 23, 3.0), (23, 6, 1.8)))",
+     "stale_price_max_gap_multiple": 3.0,
+     "use_guaranteed_stops": false
+    },
+    "risk_fraction": 0.01,
+    "sizing_policy": "fixed_fractional_v2"
+   },
+   "engine_runs": {
+    "as_of": null,
+    "caveats": [],
+    "estimated": false,
+    "provenance": "backtest",
+    "sample_size": null,
+    "unit": "count",
+    "value": 3.0
+   },
+   "reproduces_stored": null,
+   "window_bars": {
+    "as_of": null,
+    "caveats": [],
+    "estimated": false,
+    "provenance": "backtest",
+    "sample_size": null,
+    "unit": "bars",
+    "value": 1920.0
+   },
+   "window_end": "2024-11-15T20:48:00Z",
+   "window_start": "2024-01-01T00:00:00Z"
+  },
+  "random": null,
+  "run_id": "bt_0002",
+  "status": {
+   "cache_key": "f98a5d9e3307d4a8d1b4af42b9f6b111a595a334dce5afb597626df675c910ef",
+   "computed_at": "2026-10-19T00:00:00Z",
+   "error": "",
+   "job_id": "job_0000000000000001",
+   "kind": "warmup",
+   "options": {
+    "extra_bars": [
+     100,
+     300
+    ]
+   },
+   "progress": {
+    "as_of": null,
+    "caveats": [],
+    "estimated": false,
+    "provenance": "backtest",
+    "sample_size": 5,
+    "unit": "ratio",
+    "value": 1.0
+   },
+   "stage": "late_start 300 bars: engine",
+   "status": "done",
+   "title": "Warm-up stability (recursive indicators)",
+   "updated_at": "2026-10-19T00:00:00Z"
+  },
+  "warmup": {
+   "baseline": {
+    "ledger_sha256": "27938287e0b894509f5b0473c80c3b7f016ef2edcbcdc41e3bea4e65fe39c437",
+    "metrics": {
+     "cagr_pct": {
+      "as_of": null,
+      "caveats": [],
+      "estimated": false,
+      "provenance": "backtest",
+      "sample_size": null,
+      "unit": "pct",
+      "value": 0.6765768665051519
+     },
+     "calmar": {
+      "as_of": null,
+      "caveats": [],
+      "estimated": false,
+      "provenance": "backtest",
+      "sample_size": null,
+      "unit": "ratio",
+      "value": 0.19077664100369343
+     },
+     "expectancy": {
+      "as_of": null,
+      "caveats": [],
+      "estimated": false,
+      "provenance": "backtest",
+      "sample_size": null,
+      "unit": "USD",
+      "value": 8.459999650035659
+     },
+     "max_drawdown_pct": {
+      "as_of": null,
+      "caveats": [],
+      "estimated": false,
+      "provenance": "backtest",
+      "sample_size": null,
+      "unit": "pct",
+      "value": -3.5464345264997794
+     },
+     "n_trades": {
+      "as_of": null,
+      "caveats": [],
+      "estimated": false,
+      "provenance": "backtest",
+      "sample_size": null,
+      "unit": "count",
+      "value": 7.0
+     },
+     "net_profit": {
+      "as_of": null,
+      "caveats": [],
+      "estimated": false,
+      "provenance": "backtest",
+      "sample_size": null,
+      "unit": "USD",
+      "value": 59.21999755024808
+     },
+     "profit_factor": {
+      "as_of": null,
+      "caveats": [],
+      "estimated": false,
+      "provenance": "backtest",
+      "sample_size": null,
+      "unit": "ratio",
+      "value": 1.171175504562273
+     },
+     "sharpe": {
+      "as_of": null,
+      "caveats": [],
+      "estimated": false,
+      "provenance": "backtest",
+      "sample_size": null,
+      "unit": "ratio",
+      "value": 0.22904557509554796
+     },
+     "sortino": {
+      "as_of": null,
+      "caveats": [],
+      "estimated": false,
+      "provenance": "backtest",
+      "sample_size": null,
+      "unit": "ratio",
+      "value": 0.0710413843120632
+     },
+     "total_costs": {
+      "as_of": null,
+      "caveats": [],
+      "estimated": false,
+      "provenance": "backtest",
+      "sample_size": null,
+      "unit": "USD",
+      "value": 78.3371131736755
+     },
+     "total_return_pct": {
+      "as_of": null,
+      "caveats": [],
+      "estimated": false,
+      "provenance": "backtest",
+      "sample_size": null,
+      "unit": "pct",
+      "value": 0.5921999755024832
+     },
+     "win_rate_pct": {
+      "as_of": null,
+      "caveats": [],
+      "estimated": false,
+      "provenance": "backtest",
+      "sample_size": null,
+      "unit": "pct",
+      "value": 28.57142857142857
+     }
+    },
+    "profile": "IG_REALISTIC",
+    "rejections": {},
+    "signals_emitted": {
+     "as_of": null,
+     "caveats": [],
+     "estimated": false,
+     "provenance": "backtest",
+     "sample_size": null,
+     "unit": "count",
+     "value": 7.0
+    }
+   },
+   "prologue_available": {
+    "as_of": null,
+    "caveats": [],
+    "estimated": false,
+    "provenance": "backtest",
+    "sample_size": null,
+    "unit": "bars",
+    "value": 0.0
+   },
+   "runs": [
+    {
+     "compared_from": "2024-01-31T00:00:00Z",
+     "extra_bars": {
+      "as_of": null,
+      "caveats": [],
+      "estimated": false,
+      "provenance": "backtest",
+      "sample_size": null,
+      "unit": "count",
+      "value": 100.0
+     },
+     "first_changed_signal": null,
+     "indicator_columns": [
+      {
+       "bars_differing": {
+        "as_of": null,
+        "caveats": [],
+        "estimated": false,
+        "provenance": "backtest",
+        "sample_size": null,
+        "unit": "count",
+        "value": 209.0
+       },
+       "column": "adx_14",
+       "last_differing_bar": "2024-03-05T16:00:00Z",
+       "max_abs_diff": {
+        "as_of": null,
+        "caveats": [],
+        "estimated": false,
+        "provenance": "backtest",
+        "sample_size": null,
+        "unit": "price",
+        "value": 0.1056222959808828
+       },
+       "max_rel_diff": {
+        "as_of": null,
+        "caveats": [],
+        "estimated": false,
+        "provenance": "backtest",
+        "sample_size": null,
+        "unit": "ratio",
+        "value": 0.008915888963737217
+       }
+      },
+      {
+       "bars_differing": {
+        "as_of": null,
+        "caveats": [],
+        "estimated": false,
+        "provenance": "backtest",
+        "sample_size": null,
+        "unit": "count",
+        "value": 167.0
+       },
+       "column": "adx_14_plus_di",
+       "last_differing_bar": "2024-03-01T00:00:00Z",
+       "max_abs_diff": {
+        "as_of": null,
+        "caveats": [],
+        "estimated": false,
+        "provenance": "backtest",
+        "sample_size": null,
+        "unit": "price",
+        "value": 0.002405606353022449
+       },
+       "max_rel_diff": {
+        "as_of": null,
+        "caveats": [],
+        "estimated": false,
+        "provenance": "backtest",
+        "sample_size": null,
+        "unit": "ratio",
+        "value": 0.00010284398963927559
+       }
+      },
+      {
+       "bars_differing": {
+        "as_of": null,
+        "caveats": [],
+        "estimated": false,
+        "provenance": "backtest",
+        "sample_size": null,
+        "unit": "count",
+        "value": 179.0
+       },
+       "column": "adx_14_minus_di",
+       "last_differing_bar": "2024-02-29T16:00:00Z",
+       "max_abs_diff": {
+        "as_of": null,
+        "caveats": [],
+        "estimated": false,
+        "provenance": "backtest",
+        "sample_size": null,
+        "unit": "price",
+        "value": 0.005216078031679672
+       },
+       "max_rel_diff": {
+        "as_of": null,
+        "caveats": [],
+        "estimated": false,
+        "provenance": "backtest",
+        "sample_size": null,
+        "unit": "ratio",
+        "value": 0.00046196763054075506
+       }
+      },
+      {
+       "bars_differing": {
+        "as_of": null,
+        "caveats": [],
+        "estimated": false,
+        "provenance": "backtest",
+        "sample_size": null,
+        "unit": "count",
+        "value": 79.0
+       },
+       "column": "atr_14",
+       "last_differing_bar": "2024-02-13T00:00:00Z",
+       "max_abs_diff": {
+        "as_of": null,
+        "caveats": [],
+        "estimated": false,
+        "provenance": "backtest",
+        "sample_size": null,
+        "unit": "price",
+        "value": 3.2639259057130887e-07
+       },
+       "max_rel_diff": {
+        "as_of": null,
+        "caveats": [],
+        "estimated": false,
+        "provenance": "backtest",
+        "sample_size": null,
+        "unit": "ratio",
+        "value": 0.0002571048949127567
+       }
+      },
+      {
+       "bars_differing": {
+        "as_of": null,
+        "caveats": [],
+        "estimated": false,
+        "provenance": "backtest",
+        "sample_size": null,
+        "unit": "count",
+        "value": 0.0
+       },
+       "column": "ichimoku_9_26_52_26_26_tenkan",
+       "last_differing_bar": null,
+       "max_abs_diff": {
+        "as_of": null,
+        "caveats": [],
+        "estimated": false,
+        "provenance": "backtest",
+        "sample_size": null,
+        "unit": "price",
+        "value": 0.0
+       },
+       "max_rel_diff": {
+        "as_of": null,
+        "caveats": [],
+        "estimated": false,
+        "provenance": "backtest",
+        "sample_size": null,
+        "unit": "ratio",
+        "value": 0.0
+       }
+      },
+      {
+       "bars_differing": {
+        "as_of": null,
+        "caveats": [],
+        "estimated": false,
+        "provenance": "backtest",
+        "sample_size": null,
+        "unit": "count",
+        "value": 0.0
+       },
+       "column": "ichimoku_9_26_52_26_26_kijun",
+       "last_differing_bar": null,
+       "max_abs_diff": {
+        "as_of": null,
+        "caveats": [],
+        "estimated": false,
+        "provenance": "backtest",
+        "sample_size": null,
+        "unit": "price",
+        "value": 0.0
+       },
+       "max_rel_diff": {
+        "as_of": null,
+        "caveats": [],
+        "estimated": false,
+        "provenance": "backtest",
+        "sample_size": null,
+        "unit": "ratio",
+        "value": 0.0
+       }
+      },
+      {
+       "bars_differing": {
+        "as_of": null,
+        "caveats": [],
+        "estimated": false,
+        "provenance": "backtest",
+        "sample_size": null,
+        "unit": "count",
+        "value": 0.0
+       },
+       "column": "ichimoku_9_26_52_26_26_senkou_a",
+       "last_differing_bar": null,
+       "max_abs_diff": {
+        "as_of": null,
+        "caveats": [],
+        "estimated": false,
+        "provenance": "backtest",
+        "sample_size": null,
+        "unit": "price",
+        "value": 0.0
+       },
+       "max_rel_diff": {
+        "as_of": null,
+        "caveats": [],
+        "estimated": false,
+        "provenance": "backtest",
+        "sample_size": null,
+        "unit": "ratio",
+        "value": 0.0
+       }
+      },
+      {
+       "bars_differing": {
+        "as_of": null,
+        "caveats": [],
+        "estimated": false,
+        "provenance": "backtest",
+        "sample_size": null,
+        "unit": "count",
+        "value": 0.0
+       },
+       "column": "ichimoku_9_26_52_26_26_senkou_b",
+       "last_differing_bar": null,
+       "max_abs_diff": {
+        "as_of": null,
+        "caveats": [],
+        "estimated": false,
+        "provenance": "backtest",
+        "sample_size": null,
+        "unit": "price",
+        "value": 0.0
+       },
+       "max_rel_diff": {
+        "as_of": null,
+        "caveats": [],
+        "estimated": false,
+        "provenance": "backtest",
+        "sample_size": null,
+        "unit": "ratio",
+        "value": 0.0
+       }
+      },
+      {
+       "bars_differing": {
+        "as_of": null,
+        "caveats": [],
+        "estimated": false,
+        "provenance": "backtest",
+        "sample_size": null,
+        "unit": "count",
+        "value": 0.0
+       },
+       "column": "ichimoku_9_26_52_26_26_cloud_top",
+       "last_differing_bar": null,
+       "max_abs_diff": {
+        "as_of": null,
+        "caveats": [],
+        "estimated": false,
+        "provenance": "backtest",
+        "sample_size": null,
+        "unit": "price",
+        "value": 0.0
+       },
+       "max_rel_diff": {
+        "as_of": null,
+        "caveats": [],
+        "estimated": false,
+        "provenance": "backtest",
+        "sample_size": null,
+        "unit": "ratio",
+        "value": 0.0
+       }
+      },
+      {
+       "bars_differing": {
+        "as_of": null,
+        "caveats": [],
+        "estimated": false,
+        "provenance": "backtest",
+        "sample_size": null,
+        "unit": "count",
+        "value": 0.0
+       },
+       "column": "ichimoku_9_26_52_26_26_cloud_bottom",
+       "last_differing_bar": null,
+       "max_abs_diff": {
+        "as_of": null,
+        "caveats": [],
+        "estimated": false,
+        "provenance": "backtest",
+        "sample_size": null,
+        "unit": "price",
+        "value": 0.0
+       },
+       "max_rel_diff": {
+        "as_of": null,
+        "caveats": [],
+        "estimated": false,
+        "provenance": "backtest",
+        "sample_size": null,
+        "unit": "ratio",
+        "value": 0.0
+       }
+      },
+      {
+       "bars_differing": {
+        "as_of": null,
+        "caveats": [],
+        "estimated": false,
+        "provenance": "backtest",
+        "sample_size": null,
+        "unit": "count",
+        "value": 0.0
+       },
+       "column": "ichimoku_9_26_52_26_26_price_vs_cloud",
+       "last_differing_bar": null,
+       "max_abs_diff": {
+        "as_of": null,
+        "caveats": [],
+        "estimated": false,
+        "provenance": "backtest",
+        "sample_size": null,
+        "unit": "price",
+        "value": 0.0
+       },
+       "max_rel_diff": {
+        "as_of": null,
+        "caveats": [],
+        "estimated": false,
+        "provenance": "backtest",
+        "sample_size": null,
+        "unit": "ratio",
+        "value": 0.0
+       }
+      },
+      {
+       "bars_differing": {
+        "as_of": null,
+        "caveats": [],
+        "estimated": false,
+        "provenance": "backtest",
+        "sample_size": null,
+        "unit": "count",
+        "value": 0.0
+       },
+       "column": "ichimoku_9_26_52_26_26_chikou_above_price",
+       "last_differing_bar": null,
+       "max_abs_diff": {
+        "as_of": null,
+        "caveats": [],
+        "estimated": false,
+        "provenance": "backtest",
+        "sample_size": null,
+        "unit": "price",
+        "value": 0.0
+       },
+       "max_rel_diff": {
+        "as_of": null,
+        "caveats": [],
+        "estimated": false,
+        "provenance": "backtest",
+        "sample_size": null,
+        "unit": "ratio",
+        "value": 0.0
+       }
+      }
+     ],
+     "indicators_converged": false,
+     "metrics": {
+      "cagr_pct": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": false,
+       "provenance": "backtest",
+       "sample_size": null,
+       "unit": "pct",
+       "value": 2.3707368047712896
+      },
+      "calmar": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": false,
+       "provenance": "backtest",
+       "sample_size": null,
+       "unit": "ratio",
+       "value": 1.028305535319091
+      },
+      "expectancy": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": false,
+       "provenance": "backtest",
+       "sample_size": null,
+       "unit": "USD",
+       "value": 39.2768503311325
+      },
+      "max_drawdown_pct": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": false,
+       "provenance": "backtest",
+       "sample_size": null,
+       "unit": "pct",
+       "value": -2.305478987853189
+      },
+      "n_trades": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": false,
+       "provenance": "backtest",
+       "sample_size": null,
+       "unit": "count",
+       "value": 5.0
+      },
+      "net_profit": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": false,
+       "provenance": "backtest",
+       "sample_size": null,
+       "unit": "USD",
+       "value": 196.3842516556615
+      },
+      "profit_factor": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": false,
+       "provenance": "backtest",
+       "sample_size": null,
+       "unit": "ratio",
+       "value": 1.9268655278674245
+      },
+      "sharpe": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": false,
+       "provenance": "backtest",
+       "sample_size": null,
+       "unit": "ratio",
+       "value": 0.7924037738728917
+      },
+      "sortino": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": false,
+       "provenance": "backtest",
+       "sample_size": null,
+       "unit": "ratio",
+       "value": 0.24142571663341042
+      },
+      "total_costs": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": false,
+       "provenance": "backtest",
+       "sample_size": null,
+       "unit": "USD",
+       "value": 39.35103314459012
+      },
+      "total_return_pct": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": false,
+       "provenance": "backtest",
+       "sample_size": null,
+       "unit": "pct",
+       "value": 1.9638425165566131
+      },
+      "win_rate_pct": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": false,
+       "provenance": "backtest",
+       "sample_size": null,
+       "unit": "pct",
+       "value": 40.0
+      }
+     },
+     "mode": "late_start",
+     "signals_changed_after_warmup": {
+      "as_of": null,
+      "caveats": [],
+      "estimated": false,
+      "provenance": "backtest",
+      "sample_size": null,
+      "unit": "count",
+      "value": 0.0
+     },
+     "signals_changed_in_cold_region": {
+      "as_of": null,
+      "caveats": [],
+      "estimated": false,
+      "provenance": "backtest",
+      "sample_size": null,
+      "unit": "count",
+      "value": 2.0
+     },
+     "signals_compared": {
+      "as_of": null,
+      "caveats": [],
+      "estimated": false,
+      "provenance": "backtest",
+      "sample_size": null,
+      "unit": "count",
+      "value": 1740.0
+     },
+     "stable": false,
+     "trades_changed": {
+      "as_of": null,
+      "caveats": [],
+      "estimated": false,
+      "provenance": "backtest",
+      "sample_size": null,
+      "unit": "count",
+      "value": 1.0
+     },
+     "trades_long": {
+      "as_of": null,
+      "caveats": [],
+      "estimated": false,
+      "provenance": "backtest",
+      "sample_size": null,
+      "unit": "count",
+      "value": 5.0
+     },
+     "trades_matched": {
+      "as_of": null,
+      "caveats": [],
+      "estimated": false,
+      "provenance": "backtest",
+      "sample_size": null,
+      "unit": "count",
+      "value": 5.0
+     },
+     "trades_only_long": {
+      "as_of": null,
+      "caveats": [],
+      "estimated": false,
+      "provenance": "backtest",
+      "sample_size": null,
+      "unit": "count",
+      "value": 0.0
+     },
+     "trades_only_short": {
+      "as_of": null,
+      "caveats": [],
+      "estimated": false,
+      "provenance": "backtest",
+      "sample_size": null,
+      "unit": "count",
+      "value": 0.0
+     },
+     "trades_short": {
+      "as_of": null,
+      "caveats": [],
+      "estimated": false,
+      "provenance": "backtest",
+      "sample_size": null,
+      "unit": "count",
+      "value": 5.0
+     }
+    },
+    {
+     "compared_from": "2024-03-04T08:00:00Z",
+     "extra_bars": {
+      "as_of": null,
+      "caveats": [],
+      "estimated": false,
+      "provenance": "backtest",
+      "sample_size": null,
+      "unit": "count",
+      "value": 300.0
+     },
+     "first_changed_signal": null,
+     "indicator_columns": [
+      {
+       "bars_differing": {
+        "as_of": null,
+        "caveats": [],
+        "estimated": false,
+        "provenance": "backtest",
+        "sample_size": null,
+        "unit": "count",
+        "value": 250.0
+       },
+       "column": "adx_14",
+       "last_differing_bar": "2024-04-14T20:00:00Z",
+       "max_abs_diff": {
+        "as_of": null,
+        "caveats": [],
+        "estimated": false,
+        "provenance": "backtest",
+        "sample_size": null,
+        "unit": "price",
+        "value": 0.9339254794343859
+       },
+       "max_rel_diff": {
+        "as_of": null,
+        "caveats": [],
+        "estimated": false,
+        "provenance": "backtest",
+        "sample_size": null,
+        "unit": "ratio",
+        "value": 0.01793171941683169
+       }
+      },
+      {
+       "bars_differing": {
+        "as_of": null,
+        "caveats": [],
+        "estimated": false,
+        "provenance": "backtest",
+        "sample_size": null,
+        "unit": "count",
+        "value": 201.0
+       },
+       "column": "adx_14_plus_di",
+       "last_differing_bar": "2024-04-06T16:00:00Z",
+       "max_abs_diff": {
+        "as_of": null,
+        "caveats": [],
+        "estimated": false,
+        "provenance": "backtest",
+        "sample_size": null,
+        "unit": "price",
+        "value": 0.03475016048918178
+       },
+       "max_rel_diff": {
+        "as_of": null,
+        "caveats": [],
+        "estimated": false,
+        "provenance": "backtest",
+        "sample_size": null,
+        "unit": "ratio",
+        "value": 0.004973038007165725
+       }
+      },
+      {
+       "bars_differing": {
+        "as_of": null,
+        "caveats": [],
+        "estimated": false,
+        "provenance": "backtest",
+        "sample_size": null,
+        "unit": "count",
+        "value": 181.0
+       },
+       "column": "adx_14_minus_di",
+       "last_differing_bar": "2024-04-03T08:00:00Z",
+       "max_abs_diff": {
+        "as_of": null,
+        "caveats": [],
+        "estimated": false,
+        "provenance": "backtest",
+        "sample_size": null,
+        "unit": "price",
+        "value": 0.017597605839171138
+       },
+       "max_rel_diff": {
+        "as_of": null,
+        "caveats": [],
+        "estimated": false,
+        "provenance": "backtest",
+        "sample_size": null,
+        "unit": "ratio",
+        "value": 0.0005578037414816368
+       }
+      },
+      {
+       "bars_differing": {
+        "as_of": null,
+        "caveats": [],
+        "estimated": false,
+        "provenance": "backtest",
+        "sample_size": null,
+        "unit": "count",
+        "value": 52.0
+       },
+       "column": "atr_14",
+       "last_differing_bar": "2024-03-12T20:00:00Z",
+       "max_abs_diff": {
+        "as_of": null,
+        "caveats": [],
+        "estimated": false,
+        "provenance": "backtest",
+        "sample_size": null,
+        "unit": "price",
+        "value": 4.653131743044721e-08
+       },
+       "max_rel_diff": {
+        "as_of": null,
+        "caveats": [],
+        "estimated": false,
+        "provenance": "backtest",
+        "sample_size": null,
+        "unit": "ratio",
+        "value": 3.610824910695789e-05
+       }
+      },
+      {
+       "bars_differing": {
+        "as_of": null,
+        "caveats": [],
+        "estimated": false,
+        "provenance": "backtest",
+        "sample_size": null,
+        "unit": "count",
+        "value": 0.0
+       },
+       "column": "ichimoku_9_26_52_26_26_tenkan",
+       "last_differing_bar": null,
+       "max_abs_diff": {
+        "as_of": null,
+        "caveats": [],
+        "estimated": false,
+        "provenance": "backtest",
+        "sample_size": null,
+        "unit": "price",
+        "value": 0.0
+       },
+       "max_rel_diff": {
+        "as_of": null,
+        "caveats": [],
+        "estimated": false,
+        "provenance": "backtest",
+        "sample_size": null,
+        "unit": "ratio",
+        "value": 0.0
+       }
+      },
+      {
+       "bars_differing": {
+        "as_of": null,
+        "caveats": [],
+        "estimated": false,
+        "provenance": "backtest",
+        "sample_size": null,
+        "unit": "count",
+        "value": 0.0
+       },
+       "column": "ichimoku_9_26_52_26_26_kijun",
+       "last_differing_bar": null,
+       "max_abs_diff": {
+        "as_of": null,
+        "caveats": [],
+        "estimated": false,
+        "provenance": "backtest",
+        "sample_size": null,
+        "unit": "price",
+        "value": 0.0
+       },
+       "max_rel_diff": {
+        "as_of": null,
+        "caveats": [],
+        "estimated": false,
+        "provenance": "backtest",
+        "sample_size": null,
+        "unit": "ratio",
+        "value": 0.0
+       }
+      },
+      {
+       "bars_differing": {
+        "as_of": null,
+        "caveats": [],
+        "estimated": false,
+        "provenance": "backtest",
+        "sample_size": null,
+        "unit": "count",
+        "value": 0.0
+       },
+       "column": "ichimoku_9_26_52_26_26_senkou_a",
+       "last_differing_bar": null,
+       "max_abs_diff": {
+        "as_of": null,
+        "caveats": [],
+        "estimated": false,
+        "provenance": "backtest",
+        "sample_size": null,
+        "unit": "price",
+        "value": 0.0
+       },
+       "max_rel_diff": {
+        "as_of": null,
+        "caveats": [],
+        "estimated": false,
+        "provenance": "backtest",
+        "sample_size": null,
+        "unit": "ratio",
+        "value": 0.0
+       }
+      },
+      {
+       "bars_differing": {
+        "as_of": null,
+        "caveats": [],
+        "estimated": false,
+        "provenance": "backtest",
+        "sample_size": null,
+        "unit": "count",
+        "value": 0.0
+       },
+       "column": "ichimoku_9_26_52_26_26_senkou_b",
+       "last_differing_bar": null,
+       "max_abs_diff": {
+        "as_of": null,
+        "caveats": [],
+        "estimated": false,
+        "provenance": "backtest",
+        "sample_size": null,
+        "unit": "price",
+        "value": 0.0
+       },
+       "max_rel_diff": {
+        "as_of": null,
+        "caveats": [],
+        "estimated": false,
+        "provenance": "backtest",
+        "sample_size": null,
+        "unit": "ratio",
+        "value": 0.0
+       }
+      },
+      {
+       "bars_differing": {
+        "as_of": null,
+        "caveats": [],
+        "estimated": false,
+        "provenance": "backtest",
+        "sample_size": null,
+        "unit": "count",
+        "value": 0.0
+       },
+       "column": "ichimoku_9_26_52_26_26_cloud_top",
+       "last_differing_bar": null,
+       "max_abs_diff": {
+        "as_of": null,
+        "caveats": [],
+        "estimated": false,
+        "provenance": "backtest",
+        "sample_size": null,
+        "unit": "price",
+        "value": 0.0
+       },
+       "max_rel_diff": {
+        "as_of": null,
+        "caveats": [],
+        "estimated": false,
+        "provenance": "backtest",
+        "sample_size": null,
+        "unit": "ratio",
+        "value": 0.0
+       }
+      },
+      {
+       "bars_differing": {
+        "as_of": null,
+        "caveats": [],
+        "estimated": false,
+        "provenance": "backtest",
+        "sample_size": null,
+        "unit": "count",
+        "value": 0.0
+       },
+       "column": "ichimoku_9_26_52_26_26_cloud_bottom",
+       "last_differing_bar": null,
+       "max_abs_diff": {
+        "as_of": null,
+        "caveats": [],
+        "estimated": false,
+        "provenance": "backtest",
+        "sample_size": null,
+        "unit": "price",
+        "value": 0.0
+       },
+       "max_rel_diff": {
+        "as_of": null,
+        "caveats": [],
+        "estimated": false,
+        "provenance": "backtest",
+        "sample_size": null,
+        "unit": "ratio",
+        "value": 0.0
+       }
+      },
+      {
+       "bars_differing": {
+        "as_of": null,
+        "caveats": [],
+        "estimated": false,
+        "provenance": "backtest",
+        "sample_size": null,
+        "unit": "count",
+        "value": 0.0
+       },
+       "column": "ichimoku_9_26_52_26_26_price_vs_cloud",
+       "last_differing_bar": null,
+       "max_abs_diff": {
+        "as_of": null,
+        "caveats": [],
+        "estimated": false,
+        "provenance": "backtest",
+        "sample_size": null,
+        "unit": "price",
+        "value": 0.0
+       },
+       "max_rel_diff": {
+        "as_of": null,
+        "caveats": [],
+        "estimated": false,
+        "provenance": "backtest",
+        "sample_size": null,
+        "unit": "ratio",
+        "value": 0.0
+       }
+      },
+      {
+       "bars_differing": {
+        "as_of": null,
+        "caveats": [],
+        "estimated": false,
+        "provenance": "backtest",
+        "sample_size": null,
+        "unit": "count",
+        "value": 0.0
+       },
+       "column": "ichimoku_9_26_52_26_26_chikou_above_price",
+       "last_differing_bar": null,
+       "max_abs_diff": {
+        "as_of": null,
+        "caveats": [],
+        "estimated": false,
+        "provenance": "backtest",
+        "sample_size": null,
+        "unit": "price",
+        "value": 0.0
+       },
+       "max_rel_diff": {
+        "as_of": null,
+        "caveats": [],
+        "estimated": false,
+        "provenance": "backtest",
+        "sample_size": null,
+        "unit": "ratio",
+        "value": 0.0
+       }
+      }
+     ],
+     "indicators_converged": false,
+     "metrics": {
+      "cagr_pct": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": false,
+       "provenance": "backtest",
+       "sample_size": null,
+       "unit": "pct",
+       "value": 2.4926669108557897
+      },
+      "calmar": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": false,
+       "provenance": "backtest",
+       "sample_size": null,
+       "unit": "ratio",
+       "value": 1.0412615688027933
+      },
+      "expectancy": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": false,
+       "provenance": "backtest",
+       "sample_size": null,
+       "unit": "USD",
+       "value": 36.711147603578056
+      },
+      "max_drawdown_pct": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": false,
+       "provenance": "backtest",
+       "sample_size": null,
+       "unit": "pct",
+       "value": -2.3938912042262084
+      },
+      "n_trades": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": false,
+       "provenance": "backtest",
+       "sample_size": null,
+       "unit": "count",
+       "value": 5.0
+      },
+      "net_profit": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": false,
+       "provenance": "backtest",
+       "sample_size": null,
+       "unit": "USD",
+       "value": 183.5557380178907
+      },
+      "profit_factor": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": false,
+       "provenance": "backtest",
+       "sample_size": null,
+       "unit": "ratio",
+       "value": 1.8168078835623809
+      },
+      "sharpe": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": false,
+       "provenance": "backtest",
+       "sample_size": null,
+       "unit": "ratio",
+       "value": 0.7754863194473784
+      },
+      "sortino": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": false,
+       "provenance": "backtest",
+       "sample_size": null,
+       "unit": "ratio",
+       "value": 0.2490099727372856
+      },
+      "total_costs": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": false,
+       "provenance": "backtest",
+       "sample_size": null,
+       "unit": "USD",
+       "value": 51.79439790410285
+      },
+      "total_return_pct": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": false,
+       "provenance": "backtest",
+       "sample_size": null,
+       "unit": "pct",
+       "value": 1.8355573801789093
+      },
+      "win_rate_pct": {
+       "as_of": null,
+       "caveats": [],
+       "estimated": false,
+       "provenance": "backtest",
+       "sample_size": null,
+       "unit": "pct",
+       "value": 40.0
+      }
+     },
+     "mode": "late_start",
+     "signals_changed_after_warmup": {
+      "as_of": null,
+      "caveats": [],
+      "estimated": false,
+      "provenance": "backtest",
+      "sample_size": null,
+      "unit": "count",
+      "value": 0.0
+     },
+     "signals_changed_in_cold_region": {
+      "as_of": null,
+      "caveats": [],
+      "estimated": false,
+      "provenance": "backtest",
+      "sample_size": null,
+      "unit": "count",
+      "value": 0.0
+     },
+     "signals_compared": {
+      "as_of": null,
+      "caveats": [],
+      "estimated": false,
+      "provenance": "backtest",
+      "sample_size": null,
+      "unit": "count",
+      "value": 1540.0
+     },
+     "stable": false,
+     "trades_changed": {
+      "as_of": null,
+      "caveats": [],
+      "estimated": false,
+      "provenance": "backtest",
+      "sample_size": null,
+      "unit": "count",
+      "value": 1.0
+     },
+     "trades_long": {
+      "as_of": null,
+      "caveats": [],
+      "estimated": false,
+      "provenance": "backtest",
+      "sample_size": null,
+      "unit": "count",
+      "value": 5.0
+     },
+     "trades_matched": {
+      "as_of": null,
+      "caveats": [],
+      "estimated": false,
+      "provenance": "backtest",
+      "sample_size": null,
+      "unit": "count",
+      "value": 5.0
+     },
+     "trades_only_long": {
+      "as_of": null,
+      "caveats": [],
+      "estimated": false,
+      "provenance": "backtest",
+      "sample_size": null,
+      "unit": "count",
+      "value": 0.0
+     },
+     "trades_only_short": {
+      "as_of": null,
+      "caveats": [],
+      "estimated": false,
+      "provenance": "backtest",
+      "sample_size": null,
+      "unit": "count",
+      "value": 0.0
+     },
+     "trades_short": {
+      "as_of": null,
+      "caveats": [],
+      "estimated": false,
+      "provenance": "backtest",
+      "sample_size": null,
+      "unit": "count",
+      "value": 5.0
+     }
+    }
+   ],
+   "stable": false,
+   "warmup_period": {
+    "as_of": null,
+    "caveats": [],
+    "estimated": false,
+    "provenance": "backtest",
+    "sample_size": null,
+    "unit": "bars",
+    "value": 80.0
+   }
+  }
+ },
+ "source": {
+  "as_of": "2026-10-19T00:00:00Z",
+  "detail": "Robustness cache (written by the research worker), read-only.",
+  "kind": "live"
+ }
+}
