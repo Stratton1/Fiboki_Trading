@@ -165,6 +165,10 @@ class AlertEvent(str, Enum):
     #: A durable ledger (intents, kill switch, alerts) had a torn final record,
     #: which was quarantined to ``<file>.torn-<ts>``. A crash happened mid-write.
     LEDGER_TORN_TAIL = "ledger_torn_tail"
+    #: A protective amend or a close refused only because the market is closed:
+    #: re-sent every bar, notified once per position, escalated as
+    #: RECONCILIATION_DIVERGENCE if it still fails once the market is open.
+    INSTRUCTION_DEFERRED = "instruction_deferred"
     #: ``fiboki alerts test``: proves a channel delivers, on demand.
     ALERT_TEST = "alert_test"
 
@@ -188,6 +192,7 @@ _DEFAULT_SEVERITY: dict[AlertEvent, Severity] = {
     AlertEvent.HEARTBEAT_STALE: Severity.ERROR,
     AlertEvent.WORKER_LEASE_CONTENDED: Severity.CRITICAL,
     AlertEvent.RECONCILIATION_DIVERGENCE: Severity.CRITICAL,
+    AlertEvent.INSTRUCTION_DEFERRED: Severity.INFO,
     AlertEvent.DATA_STALE: Severity.WARNING,
     AlertEvent.DATA_QUALITY_DEFECT: Severity.WARNING,
     AlertEvent.BROKER_UNHEALTHY: Severity.ERROR,

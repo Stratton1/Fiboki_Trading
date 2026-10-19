@@ -825,6 +825,12 @@ class VenuePositionManager:
         self.venue_entry: dict[str, float] = {}
         self.cycles: list[ManagerCycle] = []
         self.unrealised_intents: list[IntentDivergence] = []
+        #: ``"<kind>:<broker_ref>" -> first refusal`` for amend/close instructions
+        #: refused ONLY because the market is closed (the gateway's
+        #: ``market_closed``). Notified once, at INFO, as deferred until the
+        #: market opens; cleared when the instruction is applied or when it
+        #: fails for another reason (which escalates as before).
+        self.deferred: dict[str, IntentDivergence] = {}
         #: ``pending entry sequence -> (broker_ref, instrument)``.
         self._pending_orders: dict[int, tuple[str, str]] = {}
         #: ``book sequence -> broker_ref``. Survives the position leaving the
@@ -1305,7 +1311,26 @@ class VenuePositionManager:
             mode=str(getattr(self.execution, "mode", "")),
         )
         self._emit(record, cycle)
-        if not record.applied:
+        if record.applied:
+            self._clear_deferred("close_not_realised", position.venue_ref or position.position_id)
+        elif _market_closed_only(outcome):
+            self._defer(
+                IntentDivergence(
+                    kind="close_not_realised",
+                    position_id=position.position_id,
+                    broker_ref=position.venue_ref,
+                    instrument=position.instrument,
+                    detail=record.error,
+                ),
+                cycle,
+                message=(
+                    f"{position.instrument}: close of {size} deferred until the market opens "
+                    "(the gateway refuses every order while the market is closed). It is re-sent "
+                    "every bar; a refusal once the market is open escalates."
+                ),
+            )
+        if not record.applied and not _market_closed_only(outcome):
+            self._clear_deferred("close_not_realised", position.venue_ref or position.position_id)
             self._raise_unrealised(
                 IntentDivergence(
                     kind="close_not_realised",
@@ -1423,7 +1448,30 @@ class VenuePositionManager:
             mode=str(getattr(self.execution, "mode", "")),
         )
         self._emit(record, cycle)
-        if not applied:
+        if applied:
+            self._clear_deferred("amend_not_realised", position.venue_ref or position.position_id)
+        elif _market_closed_only(outcome):
+            self._defer(
+                IntentDivergence(
+                    kind="amend_not_realised",
+                    position_id=position.position_id,
+                    broker_ref=position.venue_ref,
+                    instrument=position.instrument,
+                    intended_stop=desired.stop_loss,
+                    venue_stop=None if before is None else before.stop_loss,
+                    intended_take_profit=desired.take_profit,
+                    venue_take_profit=None if before is None else before.take_profit,
+                    detail=record.error,
+                ),
+                cycle,
+                message=(
+                    f"{position.instrument}: stop/target amend to {desired.stop_loss} deferred until "
+                    "the market opens (the gateway refuses every order while the market is closed). "
+                    "It is re-sent every bar; a refusal once the market is open escalates."
+                ),
+            )
+        if not applied and not _market_closed_only(outcome):
+            self._clear_deferred("amend_not_realised", position.venue_ref or position.position_id)
             self._raise_unrealised(
                 IntentDivergence(
                     kind="amend_not_realised",
@@ -1927,7 +1975,43 @@ class VenuePositionManager:
             divergence.as_row(),
         )
 
+    def _defer(self, divergence: IntentDivergence, cycle: ManagerCycle, *, message: str) -> None:
+        """A market-closed refusal: recorded on the cycle, notified ONCE at INFO.
+
+        Not an unrealised intent and not CRITICAL: the gateway refuses every
+        order while the market is closed, by design, and the instruction is
+        re-sent every bar. Escalation is kept for what matters: the same
+        instruction failing once the market is open (``_raise_unrealised``).
+        """
+        key = f"{divergence.kind}:{divergence.broker_ref or divergence.position_id}"
+        cycle.alerts.append(message)
+        if key in self.deferred:
+            return
+        self.deferred[key] = divergence
+        self._alert(
+            f"deferred:{key}",
+            message,
+            {**divergence.as_row(), "deferred_until_market_open": True, "severity": "info"},
+        )
+
+    def _clear_deferred(self, kind: str, ref: Any) -> None:
+        self.deferred.pop(f"{kind}:{ref}", None)
+
     def _alert(self, key: str, message: str, detail: Mapping[str, Any]) -> None:
         if self.alert is None:
             return
         self.alert(key, message, dict(detail))
+
+
+def _market_closed_only(outcome: Any) -> bool:
+    """True when the gateway refused the instruction because the market is closed.
+
+    ``market_closed`` among the decision's reasons; the staleness checks that
+    accompany a closed market (``data_stale``, ``stale_price``) are its
+    consequence, not a separate fault. Any refusal WITHOUT ``market_closed`` --
+    in particular every refusal while the market is open -- is not deferred.
+    """
+    decision = getattr(outcome, "decision", None)
+    if decision is None or getattr(decision, "allowed", True):
+        return False
+    return "market_closed" in tuple(str(r) for r in getattr(decision, "reasons", ()) or ())

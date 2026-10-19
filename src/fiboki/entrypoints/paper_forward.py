@@ -2198,8 +2198,10 @@ def compose_runtime(
         sleeper=sleeper,
         alert=(
             (lambda key, message, detail: dispatcher.fire(
-                AlertEvent.RECONCILIATION_DIVERGENCE, message, source="paper-forward",
-                dedupe_key=key,
+                AlertEvent.INSTRUCTION_DEFERRED
+                if detail.get("deferred_until_market_open")
+                else AlertEvent.RECONCILIATION_DIVERGENCE,
+                message, source="paper-forward", dedupe_key=key,
             ))
             if dispatcher is not None
             else None
