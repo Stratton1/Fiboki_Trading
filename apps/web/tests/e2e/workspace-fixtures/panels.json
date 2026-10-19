@@ -1,0 +1,155 @@
+{
+ "caveats": [],
+ "items": [
+  {
+   "code": "GP",
+   "description": "Closed-candle price chart for the linked symbol.",
+   "follows_symbol": true,
+   "kind": "chart",
+   "label": "Chart",
+   "publishes_symbol": false,
+   "reads": [
+    "/api/markets/bars/{symbol}"
+   ]
+  },
+  {
+   "code": "WL",
+   "description": "Recorded quotes for a saved list: sparkline, session and data age.",
+   "follows_symbol": false,
+   "kind": "watchlist",
+   "label": "Watchlist",
+   "publishes_symbol": true,
+   "reads": [
+    "/api/markets/watchlists",
+    "/api/markets/quotes"
+   ]
+  },
+  {
+   "code": "NWS",
+   "description": "Recorded headlines, filtered by the linked instrument's currencies.",
+   "follows_symbol": true,
+   "kind": "news",
+   "label": "News",
+   "publishes_symbol": true,
+   "reads": [
+    "/api/markets/news"
+   ]
+  },
+  {
+   "code": "ECO",
+   "description": "Official economic calendar (newest version), impact filter and countdowns.",
+   "follows_symbol": true,
+   "kind": "calendar",
+   "label": "Calendar",
+   "publishes_symbol": true,
+   "reads": [
+    "/api/markets/calendar"
+   ]
+  },
+  {
+   "code": "FLT",
+   "description": "Every paper bot: state, last decision, position and day P&L.",
+   "follows_symbol": false,
+   "kind": "fleet",
+   "label": "Fleet",
+   "publishes_symbol": false,
+   "reads": [
+    "/api/trading/fleet"
+   ]
+  },
+  {
+   "code": "RSK",
+   "description": "The limit board: utilisation and headroom, decided by the API.",
+   "follows_symbol": false,
+   "kind": "risk",
+   "label": "Risk",
+   "publishes_symbol": false,
+   "reads": [
+    "/api/trading/limits"
+   ]
+  },
+  {
+   "code": "EXPO",
+   "description": "Exposure by instrument, currency and strategy.",
+   "follows_symbol": false,
+   "kind": "exposure",
+   "label": "Exposure",
+   "publishes_symbol": false,
+   "reads": [
+    "/api/trading/limits"
+   ]
+  },
+  {
+   "code": "NTF",
+   "description": "Price and level alert notifications, with the read marker.",
+   "follows_symbol": false,
+   "kind": "alerts",
+   "label": "Alerts",
+   "publishes_symbol": true,
+   "reads": [
+    "/api/alerts/notifications"
+   ]
+  },
+  {
+   "code": "JRN",
+   "description": "Closed trades, filtered by the linked instrument.",
+   "follows_symbol": true,
+   "kind": "journal",
+   "label": "Journal",
+   "publishes_symbol": true,
+   "reads": [
+    "/api/trading/trades"
+   ]
+  },
+  {
+   "code": "RUNS",
+   "description": "Stored backtest runs, newest first.",
+   "follows_symbol": false,
+   "kind": "research_runs",
+   "label": "Research runs",
+   "publishes_symbol": false,
+   "reads": [
+    "/api/research/runs"
+   ]
+  },
+  {
+   "code": "PULSE",
+   "description": "Movers, currency strength, volatility and sessions from recorded quotes.",
+   "follows_symbol": false,
+   "kind": "market_pulse",
+   "label": "Market Pulse",
+   "publishes_symbol": true,
+   "reads": [
+    "/api/markets/pulse"
+   ]
+  },
+  {
+   "code": "SYS",
+   "description": "Every service, worker and check on one clock.",
+   "follows_symbol": false,
+   "kind": "system_board",
+   "label": "System board",
+   "publishes_symbol": false,
+   "reads": [
+    "/api/system/board"
+   ]
+  },
+  {
+   "code": "NOTE",
+   "description": "Free text kept with the layout (an operator note, never strategy input).",
+   "follows_symbol": false,
+   "kind": "notes",
+   "label": "Notes",
+   "publishes_symbol": false,
+   "reads": []
+  }
+ ],
+ "limit": 13,
+ "offset": 0,
+ "source": {
+  "as_of": "2026-10-19T01:29:12.392772Z",
+  "detail": "The panel registry in fiboki.api.workspace_layouts (code).",
+  "kind": "live"
+ },
+ "total": 13
+}

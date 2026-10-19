@@ -1,0 +1,314 @@
+{
+ "caveats": [],
+ "items": [
+  {
+   "description": "Watchlist drives the chart, news and calendar (amber group); pulse and alerts below.",
+   "key": "fx-monitoring",
+   "layout": {
+    "panels": [
+     {
+      "id": "wl",
+      "kind": "watchlist",
+      "link": {
+       "group": "amber",
+       "role": "source"
+      },
+      "settings": {
+       "watchlist": "Majors"
+      },
+      "symbol": null,
+      "title": ""
+     },
+     {
+      "id": "chart",
+      "kind": "chart",
+      "link": {
+       "group": "amber",
+       "role": "destination"
+      },
+      "settings": {
+       "timeframe": "H1"
+      },
+      "symbol": "EURUSD",
+      "title": ""
+     },
+     {
+      "id": "news",
+      "kind": "news",
+      "link": {
+       "group": "amber",
+       "role": "destination"
+      },
+      "settings": {},
+      "symbol": "EURUSD",
+      "title": ""
+     },
+     {
+      "id": "eco",
+      "kind": "calendar",
+      "link": {
+       "group": "amber",
+       "role": "destination"
+      },
+      "settings": {
+       "impact": "high"
+      },
+      "symbol": "EURUSD",
+      "title": ""
+     },
+     {
+      "id": "pulse",
+      "kind": "market_pulse",
+      "link": {
+       "group": "amber",
+       "role": "source"
+      },
+      "settings": {
+       "window": "24h"
+      },
+      "symbol": null,
+      "title": ""
+     }
+    ],
+    "root": {
+     "children": [
+      {
+       "children": [
+        {
+         "panel": "wl",
+         "type": "panel"
+        },
+        {
+         "panel": "chart",
+         "type": "panel"
+        }
+       ],
+       "id": "s1",
+       "orientation": "horizontal",
+       "sizes": [
+        30.0,
+        70.0
+       ],
+       "type": "split"
+      },
+      {
+       "children": [
+        {
+         "panel": "news",
+         "type": "panel"
+        },
+        {
+         "panel": "eco",
+         "type": "panel"
+        },
+        {
+         "panel": "pulse",
+         "type": "panel"
+        }
+       ],
+       "id": "s2",
+       "orientation": "horizontal",
+       "sizes": [
+        34.0,
+        33.0,
+        33.0
+       ],
+       "type": "split"
+      }
+     ],
+     "id": "s0",
+     "orientation": "vertical",
+     "sizes": [
+      62.0,
+      38.0
+     ],
+     "type": "split"
+    },
+    "schema": "fiboki.workspace.layout/1"
+   },
+   "name": "FX monitoring"
+  },
+  {
+   "description": "Stored runs beside a chart of the instrument under study, with a notes pad.",
+   "key": "research",
+   "layout": {
+    "panels": [
+     {
+      "id": "runs",
+      "kind": "research_runs",
+      "link": {
+       "group": "none",
+       "role": "both"
+      },
+      "settings": {},
+      "symbol": null,
+      "title": ""
+     },
+     {
+      "id": "chart",
+      "kind": "chart",
+      "link": {
+       "group": "cyan",
+       "role": "destination"
+      },
+      "settings": {
+       "timeframe": "H4"
+      },
+      "symbol": "EURUSD",
+      "title": ""
+     },
+     {
+      "id": "notes",
+      "kind": "notes",
+      "link": {
+       "group": "none",
+       "role": "both"
+      },
+      "settings": {
+       "text": ""
+      },
+      "symbol": null,
+      "title": ""
+     }
+    ],
+    "root": {
+     "children": [
+      {
+       "panel": "runs",
+       "type": "panel"
+      },
+      {
+       "children": [
+        {
+         "panel": "chart",
+         "type": "panel"
+        },
+        {
+         "panel": "notes",
+         "type": "panel"
+        }
+       ],
+       "id": "s1",
+       "orientation": "vertical",
+       "sizes": [
+        65.0,
+        35.0
+       ],
+       "type": "split"
+      }
+     ],
+     "id": "s0",
+     "orientation": "horizontal",
+     "sizes": [
+      45.0,
+      55.0
+     ],
+     "type": "split"
+    },
+    "schema": "fiboki.workspace.layout/1"
+   },
+   "name": "Research"
+  },
+  {
+   "description": "System board, alert notifications, the fleet and the limit board on one screen.",
+   "key": "incident",
+   "layout": {
+    "panels": [
+     {
+      "id": "board",
+      "kind": "system_board",
+      "link": {
+       "group": "none",
+       "role": "both"
+      },
+      "settings": {},
+      "symbol": null,
+      "title": ""
+     },
+     {
+      "id": "alerts",
+      "kind": "alerts",
+      "link": {
+       "group": "none",
+       "role": "both"
+      },
+      "settings": {},
+      "symbol": null,
+      "title": ""
+     },
+     {
+      "id": "fleet",
+      "kind": "fleet",
+      "link": {
+       "group": "none",
+       "role": "both"
+      },
+      "settings": {},
+      "symbol": null,
+      "title": ""
+     },
+     {
+      "id": "risk",
+      "kind": "risk",
+      "link": {
+       "group": "none",
+       "role": "both"
+      },
+      "settings": {},
+      "symbol": null,
+      "title": ""
+     }
+    ],
+    "root": {
+     "children": [
+      {
+       "panel": "board",
+       "type": "panel"
+      },
+      {
+       "children": [
+        {
+         "panel": "alerts",
+         "type": "panel"
+        },
+        {
+         "panel": "fleet",
+         "type": "panel"
+        },
+        {
+         "panel": "risk",
+         "type": "panel"
+        }
+       ],
+       "id": "s1",
+       "orientation": "vertical",
+       "sizes": [
+        34.0,
+        33.0,
+        33.0
+       ],
+       "type": "split"
+      }
+     ],
+     "id": "s0",
+     "orientation": "horizontal",
+     "sizes": [
+      50.0,
+      50.0
+     ],
+     "type": "split"
+    },
+    "schema": "fiboki.workspace.layout/1"
+   },
+   "name": "Incident"
+  }
+ ],
+ "limit": 3,
+ "offset": 0,
+ "source": {
+  "as_of": "2026-10-19T01:29:12.395275Z",
+  "detail": "Preset layouts in fiboki.api.workspace_layouts (code).",
+  "kind": "live"
+ },
+ "total": 3
+}
