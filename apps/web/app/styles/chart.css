@@ -392,3 +392,47 @@
   color: var(--critical);
   font-size: 11px;
 }
+
+/* ------------------------------------------------------ layer toolbar */
+.cw-layers {
+  display: inline-flex;
+  flex-wrap: nowrap;
+  gap: 1px;
+  padding: 1px;
+  border: 1px solid var(--border-control);
+  border-radius: var(--r-sm);
+  background: var(--bg-sunken);
+}
+.cw-layers__btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  height: 20px;
+  padding: 0 6px;
+  border: 0;
+  border-radius: var(--r-xs);
+  background: transparent;
+  color: var(--fg-subtle);
+  font-size: 11px;
+  white-space: nowrap;
+  text-decoration: line-through;
+}
+.cw-layers__btn[aria-pressed="true"] {
+  background: var(--bg-raised);
+  color: var(--fg);
+  text-decoration: none;
+}
+.cw-layers__btn--all {
+  text-decoration: none;
+  color: var(--fg-muted);
+}
+.cw-layers__btn--all[aria-pressed="true"] {
+  background: transparent;
+  color: var(--warn);
+}
+.cw-layers__n {
+  color: var(--fg-muted);
+  font-family: var(--font-code);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}

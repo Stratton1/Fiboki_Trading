@@ -2,7 +2,9 @@
 
 import type { ChartTemplateBody } from "@/lib/chart-contract";
 import type { TimeZoneId } from "../time";
+import type { ChartLayers, LayerName } from "../layers";
 import { GoToDate, TimeZoneSelect } from "./GoToDate";
+import { LayerToolbar } from "./LayerToolbar";
 import { TemplateMenu } from "./TemplateMenu";
 
 /**
@@ -18,6 +20,9 @@ export interface ChartToolbarProps {
   at: string | null;
   onGoTo: (iso: string) => void;
   onLatest: () => void;
+  layers: ChartLayers;
+  onLayers: (update: (layers: ChartLayers) => ChartLayers) => void;
+  counts: Partial<Record<LayerName, number | null>>;
 }
 
 export default function ChartToolbar({
@@ -28,9 +33,13 @@ export default function ChartToolbar({
   at,
   onGoTo,
   onLatest,
+  layers,
+  onLayers,
+  counts,
 }: ChartToolbarProps) {
   return (
     <div className="cw-tools" role="group" aria-label="Chart tools" data-testid="chart-tools">
+      <LayerToolbar layers={layers} onLayers={onLayers} counts={counts} />
       <GoToDate tz={tz} at={at} onGoTo={onGoTo} onLatest={onLatest} />
       <TimeZoneSelect tz={tz} onTz={onTz} />
       <TemplateMenu current={template} onApply={onApplyTemplate} />

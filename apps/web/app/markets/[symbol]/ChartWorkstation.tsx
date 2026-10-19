@@ -366,6 +366,20 @@ function Workstation({
               at={at}
               onGoTo={goTo}
               onLatest={() => onAt(null)}
+              layers={chartLayers}
+              onLayers={setChartLayers}
+              counts={
+                overlayEnv
+                  ? {
+                      signals: overlayEnv.data.signals.length,
+                      fills: overlayEnv.data.fills.length,
+                      regimes: overlayEnv.data.regimes.length,
+                      stops: overlayEnv.data.levels.length,
+                      events: overlayEnv.data.events.length,
+                      indicators: overlayEnv.data.series.length,
+                    }
+                  : {}
+              }
             />
           </Suspense>
           <SourcesPopover bars={barsEnv} overlays={overlayEnv} />
