@@ -724,6 +724,31 @@ tests were unaffected (nanosecond fixtures).
 The first run's files are renamed `*.engine_v3` on the Mac and kept. K6 stays DRAFT, and its
 engine references move to v4.
 
+### E-4 P0 re-run on `engine_v4_time_units` (amendment 2): both timeframes ADMITTED again (2026-10-19, MacBook)
+
+These files supersede the void engine_v3 P0 files, which are kept under `void_engine_v3/` on the
+runtime checkout. `p0_admits` returns "P0 admits" for both timeframes. Neither file is committed.
+
+| | H4 | D1 |
+|---|---|---|
+| File | `e4_p0_H4.r400.json` | `e4_p0_D1.r400.json` |
+| sha256 | `d1e0163c3aa3979f395d737685eca32bb681d580b8ea7c53d570439753797831` | `0cef7e935fef18a84abfe450a87f01e09a405cdb6dfe6b2164db73ebe64549c5` |
+| Size at sr = 0 | 0.0025 (1 of 400) | 0.000 |
+| Effective z-variance | 0.955 (naive 1.311) | 0.990 (naive 1.544) |
+| DEFF median | 1.21 | 1.54 |
+| Effective pooled trades, median | 2,304 | 962 |
+| Power at 0.03 | 1.25% | 0% |
+| Power at 0.05 | 7.5% | 1.0% |
+| Power at **0.08** | **24.75%** (MC SE 2.2%) | **7.25%** |
+| Power at 0.12 | 48.25% | 22.5% |
+
+The engine_v3 P0 figures were within Monte Carlo error of these (H4 power at 0.08 was 25.25%,
+D1's was 6.75%). As expected, P0's bootstrap demeans and rescales the trade sources, so the
+defect barely touched it. Both are below 0.5, so a main-stage null at 0.08 will be described as
+underpowered (decision rule 5), and F3 (H4 power at 0.08 below 0.20) is not triggered.
+
+Next: the main stage on both timeframes, run with `e4_p0_<TF>.json` copied from these r400 files.
+
 ## K6 drafted, `campaign_k6_generated_100k` (DRAFT 2026-10-10, not filed; no compute on evidence data)
 
 **Why it exists.** The operator asked for "100,000 more" strategies. Tested one by one that would be
