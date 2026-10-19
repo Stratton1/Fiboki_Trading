@@ -335,6 +335,30 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/markets/datawindow/{symbol}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Data Window
+         * @description OHLC(V), every indicator output and every overlay item for the bar at ``t``.
+         *
+         *     The same computation as the overlays route (indicators over the bar's
+         *     history, closed bars only), for one bar, with nothing filtered by the
+         *     chart's layer toggles: state and ratio columns included.
+         */
+        get: operations["data_window_api_markets_datawindow__symbol__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/markets/drawings/{symbol}": {
         parameters: {
             query?: never;
@@ -2046,6 +2070,59 @@ export interface components {
             quality: string;
             stale_runs: components["schemas"]["Figure"];
         };
+        /** DataWindowValue */
+        DataWindowValue: {
+            /** Display Only */
+            display_only: boolean;
+            /** Indicator Id */
+            indicator_id: string;
+            /** Name */
+            name: string;
+            /** Pane */
+            pane: string;
+            /** Value */
+            value: number | null;
+        };
+        /**
+         * DataWindowView
+         * @description Everything the platform holds for ONE bar of one chart.
+         */
+        DataWindowView: {
+            bar: components["schemas"]["ReplayBar"];
+            /** Dataset Version Id */
+            dataset_version_id: string;
+            /** Events */
+            events: components["schemas"]["EventOverlay"][];
+            /** Fills */
+            fills: components["schemas"]["FillOverlay"][];
+            /** Headlines */
+            headlines: components["schemas"]["HeadlineOverlay"][];
+            /** Levels */
+            levels: components["schemas"]["LevelOverlay"][];
+            regime: components["schemas"]["RegimeOverlay"] | null;
+            /** Sections */
+            sections: {
+                [key: string]: components["schemas"]["SectionStatus"];
+            };
+            /** Signals */
+            signals: components["schemas"]["SignalOverlay"][];
+            /** Symbol */
+            symbol: string;
+            /**
+             * T
+             * Format: date-time
+             */
+            t: string;
+            /**
+             * T End
+             * Format: date-time
+             */
+            t_end: string;
+            /** Timeframe */
+            timeframe: string;
+            /** Values */
+            values: components["schemas"]["DataWindowValue"][];
+        };
         /** DefinitionView */
         DefinitionView: {
             /** Definition */
@@ -2273,6 +2350,16 @@ export interface components {
              */
             caveats: components["schemas"]["Caveat"][];
             data: components["schemas"]["CorrelationMatrixView"];
+            source: components["schemas"]["SourceNote"];
+        };
+        /** Envelope[DataWindowView] */
+        Envelope_DataWindowView_: {
+            /**
+             * Caveats
+             * @default []
+             */
+            caveats: components["schemas"]["Caveat"][];
+            data: components["schemas"]["DataWindowView"];
             source: components["schemas"]["SourceNote"];
         };
         /** Envelope[dict] */
@@ -5562,6 +5649,41 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Page_DataQualityRow_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    data_window_api_markets_datawindow__symbol__get: {
+        parameters: {
+            query: {
+                /** @description A UTC instant inside the bar. */
+                t: string;
+                timeframe?: string;
+            };
+            header?: never;
+            path: {
+                symbol: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_DataWindowView_"];
                 };
             };
             /** @description Validation Error */

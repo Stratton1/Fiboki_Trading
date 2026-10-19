@@ -727,6 +727,8 @@ function ChartArea({
           run={run}
           onRun={onRun}
           replay={replay ? { rows: replay.rows, runId: replay.runId } : null}
+          overlays={overlayData}
+          readoutIndex={shown}
         />
       </Suspense>
     </div>

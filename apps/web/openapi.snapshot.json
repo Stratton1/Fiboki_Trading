@@ -1576,6 +1576,153 @@
         "title": "DataQualityRow",
         "type": "object"
       },
+      "DataWindowValue": {
+        "properties": {
+          "display_only": {
+            "title": "Display Only",
+            "type": "boolean"
+          },
+          "indicator_id": {
+            "title": "Indicator Id",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "pane": {
+            "title": "Pane",
+            "type": "string"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Value"
+          }
+        },
+        "required": [
+          "indicator_id",
+          "name",
+          "pane",
+          "value",
+          "display_only"
+        ],
+        "title": "DataWindowValue",
+        "type": "object"
+      },
+      "DataWindowView": {
+        "description": "Everything the platform holds for ONE bar of one chart.",
+        "properties": {
+          "bar": {
+            "$ref": "#/components/schemas/ReplayBar"
+          },
+          "dataset_version_id": {
+            "title": "Dataset Version Id",
+            "type": "string"
+          },
+          "events": {
+            "items": {
+              "$ref": "#/components/schemas/EventOverlay"
+            },
+            "title": "Events",
+            "type": "array"
+          },
+          "fills": {
+            "items": {
+              "$ref": "#/components/schemas/FillOverlay"
+            },
+            "title": "Fills",
+            "type": "array"
+          },
+          "headlines": {
+            "items": {
+              "$ref": "#/components/schemas/HeadlineOverlay"
+            },
+            "title": "Headlines",
+            "type": "array"
+          },
+          "levels": {
+            "items": {
+              "$ref": "#/components/schemas/LevelOverlay"
+            },
+            "title": "Levels",
+            "type": "array"
+          },
+          "regime": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RegimeOverlay"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "sections": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/SectionStatus"
+            },
+            "title": "Sections",
+            "type": "object"
+          },
+          "signals": {
+            "items": {
+              "$ref": "#/components/schemas/SignalOverlay"
+            },
+            "title": "Signals",
+            "type": "array"
+          },
+          "symbol": {
+            "title": "Symbol",
+            "type": "string"
+          },
+          "t": {
+            "format": "date-time",
+            "title": "T",
+            "type": "string"
+          },
+          "t_end": {
+            "format": "date-time",
+            "title": "T End",
+            "type": "string"
+          },
+          "timeframe": {
+            "title": "Timeframe",
+            "type": "string"
+          },
+          "values": {
+            "items": {
+              "$ref": "#/components/schemas/DataWindowValue"
+            },
+            "title": "Values",
+            "type": "array"
+          }
+        },
+        "required": [
+          "symbol",
+          "timeframe",
+          "t",
+          "t_end",
+          "dataset_version_id",
+          "bar",
+          "values",
+          "regime",
+          "signals",
+          "fills",
+          "levels",
+          "events",
+          "headlines",
+          "sections"
+        ],
+        "title": "DataWindowView",
+        "type": "object"
+      },
       "DefinitionView": {
         "properties": {
           "definition": {
@@ -2134,6 +2281,30 @@
           "source"
         ],
         "title": "Envelope[CorrelationMatrixView]",
+        "type": "object"
+      },
+      "Envelope_DataWindowView_": {
+        "properties": {
+          "caveats": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/Caveat"
+            },
+            "title": "Caveats",
+            "type": "array"
+          },
+          "data": {
+            "$ref": "#/components/schemas/DataWindowView"
+          },
+          "source": {
+            "$ref": "#/components/schemas/SourceNote"
+          }
+        },
+        "required": [
+          "data",
+          "source"
+        ],
+        "title": "Envelope[DataWindowView]",
         "type": "object"
       },
       "Envelope_DrawingSetView_": {
@@ -10451,6 +10622,73 @@
         "summary": "Data Quality",
         "tags": [
           "markets"
+        ],
+        "x-fiboki-auth": "public"
+      }
+    },
+    "/api/markets/datawindow/{symbol}": {
+      "get": {
+        "description": "OHLC(V), every indicator output and every overlay item for the bar at ``t``.\n\nThe same computation as the overlays route (indicators over the bar's\nhistory, closed bars only), for one bar, with nothing filtered by the\nchart's layer toggles: state and ratio columns included.",
+        "operationId": "data_window_api_markets_datawindow__symbol__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "symbol",
+            "required": true,
+            "schema": {
+              "title": "Symbol",
+              "type": "string"
+            }
+          },
+          {
+            "description": "A UTC instant inside the bar.",
+            "in": "query",
+            "name": "t",
+            "required": true,
+            "schema": {
+              "description": "A UTC instant inside the bar.",
+              "format": "date-time",
+              "title": "T",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "timeframe",
+            "required": false,
+            "schema": {
+              "default": "H1",
+              "title": "Timeframe",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_DataWindowView_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [],
+        "summary": "Data Window",
+        "tags": [
+          "chart-workstation"
         ],
         "x-fiboki-auth": "public"
       }

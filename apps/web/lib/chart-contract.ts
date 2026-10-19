@@ -1,5 +1,17 @@
 import type { components } from "./generated/openapi";
-import type { Bar, Figure, OverlayView, Provenance } from "./types";
+import type {
+  Bar,
+  EventOverlay,
+  FillOverlay,
+  HeadlineOverlay,
+  LevelOverlay,
+  OverlayView,
+  Provenance,
+  RegimeOverlay,
+  SectionStatus,
+  SignalOverlay,
+  Figure,
+} from "./types";
 
 /**
  * Typed mirrors of the chart workstation routes (Wave 2B,
@@ -69,6 +81,34 @@ export interface CompareView {
   unmatched: number;
 }
 
+// ------------------------------------------------------------- data window
+
+export interface DataWindowValue {
+  indicator_id: string;
+  name: string;
+  pane: string;
+  value: number | null;
+  display_only: boolean;
+}
+
+/** GET /api/markets/datawindow/{symbol}?t= (Envelope): everything at one bar. */
+export interface DataWindowView {
+  symbol: string;
+  timeframe: string;
+  t: string;
+  t_end: string;
+  dataset_version_id: string;
+  bar: Bar;
+  values: DataWindowValue[];
+  regime: RegimeOverlay | null;
+  signals: SignalOverlay[];
+  fills: FillOverlay[];
+  levels: LevelOverlay[];
+  events: EventOverlay[];
+  headlines: HeadlineOverlay[];
+  sections: Record<string, SectionStatus>;
+}
+
 // ------------------------------------------------------------------ checks
 
 type SameKeys<A, B> = [Exclude<keyof A, keyof B>, Exclude<keyof B, keyof A>] extends [never, never]
@@ -80,6 +120,8 @@ export type ChartContractChecks = [
   SameKeys<ReplayView, S["ReplayView"]>,
   SameKeys<Bar, S["ReplayBar"]>,
   SameKeys<CompareView, S["CompareView"]>,
+  SameKeys<DataWindowValue, S["DataWindowValue"]>,
+  SameKeys<DataWindowView, S["DataWindowView"]>,
 ];
 
 /** Fails to compile when any check above is not `true`. */

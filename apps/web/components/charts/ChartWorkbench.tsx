@@ -8,6 +8,7 @@ import {
   MousePointer2,
   PanelRight,
   Redo2,
+  Table2,
   Ruler,
   Trash2,
   Undo2,
@@ -35,10 +36,19 @@ import {
 import { newDrawingId } from "@/lib/drawing-geometry";
 import { formatFigure, formatNumber, signClass } from "@/lib/format";
 import { useApi } from "@/lib/query";
-import type { BacktestRunRow, BacktestTradeRow, BacktestTradesView, Drawing, Envelope, Page } from "@/lib/types";
+import type {
+  BacktestRunRow,
+  BacktestTradeRow,
+  BacktestTradesView,
+  Drawing,
+  Envelope,
+  OverlayView,
+  Page,
+} from "@/lib/types";
+import { DataWindow } from "./DataWindow";
 import type { DrawingTool } from "./drawing-primitive";
 import type { ChartDrawings, PriceChartProps } from "./PriceChart";
-import { formatBarTime } from "./time";
+import { formatBarTime, type TimeZoneId } from "./time";
 import { useDrawings, type SaveStatus } from "./useDrawings";
 import "./workbench.css";
 
@@ -78,7 +88,14 @@ export interface ChartWorkbenchProps {
    * answer, exits withheld while open). When set, the stored trades are not read.
    */
   replay?: { rows: BacktestTradeRow[]; runId: string | null } | null;
+  /** The overlay payload (the data window reads it); null while loading. */
+  overlays?: OverlayView | null;
+  /** The bar the crosshair or keyboard cursor is on, or null (the latest). */
+  readoutIndex?: number | null;
+  timeZone?: TimeZoneId;
 }
+
+type PanelTab = "trades" | "data";
 
 interface ToolSpec {
   tool: DrawingTool;
@@ -237,7 +254,18 @@ function runLabel(run: BacktestRunRow): string {
   } trades${flags.length ? ` · ${flags.join(", ")}` : ""}`;
 }
 
-export default function ChartWorkbench({ symbol, tf, hours, chart, run, onRun, replay = null }: ChartWorkbenchProps) {
+export default function ChartWorkbench({
+  symbol,
+  tf,
+  hours,
+  chart,
+  run,
+  onRun,
+  replay = null,
+  overlays = null,
+  readoutIndex = null,
+  timeZone = "UTC",
+}: ChartWorkbenchProps) {
   const notify = useToast();
   const operator = useOperator();
   const model: ChartModel = chart.model;
@@ -253,7 +281,8 @@ export default function ChartWorkbench({ symbol, tf, hours, chart, run, onRun, r
   );
   const [focusTrade, setFocusTrade] = useState<{ key: string; nonce: number } | null>(null);
   const nonce = useRef(0);
-  const [panelOpen, setPanelOpen] = useState(true);
+  const [panel, setPanel] = useState<PanelTab | null>("trades");
+  const panelOpen = panel !== null;
 
   // ---------------------------------------------------------- backtest runs
   const runs = useApi<Page<BacktestRunRow>>(`/api/markets/backtests/${enc}?timeframe=${tf}`);
@@ -425,6 +454,11 @@ export default function ChartWorkbench({ symbol, tf, hours, chart, run, onRun, r
         return;
       }
       if (event.altKey && !mod) {
+        if (!event.shiftKey && event.code === "KeyW") {
+          event.preventDefault();
+          setPanel((v) => (v === "data" ? null : "data"));
+          return;
+        }
         if (event.shiftKey && event.code === "KeyL") {
           event.preventDefault();
           toggleLock();
@@ -557,12 +591,23 @@ export default function ChartWorkbench({ symbol, tf, hours, chart, run, onRun, r
         <button
           type="button"
           className="cw-bench__toggle"
-          aria-pressed={panelOpen}
+          aria-pressed={panel === "trades"}
           aria-controls="cw-trades"
           data-testid="trades-panel-toggle"
-          onClick={() => setPanelOpen((v) => !v)}
+          onClick={() => setPanel((v) => (v === "trades" ? null : "trades"))}
         >
           <PanelRight size={14} aria-hidden="true" /> Trades ({tableTrades.length})
+        </button>
+        <button
+          type="button"
+          className="cw-bench__toggle"
+          aria-pressed={panel === "data"}
+          aria-controls="cw-data-window"
+          data-testid="data-window-toggle"
+          title="Data window: every value at the crosshair, from the platform · Alt W"
+          onClick={() => setPanel((v) => (v === "data" ? null : "data"))}
+        >
+          <Table2 size={14} aria-hidden="true" /> Data
         </button>
         {hours ? (
           <span className="cw__chip" data-testid="instrument-hours" title={`${symbol} trading hours: ${hours}`}>
@@ -623,7 +668,7 @@ export default function ChartWorkbench({ symbol, tf, hours, chart, run, onRun, r
             }}
           />
         </div>
-        {panelOpen ? (
+        {panel === "trades" ? (
           <TradesTable
             trades={tableTrades}
             selected={selectedTrade}
@@ -631,6 +676,21 @@ export default function ChartWorkbench({ symbol, tf, hours, chart, run, onRun, r
             priceDecimals={chart.priceDecimals}
             stopsDetail={run ? (btView?.stops_detail ?? null) : null}
           />
+        ) : panel === "data" ? (
+          <div className="cw-trades" id="cw-data-window">
+            <DataWindow
+              symbol={symbol}
+              tf={tf}
+              model={model}
+              overlays={overlays}
+              index={readoutIndex}
+              hidden={chart.hidden}
+              priceDecimals={chart.priceDecimals}
+              paneDecimals={chart.paneDecimals}
+              trades={allTrades}
+              tz={timeZone}
+            />
+          </div>
         ) : null}
       </div>
     </div>

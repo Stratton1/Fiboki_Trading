@@ -493,3 +493,125 @@ def compare(
         ),
         caveats=tuple(caveats),
     )
+
+
+# ============================================================= data window
+
+
+class DataWindowValue(BaseModel):
+    model_config = ConfigDict(frozen=True)
+
+    indicator_id: str
+    name: str
+    pane: str
+    #: The indicator's value at this bar; null where it has none (warm-up).
+    value: float | None
+    display_only: bool
+
+
+class DataWindowView(BaseModel):
+    """Everything the platform holds for ONE bar of one chart."""
+
+    model_config = ConfigDict(frozen=True, populate_by_name=True)
+
+    symbol: str
+    timeframe: str
+    #: The bar's open time (the bar open at or before the requested ``t``).
+    t: datetime
+    #: The bar's span ``[t, t_end)``: items timed inside it belong to it.
+    t_end: datetime
+    dataset_version_id: str
+    bar: ReplayBar
+    values: list[DataWindowValue]
+    regime: markets_router.RegimeOverlay | None
+    signals: list[markets_router.SignalOverlay]
+    fills: list[markets_router.FillOverlay]
+    #: Levels standing during the bar (entry, stop, target).
+    levels: list[markets_router.LevelOverlay]
+    events: list[markets_router.EventOverlay]
+    headlines: list[markets_router.HeadlineOverlay]
+    sections: dict[str, markets_router.SectionStatus]
+
+
+@router.get("/api/markets/datawindow/{symbol}", response_model=Envelope[DataWindowView])
+def data_window(
+    symbol: str,
+    platform: PlatformDep,
+    settings: SettingsDep,
+    t: Annotated[datetime, Query(description="A UTC instant inside the bar.")],
+    timeframe: str = Query("H1"),
+) -> Envelope[DataWindowView]:
+    """OHLC(V), every indicator output and every overlay item for the bar at ``t``.
+
+    The same computation as the overlays route (indicators over the bar's
+    history, closed bars only), for one bar, with nothing filtered by the
+    chart's layer toggles: state and ratio columns included.
+    """
+    import pandas as pd
+
+    sym = _symbol(symbol)
+    tf = _tf(timeframe)
+    _mounted(settings, sym, tf.value)
+    frame, version = _read_frame(settings, sym, tf)
+    at = pd.Timestamp(_utc(t))
+    upto = frame[frame.index <= at]
+    if upto.empty:
+        raise ApiError(
+            status.HTTP_404_NOT_FOUND,
+            "no_bar_at_time",
+            f"The dataset has no {sym} {tf.value} bar at or before {at.isoformat()}.",
+        )
+    bar_open = upto.index[-1]
+    span_end = bar_open + pd.Timedelta(minutes=tf.minutes)
+    later = frame[frame.index > bar_open]
+    hi = later.index[0] if not later.empty else bar_open
+    env = markets_router.overlays(
+        sym, platform, settings, from_=bar_open.to_pydatetime(), to=hi.to_pydatetime(),
+        strategy_id=None, timeframe=tf.value, limit=2, include_indicators=True,
+    )
+    ov = env.data
+    lo_dt, end_dt = bar_open.to_pydatetime(), span_end.to_pydatetime()
+
+    def inside(x: datetime) -> bool:
+        return lo_dt <= x < end_dt
+
+    values: list[DataWindowValue] = []
+    for s in ov.series:
+        point = next((p for p in s.points if pd.Timestamp(p.t) == bar_open), None)
+        values.append(
+            DataWindowValue(
+                indicator_id=s.indicator_id, name=s.name, pane=s.pane,
+                value=None if point is None else point.v, display_only=s.display_only,
+            )
+        )
+    regime = next((r for r in ov.regimes if r.from_ <= lo_dt <= r.to), None)
+    bars, _ = _bar_dicts(frame.loc[[bar_open]])
+    view = DataWindowView(
+        symbol=sym,
+        timeframe=tf.value,
+        t=lo_dt,
+        t_end=end_dt,
+        dataset_version_id=version,
+        bar=ReplayBar(**bars[0]),
+        values=values,
+        regime=regime,
+        signals=[s for s in ov.signals if inside(s.t)],
+        fills=[f for f in ov.fills if inside(f.t)],
+        levels=[
+            lv for lv in ov.levels
+            if lv.from_ < end_dt and (lv.to is None or lv.to >= lo_dt)
+        ],
+        events=[e for e in ov.events if inside(e.t)],
+        headlines=[h for h in ov.headlines if inside(h.t)],
+        sections=ov.sections,
+    )
+    return Envelope(
+        data=view,
+        source=_note(
+            "live",
+            f"Dataset {version}, bar {bar_open.isoformat()}: indicators from "
+            "fiboki.indicators, regime from fiboki.marketstate, journal items from the "
+            "paper journal, events from the official calendar.",
+        ),
+        caveats=env.caveats,
+    )

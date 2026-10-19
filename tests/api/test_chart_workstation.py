@@ -85,3 +85,42 @@ def test_compare_without_market_data_is_unavailable_not_flat(client):
     response = client.get("/api/markets/compare/EURUSD", params={"with": "GBPUSD"})
     assert response.status_code == 503
     assert response.json()["code"] == "market_data_not_mounted"
+
+
+# -------------------------------------------------------------- data window
+
+
+def test_data_window_serves_every_indicator_and_overlay_at_one_bar(world):
+    from fiboki.indicators import ATR, Ichimoku
+
+    eur = world["eur"]
+    # 30 minutes into bar 100 (the paper trade's entry bar): the bar is 100.
+    at = eur.index[100] + pd.Timedelta(minutes=30)
+    body = world["client"].get(
+        "/api/markets/datawindow/EURUSD", params={"t": at.isoformat(), "timeframe": "H1"}
+    ).json()
+    data = body["data"]
+    assert pd.Timestamp(data["t"]) == eur.index[100]
+    assert pd.Timestamp(data["t_end"]) == eur.index[100] + pd.Timedelta(hours=1)
+    assert data["dataset_version_id"] == world["v_eur"]
+    assert data["bar"]["c"] == float(eur["close"].iloc[100])
+    values = {v["name"]: v["value"] for v in data["values"]}
+    ich = Ichimoku()
+    expected = ich.compute(eur).iloc[100]
+    assert values[f"{ich.name}_tenkan"] == float(expected[f"{ich.name}_tenkan"])
+    # State columns are served too (the chart hides them by default).
+    assert f"{ich.name}_price_vs_cloud" in values
+    atr = ATR(14)
+    assert values[atr.name] == float(atr.compute(eur)[atr.name].iloc[100])
+    # The paper trade entered at bar 100's open: its entry fill is on this bar.
+    assert [f["role"] for f in data["fills"]] == ["entry"]
+    assert all(pd.Timestamp(e["t"]) >= eur.index[100] for e in data["events"])
+
+
+def test_data_window_needs_a_bar_at_or_before_t(world):
+    early = world["eur"].index[0] - pd.Timedelta(days=1)
+    response = world["client"].get(
+        "/api/markets/datawindow/EURUSD", params={"t": early.isoformat()}
+    )
+    assert response.status_code == 404
+    assert response.json()["code"] == "no_bar_at_time"
