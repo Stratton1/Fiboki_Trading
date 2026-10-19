@@ -1,0 +1,220 @@
+/* Wave 3R: robustness and integrity diagnostics (components/research/robustness).
+ * Terminal-dense, tabular numerals, amber/neutral ink; green and red for P&L only. */
+
+.rb {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+.rb-advisory {
+  margin: 0;
+  font-size: 11px;
+  color: var(--fg-subtle);
+}
+.rb-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0;
+  border-bottom: 1px solid var(--border);
+}
+.rb-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-height: 26px;
+  padding: 0 10px;
+  border: 1px solid transparent;
+  border-bottom: 0;
+  background: transparent;
+  color: var(--fg-muted);
+  font-size: 12px;
+  cursor: pointer;
+  margin-bottom: -1px;
+}
+.rb-tab[aria-selected="true"] {
+  color: var(--fg);
+  background: var(--bg-raised);
+  border-color: var(--border-strong);
+}
+.rb-tab:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: -2px;
+}
+.rb-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--unknown);
+}
+.rb-dot--ok { background: var(--ok); }
+.rb-dot--degraded { background: var(--warn); }
+.rb-dot--down { background: var(--critical); }
+.rb-body {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+.rb-boundary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 10px;
+  margin: 0;
+  font-size: 11px;
+  color: var(--fg-muted);
+}
+.rb-boundary__k {
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--fg-subtle);
+  font-size: 10.5px;
+}
+.rb-tag {
+  display: inline-block;
+  padding: 0 5px;
+  margin-right: 3px;
+  border: 1px solid var(--border);
+  font-size: 10.5px;
+  line-height: 16px;
+  white-space: nowrap;
+}
+.rb-tag--ok { border-color: var(--ok); color: var(--ok); }
+.rb-tag--warn { border-color: var(--warn); color: var(--warn); }
+.rb-table td,
+.rb-table th {
+  font-variant-numeric: tabular-nums;
+}
+.rb-table .num {
+  text-align: right;
+}
+.rb-range {
+  display: block;
+  width: 120px;
+  height: 12px;
+}
+.rb-range__axis { stroke: var(--border-strong); stroke-width: 1; }
+.rb-range__zero { stroke: var(--fg-subtle); stroke-width: 1; stroke-dasharray: 2 2; }
+.rb-range__band { fill: var(--accent-bg); stroke: var(--accent); stroke-width: 0.6; }
+.rb-range__mid { stroke: var(--fg); stroke-width: 1.4; }
+.rb-range__point { fill: var(--fg-muted); }
+.rb-barcell { width: 90px; }
+.rb-pnlbar { display: block; width: 90px; height: 8px; }
+.rb-pnlbar--pos { fill: var(--pnl-up); }
+.rb-pnlbar--neg { fill: var(--pnl-down); }
+.rb-method {
+  margin: 2px 0 0;
+  font-size: 11px;
+  color: var(--fg-subtle);
+  max-width: 120ch;
+}
+.rb-h3 {
+  margin: 4px 0 0;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--fg);
+}
+.rb-h4 {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 4px 0 2px;
+  font-size: 12px;
+  font-weight: 600;
+}
+.rb-sub {
+  border-top: 1px solid var(--border-subtle);
+  padding-top: 4px;
+}
+.rb-status {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 10px;
+  font-size: 11.5px;
+}
+.rb-progress {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 160px;
+}
+.rb-progress .rs-progress { width: 100px; }
+.rb-progress__fill { fill: var(--accent); }
+.rb-queue input { min-width: min(100%, 260px); }
+.rb-refusal {
+  margin: 0;
+  padding: 4px 8px;
+  border-left: 2px solid var(--warn);
+  background: var(--warn-bg);
+  font-size: 12px;
+}
+.rb-prov {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 260px), 1fr));
+  gap: 2px 16px;
+  margin: 0;
+  font-size: 11.5px;
+}
+.rb-prov dt {
+  color: var(--fg-subtle);
+  font-size: 10.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.rb-prov dd { margin: 0; overflow-wrap: anywhere; }
+.rb-verdict {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 12px;
+  font-size: 12px;
+}
+.rb-big {
+  font-size: 20px;
+  font-variant-numeric: tabular-nums;
+}
+.rb-dist {
+  display: inline-flex;
+  gap: 4px;
+  align-items: baseline;
+  white-space: nowrap;
+}
+.rb-dist__range {
+  color: var(--fg-subtle);
+  font-size: 11px;
+}
+.rb-strip {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 2px 12px;
+  margin: 0;
+  padding: 3px 6px;
+  background: var(--bg-sunken);
+  border: 1px solid var(--border-subtle);
+  font-size: 11.5px;
+}
+.rb-strip__label {
+  color: var(--fg-subtle);
+  font-size: 10.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.rb-strip__body {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 12px;
+  margin: 0;
+}
+.rb-strip__item {
+  display: inline-flex;
+  gap: 4px;
+  align-items: baseline;
+}
+.rb-strip__k { color: var(--fg-subtle); }
+
+@media (max-width: 640px) {
+  .rb-tab { padding: 0 7px; font-size: 11.5px; }
+  .rb-range { width: 80px; }
+  .rb-barcell, .rb-pnlbar { width: 60px; }
+}

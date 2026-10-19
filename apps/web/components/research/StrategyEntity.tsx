@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { lazy, Suspense } from "react";
 import { AsyncBoundary } from "@/components/AsyncBoundary";
 import { FigureValue } from "@/components/FigureValue";
 import { CaveatList, SourceBadge, ToneBadge } from "@/components/primitives";
@@ -10,6 +11,8 @@ import { researchHref, type StrategyOverviewView } from "@/lib/research";
 import type { Envelope } from "@/lib/types";
 import { ResearchNav } from "./ResearchNav";
 import { gateVerdictTone, ladderTone, rungTone } from "./tones";
+
+const StrategyRobustness = lazy(() => import("./robustness/StrategyRobustness"));
 
 /**
  * RESEARCH · one strategy (`/research/strategies/<id>`): the document, its
@@ -297,6 +300,15 @@ function Overview({ env }: { env: Envelope<StrategyOverviewView> }) {
             </table>
           </div>
         )}
+      </section>
+
+      <section className="rs-panel" id="robustness" aria-labelledby="st-rb">
+        <h2 className="rs-panel__title" id="st-rb">
+          Robustness: optimisation profile and objective ranking
+        </h2>
+        <Suspense fallback={<div className="state state--loading">Loading the robustness views…</div>}>
+          <StrategyRobustness strategyId={v.strategy_id} />
+        </Suspense>
       </section>
 
       {v.gate_reports.length ? (

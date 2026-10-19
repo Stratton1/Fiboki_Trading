@@ -714,6 +714,8 @@ def optimisation_profile(strategy_id: str, platform: PlatformDep, settings: Sett
                                     objective=_fig(value, run.provenance, unit, sample=n, reason="Undefined."),
                                     trades=_count(n)))
     prof = rl.optimisation_profile(triples)
+    # Best objective first, undefined last, run id as the tie-break: the order is the API's.
+    points.sort(key=lambda g: (g.objective.value is None, -(g.objective.value or 0.0), g.run_id))
 
     def f(k: str, u: str = unit, reason: str = "No grid point has a defined objective.") -> Figure:
         return _fig(prof.get(k), P, u, sample=prof["n_defined"], reason=reason)

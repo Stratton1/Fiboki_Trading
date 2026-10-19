@@ -21,6 +21,7 @@ import { ResearchNav } from "../ResearchNav";
 import { gateVerdictTone } from "../tones";
 
 const MonteCarloPanel = lazy(() => import("./MonteCarloPanel"));
+const RobustnessPanel = lazy(() => import("../robustness/RobustnessPanel"));
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
@@ -101,6 +102,9 @@ function Sheet({ env }: { env: Envelope<TearsheetView> }) {
           </Link>
           <a href="#monte-carlo" className="rs-btn rs-btn--ghost">
             Monte Carlo
+          </a>
+          <a href="#robustness" className="rs-btn rs-btn--ghost">
+            Robustness
           </a>
           <a href="#provenance" className="rs-btn rs-btn--ghost">
             Provenance
@@ -236,6 +240,15 @@ function Sheet({ env }: { env: Envelope<TearsheetView> }) {
         </h2>
         <Suspense fallback={<div className="state state--loading">Loading the simulation…</div>}>
           <MonteCarloPanel runId={run.run_id} />
+        </Suspense>
+      </section>
+
+      <section className="rs-panel" id="robustness" aria-labelledby="ts-rb">
+        <h2 className="rs-panel__title" id="ts-rb">
+          Robustness and integrity
+        </h2>
+        <Suspense fallback={<div className="state state--loading">Loading the diagnostics…</div>}>
+          <RobustnessPanel runId={run.run_id} />
         </Suspense>
       </section>
 

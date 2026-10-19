@@ -759,6 +759,53 @@
         "title": "BacktestTradesView",
         "type": "object"
       },
+      "BandView": {
+        "properties": {
+          "basis": {
+            "title": "Basis",
+            "type": "string"
+          },
+          "block_length": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "key": {
+            "title": "Key",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "observations": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "p5": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "p50": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "p95": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "point": {
+            "$ref": "#/components/schemas/Figure"
+          }
+        },
+        "required": [
+          "key",
+          "label",
+          "point",
+          "p5",
+          "p50",
+          "p95",
+          "basis",
+          "observations",
+          "block_length"
+        ],
+        "title": "BandView",
+        "type": "object"
+      },
       "BandsView": {
         "properties": {
           "critical_at": {
@@ -914,6 +961,49 @@
         "title": "BotCounts",
         "type": "object"
       },
+      "BreakdownsView": {
+        "properties": {
+          "account_ccy": {
+            "title": "Account Ccy",
+            "type": "string"
+          },
+          "boundary": {
+            "$ref": "#/components/schemas/HoldoutBoundaryView"
+          },
+          "calendar_note": {
+            "title": "Calendar Note",
+            "type": "string"
+          },
+          "entry_reason_note": {
+            "title": "Entry Reason Note",
+            "type": "string"
+          },
+          "groups": {
+            "additionalProperties": {
+              "items": {
+                "$ref": "#/components/schemas/BucketView"
+              },
+              "type": "array"
+            },
+            "title": "Groups",
+            "type": "object"
+          },
+          "run_id": {
+            "title": "Run Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "run_id",
+          "account_ccy",
+          "groups",
+          "entry_reason_note",
+          "calendar_note",
+          "boundary"
+        ],
+        "title": "BreakdownsView",
+        "type": "object"
+      },
       "BrokerHealthView": {
         "properties": {
           "configured": {
@@ -961,6 +1051,43 @@
           "detail"
         ],
         "title": "BrokerHealthView",
+        "type": "object"
+      },
+      "BucketView": {
+        "properties": {
+          "avg_bars_held": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "expectancy": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "key": {
+            "title": "Key",
+            "type": "string"
+          },
+          "net_pnl": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "profit_factor": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "trades": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "win_rate_pct": {
+            "$ref": "#/components/schemas/Figure"
+          }
+        },
+        "required": [
+          "key",
+          "trades",
+          "net_pnl",
+          "win_rate_pct",
+          "expectancy",
+          "profit_factor",
+          "avg_bars_held"
+        ],
+        "title": "BucketView",
         "type": "object"
       },
       "CandidateView": {
@@ -1299,6 +1426,106 @@
         "title": "ComparisonView",
         "type": "object"
       },
+      "ConfidenceBandsView": {
+        "properties": {
+          "bands": {
+            "items": {
+              "$ref": "#/components/schemas/BandView"
+            },
+            "title": "Bands",
+            "type": "array"
+          },
+          "boundary": {
+            "$ref": "#/components/schemas/HoldoutBoundaryView"
+          },
+          "method": {
+            "title": "Method",
+            "type": "string"
+          },
+          "n_boot": {
+            "title": "N Boot",
+            "type": "integer"
+          },
+          "run_id": {
+            "title": "Run Id",
+            "type": "string"
+          },
+          "seed": {
+            "title": "Seed",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "run_id",
+          "seed",
+          "n_boot",
+          "bands",
+          "boundary",
+          "method"
+        ],
+        "title": "ConfidenceBandsView",
+        "type": "object"
+      },
+      "ConsistencyView": {
+        "properties": {
+          "boundary": {
+            "$ref": "#/components/schemas/HoldoutBoundaryView"
+          },
+          "instrument_positive_share": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "instruments": {
+            "items": {
+              "$ref": "#/components/schemas/SplitView"
+            },
+            "title": "Instruments",
+            "type": "array"
+          },
+          "k": {
+            "title": "K",
+            "type": "integer"
+          },
+          "method": {
+            "title": "Method",
+            "type": "string"
+          },
+          "period_empty": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "period_positive_share": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "periods": {
+            "items": {
+              "$ref": "#/components/schemas/SplitView"
+            },
+            "title": "Periods",
+            "type": "array"
+          },
+          "pooled": {
+            "title": "Pooled",
+            "type": "boolean"
+          },
+          "run_id": {
+            "title": "Run Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "run_id",
+          "k",
+          "periods",
+          "instruments",
+          "period_positive_share",
+          "period_empty",
+          "instrument_positive_share",
+          "pooled",
+          "boundary",
+          "method"
+        ],
+        "title": "ConsistencyView",
+        "type": "object"
+      },
       "CorrelationCellView": {
         "properties": {
           "a": {
@@ -1503,6 +1730,43 @@
           "formula"
         ],
         "title": "DefinitionView",
+        "type": "object"
+      },
+      "DistributionView": {
+        "description": "Quantiles of one figure across many re-runs (simulated, so ``estimated``).",
+        "properties": {
+          "mean": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "n": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "p25": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "p5": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "p50": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "p75": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "p95": {
+            "$ref": "#/components/schemas/Figure"
+          }
+        },
+        "required": [
+          "n",
+          "p5",
+          "p25",
+          "p50",
+          "p75",
+          "p95",
+          "mean"
+        ],
+        "title": "DistributionView",
         "type": "object"
       },
       "DivergenceDimensionView": {
@@ -1898,6 +2162,30 @@
         "title": "Envelope[BoardView]",
         "type": "object"
       },
+      "Envelope_BreakdownsView_": {
+        "properties": {
+          "caveats": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/Caveat"
+            },
+            "title": "Caveats",
+            "type": "array"
+          },
+          "data": {
+            "$ref": "#/components/schemas/BreakdownsView"
+          },
+          "source": {
+            "$ref": "#/components/schemas/SourceNote"
+          }
+        },
+        "required": [
+          "data",
+          "source"
+        ],
+        "title": "Envelope[BreakdownsView]",
+        "type": "object"
+      },
       "Envelope_BrokerHealthView_": {
         "properties": {
           "caveats": {
@@ -1994,6 +2282,54 @@
         "title": "Envelope[ComparisonView]",
         "type": "object"
       },
+      "Envelope_ConfidenceBandsView_": {
+        "properties": {
+          "caveats": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/Caveat"
+            },
+            "title": "Caveats",
+            "type": "array"
+          },
+          "data": {
+            "$ref": "#/components/schemas/ConfidenceBandsView"
+          },
+          "source": {
+            "$ref": "#/components/schemas/SourceNote"
+          }
+        },
+        "required": [
+          "data",
+          "source"
+        ],
+        "title": "Envelope[ConfidenceBandsView]",
+        "type": "object"
+      },
+      "Envelope_ConsistencyView_": {
+        "properties": {
+          "caveats": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/Caveat"
+            },
+            "title": "Caveats",
+            "type": "array"
+          },
+          "data": {
+            "$ref": "#/components/schemas/ConsistencyView"
+          },
+          "source": {
+            "$ref": "#/components/schemas/SourceNote"
+          }
+        },
+        "required": [
+          "data",
+          "source"
+        ],
+        "title": "Envelope[ConsistencyView]",
+        "type": "object"
+      },
       "Envelope_CorrelationMatrixView_": {
         "properties": {
           "caveats": {
@@ -2064,6 +2400,30 @@
           "source"
         ],
         "title": "Envelope[ExecutionModeBanner]",
+        "type": "object"
+      },
+      "Envelope_FillDetailView_": {
+        "properties": {
+          "caveats": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/Caveat"
+            },
+            "title": "Caveats",
+            "type": "array"
+          },
+          "data": {
+            "$ref": "#/components/schemas/FillDetailView"
+          },
+          "source": {
+            "$ref": "#/components/schemas/SourceNote"
+          }
+        },
+        "required": [
+          "data",
+          "source"
+        ],
+        "title": "Envelope[FillDetailView]",
         "type": "object"
       },
       "Envelope_IncidentView_": {
@@ -2234,6 +2594,30 @@
         "title": "Envelope[MonteCarloView]",
         "type": "object"
       },
+      "Envelope_OptimisationProfileView_": {
+        "properties": {
+          "caveats": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/Caveat"
+            },
+            "title": "Caveats",
+            "type": "array"
+          },
+          "data": {
+            "$ref": "#/components/schemas/OptimisationProfileView"
+          },
+          "source": {
+            "$ref": "#/components/schemas/SourceNote"
+          }
+        },
+        "required": [
+          "data",
+          "source"
+        ],
+        "title": "Envelope[OptimisationProfileView]",
+        "type": "object"
+      },
       "Envelope_OverlayView_": {
         "properties": {
           "caveats": {
@@ -2354,6 +2738,78 @@
         "title": "Envelope[PromotePreflightView]",
         "type": "object"
       },
+      "Envelope_RankingView_": {
+        "properties": {
+          "caveats": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/Caveat"
+            },
+            "title": "Caveats",
+            "type": "array"
+          },
+          "data": {
+            "$ref": "#/components/schemas/RankingView"
+          },
+          "source": {
+            "$ref": "#/components/schemas/SourceNote"
+          }
+        },
+        "required": [
+          "data",
+          "source"
+        ],
+        "title": "Envelope[RankingView]",
+        "type": "object"
+      },
+      "Envelope_RerunResultView_": {
+        "properties": {
+          "caveats": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/Caveat"
+            },
+            "title": "Caveats",
+            "type": "array"
+          },
+          "data": {
+            "$ref": "#/components/schemas/RerunResultView"
+          },
+          "source": {
+            "$ref": "#/components/schemas/SourceNote"
+          }
+        },
+        "required": [
+          "data",
+          "source"
+        ],
+        "title": "Envelope[RerunResultView]",
+        "type": "object"
+      },
+      "Envelope_RerunStatusView_": {
+        "properties": {
+          "caveats": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/Caveat"
+            },
+            "title": "Caveats",
+            "type": "array"
+          },
+          "data": {
+            "$ref": "#/components/schemas/RerunStatusView"
+          },
+          "source": {
+            "$ref": "#/components/schemas/SourceNote"
+          }
+        },
+        "required": [
+          "data",
+          "source"
+        ],
+        "title": "Envelope[RerunStatusView]",
+        "type": "object"
+      },
       "Envelope_ResearchMemoryView_": {
         "properties": {
           "caveats": {
@@ -2400,6 +2856,30 @@
           "source"
         ],
         "title": "Envelope[RiskStateView]",
+        "type": "object"
+      },
+      "Envelope_RobustnessIndexView_": {
+        "properties": {
+          "caveats": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/Caveat"
+            },
+            "title": "Caveats",
+            "type": "array"
+          },
+          "data": {
+            "$ref": "#/components/schemas/RobustnessIndexView"
+          },
+          "source": {
+            "$ref": "#/components/schemas/SourceNote"
+          }
+        },
+        "required": [
+          "data",
+          "source"
+        ],
+        "title": "Envelope[RobustnessIndexView]",
         "type": "object"
       },
       "Envelope_SettingsView_": {
@@ -2933,6 +3413,55 @@
         "title": "ExecutionModeBanner",
         "type": "object"
       },
+      "ExecutionStressView": {
+        "properties": {
+          "baseline": {
+            "$ref": "#/components/schemas/RerunBriefView"
+          },
+          "grid": {
+            "items": {
+              "$ref": "#/components/schemas/StressCellView"
+            },
+            "title": "Grid",
+            "type": "array"
+          },
+          "multipliers": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Multipliers",
+            "type": "array"
+          },
+          "notes": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Notes",
+            "type": "array"
+          },
+          "rows": {
+            "items": {
+              "$ref": "#/components/schemas/StressRowView"
+            },
+            "title": "Rows",
+            "type": "array"
+          },
+          "seed": {
+            "title": "Seed",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "baseline",
+          "rows",
+          "grid",
+          "multipliers",
+          "seed",
+          "notes"
+        ],
+        "title": "ExecutionStressView",
+        "type": "object"
+      },
       "ExperimentRequest": {
         "properties": {
           "hypothesis": {
@@ -3122,6 +3651,61 @@
         "title": "Figure",
         "type": "object"
       },
+      "FillDetailView": {
+        "properties": {
+          "boundary": {
+            "$ref": "#/components/schemas/HoldoutBoundaryView"
+          },
+          "intrabar_policy": {
+            "title": "Intrabar Policy",
+            "type": "string"
+          },
+          "note": {
+            "title": "Note",
+            "type": "string"
+          },
+          "rule_counts": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/Figure"
+            },
+            "title": "Rule Counts",
+            "type": "object"
+          },
+          "rule_definitions": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "title": "Rule Definitions",
+            "type": "object"
+          },
+          "run_id": {
+            "title": "Run Id",
+            "type": "string"
+          },
+          "table": {
+            "$ref": "#/components/schemas/FillTable"
+          },
+          "trades_recorded": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "trades_total": {
+            "$ref": "#/components/schemas/Figure"
+          }
+        },
+        "required": [
+          "run_id",
+          "intrabar_policy",
+          "rule_counts",
+          "rule_definitions",
+          "trades_recorded",
+          "trades_total",
+          "table",
+          "boundary",
+          "note"
+        ],
+        "title": "FillDetailView",
+        "type": "object"
+      },
       "FillOverlay": {
         "properties": {
           "dataset_version_id": {
@@ -3216,6 +3800,197 @@
           "source"
         ],
         "title": "FillOverlay",
+        "type": "object"
+      },
+      "FillTable": {
+        "description": "Per-trade fill rules and cost decomposition, as labelled COLUMNS.",
+        "properties": {
+          "commission": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "title": "Commission",
+            "type": "array"
+          },
+          "direction": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Direction",
+            "type": "array"
+          },
+          "entry_time": {
+            "items": {
+              "anyOf": [
+                {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "title": "Entry Time",
+            "type": "array"
+          },
+          "exit_reason": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Exit Reason",
+            "type": "array"
+          },
+          "exit_time": {
+            "items": {
+              "anyOf": [
+                {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "title": "Exit Time",
+            "type": "array"
+          },
+          "financing_cost": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "title": "Financing Cost",
+            "type": "array"
+          },
+          "gross_pnl": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "title": "Gross Pnl",
+            "type": "array"
+          },
+          "instrument": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Instrument",
+            "type": "array"
+          },
+          "net_pnl": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "title": "Net Pnl",
+            "type": "array"
+          },
+          "provenance": {
+            "$ref": "#/components/schemas/Provenance"
+          },
+          "recorded": {
+            "items": {
+              "type": "boolean"
+            },
+            "title": "Recorded",
+            "type": "array"
+          },
+          "rules": {
+            "items": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "title": "Rules",
+            "type": "array"
+          },
+          "slippage_cost": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "title": "Slippage Cost",
+            "type": "array"
+          },
+          "spread_cost": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "title": "Spread Cost",
+            "type": "array"
+          },
+          "trade_id": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Trade Id",
+            "type": "array"
+          },
+          "unit": {
+            "title": "Unit",
+            "type": "string"
+          }
+        },
+        "required": [
+          "provenance",
+          "unit",
+          "trade_id",
+          "instrument",
+          "direction",
+          "entry_time",
+          "exit_time",
+          "exit_reason",
+          "recorded",
+          "rules",
+          "gross_pnl",
+          "spread_cost",
+          "slippage_cost",
+          "commission",
+          "financing_cost",
+          "net_pnl"
+        ],
+        "title": "FillTable",
         "type": "object"
       },
       "FleetRowView": {
@@ -3658,6 +4433,32 @@
         "title": "GateReportView",
         "type": "object"
       },
+      "GridPointView": {
+        "properties": {
+          "objective": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "params": {
+            "title": "Params",
+            "type": "object"
+          },
+          "run_id": {
+            "title": "Run Id",
+            "type": "string"
+          },
+          "trades": {
+            "$ref": "#/components/schemas/Figure"
+          }
+        },
+        "required": [
+          "run_id",
+          "params",
+          "objective",
+          "trades"
+        ],
+        "title": "GridPointView",
+        "type": "object"
+      },
       "HTTPValidationError": {
         "properties": {
           "detail": {
@@ -3972,6 +4773,43 @@
         "title": "HistogramView",
         "type": "object"
       },
+      "HoldoutBoundaryView": {
+        "properties": {
+          "basis": {
+            "title": "Basis",
+            "type": "string"
+          },
+          "detail": {
+            "title": "Detail",
+            "type": "string"
+          },
+          "note": {
+            "title": "Note",
+            "type": "string"
+          },
+          "points_excluded": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "start": {
+            "format": "date-time",
+            "title": "Start",
+            "type": "string"
+          },
+          "trades_excluded": {
+            "$ref": "#/components/schemas/Figure"
+          }
+        },
+        "required": [
+          "start",
+          "basis",
+          "detail",
+          "trades_excluded",
+          "points_excluded",
+          "note"
+        ],
+        "title": "HoldoutBoundaryView",
+        "type": "object"
+      },
       "HypothesisView": {
         "properties": {
           "family": {
@@ -4156,6 +4994,44 @@
           "timeline"
         ],
         "title": "IncidentView",
+        "type": "object"
+      },
+      "IndicatorDriftView": {
+        "properties": {
+          "bars_differing": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "column": {
+            "title": "Column",
+            "type": "string"
+          },
+          "last_differing_bar": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Differing Bar"
+          },
+          "max_abs_diff": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "max_rel_diff": {
+            "$ref": "#/components/schemas/Figure"
+          }
+        },
+        "required": [
+          "column",
+          "max_abs_diff",
+          "max_rel_diff",
+          "bars_differing",
+          "last_differing_bar"
+        ],
+        "title": "IndicatorDriftView",
         "type": "object"
       },
       "InstrumentBreakdownView": {
@@ -5212,6 +6088,103 @@
         "title": "LoginRequest",
         "type": "object"
       },
+      "LookaheadFlagView": {
+        "properties": {
+          "bar": {
+            "format": "date-time",
+            "title": "Bar",
+            "type": "string"
+          },
+          "columns_changed": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Columns Changed",
+            "type": "array"
+          },
+          "signal_changed": {
+            "title": "Signal Changed",
+            "type": "boolean"
+          },
+          "signal_full": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Signal Full"
+          },
+          "signal_truncated": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Signal Truncated"
+          }
+        },
+        "required": [
+          "bar",
+          "signal_full",
+          "signal_truncated",
+          "signal_changed",
+          "columns_changed"
+        ],
+        "title": "LookaheadFlagView",
+        "type": "object"
+      },
+      "LookaheadView": {
+        "properties": {
+          "biased": {
+            "title": "Biased",
+            "type": "boolean"
+          },
+          "columns_checked": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Columns Checked",
+            "type": "array"
+          },
+          "flags": {
+            "items": {
+              "$ref": "#/components/schemas/LookaheadFlagView"
+            },
+            "title": "Flags",
+            "type": "array"
+          },
+          "samples": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "seed": {
+            "title": "Seed",
+            "type": "integer"
+          },
+          "signal_flags": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "signals_at_samples": {
+            "$ref": "#/components/schemas/Figure"
+          }
+        },
+        "required": [
+          "samples",
+          "seed",
+          "signals_at_samples",
+          "columns_checked",
+          "flags",
+          "biased",
+          "signal_flags"
+        ],
+        "title": "LookaheadView",
+        "type": "object"
+      },
       "MarketSessionView": {
         "properties": {
           "detail": {
@@ -5398,6 +6371,104 @@
         "title": "MonthlyCellView",
         "type": "object"
       },
+      "NoiseRowView": {
+        "properties": {
+          "atr_fraction": {
+            "title": "Atr Fraction",
+            "type": "string"
+          },
+          "degradation": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "net_profit": {
+            "$ref": "#/components/schemas/DistributionView"
+          },
+          "profitable_share": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "runs": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "sharpe": {
+            "$ref": "#/components/schemas/DistributionView"
+          },
+          "trades": {
+            "$ref": "#/components/schemas/DistributionView"
+          }
+        },
+        "required": [
+          "atr_fraction",
+          "runs",
+          "net_profit",
+          "sharpe",
+          "trades",
+          "degradation",
+          "profitable_share"
+        ],
+        "title": "NoiseRowView",
+        "type": "object"
+      },
+      "NoiseView": {
+        "properties": {
+          "atr_period": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "baseline": {
+            "$ref": "#/components/schemas/RerunBriefView"
+          },
+          "rows": {
+            "items": {
+              "$ref": "#/components/schemas/NoiseRowView"
+            },
+            "title": "Rows",
+            "type": "array"
+          },
+          "seed": {
+            "title": "Seed",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "baseline",
+          "rows",
+          "seed",
+          "atr_period"
+        ],
+        "title": "NoiseView",
+        "type": "object"
+      },
+      "ObjectiveDefView": {
+        "properties": {
+          "definition": {
+            "title": "Definition",
+            "type": "string"
+          },
+          "key": {
+            "title": "Key",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "neutral": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "unit": {
+            "title": "Unit",
+            "type": "string"
+          }
+        },
+        "required": [
+          "key",
+          "label",
+          "unit",
+          "definition",
+          "neutral"
+        ],
+        "title": "ObjectiveDefView",
+        "type": "object"
+      },
       "OpenPositionView": {
         "properties": {
           "chart": {
@@ -5440,6 +6511,86 @@
           "chart"
         ],
         "title": "OpenPositionView",
+        "type": "object"
+      },
+      "OptimisationProfileView": {
+        "properties": {
+          "median": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "median_over_peak": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "method": {
+            "title": "Method",
+            "type": "string"
+          },
+          "n_points": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "n_undefined": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "objective": {
+            "title": "Objective",
+            "type": "string"
+          },
+          "p25": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "p75": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "parameters": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Parameters",
+            "type": "array"
+          },
+          "peak": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "peak_params": {
+            "title": "Peak Params",
+            "type": "object"
+          },
+          "points": {
+            "items": {
+              "$ref": "#/components/schemas/GridPointView"
+            },
+            "title": "Points",
+            "type": "array"
+          },
+          "profitable_share": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "runs_unknown_params": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "strategy_id": {
+            "title": "Strategy Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "strategy_id",
+          "objective",
+          "parameters",
+          "points",
+          "n_points",
+          "n_undefined",
+          "runs_unknown_params",
+          "peak",
+          "median",
+          "p25",
+          "p75",
+          "profitable_share",
+          "median_over_peak",
+          "peak_params",
+          "method"
+        ],
+        "title": "OptimisationProfileView",
         "type": "object"
       },
       "OtherDrawingSet": {
@@ -6845,6 +7996,98 @@
         "title": "ParameterSurfaceView",
         "type": "object"
       },
+      "PerturbationDrawView": {
+        "properties": {
+          "error": {
+            "title": "Error",
+            "type": "string"
+          },
+          "net_profit": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "params": {
+            "title": "Params",
+            "type": "object"
+          },
+          "sharpe": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "trades": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "valid": {
+            "title": "Valid",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "params",
+          "valid",
+          "error",
+          "net_profit",
+          "sharpe",
+          "trades"
+        ],
+        "title": "PerturbationDrawView",
+        "type": "object"
+      },
+      "PerturbationView": {
+        "properties": {
+          "baseline": {
+            "$ref": "#/components/schemas/RerunBriefView"
+          },
+          "baseline_percentile": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "draws": {
+            "items": {
+              "$ref": "#/components/schemas/PerturbationDrawView"
+            },
+            "title": "Draws",
+            "type": "array"
+          },
+          "invalid": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "jitter_pct": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "net_profit": {
+            "$ref": "#/components/schemas/DistributionView"
+          },
+          "parameters": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Parameters",
+            "type": "array"
+          },
+          "profitable_share": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "seed": {
+            "title": "Seed",
+            "type": "integer"
+          },
+          "sharpe": {
+            "$ref": "#/components/schemas/DistributionView"
+          }
+        },
+        "required": [
+          "jitter_pct",
+          "seed",
+          "parameters",
+          "baseline",
+          "draws",
+          "invalid",
+          "net_profit",
+          "sharpe",
+          "profitable_share",
+          "baseline_percentile"
+        ],
+        "title": "PerturbationView",
+        "type": "object"
+      },
       "PlateauGateView": {
         "properties": {
           "comparison": {
@@ -7314,6 +8557,173 @@
         "title": "ProvenanceBlock",
         "type": "object"
       },
+      "QueueRequest": {
+        "properties": {
+          "options": {
+            "title": "Options",
+            "type": "object"
+          },
+          "reason": {
+            "maxLength": 500,
+            "minLength": 4,
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "reason"
+        ],
+        "title": "QueueRequest",
+        "type": "object"
+      },
+      "RandomBenchmarkView": {
+        "properties": {
+          "baseline": {
+            "$ref": "#/components/schemas/RerunBriefView"
+          },
+          "holding_bars": {
+            "$ref": "#/components/schemas/DistributionView"
+          },
+          "long_share": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "percentile": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "random_total_return": {
+            "$ref": "#/components/schemas/DistributionView"
+          },
+          "runs": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "seed": {
+            "title": "Seed",
+            "type": "integer"
+          },
+          "strategy_mean_return": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "strategy_total_return": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "trades": {
+            "$ref": "#/components/schemas/Figure"
+          }
+        },
+        "required": [
+          "runs",
+          "seed",
+          "trades",
+          "strategy_total_return",
+          "strategy_mean_return",
+          "random_total_return",
+          "percentile",
+          "holding_bars",
+          "long_share",
+          "baseline"
+        ],
+        "title": "RandomBenchmarkView",
+        "type": "object"
+      },
+      "RankingRowView": {
+        "properties": {
+          "basis": {
+            "title": "Basis",
+            "type": "string"
+          },
+          "holdout_excluded": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "penalised": {
+            "title": "Penalised",
+            "type": "boolean"
+          },
+          "penalty_factor": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "rank": {
+            "title": "Rank",
+            "type": "integer"
+          },
+          "raw": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "run": {
+            "$ref": "#/components/schemas/BacktestRunView"
+          },
+          "score": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "trades": {
+            "$ref": "#/components/schemas/Figure"
+          }
+        },
+        "required": [
+          "rank",
+          "run",
+          "trades",
+          "raw",
+          "score",
+          "penalty_factor",
+          "penalised",
+          "basis",
+          "holdout_excluded"
+        ],
+        "title": "RankingRowView",
+        "type": "object"
+      },
+      "RankingView": {
+        "properties": {
+          "min_trades": {
+            "title": "Min Trades",
+            "type": "integer"
+          },
+          "note": {
+            "title": "Note",
+            "type": "string"
+          },
+          "objective": {
+            "title": "Objective",
+            "type": "string"
+          },
+          "objectives": {
+            "items": {
+              "$ref": "#/components/schemas/ObjectiveDefView"
+            },
+            "title": "Objectives",
+            "type": "array"
+          },
+          "penalty": {
+            "title": "Penalty",
+            "type": "string"
+          },
+          "rows": {
+            "items": {
+              "$ref": "#/components/schemas/RankingRowView"
+            },
+            "title": "Rows",
+            "type": "array"
+          },
+          "unranked": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Unranked",
+            "type": "array"
+          }
+        },
+        "required": [
+          "objective",
+          "objectives",
+          "min_trades",
+          "rows",
+          "unranked",
+          "penalty",
+          "note"
+        ],
+        "title": "RankingView",
+        "type": "object"
+      },
       "RegimeOverlay": {
         "properties": {
           "axes": {
@@ -7467,6 +8877,285 @@
         "title": "RegimeView",
         "type": "object"
       },
+      "RerunBriefView": {
+        "properties": {
+          "ledger_sha256": {
+            "title": "Ledger Sha256",
+            "type": "string"
+          },
+          "metrics": {
+            "$ref": "#/components/schemas/RunMetricsView"
+          },
+          "profile": {
+            "title": "Profile",
+            "type": "string"
+          },
+          "rejections": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "Rejections",
+            "type": "object"
+          },
+          "signals_emitted": {
+            "$ref": "#/components/schemas/Figure"
+          }
+        },
+        "required": [
+          "profile",
+          "metrics",
+          "ledger_sha256",
+          "rejections",
+          "signals_emitted"
+        ],
+        "title": "RerunBriefView",
+        "type": "object"
+      },
+      "RerunProvenanceView": {
+        "properties": {
+          "boundary": {
+            "title": "Boundary",
+            "type": "object"
+          },
+          "covers_stored_run": {
+            "title": "Covers Stored Run",
+            "type": "boolean"
+          },
+          "dataset_version_id": {
+            "title": "Dataset Version Id",
+            "type": "string"
+          },
+          "engine": {
+            "title": "Engine",
+            "type": "object"
+          },
+          "engine_runs": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "reproduces_stored": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reproduces Stored"
+          },
+          "window_bars": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "window_end": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Window End"
+          },
+          "window_start": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Window Start"
+          }
+        },
+        "required": [
+          "window_start",
+          "window_end",
+          "window_bars",
+          "boundary",
+          "dataset_version_id",
+          "engine",
+          "engine_runs",
+          "covers_stored_run",
+          "reproduces_stored"
+        ],
+        "title": "RerunProvenanceView",
+        "type": "object"
+      },
+      "RerunResultView": {
+        "properties": {
+          "execution": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ExecutionStressView"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "lookahead": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/LookaheadView"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "method": {
+            "title": "Method",
+            "type": "string"
+          },
+          "noise": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/NoiseView"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "perturbation": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PerturbationView"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "provenance": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RerunProvenanceView"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "random": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RandomBenchmarkView"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "run_id": {
+            "title": "Run Id",
+            "type": "string"
+          },
+          "status": {
+            "$ref": "#/components/schemas/RerunStatusView"
+          },
+          "warmup": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/WarmupView"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "run_id",
+          "status",
+          "provenance",
+          "method"
+        ],
+        "title": "RerunResultView",
+        "type": "object"
+      },
+      "RerunStatusView": {
+        "properties": {
+          "cache_key": {
+            "title": "Cache Key",
+            "type": "string"
+          },
+          "computed_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Computed At"
+          },
+          "error": {
+            "title": "Error",
+            "type": "string"
+          },
+          "job_id": {
+            "title": "Job Id",
+            "type": "string"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "options": {
+            "title": "Options",
+            "type": "object"
+          },
+          "progress": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "stage": {
+            "title": "Stage",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "updated_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Updated At"
+          }
+        },
+        "required": [
+          "kind",
+          "title",
+          "status",
+          "cache_key",
+          "job_id",
+          "error",
+          "progress",
+          "stage",
+          "updated_at",
+          "computed_at",
+          "options"
+        ],
+        "title": "RerunStatusView",
+        "type": "object"
+      },
       "ResearchMemoryView": {
         "properties": {
           "available": {
@@ -7595,6 +9284,47 @@
         "title": "RiskStateView",
         "type": "object"
       },
+      "RobustnessIndexView": {
+        "properties": {
+          "binding": {
+            "title": "Binding",
+            "type": "object"
+          },
+          "can_queue_note": {
+            "title": "Can Queue Note",
+            "type": "string"
+          },
+          "kinds": {
+            "items": {
+              "$ref": "#/components/schemas/RerunStatusView"
+            },
+            "title": "Kinds",
+            "type": "array"
+          },
+          "reason": {
+            "title": "Reason",
+            "type": "string"
+          },
+          "rerunnable": {
+            "title": "Rerunnable",
+            "type": "boolean"
+          },
+          "run_id": {
+            "title": "Run Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "run_id",
+          "rerunnable",
+          "reason",
+          "binding",
+          "kinds",
+          "can_queue_note"
+        ],
+        "title": "RobustnessIndexView",
+        "type": "object"
+      },
       "RuleEvaluationView": {
         "properties": {
           "detail": {
@@ -7629,6 +9359,62 @@
           "threshold"
         ],
         "title": "RuleEvaluationView",
+        "type": "object"
+      },
+      "RunMetricsView": {
+        "properties": {
+          "cagr_pct": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "calmar": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "expectancy": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "max_drawdown_pct": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "n_trades": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "net_profit": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "profit_factor": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "sharpe": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "sortino": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "total_costs": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "total_return_pct": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "win_rate_pct": {
+            "$ref": "#/components/schemas/Figure"
+          }
+        },
+        "required": [
+          "n_trades",
+          "net_profit",
+          "total_return_pct",
+          "cagr_pct",
+          "sharpe",
+          "sortino",
+          "calmar",
+          "max_drawdown_pct",
+          "profit_factor",
+          "win_rate_pct",
+          "expectancy",
+          "total_costs"
+        ],
+        "title": "RunMetricsView",
         "type": "object"
       },
       "RunSummaryView": {
@@ -8204,6 +9990,81 @@
         "title": "SourceNote",
         "type": "object"
       },
+      "SplitView": {
+        "properties": {
+          "end": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "End"
+          },
+          "key": {
+            "title": "Key",
+            "type": "string"
+          },
+          "net_profit": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "positive": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Positive"
+          },
+          "profit_factor": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "sharpe": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "start": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Start"
+          },
+          "total_return_pct": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "trades": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "win_rate_pct": {
+            "$ref": "#/components/schemas/Figure"
+          }
+        },
+        "required": [
+          "key",
+          "start",
+          "end",
+          "trades",
+          "net_profit",
+          "total_return_pct",
+          "sharpe",
+          "win_rate_pct",
+          "profit_factor",
+          "positive"
+        ],
+        "title": "SplitView",
+        "type": "object"
+      },
       "StatView": {
         "description": "A headline figure, its definition, and the gate on the same metric (if any).",
         "properties": {
@@ -8528,6 +10389,88 @@
           "notes"
         ],
         "title": "StrategyView",
+        "type": "object"
+      },
+      "StressCellView": {
+        "properties": {
+          "metrics": {
+            "$ref": "#/components/schemas/RunMetricsView"
+          },
+          "profile": {
+            "title": "Profile",
+            "type": "string"
+          },
+          "retention": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "slippage_x": {
+            "title": "Slippage X",
+            "type": "string"
+          },
+          "spread_x": {
+            "title": "Spread X",
+            "type": "string"
+          }
+        },
+        "required": [
+          "spread_x",
+          "slippage_x",
+          "profile",
+          "metrics",
+          "retention"
+        ],
+        "title": "StressCellView",
+        "type": "object"
+      },
+      "StressRowView": {
+        "properties": {
+          "level": {
+            "title": "Level",
+            "type": "string"
+          },
+          "max_drawdown_pct": {
+            "$ref": "#/components/schemas/DistributionView"
+          },
+          "net_profit": {
+            "$ref": "#/components/schemas/DistributionView"
+          },
+          "profile": {
+            "title": "Profile",
+            "type": "string"
+          },
+          "profitable_share": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "retention": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "runs": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "sharpe": {
+            "$ref": "#/components/schemas/DistributionView"
+          },
+          "stress": {
+            "title": "Stress",
+            "type": "string"
+          },
+          "trades": {
+            "$ref": "#/components/schemas/DistributionView"
+          }
+        },
+        "required": [
+          "stress",
+          "level",
+          "runs",
+          "profile",
+          "net_profit",
+          "sharpe",
+          "max_drawdown_pct",
+          "trades",
+          "retention",
+          "profitable_share"
+        ],
+        "title": "StressRowView",
         "type": "object"
       },
       "SurfaceCellView": {
@@ -9137,6 +11080,117 @@
           "definitions"
         ],
         "title": "WalkForwardView",
+        "type": "object"
+      },
+      "WarmupRunView": {
+        "properties": {
+          "extra_bars": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "first_changed_signal": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "First Changed Signal"
+          },
+          "indicator_columns": {
+            "items": {
+              "$ref": "#/components/schemas/IndicatorDriftView"
+            },
+            "title": "Indicator Columns",
+            "type": "array"
+          },
+          "metrics": {
+            "$ref": "#/components/schemas/RunMetricsView"
+          },
+          "signals_changed_after_warmup": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "signals_changed_in_cold_region": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "signals_compared": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "stable": {
+            "title": "Stable",
+            "type": "boolean"
+          },
+          "trades_baseline": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "trades_changed": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "trades_extended": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "trades_matched": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "trades_only_baseline": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "trades_only_extended": {
+            "$ref": "#/components/schemas/Figure"
+          }
+        },
+        "required": [
+          "extra_bars",
+          "signals_compared",
+          "signals_changed_after_warmup",
+          "first_changed_signal",
+          "signals_changed_in_cold_region",
+          "indicator_columns",
+          "trades_baseline",
+          "trades_extended",
+          "trades_matched",
+          "trades_only_baseline",
+          "trades_only_extended",
+          "trades_changed",
+          "metrics",
+          "stable"
+        ],
+        "title": "WarmupRunView",
+        "type": "object"
+      },
+      "WarmupView": {
+        "properties": {
+          "baseline": {
+            "$ref": "#/components/schemas/RerunBriefView"
+          },
+          "prologue_available": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "runs": {
+            "items": {
+              "$ref": "#/components/schemas/WarmupRunView"
+            },
+            "title": "Runs",
+            "type": "array"
+          },
+          "stable": {
+            "title": "Stable",
+            "type": "boolean"
+          },
+          "warmup_period": {
+            "$ref": "#/components/schemas/Figure"
+          }
+        },
+        "required": [
+          "warmup_period",
+          "prologue_available",
+          "stable",
+          "baseline",
+          "runs"
+        ],
+        "title": "WarmupView",
         "type": "object"
       },
       "WorkerRow": {
@@ -10719,6 +12773,79 @@
         "x-fiboki-auth": "public"
       }
     },
+    "/api/research/rankings": {
+      "get": {
+        "operationId": "rankings_api_research_rankings_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "objective",
+            "required": false,
+            "schema": {
+              "default": "sharpe",
+              "title": "Objective",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "strategy_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Strategy Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 100,
+              "maximum": 300,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_RankingView_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [],
+        "summary": "Rankings",
+        "tags": [
+          "research"
+        ],
+        "x-fiboki-auth": "public"
+      }
+    },
     "/api/research/runs": {
       "get": {
         "description": "Every stored backtest run (any symbol), newest first. Read-only.",
@@ -10874,6 +13001,400 @@
         "x-fiboki-auth": "public"
       }
     },
+    "/api/research/runs/{run_id}/robustness": {
+      "get": {
+        "operationId": "robustness_index_api_research_runs__run_id__robustness_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "run_id",
+            "required": true,
+            "schema": {
+              "title": "Run Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_RobustnessIndexView_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [],
+        "summary": "Robustness Index",
+        "tags": [
+          "research"
+        ],
+        "x-fiboki-auth": "public"
+      }
+    },
+    "/api/research/runs/{run_id}/robustness/bands": {
+      "get": {
+        "operationId": "bands_api_research_runs__run_id__robustness_bands_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "run_id",
+            "required": true,
+            "schema": {
+              "title": "Run Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "seed",
+            "required": false,
+            "schema": {
+              "default": 20261018,
+              "maximum": 4294967295,
+              "minimum": 0,
+              "title": "Seed",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "n_boot",
+            "required": false,
+            "schema": {
+              "default": 1000,
+              "maximum": 5000,
+              "minimum": 200,
+              "title": "N Boot",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_ConfidenceBandsView_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [],
+        "summary": "Bands",
+        "tags": [
+          "research"
+        ],
+        "x-fiboki-auth": "public"
+      }
+    },
+    "/api/research/runs/{run_id}/robustness/breakdowns": {
+      "get": {
+        "operationId": "breakdowns_api_research_runs__run_id__robustness_breakdowns_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "run_id",
+            "required": true,
+            "schema": {
+              "title": "Run Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_BreakdownsView_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [],
+        "summary": "Breakdowns",
+        "tags": [
+          "research"
+        ],
+        "x-fiboki-auth": "public"
+      }
+    },
+    "/api/research/runs/{run_id}/robustness/consistency": {
+      "get": {
+        "operationId": "consistency_api_research_runs__run_id__robustness_consistency_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "run_id",
+            "required": true,
+            "schema": {
+              "title": "Run Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "k",
+            "required": false,
+            "schema": {
+              "default": 4,
+              "maximum": 12,
+              "minimum": 2,
+              "title": "K",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_ConsistencyView_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [],
+        "summary": "Consistency",
+        "tags": [
+          "research"
+        ],
+        "x-fiboki-auth": "public"
+      }
+    },
+    "/api/research/runs/{run_id}/robustness/fills": {
+      "get": {
+        "operationId": "fills_api_research_runs__run_id__robustness_fills_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "run_id",
+            "required": true,
+            "schema": {
+              "title": "Run Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_FillDetailView_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [],
+        "summary": "Fills",
+        "tags": [
+          "research"
+        ],
+        "x-fiboki-auth": "public"
+      }
+    },
+    "/api/research/runs/{run_id}/robustness/{kind}": {
+      "get": {
+        "operationId": "robustness_result_api_research_runs__run_id__robustness__kind__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "run_id",
+            "required": true,
+            "schema": {
+              "title": "Run Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "kind",
+            "required": true,
+            "schema": {
+              "title": "Kind",
+              "type": "string"
+            }
+          },
+          {
+            "description": "JSON options, as queued.",
+            "in": "query",
+            "name": "options",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "JSON options, as queued.",
+              "title": "Options"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_RerunResultView_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [],
+        "summary": "Robustness Result",
+        "tags": [
+          "research"
+        ],
+        "x-fiboki-auth": "public"
+      },
+      "post": {
+        "description": "Queue one re-run diagnostic as a research job. Admin-gated and audited: it consumes compute.",
+        "operationId": "queue_robustness_api_research_runs__run_id__robustness__kind__post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "run_id",
+            "required": true,
+            "schema": {
+              "title": "Run Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "kind",
+            "required": true,
+            "schema": {
+              "title": "Kind",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/QueueRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_RerunStatusView_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "csrfHeader": [],
+            "sessionCookie": []
+          }
+        ],
+        "summary": "Queue Robustness",
+        "tags": [
+          "research"
+        ],
+        "x-fiboki-auth": "admin"
+      }
+    },
     "/api/research/runs/{run_id}/tearsheet": {
       "get": {
         "operationId": "tearsheet_api_research_runs__run_id__tearsheet_get",
@@ -10979,6 +13500,60 @@
         },
         "security": [],
         "summary": "Strategy Detail",
+        "tags": [
+          "research"
+        ],
+        "x-fiboki-auth": "public"
+      }
+    },
+    "/api/research/strategies/{strategy_id}/optimisation-profile": {
+      "get": {
+        "operationId": "optimisation_profile_api_research_strategies__strategy_id__optimisation_profile_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "strategy_id",
+            "required": true,
+            "schema": {
+              "title": "Strategy Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "objective",
+            "required": false,
+            "schema": {
+              "default": "net_profit",
+              "title": "Objective",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_OptimisationProfileView_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [],
+        "summary": "Optimisation Profile",
         "tags": [
           "research"
         ],

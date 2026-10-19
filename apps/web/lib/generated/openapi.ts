@@ -537,6 +537,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/research/rankings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Rankings */
+        get: operations["rankings_api_research_rankings_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/research/runs": {
         parameters: {
             query?: never;
@@ -566,6 +583,112 @@ export interface paths {
         };
         /** Monte Carlo */
         get: operations["monte_carlo_api_research_runs__run_id__monte_carlo_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/research/runs/{run_id}/robustness": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Robustness Index */
+        get: operations["robustness_index_api_research_runs__run_id__robustness_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/research/runs/{run_id}/robustness/{kind}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Robustness Result */
+        get: operations["robustness_result_api_research_runs__run_id__robustness__kind__get"];
+        put?: never;
+        /**
+         * Queue Robustness
+         * @description Queue one re-run diagnostic as a research job. Admin-gated and audited: it consumes compute.
+         */
+        post: operations["queue_robustness_api_research_runs__run_id__robustness__kind__post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/research/runs/{run_id}/robustness/bands": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Bands */
+        get: operations["bands_api_research_runs__run_id__robustness_bands_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/research/runs/{run_id}/robustness/breakdowns": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Breakdowns */
+        get: operations["breakdowns_api_research_runs__run_id__robustness_breakdowns_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/research/runs/{run_id}/robustness/consistency": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Consistency */
+        get: operations["consistency_api_research_runs__run_id__robustness_consistency_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/research/runs/{run_id}/robustness/fills": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Fills */
+        get: operations["fills_api_research_runs__run_id__robustness_fills_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -617,6 +740,23 @@ export interface paths {
         };
         /** Strategy Detail */
         get: operations["strategy_detail_api_research_strategies__strategy_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/research/strategies/{strategy_id}/optimisation-profile": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Optimisation Profile */
+        get: operations["optimisation_profile_api_research_strategies__strategy_id__optimisation_profile_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1712,6 +1852,21 @@ export interface components {
             detail: string;
             warn_at: components["schemas"]["Figure"];
         };
+        /** BandView */
+        BandView: {
+            /** Basis */
+            basis: string;
+            block_length: components["schemas"]["Figure"];
+            /** Key */
+            key: string;
+            /** Label */
+            label: string;
+            observations: components["schemas"]["Figure"];
+            p5: components["schemas"]["Figure"];
+            p50: components["schemas"]["Figure"];
+            p95: components["schemas"]["Figure"];
+            point: components["schemas"]["Figure"];
+        };
         /** BoardRow */
         BoardRow: {
             age: components["schemas"]["Figure"];
@@ -1760,6 +1915,22 @@ export interface components {
             stale: components["schemas"]["Figure"];
             total: components["schemas"]["Figure"];
         };
+        /** BreakdownsView */
+        BreakdownsView: {
+            /** Account Ccy */
+            account_ccy: string;
+            boundary: components["schemas"]["HoldoutBoundaryView"];
+            /** Calendar Note */
+            calendar_note: string;
+            /** Entry Reason Note */
+            entry_reason_note: string;
+            /** Groups */
+            groups: {
+                [key: string]: components["schemas"]["BucketView"][];
+            };
+            /** Run Id */
+            run_id: string;
+        };
         /** BrokerHealthView */
         BrokerHealthView: {
             /** Configured */
@@ -1778,6 +1949,17 @@ export interface components {
             reasons: string[];
             /** Venue Url Host */
             venue_url_host: string;
+        };
+        /** BucketView */
+        BucketView: {
+            avg_bars_held: components["schemas"]["Figure"];
+            expectancy: components["schemas"]["Figure"];
+            /** Key */
+            key: string;
+            net_pnl: components["schemas"]["Figure"];
+            profit_factor: components["schemas"]["Figure"];
+            trades: components["schemas"]["Figure"];
+            win_rate_pct: components["schemas"]["Figure"];
         };
         /**
          * CandidateView
@@ -1912,6 +2094,39 @@ export interface components {
             /** Runs */
             runs: components["schemas"]["ComparedRunView"][];
         };
+        /** ConfidenceBandsView */
+        ConfidenceBandsView: {
+            /** Bands */
+            bands: components["schemas"]["BandView"][];
+            boundary: components["schemas"]["HoldoutBoundaryView"];
+            /** Method */
+            method: string;
+            /** N Boot */
+            n_boot: number;
+            /** Run Id */
+            run_id: string;
+            /** Seed */
+            seed: number;
+        };
+        /** ConsistencyView */
+        ConsistencyView: {
+            boundary: components["schemas"]["HoldoutBoundaryView"];
+            instrument_positive_share: components["schemas"]["Figure"];
+            /** Instruments */
+            instruments: components["schemas"]["SplitView"][];
+            /** K */
+            k: number;
+            /** Method */
+            method: string;
+            period_empty: components["schemas"]["Figure"];
+            period_positive_share: components["schemas"]["Figure"];
+            /** Periods */
+            periods: components["schemas"]["SplitView"][];
+            /** Pooled */
+            pooled: boolean;
+            /** Run Id */
+            run_id: string;
+        };
         /** CorrelationCellView */
         CorrelationCellView: {
             /** A */
@@ -1976,6 +2191,19 @@ export interface components {
             formula: string;
             /** Label */
             label: string;
+        };
+        /**
+         * DistributionView
+         * @description Quantiles of one figure across many re-runs (simulated, so ``estimated``).
+         */
+        DistributionView: {
+            mean: components["schemas"]["Figure"];
+            n: components["schemas"]["Figure"];
+            p5: components["schemas"]["Figure"];
+            p25: components["schemas"]["Figure"];
+            p50: components["schemas"]["Figure"];
+            p75: components["schemas"]["Figure"];
+            p95: components["schemas"]["Figure"];
         };
         /** DivergenceDimensionView */
         DivergenceDimensionView: {
@@ -2137,6 +2365,16 @@ export interface components {
             data: components["schemas"]["BoardView"];
             source: components["schemas"]["SourceNote"];
         };
+        /** Envelope[BreakdownsView] */
+        Envelope_BreakdownsView_: {
+            /**
+             * Caveats
+             * @default []
+             */
+            caveats: components["schemas"]["Caveat"][];
+            data: components["schemas"]["BreakdownsView"];
+            source: components["schemas"]["SourceNote"];
+        };
         /** Envelope[BrokerHealthView] */
         Envelope_BrokerHealthView_: {
             /**
@@ -2175,6 +2413,26 @@ export interface components {
              */
             caveats: components["schemas"]["Caveat"][];
             data: components["schemas"]["ComparisonView"];
+            source: components["schemas"]["SourceNote"];
+        };
+        /** Envelope[ConfidenceBandsView] */
+        Envelope_ConfidenceBandsView_: {
+            /**
+             * Caveats
+             * @default []
+             */
+            caveats: components["schemas"]["Caveat"][];
+            data: components["schemas"]["ConfidenceBandsView"];
+            source: components["schemas"]["SourceNote"];
+        };
+        /** Envelope[ConsistencyView] */
+        Envelope_ConsistencyView_: {
+            /**
+             * Caveats
+             * @default []
+             */
+            caveats: components["schemas"]["Caveat"][];
+            data: components["schemas"]["ConsistencyView"];
             source: components["schemas"]["SourceNote"];
         };
         /** Envelope[CorrelationMatrixView] */
@@ -2216,6 +2474,16 @@ export interface components {
              */
             caveats: components["schemas"]["Caveat"][];
             data: components["schemas"]["ExecutionModeBanner"];
+            source: components["schemas"]["SourceNote"];
+        };
+        /** Envelope[FillDetailView] */
+        Envelope_FillDetailView_: {
+            /**
+             * Caveats
+             * @default []
+             */
+            caveats: components["schemas"]["Caveat"][];
+            data: components["schemas"]["FillDetailView"];
             source: components["schemas"]["SourceNote"];
         };
         /** Envelope[IncidentView] */
@@ -2288,6 +2556,16 @@ export interface components {
             data: components["schemas"]["MonteCarloView"];
             source: components["schemas"]["SourceNote"];
         };
+        /** Envelope[OptimisationProfileView] */
+        Envelope_OptimisationProfileView_: {
+            /**
+             * Caveats
+             * @default []
+             */
+            caveats: components["schemas"]["Caveat"][];
+            data: components["schemas"]["OptimisationProfileView"];
+            source: components["schemas"]["SourceNote"];
+        };
         /** Envelope[OverlayView] */
         Envelope_OverlayView_: {
             /**
@@ -2338,6 +2616,36 @@ export interface components {
             data: components["schemas"]["PromotePreflightView"];
             source: components["schemas"]["SourceNote"];
         };
+        /** Envelope[RankingView] */
+        Envelope_RankingView_: {
+            /**
+             * Caveats
+             * @default []
+             */
+            caveats: components["schemas"]["Caveat"][];
+            data: components["schemas"]["RankingView"];
+            source: components["schemas"]["SourceNote"];
+        };
+        /** Envelope[RerunResultView] */
+        Envelope_RerunResultView_: {
+            /**
+             * Caveats
+             * @default []
+             */
+            caveats: components["schemas"]["Caveat"][];
+            data: components["schemas"]["RerunResultView"];
+            source: components["schemas"]["SourceNote"];
+        };
+        /** Envelope[RerunStatusView] */
+        Envelope_RerunStatusView_: {
+            /**
+             * Caveats
+             * @default []
+             */
+            caveats: components["schemas"]["Caveat"][];
+            data: components["schemas"]["RerunStatusView"];
+            source: components["schemas"]["SourceNote"];
+        };
         /** Envelope[ResearchMemoryView] */
         Envelope_ResearchMemoryView_: {
             /**
@@ -2356,6 +2664,16 @@ export interface components {
              */
             caveats: components["schemas"]["Caveat"][];
             data: components["schemas"]["RiskStateView"];
+            source: components["schemas"]["SourceNote"];
+        };
+        /** Envelope[RobustnessIndexView] */
+        Envelope_RobustnessIndexView_: {
+            /**
+             * Caveats
+             * @default []
+             */
+            caveats: components["schemas"]["Caveat"][];
+            data: components["schemas"]["RobustnessIndexView"];
             source: components["schemas"]["SourceNote"];
         };
         /** Envelope[SettingsView] */
@@ -2529,6 +2847,20 @@ export interface components {
             /** Touches Real Money */
             touches_real_money: boolean;
         };
+        /** ExecutionStressView */
+        ExecutionStressView: {
+            baseline: components["schemas"]["RerunBriefView"];
+            /** Grid */
+            grid: components["schemas"]["StressCellView"][];
+            /** Multipliers */
+            multipliers: string[];
+            /** Notes */
+            notes: string[];
+            /** Rows */
+            rows: components["schemas"]["StressRowView"][];
+            /** Seed */
+            seed: number;
+        };
         /** ExperimentRequest */
         ExperimentRequest: {
             /** Hypothesis */
@@ -2603,6 +2935,27 @@ export interface components {
             /** Value */
             value: number | null;
         };
+        /** FillDetailView */
+        FillDetailView: {
+            boundary: components["schemas"]["HoldoutBoundaryView"];
+            /** Intrabar Policy */
+            intrabar_policy: string;
+            /** Note */
+            note: string;
+            /** Rule Counts */
+            rule_counts: {
+                [key: string]: components["schemas"]["Figure"];
+            };
+            /** Rule Definitions */
+            rule_definitions: {
+                [key: string]: string;
+            };
+            /** Run Id */
+            run_id: string;
+            table: components["schemas"]["FillTable"];
+            trades_recorded: components["schemas"]["Figure"];
+            trades_total: components["schemas"]["Figure"];
+        };
         /** FillOverlay */
         FillOverlay: {
             /** Dataset Version Id */
@@ -2638,6 +2991,43 @@ export interface components {
             t: string;
             /** Trade Id */
             trade_id: string;
+        };
+        /**
+         * FillTable
+         * @description Per-trade fill rules and cost decomposition, as labelled COLUMNS.
+         */
+        FillTable: {
+            /** Commission */
+            commission: (number | null)[];
+            /** Direction */
+            direction: string[];
+            /** Entry Time */
+            entry_time: (string | null)[];
+            /** Exit Reason */
+            exit_reason: string[];
+            /** Exit Time */
+            exit_time: (string | null)[];
+            /** Financing Cost */
+            financing_cost: (number | null)[];
+            /** Gross Pnl */
+            gross_pnl: (number | null)[];
+            /** Instrument */
+            instrument: string[];
+            /** Net Pnl */
+            net_pnl: (number | null)[];
+            provenance: components["schemas"]["Provenance"];
+            /** Recorded */
+            recorded: boolean[];
+            /** Rules */
+            rules: string[][];
+            /** Slippage Cost */
+            slippage_cost: (number | null)[];
+            /** Spread Cost */
+            spread_cost: (number | null)[];
+            /** Trade Id */
+            trade_id: string[];
+            /** Unit */
+            unit: string;
         };
         /** FleetRowView */
         FleetRowView: {
@@ -2762,6 +3152,15 @@ export interface components {
             /** Verdict */
             verdict: string;
         };
+        /** GridPointView */
+        GridPointView: {
+            objective: components["schemas"]["Figure"];
+            /** Params */
+            params: Record<string, never>;
+            /** Run Id */
+            run_id: string;
+            trades: components["schemas"]["Figure"];
+        };
         /** HeadlineOverlay */
         HeadlineOverlay: {
             /** Currency */
@@ -2861,6 +3260,22 @@ export interface components {
             /** Unit */
             unit: string;
         };
+        /** HoldoutBoundaryView */
+        HoldoutBoundaryView: {
+            /** Basis */
+            basis: string;
+            /** Detail */
+            detail: string;
+            /** Note */
+            note: string;
+            points_excluded: components["schemas"]["Figure"];
+            /**
+             * Start
+             * Format: date-time
+             */
+            start: string;
+            trades_excluded: components["schemas"]["Figure"];
+        };
         /** HTTPValidationError */
         HTTPValidationError: {
             /** Detail */
@@ -2935,6 +3350,16 @@ export interface components {
             timeline: components["schemas"]["TimelineEntry"][];
             /** Title */
             title: string;
+        };
+        /** IndicatorDriftView */
+        IndicatorDriftView: {
+            bars_differing: components["schemas"]["Figure"];
+            /** Column */
+            column: string;
+            /** Last Differing Bar */
+            last_differing_bar: string | null;
+            max_abs_diff: components["schemas"]["Figure"];
+            max_rel_diff: components["schemas"]["Figure"];
         };
         /** InstrumentBreakdownView */
         InstrumentBreakdownView: {
@@ -3290,6 +3715,36 @@ export interface components {
             /** Username */
             username: string;
         };
+        /** LookaheadFlagView */
+        LookaheadFlagView: {
+            /**
+             * Bar
+             * Format: date-time
+             */
+            bar: string;
+            /** Columns Changed */
+            columns_changed: string[];
+            /** Signal Changed */
+            signal_changed: boolean;
+            /** Signal Full */
+            signal_full: string | null;
+            /** Signal Truncated */
+            signal_truncated: string | null;
+        };
+        /** LookaheadView */
+        LookaheadView: {
+            /** Biased */
+            biased: boolean;
+            /** Columns Checked */
+            columns_checked: string[];
+            /** Flags */
+            flags: components["schemas"]["LookaheadFlagView"][];
+            samples: components["schemas"]["Figure"];
+            /** Seed */
+            seed: number;
+            signal_flags: components["schemas"]["Figure"];
+            signals_at_samples: components["schemas"]["Figure"];
+        };
         /** MarketSessionView */
         MarketSessionView: {
             /** Detail */
@@ -3361,6 +3816,38 @@ export interface components {
             /** Year */
             year: number;
         };
+        /** NoiseRowView */
+        NoiseRowView: {
+            /** Atr Fraction */
+            atr_fraction: string;
+            degradation: components["schemas"]["Figure"];
+            net_profit: components["schemas"]["DistributionView"];
+            profitable_share: components["schemas"]["Figure"];
+            runs: components["schemas"]["Figure"];
+            sharpe: components["schemas"]["DistributionView"];
+            trades: components["schemas"]["DistributionView"];
+        };
+        /** NoiseView */
+        NoiseView: {
+            atr_period: components["schemas"]["Figure"];
+            baseline: components["schemas"]["RerunBriefView"];
+            /** Rows */
+            rows: components["schemas"]["NoiseRowView"][];
+            /** Seed */
+            seed: number;
+        };
+        /** ObjectiveDefView */
+        ObjectiveDefView: {
+            /** Definition */
+            definition: string;
+            /** Key */
+            key: string;
+            /** Label */
+            label: string;
+            neutral: components["schemas"]["Figure"];
+            /** Unit */
+            unit: string;
+        };
         /** OpenPositionView */
         OpenPositionView: {
             /** Chart */
@@ -3375,6 +3862,30 @@ export interface components {
             position_id: string;
             size: components["schemas"]["Figure"];
             unrealised_pnl: components["schemas"]["Figure"];
+        };
+        /** OptimisationProfileView */
+        OptimisationProfileView: {
+            median: components["schemas"]["Figure"];
+            median_over_peak: components["schemas"]["Figure"];
+            /** Method */
+            method: string;
+            n_points: components["schemas"]["Figure"];
+            n_undefined: components["schemas"]["Figure"];
+            /** Objective */
+            objective: string;
+            p25: components["schemas"]["Figure"];
+            p75: components["schemas"]["Figure"];
+            /** Parameters */
+            parameters: string[];
+            peak: components["schemas"]["Figure"];
+            /** Peak Params */
+            peak_params: Record<string, never>;
+            /** Points */
+            points: components["schemas"]["GridPointView"][];
+            profitable_share: components["schemas"]["Figure"];
+            runs_unknown_params: components["schemas"]["Figure"];
+            /** Strategy Id */
+            strategy_id: string;
         };
         /**
          * OtherDrawingSet
@@ -4047,6 +4558,34 @@ export interface components {
             /** Y Values */
             y_values: number[];
         };
+        /** PerturbationDrawView */
+        PerturbationDrawView: {
+            /** Error */
+            error: string;
+            net_profit: components["schemas"]["Figure"];
+            /** Params */
+            params: Record<string, never>;
+            sharpe: components["schemas"]["Figure"];
+            trades: components["schemas"]["Figure"];
+            /** Valid */
+            valid: boolean;
+        };
+        /** PerturbationView */
+        PerturbationView: {
+            baseline: components["schemas"]["RerunBriefView"];
+            baseline_percentile: components["schemas"]["Figure"];
+            /** Draws */
+            draws: components["schemas"]["PerturbationDrawView"][];
+            invalid: components["schemas"]["Figure"];
+            jitter_pct: components["schemas"]["Figure"];
+            net_profit: components["schemas"]["DistributionView"];
+            /** Parameters */
+            parameters: string[];
+            profitable_share: components["schemas"]["Figure"];
+            /** Seed */
+            seed: number;
+            sharpe: components["schemas"]["DistributionView"];
+        };
         /** PlateauGateView */
         PlateauGateView: {
             /** Comparison */
@@ -4230,6 +4769,59 @@ export interface components {
             /** Timeframe */
             timeframe: string;
         };
+        /** QueueRequest */
+        QueueRequest: {
+            /** Options */
+            options?: Record<string, never>;
+            /** Reason */
+            reason: string;
+        };
+        /** RandomBenchmarkView */
+        RandomBenchmarkView: {
+            baseline: components["schemas"]["RerunBriefView"];
+            holding_bars: components["schemas"]["DistributionView"];
+            long_share: components["schemas"]["Figure"];
+            percentile: components["schemas"]["Figure"];
+            random_total_return: components["schemas"]["DistributionView"];
+            runs: components["schemas"]["Figure"];
+            /** Seed */
+            seed: number;
+            strategy_mean_return: components["schemas"]["Figure"];
+            strategy_total_return: components["schemas"]["Figure"];
+            trades: components["schemas"]["Figure"];
+        };
+        /** RankingRowView */
+        RankingRowView: {
+            /** Basis */
+            basis: string;
+            holdout_excluded: components["schemas"]["Figure"];
+            /** Penalised */
+            penalised: boolean;
+            penalty_factor: components["schemas"]["Figure"];
+            /** Rank */
+            rank: number;
+            raw: components["schemas"]["Figure"];
+            run: components["schemas"]["BacktestRunView"];
+            score: components["schemas"]["Figure"];
+            trades: components["schemas"]["Figure"];
+        };
+        /** RankingView */
+        RankingView: {
+            /** Min Trades */
+            min_trades: number;
+            /** Note */
+            note: string;
+            /** Objective */
+            objective: string;
+            /** Objectives */
+            objectives: components["schemas"]["ObjectiveDefView"][];
+            /** Penalty */
+            penalty: string;
+            /** Rows */
+            rows: components["schemas"]["RankingRowView"][];
+            /** Unranked */
+            unranked: string[];
+        };
         /** RegimeOverlay */
         RegimeOverlay: {
             /** Axes */
@@ -4281,6 +4873,77 @@ export interface components {
             /** Volatility */
             volatility?: string | null;
         };
+        /** RerunBriefView */
+        RerunBriefView: {
+            /** Ledger Sha256 */
+            ledger_sha256: string;
+            metrics: components["schemas"]["RunMetricsView"];
+            /** Profile */
+            profile: string;
+            /** Rejections */
+            rejections: {
+                [key: string]: number;
+            };
+            signals_emitted: components["schemas"]["Figure"];
+        };
+        /** RerunProvenanceView */
+        RerunProvenanceView: {
+            /** Boundary */
+            boundary: Record<string, never>;
+            /** Covers Stored Run */
+            covers_stored_run: boolean;
+            /** Dataset Version Id */
+            dataset_version_id: string;
+            /** Engine */
+            engine: Record<string, never>;
+            engine_runs: components["schemas"]["Figure"];
+            /** Reproduces Stored */
+            reproduces_stored: boolean | null;
+            window_bars: components["schemas"]["Figure"];
+            /** Window End */
+            window_end: string | null;
+            /** Window Start */
+            window_start: string | null;
+        };
+        /** RerunResultView */
+        RerunResultView: {
+            execution?: components["schemas"]["ExecutionStressView"] | null;
+            lookahead?: components["schemas"]["LookaheadView"] | null;
+            /** Method */
+            method: string;
+            noise?: components["schemas"]["NoiseView"] | null;
+            perturbation?: components["schemas"]["PerturbationView"] | null;
+            provenance: components["schemas"]["RerunProvenanceView"] | null;
+            random?: components["schemas"]["RandomBenchmarkView"] | null;
+            /** Run Id */
+            run_id: string;
+            status: components["schemas"]["RerunStatusView"];
+            warmup?: components["schemas"]["WarmupView"] | null;
+        };
+        /** RerunStatusView */
+        RerunStatusView: {
+            /** Cache Key */
+            cache_key: string;
+            /** Computed At */
+            computed_at: string | null;
+            /** Error */
+            error: string;
+            /** Job Id */
+            job_id: string;
+            /** Kind */
+            kind: string;
+            /** Options */
+            options: Record<string, never>;
+            progress: components["schemas"]["Figure"];
+            /** Stage */
+            stage: string;
+            /** Status */
+            status: string;
+            /** Title */
+            title: string;
+            /** Updated At */
+            updated_at: string | null;
+        };
         /** ResearchMemoryView */
         ResearchMemoryView: {
             /** Available */
@@ -4321,6 +4984,21 @@ export interface components {
             /** New Risk Reason */
             new_risk_reason: string;
         };
+        /** RobustnessIndexView */
+        RobustnessIndexView: {
+            /** Binding */
+            binding: Record<string, never>;
+            /** Can Queue Note */
+            can_queue_note: string;
+            /** Kinds */
+            kinds: components["schemas"]["RerunStatusView"][];
+            /** Reason */
+            reason: string;
+            /** Rerunnable */
+            rerunnable: boolean;
+            /** Run Id */
+            run_id: string;
+        };
         /** RuleEvaluationView */
         RuleEvaluationView: {
             /**
@@ -4347,6 +5025,21 @@ export interface components {
             outcome: string;
             /** Reason */
             reason: string;
+        };
+        /** RunMetricsView */
+        RunMetricsView: {
+            cagr_pct: components["schemas"]["Figure"];
+            calmar: components["schemas"]["Figure"];
+            expectancy: components["schemas"]["Figure"];
+            max_drawdown_pct: components["schemas"]["Figure"];
+            n_trades: components["schemas"]["Figure"];
+            net_profit: components["schemas"]["Figure"];
+            profit_factor: components["schemas"]["Figure"];
+            sharpe: components["schemas"]["Figure"];
+            sortino: components["schemas"]["Figure"];
+            total_costs: components["schemas"]["Figure"];
+            total_return_pct: components["schemas"]["Figure"];
+            win_rate_pct: components["schemas"]["Figure"];
         };
         /** RunSummaryView */
         RunSummaryView: {
@@ -4558,6 +5251,23 @@ export interface components {
             /** Kind */
             kind: string;
         };
+        /** SplitView */
+        SplitView: {
+            /** End */
+            end: string | null;
+            /** Key */
+            key: string;
+            net_profit: components["schemas"]["Figure"];
+            /** Positive */
+            positive: boolean | null;
+            profit_factor: components["schemas"]["Figure"];
+            sharpe: components["schemas"]["Figure"];
+            /** Start */
+            start: string | null;
+            total_return_pct: components["schemas"]["Figure"];
+            trades: components["schemas"]["Figure"];
+            win_rate_pct: components["schemas"]["Figure"];
+        };
         /**
          * StatView
          * @description A headline figure, its definition, and the gate on the same metric (if any).
@@ -4671,6 +5381,33 @@ export interface components {
             timeframes: string[];
             /** Universe */
             universe: string[];
+        };
+        /** StressCellView */
+        StressCellView: {
+            metrics: components["schemas"]["RunMetricsView"];
+            /** Profile */
+            profile: string;
+            retention: components["schemas"]["Figure"];
+            /** Slippage X */
+            slippage_x: string;
+            /** Spread X */
+            spread_x: string;
+        };
+        /** StressRowView */
+        StressRowView: {
+            /** Level */
+            level: string;
+            max_drawdown_pct: components["schemas"]["DistributionView"];
+            net_profit: components["schemas"]["DistributionView"];
+            /** Profile */
+            profile: string;
+            profitable_share: components["schemas"]["Figure"];
+            retention: components["schemas"]["Figure"];
+            runs: components["schemas"]["Figure"];
+            sharpe: components["schemas"]["DistributionView"];
+            /** Stress */
+            stress: string;
+            trades: components["schemas"]["DistributionView"];
         };
         /** SurfaceCellView */
         SurfaceCellView: {
@@ -4889,6 +5626,36 @@ export interface components {
             /** Strategy Id */
             strategy_id: string;
             walk_forward_efficiency: components["schemas"]["Figure"];
+        };
+        /** WarmupRunView */
+        WarmupRunView: {
+            extra_bars: components["schemas"]["Figure"];
+            /** First Changed Signal */
+            first_changed_signal: string | null;
+            /** Indicator Columns */
+            indicator_columns: components["schemas"]["IndicatorDriftView"][];
+            metrics: components["schemas"]["RunMetricsView"];
+            signals_changed_after_warmup: components["schemas"]["Figure"];
+            signals_changed_in_cold_region: components["schemas"]["Figure"];
+            signals_compared: components["schemas"]["Figure"];
+            /** Stable */
+            stable: boolean;
+            trades_baseline: components["schemas"]["Figure"];
+            trades_changed: components["schemas"]["Figure"];
+            trades_extended: components["schemas"]["Figure"];
+            trades_matched: components["schemas"]["Figure"];
+            trades_only_baseline: components["schemas"]["Figure"];
+            trades_only_extended: components["schemas"]["Figure"];
+        };
+        /** WarmupView */
+        WarmupView: {
+            baseline: components["schemas"]["RerunBriefView"];
+            prologue_available: components["schemas"]["Figure"];
+            /** Runs */
+            runs: components["schemas"]["WarmupRunView"][];
+            /** Stable */
+            stable: boolean;
+            warmup_period: components["schemas"]["Figure"];
         };
         /** WorkerRow */
         WorkerRow: {
@@ -5804,6 +6571,39 @@ export interface operations {
             };
         };
     };
+    rankings_api_research_rankings_get: {
+        parameters: {
+            query?: {
+                limit?: number;
+                objective?: string;
+                strategy_id?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_RankingView_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     runs_api_research_runs_get: {
         parameters: {
             query?: {
@@ -5859,6 +6659,237 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Envelope_MonteCarloView_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    robustness_index_api_research_runs__run_id__robustness_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                run_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_RobustnessIndexView_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    robustness_result_api_research_runs__run_id__robustness__kind__get: {
+        parameters: {
+            query?: {
+                /** @description JSON options, as queued. */
+                options?: string | null;
+            };
+            header?: never;
+            path: {
+                kind: string;
+                run_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_RerunResultView_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    queue_robustness_api_research_runs__run_id__robustness__kind__post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                kind: string;
+                run_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["QueueRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_RerunStatusView_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    bands_api_research_runs__run_id__robustness_bands_get: {
+        parameters: {
+            query?: {
+                n_boot?: number;
+                seed?: number;
+            };
+            header?: never;
+            path: {
+                run_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_ConfidenceBandsView_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    breakdowns_api_research_runs__run_id__robustness_breakdowns_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                run_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_BreakdownsView_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    consistency_api_research_runs__run_id__robustness_consistency_get: {
+        parameters: {
+            query?: {
+                k?: number;
+            };
+            header?: never;
+            path: {
+                run_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_ConsistencyView_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    fills_api_research_runs__run_id__robustness_fills_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                run_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_FillDetailView_"];
                 };
             };
             /** @description Validation Error */
@@ -5941,6 +6972,39 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Envelope_StrategyView_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    optimisation_profile_api_research_strategies__strategy_id__optimisation_profile_get: {
+        parameters: {
+            query?: {
+                objective?: string;
+            };
+            header?: never;
+            path: {
+                strategy_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_OptimisationProfileView_"];
                 };
             };
             /** @description Validation Error */
