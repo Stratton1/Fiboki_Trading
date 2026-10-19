@@ -46,6 +46,7 @@ import {
   type PanelKind,
   type PanelKindSpec,
 } from "@/lib/workspace";
+import { ConfirmDelete } from "@/components/monitors/ConfirmDelete";
 import { PANELS } from "./registry";
 import { useLayoutDoc, type LayoutDocState } from "./useLayoutDoc";
 
@@ -139,6 +140,7 @@ function Toolbar({
   const presets = useApi<Page<LayoutPreset>>(PATHS.presets);
   const notify = useToast();
   const [saveAs, setSaveAs] = useState("");
+  const [confirming, setConfirming] = useState(false);
   const word = statusWord(state);
   const saved = layouts.status === "success" ? layouts.data.items : [];
   const names = Array.from(new Set([state.name, ...saved.map((l) => l.name)])).sort((a, b) => a.localeCompare(b));
@@ -274,24 +276,27 @@ function Toolbar({
       </label>
       <History name={state.name} version={state.version} />
       {state.version > 0 && state.canEdit ? (
-        <button
-          type="button"
-          className="ws-btn ws-btn--ghost"
-          data-testid="ws-delete"
-          onClick={async () => {
-            if (!window.confirm(`Delete layout ${state.name}? Its history is kept.`)) return;
-            try {
-              await deleteLayout(state.name, state.version);
-              notify(`Deleted ${state.name}`);
-              onOpen(DEFAULT_LAYOUT === state.name ? `${DEFAULT_LAYOUT}` : DEFAULT_LAYOUT);
-            } catch (error) {
-              notify(error instanceof Error ? error.message : String(error));
-            }
-          }}
-        >
+        <button type="button" className="ws-btn ws-btn--ghost" data-testid="ws-delete" onClick={() => setConfirming(true)}>
           Delete
         </button>
       ) : null}
+      <ConfirmDelete
+        open={confirming}
+        title={`Delete layout ${state.name}?`}
+        body="Removes this named layout for you. It is display state; nothing on the platform changes."
+        consequences={["The layout's version history is kept on the server.", "Other operators' layouts are untouched."]}
+        onCancel={() => setConfirming(false)}
+        onConfirm={async () => {
+          setConfirming(false);
+          try {
+            await deleteLayout(state.name, state.version);
+            notify(`Deleted ${state.name}`);
+            onOpen(DEFAULT_LAYOUT);
+          } catch (error) {
+            notify(error instanceof Error ? error.message : String(error));
+          }
+        }}
+      />
       {state.status.kind === "conflict" ? (
         <div className="ws-conflict" role="alert" data-testid="ws-conflict">
           <span>{state.status.message}</span>

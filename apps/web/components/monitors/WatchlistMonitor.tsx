@@ -23,6 +23,7 @@ import { invalidatePath, useApi } from "@/lib/query";
 import { route } from "@/lib/routes";
 import type { InstrumentRow, Page } from "@/lib/types";
 import { useQueryClient } from "@tanstack/react-query";
+import { ConfirmDelete } from "./ConfirmDelete";
 import { Sparkline } from "./Sparkline";
 
 /**
@@ -196,6 +197,7 @@ function ListEditor({
   const notify = useToast();
   const [symbol, setSymbol] = useState("");
   const [newName, setNewName] = useState("");
+  const [confirming, setConfirming] = useState(false);
   const known = new Set(instruments.map((i) => i.symbol));
   const refresh = () => {
     void invalidatePath(client, MONITOR_PATHS.watchlists);
@@ -286,23 +288,28 @@ function ListEditor({
         <input id="wl-new" className="ws-input" placeholder="New list…" maxLength={48} value={newName} onChange={(e) => setNewName(e.target.value)} data-testid="wl-new" />
       </form>
       {!list.builtin ? (
-        <button
-          type="button"
-          className="ws-btn ws-btn--ghost"
-          data-testid="wl-delete"
-          onClick={async () => {
-            if (!window.confirm(`Delete watchlist ${list.name}?`)) return;
-            try {
-              await deleteWatchlist(list.name, list.version);
-              refresh();
-              onList("Majors");
-            } catch (error) {
-              notify(error instanceof Error ? error.message : String(error));
-            }
-          }}
-        >
-          Delete list
-        </button>
+        <>
+          <button type="button" className="ws-btn ws-btn--ghost" data-testid="wl-delete" onClick={() => setConfirming(true)}>
+            Delete list
+          </button>
+          <ConfirmDelete
+            open={confirming}
+            title={`Delete watchlist ${list.name}?`}
+            body="Removes this list for you. A watchlist is display state; nothing on the platform changes."
+            consequences={["Its earlier versions are kept on the server."]}
+            onCancel={() => setConfirming(false)}
+            onConfirm={async () => {
+              setConfirming(false);
+              try {
+                await deleteWatchlist(list.name, list.version);
+                refresh();
+                onList("Majors");
+              } catch (error) {
+                notify(error instanceof Error ? error.message : String(error));
+              }
+            }}
+          />
+        </>
       ) : (
         <span className="muted" title="A built-in list is code; adding a symbol saves your own copy under this name.">
           built-in

@@ -36,7 +36,7 @@ const panelsOf = (layout: Record<string, unknown> | null) =>
 
 export async function mockWorkspace(
   page: Page,
-  options: { saved?: Record<string, Record<string, unknown>>; canEdit?: boolean } = {},
+  options: { saved?: Record<string, Record<string, unknown>>; canEdit?: boolean; bars?: boolean } = {},
 ): Promise<WorkspaceMock> {
   const layouts = new Map<string, StoredLayout>();
   const writes: WorkspaceMock["writes"] = [];
@@ -95,12 +95,12 @@ export async function mockWorkspace(
         if (!stored || stored.layout === null) {
           return route.fulfill({
             status: 404,
-            json: { code: "layout_not_found", detail: `No layout is saved as '${name}'.`, correlation_id: "cid-ws", context: { version: stored?.version ?? 0 } },
+            json: { code: "layout_not_found", detail: `No layout is saved as '${name}'.`, correlation_id: "cid-ws", context: { version: stored ? stored.version : 0 } },
           });
         }
         return route.fulfill({ json: view(name, stored) });
       }
-      const current = stored?.version ?? 0;
+      const current = stored ? stored.version : 0;
       const base = method === "DELETE" ? Number(url.searchParams.get("base_version")) : (route.request().postDataJSON() as { base_version: number }).base_version;
       if (base !== current) {
         return route.fulfill({
@@ -131,7 +131,7 @@ export async function mockWorkspace(
     },
   );
   // The chart panel reads closed bars.
-  await page.route((url) => url.origin === API && url.pathname.startsWith("/api/markets/bars/"), (route) => {
+  if (options.bars !== false) await page.route((url) => url.origin === API && url.pathname.startsWith("/api/markets/bars/"), (route) => {
     const url = new URL(route.request().url());
     const symbol = decodeURIComponent(url.pathname.split("/").pop() ?? "EURUSD");
     return route.fulfill({ json: chartBars({ symbol, timeframe: url.searchParams.get("timeframe") ?? "H1", count: 60 }) });

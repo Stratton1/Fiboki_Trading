@@ -18,6 +18,7 @@ import {
   riskState,
   source,
 } from "./fixtures";
+import { mockMonitors, mockWorkspace } from "./workspace-fixtures";
 
 const page1 = <T>(items: T[], detail = "Inventory fixture.") => ({
   items,
@@ -86,6 +87,9 @@ export async function mockEverything(page: Page, unexpected: string[]) {
     });
   });
   await mockShell(page);
+  // wave workspace: the workspace, monitors and notifications.
+  await mockWorkspace(page, { bars: false });
+  await mockMonitors(page);
 
   const json = (pattern: string, body: unknown) =>
     page.route(`${API}${pattern}`, (route: Route) => route.fulfill({ json: body }));
