@@ -26,6 +26,7 @@ from fiboki.api.errors import ApiError
 from fiboki.api.logging import current_correlation_id
 from fiboki.api.models import Envelope, Page, SourceNote
 from fiboki.api.provenance import Caveat, Figure
+from fiboki.api.routers.trading import TradeRowView, _record_caveats, _trade_view
 from fiboki.api.security import Principal, require_admin, require_operator
 from fiboki.core.enums import Provenance
 from fiboki.ops.audit_chain import CHAIN_FILE, ChainVerification, PaperAuditChain
@@ -1222,4 +1223,183 @@ def allocation(
         data=view,
         source=_note("live" if scheme_views else "absent",
                      f"{len(member_views)} member(s) on the {basis} basis; {days} common day(s)."),
+    )
+
+
+# ============================================================ structured journal
+
+
+class TradeNoteView(BaseModel):
+    model_config = ConfigDict(frozen=True)
+
+    trade_id: str
+    note: str
+    tags: list[str]
+    grade: str | None = Field(default=None, pattern="^(A|B|C)$")
+    mistakes: list[str]
+    screenshot_url: str | None
+    intervention_reason: str | None
+    updated_by: str
+    updated_at: datetime | None
+    #: 0 = no note yet. A PUT names the version it was based on.
+    version: int
+
+
+class TradeNoteDetailView(BaseModel):
+    model_config = ConfigDict(frozen=True)
+
+    note: TradeNoteView
+    history: list[dict[str, Any]]
+
+
+class TradeNoteRequest(BaseModel):
+    note: str = Field(default="", max_length=4000)
+    tags: list[str] = Field(default_factory=list, max_length=12)
+    grade: str | None = Field(default=None, pattern="^(A|B|C)?$")
+    mistakes: list[str] = Field(default_factory=list, max_length=12)
+    screenshot_url: str | None = Field(default=None, max_length=500)
+    intervention_reason: str | None = Field(default=None, max_length=500)
+    expected_version: int = Field(ge=0)
+
+
+class JournalVocabularyView(BaseModel):
+    model_config = ConfigDict(frozen=True)
+
+    tags: dict[str, int]
+    mistakes: dict[str, int]
+    grades: dict[str, int]
+    suggested_mistakes: list[str]
+
+
+#: A starter vocabulary the editor offers; any slug is accepted.
+SUGGESTED_MISTAKES = [
+    "early-exit", "late-entry", "moved-stop", "oversized", "chased", "ignored-news", "revenge", "no-plan",
+    "manual-override",
+]
+
+
+def _notes(settings: Any) -> Any:
+    from fiboki.ops.journal_notes import JournalNoteStore
+
+    return JournalNoteStore(Path(settings.paths.ops_dir) / "journal_notes.sqlite")
+
+
+def _note_view(n: Any) -> TradeNoteView:
+    return TradeNoteView(
+        trade_id=n.trade_id, note=n.note, tags=list(n.tags), grade=n.grade, mistakes=list(n.mistakes),
+        screenshot_url=n.screenshot_url, intervention_reason=n.intervention_reason, updated_by=n.updated_by,
+        updated_at=datetime.fromisoformat(n.updated_at) if n.updated_at else None, version=n.version,
+    )
+
+
+def _trade_exists(platform: Any, trade_id: str) -> bool:
+    rows, _ = platform.trades(limit=1_000_000)
+    return any(r.trade_id == trade_id for r in rows)
+
+
+@router.get("/journal/notes", response_model=Page[TradeNoteView])
+def journal_notes(
+    settings: SettingsDep,
+    tag: str | None = None,
+    grade: str | None = Query(None, pattern="^(A|B|C)$"),
+    mistake: str | None = None,
+    intervened: bool | None = None,
+) -> Page[TradeNoteView]:
+    store = _notes(settings)
+    rows = store.matching(tag=tag, grade=grade, mistake=mistake, intervened=intervened)
+    return Page(
+        items=[_note_view(n) for n in rows], total=len(rows), limit=max(1, len(rows)),
+        source=_note("live" if store.path.exists() else "absent",
+                     "Operator journal notes (annotations; nothing trades on them)." if store.path.exists()
+                     else "No journal note has been written yet."),
+    )
+
+
+@router.get("/journal/vocabulary", response_model=Envelope[JournalVocabularyView])
+def journal_vocabulary(settings: SettingsDep) -> Envelope[JournalVocabularyView]:
+    vocab = _notes(settings).vocabulary()
+    return Envelope(data=JournalVocabularyView(**vocab, suggested_mistakes=SUGGESTED_MISTAKES),
+                    source=_note("live", "Tags, mistakes and grades in use, with counts."))
+
+
+@router.get("/journal/notes/{trade_id}", response_model=Envelope[TradeNoteDetailView])
+def journal_note(trade_id: str, settings: SettingsDep) -> Envelope[TradeNoteDetailView]:
+    from fiboki.ops.journal_notes import TradeNote
+
+    store = _notes(settings)
+    note = store.get(trade_id) or TradeNote(trade_id=trade_id)
+    return Envelope(data=TradeNoteDetailView(note=_note_view(note), history=store.history(trade_id)),
+                    source=_note("live" if note.version else "absent",
+                                 f"Version {note.version}." if note.version else "No note on this trade yet."))
+
+
+@router.put("/journal/notes/{trade_id}", response_model=Envelope[TradeNoteDetailView])
+def put_journal_note(
+    trade_id: str,
+    body: TradeNoteRequest,
+    platform: PlatformDep,
+    settings: SettingsDep,
+    audit: AuditDep,
+    principal: OperatorPrincipal,
+    request: Request,
+) -> Envelope[TradeNoteDetailView]:
+    """Write a trade's journal note (operator role). Versioned, history kept, audited."""
+    from fiboki.ops.journal_notes import NoteConflict, NoteInvalid, validate
+
+    common = {
+        "actor": principal.user_id, "actor_role": principal.role.value,
+        "reason": (body.intervention_reason or "journal note")[:500], "target": trade_id,
+        "execution_mode": settings.execution_mode.value, "correlation_id": current_correlation_id(),
+        "source_ip": request.client.host if request.client else "",
+    }
+    if not _trade_exists(platform, trade_id):
+        raise ApiError(status.HTTP_404_NOT_FOUND, "unknown_trade", f"No closed trade {trade_id!r} on this platform.")
+    try:
+        note = validate(trade_id, note=body.note, tags=body.tags, grade=body.grade or None, mistakes=body.mistakes,
+                        screenshot_url=body.screenshot_url, intervention_reason=body.intervention_reason)
+        saved = _notes(settings).put(note, actor=principal.user_id, expected_version=body.expected_version)
+    except NoteConflict as exc:
+        audit.record("journal.note", outcome="refused", detail={"error": str(exc)}, **common)
+        raise ApiError(status.HTTP_409_CONFLICT, "note_version_conflict", str(exc),
+                       context={"current_version": exc.current}) from exc
+    except NoteInvalid as exc:
+        raise ApiError(status.HTTP_422_UNPROCESSABLE_ENTITY, "note_invalid", str(exc)) from exc
+    audit.record("journal.note", outcome="allowed",
+                 detail={"version": saved.version, "grade": saved.grade, "tags": list(saved.tags),
+                         "intervention": bool(saved.intervention_reason)}, **common)
+    return journal_note(trade_id, settings)
+
+
+@router.get("/journal/trades", response_model=Page[TradeRowView])
+def journal_trades(
+    platform: PlatformDep,
+    settings: SettingsDep,
+    tag: str | None = None,
+    grade: str | None = Query(None, pattern="^(A|B|C)$"),
+    mistake: str | None = None,
+    intervened: bool | None = None,
+    provenance: Annotated[list[Provenance] | None, Query()] = None,
+    strategy_id: str | None = None,
+    instrument: str | None = None,
+    limit: int = Query(200, ge=1, le=500),
+    offset: int = Query(0, ge=0),
+) -> Page[TradeRowView]:
+    """``/api/trading/trades`` restricted, SERVER-SIDE, to trades whose journal note matches."""
+
+    wanted = {n.trade_id for n in _notes(settings).matching(tag=tag, grade=grade, mistake=mistake,
+                                                            intervened=intervened)}
+    rows, _ = platform.trades(provenance=set(provenance) if provenance else None, strategy_id=strategy_id,
+                              instrument=instrument, limit=1_000_000)
+    hits = [r for r in rows if r.trade_id in wanted]
+    page = hits[offset: offset + limit]
+    items = [_trade_view(r, settings, platform.session_charged_costs(r.session_id)
+                         if getattr(r, "session_id", None) else None)
+             for r in page]
+    filters = ", ".join(f"{k}={v}" for k, v in (("tag", tag), ("grade", grade), ("mistake", mistake),
+                                                 ("intervened", intervened)) if v is not None) or "none"
+    return Page(
+        items=items, total=len(hits), offset=offset, limit=limit,
+        source=_note(platform.data_source, f"Trade record filtered by journal notes ({filters}). "
+                     + platform.trade_record_detail(), platform.journal_as_of()),
+        caveats=_record_caveats(platform),
     )

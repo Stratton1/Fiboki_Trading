@@ -1332,6 +1332,81 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/trading/journal/notes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Journal Notes */
+        get: operations["journal_notes_api_trading_journal_notes_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/trading/journal/notes/{trade_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Journal Note */
+        get: operations["journal_note_api_trading_journal_notes__trade_id__get"];
+        /**
+         * Put Journal Note
+         * @description Write a trade's journal note (operator role). Versioned, history kept, audited.
+         */
+        put: operations["put_journal_note_api_trading_journal_notes__trade_id__put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/trading/journal/trades": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Journal Trades
+         * @description ``/api/trading/trades`` restricted, SERVER-SIDE, to trades whose journal note matches.
+         */
+        get: operations["journal_trades_api_trading_journal_trades_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/trading/journal/vocabulary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Journal Vocabulary */
+        get: operations["journal_vocabulary_api_trading_journal_vocabulary_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/trading/lifecycle/strategies": {
         parameters: {
             query?: never;
@@ -2645,6 +2720,16 @@ export interface components {
             data: components["schemas"]["JobQueueView"];
             source: components["schemas"]["SourceNote"];
         };
+        /** Envelope[JournalVocabularyView] */
+        Envelope_JournalVocabularyView_: {
+            /**
+             * Caveats
+             * @default []
+             */
+            caveats: components["schemas"]["Caveat"][];
+            data: components["schemas"]["JournalVocabularyView"];
+            source: components["schemas"]["SourceNote"];
+        };
         /** Envelope[KillSwitchDisarmPreflightView] */
         Envelope_KillSwitchDisarmPreflightView_: {
             /**
@@ -2853,6 +2938,16 @@ export interface components {
              */
             caveats: components["schemas"]["Caveat"][];
             data: components["schemas"]["TearsheetView"];
+            source: components["schemas"]["SourceNote"];
+        };
+        /** Envelope[TradeNoteDetailView] */
+        Envelope_TradeNoteDetailView_: {
+            /**
+             * Caveats
+             * @default []
+             */
+            caveats: components["schemas"]["Caveat"][];
+            data: components["schemas"]["TradeNoteDetailView"];
             source: components["schemas"]["SourceNote"];
         };
         /** Envelope[WalkForwardView] */
@@ -3478,6 +3573,23 @@ export interface components {
             strategy_id: string;
             /** Submitted At */
             submitted_at: string | null;
+        };
+        /** JournalVocabularyView */
+        JournalVocabularyView: {
+            /** Grades */
+            grades: {
+                [key: string]: number;
+            };
+            /** Mistakes */
+            mistakes: {
+                [key: string]: number;
+            };
+            /** Suggested Mistakes */
+            suggested_mistakes: string[];
+            /** Tags */
+            tags: {
+                [key: string]: number;
+            };
         };
         /**
          * KillSwitchDisarmPreflightView
@@ -4456,6 +4568,29 @@ export interface components {
             caveats: components["schemas"]["Caveat"][];
             /** Items */
             items: components["schemas"]["TelemetryRow"][];
+            /**
+             * Limit
+             * @default 100
+             */
+            limit: number;
+            /**
+             * Offset
+             * @default 0
+             */
+            offset: number;
+            source: components["schemas"]["SourceNote"];
+            /** Total */
+            total: number;
+        };
+        /** Page[TradeNoteView] */
+        Page_TradeNoteView_: {
+            /**
+             * Caveats
+             * @default []
+             */
+            caveats: components["schemas"]["Caveat"][];
+            /** Items */
+            items: components["schemas"]["TradeNoteView"][];
             /**
              * Limit
              * @default 100
@@ -5491,6 +5626,55 @@ export interface components {
             severity?: string | null;
             /** Text */
             text: string;
+        };
+        /** TradeNoteDetailView */
+        TradeNoteDetailView: {
+            /** History */
+            history: Record<string, never>[];
+            note: components["schemas"]["TradeNoteView"];
+        };
+        /** TradeNoteRequest */
+        TradeNoteRequest: {
+            /** Expected Version */
+            expected_version: number;
+            /** Grade */
+            grade?: string | null;
+            /** Intervention Reason */
+            intervention_reason?: string | null;
+            /** Mistakes */
+            mistakes?: string[];
+            /**
+             * Note
+             * @default
+             */
+            note: string;
+            /** Screenshot Url */
+            screenshot_url?: string | null;
+            /** Tags */
+            tags?: string[];
+        };
+        /** TradeNoteView */
+        TradeNoteView: {
+            /** Grade */
+            grade?: string | null;
+            /** Intervention Reason */
+            intervention_reason: string | null;
+            /** Mistakes */
+            mistakes: string[];
+            /** Note */
+            note: string;
+            /** Screenshot Url */
+            screenshot_url: string | null;
+            /** Tags */
+            tags: string[];
+            /** Trade Id */
+            trade_id: string;
+            /** Updated At */
+            updated_at: string | null;
+            /** Updated By */
+            updated_by: string;
+            /** Version */
+            version: number;
         };
         /**
          * TradeRowView
@@ -7617,6 +7801,165 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Page_FleetRowView_"];
+                };
+            };
+        };
+    };
+    journal_notes_api_trading_journal_notes_get: {
+        parameters: {
+            query?: {
+                grade?: string | null;
+                intervened?: boolean | null;
+                mistake?: string | null;
+                tag?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Page_TradeNoteView_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    journal_note_api_trading_journal_notes__trade_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                trade_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_TradeNoteDetailView_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    put_journal_note_api_trading_journal_notes__trade_id__put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                trade_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TradeNoteRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_TradeNoteDetailView_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    journal_trades_api_trading_journal_trades_get: {
+        parameters: {
+            query?: {
+                grade?: string | null;
+                instrument?: string | null;
+                intervened?: boolean | null;
+                limit?: number;
+                mistake?: string | null;
+                offset?: number;
+                provenance?: components["schemas"]["Provenance"][] | null;
+                strategy_id?: string | null;
+                tag?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Page_TradeRowView_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    journal_vocabulary_api_trading_journal_vocabulary_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_JournalVocabularyView_"];
                 };
             };
         };

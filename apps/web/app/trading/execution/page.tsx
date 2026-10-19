@@ -2,8 +2,9 @@
 
 import Link from "next/link";
 import { parseAsString, parseAsStringLiteral, useQueryState } from "nuqs";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { GridPage } from "@/components/GridPage";
+import { NoteEditor } from "@/components/ops/NoteEditor";
 import { UrlState } from "@/components/UrlState";
 import { ProvenanceChip } from "@/components/ProvenanceChip";
 import { Distribution } from "@/components/charts";
@@ -13,6 +14,8 @@ import { PROVENANCES, type InstrumentRow, type Page, type Provenance, type Trade
 import { formatTimestamp, priceDecimals } from "@/lib/format";
 import { deriveProvenance } from "@/lib/provenance";
 import { route } from "@/lib/routes";
+import { JOURNAL_NOTES_PATH, JOURNAL_VOCAB_PATH, NOTE_GRADES, type JournalVocabularyView, type TradeNoteView } from "@/lib/ops";
+import type { Envelope } from "@/lib/types";
 
 /**
  * TRADING · Execution (the Journal's trade list).
@@ -41,7 +44,7 @@ const TRADES_REFRESH_MS = 30_000;
 
 export default function ExecutionPage() {
   return (
-    <UrlState fallback={<ExecutionView filter="all" onFilter={() => undefined} strategy={null} instrument={null} onClear={() => undefined} />}>
+    <UrlState fallback={<ExecutionView filter="all" onFilter={() => undefined} strategy={null} instrument={null} onClear={() => undefined} journal={NO_JOURNAL_FILTER} onJournal={() => undefined} />}>
       <ExecutionFromUrl />
     </UrlState>
   );
@@ -49,12 +52,23 @@ export default function ExecutionPage() {
 
 const textParser = parseAsString.withOptions({ history: "replace" });
 
+/** wave ops: the structured journal's filters (server-side, /api/trading/journal/trades). */
+interface JournalFilter {
+  tag: string | null;
+  grade: string | null;
+  mistake: string | null;
+}
+const NO_JOURNAL_FILTER: JournalFilter = { tag: null, grade: null, mistake: null };
+
 function ExecutionFromUrl() {
   const [filter, setFilter] = useQueryState("provenance", filterParser);
   // Cross-links land here filtered: a bot's or a strategy's journal
   // (`?strategy=`), an instrument's trades (`?instrument=`, `EURUSD TRD`).
   const [strategy, setStrategy] = useQueryState("strategy", textParser);
   const [instrument, setInstrument] = useQueryState("instrument", textParser);
+  const [tag, setTag] = useQueryState("tag", textParser);
+  const [grade, setGrade] = useQueryState("grade", textParser);
+  const [mistake, setMistake] = useQueryState("mistake", textParser);
   return (
     <ExecutionView
       filter={filter}
@@ -64,6 +78,12 @@ function ExecutionFromUrl() {
       onClear={() => {
         void setStrategy(null);
         void setInstrument(null);
+      }}
+      journal={{ tag, grade, mistake }}
+      onJournal={(next) => {
+        void setTag(next.tag);
+        void setGrade(next.grade);
+        void setMistake(next.mistake);
       }}
     />
   );
@@ -75,17 +95,38 @@ function ExecutionView({
   strategy,
   instrument,
   onClear,
+  journal,
+  onJournal,
 }: {
   filter: Provenance | "all";
   onFilter: (next: Provenance | "all") => void;
   strategy: string | null;
   instrument: string | null;
   onClear: () => void;
+  journal: JournalFilter;
+  onJournal: (next: JournalFilter) => void;
 }) {
   const query =
     (filter === "all" ? "" : `&provenance=${filter}`) +
     (strategy ? `&strategy_id=${encodeURIComponent(strategy)}` : "") +
     (instrument ? `&instrument=${encodeURIComponent(instrument)}` : "");
+  // wave ops: a journal filter switches the grid to the server-side filtered
+  // record (/api/trading/journal/trades); without one the path is unchanged.
+  const journalQuery =
+    (journal.tag ? `&tag=${encodeURIComponent(journal.tag)}` : "") +
+    (journal.grade ? `&grade=${encodeURIComponent(journal.grade)}` : "") +
+    (journal.mistake ? `&mistake=${encodeURIComponent(journal.mistake)}` : "");
+  const gridPath = journalQuery
+    ? `/api/trading/journal/trades?limit=200${query}${journalQuery}`
+    : `/api/trading/trades?limit=200${query}`;
+  const notes = useApi<Page<TradeNoteView>>(JOURNAL_NOTES_PATH, { refreshMs: TRADES_REFRESH_MS });
+  const vocab = useApi<Envelope<JournalVocabularyView>>(JOURNAL_VOCAB_PATH);
+  const noteOf = useMemo(() => {
+    const map = new Map<string, TradeNoteView>();
+    if (notes.status === "success") for (const n of notes.data.items) map.set(n.trade_id, n);
+    return map;
+  }, [notes]);
+  const [editing, setEditing] = useState<string | null>(null);
   const instruments = useApi<Page<InstrumentRow>>("/api/markets/instruments");
   const pips = useMemo(() => {
     const map = new Map<string, number | null>();
@@ -158,6 +199,46 @@ function ExecutionView({
     { id: "net", header: "Net P&L", figure: (row) => row.net_pnl, signed: true, width: 124 },
     { id: "r", header: "R", figure: (row) => row.r_multiple, signed: true, width: 88 },
     { id: "reason", header: "Exit", value: (row) => row.exit_reason, width: 120 },
+    // wave ops: the structured journal (operator annotations, server-stored)
+    {
+      id: "grade",
+      header: "Grade",
+      value: (row) => noteOf.get(row.trade_id)?.grade ?? "",
+      cell: (row) => <span className="mono" data-testid="journal-grade">{noteOf.get(row.trade_id)?.grade ?? "—"}</span>,
+      width: 64,
+    },
+    {
+      id: "tags",
+      header: "Tags",
+      value: (row) => (noteOf.get(row.trade_id)?.tags ?? []).join(" "),
+      cell: (row) => (
+        <span className="ops-tags" data-testid="journal-tags">
+          {(noteOf.get(row.trade_id)?.tags ?? []).map((t) => (
+            <span key={t} className="ops-tag">
+              {t}
+            </span>
+          ))}
+        </span>
+      ),
+      width: 160,
+    },
+    {
+      id: "note",
+      header: "Note",
+      value: (row) => noteOf.get(row.trade_id)?.note ?? "",
+      cell: (row) => {
+        const n = noteOf.get(row.trade_id);
+        return n ? (
+          <span title={n.note} data-testid="journal-note">
+            {n.intervention_reason ? "✋ " : ""}
+            {n.note.length > 48 ? `${n.note.slice(0, 48)}…` : n.note || "(no text)"}
+          </span>
+        ) : (
+          <span className="muted">—</span>
+        );
+      },
+      width: 220,
+    },
     {
       id: "entry_time",
       header: "Opened",
@@ -172,12 +253,13 @@ function ExecutionView({
     <GridPage<TradeRow>
       title="Execution"
       intro="Every closed trade the platform holds, from every source. The Source column is the truth; this heading makes no claim about it."
-      path={`/api/trading/trades?limit=200${query}`}
+      path={gridPath}
       label="trades"
       gridId="trades"
       columns={columns}
       rowKey={(row) => row.trade_id}
       refreshMs={TRADES_REFRESH_MS}
+      onRowActivate={(row) => setEditing(row.trade_id)}
       before={
         <div className="row mb-3">
           <label className="m-0" htmlFor="prov-filter">
@@ -213,6 +295,12 @@ function ExecutionView({
               </button>
             </span>
           ) : null}
+          {/* wave ops: journal filters, applied by the API */}
+          <JournalFilters journal={journal} onJournal={onJournal} vocab={vocab.status === "success" ? vocab.data.data : null} />
+          <span className="ops-hint" data-testid="journal-hint">
+            Enter or double-click a row: its journal note.
+          </span>
+          <NoteEditor tradeId={editing} onClose={() => setEditing(null)} />
         </div>
       }
     >
@@ -242,5 +330,57 @@ function ExecutionView({
         );
       }}
     </GridPage>
+  );
+}
+
+function JournalFilters({
+  journal,
+  onJournal,
+  vocab,
+}: {
+  journal: JournalFilter;
+  onJournal: (next: JournalFilter) => void;
+  vocab: JournalVocabularyView | null;
+}) {
+  const tags = Object.keys(vocab?.tags ?? {});
+  const mistakes = Object.keys(vocab?.mistakes ?? {});
+  return (
+    <>
+      <label className="m-0" htmlFor="journal-tag">
+        Tag
+      </label>
+      <select id="journal-tag" data-testid="journal-filter-tag" value={journal.tag ?? ""} onChange={(e) => onJournal({ ...journal, tag: e.target.value || null })}>
+        <option value="">any</option>
+        {tags.map((t) => (
+          <option key={t} value={t}>
+            {t} ({vocab?.tags[t]})
+          </option>
+        ))}
+        {journal.tag && !tags.includes(journal.tag) ? <option value={journal.tag}>{journal.tag}</option> : null}
+      </select>
+      <label className="m-0" htmlFor="journal-grade">
+        Grade
+      </label>
+      <select id="journal-grade" data-testid="journal-filter-grade" value={journal.grade ?? ""} onChange={(e) => onJournal({ ...journal, grade: e.target.value || null })}>
+        <option value="">any</option>
+        {NOTE_GRADES.map((g) => (
+          <option key={g} value={g}>
+            {g}
+          </option>
+        ))}
+      </select>
+      <label className="m-0" htmlFor="journal-mistake">
+        Mistake
+      </label>
+      <select id="journal-mistake" data-testid="journal-filter-mistake" value={journal.mistake ?? ""} onChange={(e) => onJournal({ ...journal, mistake: e.target.value || null })}>
+        <option value="">any</option>
+        {mistakes.map((m) => (
+          <option key={m} value={m}>
+            {m} ({vocab?.mistakes[m]})
+          </option>
+        ))}
+        {journal.mistake && !mistakes.includes(journal.mistake) ? <option value={journal.mistake}>{journal.mistake}</option> : null}
+      </select>
+    </>
   );
 }

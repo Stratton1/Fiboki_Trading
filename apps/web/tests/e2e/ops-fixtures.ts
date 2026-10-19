@@ -93,6 +93,18 @@ export async function mockOps(page: Page) {
   await page.route(`${API}/api/trading/candidates/correlation`, (route: Route) =>
     route.fulfill({ json: env(selfCorrelationView()) }),
   );
+  await page.route(`${API}/api/trading/journal/notes`, (route: Route) =>
+    route.fulfill({ json: page1(journalNotes()) }),
+  );
+  await page.route(`${API}/api/trading/journal/notes?*`, (route: Route) =>
+    route.fulfill({ json: page1(journalNotes()) }),
+  );
+  await page.route(`${API}/api/trading/journal/vocabulary`, (route: Route) =>
+    route.fulfill({ json: env(journalVocabulary()) }),
+  );
+  await page.route(`${API}/api/trading/journal/notes/*`, (route: Route) =>
+    route.request().method() === "GET" ? route.fulfill({ json: env(noteDetail(decodeURIComponent(new URL(route.request().url()).pathname.split("/").pop() ?? ""))) }) : route.fallback(),
+  );
   await page.route(`${API}/api/trading/allocation*`, (route: Route) =>
     route.fulfill({ json: env(allocationView()) }),
   );
@@ -289,5 +301,32 @@ export function allocationView() {
     ],
     absent_reason: null,
     method: "DISPLAY ONLY: the paper runtime's portfolio construction decides sizes and reads none of this.",
+  };
+}
+
+export function journalNotes() {
+  return [
+    {
+      trade_id: "trd_0002", note: "Clean breakout through the London open; held to target.", tags: ["breakout", "london-open"],
+      grade: "A", mistakes: [], screenshot_url: "https://img.example/trd_0002.png", intervention_reason: null,
+      updated_by: "joe", updated_at: "2026-10-19T08:30:00Z", version: 2,
+    },
+  ];
+}
+
+export function noteDetail(tradeId: string) {
+  const found = journalNotes().find((n) => n.trade_id === tradeId);
+  return {
+    note: found ?? { trade_id: tradeId, note: "", tags: [], grade: null, mistakes: [], screenshot_url: null, intervention_reason: null, updated_by: "", updated_at: null, version: 0 },
+    history: found ? [{ version: 1 }, { version: 2 }] : [],
+  };
+}
+
+export function journalVocabulary() {
+  return {
+    tags: { breakout: 1, "london-open": 1 },
+    mistakes: { "early-exit": 1 },
+    grades: { A: 1 },
+    suggested_mistakes: ["early-exit", "late-entry", "moved-stop", "oversized"],
   };
 }

@@ -111,3 +111,14 @@ export function riskCalculatorPath(form: {
 
 export type AllocationView = Local<S["AllocationView"]>;
 export const allocationPath = (basis: "backtest" | "paper") => `/api/trading/allocation?basis=${basis}`;
+
+export type TradeNoteView = Local<S["TradeNoteView"]>;
+export type TradeNoteDetailView = Local<S["TradeNoteDetailView"]>;
+export type JournalVocabularyView = Local<S["JournalVocabularyView"]>;
+export const JOURNAL_NOTES_PATH = "/api/trading/journal/notes";
+export const JOURNAL_VOCAB_PATH = "/api/trading/journal/vocabulary";
+export const journalNotePath = (tradeId: string) => `${JOURNAL_NOTES_PATH}/${encodeURIComponent(tradeId)}`;
+export const NOTE_GRADES = ["A", "B", "C"] as const;
+/** The backend's TradeNoteRequest bounds (routers/ops.py, ops/journal_notes.py). */
+export const NOTE_MAX = 4000;
+export const NOTE_REASON_MAX = 500;

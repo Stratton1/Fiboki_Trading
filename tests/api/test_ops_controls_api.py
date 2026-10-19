@@ -129,3 +129,38 @@ def test_maturity_is_advisory_and_not_evaluated_without_evidence(tmp_path, api_e
         assert statuses["audit_chain_intact"] == "not_evaluated"
         assert statuses["min_trades"] == "fail"
         assert c.get("/api/trading/sessions/nope/maturity").status_code == 404
+
+
+def test_journal_notes_are_written_by_an_operator_filtered_server_side_and_audited(tmp_path, api_env):
+    import shutil
+    from pathlib import Path as _P
+
+    fixture = _P(__file__).resolve().parents[1] / "fixtures" / "paper_journal"
+    shutil.copytree(fixture, tmp_path / "paper")
+    env = {**api_env, "FIBOKI_PAPER_ROOT": str(tmp_path / "paper")}
+    with TestClient(create_app(load_settings(env), configure_logs=False), base_url=ORIGIN) as c:
+        trades = c.get("/api/trading/trades?limit=5").json()["items"]
+        tid = trades[0]["trade_id"]
+        assert c.get(f"/api/trading/journal/notes/{tid}").json()["data"]["note"]["version"] == 0
+        assert login(c, "tom", OPERATOR_PW).status_code == 200
+        body = {"note": "late entry, fine stop", "tags": ["breakout"], "grade": "B", "mistakes": ["late-entry"],
+                "screenshot_url": "https://img.example/a.png", "intervention_reason": None, "expected_version": 0}
+        r = c.put(f"/api/trading/journal/notes/{tid}", json=body, headers=csrf_headers(c))
+        assert r.status_code == 200, r.text
+        assert r.json()["data"]["note"]["version"] == 1 and r.json()["data"]["note"]["updated_by"] == "tom"
+        stale = c.put(f"/api/trading/journal/notes/{tid}", json=body, headers=csrf_headers(c))
+        assert stale.status_code == 409 and stale.json()["code"] == "note_version_conflict"
+        bad = c.put(f"/api/trading/journal/notes/{tid}", json={**body, "expected_version": 1,
+                                                               "screenshot_url": "javascript:x"},
+                    headers=csrf_headers(c))
+        assert bad.status_code == 422
+        assert c.put("/api/trading/journal/notes/nope", json=body, headers=csrf_headers(c)).status_code == 404
+        filtered = c.get("/api/trading/journal/trades?tag=breakout").json()
+        assert [t["trade_id"] for t in filtered["items"]] == [tid] and filtered["total"] == 1
+        assert c.get("/api/trading/journal/trades?grade=A").json()["total"] == 0
+        notes = c.get("/api/trading/journal/notes?mistake=late-entry").json()
+        assert [n["trade_id"] for n in notes["items"]] == [tid]
+        vocab = c.get("/api/trading/journal/vocabulary").json()["data"]
+        assert vocab["tags"] == {"breakout": 1} and "early-exit" in vocab["suggested_mistakes"]
+        acts = [(e.action, e.outcome) for e in c.app.state.audit.entries() if e.action == "journal.note"]
+        assert acts == [("journal.note", "allowed"), ("journal.note", "refused")]

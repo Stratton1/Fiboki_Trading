@@ -2799,6 +2799,30 @@
         "title": "Envelope[JobQueueView]",
         "type": "object"
       },
+      "Envelope_JournalVocabularyView_": {
+        "properties": {
+          "caveats": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/Caveat"
+            },
+            "title": "Caveats",
+            "type": "array"
+          },
+          "data": {
+            "$ref": "#/components/schemas/JournalVocabularyView"
+          },
+          "source": {
+            "$ref": "#/components/schemas/SourceNote"
+          }
+        },
+        "required": [
+          "data",
+          "source"
+        ],
+        "title": "Envelope[JournalVocabularyView]",
+        "type": "object"
+      },
       "Envelope_KillSwitchDisarmPreflightView_": {
         "properties": {
           "caveats": {
@@ -3301,6 +3325,30 @@
           "source"
         ],
         "title": "Envelope[TearsheetView]",
+        "type": "object"
+      },
+      "Envelope_TradeNoteDetailView_": {
+        "properties": {
+          "caveats": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/Caveat"
+            },
+            "title": "Caveats",
+            "type": "array"
+          },
+          "data": {
+            "$ref": "#/components/schemas/TradeNoteDetailView"
+          },
+          "source": {
+            "$ref": "#/components/schemas/SourceNote"
+          }
+        },
+        "required": [
+          "data",
+          "source"
+        ],
+        "title": "Envelope[TradeNoteDetailView]",
         "type": "object"
       },
       "Envelope_WalkForwardView_": {
@@ -5232,6 +5280,46 @@
           "outputs"
         ],
         "title": "JobView",
+        "type": "object"
+      },
+      "JournalVocabularyView": {
+        "properties": {
+          "grades": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "Grades",
+            "type": "object"
+          },
+          "mistakes": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "Mistakes",
+            "type": "object"
+          },
+          "suggested_mistakes": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Suggested Mistakes",
+            "type": "array"
+          },
+          "tags": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "Tags",
+            "type": "object"
+          }
+        },
+        "required": [
+          "tags",
+          "mistakes",
+          "grades",
+          "suggested_mistakes"
+        ],
+        "title": "JournalVocabularyView",
         "type": "object"
       },
       "KillSwitchDisarmPreflightView": {
@@ -7525,6 +7613,49 @@
           "source"
         ],
         "title": "Page[TelemetryRow]",
+        "type": "object"
+      },
+      "Page_TradeNoteView_": {
+        "properties": {
+          "caveats": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/Caveat"
+            },
+            "title": "Caveats",
+            "type": "array"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/TradeNoteView"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "limit": {
+            "default": 100,
+            "title": "Limit",
+            "type": "integer"
+          },
+          "offset": {
+            "default": 0,
+            "title": "Offset",
+            "type": "integer"
+          },
+          "source": {
+            "$ref": "#/components/schemas/SourceNote"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "total",
+          "source"
+        ],
+        "title": "Page[TradeNoteView]",
         "type": "object"
       },
       "Page_TradeRowView_": {
@@ -10420,6 +10551,191 @@
           "text"
         ],
         "title": "TimelineEntry",
+        "type": "object"
+      },
+      "TradeNoteDetailView": {
+        "properties": {
+          "history": {
+            "items": {
+              "type": "object"
+            },
+            "title": "History",
+            "type": "array"
+          },
+          "note": {
+            "$ref": "#/components/schemas/TradeNoteView"
+          }
+        },
+        "required": [
+          "note",
+          "history"
+        ],
+        "title": "TradeNoteDetailView",
+        "type": "object"
+      },
+      "TradeNoteRequest": {
+        "properties": {
+          "expected_version": {
+            "minimum": 0.0,
+            "title": "Expected Version",
+            "type": "integer"
+          },
+          "grade": {
+            "anyOf": [
+              {
+                "pattern": "^(A|B|C)?$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Grade"
+          },
+          "intervention_reason": {
+            "anyOf": [
+              {
+                "maxLength": 500,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Intervention Reason"
+          },
+          "mistakes": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 12,
+            "title": "Mistakes",
+            "type": "array"
+          },
+          "note": {
+            "default": "",
+            "maxLength": 4000,
+            "title": "Note",
+            "type": "string"
+          },
+          "screenshot_url": {
+            "anyOf": [
+              {
+                "maxLength": 500,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Screenshot Url"
+          },
+          "tags": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 12,
+            "title": "Tags",
+            "type": "array"
+          }
+        },
+        "required": [
+          "expected_version"
+        ],
+        "title": "TradeNoteRequest",
+        "type": "object"
+      },
+      "TradeNoteView": {
+        "properties": {
+          "grade": {
+            "anyOf": [
+              {
+                "pattern": "^(A|B|C)$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Grade"
+          },
+          "intervention_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Intervention Reason"
+          },
+          "mistakes": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Mistakes",
+            "type": "array"
+          },
+          "note": {
+            "title": "Note",
+            "type": "string"
+          },
+          "screenshot_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Screenshot Url"
+          },
+          "tags": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Tags",
+            "type": "array"
+          },
+          "trade_id": {
+            "title": "Trade Id",
+            "type": "string"
+          },
+          "updated_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Updated At"
+          },
+          "updated_by": {
+            "title": "Updated By",
+            "type": "string"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "trade_id",
+          "note",
+          "tags",
+          "mistakes",
+          "screenshot_url",
+          "intervention_reason",
+          "updated_by",
+          "updated_at",
+          "version"
+        ],
+        "title": "TradeNoteView",
         "type": "object"
       },
       "TradeRowView": {
@@ -13937,6 +14253,406 @@
         "summary": "Fleet",
         "tags": [
           "trading"
+        ],
+        "x-fiboki-auth": "public"
+      }
+    },
+    "/api/trading/journal/notes": {
+      "get": {
+        "operationId": "journal_notes_api_trading_journal_notes_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "tag",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Tag"
+            }
+          },
+          {
+            "in": "query",
+            "name": "grade",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "pattern": "^(A|B|C)$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Grade"
+            }
+          },
+          {
+            "in": "query",
+            "name": "mistake",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Mistake"
+            }
+          },
+          {
+            "in": "query",
+            "name": "intervened",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Intervened"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Page_TradeNoteView_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [],
+        "summary": "Journal Notes",
+        "tags": [
+          "ops"
+        ],
+        "x-fiboki-auth": "public"
+      }
+    },
+    "/api/trading/journal/notes/{trade_id}": {
+      "get": {
+        "operationId": "journal_note_api_trading_journal_notes__trade_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "trade_id",
+            "required": true,
+            "schema": {
+              "title": "Trade Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_TradeNoteDetailView_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [],
+        "summary": "Journal Note",
+        "tags": [
+          "ops"
+        ],
+        "x-fiboki-auth": "public"
+      },
+      "put": {
+        "description": "Write a trade's journal note (operator role). Versioned, history kept, audited.",
+        "operationId": "put_journal_note_api_trading_journal_notes__trade_id__put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "trade_id",
+            "required": true,
+            "schema": {
+              "title": "Trade Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TradeNoteRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_TradeNoteDetailView_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "csrfHeader": [],
+            "sessionCookie": []
+          }
+        ],
+        "summary": "Put Journal Note",
+        "tags": [
+          "ops"
+        ],
+        "x-fiboki-auth": "operator"
+      }
+    },
+    "/api/trading/journal/trades": {
+      "get": {
+        "description": "``/api/trading/trades`` restricted, SERVER-SIDE, to trades whose journal note matches.",
+        "operationId": "journal_trades_api_trading_journal_trades_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "tag",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Tag"
+            }
+          },
+          {
+            "in": "query",
+            "name": "grade",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "pattern": "^(A|B|C)$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Grade"
+            }
+          },
+          {
+            "in": "query",
+            "name": "mistake",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Mistake"
+            }
+          },
+          {
+            "in": "query",
+            "name": "intervened",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Intervened"
+            }
+          },
+          {
+            "in": "query",
+            "name": "provenance",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "items": {
+                    "$ref": "#/components/schemas/Provenance"
+                  },
+                  "type": "array"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Provenance"
+            }
+          },
+          {
+            "in": "query",
+            "name": "strategy_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Strategy Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "instrument",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Instrument"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 200,
+              "maximum": 500,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Page_TradeRowView_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [],
+        "summary": "Journal Trades",
+        "tags": [
+          "ops"
+        ],
+        "x-fiboki-auth": "public"
+      }
+    },
+    "/api/trading/journal/vocabulary": {
+      "get": {
+        "operationId": "journal_vocabulary_api_trading_journal_vocabulary_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_JournalVocabularyView_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [],
+        "summary": "Journal Vocabulary",
+        "tags": [
+          "ops"
         ],
         "x-fiboki-auth": "public"
       }
