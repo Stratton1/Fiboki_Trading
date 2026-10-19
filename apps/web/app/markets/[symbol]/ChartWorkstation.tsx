@@ -382,6 +382,10 @@ function Workstation({
               onLatest={() => onAt(null)}
               layers={chartLayers}
               onLayers={setChartLayers}
+              symbol={symbol}
+              tf={tf}
+              datasetVersion={barsEnv?.data.dataset_version_id ?? null}
+              capture={() => handle?.screenshot() ?? null}
               counts={
                 overlayEnv
                   ? {

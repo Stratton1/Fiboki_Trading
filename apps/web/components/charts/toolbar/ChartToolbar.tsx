@@ -5,6 +5,7 @@ import type { TimeZoneId } from "../time";
 import type { ChartLayers, LayerName } from "../layers";
 import { GoToDate, TimeZoneSelect } from "./GoToDate";
 import { LayerToolbar } from "./LayerToolbar";
+import { SnapshotButton } from "./SnapshotButton";
 import { TemplateMenu } from "./TemplateMenu";
 
 /**
@@ -23,6 +24,10 @@ export interface ChartToolbarProps {
   layers: ChartLayers;
   onLayers: (update: (layers: ChartLayers) => ChartLayers) => void;
   counts: Partial<Record<LayerName, number | null>>;
+  symbol: string;
+  tf: string;
+  datasetVersion: string | null;
+  capture: () => HTMLCanvasElement | null;
 }
 
 export default function ChartToolbar({
@@ -36,6 +41,10 @@ export default function ChartToolbar({
   layers,
   onLayers,
   counts,
+  symbol,
+  tf,
+  datasetVersion,
+  capture,
 }: ChartToolbarProps) {
   return (
     <div className="cw-tools" role="group" aria-label="Chart tools" data-testid="chart-tools">
@@ -43,6 +52,7 @@ export default function ChartToolbar({
       <GoToDate tz={tz} at={at} onGoTo={onGoTo} onLatest={onLatest} />
       <TimeZoneSelect tz={tz} onTz={onTz} />
       <TemplateMenu current={template} onApply={onApplyTemplate} />
+      <SnapshotButton symbol={symbol} tf={tf} datasetVersion={datasetVersion} capture={capture} />
     </div>
   );
 }

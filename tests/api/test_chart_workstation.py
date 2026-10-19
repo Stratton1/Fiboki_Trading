@@ -331,3 +331,29 @@ def test_overlay_events_are_stamped_with_the_version_they_were_loaded_from(world
     version = latest_official_calendar_version()
     for event in data["events"]:
         assert event["dataset_version_id"].startswith(f"official_calendar:{version}")
+
+
+# ---------------------------------------------------------------- snapshot
+
+
+def test_snapshot_stamp_is_attested_by_the_api(world):
+    body = world["client"].get(
+        "/api/chart/stamp/EURUSD", params={"timeframe": "H1", "dataset_version_id": world["v_eur"]}
+    ).json()["data"]
+    assert body["build_sha"] == "deadbeef"
+    assert body["dataset_current"] is True
+    assert body["execution_mode"]
+    text = body["text"]
+    # symbol, timeframe, dataset version, build sha, UTC time, in that order.
+    order = ["EURUSD H1", world["v_eur"], "build deadbeef", " UTC"]
+    positions = [text.index(part) for part in order]
+    assert positions == sorted(positions)
+    stale = world["client"].get(
+        "/api/chart/stamp/EURUSD", params={"timeframe": "H1", "dataset_version_id": "dsv_old"}
+    ).json()["data"]
+    assert stale["dataset_current"] is False and "(superseded)" in stale["text"]
+
+
+def test_snapshot_stamp_without_market_data_says_it_could_not_check(client):
+    body = client.get("/api/chart/stamp/EURUSD", params={"dataset_version_id": "x"}).json()["data"]
+    assert body["dataset_current"] is None and body["latest_dataset_version_id"] is None

@@ -177,6 +177,22 @@ export interface CalendarEventsView {
   declared_end: string | null;
 }
 
+// ---------------------------------------------------------------- snapshot
+
+/** GET /api/chart/stamp/{symbol} (Envelope): the provenance stamp a snapshot carries. */
+export interface SnapshotStampView {
+  symbol: string;
+  timeframe: string;
+  dataset_version_id: string;
+  dataset_current: boolean | null;
+  latest_dataset_version_id: string | null;
+  build_sha: string | null;
+  api_version: string;
+  execution_mode: string;
+  generated_at: string;
+  text: string;
+}
+
 // ------------------------------------------------------------------ checks
 
 type SameKeys<A, B> = [Exclude<keyof A, keyof B>, Exclude<keyof B, keyof A>] extends [never, never]
@@ -196,6 +212,7 @@ export type ChartContractChecks = [
   SameKeys<PriceAlertRow, S["PriceAlert"]>,
   SameKeys<PriceAlertsView, S["PriceAlertsView"]>,
   SameKeys<CalendarEventsView, S["CalendarEventsView"]>,
+  SameKeys<SnapshotStampView, S["SnapshotStampView"]>,
 ];
 
 /** Fails to compile when any check above is not `true`. */

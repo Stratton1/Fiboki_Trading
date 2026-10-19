@@ -1041,3 +1041,71 @@ def calendar_events(
         ),
         caveats=tuple(caveats),
     )
+
+
+# ================================================================ snapshot
+
+
+class SnapshotStampView(BaseModel):
+    """The provenance stamp printed on a chart snapshot, attested by the API."""
+
+    model_config = ConfigDict(frozen=True)
+
+    symbol: str
+    timeframe: str
+    #: The dataset the chart drew (as the browser reports it).
+    dataset_version_id: str
+    #: Whether that dataset is still the latest one in the store (null when
+    #: no market-data root is mounted, so it cannot be checked).
+    dataset_current: bool | None
+    latest_dataset_version_id: str | None
+    build_sha: str | None
+    api_version: str
+    execution_mode: str
+    #: The server's UTC time when the stamp was issued.
+    generated_at: datetime
+    #: The one-line stamp, in this exact order: symbol, timeframe, dataset,
+    #: build, UTC time, mode.
+    text: str
+
+
+@router.get("/api/chart/stamp/{symbol}", response_model=Envelope[SnapshotStampView])
+def snapshot_stamp(
+    symbol: str,
+    settings: SettingsDep,
+    timeframe: str = Query("H1"),
+    dataset_version_id: str = Query("", max_length=200),
+) -> Envelope[SnapshotStampView]:
+    sym = _symbol(symbol)
+    tf = _tf(timeframe)
+    latest: str | None = None
+    current: bool | None = None
+    if settings.data_root is not None and settings.data_root.exists():
+        try:
+            _, latest = _read_frame(settings, sym, tf)
+        except ApiError:
+            latest = None
+        current = None if latest is None else (latest == dataset_version_id)
+    now = datetime.now(tz=UTC).replace(microsecond=0)
+    build = settings.build_sha or None
+    mode = settings.execution_mode.value
+    text = (
+        f"{sym} {tf.value} · dataset {dataset_version_id or 'not reported'}"
+        f"{'' if current is not False else ' (superseded)'} · build {build or 'unstamped'} · "
+        f"{now.strftime('%Y-%m-%d %H:%M:%S')} UTC · {mode.upper()}"
+    )
+    return Envelope(
+        data=SnapshotStampView(
+            symbol=sym,
+            timeframe=tf.value,
+            dataset_version_id=dataset_version_id,
+            dataset_current=current,
+            latest_dataset_version_id=latest,
+            build_sha=build,
+            api_version="2.0.0",
+            execution_mode=mode,
+            generated_at=now,
+            text=text,
+        ),
+        source=_note("live", "API settings (build sha, mode) and the bar store (latest dataset)."),
+    )

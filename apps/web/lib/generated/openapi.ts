@@ -81,6 +81,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/chart/stamp/{symbol}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Snapshot Stamp */
+        get: operations["snapshot_stamp_api_chart_stamp__symbol__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/chart/templates": {
         parameters: {
             query?: never;
@@ -2746,6 +2763,16 @@ export interface components {
             data: components["schemas"]["SettingsView"];
             source: components["schemas"]["SourceNote"];
         };
+        /** Envelope[SnapshotStampView] */
+        Envelope_SnapshotStampView_: {
+            /**
+             * Caveats
+             * @default []
+             */
+            caveats: components["schemas"]["Caveat"][];
+            data: components["schemas"]["SnapshotStampView"];
+            source: components["schemas"]["SourceNote"];
+        };
         /** Envelope[StrategyOverviewView] */
         Envelope_StrategyOverviewView_: {
             /**
@@ -5090,6 +5117,35 @@ export interface components {
             timeframe: string;
         };
         /**
+         * SnapshotStampView
+         * @description The provenance stamp printed on a chart snapshot, attested by the API.
+         */
+        SnapshotStampView: {
+            /** Api Version */
+            api_version: string;
+            /** Build Sha */
+            build_sha: string | null;
+            /** Dataset Current */
+            dataset_current: boolean | null;
+            /** Dataset Version Id */
+            dataset_version_id: string;
+            /** Execution Mode */
+            execution_mode: string;
+            /**
+             * Generated At
+             * Format: date-time
+             */
+            generated_at: string;
+            /** Latest Dataset Version Id */
+            latest_dataset_version_id: string | null;
+            /** Symbol */
+            symbol: string;
+            /** Text */
+            text: string;
+            /** Timeframe */
+            timeframe: string;
+        };
+        /**
          * SourceNote
          * @description Where a payload came from, always rendered, never inferred from the URL.
          */
@@ -5589,6 +5645,40 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PrincipalView"];
+                };
+            };
+        };
+    };
+    snapshot_stamp_api_chart_stamp__symbol__get: {
+        parameters: {
+            query?: {
+                dataset_version_id?: string;
+                timeframe?: string;
+            };
+            header?: never;
+            path: {
+                symbol: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_SnapshotStampView_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

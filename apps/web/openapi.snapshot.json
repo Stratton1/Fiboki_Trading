@@ -3046,6 +3046,30 @@
         "title": "Envelope[SettingsView]",
         "type": "object"
       },
+      "Envelope_SnapshotStampView_": {
+        "properties": {
+          "caveats": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/Caveat"
+            },
+            "title": "Caveats",
+            "type": "array"
+          },
+          "data": {
+            "$ref": "#/components/schemas/SnapshotStampView"
+          },
+          "source": {
+            "$ref": "#/components/schemas/SourceNote"
+          }
+        },
+        "required": [
+          "data",
+          "source"
+        ],
+        "title": "Envelope[SnapshotStampView]",
+        "type": "object"
+      },
       "Envelope_StrategyOverviewView_": {
         "properties": {
           "caveats": {
@@ -9283,6 +9307,87 @@
         "title": "SignalOverlay",
         "type": "object"
       },
+      "SnapshotStampView": {
+        "description": "The provenance stamp printed on a chart snapshot, attested by the API.",
+        "properties": {
+          "api_version": {
+            "title": "Api Version",
+            "type": "string"
+          },
+          "build_sha": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Build Sha"
+          },
+          "dataset_current": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dataset Current"
+          },
+          "dataset_version_id": {
+            "title": "Dataset Version Id",
+            "type": "string"
+          },
+          "execution_mode": {
+            "title": "Execution Mode",
+            "type": "string"
+          },
+          "generated_at": {
+            "format": "date-time",
+            "title": "Generated At",
+            "type": "string"
+          },
+          "latest_dataset_version_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Latest Dataset Version Id"
+          },
+          "symbol": {
+            "title": "Symbol",
+            "type": "string"
+          },
+          "text": {
+            "title": "Text",
+            "type": "string"
+          },
+          "timeframe": {
+            "title": "Timeframe",
+            "type": "string"
+          }
+        },
+        "required": [
+          "symbol",
+          "timeframe",
+          "dataset_version_id",
+          "dataset_current",
+          "latest_dataset_version_id",
+          "build_sha",
+          "api_version",
+          "execution_mode",
+          "generated_at",
+          "text"
+        ],
+        "title": "SnapshotStampView",
+        "type": "object"
+      },
       "SourceNote": {
         "description": "Where a payload came from, always rendered, never inferred from the URL.",
         "properties": {
@@ -10508,6 +10613,71 @@
           "auth"
         ],
         "x-fiboki-auth": "session"
+      }
+    },
+    "/api/chart/stamp/{symbol}": {
+      "get": {
+        "operationId": "snapshot_stamp_api_chart_stamp__symbol__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "symbol",
+            "required": true,
+            "schema": {
+              "title": "Symbol",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "timeframe",
+            "required": false,
+            "schema": {
+              "default": "H1",
+              "title": "Timeframe",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "dataset_version_id",
+            "required": false,
+            "schema": {
+              "default": "",
+              "maxLength": 200,
+              "title": "Dataset Version Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_SnapshotStampView_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [],
+        "summary": "Snapshot Stamp",
+        "tags": [
+          "chart-workstation"
+        ],
+        "x-fiboki-auth": "public"
       }
     },
     "/api/chart/templates": {
