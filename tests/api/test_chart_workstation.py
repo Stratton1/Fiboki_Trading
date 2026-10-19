@@ -263,3 +263,31 @@ def test_bars_and_overlays_centre_on_a_date_when_asked(world):
     # Without `around` nothing changes: the latest bars.
     latest = client.get("/api/markets/bars/EURUSD", params={"timeframe": "H1", "limit": 5}).json()
     assert [pd.Timestamp(b["t"]) for b in latest["data"]["bars"]] == list(eur.index[-5:])
+
+
+def test_levels_and_zones_are_stored_with_the_drawings_and_alert_from_their_edges(world):
+    """A horizontal level and a rectangle zone round-trip through the drawing
+    store; an alert created from the zone's top edge names the drawing."""
+    client = world["client"]
+    eur = world["eur"]
+    assert login(client, "tom", OPERATOR_PW).status_code == 200
+    t0, t1 = eur.index[10].isoformat(), eur.index[40].isoformat()
+    last = float(eur["close"].iloc[-1])
+    drawings = [
+        {"id": "lvl_1", "kind": "hline", "points": [{"t": t0, "price": last + 0.002}]},
+        {"id": "zone_1", "kind": "rect", "points": [{"t": t0, "price": last - 0.004},
+                                                    {"t": t1, "price": last - 0.001}]},
+    ]
+    put = client.put("/api/markets/drawings/EURUSD", json={"base_version": 0, "drawings": drawings},
+                     headers=csrf_headers(client))
+    assert put.status_code == 200, put.text
+    stored = {d["id"]: d for d in client.get("/api/markets/drawings/EURUSD").json()["data"]["drawings"]}
+    assert stored["lvl_1"]["kind"] == "hline" and stored["zone_1"]["kind"] == "rect"
+    top = max(p["price"] for p in stored["zone_1"]["points"])
+    made = client.post("/api/alerts/price", json={"symbol": "EURUSD", "price": top,
+                                                  "drawing_id": "zone_1", "origin": "zone_top"},
+                       headers=csrf_headers(client))
+    assert made.status_code == 201
+    [alert] = made.json()["data"]["alerts"]
+    assert alert["drawing_id"] == "zone_1" and alert["origin"] == "zone_top"
+    assert alert["condition"] == "cross_below"  # the zone sits under the last close

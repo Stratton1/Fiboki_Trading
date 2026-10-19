@@ -107,6 +107,8 @@ export interface PriceChartProps {
   onHandle?: (handle: PriceChartHandle | null) => void;
   /** Smaller chrome for a grid cell. */
   compact?: boolean;
+  /** The operator's price alerts on this symbol (the API's levels and directions). */
+  alerts?: readonly { id: string; price: number; label: string }[];
 }
 
 /** What the workstation can ask of a mounted chart. */
@@ -223,6 +225,7 @@ export default function PriceChart({
   timeZone = "UTC",
   onHandle,
   compact = false,
+  alerts = [],
 }: PriceChartProps) {
   const box = useRef<HTMLDivElement>(null);
   const tradeRef = useRef<TradePrimitive | null>(null);
@@ -240,6 +243,7 @@ export default function PriceChart({
   const primitiveRef = useRef<OverlayPrimitive | null>(null);
   const extraRef = useRef<ISeriesApi<"Line" | "Histogram">[]>([]);
   const linesRef = useRef<IPriceLine[]>([]);
+  const alertLinesRef = useRef<IPriceLine[]>([]);
   // Read on the client only: this module is reached through a lazy import
   // that renders after data arrives, never during server rendering.
   const [theme, setTheme] = useState<ChartTheme | null>(() =>
@@ -495,6 +499,7 @@ export default function PriceChart({
       primitiveRef.current = null;
       extraRef.current = [];
       linesRef.current = [];
+      alertLinesRef.current = [];
     };
   }, []);
 
@@ -682,6 +687,24 @@ export default function PriceChart({
       );
     }
   }, [model, theme, layers.levels]);
+
+  // ---- price alerts: a dashed accent line per alert, labelled with its direction.
+  useEffect(() => {
+    const candles = candleRef.current;
+    if (!candles || !theme) return;
+    for (const line of alertLinesRef.current) candles.removePriceLine(line);
+    alertLinesRef.current = alerts.map((a) =>
+      candles.createPriceLine({
+        price: a.price,
+        color: theme.drawing,
+        lineWidth: 1,
+        lineStyle: LineStyle.SparseDotted,
+        axisLabelVisible: true,
+        title: a.label,
+      }),
+    );
+    if (box.current) box.current.dataset.alerts = String(alerts.length);
+  }, [alerts, theme]);
 
   // ---- the overlay layer follows the model, theme and layer toggles.
   useEffect(() => {

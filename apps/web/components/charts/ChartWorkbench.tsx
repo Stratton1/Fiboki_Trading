@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  BellPlus,
   Eye,
   EyeOff,
   Lock,
@@ -51,6 +52,8 @@ import type { DrawingTool } from "./drawing-primitive";
 import type { ChartDrawings, PriceChartProps } from "./PriceChart";
 import { formatBarTime, TIME_ZONES, type TimeZoneId } from "./time";
 import { useDrawings, type SaveStatus } from "./useDrawings";
+import { ApiError, apiFetch } from "@/lib/api";
+import type { PriceAlertsView } from "@/lib/chart-contract";
 import "./workbench.css";
 
 /**
@@ -348,6 +351,49 @@ export default function ChartWorkbench({
 
   // ----------------------------------------------------------------- drawings
   const drawings = useDrawings(symbol, notify);
+  // ------------------------------------------------------------ price alerts
+  const alertsPath = `/api/alerts/price?symbol=${enc}`;
+  const alertsRead = useApi<Envelope<PriceAlertsView>>(alertsPath);
+  const alertData = alertsRead.status === "success" ? alertsRead.data.data : null;
+  const alertLines = useMemo(
+    () =>
+      (alertData?.alerts ?? []).map((a) => ({
+        id: a.alert_id,
+        price: a.price,
+        label: `ALERT ${a.condition === "cross_above" ? "↑" : "↓"}`,
+      })),
+    [alertData],
+  );
+  const [alertBusy, setAlertBusy] = useState(false);
+  const createAlert = useCallback(
+    async (price: number, drawingId: string, origin: "level" | "zone_top" | "zone_bottom") => {
+      setAlertBusy(true);
+      try {
+        const env = await apiFetch<Envelope<PriceAlertsView>>("/api/alerts/price", {
+          method: "POST",
+          body: JSON.stringify({ symbol, price, timeframe: tf, drawing_id: drawingId, origin }),
+        });
+        const made = env.data.alerts[env.data.alerts.length - 1];
+        notify(
+          made
+            ? `Alert stored: ${symbol} ${made.condition === "cross_above" ? "crosses above" : "crosses below"} ${formatNumber(
+                made.price,
+                "",
+                { decimals: chart.priceDecimals },
+              )} (decided against the close ${formatNumber(made.reference_close, "", {
+                decimals: chart.priceDecimals,
+              })}). ${env.data.evaluated ? "" : "Not watched yet: no evaluator is wired."}`
+            : "Alert stored.",
+        );
+      } catch (error) {
+        notify(error instanceof ApiError ? `Alert not created: ${error.message}` : "Alert not created.");
+      } finally {
+        setAlertBusy(false);
+        alertsRead.reload();
+      }
+    },
+    [symbol, tf, notify, chart.priceDecimals, alertsRead],
+  );
   const [tool, setTool] = useState<DrawingTool>("select");
   const [drawingPick, setDrawingPick] = useState<{ scope: string; id: string | null }>({ scope: "", id: null });
   const selectedId = drawingPick.scope === scopeKey ? drawingPick.id : null;
@@ -664,6 +710,7 @@ export default function ChartWorkbench({
             focusTrade={focusTrade}
             onTradeClick={(key) => selectTrade(key, false)}
             drawings={chartDrawings}
+            alerts={chartLayers.stops ? alertLines : []}
           />
           {note ? (
             <NoteEditor
@@ -688,6 +735,9 @@ export default function ChartWorkbench({
             onToggleScope={() => setScopeToTf((v) => !v)}
             onDelete={deleteSelected}
             onPatch={patchSelected}
+            onAlert={(price, origin) => (selected ? void createAlert(price, selected.id, origin) : undefined)}
+            alertBusy={alertBusy}
+            canAlert={roleAllows}
             onClear={() => {
               drawings.clear();
               setSelectedId(null);
@@ -851,6 +901,9 @@ function DrawingActions({
   onDelete,
   onPatch,
   onClear,
+  onAlert,
+  alertBusy,
+  canAlert,
 }: {
   canEdit: boolean;
   drawings: ReturnType<typeof useDrawings>;
@@ -862,8 +915,19 @@ function DrawingActions({
   onDelete: () => void;
   onPatch: (patch: Partial<Drawing>) => void;
   onClear: () => void;
+  onAlert: (price: number, origin: "level" | "zone_top" | "zone_bottom") => void;
+  alertBusy: boolean;
+  canAlert: boolean;
 }) {
   const noEdit = !canEdit;
+  // A level alerts at its price; a zone at its top or bottom edge. The
+  // direction (cross above or below) is decided by the platform.
+  const levelPrice = selected && selected.kind === "hline" ? (selected.points[0]?.price ?? null) : null;
+  const corners = selected && selected.kind === "rect" ? selected.points : null;
+  const a = corners?.[0];
+  const b = corners?.[1];
+  // The zone's edges are its two stored anchor prices, higher and lower.
+  const zone = a && b ? { top: Math.max(a.price, b.price), bottom: Math.min(a.price, b.price) } : null;
   return (
     <div className="cw-dbar" role="toolbar" aria-label="Drawing edits" data-testid="drawing-actions">
       {canEdit ? (
@@ -924,6 +988,42 @@ function DrawingActions({
             >
               ext
             </button>
+          ) : null}
+          {canAlert && levelPrice !== null ? (
+            <button
+              type="button"
+              className="cw-dbar__btn cw-dbar__btn--text"
+              data-testid="alert-from-level"
+              aria-disabled={alertBusy}
+              title="Create a price alert at this level (the platform decides cross above or below)"
+              onClick={() => (alertBusy ? undefined : onAlert(levelPrice, "level"))}
+            >
+              <BellPlus size={12} aria-hidden="true" /> alert
+            </button>
+          ) : null}
+          {canAlert && zone ? (
+            <>
+              <button
+                type="button"
+                className="cw-dbar__btn cw-dbar__btn--text"
+                data-testid="alert-from-zone-top"
+                aria-disabled={alertBusy}
+                title="Create a price alert at the zone's top edge"
+                onClick={() => (alertBusy ? undefined : onAlert(zone.top, "zone_top"))}
+              >
+                <BellPlus size={12} aria-hidden="true" /> alert top
+              </button>
+              <button
+                type="button"
+                className="cw-dbar__btn cw-dbar__btn--text"
+                data-testid="alert-from-zone-bottom"
+                aria-disabled={alertBusy}
+                title="Create a price alert at the zone's bottom edge"
+                onClick={() => (alertBusy ? undefined : onAlert(zone.bottom, "zone_bottom"))}
+              >
+                <BellPlus size={12} aria-hidden="true" /> alert bottom
+              </button>
+            </>
           ) : null}
           <button
             type="button"
