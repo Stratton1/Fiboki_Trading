@@ -577,3 +577,22 @@ export function placePaperTrades(model: ChartModel): PlacedTrade[] {
     };
   });
 }
+
+// ------------------------------------------------------------ compare
+
+/**
+ * The API's points placed on this chart's bars by exact bar time: one value
+ * per bar, null where the API sent none for that bar. Placement only; the
+ * values are the API's (GET /api/markets/compare rebased them).
+ */
+export function alignByTime(
+  times: readonly number[],
+  points: readonly { t: string; v: number | null }[],
+): (number | null)[] {
+  const byTime = new Map<number, number | null>();
+  for (const p of points) byTime.set(toSeconds(p.t), p.v);
+  return times.map((t) => {
+    const v = byTime.get(t);
+    return v === undefined ? null : v;
+  });
+}

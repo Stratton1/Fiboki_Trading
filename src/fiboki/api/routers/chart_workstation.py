@@ -385,3 +385,111 @@ def replay(
         ),
         caveats=tuple(caveats),
     )
+
+
+# ================================================================= compare
+
+
+class ComparePoint(BaseModel):
+    model_config = ConfigDict(frozen=True)
+
+    t: datetime
+    #: Percent change of the compared close since the anchor bar; null where
+    #: the compared instrument has no bar at this base bar's time.
+    v: float | None
+
+
+class CompareView(BaseModel):
+    model_config = ConfigDict(frozen=True)
+
+    base: str
+    symbol: str
+    timeframe: str
+    unit: str = "percent"
+    #: The base bar the series is rebased at (the first base bar the compared
+    #: instrument also has a close for): 0% there by definition.
+    anchor_time: datetime | None
+    anchor_close: Figure
+    base_dataset_version_id: str
+    dataset_version_id: str
+    points: list[ComparePoint]
+    #: Base bars with no compared bar at the same time (drawn as gaps).
+    unmatched: int
+
+
+@router.get("/api/markets/compare/{base}", response_model=Envelope[CompareView])
+def compare(
+    base: str,
+    settings: SettingsDep,
+    with_: Annotated[str, Query(alias="with", description="The instrument compared against the base.")],
+    timeframe: str = Query("H1"),
+    from_: Annotated[datetime | None, Query(alias="from")] = None,
+    to: Annotated[datetime | None, Query()] = None,
+    limit: int = Query(500, ge=1, le=5_000),
+) -> Envelope[CompareView]:
+    """``with``'s close rebased to percent at the first shared bar, on ``base``'s bars.
+
+    Aligned on the base instrument's bar open times exactly: a compared bar at
+    a different time is not interpolated, and the gap is counted.
+    """
+    import pandas as pd
+
+    b = _symbol(base)
+    s = _symbol(with_)
+    tf = _tf(timeframe)
+    _mounted(settings, b, tf.value)
+    base_frame, base_version = _read_frame(settings, b, tf)
+    other, version = _read_frame(settings, s, tf)
+    sel = base_frame
+    if from_ is not None:
+        sel = sel[sel.index >= pd.Timestamp(_utc(from_))]
+    if to is not None:
+        sel = sel[sel.index <= pd.Timestamp(_utc(to))]
+    window = sel.tail(limit)
+    closes = other["close"].reindex(window.index)
+    known = closes.dropna()
+    p = Provenance.BACKTEST
+    caveats: list[Caveat] = []
+    if known.empty:
+        anchor_time = None
+        anchor = Figure.missing(p, reason=f"{s} has no bar at any of these {b} bar times.")
+        points = [ComparePoint(t=t.to_pydatetime(), v=None) for t in window.index]
+    else:
+        anchor_time = known.index[0].to_pydatetime()
+        anchor_close = float(known.iloc[0])
+        anchor = Figure(value=anchor_close, provenance=p)
+        points = []
+        for stamp, close in closes.items():
+            v = None if close != close else (float(close) / anchor_close - 1.0) * 100.0
+            points.append(ComparePoint(t=stamp.to_pydatetime(), v=v))
+    unmatched = int(closes.isna().sum())
+    if unmatched:
+        caveats.append(
+            Caveat(
+                code="compare_unaligned_bars",
+                severity="info",
+                message=f"{unmatched} {b} bar(s) have no {s} bar at the same time; they are "
+                "gaps, not interpolated values.",
+                affects="compare",
+                direction="unknown",
+            )
+        )
+    return Envelope(
+        data=CompareView(
+            base=b,
+            symbol=s,
+            timeframe=tf.value,
+            anchor_time=anchor_time,
+            anchor_close=anchor,
+            base_dataset_version_id=base_version,
+            dataset_version_id=version,
+            points=points,
+            unmatched=unmatched,
+        ),
+        source=_note(
+            "live",
+            f"Canonical bar store: {s} close (dataset {version}) as percent change since "
+            f"its close at the first shared {b} bar (dataset {base_version}).",
+        ),
+        caveats=tuple(caveats),
+    )

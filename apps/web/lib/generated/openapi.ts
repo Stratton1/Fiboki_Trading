@@ -278,6 +278,29 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/markets/compare/{base}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Compare
+         * @description ``with``'s close rebased to percent at the first shared bar, on ``base``'s bars.
+         *
+         *     Aligned on the base instrument's bar open times exactly: a compared bar at
+         *     a different time is not interpolated, and the gap is counted.
+         */
+        get: operations["compare_api_markets_compare__base__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/markets/correlations": {
         parameters: {
             query?: never;
@@ -1919,6 +1942,41 @@ export interface components {
             /** Stats */
             stats: components["schemas"]["StatView"][];
         };
+        /** ComparePoint */
+        ComparePoint: {
+            /**
+             * T
+             * Format: date-time
+             */
+            t: string;
+            /** V */
+            v: number | null;
+        };
+        /** CompareView */
+        CompareView: {
+            anchor_close: components["schemas"]["Figure"];
+            /** Anchor Time */
+            anchor_time: string | null;
+            /** Base */
+            base: string;
+            /** Base Dataset Version Id */
+            base_dataset_version_id: string;
+            /** Dataset Version Id */
+            dataset_version_id: string;
+            /** Points */
+            points: components["schemas"]["ComparePoint"][];
+            /** Symbol */
+            symbol: string;
+            /** Timeframe */
+            timeframe: string;
+            /**
+             * Unit
+             * @default percent
+             */
+            unit: string;
+            /** Unmatched */
+            unmatched: number;
+        };
         /** ComparisonView */
         ComparisonView: {
             /** Correlations */
@@ -2185,6 +2243,16 @@ export interface components {
              */
             caveats: components["schemas"]["Caveat"][];
             data: components["schemas"]["CommandSummaryView"];
+            source: components["schemas"]["SourceNote"];
+        };
+        /** Envelope[CompareView] */
+        Envelope_CompareView_: {
+            /**
+             * Caveats
+             * @default []
+             */
+            caveats: components["schemas"]["Caveat"][];
+            data: components["schemas"]["CompareView"];
             source: components["schemas"]["SourceNote"];
         };
         /** Envelope[ComparisonView] */
@@ -5405,6 +5473,44 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Envelope_dict_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    compare_api_markets_compare__base__get: {
+        parameters: {
+            query: {
+                from?: string | null;
+                limit?: number;
+                timeframe?: string;
+                to?: string | null;
+                /** @description The instrument compared against the base. */
+                with: string;
+            };
+            header?: never;
+            path: {
+                base: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_CompareView_"];
                 };
             };
             /** @description Validation Error */

@@ -63,6 +63,12 @@ export const INSTRUMENT_FUNCTIONS: InstrumentFunction[] = [
   },
   // wave chart2
   {
+    code: "GRID",
+    label: "Chart grid",
+    description: "This instrument on a 2x2 grid at H1, H4 and D1, symbol, crosshair and time axis linked.",
+    href: (s) => route.grid({ symbols: [s], sync: ["symbol", "crosshair", "time"] }),
+  },
+  {
     code: "REPLAY",
     label: "Replay",
     description: "Bar-by-bar replay from the platform: closed candles, trades and markers as of a cursor.",

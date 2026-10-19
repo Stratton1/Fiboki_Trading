@@ -89,3 +89,163 @@
   flex: 1 1 auto;
   min-height: 0;
 }
+
+/* ------------------------------------------------------ candle tokens */
+/* Programme P1 #9: in the dark theme rising and falling candles were both
+   amber (--chart-candle). Two neutral inks now, separated by lightness
+   (>= 0.15 OKLCH L, checked by scripts/contrast.mjs) as well as by shape
+   (rising hollow, falling filled). Green and red stay P&L-only. */
+:root {
+  --chart-candle-up: oklch(0.920 0.015 85);
+  --chart-candle-down: oklch(0.720 0.110 70);
+}
+:root[data-theme="light"] {
+  --chart-candle-up: oklch(0.320 0.012 255);
+  --chart-candle-down: oklch(0.560 0.012 255);
+}
+
+/* --------------------------------------------------------------- grid */
+.cg {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  height: calc(100dvh - var(--banner-h) - var(--statusbar-h) - 100px);
+  min-height: 520px;
+}
+.cg__bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 8px;
+  font-size: 12px;
+}
+.cg__title {
+  margin: 0 8px 0 0;
+  font-size: 15px;
+  line-height: 20px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.cg__label {
+  margin-left: 8px;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.cg__sync {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 22px;
+  padding: 0 8px;
+  border: 1px solid var(--border-control);
+  border-radius: var(--r-sm);
+  background: transparent;
+  color: var(--fg-muted);
+  font-size: 11px;
+}
+.cg__sync[aria-pressed="true"] {
+  border-color: var(--accent);
+  background: var(--accent-bg);
+  color: var(--fg);
+}
+.cg__note {
+  margin-left: auto;
+  font-size: 11px;
+}
+.cg__cells {
+  display: grid;
+  flex: 1 1 auto;
+  min-height: 0;
+  gap: 4px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-auto-rows: minmax(0, 1fr);
+}
+.cg[data-layout="1x2"] .cg__cells {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.cg[data-layout="3x3"] .cg__cells {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+.cg-cell {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  min-width: 0;
+  min-height: 0;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--r-sm);
+  background: var(--bg-surface);
+}
+.cg-cell[data-stale] {
+  border-color: var(--warn);
+}
+.cg-cell__head {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+  padding: 2px 4px;
+  overflow: hidden;
+  border-bottom: 1px solid var(--border-subtle);
+  font-size: 11px;
+}
+.cg-cell__field select {
+  height: 20px;
+  max-width: 110px;
+  border: 1px solid var(--border-control);
+  border-radius: var(--r-xs);
+  background: var(--bg-sunken);
+  color: var(--fg);
+  font-family: var(--font-code);
+  font-size: 11px;
+}
+.cg-cell__read {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--fg-muted);
+  font-family: var(--font-code);
+  font-variant-numeric: tabular-nums;
+}
+.cg-cell__open {
+  display: inline-flex;
+  padding: 2px;
+  color: var(--fg-muted);
+}
+.cg-cell__plot {
+  position: relative;
+  min-height: 160px;
+}
+.cg-cell__plot .price-chart-wrap,
+.cg-cell__plot .price-chart {
+  height: 100%;
+}
+.cg-cell__state {
+  margin: 8px;
+}
+.cg-cell__foot {
+  padding: 1px 6px;
+  overflow: hidden;
+  border-top: 1px solid var(--border-subtle);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-size: 11px;
+}
+@media (max-width: 760px) {
+  .cg {
+    height: auto;
+    min-height: 0;
+  }
+  .cg__cells,
+  .cg[data-layout="1x2"] .cg__cells,
+  .cg[data-layout="3x3"] .cg__cells {
+    grid-template-columns: minmax(0, 1fr);
+    grid-auto-rows: 280px;
+  }
+  .cg__note {
+    margin-left: 0;
+  }
+}

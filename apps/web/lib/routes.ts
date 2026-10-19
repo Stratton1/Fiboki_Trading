@@ -60,6 +60,12 @@ export const route = {
       at: opts.at,
       event: opts.event,
     }),
+  grid: (opts: { symbols?: string[]; layout?: "1x2" | "2x2" | "3x3"; sync?: string[] } = {}) =>
+    withQuery("/markets/grid", {
+      layout: opts.layout,
+      symbols: opts.symbols?.join(","),
+      sync: opts.sync?.join(","),
+    }),
   strategy: (id: string) => `/research/strategies/${q(id)}`,
   run: (runId: string) => `/research/runs/${q(runId)}`,
   trade: (tradeId: string) => withQuery("/trading/execution", { row: tradeId }),
@@ -82,6 +88,7 @@ export const ROUTE_PATTERNS = [
   "/markets/[symbol]",
   "/markets/correlations",
   "/markets/data-quality",
+  "/markets/grid",
   "/markets/regimes",
   "/research",
   "/research/datasets",

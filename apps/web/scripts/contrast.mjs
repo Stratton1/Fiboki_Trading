@@ -24,12 +24,25 @@
  *   node scripts/contrast.mjs --self-test
  *   CONTRAST_CSS=other.css node scripts/contrast.mjs   # check another stylesheet
  */
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const CSS_PATH = process.env.CONTRAST_CSS ?? join(HERE, "..", "app", "globals.css");
+/** Wave stylesheets (app/styles/*.css) may declare tokens too; they load after globals.css. */
+const STYLES_DIR = join(HERE, "..", "app", "styles");
+
+function tokenSources() {
+  const extra =
+    process.env.CONTRAST_CSS || !existsSync(STYLES_DIR)
+      ? []
+      : readdirSync(STYLES_DIR)
+          .filter((f) => f.endsWith(".css"))
+          .sort()
+          .map((f) => readFileSync(join(STYLES_DIR, f), "utf8"));
+  return [readFileSync(CSS_PATH, "utf8"), ...extra].join("\n");
+}
 
 // ------------------------------------------------------------ colour maths
 
@@ -123,7 +136,7 @@ function declarations(body) {
   return out;
 }
 
-export function themes(css = readFileSync(CSS_PATH, "utf8")) {
+export function themes(css = tokenSources()) {
   const all = blocks(css);
   const pick = (selector) =>
     Object.assign(
@@ -271,6 +284,8 @@ export const PAIRS = [
   // the chart background, the provenance marker inks, the P&L connector
   // colours, and the regime ribbon label (fg-muted) over each regime tint.
   ...on("--chart-candle", ["--chart-bg"], "graphics", "candle ink"),
+  ...on("--chart-candle-up", ["--chart-bg"], "graphics", "rising candle ink"),
+  ...on("--chart-candle-down", ["--chart-bg"], "graphics", "falling candle ink"),
   ...["--prov-sim", "--prov-paper", "--prov-shadow", "--prov-demo", "--mode-live"].flatMap((fg) =>
     on(fg, ["--chart-bg"], "graphics", "price-chart marker"),
   ),
@@ -306,6 +321,9 @@ export const DISTINCT = [
   { a: "--accent", b: "--pnl-up", note: "accent vs profit", sameFamilyInCvd: true },
   // Blue against orange sits on the axis colour-blind readers keep.
   { a: "--accent", b: "--pnl-down", note: "accent vs loss", sameFamilyInCvd: false },
+  // Rising vs falling candles must separate by LIGHTNESS in every theme
+  // (programme P1 #9: both were amber in the dark theme). Neutral inks.
+  { a: "--chart-candle-up", b: "--chart-candle-down", note: "candle up vs down", sameFamilyInCvd: false, minDeltaL: 0.15 },
 ];
 const MIN_DELTA_E = 0.1;
 const MIN_DELTA_L_CVD = 0.08;
@@ -327,7 +345,9 @@ export function distinctness() {
       const deltaE = Math.hypot(la - lb, aa - ab, ba - bb);
       const deltaL = Math.abs(la - lb);
       const pass =
-        deltaE >= MIN_DELTA_E && (!cvd || !pair.sameFamilyInCvd || deltaL >= MIN_DELTA_L_CVD);
+        deltaE >= MIN_DELTA_E &&
+        (!cvd || !pair.sameFamilyInCvd || deltaL >= MIN_DELTA_L_CVD) &&
+        (pair.minDeltaL === undefined || deltaL >= pair.minDeltaL);
       rows.push({ theme, ...pair, deltaE, deltaL, pass });
     }
   }

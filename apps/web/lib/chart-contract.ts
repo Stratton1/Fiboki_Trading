@@ -53,6 +53,22 @@ export interface ReplayView {
   trades_detail: string;
 }
 
+// ----------------------------------------------------------------- compare
+
+/** GET /api/markets/compare/{base}?with= (Envelope): percent since the anchor bar. */
+export interface CompareView {
+  base: string;
+  symbol: string;
+  timeframe: string;
+  unit: string;
+  anchor_time: string | null;
+  anchor_close: Figure;
+  base_dataset_version_id: string;
+  dataset_version_id: string;
+  points: { t: string; v: number | null }[];
+  unmatched: number;
+}
+
 // ------------------------------------------------------------------ checks
 
 type SameKeys<A, B> = [Exclude<keyof A, keyof B>, Exclude<keyof B, keyof A>] extends [never, never]
@@ -63,6 +79,7 @@ export type ChartContractChecks = [
   SameKeys<ReplayTrade, S["ReplayTrade"]>,
   SameKeys<ReplayView, S["ReplayView"]>,
   SameKeys<Bar, S["ReplayBar"]>,
+  SameKeys<CompareView, S["CompareView"]>,
 ];
 
 /** Fails to compile when any check above is not `true`. */

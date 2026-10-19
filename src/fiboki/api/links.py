@@ -59,6 +59,7 @@ ROUTE_PATTERNS: tuple[str, ...] = (
     "/markets/[symbol]",
     "/markets/correlations",
     "/markets/data-quality",
+    "/markets/grid",
     "/markets/regimes",
     "/research",
     "/research/datasets",

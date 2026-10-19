@@ -14,11 +14,13 @@ import {
   type LineWidth,
   type Logical,
   type MouseEventParams,
+  type IRange,
   type Time,
   type UTCTimestamp,
 } from "lightweight-charts";
 import { useEffect, useRef, useState, type KeyboardEvent } from "react";
 import {
+  barIndexAtOrBefore,
   visiblePanes,
   type ChartModel,
   type LineStyleName,
@@ -33,7 +35,7 @@ import {
   DrawingPrimitive,
   type DrawingControls,
 } from "./drawing-primitive";
-import { formatBarTime } from "./time";
+import { formatBarTime, formatTick, type TimeZoneId } from "./time";
 import { OverlayPrimitive, type OverlayLayers } from "./overlay-primitive";
 import { TradePrimitive } from "./trade-primitive";
 import { TradeTooltip } from "./TradeTooltip";
@@ -86,6 +88,33 @@ export interface PriceChartProps {
   onTradeClick?: (key: string) => void;
   /** Operator drawings; absent until the drawing layer has loaded. */
   drawings?: ChartDrawings | null;
+  /**
+   * A compared instrument as the API rebased it (percent since its anchor
+   * bar, one value per bar of this chart), drawn on the LEFT scale.
+   */
+  compare?: { label: string; values: readonly (number | null)[] } | null;
+  /** Another chart's crosshair time (UTC seconds) to mirror, or null. */
+  syncTime?: number | null;
+  /** The pointer's bar time (UTC seconds) as it moves here, or null when it leaves. */
+  onCrosshairTime?: (t: number | null) => void;
+  /** Another chart's visible time range to follow (UTC seconds), or null. */
+  syncRange?: { from: number; to: number } | null;
+  /** This chart's visible time range when the operator scrolls or zooms it. */
+  onTimeRange?: (range: { from: number; to: number }) => void;
+  /** The display time zone for labels; storage and every request stay UTC. */
+  timeZone?: TimeZoneId;
+  /** The imperative handle (go to a time, take a snapshot), once the chart exists. */
+  onHandle?: (handle: PriceChartHandle | null) => void;
+  /** Smaller chrome for a grid cell. */
+  compact?: boolean;
+}
+
+/** What the workstation can ask of a mounted chart. */
+export interface PriceChartHandle {
+  /** Centre the bar open at `t` (UTC seconds) and put the crosshair on it; false when outside the bars. */
+  goTo: (t: number) => boolean;
+  /** The chart as drawn, panes and axes included, on one canvas. */
+  screenshot: () => HTMLCanvasElement | null;
 }
 
 /** What the chart needs to draw and edit the operator's drawings. */
@@ -155,15 +184,17 @@ function chartOptions(theme: ChartTheme) {
 }
 
 function candleOptions(theme: ChartTheme) {
-  // Neutral ink. Rising bars hollow (body in the chart background), falling
-  // bars filled: direction is a shape, and green/red stay P&L-only.
+  // Neutral inks, two lightnesses (--chart-candle-up / --chart-candle-down,
+  // at least 0.15 apart in OKLCH L, scripts/contrast.mjs). Rising bars are
+  // also hollow (body in the chart background), falling bars filled, so
+  // direction is a shape AND a lightness; green and red stay P&L-only.
   return {
     upColor: theme.background,
-    downColor: theme.candle,
-    borderUpColor: theme.candle,
-    borderDownColor: theme.candle,
-    wickUpColor: theme.candle,
-    wickDownColor: theme.candle,
+    downColor: theme.candleDown,
+    borderUpColor: theme.candleUp,
+    borderDownColor: theme.candleDown,
+    wickUpColor: theme.candleUp,
+    wickDownColor: theme.candleDown,
     borderVisible: true,
   };
 }
@@ -184,6 +215,14 @@ export default function PriceChart({
   focusTrade = null,
   onTradeClick,
   drawings = null,
+  compare = null,
+  syncTime = null,
+  onCrosshairTime,
+  syncRange = null,
+  onTimeRange,
+  timeZone = "UTC",
+  onHandle,
+  compact = false,
 }: PriceChartProps) {
   const box = useRef<HTMLDivElement>(null);
   const tradeRef = useRef<TradePrimitive | null>(null);
@@ -208,7 +247,16 @@ export default function PriceChart({
   );
   const onCursorRef = useRef(onCursor);
   const modelRef = useRef(model);
+  const onCrosshairTimeRef = useRef(onCrosshairTime);
+  const onTimeRangeRef = useRef(onTimeRange);
+  const onHandleRef = useRef(onHandle);
+  const timeZoneRef = useRef(timeZone);
+  // True while this chart applies another chart's range, so it does not echo it back.
+  const applyingRange = useRef(false);
   useEffect(() => {
+    onCrosshairTimeRef.current = onCrosshairTime;
+    onTimeRangeRef.current = onTimeRange;
+    onHandleRef.current = onHandle;
     onCursorRef.current = onCursor;
     modelRef.current = model;
     tradesRef.current = trades;
@@ -245,7 +293,7 @@ export default function PriceChart({
       height: Math.max(1, el.clientHeight),
       localization: {
         locale: "en-GB",
-        timeFormatter: (time: Time) => formatBarTime(time as UTCTimestamp),
+        timeFormatter: (time: Time) => formatBarTime(time as UTCTimestamp, timeZoneRef.current),
       },
       timeScale: {
         ...chartOptions(initial).timeScale,
@@ -253,7 +301,13 @@ export default function PriceChart({
         secondsVisible: false,
         barSpacing: 8,
         rightOffset: 4,
+        tickMarkFormatter: (time: Time, kind: number) =>
+          formatTick(time as UTCTimestamp, kind, timeZoneRef.current),
       },
+      // The top price label sits inside the pane, never clipped by its edge
+      // (programme P1 #9): a margin above the highest bar.
+      rightPriceScale: { borderColor: initial.axis, scaleMargins: { top: 0.08, bottom: 0.06 } },
+      leftPriceScale: { visible: false, borderColor: initial.axis },
     });
     const candles = chart.addSeries(CandlestickSeries, {
       ...candleOptions(initial),
@@ -344,12 +398,16 @@ export default function PriceChart({
       if (param.sourceEvent === undefined) return;
       if (param.point === undefined || param.logical === undefined) {
         onCursorRef.current(null, "pointer");
+        onCrosshairTimeRef.current?.(null);
         setHover(null);
         return;
       }
       const index = Math.round(param.logical);
       const count = modelRef.current.times.length;
       onCursorRef.current(index >= 0 && index < count ? index : null, "pointer");
+      onCrosshairTimeRef.current?.(
+        index >= 0 && index < count ? (modelRef.current.times[index] ?? null) : null,
+      );
       const key = tradeAt(param.point.x, param.point.y);
       setHover((prev) => {
         if (key === null) return prev === null ? prev : null;
@@ -373,6 +431,42 @@ export default function PriceChart({
     };
     chart.timeScale().subscribeVisibleLogicalRangeChange(writeRange);
 
+    const onRange = (range: IRange<Time> | null) => {
+      if (applyingRange.current || range === null) return;
+      onTimeRangeRef.current?.({ from: Number(range.from), to: Number(range.to) });
+    };
+    chart.timeScale().subscribeVisibleTimeRangeChange(onRange);
+
+    const handle: PriceChartHandle = {
+      goTo: (t: number) => {
+        const m = modelRef.current;
+        const n = m.times.length;
+        const first = m.times[0];
+        const lastT = m.times[n - 1];
+        if (n === 0 || first === undefined || lastT === undefined || t < first) return false;
+        const index = barIndexAtOrBefore(m.times, t);
+        // Past the last bar's open by more than one bar's span: not on this chart.
+        const span = n > 1 ? lastT - (m.times[n - 2] as number) : 0;
+        if (index < 0 || t > lastT + span) return false;
+        const ts = chart.timeScale();
+        const range = ts.getVisibleLogicalRange();
+        const width = range ? range.to - range.from : 80;
+        ts.setVisibleLogicalRange({ from: index - width / 2, to: index + width / 2 });
+        const bar = m.bars[index];
+        if (bar) chart.setCrosshairPosition(bar.c, m.times[index] as UTCTimestamp, candles);
+        el.dataset.goto = String(index);
+        return true;
+      },
+      screenshot: () => {
+        try {
+          return chart.takeScreenshot(true, false);
+        } catch {
+          return null;
+        }
+      },
+    };
+    onHandleRef.current?.(handle);
+
     const onClick = (param: MouseEventParams<Time>) => {
       if (!param.point) return;
       const key = tradeAt(param.point.x, param.point.y);
@@ -381,6 +475,8 @@ export default function PriceChart({
     chart.subscribeClick(onClick);
 
     return () => {
+      onHandleRef.current?.(null);
+      chart.timeScale().unsubscribeVisibleTimeRangeChange(onRange);
       chart.timeScale().unsubscribeVisibleLogicalRangeChange(writeRange);
       chart.unsubscribeClick(onClick);
       controller.dispose();
@@ -480,9 +576,87 @@ export default function PriceChart({
       );
       extraRef.current.push(line);
     }
+    if (compare) {
+      const line = chart.addSeries(
+        LineSeries,
+        {
+          color: theme.series["series-6"],
+          lineWidth: 1 as LineWidth,
+          priceScaleId: "left",
+          priceLineVisible: false,
+          lastValueVisible: true,
+          crosshairMarkerVisible: false,
+          title: compare.label,
+          priceFormat: {
+            type: "custom",
+            minMove: 0.01,
+            formatter: (v: number) => `${v >= 0 ? "+" : ""}${v.toFixed(2)}%`,
+          },
+        },
+        0,
+      );
+      line.setData(
+        compare.values.map((v, i) =>
+          v === null
+            ? { time: model.times[i] as UTCTimestamp }
+            : { time: model.times[i] as UTCTimestamp, value: v },
+        ),
+      );
+      extraRef.current.push(line);
+    }
+    chart.applyOptions({ leftPriceScale: { visible: compare !== null, borderColor: theme.axis } });
     // Price gets the room; every other pane an equal smaller share.
     chart.panes().forEach((pane, i) => pane.setStretchFactor(i === 0 ? 4 : 1));
-  }, [model, hidden, theme, priceDecimals, paneDecimals]);
+  }, [model, hidden, theme, priceDecimals, paneDecimals, compare]);
+
+  // ---- display time zone: labels only (every time stays UTC underneath).
+  useEffect(() => {
+    timeZoneRef.current = timeZone;
+    const chart = chartRef.current;
+    if (!chart) return;
+    chart.applyOptions({
+      localization: { timeFormatter: (time: Time) => formatBarTime(time as UTCTimestamp, timeZone) },
+      timeScale: {
+        tickMarkFormatter: (time: Time, kind: number) => formatTick(time as UTCTimestamp, kind, timeZone),
+      },
+    });
+    if (box.current) box.current.dataset.timeZone = timeZone;
+  }, [timeZone]);
+
+  // ---- another chart's crosshair (grid sync): mirror it at that bar.
+  useEffect(() => {
+    const chart = chartRef.current;
+    const candles = candleRef.current;
+    if (!chart || !candles) return;
+    if (syncTime === null) {
+      if (cursor === null) chart.clearCrosshairPosition();
+      return;
+    }
+    const index = barIndexAtOrBefore(model.times, syncTime);
+    const bar = model.bars[index];
+    if (index < 0 || !bar) return;
+    chart.setCrosshairPosition(bar.c, model.times[index] as UTCTimestamp, candles);
+    if (box.current) box.current.dataset.syncIndex = String(index);
+  }, [syncTime, model, cursor]);
+
+  // ---- another chart's visible time range (grid sync).
+  useEffect(() => {
+    const chart = chartRef.current;
+    if (!chart || syncRange === null || model.times.length === 0) return;
+    applyingRange.current = true;
+    try {
+      chart.timeScale().setVisibleRange({
+        from: syncRange.from as UTCTimestamp,
+        to: syncRange.to as UTCTimestamp,
+      });
+    } catch {
+      // A range with no bar of this chart in it: keep this chart's own view.
+    }
+    const frame = requestAnimationFrame(() => {
+      applyingRange.current = false;
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [syncRange, model.times.length]);
 
   // ---- levels: entry, stop and target as labelled price lines.
   useEffect(() => {
@@ -627,7 +801,7 @@ export default function PriceChart({
   const tool = drawings?.controls.tool ?? "select";
   const hoveredTrade = hover ? trades.find((t) => t.key === hover.key) ?? null : null;
   return (
-    <div className="price-chart-wrap" data-tool={tool}>
+    <div className="price-chart-wrap" data-tool={tool} data-compact={compact || undefined}>
       <div
         ref={box}
         className="price-chart"

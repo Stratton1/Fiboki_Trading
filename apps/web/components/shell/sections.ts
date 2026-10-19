@@ -106,6 +106,8 @@ export const SECTIONS: Section[] = [
       { href: "/markets", label: "Explorer", code: "MKT", description: "The instrument universe." },
       { href: "/markets/regimes", label: "Regimes", code: "REGM", description: "Market regime per instrument." },
       { href: "/markets/correlations", label: "Correlations", code: "CORR", description: "Correlation matrix." },
+      // wave chart2
+      { href: "/markets/grid", label: "Chart grid", code: "GRID", description: "1x2, 2x2 or 3x3 linked price charts with compare." },
       { href: "/intelligence/agents", label: "Agents", code: "AGT", description: "Agent roles and capabilities." },
       { href: "/intelligence/runs", label: "Agent runs", code: "RUNS", description: "Agent run history." },
       { href: "/intelligence/research-memory", label: "Research Memory", code: "MEM", description: "What was tried and how it died." },

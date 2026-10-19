@@ -1233,6 +1233,100 @@
         "title": "CommandSummaryView",
         "type": "object"
       },
+      "ComparePoint": {
+        "properties": {
+          "t": {
+            "format": "date-time",
+            "title": "T",
+            "type": "string"
+          },
+          "v": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "V"
+          }
+        },
+        "required": [
+          "t",
+          "v"
+        ],
+        "title": "ComparePoint",
+        "type": "object"
+      },
+      "CompareView": {
+        "properties": {
+          "anchor_close": {
+            "$ref": "#/components/schemas/Figure"
+          },
+          "anchor_time": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Anchor Time"
+          },
+          "base": {
+            "title": "Base",
+            "type": "string"
+          },
+          "base_dataset_version_id": {
+            "title": "Base Dataset Version Id",
+            "type": "string"
+          },
+          "dataset_version_id": {
+            "title": "Dataset Version Id",
+            "type": "string"
+          },
+          "points": {
+            "items": {
+              "$ref": "#/components/schemas/ComparePoint"
+            },
+            "title": "Points",
+            "type": "array"
+          },
+          "symbol": {
+            "title": "Symbol",
+            "type": "string"
+          },
+          "timeframe": {
+            "title": "Timeframe",
+            "type": "string"
+          },
+          "unit": {
+            "default": "percent",
+            "title": "Unit",
+            "type": "string"
+          },
+          "unmatched": {
+            "title": "Unmatched",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "base",
+          "symbol",
+          "timeframe",
+          "anchor_time",
+          "anchor_close",
+          "base_dataset_version_id",
+          "dataset_version_id",
+          "points",
+          "unmatched"
+        ],
+        "title": "CompareView",
+        "type": "object"
+      },
       "ComparedRunView": {
         "properties": {
           "daily_returns": {
@@ -1968,6 +2062,30 @@
           "source"
         ],
         "title": "Envelope[CommandSummaryView]",
+        "type": "object"
+      },
+      "Envelope_CompareView_": {
+        "properties": {
+          "caveats": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/Caveat"
+            },
+            "title": "Caveats",
+            "type": "array"
+          },
+          "data": {
+            "$ref": "#/components/schemas/CompareView"
+          },
+          "source": {
+            "$ref": "#/components/schemas/SourceNote"
+          }
+        },
+        "required": [
+          "data",
+          "source"
+        ],
+        "title": "Envelope[CompareView]",
         "type": "object"
       },
       "Envelope_ComparisonView_": {
@@ -10151,6 +10269,118 @@
         "summary": "Bars",
         "tags": [
           "markets"
+        ],
+        "x-fiboki-auth": "public"
+      }
+    },
+    "/api/markets/compare/{base}": {
+      "get": {
+        "description": "``with``'s close rebased to percent at the first shared bar, on ``base``'s bars.\n\nAligned on the base instrument's bar open times exactly: a compared bar at\na different time is not interpolated, and the gap is counted.",
+        "operationId": "compare_api_markets_compare__base__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "base",
+            "required": true,
+            "schema": {
+              "title": "Base",
+              "type": "string"
+            }
+          },
+          {
+            "description": "The instrument compared against the base.",
+            "in": "query",
+            "name": "with",
+            "required": true,
+            "schema": {
+              "description": "The instrument compared against the base.",
+              "title": "With",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "timeframe",
+            "required": false,
+            "schema": {
+              "default": "H1",
+              "title": "Timeframe",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "from",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "From"
+            }
+          },
+          {
+            "in": "query",
+            "name": "to",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "To"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 500,
+              "maximum": 5000,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_CompareView_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [],
+        "summary": "Compare",
+        "tags": [
+          "chart-workstation"
         ],
         "x-fiboki-auth": "public"
       }

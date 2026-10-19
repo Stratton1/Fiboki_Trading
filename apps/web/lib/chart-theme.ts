@@ -40,6 +40,9 @@ export interface ChartTheme {
   crosshair: string;
   crosshairLabel: string;
   candle: string;
+  /** Rising and falling candle inks: neutral, two lightnesses (never P&L hues). */
+  candleUp: string;
+  candleDown: string;
   volume: string;
   series: Record<SeriesRole, string>;
   /** Marker ink per provenance: the neutral simulated hue, or the mode hue. */
@@ -158,6 +161,8 @@ export function readChartTheme(root: HTMLElement = document.documentElement): Ch
     crosshair: colour("--chart-crosshair"),
     crosshairLabel: colour("--bg-overlay"),
     candle: colour("--chart-candle"),
+    candleUp: colour("--chart-candle-up"),
+    candleDown: colour("--chart-candle-down"),
     volume: colour("--chart-volume"),
     series,
     provenance,
