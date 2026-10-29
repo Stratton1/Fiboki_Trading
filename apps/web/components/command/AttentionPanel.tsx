@@ -253,19 +253,45 @@ export function AttentionPanel() {
               Acknowledging is disabled. {allowed.reason}
             </p>
           ) : null}
-          <ol className="triage-list" data-testid="attention-list" onKeyDown={moveFocus}>
-            {page.items.map((item, index) => (
-              <Row
-                key={item.id}
-                item={item}
-                position={index + 1}
-                now={now}
-                unconfirmed={unconfirmed.has(item.id)}
-                onUnconfirmed={() => setUnconfirmed((previous) => new Set([...previous, item.id]))}
-                showChip={shared === null}
-              />
-            ))}
-          </ol>
+          <div data-testid="attention-list">
+          {(["critical", "error", "warning", "info"] as const).map((severity) => {
+            const rows = page.items.filter((item) => item.severity === severity);
+            if (rows.length === 0) return null;
+            const list = (
+              <ol className="triage-list" data-testid={`attention-list-${severity}`} onKeyDown={moveFocus}>
+                {rows.map((item, index) => (
+                  <Row
+                    key={item.id}
+                    item={item}
+                    position={index + 1}
+                    now={now}
+                    unconfirmed={unconfirmed.has(item.id)}
+                    onUnconfirmed={() => setUnconfirmed((previous) => new Set([...previous, item.id]))}
+                    showChip={shared === null}
+                  />
+                ))}
+              </ol>
+            );
+            if (severity === "critical" || severity === "error") {
+              return (
+                <section key={severity} data-testid={`attention-group-${severity}`}>
+                  <h2 className="triage-head">
+                    {severity} <span className="num">{rows.length}</span>
+                  </h2>
+                  {list}
+                </section>
+              );
+            }
+            return (
+              <details key={severity} data-testid={`attention-group-${severity}`}>
+                <summary>
+                  {severity} <span className="num">{rows.length}</span>
+                </summary>
+                {list}
+              </details>
+            );
+          })}
+          </div>
           <details className="triage-foot">
             <summary>Where this list came from</summary>
             <SourceBadge source={page.source} />

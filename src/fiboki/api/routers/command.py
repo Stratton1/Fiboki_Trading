@@ -45,6 +45,7 @@ from fiboki.api.health import build_health
 from fiboki.api.limit_board import attention_rows, build_limit_board
 from fiboki.api.market_sessions import MarketSessionView, market_sessions
 from fiboki.api.models import Envelope, Page, SourceNote
+from fiboki.api.paper_journal import read_unclosed_abandons
 from fiboki.api.provenance import Caveat, Figure, figure
 
 router = APIRouter(prefix="/api/command", tags=["command"])
@@ -434,6 +435,37 @@ def collect_attention(
                 )
 
     # -- caveats on the trade record ---------------------------------------
+    def abandoned_forward() -> None:
+        found = [row for book in session_books(platform, settings, p) for row in book.abandoned]
+        if not found:
+            return
+        def _shown(fig: Figure) -> str:
+            return "no data" if fig.value is None else f"{fig.value:g}"
+
+        detail = "; ".join(
+            f"{row.instrument} {row.direction} {_shown(row.size)} @ {_shown(row.entry_price)} "
+            f"({row.at.isoformat()})"
+            for row in found
+        )
+        items.append(
+            _item(
+                p,
+                id="abandoned_forward",
+                category="caveat",
+                severity="warning",
+                title=(
+                    f"{len(found)} forward position(s) abandoned, unrealised P&L not booked"
+                ),
+                reason=(
+                    "A restart had no snapshot to restore, so these positions died "
+                    "with the previous process. Unrealised P&L was not carried and "
+                    "is not estimated here: " + detail
+                ),
+                deep_link=links.JOURNAL,
+                as_of=max(row.at for row in found),
+            )
+        )
+
     def record_caveats() -> None:
         for caveat in trading_router._record_caveats(platform):
             if caveat.severity not in ("warning", "critical"):
@@ -459,6 +491,7 @@ def collect_attention(
         ("health", health),
         ("lifecycle", strategies),
         ("trade_record", record_caveats),
+        ("forward_journal", abandoned_forward),
     ):
         guarded(name, fn)
     return rank_attention(items), failed
@@ -523,6 +556,36 @@ class BotCounts(BaseModel):
     failed: Figure
 
 
+class AbandonedPositionView(BaseModel):
+    model_config = ConfigDict(frozen=True)
+
+    position_id: str
+    instrument: str
+    direction: str
+    size: Figure
+    entry_price: Figure
+    at: datetime
+    note: str
+
+
+class BookStrip(BaseModel):
+    """One paper session, in its own currency. Never summed with another."""
+
+    model_config = ConfigDict(frozen=True)
+
+    session_id: str
+    strategy_id: str
+    instruments: str
+    currency: str
+    equity: Figure
+    unrealised_pnl: Figure
+    open_positions: Figure
+    day_pnl: Figure
+    week_pnl: Figure
+    pnl_day: str | None
+    abandoned: list[AbandonedPositionView] = Field(default_factory=list)
+
+
 class CommandSummaryView(BaseModel):
     """The money strip: the book, the fleet and the research load, all decided here."""
 
@@ -546,9 +609,147 @@ class CommandSummaryView(BaseModel):
     pnl_day: str | None
     #: Monday of the ISO week "week P&L" covers.
     pnl_week_start: str | None
+    #: One entry per paper session in this mode. Mixed currencies stay here
+    #: and are not folded into ``equity``.
+    books: list[BookStrip] = Field(default_factory=list)
     server_time: datetime
     sessions: list[MarketSessionView]
     links: dict[str, str]
+
+
+def _abandon_figure(value: float | None, provenance: Any, unit: str, as_of: datetime, affects: str) -> Figure:
+    """The journalled size or entry. Absence stays missing. P&L is not implied."""
+    caveat = Caveat(
+        code="pnl_not_carried",
+        severity="warning",
+        message="Unrealised P&L was not carried for this abandoned position.",
+        affects=affects,
+        direction="unknown",
+    )
+    if value is None:
+        missing = Figure.missing(
+            provenance,
+            unit=unit,
+            reason="The journal did not record this number.",
+        )
+        return missing.model_copy(update={"as_of": as_of, "caveats": missing.caveats + (caveat,)})
+    return figure(
+        float(value),
+        provenance,
+        unit=unit,
+        as_of=as_of,
+        extra_caveats=(caveat,),
+    )
+
+
+def session_books(platform: Any, settings: Any, provenance: Any) -> list[BookStrip]:
+    """Per-session figures. Day P&L uses that session's trades and currency only."""
+    journal = getattr(platform, "journal", None)
+    if journal is None:
+        return []
+    state_dir = getattr(settings, "state_dir", None)
+    books: list[BookStrip] = []
+    for session in journal.sessions:
+        if session.provenance is not provenance:
+            continue
+        ccy = session.account_ccy
+        as_of = session.as_of
+        if as_of is None:
+            day_pnl = Figure.missing(
+                provenance, unit=ccy, reason="This session has no last bar, so day P&L is unknown."
+            )
+            week_pnl = Figure.missing(
+                provenance, unit=ccy, reason="This session has no last bar, so week P&L is unknown."
+            )
+            pnl_day = None
+        else:
+            day = as_of.date()
+            week_start = day - timedelta(days=day.weekday())
+            day_trades = [t for t in session.trades if t.exit_time.date() == day]
+            week_trades = [
+                t for t in session.trades if week_start <= t.exit_time.date() <= day
+            ]
+            day_pnl = figure(
+                round(sum(t.net_pnl for t in day_trades), 2),
+                provenance,
+                settings=settings,
+                unit=ccy,
+                as_of=as_of,
+                sample_size=len(day_trades),
+                affects="net_pnl",
+            )
+            week_pnl = figure(
+                round(sum(t.net_pnl for t in week_trades), 2),
+                provenance,
+                settings=settings,
+                unit=ccy,
+                as_of=as_of,
+                sample_size=len(week_trades),
+                affects="net_pnl",
+            )
+            pnl_day = day.isoformat()
+        unrealised = (
+            round(session.equity - session.balance, 2)
+            if session.equity is not None and session.balance is not None
+            else None
+        )
+        name = session.session_id.removeprefix("forward-")
+        journal_path = (
+            state_dir / "paper_forward" / name / "journal.jsonl" if state_dir is not None else None
+        )
+        abandoned = (
+            [
+                AbandonedPositionView(
+                    position_id=row.position_id,
+                    instrument=row.instrument,
+                    direction=row.direction,
+                    size=_abandon_figure(row.size, provenance, "units", row.at, "size"),
+                    entry_price=_abandon_figure(
+                        row.entry_price, provenance, ccy or "", row.at, "entry_price"
+                    ),
+                    at=row.at,
+                    note=row.note,
+                )
+                for row in read_unclosed_abandons(journal_path)
+            ]
+            if journal_path is not None
+            else []
+        )
+        books.append(
+            BookStrip(
+                session_id=session.session_id,
+                strategy_id=session.strategy_id,
+                instruments=session.instrument,
+                currency=ccy,
+                equity=figure(
+                    session.equity,
+                    provenance,
+                    settings=settings,
+                    unit=ccy,
+                    as_of=as_of,
+                    affects="equity",
+                    sample_size=len(session.trades),
+                ),
+                unrealised_pnl=Figure(
+                    value=unrealised,
+                    provenance=provenance,
+                    unit=ccy,
+                    as_of=as_of,
+                    estimated=unrealised is not None,
+                ),
+                open_positions=Figure(
+                    value=float(len(session.positions)),
+                    provenance=provenance,
+                    unit="count",
+                    as_of=as_of,
+                ),
+                day_pnl=day_pnl,
+                week_pnl=week_pnl,
+                pnl_day=pnl_day,
+                abandoned=abandoned,
+            )
+        )
+    return books
 
 
 def command_summary(platform: Any, settings: Any, *, now: datetime | None = None) -> CommandSummaryView:
@@ -559,8 +760,16 @@ def command_summary(platform: Any, settings: Any, *, now: datetime | None = None
     p = settings.provenance_for_execution()
     portfolio = trading_router.portfolio(platform, settings).data
     risk = trading_router.risk_state(platform, settings).data
-    ccy = portfolio.equity.unit or None
     account = trading_router._mode_account(platform, p)
+    # A mixed-currency journal has an account and no currency. Labelling the
+    # missing total with the GBP fallback would present one book's unit as the
+    # whole strip.
+    if account is not None and account.account_ccy:
+        ccy = account.account_ccy
+    elif account is not None:
+        ccy = None
+    else:
+        ccy = portfolio.equity.unit or None
     as_of = account.as_of if account is not None else None
     starting = account.initial_balance if account is not None else None
     executed, _ = platform.trades(provenance={p}, limit=100_000)
@@ -568,7 +777,7 @@ def command_summary(platform: Any, settings: Any, *, now: datetime | None = None
         "No paper account exists (the trade record is "
         f"{platform.data_source}), so day and week P&L are unknown, not zero."
     )
-    if account is not None and as_of is not None:
+    if account is not None and account.account_ccy and as_of is not None:
         day = as_of.date()
         week_start = day - timedelta(days=day.weekday())
         day_trades = [t for t in executed if t.exit_time.date() == day]
@@ -588,6 +797,11 @@ def command_summary(platform: Any, settings: Any, *, now: datetime | None = None
         )
         pnl_day, pnl_week = day.isoformat(), week_start.isoformat()
     else:
+        if account is not None and not account.account_ccy:
+            reason = (
+                "The paper sessions are in different currencies, so day and week "
+                "P&L are reported on each book and not summed."
+            )
         day_pnl = Figure.missing(p, unit=ccy or "", reason=reason)
         week_pnl = Figure.missing(p, unit=ccy or "", reason=reason)
         day_pct = Figure.missing(p, unit="pct", reason=reason)
@@ -635,6 +849,7 @@ def command_summary(platform: Any, settings: Any, *, now: datetime | None = None
         new_risk_permitted=risk.new_risk_permitted,
         pnl_day=pnl_day,
         pnl_week_start=pnl_week,
+        books=session_books(platform, settings, p),
         server_time=stamp,
         sessions=market_sessions(stamp),
         links={
@@ -655,6 +870,20 @@ def summary(platform: PlatformDep, settings: SettingsDep) -> Envelope[CommandSum
 
     view = command_summary(platform, settings)
     caveats: list[Caveat] = list(trading_router._record_caveats(platform))
+    abandoned = [row for book in view.books for row in book.abandoned]
+    if abandoned:
+        caveats.append(
+            Caveat(
+                code="positions_abandoned",
+                severity="warning",
+                message=(
+                    f"{len(abandoned)} forward position(s) were abandoned at a restart "
+                    "and their unrealised P&L was not carried. No estimate is shown."
+                ),
+                affects="equity",
+                direction="unknown",
+            )
+        )
     caveats.append(
         Caveat(
             code="day_is_last_bar",

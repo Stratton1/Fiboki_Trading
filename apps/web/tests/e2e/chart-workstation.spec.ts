@@ -516,6 +516,21 @@ test.describe("dataset chip (inventory F-8)", () => {
     expect(await width()).toBeGreaterThan(60);
   });
 
+  test("an as-of asks bars and overlays for that bar and marks the chart as replay", async ({ page }) => {
+    const requests = await mockChart(page);
+    const asof = "2026-09-30T16:00:00Z";
+    await page.goto(`${EURUSD}?asof=${encodeURIComponent(asof)}`);
+    await ready(page);
+    await expect(page.getByTestId("chart-workstation")).toHaveAttribute("data-replay", "true");
+    await expect(page.getByTestId("view-state-replay")).toBeVisible();
+    const bars = requests.filter((u) => u.pathname === "/api/markets/bars/EURUSD");
+    const overlays = requests.filter((u) => u.pathname === "/api/markets/overlays/EURUSD");
+    expect(bars.some((u) => u.searchParams.get("to") === asof)).toBe(true);
+    expect(overlays.some((u) => u.searchParams.get("to") === asof)).toBe(true);
+    await page.getByTestId("chart-live").click();
+    await expect(page.getByTestId("chart-workstation")).toHaveAttribute("data-replay", "false");
+  });
+
   test("a short id is shown whole", async ({ page }) => {
     await mockChart(page, { bars: () => chartBars({ version: "dsv_short_01" }) });
     await page.goto(EURUSD);

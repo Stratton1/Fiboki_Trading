@@ -47,6 +47,7 @@ export const SCREEN_FUNCTIONS: ScreenFunction[] = SECTIONS.flatMap((section, sec
 /** Codes that are not screens: they open a dialog or the directory. */
 export const COMMAND_CODES: { code: string; label: string; description: string; keys: string[] }[] = [
   { code: "HELP", label: "Function directory", description: "Every function and key (also FUNC).", keys: ["?"] },
+  { code: "GUIDE", label: "How to use Fiboki", description: "Opens the operator walkthrough. It changes nothing on the platform.", keys: [] },
   { code: "KILL", label: "Kill switch…", description: "Opens the kill-switch dialog. It never arms by itself.", keys: ["⇧K"] },
 ];
 
@@ -119,7 +120,7 @@ export type Parsed =
   | { kind: "empty" }
   | { kind: "screen"; fn: ScreenFunction }
   | { kind: "alias"; href: string; code: string }
-  | { kind: "command"; code: "KILL" }
+  | { kind: "command"; code: "KILL" | "GUIDE" }
   | { kind: "instrument"; symbol: string; fn: InstrumentFunction | null; rest: string }
   | { kind: "text"; text: string };
 
@@ -134,6 +135,7 @@ export function parseCommand(text: string, symbols: ReadonlySet<string>): Parsed
   const first = (words[0] ?? "").toUpperCase();
   if (words.length === 1) {
     if (first === "KILL" || first === "HALT") return { kind: "command", code: "KILL" };
+    if (first === "GUIDE") return { kind: "command", code: "GUIDE" };
     const alias = aliasHref(first);
     if (alias) return { kind: "alias", href: alias, code: first };
     const screen = screenByCode(first);

@@ -139,6 +139,7 @@ from fiboki.marketstate.calendar import (
     CalendarError,
     EconomicCalendar,
     instrument_currencies,
+    latest_official_calendar_version,
     load_official_calendar,
 )
 from fiboki.obs.alerts import AlertEvent, Severity
@@ -1396,6 +1397,7 @@ class PaperForwardWorker(LiveWorker):
             strategy_content_hashes=[s.content_hash for s in runtime.wiring.strategies],
             limits_version=runtime.wiring.limits_version,
             broker_profile=runtime.wiring.broker_profile,
+            calendar_version=runtime.calendar_version,
         )
         runtime.forward.write_session()
         runtime.persist()
@@ -1447,6 +1449,9 @@ class PaperForwardRuntime:
     snapshot_status: dict[str, Any] = field(default_factory=dict)
     snapshot_path: Path | None = None
     account: ModelledAccount | None = None
+    #: Official calendar version this process loaded. ``injected`` when a test
+    #: passed a calendar in. Research stays pinned to 1.0.0 elsewhere.
+    calendar_version: str = ""
     _last_snapshot: str = ""
 
     # -- the state snapshot ------------------------------------------------
@@ -1682,7 +1687,11 @@ def compose_runtime(
             )
     fx = IdentityFxSource()
 
+    supplied_calendar = calendar is not None
     calendar = calendar or load_official_calendar()
+    calendar_version = (
+        "injected" if supplied_calendar else latest_official_calendar_version()
+    )
     now = clock()
     try:
         calendar.assert_populated(
@@ -2071,6 +2080,7 @@ def compose_runtime(
         snapshot_status=assessment.summary(),
         snapshot_path=snapshot_path,
         account=account,
+        calendar_version=calendar_version,
     )
     worker.runtime = runtime
     if assessment.restorable:

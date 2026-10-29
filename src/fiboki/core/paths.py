@@ -69,6 +69,9 @@ class FibokiPaths:
     intent_ledger: Path
     #: Agent audit ledger (hash-chained, ``JsonlAuditLedger``).
     audit_ledger: Path
+    #: Licence-gated reading corpus. Not an experiment ledger and not a
+    #: training set. Resolved here so nothing else invents a corpus path.
+    corpus_dir: Path
     #: HTTP API audit trail.
     api_audit: Path
     holdout_db: Path
@@ -147,6 +150,7 @@ def resolve_paths(env: Mapping[str, str], *, cwd: str | Path | None = None) -> F
         killswitch_journal=state_dir / "killswitch.jsonl",
         intent_ledger=state_dir / "execution" / "intents.jsonl",
         audit_ledger=state_dir / "agents" / "audit.jsonl",
+        corpus_dir=state_dir / "corpus",
         api_audit=state_dir / "api_audit.jsonl",
         holdout_db=state_dir / "holdout.sqlite",
         experiment_db=experiment_env or state_dir / "experiments.sqlite",

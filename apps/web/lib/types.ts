@@ -515,6 +515,10 @@ export interface Bar {
   l: number;
   c: number;
   v?: number | null;
+  /** The server says this bar has not closed. A replay window never sets it. */
+  forming?: boolean;
+  /** The server says the step from the previous bar is longer than one bar. */
+  gap_before?: boolean;
 }
 
 /** `volume` is exchange volume, `tick_volume` a count of price updates, null neither. */
@@ -756,6 +760,7 @@ export type DrawingSetWrite = Schemas["DrawingSetWrite"];
 // ----------------------------------------------------------- intelligence
 
 export type AgentRoleRow = Schemas["AgentRoleView"];
+export type AgentRunView = Schemas["AgentRunView"];
 
 export type AuditEntryRow = Schemas["AuditEntryView"];
 
@@ -901,6 +906,30 @@ export interface BotCounts {
   failed: Figure;
 }
 
+export interface AbandonedPositionView {
+  position_id: string;
+  instrument: string;
+  direction: string;
+  size: Figure;
+  entry_price: Figure;
+  at: string;
+  note: string;
+}
+
+export interface BookStrip {
+  session_id: string;
+  strategy_id: string;
+  instruments: string;
+  currency: string;
+  equity: Figure;
+  unrealised_pnl: Figure;
+  open_positions: Figure;
+  day_pnl: Figure;
+  week_pnl: Figure;
+  pnl_day: string | null;
+  abandoned: AbandonedPositionView[];
+}
+
 export interface CommandSummaryView {
   provenance: Provenance;
   currency: string | null;
@@ -918,6 +947,7 @@ export interface CommandSummaryView {
   new_risk_permitted: boolean;
   pnl_day: string | null;
   pnl_week_start: string | null;
+  books?: BookStrip[];
   server_time: string;
   sessions: MarketSessionView[];
   links: Record<string, string>;

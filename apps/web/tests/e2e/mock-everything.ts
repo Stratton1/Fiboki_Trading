@@ -420,7 +420,29 @@ export async function mockEverything(page: Page, unexpected: string[]) {
       { role: "researcher", purpose: "Proposes experiments.", capabilities: ["read_research"], can_execute: false },
     ]),
   );
-  await json("/api/intelligence/runs", page1([{ run_id: "run_0001", status: "completed" }]));
+  await json(
+    "/api/intelligence/runs",
+    page1([
+      {
+        recorded_at: "2026-10-19T02:15:00Z",
+        workflow: "wf_nightly",
+        workflow_reason: null,
+        role: "workflow",
+        outcome: "ok",
+        model_id: "qwen3:4b",
+        model_id_reason: null,
+        model_digest: "sha256:359d7dd4",
+        model_digest_reason: null,
+        tier: "t1_annotate_shadow",
+        tier_source: "absent",
+        in_progress: false,
+        activity: "idle",
+        activity_label: "wf_nightly at 2026-10-19T02:15:00Z",
+        acceptance_protocol:
+          "One smoke call and one eval of the existing ledger do not finish the 20-run acceptance protocol.",
+      },
+    ]),
+  );
   await json(
     "/api/intelligence/research-memory",
     env({

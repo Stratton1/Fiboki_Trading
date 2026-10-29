@@ -41,14 +41,17 @@ from collections.abc import Iterable
 from dataclasses import dataclass, field, replace
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
-from typing import Any
+from typing import Any, Mapping
 
 from fiboki.core.enums import Direction, ExitReason, Provenance
 
 __all__ = [
+    "AbandonedPosition",
     "JournalPosition",
     "JournalTrade",
     "PaperAccount",
+    "read_unclosed_abandons",
+    "unclosed_abandons",
     "PaperJournal",
     "PaperJournalReader",
     "PaperSession",
@@ -146,6 +149,105 @@ class PaperSession:
     trades: tuple[JournalTrade, ...]
     positions: tuple[JournalPosition, ...]
     warnings: tuple[str, ...] = ()
+
+
+@dataclass(frozen=True, slots=True)
+class AbandonedPosition:
+    """A forward position whose last journalled fate is an abandon, not a close.
+
+    ``entry_price`` and ``size`` are what the journal recorded at the open.
+    There is no P&L field: the abandon note says the unrealised result was
+    not carried, and this record does not invent one.
+    """
+
+    position_id: str
+    instrument: str
+    direction: str
+    size: float | None
+    entry_price: float | None
+    at: datetime
+    note: str
+
+
+def unclosed_abandons(events: Iterable[Mapping[str, Any]]) -> tuple[AbandonedPosition, ...]:
+    """Positions still abandoned after the journal is replayed in order.
+
+    A close is matched to the latest still-open position on that instrument.
+    A later trade on the same instrument is a different position and does not
+    clear an earlier abandon. Repeating the abandon for one id keeps the
+    latest time.
+    """
+    open_ids: dict[str, list[str]] = {}
+    abandoned: dict[str, AbandonedPosition] = {}
+    for row in events:
+        if not isinstance(row, Mapping):
+            continue
+        kind = row.get("kind")
+        if kind == "position_opened":
+            pid = str(row.get("position_id") or "")
+            inst = str(row.get("instrument") or "")
+            if not pid or not inst:
+                continue
+            open_ids.setdefault(inst, []).append(pid)
+            continue
+        if kind == "trade_closed":
+            inst = str(row.get("instrument") or "")
+            stack = open_ids.get(inst)
+            if stack:
+                pid = stack.pop()
+                abandoned.pop(pid, None)
+            continue
+        if kind != "positions_abandoned_at_restart":
+            continue
+        at = _parse_abandon_time(row.get("at"))
+        if at is None:
+            continue
+        note = str(row.get("note") or "")
+        for pos in row.get("positions") or []:
+            if not isinstance(pos, Mapping):
+                continue
+            pid = str(pos.get("position_id") or "")
+            inst = str(pos.get("instrument") or "")
+            if not pid or not inst:
+                continue
+            stack = open_ids.get(inst)
+            if stack:
+                open_ids[inst] = [item for item in stack if item != pid]
+            abandoned[pid] = AbandonedPosition(
+                position_id=pid,
+                instrument=inst,
+                direction=str(pos.get("direction") or ""),
+                size=_float(pos.get("size")),
+                entry_price=_float(pos.get("entry_price")),
+                at=at,
+                note=note,
+            )
+    return tuple(abandoned.values())
+
+
+def read_unclosed_abandons(path: Path) -> tuple[AbandonedPosition, ...]:
+    """Replay one forward journal. A missing file is an empty record."""
+    if not path.is_file():
+        return ()
+    rows: list[Any] = []
+    for line in path.read_text(encoding="utf-8").splitlines():
+        text = line.strip()
+        if not text:
+            continue
+        try:
+            rows.append(json.loads(text))
+        except json.JSONDecodeError:
+            continue
+    return unclosed_abandons(rows)
+
+
+def _parse_abandon_time(value: Any) -> datetime | None:
+    if not isinstance(value, str) or not value:
+        return None
+    try:
+        return _timestamp(value)
+    except (TypeError, ValueError):
+        return None
 
 
 @dataclass(frozen=True, slots=True)

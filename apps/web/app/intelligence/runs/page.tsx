@@ -1,32 +1,30 @@
 "use client";
 
 import { ListPage, type Column } from "@/components/ListPage";
+import type { AgentRunView } from "@/lib/types";
 
-interface RunRow {
-  [key: string]: unknown;
-}
-
-/** INTELLIGENCE · Runs: no orchestrator attached is a stated fact, not silence. */
+/** INTELLIGENCE · Runs: a missing ledger is a stated fact, not silence. */
 export default function RunsPage() {
-  const columns: Column<RunRow>[] = [
-    { key: "run", header: "Run", cell: (row) => String(row.run_id ?? "—") },
-    { key: "status", header: "Status", cell: (row) => String(row.status ?? "—") },
+  const columns: Column<AgentRunView>[] = [
+    { key: "when", header: "When", cell: (row) => row.recorded_at },
+    { key: "workflow", header: "Workflow", cell: (row) => row.workflow ?? row.workflow_reason ?? "—" },
+    { key: "role", header: "Role", cell: (row) => row.role },
+    { key: "outcome", header: "Outcome", cell: (row) => row.outcome },
+    { key: "model", header: "Model", cell: (row) => row.model_id ?? row.model_id_reason ?? "—" },
+    { key: "tier", header: "Tier", cell: (row) => row.tier },
   ];
   return (
-    <ListPage<RunRow>
+    <ListPage<AgentRunView>
       title="Runs"
-      intro="Agent workflow runs and their outcomes."
+      intro="Agent workflow runs and their outcomes. The 20-run acceptance protocol is still open."
       path="/api/intelligence/runs"
       label="agent runs"
       columns={columns}
       rowKey={(row, index) =>
-        (typeof row.run_id === "string" && row.run_id !== "") ||
-        typeof row.run_id === "number"
-          ? `run:${String(row.run_id)}`
-          : `row:${index}`
+        row.workflow ? `${row.workflow}:${row.recorded_at}` : `row:${index}`
       }
       emptyTitle="No agent runs recorded"
-      emptyBody="Read the source badge: if it says ABSENT, no orchestrator is attached to this deployment. No run recorded is not the same as every run succeeding."
+      emptyBody="Read the source badge. ABSENT means the agent audit ledger is not on disk. No run recorded is not the same as every run succeeding."
     />
   );
 }

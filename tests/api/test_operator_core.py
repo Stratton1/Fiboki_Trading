@@ -181,6 +181,102 @@ def test_summary_day_and_week_pnl_are_the_server_s_sums(journal_env):
     assert data["bots"]["finished"]["value"] == 2.0
 
 
+def test_mixed_currency_books_stay_separate_and_abandons_are_named(tmp_path, api_env):
+    root = tmp_path / "paper"
+    when = datetime(2026, 10, 19, 16, 0, tzinfo=UTC)
+
+    def write(name: str, ccy: str, balance: float) -> None:
+        directory = root / f"forward-{name}"
+        directory.mkdir(parents=True)
+        (directory / "summary.json").write_text(
+            json.dumps(
+                {
+                    "provenance": "paper",
+                    "source": "fiboki paper forward",
+                    "wiring_version": name,
+                    "strategy_id": "donchian_breakout_atr",
+                    "instrument": "EURUSD" if ccy == "USD" else "BTCGBP",
+                    "timeframe": "H4",
+                    "account_ccy": ccy,
+                    "initial_balance": 100000.0 if ccy == "USD" else 10000.0,
+                    "balance": balance,
+                    "equity": balance,
+                    "dataset_last_bar": when.isoformat(),
+                    "trades": 0,
+                    "open_positions": 0,
+                }
+            )
+        )
+        (directory / "trades.csv").write_text("")
+        (directory / "positions.csv").write_text("")
+
+    write("paper_forward_v1", "USD", 99844.89)
+    write("paper_forward_crypto_v1", "GBP", 10000.0)
+    journal = tmp_path / "state" / "paper_forward" / "paper_forward_v1" / "journal.jsonl"
+    journal.parent.mkdir(parents=True)
+    journal.write_text(
+        json.dumps(
+            {
+                "kind": "position_opened",
+                "position_id": "pos_gbp",
+                "instrument": "GBPUSD",
+                "direction": "long",
+                "size": 24553,
+                "entry_price": 1.33024,
+            }
+        )
+        + "\n"
+        + json.dumps(
+            {
+                "kind": "positions_abandoned_at_restart",
+                "at": "2026-10-18T09:58:01+00:00",
+                "note": "unrealised P&L is NOT carried",
+                "positions": [
+                    {
+                        "position_id": "pos_gbp",
+                        "instrument": "GBPUSD",
+                        "direction": "long",
+                        "size": 24553,
+                        "entry_price": 1.33024,
+                    }
+                ],
+            }
+        )
+        + "\n"
+    )
+    env = {**api_env, "FIBOKI_PAPER_ROOT": str(root)}
+    with _client(env) as c:
+        data = c.get("/api/command/summary").json()["data"]
+        attention = c.get("/api/command/attention").json()["items"]
+        risk = c.get("/api/trading/risk").json()["data"]
+        limits = c.get("/api/trading/limits").json()["data"]
+    assert data["currency"] is None
+    assert data["equity"]["value"] is None
+    assert data["day_pnl"]["value"] is None
+    by_ccy = {book["currency"]: book for book in data["books"]}
+    assert set(by_ccy) == {"USD", "GBP"}
+    assert by_ccy["USD"]["equity"]["value"] == pytest.approx(99844.89)
+    assert by_ccy["GBP"]["equity"]["value"] == pytest.approx(10000.0)
+    assert by_ccy["USD"]["day_pnl"]["unit"] == "USD"
+    assert by_ccy["USD"]["abandoned"][0]["instrument"] == "GBPUSD"
+    assert by_ccy["USD"]["abandoned"][0]["size"]["value"] == pytest.approx(24553)
+    assert by_ccy["USD"]["abandoned"][0]["size"]["unit"] == "units"
+    assert by_ccy["USD"]["abandoned"][0]["entry_price"]["value"] == pytest.approx(1.33024)
+    assert by_ccy["USD"]["abandoned"][0]["entry_price"]["unit"] == "USD"
+    assert "net_pnl" not in by_ccy["USD"]["abandoned"][0]
+    titles = [item["title"] for item in attention]
+    assert any("abandoned" in title for title in titles)
+    mixed = "different currencies"
+    assert risk["daily_loss_pct"]["value"] is None
+    assert risk["drawdown_pct"]["value"] is None
+    assert mixed in risk["daily_loss_pct"]["caveats"][0]["message"]
+    assert "No paper account exists" not in risk["daily_loss_pct"]["caveats"][0]["message"]
+    assert "live" not in risk["daily_loss_pct"]["caveats"][0]["message"]
+    daily = next(row for row in limits["rows"] if row["key"] == "risk:daily_loss")
+    assert daily["band"] == "absent"
+    assert mixed in daily["absent_reason"]
+
+
 # ------------------------------------------------------------------- fleet
 
 

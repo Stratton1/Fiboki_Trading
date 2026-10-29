@@ -20,6 +20,7 @@ import { SECTIONS } from "./sections";
  *   RSK, FLT, LAB …          a screen code
  *   FUNC, HELP               the function directory
  *   KILL                     opens the kill-switch dialog (never arms)
+ *   GUIDE                    opens the operator walkthrough
  *   EURUSD                   the instrument's chart
  *   EURUSD H4 | BT | NEWS …  an instrument function
  *
@@ -87,9 +88,9 @@ function CommandLine() {
         openCommand("palette");
         return;
       case "command":
-        pushHistory(operator?.user_id, "KILL");
+        pushHistory(operator?.user_id, parsed.code);
         reset();
-        openCommand("kill-switch");
+        openCommand(parsed.code === "GUIDE" ? "guide" : "kill-switch");
         return;
       case "alias":
         go(parsed.href, parsed.code);

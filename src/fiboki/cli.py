@@ -89,6 +89,9 @@ app.add_typer(broker_app, name="broker")
 app.add_typer(killswitch_app, name="killswitch")
 app.add_typer(calendar_app, name="calendar")
 
+corpus_app = typer.Typer(help="Licence-gated reading manifest. Does not download.", no_args_is_help=True)
+app.add_typer(corpus_app, name="corpus")
+
 
 # ---------------------------------------------------------------------------
 # Shared helpers
@@ -999,6 +1002,30 @@ def research_campaign(
         "enqueueing needs a live orchestrator with handlers registered. Start the API or "
         "the research worker process, which own that wiring."
     )
+
+
+@corpus_app.command("verify")
+def corpus_verify(
+    manifest: Path | None = typer.Option(None, "--manifest", help="JSONL manifest. Defaults to the state corpus."),
+) -> None:
+    """Print each title, licence and sha256, or refuse the manifest."""
+    from fiboki.core.paths import resolve_paths
+    from fiboki.research.corpus import CorpusManifestError, load_manifest, verify_bytes
+
+    target = manifest
+    if target is None:
+        target = resolve_paths(dict(os.environ)).corpus_dir / "manifest.jsonl"
+    try:
+        entries = load_manifest(target)
+        verify_bytes(target, entries)
+    except FileNotFoundError:
+        _fail(f"corpus manifest is missing: {target}", EXIT_MISUSE)
+    except CorpusManifestError as exc:
+        _fail(str(exc), EXIT_FAIL)
+    for entry in entries:
+        typer.echo(f"{entry.title}\t{entry.licence}\t{entry.sha256}")
+    if not entries:
+        _fail(f"corpus manifest has no lines: {target}", EXIT_FAIL)
 
 
 @research_app.command("memory")
@@ -3861,6 +3888,7 @@ def paper_forward(
             f"strategy:  {', '.join(f'{s.strategy_id}@{s.content_hash[:12]}' for s in wired.strategies)}\n"
             f"markets:   {', '.join(wired.instruments)} {wired.timeframe.value}\n"
             f"limits:    {wired.limits_version}   profile: {wired.broker_profile}\n"
+            f"calendar:  {runtime.calendar_version}\n"
             f"journal:   {runtime.journal.ledger_dir}\n"
             f"session:   {runtime.journal.session_dir}\n"
             f"state db:  {state_db_path()}\n"

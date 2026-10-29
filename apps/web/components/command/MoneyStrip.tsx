@@ -263,6 +263,49 @@ export function MoneyStrip() {
           </span>
         </Cell>
       </ul>
+      {(data.books?.length ?? 0) > 1 ? (
+        <ul className="money money--books" data-testid="money-books" aria-label="Each paper book">
+          {data.books?.map((book) => (
+            <li
+              key={book.session_id}
+              className="money__cell"
+              data-testid="money-book"
+              data-session={book.session_id}
+              data-currency={book.currency}
+              data-tone={book.abandoned.length > 0 ? "warn" : undefined}
+            >
+              <div className="money__body">
+                <span className="money__label">{book.instruments || book.session_id}</span>
+                <span className="money__value">
+                  <Fig figure={book.equity} provenance={p} />
+                  <span className="muted"> {book.currency}</span>
+                </span>
+                <span className="money__sub">
+                  <span>
+                    day <Fig figure={book.day_pnl} provenance={p} signed />
+                    {" · "}
+                    {book.open_positions.value ?? "–"} open
+                  </span>
+                  {book.abandoned.length > 0 ? (
+                    <span
+                      className="money__abandon"
+                      data-testid="money-abandoned"
+                      title={book.abandoned
+                        .map(
+                          (row) =>
+                            `${row.instrument} ${row.direction} ${row.size.value ?? "no data"} @ ${row.entry_price.value ?? "no data"} (${row.at})`,
+                        )
+                        .join("; ")}
+                    >
+                      {book.abandoned.length} abandoned, P&L not carried
+                    </span>
+                  ) : null}
+                </span>
+              </div>
+            </li>
+          ))}
+        </ul>
+      ) : null}
       <div className="money__meta">
         {state.freshness === "stale" ||
         state.freshness === "disconnected" ||

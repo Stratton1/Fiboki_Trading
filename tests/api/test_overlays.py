@@ -393,6 +393,56 @@ def test_bad_requests(client):
 # ----------------------------------------------------------------- bars
 
 
+def test_bars_to_ends_at_the_requested_bar_and_is_not_forming(overlay_world):
+    """A replay window stops at ``to``. That bar is closed, so it is not forming."""
+    frame = overlay_world["frame"]
+    cut = frame.index[100]
+    response = overlay_world["client"].get(
+        "/api/markets/bars/EURUSD",
+        params={"timeframe": "H1", "limit": 5, "to": _iso(cut)},
+    )
+    assert response.status_code == 200
+    bars = response.json()["data"]["bars"]
+    assert len(bars) == 5
+    assert bars[-1]["t"].startswith(str(cut.isoformat())[:19])
+    assert all("forming" not in bar for bar in bars)
+    later = frame.index[101]
+    assert all(bar["t"] < later.isoformat() or bar["t"].startswith(str(cut.isoformat())[:19]) for bar in bars)
+
+
+def test_bars_reject_a_reversed_window(overlay_world):
+    response = overlay_world["client"].get(
+        "/api/markets/bars/EURUSD",
+        params={"from": "2026-02-01T00:00:00Z", "to": "2026-01-01T00:00:00Z"},
+    )
+    assert response.status_code == 400
+    assert response.json()["code"] == "invalid_window"
+
+
+def test_a_weekend_step_is_a_gap_and_a_live_open_bar_is_forming():
+    from fiboki.api.routers.markets import _bar_flags
+    from fiboki.core.enums import Timeframe
+
+    friday = pd.Timestamp("2026-10-16T21:00:00Z")
+    monday = pd.Timestamp("2026-10-19T00:00:00Z")
+    gap = _bar_flags(
+        opened=monday, previous=friday, timeframe=Timeframe.D1,
+        live=False, is_last=True, now=datetime(2026, 10, 19, 12, tzinfo=UTC),
+    )
+    assert gap == {"gap_before": True}
+    opened = pd.Timestamp("2026-10-19T16:00:00Z")
+    forming = _bar_flags(
+        opened=opened, previous=opened - pd.Timedelta(hours=4), timeframe=Timeframe.H4,
+        live=True, is_last=True, now=datetime(2026, 10, 19, 18, tzinfo=UTC),
+    )
+    assert forming == {"forming": True}
+    closed = _bar_flags(
+        opened=opened, previous=opened - pd.Timedelta(hours=4), timeframe=Timeframe.H4,
+        live=False, is_last=True, now=datetime(2026, 10, 19, 18, tzinfo=UTC),
+    )
+    assert closed == {}
+
+
 def test_bars_carry_volume_when_the_dataset_has_it(overlay_world):
     body = overlay_world["client"].get("/api/markets/bars/EURUSD?timeframe=H1&limit=5").json()
     data = body["data"]

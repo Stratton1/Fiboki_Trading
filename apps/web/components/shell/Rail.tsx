@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { PanelLeftClose, PanelLeftOpen } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { uiPrefs, useUiPrefs } from "@/lib/ui-prefs";
 import { IconButton } from "../ui/IconButton";
 import { Tooltip } from "../ui/Tooltip";
@@ -33,6 +33,45 @@ export function Rail() {
   // rather than in an effect: an effect leaves the drawer covering the new page
   // for a frame, which at 390px is the whole screen.
   const [lastPath, setLastPath] = useState(pathname);
+  useEffect(() => {
+    if (!open) return;
+    const nav = document.getElementById("primary-nav");
+    const inertTargets = [".shell__main", ".topbar", ".status-bar", ".mode-banner"]
+      .map((selector) => document.querySelector<HTMLElement>(selector))
+      .filter((node): node is HTMLElement => node !== null);
+    inertTargets.forEach((node) => node.setAttribute("inert", ""));
+    const previously = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    const items = () =>
+      [...(nav?.querySelectorAll<HTMLElement>("a, button") ?? [])].filter(
+        (el) => !el.hasAttribute("disabled"),
+      );
+    items()[0]?.focus();
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        setOpen(false);
+        return;
+      }
+      if (event.key !== "Tab" || !nav) return;
+      const focusable = items();
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (!first || !last) return;
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      inertTargets.forEach((node) => node.removeAttribute("inert"));
+      previously?.focus();
+    };
+  }, [open, setOpen]);
   if (lastPath !== pathname) {
     setLastPath(pathname);
     if (open) setOpen(false);

@@ -18,7 +18,7 @@ from pathlib import Path
 
 import pytest
 
-from fiboki.api.paper_journal import PaperJournalReader
+from fiboki.api.paper_journal import PaperJournalReader, unclosed_abandons
 from fiboki.api.platform import Platform
 from fiboki.api.seed import SEED_PROVENANCES, generate
 from fiboki.api.settings import load_settings
@@ -247,3 +247,39 @@ def test_the_committed_report_directory_parses_identically():
     assert live.errors == ()
     assert len(live.trades) == len(fixture.trades) == 283
     assert len(live.positions) == len(fixture.positions) == 1
+
+
+def test_a_later_trade_does_not_clear_an_earlier_abandon():
+    """The October forward journal: an abandoned EURUSD, then a different EURUSD
+    that did close, then an abandoned GBPUSD. Only the two abandons remain."""
+    events = [
+        {"kind": "position_opened", "position_id": "pos_eur_1", "instrument": "EURUSD",
+         "direction": "short", "size": 26935, "entry_price": 1.12318, "at": "2026-10-01T20:00:28+00:00"},
+        {"kind": "positions_abandoned_at_restart", "at": "2026-10-02T00:16:01+00:00",
+         "note": "unrealised P&L is NOT carried",
+         "positions": [{"position_id": "pos_eur_1", "instrument": "EURUSD", "direction": "short",
+                        "size": 26935, "entry_price": 1.12318}]},
+        {"kind": "positions_abandoned_at_restart", "at": "2026-10-02T02:54:53+00:00",
+         "note": "unrealised P&L is NOT carried",
+         "positions": [{"position_id": "pos_eur_1", "instrument": "EURUSD", "direction": "short",
+                        "size": 26935, "entry_price": 1.12318}]},
+        {"kind": "position_opened", "position_id": "pos_eur_2", "instrument": "EURUSD",
+         "direction": "short", "size": 24085, "entry_price": 1.11659, "at": "2026-10-05T08:03:52+00:00"},
+        {"kind": "trade_closed", "instrument": "EURUSD", "trade_id": "trd_1", "at": "2026-10-06T04:10:29+00:00"},
+        {"kind": "position_opened", "position_id": "pos_gbp", "instrument": "GBPUSD",
+         "direction": "long", "size": 24553, "entry_price": 1.33024, "at": "2026-10-16T08:02:28+00:00"},
+        {"kind": "positions_abandoned_at_restart", "at": "2026-10-18T09:58:01+00:00",
+         "note": "no state snapshot",
+         "positions": [{"position_id": "pos_gbp", "instrument": "GBPUSD", "direction": "long",
+                        "size": 24553, "entry_price": 1.33024}]},
+    ]
+    found = unclosed_abandons(events)
+    assert [row.position_id for row in found] == ["pos_eur_1", "pos_gbp"]
+    assert found[0].at == datetime(2026, 10, 2, 2, 54, 53, tzinfo=UTC)
+    assert found[1].instrument == "GBPUSD"
+    assert all(not hasattr(row, "net_pnl") for row in found)
+    omitted = unclosed_abandons([
+        {"kind": "positions_abandoned_at_restart", "at": "2026-10-18T09:58:01+00:00",
+         "positions": [{"position_id": "pos_gap", "instrument": "EURUSD", "direction": "short"}]},
+    ])
+    assert omitted[0].size is None and omitted[0].entry_price is None

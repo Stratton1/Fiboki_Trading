@@ -58,9 +58,8 @@ import { TradeTooltip } from "./TradeTooltip";
  * box; every subscription, observer, price line and the chart itself are
  * released on unmount.
  *
- * Forming bar: the bars endpoint does not flag a forming (still open) bar, so
- * no bar is drawn as forming. When the API adds the flag, draw that bar at 50%
- * opacity here (a per-bar `color`/`borderColor`/`wickColor` override).
+ * Forming bar: when the bars payload sets `forming`, that candle is drawn at
+ * 50% opacity. The browser does not decide which bar is still open.
  */
 
 export interface PriceChartProps {
@@ -152,6 +151,11 @@ function chartOptions(theme: ChartTheme) {
     rightPriceScale: { borderColor: theme.axis },
     timeScale: { borderColor: theme.axis },
   };
+}
+
+/** Half-opacity ink for a bar the server marked forming. Hex only; other forms stay solid. */
+function fade(color: string): string {
+  return color.startsWith("#") && color.length === 7 ? `${color}80` : color;
 }
 
 function candleOptions(theme: ChartTheme) {
@@ -417,6 +421,7 @@ export default function PriceChart({
     const candles = candleRef.current;
     if (!chart || !candles || !theme) return;
 
+    const formingInk = fade(theme.candle);
     candles.setData(
       model.bars.map((b, i) => ({
         time: model.times[i] as UTCTimestamp,
@@ -424,6 +429,9 @@ export default function PriceChart({
         high: b.h,
         low: b.l,
         close: b.c,
+        ...(b.forming
+          ? { color: formingInk, borderColor: formingInk, wickColor: formingInk }
+          : {}),
       })),
     );
     if (priceDecimals !== null) candles.applyOptions({ priceFormat: priceFormat(priceDecimals) });

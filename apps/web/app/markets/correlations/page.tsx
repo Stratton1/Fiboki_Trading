@@ -1,6 +1,7 @@
 "use client";
 
 import { useApi } from "@/lib/query";
+import { AbsentNotice, UNWIRED_CODES } from "@/components/AbsentNotice";
 import { AsyncBoundary } from "@/components/AsyncBoundary";
 import { Heatmap } from "@/components/charts";
 import { CaveatList, PageHead, SourceBadge } from "@/components/primitives";
@@ -15,6 +16,9 @@ export default function CorrelationsPage() {
         title="Correlations"
         intro="Windowed correlation across the traded universe. Correlated-exposure limits cannot be enforced meaningfully without this."
       />
+      {state.status === "error" && UNWIRED_CODES.has(state.error.code) ? (
+        <AbsentNotice title="Correlations are not wired" detail={state.error.message} />
+      ) : (
       <AsyncBoundary state={state} label="correlations" onRetry={state.reload}>
         {(envelope) => (
           <>
@@ -37,6 +41,7 @@ export default function CorrelationsPage() {
           </>
         )}
       </AsyncBoundary>
+      )}
     </>
   );
 }

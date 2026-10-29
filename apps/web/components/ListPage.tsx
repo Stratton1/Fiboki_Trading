@@ -3,6 +3,7 @@
 import type { ReactNode } from "react";
 import { useApi } from "@/lib/query";
 import type { Page } from "@/lib/types";
+import { AbsentNotice, UNWIRED_CODES } from "./AbsentNotice";
 import { AsyncBoundary } from "./AsyncBoundary";
 import { CaveatList, PageHead, SourceBadge, TableWrap } from "./primitives";
 
@@ -55,6 +56,9 @@ export function ListPage<T>({
   return (
     <>
       <PageHead title={title} intro={intro} />
+      {state.status === "error" && UNWIRED_CODES.has(state.error.code) ? (
+        <AbsentNotice title={`${title} is not wired`} detail={state.error.message} />
+      ) : (
       <AsyncBoundary
         state={state}
         label={label}
@@ -113,6 +117,7 @@ export function ListPage<T>({
           </>
         )}
       </AsyncBoundary>
+      )}
     </>
   );
 }

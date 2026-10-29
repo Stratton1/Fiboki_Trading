@@ -22,6 +22,7 @@ import {
 import { STREAM_KINDS } from "./contract";
 import { countTestHook, type StreamControl } from "./control";
 import { StreamRouter, type RouterSink, type StreamFrame } from "./router";
+import { noteClockSkew } from "./skew";
 import { samePathname, SUBSCRIBED_TOPICS } from "./topics";
 
 /**
@@ -159,6 +160,7 @@ class Connection {
 
     const forward = (event: MessageEvent<string>) => {
       if (!current()) return;
+      if (event.type === "heartbeat.heartbeat") noteClockSkew(event.data);
       this.onFrame({ id: event.lastEventId, event: event.type, data: event.data });
     };
     source.onmessage = forward;

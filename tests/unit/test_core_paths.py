@@ -24,6 +24,7 @@ def test_every_ledger_lives_under_the_state_dir() -> None:
         paths.killswitch_journal,
         paths.intent_ledger,
         paths.audit_ledger,
+        paths.corpus_dir,
         paths.api_audit,
         paths.holdout_db,
         paths.experiment_db,
@@ -35,6 +36,7 @@ def test_every_ledger_lives_under_the_state_dir() -> None:
     ):
         assert root in ledger.parents, ledger
     assert paths.killswitch_journal == root / "killswitch.jsonl"
+    assert paths.corpus_dir == root / "corpus"
     assert paths.home == Path("/Users/joe/.fiboki")
     assert paths.heartbeat_db == Path("/Users/joe/.fiboki/state.db")
 

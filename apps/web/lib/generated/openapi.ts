@@ -167,6 +167,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/intelligence/candidates": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Candidates
+         * @description Stored reviews only. A file that claims execution is still returned as false.
+         */
+        get: operations["candidates_api_intelligence_candidates_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/intelligence/research-memory": {
         parameters: {
             query?: never;
@@ -201,6 +221,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/intelligence/research-memory/recall": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Research Memory Recall */
+        get: operations["research_memory_recall_api_intelligence_research_memory_recall_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/intelligence/runs": {
         parameters: {
             query?: never;
@@ -208,7 +245,14 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Runs */
+        /**
+         * Runs
+         * @description Newest agent-audit rows first.
+         *
+         *     A missing ledger is absent, not an empty success. A broken hash chain
+         *     returns only the intact prefix and names the sequence where it breaks.
+         *     The handler does not write ``agent_tier.json``.
+         */
         get: operations["runs_api_intelligence_runs_get"];
         put?: never;
         post?: never;
@@ -1456,6 +1500,40 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** AbandonedPositionView */
+        AbandonedPositionView: {
+            /**
+             * At
+             * Format: date-time
+             */
+            at: string;
+            /** Direction */
+            direction: string;
+            entry_price: components["schemas"]["Figure"];
+            /** Instrument */
+            instrument: string;
+            /** Note */
+            note: string;
+            /** Position Id */
+            position_id: string;
+            size: components["schemas"]["Figure"];
+        };
+        /** AgentCandidateView */
+        AgentCandidateView: {
+            /** Brief */
+            brief: string;
+            /**
+             * Can Execute
+             * @default false
+             */
+            can_execute: boolean;
+            /** Candidate Id */
+            candidate_id: string;
+            /** Refusal */
+            refusal: string;
+            /** Status */
+            status: string;
+        };
         /** AgentRoleView */
         AgentRoleView: {
             /**
@@ -1469,6 +1547,55 @@ export interface components {
             purpose: string;
             /** Role */
             role: string;
+        };
+        /**
+         * AgentRunView
+         * @description One agent-audit row, newest first on the page.
+         *
+         *     ``activity``, ``activity_label`` and ``acceptance_protocol`` repeat on
+         *     every row: :class:`~fiboki.api.models.Page` has no slot for a page-level
+         *     status, and a bare count would be an unlabelled number.
+         */
+        AgentRunView: {
+            /**
+             * Acceptance Protocol
+             * @default One smoke call and one eval of the existing ledger do not finish the 20-run acceptance protocol.
+             */
+            acceptance_protocol: string;
+            /** Activity */
+            activity: string;
+            /** Activity Label */
+            activity_label: string;
+            /**
+             * In Progress
+             * @default false
+             */
+            in_progress: boolean;
+            /** Model Digest */
+            model_digest?: string | null;
+            /** Model Digest Reason */
+            model_digest_reason?: string | null;
+            /** Model Id */
+            model_id?: string | null;
+            /** Model Id Reason */
+            model_id_reason?: string | null;
+            /** Outcome */
+            outcome: string;
+            /**
+             * Recorded At
+             * Format: date-time
+             */
+            recorded_at: string;
+            /** Role */
+            role: string;
+            /** Tier */
+            tier: string;
+            /** Tier Source */
+            tier_source: string;
+            /** Workflow */
+            workflow?: string | null;
+            /** Workflow Reason */
+            workflow_reason?: string | null;
         };
         /** AlertHistoryRow */
         AlertHistoryRow: {
@@ -1750,6 +1877,29 @@ export interface components {
             /** Status */
             status: string;
         };
+        /**
+         * BookStrip
+         * @description One paper session, in its own currency. Never summed with another.
+         */
+        BookStrip: {
+            /** Abandoned */
+            abandoned?: components["schemas"]["AbandonedPositionView"][];
+            /** Currency */
+            currency: string;
+            day_pnl: components["schemas"]["Figure"];
+            equity: components["schemas"]["Figure"];
+            /** Instruments */
+            instruments: string;
+            open_positions: components["schemas"]["Figure"];
+            /** Pnl Day */
+            pnl_day: string | null;
+            /** Session Id */
+            session_id: string;
+            /** Strategy Id */
+            strategy_id: string;
+            unrealised_pnl: components["schemas"]["Figure"];
+            week_pnl: components["schemas"]["Figure"];
+        };
         /** BotCounts */
         BotCounts: {
             failed: components["schemas"]["Figure"];
@@ -1856,6 +2006,8 @@ export interface components {
          */
         CommandSummaryView: {
             balance: components["schemas"]["Figure"];
+            /** Books */
+            books?: components["schemas"]["BookStrip"][];
             bots: components["schemas"]["BotCounts"];
             /** Currency */
             currency: string | null;
@@ -2336,6 +2488,16 @@ export interface components {
              */
             caveats: components["schemas"]["Caveat"][];
             data: components["schemas"]["PromotePreflightView"];
+            source: components["schemas"]["SourceNote"];
+        };
+        /** Envelope[RecallView] */
+        Envelope_RecallView_: {
+            /**
+             * Caveats
+             * @default []
+             */
+            caveats: components["schemas"]["Caveat"][];
+            data: components["schemas"]["RecallView"];
             source: components["schemas"]["SourceNote"];
         };
         /** Envelope[ResearchMemoryView] */
@@ -2936,6 +3098,20 @@ export interface components {
             /** Title */
             title: string;
         };
+        /** IncomparableExperimentView */
+        IncomparableExperimentView: {
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Experiment Id */
+            experiment_id: string;
+            /** Key Versions */
+            key_versions: {
+                [key: string]: string;
+            };
+        };
         /** InstrumentBreakdownView */
         InstrumentBreakdownView: {
             expectancy: components["schemas"]["Figure"];
@@ -3431,6 +3607,29 @@ export interface components {
             /** Window To */
             window_to: string | null;
         };
+        /** Page[AgentCandidateView] */
+        Page_AgentCandidateView_: {
+            /**
+             * Caveats
+             * @default []
+             */
+            caveats: components["schemas"]["Caveat"][];
+            /** Items */
+            items: components["schemas"]["AgentCandidateView"][];
+            /**
+             * Limit
+             * @default 100
+             */
+            limit: number;
+            /**
+             * Offset
+             * @default 0
+             */
+            offset: number;
+            source: components["schemas"]["SourceNote"];
+            /** Total */
+            total: number;
+        };
         /** Page[AgentRoleView] */
         Page_AgentRoleView_: {
             /**
@@ -3440,6 +3639,29 @@ export interface components {
             caveats: components["schemas"]["Caveat"][];
             /** Items */
             items: components["schemas"]["AgentRoleView"][];
+            /**
+             * Limit
+             * @default 100
+             */
+            limit: number;
+            /**
+             * Offset
+             * @default 0
+             */
+            offset: number;
+            source: components["schemas"]["SourceNote"];
+            /** Total */
+            total: number;
+        };
+        /** Page[AgentRunView] */
+        Page_AgentRunView_: {
+            /**
+             * Caveats
+             * @default []
+             */
+            caveats: components["schemas"]["Caveat"][];
+            /** Items */
+            items: components["schemas"]["AgentRunView"][];
             /**
              * Limit
              * @default 100
@@ -4229,6 +4451,37 @@ export interface components {
             tearsheet_version: string;
             /** Timeframe */
             timeframe: string;
+        };
+        /**
+         * RecallMatchView
+         * @description One prior experiment. The body is the relation, not the report.
+         */
+        RecallMatchView: {
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Experiment Id */
+            experiment_id: string;
+            /** Outcome */
+            outcome: string;
+            /** Relation */
+            relation: string;
+            similarity: components["schemas"]["Figure"];
+            /** Why */
+            why: string;
+        };
+        /** RecallView */
+        RecallView: {
+            /** Incomparable */
+            incomparable: components["schemas"]["IncomparableExperimentView"][];
+            /** Matches */
+            matches: components["schemas"]["RecallMatchView"][];
+            /** Novel */
+            novel: boolean;
+            /** Recommendation */
+            recommendation: string;
         };
         /** RegimeOverlay */
         RegimeOverlay: {
@@ -5117,6 +5370,26 @@ export interface operations {
             };
         };
     };
+    candidates_api_intelligence_candidates_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Page_AgentCandidateView_"];
+                };
+            };
+        };
+    };
     research_memory_api_intelligence_research_memory_get: {
         parameters: {
             query?: never;
@@ -5170,9 +5443,11 @@ export interface operations {
             };
         };
     };
-    runs_api_intelligence_runs_get: {
+    research_memory_recall_api_intelligence_research_memory_recall_get: {
         parameters: {
-            query?: never;
+            query?: {
+                q?: string;
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -5185,7 +5460,47 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Page_dict_"];
+                    "application/json": components["schemas"]["Envelope_RecallView_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    runs_api_intelligence_runs_get: {
+        parameters: {
+            query?: {
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Page_AgentRunView_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
@@ -5264,8 +5579,10 @@ export interface operations {
     bars_api_markets_bars__symbol__get: {
         parameters: {
             query?: {
+                from?: string | null;
                 limit?: number;
                 timeframe?: string;
+                to?: string | null;
             };
             header?: never;
             path: {

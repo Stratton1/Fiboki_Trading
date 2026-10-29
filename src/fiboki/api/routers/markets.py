@@ -165,12 +165,44 @@ def instruments(
     )
 
 
+def _bar_flags(
+    *,
+    opened: pd.Timestamp,
+    previous: pd.Timestamp | None,
+    timeframe: Any,
+    live: bool,
+    is_last: bool,
+    now: datetime,
+) -> dict[str, bool]:
+    """Flags the server can state about one bar. Absent keys mean false.
+
+    A gap is a step longer than one and a half bars, so a weekend on D1 is a
+    gap and an ordinary H1 step is not. The last bar of a live read is forming
+    until its timeframe has elapsed. A replay (``to`` set, ``live`` false)
+    never marks a bar forming: the chosen bar is closed.
+    """
+    import pandas as pd
+
+    flags: dict[str, bool] = {}
+    if timeframe is not None and previous is not None:
+        step = pd.Timedelta(minutes=int(timeframe.minutes))
+        if opened - previous > step * 1.5:
+            flags["gap_before"] = True
+    if timeframe is not None and live and is_last:
+        close_at = (opened + pd.Timedelta(minutes=int(timeframe.minutes))).to_pydatetime()
+        if now < close_at:
+            flags["forming"] = True
+    return flags
+
+
 @router.get("/bars/{symbol}", response_model=Envelope[dict])
 def bars(
     symbol: str,
     platform: PlatformDep,
     settings: SettingsDep,
     timeframe: str = Query("H1"),
+    from_: Annotated[datetime | None, Query(alias="from")] = None,
+    to: Annotated[datetime | None, Query()] = None,
     limit: int = Query(500, ge=1, le=5000),
 ) -> Envelope[dict]:
     if not instrument_registry.exists(symbol):
@@ -178,6 +210,11 @@ def bars(
             status.HTTP_404_NOT_FOUND,
             "unknown_instrument",
             f"{symbol!r} is not in the instrument registry.",
+        )
+    lo, hi = _utc(from_), _utc(to)
+    if lo is not None and hi is not None and lo > hi:
+        raise ApiError(
+            status.HTTP_400_BAD_REQUEST, "invalid_window", "'from' is after 'to'."
         )
     if settings.data_root is None or not settings.data_root.exists():
         # An explicit 503 rather than an empty candle array. An empty chart and
@@ -189,11 +226,17 @@ def bars(
             "be served. This is a missing data source, not a quiet market.",
             context={"symbol": symbol, "timeframe": timeframe},
         )
+    import pandas as pd
+
     from fiboki.data.store import DataStore
 
     try:
         store = DataStore(settings.data_root)
-        frame, version = store.read_latest(instrument=symbol, timeframe=timeframe)
+        frame, version = store.read_latest(
+            instrument=symbol,
+            timeframe=timeframe,
+            end=pd.Timestamp(hi) if hi else None,
+        )
     except Exception as exc:
         raise ApiError(
             status.HTTP_503_SERVICE_UNAVAILABLE,
@@ -201,10 +244,24 @@ def bars(
             "The bar dataset could not be read.",
             context={"error_class": type(exc).__name__},
         ) from exc
+    if lo is not None:
+        frame = frame[frame.index >= pd.Timestamp(lo)]
     tail = frame.tail(limit)
     volume_kind = _volume_column(tail)
+    try:
+        from fiboki.core.enums import Timeframe
+
+        tf_known: Any = Timeframe(timeframe)
+    except ValueError:
+        tf_known = None
+    now = datetime.now(tz=UTC)
     bars_out: list[dict[str, Any]] = []
-    for index, row in tail.iterrows():
+    previous: pd.Timestamp | None = None
+    rows = list(tail.iterrows())
+    for n, (index, row) in enumerate(rows):
+        opened = index if isinstance(index, pd.Timestamp) else pd.Timestamp(index)
+        if opened.tzinfo is None:
+            opened = opened.tz_localize("UTC")
         bar: dict[str, Any] = {
             "t": index.isoformat(),
             "o": float(row.open),
@@ -215,6 +272,17 @@ def bars(
         if volume_kind is not None:
             raw = row[volume_kind]
             bar["v"] = None if raw is None or raw != raw else float(raw)
+        bar.update(
+            _bar_flags(
+                opened=opened,
+                previous=previous,
+                timeframe=tf_known,
+                live=hi is None,
+                is_last=n == len(rows) - 1,
+                now=now,
+            )
+        )
+        previous = opened
         bars_out.append(bar)
     return Envelope(
         data={

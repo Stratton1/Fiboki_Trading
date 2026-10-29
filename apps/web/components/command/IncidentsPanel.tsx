@@ -32,6 +32,22 @@ import { SeverityBadge } from "./SeverityBadge";
 export { INCIDENTS_PATH };
 const INCIDENTS_REFRESH_MS = 30_000;
 
+/** Same event, title and status: one folded row, each incident still listed inside. */
+function incidentGroups(items: IncidentRow[]): IncidentRow[][] {
+  const order: string[] = [];
+  const by = new Map<string, IncidentRow[]>();
+  for (const row of items) {
+    const key = `${row.status}\0${row.event}\0${row.title}`;
+    const list = by.get(key);
+    if (list) list.push(row);
+    else {
+      by.set(key, [row]);
+      order.push(key);
+    }
+  }
+  return order.map((key) => by.get(key) ?? []);
+}
+
 /** The reason recorded with the latest acknowledgement, from the incident's timeline. */
 function latestAckReason(row: IncidentRow): string | null {
   const acks = row.timeline.filter((entry) => entry.kind === "ack");
@@ -86,7 +102,69 @@ export function IncidentsPanel() {
                 </tr>
               </thead>
               <tbody>
-                {page.items.map((row) => (
+                {incidentGroups(page.items).map((group) =>
+                  group.length < 2 ? (
+                    group.map((row) => (
+                      <IncidentRecord
+                        key={row.id}
+                        row={row}
+                        unconfirmed={unconfirmed}
+                        setUnconfirmed={setUnconfirmed}
+                        client={client}
+                      />
+                    ))
+                  ) : (
+                    <tr key={group.map((row) => row.id).join("|")} data-testid="incident-group">
+                      <td colSpan={6}>
+                        <details className="incident-group">
+                          <summary>
+                            <SeverityBadge severity={group[0]!.severity} />
+                            <strong>{group[0]!.title}</strong>
+                            <span className="muted">
+                              {" "}
+                              {group.length.toLocaleString("en-GB")} separate incidents, same title.
+                              Last seen {formatTimestamp(group[0]!.last_seen)}. Each one is still listed.
+                            </span>
+                          </summary>
+                          <table className="table--stack-sm">
+                            <tbody>
+                              {group.map((row) => (
+                                <IncidentRecord
+                                  key={row.id}
+                                  row={row}
+                                  unconfirmed={unconfirmed}
+                                  setUnconfirmed={setUnconfirmed}
+                                  client={client}
+                                />
+                              ))}
+                            </tbody>
+                          </table>
+                        </details>
+                      </td>
+                    </tr>
+                  ),
+                )}
+              </tbody>
+            </table>
+          </TableWrap>
+        </>
+      )}
+    </AsyncBoundary>
+  );
+}
+
+function IncidentRecord({
+  row,
+  unconfirmed,
+  setUnconfirmed,
+  client,
+}: {
+  row: IncidentRow;
+  unconfirmed: ReadonlySet<string>;
+  setUnconfirmed: (update: (previous: ReadonlySet<string>) => ReadonlySet<string>) => void;
+  client: ReturnType<typeof useQueryClient>;
+}) {
+  return (
                   <tr key={row.id} data-testid="incident-row" data-incident-id={row.id} data-status={row.status}>
                     <td data-label="Severity">
                       <SeverityBadge severity={row.severity} />
@@ -138,13 +216,6 @@ export function IncidentsPanel() {
                         />
                       ) : null}
                     </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </TableWrap>
-        </>
-      )}
-    </AsyncBoundary>
+    </tr>
   );
 }

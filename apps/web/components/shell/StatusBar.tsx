@@ -1,7 +1,7 @@
 "use client";
 
 import { useQueryClient } from "@tanstack/react-query";
-import { Activity, Clock, HeartPulse, LogOut, Radio, UserRound } from "lucide-react";
+import { Activity, Clock, Compass, HeartPulse, LogOut, Radio, UserRound } from "lucide-react";
 import { useState } from "react";
 import { ApiError } from "@/lib/api";
 import { useOnScreenAsOf } from "@/lib/as-of";
@@ -15,6 +15,7 @@ import { HEARTBEAT_OVERDUE_MS } from "@/lib/stream/router";
 import { StatusBadge } from "../primitives";
 import type { Tone } from "../ui/StatusPill";
 import { useToast } from "../ui/Toast";
+import { openCommand } from "./commands";
 import { DisplaySettings } from "./DisplaySettings";
 import { useInspector } from "./Inspector";
 import { useExecutionMode, useHealth, useOperator, type ModeKey } from "./platform";
@@ -223,13 +224,28 @@ export function StatusBar() {
             data-testid="sign-out"
             onClick={onSignOut}
             disabled={signingOut}
+            aria-describedby={signingOut ? "sign-out-reason" : undefined}
             aria-label={`Sign out ${operator.display_name}`}
           >
+            {signingOut ? (
+              <span id="sign-out-reason" className="muted">
+                Signing out. Wait for the session to close.
+              </span>
+            ) : null}
             <LogOut size={12} aria-hidden="true" />
           </button>
         </span>
       ) : null}
       <span className="status-bar__spacer" />
+      <button
+        type="button"
+        className="status-bar__item"
+        data-testid="open-guide"
+        onClick={() => openCommand("guide")}
+      >
+        <Compass size={12} aria-hidden="true" />
+        Guide
+      </button>
       <DisplaySettings />
       <span className="status-bar__item" data-testid="status-clock">
         <Clock size={12} aria-hidden="true" />

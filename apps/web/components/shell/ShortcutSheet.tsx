@@ -11,6 +11,7 @@ import { SECTIONS } from "./sections";
 export const SHORTCUTS: readonly { keys: string[]; label: string; what: string }[] = [
   { keys: ["⌘", "K"], label: "Command K", what: "Open the command palette (Ctrl+K on Windows and Linux)" },
   { keys: ["?"], label: "Question mark", what: "Show these shortcuts" },
+  { keys: ["GUIDE"], label: "GUIDE", what: "Open the operator walkthrough. The status bar’s Guide button does the same." },
   { keys: ["g", "…"], label: "g then a letter", what: "Go to a screen (see the list below)" },
   {
     keys: ["/"],

@@ -669,7 +669,10 @@ def risk_state(platform: PlatformDep, settings: SettingsDep) -> Envelope[RiskSta
     account = _mode_account(platform, p)
     starting = account.initial_balance if account is not None else None
     as_of = account.as_of if account is not None else None
-    if starting:
+    # `starting` is only a single-currency book. A mixed journal has an account
+    # and no currency; using that absence as "no paper account" and naming
+    # data_source "live" reads as execution mode LIVE.
+    if account is not None and account.account_ccy and starting:
         curve = equity_curve(executed, starting=starting)
         dd = max_drawdown_pct(curve)
         # "Today" for a replayed journal is the last day it replayed, not the
@@ -687,13 +690,25 @@ def risk_state(platform: PlatformDep, settings: SettingsDep) -> Envelope[RiskSta
         )
     else:
         dd, daily_pct = None, None
-        reason = (
-            "No paper account exists (the trade record is "
-            f"{platform.data_source}), so drawdown and daily loss are unknown, "
-            "not zero."
-        )
-        daily_fig = Figure.missing(p, unit="pct", reason=reason)
-        dd_fig = Figure.missing(p, unit="pct", reason=reason)
+        if account is not None and not account.account_ccy:
+            loss_reason = (
+                "The paper sessions are in different currencies, so drawdown and "
+                "daily loss are not summed. Each book reports its own figures. "
+                "Unknown here is not zero."
+            )
+        elif account is not None:
+            loss_reason = (
+                "The paper account has no starting balance, so drawdown and daily "
+                "loss are unknown, not zero."
+            )
+        else:
+            loss_reason = (
+                "No paper account exists (the trade record is "
+                f"{platform.data_source}), so drawdown and daily loss are unknown, "
+                "not zero."
+            )
+        daily_fig = Figure.missing(p, unit="pct", reason=loss_reason)
+        dd_fig = Figure.missing(p, unit="pct", reason=loss_reason)
 
     breaches: list[str] = []
     if dd is not None and dd > limits.max_total_drawdown_pct:

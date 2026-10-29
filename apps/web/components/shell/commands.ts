@@ -5,7 +5,7 @@
  * mutation"). The kill-switch command opens the arm dialog, which still needs
  * a choice, a reason and, for FLATTEN, the typed phrase.
  */
-export type ShellCommand = "palette" | "shortcuts" | "kill-switch";
+export type ShellCommand = "palette" | "shortcuts" | "kill-switch" | "guide";
 
 const EVENT = "fiboki:command";
 

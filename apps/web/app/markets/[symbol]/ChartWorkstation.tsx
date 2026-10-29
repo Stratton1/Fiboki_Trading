@@ -62,6 +62,8 @@ type Timeframe = (typeof TIMEFRAMES)[number];
 const tfParser = parseAsStringLiteral(TIMEFRAMES).withDefault("H1").withOptions({ history: "replace" });
 /** The backtest run drawn over the candles (`?run=`), shareable as a link. */
 const runParser = parseAsString.withOptions({ history: "replace" });
+/** Replay as of a bar (`?asof=`), a UTC timestamp the API receives as `to`. */
+const asofParser = parseAsString.withOptions({ history: "replace" });
 
 /** Bars per request: the API's own default window (routers/markets.py, limit=500). */
 const BAR_LIMIT = 500;
@@ -75,7 +77,15 @@ export function ChartWorkstation({ symbol }: { symbol: string }) {
   return (
     <UrlState
       fallback={
-        <Workstation symbol={symbol} tf="H1" onTf={() => undefined} run={null} onRun={() => undefined} />
+        <Workstation
+        symbol={symbol}
+        tf="H1"
+        onTf={() => undefined}
+        run={null}
+        onRun={() => undefined}
+        asof={null}
+        onAsof={() => undefined}
+      />
       }
     >
       <WorkstationFromUrl symbol={symbol} />
@@ -86,6 +96,7 @@ export function ChartWorkstation({ symbol }: { symbol: string }) {
 function WorkstationFromUrl({ symbol }: { symbol: string }) {
   const [tf, setTf] = useQueryState("tf", tfParser);
   const [run, setRun] = useQueryState("run", runParser);
+  const [asof, setAsof] = useQueryState("asof", asofParser);
   return (
     <Workstation
       symbol={symbol}
@@ -93,6 +104,8 @@ function WorkstationFromUrl({ symbol }: { symbol: string }) {
       onTf={(next) => void setTf(next)}
       run={run}
       onRun={(next) => void setRun(next)}
+      asof={asof}
+      onAsof={(next) => void setAsof(next)}
     />
   );
 }
@@ -113,22 +126,34 @@ function paneDecimalsOf(model: ChartModel): Map<string, number> {
   return out;
 }
 
+function withAsOf(path: string, asof: string | null): string {
+  if (!asof) return path;
+  return `${path}&to=${encodeURIComponent(asof)}`;
+}
+
 function Workstation({
   symbol,
   tf,
   onTf,
   run,
   onRun,
+  asof,
+  onAsof,
 }: {
   symbol: string;
   tf: Timeframe;
   onTf: (tf: Timeframe) => void;
   run: string | null;
   onRun: (run: string | null) => void;
+  asof: string | null;
+  onAsof: (asof: string | null) => void;
 }) {
   const enc = encodeURIComponent(symbol);
-  const barsPath = `/api/markets/bars/${enc}?timeframe=${tf}&limit=${BAR_LIMIT}`;
-  const overlaysPath = `/api/markets/overlays/${enc}?timeframe=${tf}&limit=${BAR_LIMIT}`;
+  const barsPath = withAsOf(`/api/markets/bars/${enc}?timeframe=${tf}&limit=${BAR_LIMIT}`, asof);
+  const overlaysPath = withAsOf(
+    `/api/markets/overlays/${enc}?timeframe=${tf}&limit=${BAR_LIMIT}`,
+    asof,
+  );
   const bars = useApi<Envelope<BarsView>>(barsPath, { refreshMs: REFRESH_MS });
   const overlays = useApi<Envelope<OverlayView>>(overlaysPath, { refreshMs: REFRESH_MS });
   const instruments = useApi<Page<InstrumentRow>>("/api/markets/instruments");
@@ -155,6 +180,7 @@ function Workstation({
   const pip = instrument?.pip_size.value;
 
   const barsEnv = bars.status === "success" ? bars.data : null;
+  const firstBar = barsEnv?.data.bars[0]?.t ?? null;
   const overlayEnv = overlays.status === "success" ? overlays.data : null;
   const datasetMismatch =
     barsEnv !== null &&
@@ -171,7 +197,13 @@ function Workstation({
     : [];
 
   return (
-    <section className="cw" data-testid="chart-workstation" data-symbol={symbol} data-timeframe={tf}>
+    <section
+      className="cw"
+      data-testid="chart-workstation"
+      data-symbol={symbol}
+      data-timeframe={tf}
+      data-replay={asof ? "true" : "false"}
+    >
       <header className="cw__head">
         <div className="cw__title">
           <h1 data-testid="chart-symbol">{symbol}</h1>
@@ -186,6 +218,16 @@ function Workstation({
           options={TIMEFRAMES.map((value) => ({ value, label: value }))}
           testId="chart-timeframe"
         />
+        <ReplayControl asof={asof} onAsof={onAsof} />
+        {firstBar ? (
+          <Button type="button" data-testid="chart-earlier" onClick={() => onAsof(firstBar)}>
+            Earlier
+          </Button>
+        ) : null}
+        {asof ? <ViewStateTag state="replay" /> : null}
+        {!asof && barsEnv?.data.bars.some((bar) => bar.forming) ? (
+          <ViewStateTag state="forming" />
+        ) : null}
         <div className="cw__meta">
           <Freshness bars={bars} overlays={overlays} />
           {barsEnv ? (
@@ -665,9 +707,12 @@ function ChartArea({
         data-panes={panes.length}
         data-volume={model.hasVolume}
         data-overlays={overlays.status}
+        data-gaps={model.bars.filter((bar) => bar.gap_before).length}
+        data-forming={model.bars.some((bar) => bar.forming) ? "true" : "false"}
       >
         {n.toLocaleString("en-GB")} bars · {count(summary.signals)} signals · {count(summary.fills)} fills ·{" "}
-        {count(summary.levels)} levels · {count(summary.regimes)} regime runs · {visibleSeries} of{" "}
+        {count(summary.levels)} levels · {count(summary.regimes)} regime runs ·{" "}
+        {model.bars.filter((bar) => bar.gap_before).length.toLocaleString("en-GB")} gaps · {visibleSeries} of{" "}
         {model.series.length} series · {panes.length} pane{panes.length === 1 ? "" : "s"}
         {model.hasVolume ? ` (with ${bars.data.volume_kind === "tick_volume" ? "tick volume" : "volume"})` : ""}
       </p>
@@ -681,6 +726,50 @@ function ChartArea({
  * `dsv_eurusd_h1_0007abcdef` → `dsv_eurusd_h1_…abcdef`. Cutting the end
  * (inventory F-8) dropped the timeframe.
  */
+function ReplayControl({
+  asof,
+  onAsof,
+}: {
+  asof: string | null;
+  onAsof: (asof: string | null) => void;
+}) {
+  const [draft, setDraft] = useState(asof ?? "");
+  useEffect(() => setDraft(asof ?? ""), [asof]);
+  return (
+    <form
+      className="cw__replay"
+      data-testid="chart-replay"
+      onSubmit={(event) => {
+        event.preventDefault();
+        const next = draft.trim();
+        onAsof(next.length > 0 ? next : null);
+      }}
+    >
+      <label className="cw__replay-label" htmlFor="chart-asof-input">
+        As of (UTC)
+        <input
+          id="chart-asof-input"
+          className="cw__replay-input num"
+          data-testid="chart-asof"
+          value={draft}
+          placeholder="2026-10-19T16:00:00Z"
+          spellCheck={false}
+          autoComplete="off"
+          onChange={(event) => setDraft(event.target.value)}
+        />
+      </label>
+      <Button type="submit" data-testid="chart-asof-apply">
+        Show
+      </Button>
+      {asof ? (
+        <Button type="button" data-testid="chart-live" onClick={() => onAsof(null)}>
+          Live
+        </Button>
+      ) : null}
+    </form>
+  );
+}
+
 export function middleTruncate(id: string, head = 14, tail = 6): string {
   return id.length <= head + tail + 1 ? id : `${id.slice(0, head)}…${id.slice(-tail)}`;
 }
